@@ -16,9 +16,12 @@ import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useMeasuredRowRefs } from '../../components/virtual/useMeasuredRowRefs';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
-import type { VisibleTextEditorHandle } from '../../components/VisibleTextEditor';
+import type {
+  VisibleTextEditorHandle,
+  VisibleTextMarksMode,
+} from '../../components/VisibleTextEditor';
+import { VisibleTextRenderer } from '../../components/VisibleTextRenderer';
 import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
-import { useVisibleTextEditorEnabled } from '../../hooks/useVisibleTextEditorEnabled';
 import type { GlossaryWorkbenchContext } from '../../utils/glossaryWorkbench';
 import { isPrimaryActionShortcut } from '../../utils/keyboardShortcuts';
 import { isRtlLocale } from '../../utils/localeDirection';
@@ -61,6 +64,10 @@ type WorkbenchBodyProps = {
   restoreScrollTop: number | null;
   restoreRowId: string | null;
   onRestoreScrollConsumed: () => void;
+  isVisibleTextEditorEnabled: boolean;
+  translationMarksMode: VisibleTextMarksMode;
+  onChangeTranslationMarksMode: (mode: VisibleTextMarksMode) => void;
+  showProtectedTokens: boolean;
 };
 
 type GlossaryWorkbenchTarget = {
@@ -109,10 +116,12 @@ export function WorkbenchBody({
   restoreScrollTop,
   restoreRowId,
   onRestoreScrollConsumed,
+  isVisibleTextEditorEnabled,
+  translationMarksMode,
+  onChangeTranslationMarksMode,
+  showProtectedTokens,
 }: WorkbenchBodyProps) {
   const navigate = useNavigate();
-  const isVisibleTextEditorEnabled = useVisibleTextEditorEnabled();
-  const [showTranslationInvisibles, setShowTranslationInvisibles] = useState(true);
   const editingTextTokenGuard = useProtectedTextTokenGuard(
     editingValue,
     isVisibleTextEditorEnabled && editingRowId ? 'icu-html' : 'none',
@@ -495,11 +504,15 @@ export function WorkbenchBody({
 
               const isEditing = editingRowId === row.id;
               const useAssistedTranslationEditor = isVisibleTextEditorEnabled && isEditing;
+              const useAssistedTranslationPreview = isVisibleTextEditorEnabled && !isEditing;
               const translationValue = isEditing ? editingValue : (row.translation ?? '');
               const translationDirection = isRtlLocale(row.locale) ? 'rtl' : 'ltr';
               const translationLocale = row.locale;
               const translationProtectedTokens = useAssistedTranslationEditor
                 ? editingTextTokenGuard.protectedTokens
+                : [];
+              const translationProtectedDiagnostics = useAssistedTranslationEditor
+                ? editingTextTokenGuard.diagnostics
                 : [];
               const validateTranslationValue = useAssistedTranslationEditor
                 ? editingTextTokenGuard.validateNextValue
@@ -621,40 +634,61 @@ export function WorkbenchBody({
                       className="workbench-page__cell workbench-page__cell--translation"
                       data-editing={isEditing ? 'true' : undefined}
                     >
-                      <TranslationTextEditor
-                        assisted={useAssistedTranslationEditor}
-                        className="workbench-page__translation-input"
-                        value={translationValue}
-                        onFocus={() => {
-                          if (!isEditing && row.canEdit) {
-                            onStartEditing(row.id, row.translation);
+                      {useAssistedTranslationPreview ? (
+                        <VisibleTextRenderer
+                          ariaLabel="Text editor"
+                          className="workbench-page__translation-input"
+                          value={translationValue}
+                          disabled={!row.canEdit || isSaving}
+                          lang={translationLocale}
+                          dir={translationDirection}
+                          marksMode={translationMarksMode}
+                          showProtectedTokens={showProtectedTokens}
+                          onFocus={
+                            row.canEdit && !isSaving
+                              ? () => onStartEditing(row.id, row.translation)
+                              : undefined
                           }
-                        }}
-                        onChange={(nextValue) => {
-                          if (isEditing) {
-                            onChangeEditingValue(nextValue);
+                          spellCheck={true}
+                          tokenMode="icu-html"
+                        />
+                      ) : (
+                        <TranslationTextEditor
+                          assisted={useAssistedTranslationEditor}
+                          className="workbench-page__translation-input"
+                          value={translationValue}
+                          onFocus={() => {
+                            if (!isEditing && row.canEdit) {
+                              onStartEditing(row.id, row.translation);
+                            }
+                          }}
+                          onChange={(nextValue) => {
+                            if (isEditing) {
+                              onChangeEditingValue(nextValue);
+                            }
+                          }}
+                          onKeyDown={isEditing ? handleTranslationKeyDown : undefined}
+                          controlBar={
+                            useAssistedTranslationEditor
+                              ? {
+                                  marksMode: translationMarksMode,
+                                  onChangeMarksMode: onChangeTranslationMarksMode,
+                                  protectedTokenCount: translationProtectedTokens.length,
+                                }
+                              : undefined
                           }
-                        }}
-                        onKeyDown={isEditing ? handleTranslationKeyDown : undefined}
-                        controlBar={
-                          useAssistedTranslationEditor
-                            ? {
-                                onToggleInvisibles: () =>
-                                  setShowTranslationInvisibles((current) => !current),
-                                protectedTokenCount: translationProtectedTokens.length,
-                              }
-                            : undefined
-                        }
-                        disabled={!row.canEdit}
-                        readOnly={!isEditing || !row.canEdit}
-                        ref={isEditing ? translationInputRef : undefined}
-                        showInvisibles={showTranslationInvisibles}
-                        protectedTokens={translationProtectedTokens}
-                        spellCheck={true}
-                        lang={translationLocale}
-                        dir={translationDirection}
-                        validateNextValue={validateTranslationValue}
-                      />
+                          disabled={!row.canEdit || isSaving}
+                          readOnly={!isEditing || !row.canEdit || isSaving}
+                          ref={isEditing ? translationInputRef : undefined}
+                          marksMode={translationMarksMode}
+                          protectedDiagnostics={translationProtectedDiagnostics}
+                          protectedTokens={translationProtectedTokens}
+                          spellCheck={true}
+                          lang={translationLocale}
+                          dir={translationDirection}
+                          validateNextValue={validateTranslationValue}
+                        />
+                      )}
                       <div className="workbench-page__translation-footer">
                         {isEdited ? (
                           <button

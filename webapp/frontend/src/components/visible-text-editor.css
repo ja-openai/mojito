@@ -4,6 +4,7 @@
   border-radius: var(--radius-2);
   color: var(--color-text);
   min-height: 12rem;
+  position: relative;
   transition:
     border-color var(--transition-fast),
     box-shadow var(--transition-fast);
@@ -17,6 +18,14 @@
 .visible-text-editor--disabled {
   background: var(--color-surface-muted);
   color: var(--color-text-muted);
+}
+
+.visible-text-editor--menu-open {
+  z-index: 80;
+}
+
+.virtual-scroll__inner > :has(.visible-text-editor--menu-open) {
+  z-index: 80;
 }
 
 .visible-text-editor--with-control-bar {
@@ -70,12 +79,14 @@
 
 .visible-text-editor__control-bar {
   align-items: center;
-  background: color-mix(in srgb, var(--color-surface-muted) 48%, var(--color-surface));
-  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  background: transparent;
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 54%, transparent);
   display: flex;
-  gap: var(--space-1);
+  flex-wrap: wrap;
+  gap: 0.375rem;
   min-height: 2rem;
-  padding: 0 var(--space-1);
+  padding: 0.125rem 0.625rem;
+  row-gap: 0;
 }
 
 .visible-text-editor--control-bar-top .visible-text-editor__control-bar {
@@ -93,12 +104,13 @@
   display: inline-flex;
   font: inherit;
   font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
+  font-weight: 400;
+  gap: var(--space-1);
   height: 1.5rem;
   justify-content: center;
   line-height: 1;
-  min-width: 2.75rem;
-  padding: 0 var(--space-2);
+  min-width: 0;
+  padding: 0 0.375rem;
 }
 
 .visible-text-editor__control-button:hover:not(:disabled),
@@ -114,10 +126,31 @@
 }
 
 .visible-text-editor__control-button[aria-pressed='true'] {
-  background: color-mix(in srgb, var(--color-text) 7%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--color-border) 92%, var(--color-text));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text-subtle) 8%, transparent);
-  color: var(--color-text);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--color-text-muted);
+}
+
+.visible-text-editor__mode-button {
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.visible-text-editor__mode-button[aria-pressed='true'] {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--color-text-muted);
+}
+
+.visible-text-editor__mode-button[aria-pressed='false'] {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--color-text-muted);
 }
 
 .visible-text-editor__control-select {
@@ -141,6 +174,105 @@
   outline: none;
 }
 
+.visible-text-editor__marks-control {
+  align-items: center;
+  display: inline-flex;
+  position: relative;
+}
+
+.visible-text-editor__marks-button {
+  align-items: center;
+  background: transparent;
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-2);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 400;
+  gap: var(--space-1);
+  height: 1.5rem;
+  line-height: 1;
+  padding: 0 0.375rem;
+}
+
+.visible-text-editor__marks-button:hover:not(:disabled),
+.visible-text-editor__marks-button:focus-visible,
+.visible-text-editor__marks-button[aria-expanded='true'] {
+  background: var(--color-surface);
+  border-color: color-mix(in srgb, var(--color-border) 72%, transparent);
+  color: var(--color-text);
+  outline: none;
+}
+
+.visible-text-editor__marks-button:disabled {
+  color: color-mix(in srgb, var(--color-text-subtle) 56%, transparent);
+  cursor: not-allowed;
+}
+
+.visible-text-editor__marks-label {
+  color: currentColor;
+  font-weight: 400;
+}
+
+.visible-text-editor__marks-value {
+  color: currentColor;
+  font-weight: 400;
+}
+
+.visible-text-editor__marks-chevron {
+  border-bottom: var(--border-width) solid currentColor;
+  border-right: var(--border-width) solid currentColor;
+  color: var(--color-text-subtle);
+  height: 0.375rem;
+  transform: translateY(-0.125rem) rotate(45deg);
+  width: 0.375rem;
+}
+
+.visible-text-editor__marks-menu {
+  background: var(--color-surface);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 86%, transparent);
+  border-radius: var(--radius-2);
+  box-shadow: 0 0.25rem 0.75rem color-mix(in srgb, var(--color-text) 10%, transparent);
+  display: grid;
+  inset-inline-start: 0;
+  min-width: 100%;
+  padding: 0.125rem;
+  position: absolute;
+  top: calc(100% + 0.125rem);
+  z-index: 90;
+}
+
+.visible-text-editor__marks-option {
+  background: transparent;
+  border: 0;
+  border-radius: calc(var(--radius-2) - 1px);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+  min-width: 3.75rem;
+  padding: 0.375rem var(--space-2);
+  text-align: start;
+}
+
+.visible-text-editor__marks-option:hover,
+.visible-text-editor__marks-option:focus-visible,
+.visible-text-editor__marks-option[aria-selected='true'] {
+  background: color-mix(in srgb, var(--color-text) 6%, var(--color-surface));
+  color: var(--color-text);
+  outline: none;
+}
+
+.visible-text-editor__icu-form-select {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-medium);
+  max-width: 8.5rem;
+}
+
 .visible-text-editor__exact-form {
   align-items: center;
   background: var(--color-surface);
@@ -148,6 +280,7 @@
   border-radius: var(--radius-2);
   color: var(--color-text-muted);
   display: inline-flex;
+  flex: 0 1 auto;
   height: 1.5rem;
   overflow: hidden;
 }
@@ -214,11 +347,14 @@
 
 .visible-text-editor__control-status {
   color: var(--color-text-subtle);
+  flex: 1 1 7rem;
   font-size: var(--font-size-xs);
   margin-inline-start: auto;
+  max-width: 100%;
   min-width: 0;
   overflow: hidden;
   padding-inline: var(--space-1);
+  text-align: end;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -227,11 +363,130 @@
   color: var(--color-danger);
 }
 
+.visible-text-editor__control-status--blocked {
+  color: color-mix(in srgb, var(--color-accent) 62%, var(--color-text));
+}
+
+.visible-text-editor__completion-menu {
+  background: var(--color-surface);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 86%, transparent);
+  border-radius: var(--radius-2);
+  box-shadow: 0 0.375rem 1rem color-mix(in srgb, var(--color-text) 12%, transparent);
+  display: grid;
+  min-width: 12rem;
+  overflow: hidden;
+  padding: 0.125rem;
+  position: absolute;
+  z-index: 90;
+}
+
+.visible-text-editor__completion-option {
+  align-items: baseline;
+  background: transparent;
+  border: 0;
+  border-radius: calc(var(--radius-2) - 1px);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  gap: var(--space-2);
+  justify-content: space-between;
+  line-height: 1.2;
+  padding: 0.35rem var(--space-2);
+  text-align: start;
+}
+
+.visible-text-editor__completion-option:hover,
+.visible-text-editor__completion-option:focus-visible,
+.visible-text-editor__completion-option[aria-selected='true'] {
+  background: color-mix(in srgb, var(--color-accent) 9%, var(--color-surface));
+  color: var(--color-text);
+  outline: none;
+}
+
+.visible-text-editor__completion-label {
+  color: currentColor;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  font-weight: var(--font-weight-medium);
+}
+
+.visible-text-editor__completion-detail {
+  color: var(--color-text-subtle);
+  font-size: 0.92em;
+  white-space: nowrap;
+}
+
+.visible-text-editor__diagnostic {
+  border-radius: 0.12rem;
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.16em;
+}
+
+.visible-text-editor__diagnostic--warning {
+  background: color-mix(in srgb, var(--color-warning) 7%, transparent);
+  text-decoration-color: color-mix(in srgb, var(--color-warning) 72%, transparent);
+}
+
+.visible-text-editor__diagnostic--error {
+  background: color-mix(in srgb, var(--color-danger) 7%, transparent);
+  text-decoration-color: color-mix(in srgb, var(--color-danger) 72%, transparent);
+}
+
+.visible-text-editor__drop-cursor {
+  background: color-mix(in srgb, var(--color-accent) 68%, var(--color-text));
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-surface) 90%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+  min-height: 1.4em;
+  pointer-events: none;
+}
+
+.visible-text-editor
+  .ProseMirror.visible-text-editor__editor--drop-allowed
+  .visible-text-editor__drop-cursor {
+  background: var(--color-accent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-surface) 92%, transparent),
+    0 0 0 4px color-mix(in srgb, var(--color-accent) 24%, transparent);
+}
+
+.visible-text-editor
+  .ProseMirror.visible-text-editor__editor--drop-blocked
+  .visible-text-editor__drop-cursor {
+  display: none;
+}
+
 .visible-text-editor .ProseMirror[data-empty='true']::before {
   color: var(--color-text-muted);
   content: attr(data-placeholder);
   float: left;
   height: 0;
+  pointer-events: none;
+}
+
+.visible-text-renderer {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.visible-text-renderer--interactive {
+  cursor: text;
+}
+
+.visible-text-renderer--disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.visible-text-renderer[data-empty='true']::before {
+  color: var(--color-text-muted);
+  content: attr(data-placeholder);
   pointer-events: none;
 }
 
@@ -288,13 +543,16 @@
 }
 
 .visible-text-editor__protected-token {
-  background: color-mix(in srgb, var(--color-border) 26%, var(--color-surface));
-  border: var(--border-width) solid color-mix(in srgb, var(--color-text-subtle) 34%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 9%, var(--color-surface));
+  border: var(--border-width) solid color-mix(in srgb, var(--color-accent) 46%, transparent);
   border-radius: var(--radius-2);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text-subtle) 10%, transparent);
-  color: color-mix(in srgb, var(--color-text) 86%, var(--color-text-muted));
+  box-shadow:
+    inset 0 -0.1rem 0 color-mix(in srgb, var(--color-accent) 22%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 10%, transparent);
+  color: color-mix(in srgb, var(--color-accent) 58%, var(--color-text));
+  cursor: default;
   display: inline-block;
-  font-weight: var(--font-weight-medium);
+  font-weight: 400;
   line-height: 1.16;
   margin: 0 1px;
   max-width: 100%;
@@ -304,31 +562,59 @@
   white-space: pre-wrap;
 }
 
-.visible-text-editor__protected-token--icu-placeholder,
-.visible-text-editor__protected-token--html-tag {
-  background: color-mix(in srgb, var(--color-accent) 11%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--color-accent) 38%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 10%, transparent);
-  color: color-mix(in srgb, var(--color-accent) 56%, var(--color-text));
+.visible-text-editor .ProseMirror .visible-text-editor__protected-token {
+  -webkit-user-drag: element;
+  cursor: grab;
+}
+
+.visible-text-editor .ProseMirror .visible-text-editor__protected-token:hover {
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-accent) 58%, transparent);
+  color: color-mix(in srgb, var(--color-accent) 64%, var(--color-text));
+}
+
+.visible-text-editor .ProseMirror .visible-text-editor__protected-token:active {
+  cursor: grabbing;
+}
+
+.visible-text-editor
+  .ProseMirror
+  .visible-text-editor__protected-token.visible-text-editor__protected-token--drop-boundary {
+  background: color-mix(in srgb, var(--color-accent) 16%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-accent) 68%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 18%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--color-accent) 16%, transparent);
+  color: color-mix(in srgb, var(--color-accent) 64%, var(--color-text));
+}
+
+.visible-text-editor
+  .ProseMirror
+  .visible-text-editor__protected-token.visible-text-editor__protected-token--drop-blocked {
+  background: color-mix(in srgb, var(--color-danger) 10%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-danger) 54%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 14%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--color-danger) 12%, transparent);
+  color: color-mix(in srgb, var(--color-danger) 42%, var(--color-text));
+  cursor: no-drop;
+}
+
+.visible-text-editor__protected-token.ProseMirror-selectednode {
+  background: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-accent) 70%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 24%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--color-accent) 18%, transparent);
+  color: color-mix(in srgb, var(--color-accent) 64%, var(--color-text));
 }
 
 .visible-text-editor__protected-token--icu-syntax,
 .visible-text-editor__protected-token--icu-pound {
-  background: color-mix(in srgb, var(--color-text-subtle) 8%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--color-text-subtle) 36%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text-subtle) 12%, transparent);
-  color: color-mix(in srgb, var(--color-text) 78%, var(--color-text-muted));
   font-size: 0.92em;
 }
 
 .visible-text-editor__protected-token--icu-pound {
   min-width: 1.1em;
   text-align: center;
-}
-
-.visible-text-editor__protected-token--mf2-demo {
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--color-accent) 38%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 14%, transparent);
-  color: color-mix(in srgb, var(--color-accent) 56%, var(--color-text));
 }

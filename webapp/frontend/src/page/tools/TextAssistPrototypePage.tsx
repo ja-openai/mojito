@@ -3,11 +3,20 @@ import './text-assist-prototype-page.css';
 import { useMemo, useRef, useState } from 'react';
 
 import {
+  type VisibleTextCompletionOption,
   VisibleTextEditor,
   type VisibleTextEditorHandle,
+  type VisibleTextMarksMode,
 } from '../../components/VisibleTextEditor';
 import {
+  applyMf2Completion,
+  getCompletionOptions,
+  getMf2DeclarationPlaceholderNames,
+  getNextMf2Completion,
+} from '../../utils/mf2TextModel';
+import {
   extractProtectedTextTokens,
+  getProtectedTextDiagnostics,
   type ProtectedTextToken,
 } from '../../utils/protectedTextTokens';
 import { buildTextAssistWarnings } from '../../utils/textCharacters';
@@ -48,6 +57,12 @@ const SAMPLES: Sample[] = [
     protectionMode: 'none',
   },
   {
+    label: 'Malformed placeholders',
+    text: 'Broken %1$ and %. placeholders; glued %1ds and %@name.',
+    direction: 'ltr',
+    protectionMode: 'icu-html',
+  },
+  {
     label: 'MF2 demo',
     text: '.input {$count :number}\n.match {$count}\none {{1 file}}\n* {{# files}}',
     direction: 'ltr',
@@ -78,25 +93,86 @@ const protectionOptions: Array<{ value: ProtectionMode; label: string }> = [
 
 export function TextAssistPrototypePage() {
   const [text, setText] = useState(DEFAULT_SAMPLE.text);
-  const [showInvisibles, setShowInvisibles] = useState(true);
+  const [completionSourceText, setCompletionSourceText] = useState(DEFAULT_SAMPLE.text);
+  const [marksMode, setMarksMode] = useState<VisibleTextMarksMode>('auto');
   const [direction, setDirection] = useState<DirectionMode>(DEFAULT_SAMPLE.direction);
   const [protectionMode, setProtectionMode] = useState<ProtectionMode>(
     DEFAULT_SAMPLE.protectionMode,
   );
+  const [editorSelection, setEditorSelection] = useState<{ start: number; end: number } | null>(
+    null,
+  );
   const editorRef = useRef<VisibleTextEditorHandle | null>(null);
 
-  const warnings = useMemo(() => buildTextAssistWarnings(text, text), [text]);
+  const protectedDiagnostics = useMemo(
+    () => getProtectedTextDiagnostics(text, protectionMode),
+    [protectionMode, text],
+  );
+  const warnings = useMemo(
+    () => [
+      ...buildTextAssistWarnings(text, text),
+      ...protectedDiagnostics.map((diagnostic) => ({
+        code: diagnostic.code,
+        message: diagnostic.message,
+      })),
+    ],
+    [protectedDiagnostics, text],
+  );
   const protectedTokens: ProtectedTextToken[] = useMemo(
     () => extractProtectedTextTokens(text, protectionMode),
     [protectionMode, text],
+  );
+  const mf2PlaceholderNames = useMemo(
+    () =>
+      protectionMode === 'mf2-demo' ? getMf2DeclarationPlaceholderNames(completionSourceText) : [],
+    [completionSourceText, protectionMode],
+  );
+  const mf2Completion = useMemo(
+    () =>
+      getNextMf2Completion({
+        disabled: protectionMode !== 'mf2-demo',
+        placeholderNames: mf2PlaceholderNames,
+        selectionEnd: editorSelection?.end ?? null,
+        selectionStart: editorSelection?.start ?? null,
+        text,
+      }),
+    [editorSelection, mf2PlaceholderNames, protectionMode, text],
+  );
+  const mf2CompletionOptions: VisibleTextCompletionOption[] = useMemo(
+    () =>
+      mf2Completion
+        ? getCompletionOptions(mf2PlaceholderNames, mf2Completion.query).map((name) => ({
+            id: name,
+            label: `{$${name}}`,
+            detail: 'source placeholder',
+          }))
+        : [],
+    [mf2Completion, mf2PlaceholderNames],
   );
 
   const applySample = (label: string) => {
     const sample = SAMPLES.find((item) => item.label === label) ?? DEFAULT_SAMPLE;
     setText(sample.text);
+    setCompletionSourceText(sample.text);
     setDirection(sample.direction);
     setProtectionMode(sample.protectionMode);
     window.requestAnimationFrame(() => editorRef.current?.focus());
+  };
+
+  const applyMf2PlaceholderCompletion = (option: VisibleTextCompletionOption) => {
+    if (!mf2Completion) {
+      return;
+    }
+
+    const result = applyMf2Completion(text, mf2Completion, option.id);
+    setText(result.nextValue);
+    window.requestAnimationFrame(() => {
+      editorRef.current?.setSelection({
+        start: result.nextSelection,
+        end: result.nextSelection,
+      });
+      editorRef.current?.focus();
+    });
   };
 
   return (
@@ -155,15 +231,27 @@ export function TextAssistPrototypePage() {
             ref={editorRef}
             ariaLabel="Text"
             className="text-assist-prototype__text-editor"
+            completion={
+              mf2CompletionOptions.length > 0
+                ? {
+                    ariaLabel: 'MF2 placeholder completions',
+                    onApply: applyMf2PlaceholderCompletion,
+                    options: mf2CompletionOptions,
+                  }
+                : undefined
+            }
             controlBar={{
-              onToggleInvisibles: () => setShowInvisibles((current) => !current),
+              marksMode,
+              onChangeMarksMode: setMarksMode,
               protectedTokenCount: protectedTokens.length,
             }}
             dir={direction}
             onChange={setText}
+            onSelectionChange={setEditorSelection}
             placeholder="Type text"
+            protectedDiagnostics={protectedDiagnostics}
             protectedTokens={protectedTokens}
-            showInvisibles={showInvisibles}
+            marksMode={marksMode}
             spellCheck
             value={text}
           />

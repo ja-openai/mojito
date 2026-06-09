@@ -84,7 +84,10 @@ import {
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
-import type { VisibleTextEditorHandle } from '../../components/VisibleTextEditor';
+import type {
+  VisibleTextEditorHandle,
+  VisibleTextMarksMode,
+} from '../../components/VisibleTextEditor';
 import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
 import { useUser } from '../../hooks/useUser';
 import { useVisibleTextEditorEnabled } from '../../hooks/useVisibleTextEditorEnabled';
@@ -1714,7 +1717,7 @@ function DetailPane({
   const [showStaleDecision, setShowStaleDecision] = useState(false);
 
   const [showSavingIndicator, setShowSavingIndicator] = useState(false);
-  const [showTranslationInvisibles, setShowTranslationInvisibles] = useState(true);
+  const [translationMarksMode, setTranslationMarksMode] = useState<VisibleTextMarksMode>('auto');
   const [icuPreviewMode, setIcuPreviewMode] = useState<'source' | 'target'>('target');
   const [activeContextTab, setActiveContextTab] = useState<ContextTab>('glossary');
   const [isAiCollapsed, setIsAiCollapsed] = useState(false);
@@ -1770,6 +1773,7 @@ function DetailPane({
     isVisibleTextEditorEnabled ? 'icu-html' : 'none',
   );
   const draftTargetProtectedTokens = draftTargetTokenGuard.protectedTokens;
+  const draftTargetProtectedDiagnostics = draftTargetTokenGuard.diagnostics;
   const validateDraftTarget = draftTargetTokenGuard.validateNextValue;
   const [draftTerminologyRecommendation, setDraftTerminologyRecommendation] =
     useState<ApiTerminologyFeedbackRecommendation | null>(terminologySnapshot.recommendation);
@@ -3468,16 +3472,18 @@ function DetailPane({
                   controlBar={
                     isVisibleTextEditorEnabled
                       ? {
-                          onToggleInvisibles: () =>
-                            setShowTranslationInvisibles((current) => !current),
+                          marksMode: translationMarksMode,
+                          onChangeMarksMode: setTranslationMarksMode,
                           protectedTokenCount: draftTargetProtectedTokens.length,
                         }
                       : undefined
                   }
                   spellCheck={true}
                   lang={translationLang}
+                  disabled={isSavingGlobal}
                   onKeyDown={handleTranslationEditorKeyDown}
-                  showInvisibles={showTranslationInvisibles}
+                  marksMode={translationMarksMode}
+                  protectedDiagnostics={draftTargetProtectedDiagnostics}
                   protectedTokens={draftTargetProtectedTokens}
                   validateNextValue={isVisibleTextEditorEnabled ? validateDraftTarget : undefined}
                 />

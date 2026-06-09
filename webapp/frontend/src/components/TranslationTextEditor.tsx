@@ -2,6 +2,7 @@ import {
   type CSSProperties,
   forwardRef,
   type KeyboardEvent as ReactKeyboardEvent,
+  useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -10,28 +11,36 @@ import {
 
 import {
   buildIcuExactPluralOptionInsertion,
-  getIcuPluralOptionInsertions,
+  getIcuFormInsertions,
+  getIcuMovableTextRanges,
+  type IcuFormInsertion,
+  type ProtectedTextDiagnostic,
   type ProtectedTextToken,
 } from '../utils/protectedTextTokens';
 import { AutoTextarea } from './AutoTextarea';
-import { VisibleTextEditor, type VisibleTextEditorHandle } from './VisibleTextEditor';
+import {
+  VisibleTextEditor,
+  type VisibleTextEditorHandle,
+  type VisibleTextMarksMode,
+} from './VisibleTextEditor';
 
 export type TranslationTextEditorKeyDownEvent =
   | KeyboardEvent
   | ReactKeyboardEvent<HTMLTextAreaElement>;
 
 type ControlBarOptions = {
-  onToggleInvisibles?: () => void;
+  marksMode?: VisibleTextMarksMode;
+  onChangeMarksMode?: (mode: VisibleTextMarksMode) => void;
   position?: 'bottom' | 'top';
   protectedTokenCount?: number;
-  protectedTokenLabel?: string;
 };
 
 type Props = {
   assisted: boolean;
   value: string;
   onChange: (nextValue: string) => void;
-  showInvisibles: boolean;
+  marksMode?: VisibleTextMarksMode;
+  showInvisibles?: boolean;
   ariaLabel?: string;
   className?: string;
   controlBar?: ControlBarOptions;
@@ -43,6 +52,7 @@ type Props = {
   onFocus?: () => void;
   onKeyDown?: (event: TranslationTextEditorKeyDownEvent) => void;
   placeholder?: string;
+  protectedDiagnostics?: ProtectedTextDiagnostic[];
   protectedTokens?: ProtectedTextToken[];
   readOnly?: boolean;
   spellCheck?: boolean;
@@ -50,12 +60,39 @@ type Props = {
   validateNextValue?: (nextValue: string) => boolean;
 };
 
+function getScopedIcuFormInsertions(
+  insertions: IcuFormInsertion[],
+  selection: { start: number; end: number } | null,
+): IcuFormInsertion[] {
+  if (!selection) {
+    return insertions;
+  }
+
+  const caret = selection.start;
+  const containingMessageInsertions = insertions.filter(
+    (insertion) => caret >= insertion.messageStart && caret < insertion.messageEnd,
+  );
+  if (containingMessageInsertions.length === 0) {
+    return insertions;
+  }
+
+  const smallestContainingMessageSize = Math.min(
+    ...containingMessageInsertions.map(
+      (insertion) => insertion.messageEnd - insertion.messageStart,
+    ),
+  );
+  return containingMessageInsertions.filter(
+    (insertion) => insertion.messageEnd - insertion.messageStart === smallestContainingMessageSize,
+  );
+}
+
 export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
   function TranslationTextEditor(
     {
       assisted,
       value,
       onChange,
+      marksMode,
       showInvisibles,
       ariaLabel = 'Text editor',
       className,
@@ -68,6 +105,7 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
       onFocus,
       onKeyDown,
       placeholder,
+      protectedDiagnostics,
       protectedTokens,
       readOnly = false,
       spellCheck = true,
@@ -85,6 +123,7 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
       null,
     );
     const usesVisibleEditor = assisted;
+    const hasControlBar = Boolean(controlBar);
     const usesVisibleEditorRef = useRef(usesVisibleEditor);
     const disabledRef = useRef(disabled);
     const readOnlyRef = useRef(readOnly);
@@ -95,27 +134,28 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
     disabledRef.current = disabled;
     readOnlyRef.current = readOnly;
 
-    const icuPluralOptionInsertions = useMemo(
+    useEffect(() => {
+      if (!assisted || !hasControlBar) {
+        setRawMode(false);
+      }
+    }, [assisted, hasControlBar]);
+
+    const icuFormInsertions = useMemo(
       () =>
         assisted && !rawMode && controlBar && !disabled && !readOnly
-          ? getIcuPluralOptionInsertions(value)
+          ? getIcuFormInsertions(value)
           : [],
       [assisted, controlBar, disabled, rawMode, readOnly, value],
     );
 
-    const scopedIcuPluralOptionInsertions = useMemo(() => {
-      if (!editorSelection) {
-        return icuPluralOptionInsertions;
-      }
+    const scopedIcuFormInsertions = useMemo(() => {
+      return getScopedIcuFormInsertions(icuFormInsertions, editorSelection);
+    }, [editorSelection, icuFormInsertions]);
 
-      const caret = editorSelection.start;
-      const containingPluralInsertions = icuPluralOptionInsertions.filter(
-        (insertion) => caret >= insertion.pluralStart && caret <= insertion.pluralEnd,
-      );
-      return containingPluralInsertions.length > 0
-        ? containingPluralInsertions
-        : icuPluralOptionInsertions;
-    }, [editorSelection, icuPluralOptionInsertions]);
+    const movableProtectedRanges = useMemo(
+      () => (assisted && !rawMode ? getIcuMovableTextRanges(value) : []),
+      [assisted, rawMode, value],
+    );
 
     const focusCurrentEditor = (nextUsesVisibleEditor = usesVisibleEditorRef.current) => {
       window.requestAnimationFrame(() => {
@@ -127,10 +167,10 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
       });
     };
 
-    const handleAddIcuPluralOption = (insertionId: string, exactValue?: string) => {
-      const insertion = icuPluralOptionInsertions.find((item) => item.id === insertionId);
+    const handleAddIcuForm = (insertionId: string, exactValue?: string) => {
+      const insertion = icuFormInsertions.find((item) => item.id === insertionId);
       if (!insertion) {
-        return { ok: false as const, error: 'That plural form is no longer available.' };
+        return { ok: false as const, error: 'That ICU form is no longer available.' };
       }
 
       const resolvedInsertion =
@@ -147,15 +187,12 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
         return resolvedInsertion;
       }
 
-      onChange(resolvedInsertion.nextValue);
-      window.requestAnimationFrame(() => {
-        visibleEditorRef.current?.setSelection({
-          start: resolvedInsertion.selectionStart,
-          end: resolvedInsertion.selectionEnd,
-        });
-        visibleEditorRef.current?.focus();
-      });
-      return { ok: true as const };
+      return {
+        ok: true as const,
+        nextValue: resolvedInsertion.nextValue,
+        selectionEnd: resolvedInsertion.selectionEnd,
+        selectionStart: resolvedInsertion.selectionStart,
+      };
     };
 
     const handleToggleRawMode = () => {
@@ -275,8 +312,11 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
           onKeyDown={(event) => onKeyDown?.(event)}
           onSelectionChange={setEditorSelection}
           placeholder={placeholder}
+          movableProtectedRanges={movableProtectedRanges}
+          protectedDiagnostics={protectedDiagnostics}
           protectedTokens={protectedTokens}
           readOnly={readOnly}
+          marksMode={marksMode}
           showInvisibles={showInvisibles}
           spellCheck={spellCheck}
           style={style}
@@ -294,8 +334,8 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
           className={className}
           controlBar={{
             ...controlBar,
-            icuPluralOptionInsertions: rawMode ? [] : scopedIcuPluralOptionInsertions,
-            onAddIcuPluralOption: rawMode ? undefined : handleAddIcuPluralOption,
+            icuFormInsertions: rawMode ? [] : scopedIcuFormInsertions,
+            onAddIcuForm: rawMode ? undefined : handleAddIcuForm,
             onToggleRawMode: handleToggleRawMode,
             rawMode,
           }}
@@ -307,8 +347,11 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
           onKeyDown={(event) => onKeyDown?.(event)}
           onSelectionChange={setEditorSelection}
           placeholder={placeholder}
+          movableProtectedRanges={rawMode ? [] : movableProtectedRanges}
+          protectedDiagnostics={protectedDiagnostics}
           protectedTokens={rawMode ? [] : protectedTokens}
           readOnly={readOnly}
+          marksMode={marksMode}
           showInvisibles={showInvisibles}
           spellCheck={spellCheck}
           style={style}

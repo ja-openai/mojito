@@ -29,6 +29,7 @@ import {
   searchTextUnits,
   type TextUnitSearchRequest,
 } from '../../api/text-units';
+import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
 import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
 import { useUser } from '../../hooks/useUser';
 import { useVisibleTextEditorEnabled } from '../../hooks/useVisibleTextEditorEnabled';
@@ -93,7 +94,7 @@ export function TextUnitDetailPage() {
   const [icuPreviewMode, setIcuPreviewMode] = useState<'source' | 'target'>('target');
   const [isAiCollapsed, setIsAiCollapsed] = useState(false);
   const isVisibleTextEditorEnabled = useVisibleTextEditorEnabled();
-  const [showTranslationInvisibles, setShowTranslationInvisibles] = useState(true);
+  const [translationMarksMode, setTranslationMarksMode] = useState<VisibleTextMarksMode>('auto');
 
   const [draftTarget, setDraftTarget] = useState('');
   const [baselineTarget, setBaselineTarget] = useState('');
@@ -360,6 +361,7 @@ export function TextUnitDetailPage() {
     useProtectedDetailEditor ? 'icu-html' : 'none',
   );
   const draftTargetProtectedTokens = draftTargetTokenGuard.protectedTokens;
+  const draftTargetProtectedDiagnostics = draftTargetTokenGuard.diagnostics;
   const validateDraftTarget = draftTargetTokenGuard.validateNextValue;
   const editorDirection = displayLocale && isRtlLocale(displayLocale) ? 'rtl' : 'ltr';
 
@@ -1107,8 +1109,9 @@ export function TextUnitDetailPage() {
       }}
       visibleTextEditor={{
         enabled: useProtectedDetailEditor,
-        showInvisibles: showTranslationInvisibles,
-        onToggleInvisibles: () => setShowTranslationInvisibles((current) => !current),
+        marksMode: translationMarksMode,
+        onChangeMarksMode: setTranslationMarksMode,
+        protectedDiagnostics: draftTargetProtectedDiagnostics,
         protectedTokens: draftTargetProtectedTokens,
         validateNextValue: validateDraftTarget,
         dir: editorDirection,

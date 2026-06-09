@@ -1,10 +1,17 @@
 import { type MessageFormatElement, parse, TYPE } from '@formatjs/icu-messageformat-parser';
 
+import {
+  getLiteralSourcePlaceholderNames,
+  getMf2DeclarationPlaceholderNames,
+  getMf2DiagnosticsForPlaceholders,
+} from './mf2TextModel';
+
 export type ProtectedTextTokenKind =
   | 'html-tag'
   | 'icu-placeholder'
   | 'icu-syntax'
   | 'icu-pound'
+  | 'platform-placeholder'
   | 'mf2-demo';
 export type ProtectedTextTokenMode = 'icu' | 'icu-html' | 'mf2-demo' | 'none';
 
@@ -13,6 +20,20 @@ export type ProtectedTextToken = {
   end: number;
   label: string;
   kind: ProtectedTextTokenKind;
+};
+
+export type ProtectedTextDiagnostic = {
+  start: number;
+  end: number;
+  severity: 'warning' | 'error';
+  code: string;
+  message: string;
+};
+
+export type ProtectedTextMovableRange = {
+  start: number;
+  end: number;
+  label: string;
 };
 
 type ProtectedTextStructureCheck = {
@@ -36,12 +57,13 @@ type OptionWithLocation = {
   value: MessageFormatElement[];
 };
 
-export type IcuPluralOptionInsertion = {
+export type IcuFormInsertion = {
   id: string;
   kind: 'category' | 'exact-value';
   label: string;
-  pluralEnd: number;
-  pluralStart: number;
+  messageType?: 'plural' | 'select';
+  messageEnd: number;
+  messageStart: number;
   nextValue?: string;
   selectionStart: number;
   selectionEnd: number;
@@ -53,6 +75,16 @@ const ICU_EXACT_VALUE_PATTERN = /^(?:0|[1-9]\d*)$/u;
 const MF2_DEMO_TOKEN_PATTERN =
   /\{\$[A-Za-z_][\w.-]*(?:\})?|:[A-Za-z_][\w.-]*|\.(?:input|match|local)\b/gu;
 const HTML_TAG_PATTERN = /<\/?\s*[A-Za-z][\w:.-]*(?:\s+[^<>]*?)?\/?\s*>/gu;
+const APPLE_STRINGSDICT_PLACEHOLDER_PATTERN = /%#@[A-Za-z_][\w.-]*@/gu;
+const APPLE_STRINGSDICT_PLACEHOLDER_LIKE_PATTERN = /%#@[A-Za-z_][\w.-]*/gu;
+const APPLE_STRINGSDICT_PLACEHOLDER_LIKE_PREFIX_PATTERN = /^%#@[A-Za-z_][\w.-]*/u;
+const PYTHON_NAMED_PLACEHOLDER_PATTERN =
+  /%\([A-Za-z_][\w.-]*\)[-+#0 ]*(?:\d+|\*)?(?:\.(?:\d+|\*))?(?:[hlL])?[diouxXeEfFgGcrsra]/gu;
+const PYTHON_NAMED_PLACEHOLDER_LIKE_PATTERN = /%\([A-Za-z_][\w.-]*(?:\))?/gu;
+const PLATFORM_PLACEHOLDER_PATTERN =
+  /%(?:\d+\$)?[-+#0,(<]*(?:\d+|\*)?(?:\.(?:\d+|\*))?(?:(?:hh|h|ll|l|q|L|z|t|j))?(?:[diuoxXfFeEgGaAcCsSp@]|[tT][A-Za-z]|n)/gu;
+const PLATFORM_PLACEHOLDER_LIKE_PATTERN = /%(?:\d+\.(?:\d+)?|\d+\$?|\.(?:\d+)?|\*)/gu;
+const PLACEHOLDER_ADJACENT_TEXT_PATTERN = /[\p{L}\p{N}_]/u;
 
 export function extractProtectedTextTokens(
   value: string,
@@ -71,6 +103,35 @@ export function extractProtectedTextTokens(
   }
 
   return extractMf2DemoProtectedTextTokens(value);
+}
+
+export function getProtectedTextDiagnostics(
+  value: string,
+  mode: ProtectedTextTokenMode,
+): ProtectedTextDiagnostic[] {
+  if (!value || mode === 'none') {
+    return [];
+  }
+
+  if (mode === 'icu-html') {
+    return extractPlatformPlaceholderDiagnostics(value);
+  }
+
+  if (mode === 'mf2-demo') {
+    return getMf2DiagnosticsForPlaceholders(
+      getMf2DeclarationPlaceholderNames(value),
+      getLiteralSourcePlaceholderNames(value),
+      value,
+    ).map((diagnostic, index) => ({
+      start: 0,
+      end: Math.max(1, value.length),
+      severity: diagnostic.severity,
+      code: `mf2-${diagnostic.severity}-${index + 1}`,
+      message: diagnostic.message,
+    }));
+  }
+
+  return [];
 }
 
 export function canParseProtectedTextTokens(value: string, mode: ProtectedTextTokenMode): boolean {
@@ -92,19 +153,15 @@ export function preservesProtectedTextTokenStructure({
     const nextAst = parseIcuMessage(nextValue);
 
     if (!previousAst || !nextAst) {
-      if (mode === 'icu-html') {
-        return hasSameProtectedTextTokenStructure({
-          previousValue,
-          previousTokens: previousTokens.filter((token) => token.kind === 'html-tag'),
-          nextValue,
-          nextTokens: extractHtmlTagTokens(nextValue),
-        });
-      }
-      return true;
+      return preservesProtectedTextTokenSequence({
+        previousValue,
+        previousTokens,
+        nextValue,
+      });
     }
   }
 
-  return hasSameProtectedTextTokenStructure({
+  return preservesRequiredProtectedTextTokenStructure({
     previousValue,
     previousTokens,
     nextValue,
@@ -112,7 +169,7 @@ export function preservesProtectedTextTokenStructure({
   });
 }
 
-function hasSameProtectedTextTokenStructure({
+function preservesRequiredProtectedTextTokenStructure({
   previousValue,
   previousTokens,
   nextValue,
@@ -126,11 +183,67 @@ function hasSameProtectedTextTokenStructure({
   const previousStructure = getProtectedTextTokenStructure(previousValue, previousTokens);
   const nextStructure = getProtectedTextTokenStructure(nextValue, nextTokens);
 
-  if (previousStructure.length !== nextStructure.length) {
-    return false;
+  let nextIndex = 0;
+  for (const [previousIndex, previousEntry] of previousStructure.entries()) {
+    const searchStart = nextIndex;
+    while (nextIndex < nextStructure.length && nextStructure[nextIndex] !== previousEntry) {
+      nextIndex += 1;
+    }
+
+    if (nextIndex >= nextStructure.length) {
+      return false;
+    }
+
+    // Extra tokens before an existing ICU boundary mean a plural/select skeleton was reshaped.
+    if (previousIndex > 0 && nextIndex > searchStart && isIcuStructuralTokenEntry(previousEntry)) {
+      return false;
+    }
+
+    nextIndex += 1;
+  }
+  return true;
+}
+
+function isIcuStructuralTokenEntry(entry: string): boolean {
+  return entry.startsWith('icu-syntax\u0000') || entry.startsWith('icu-pound\u0000');
+}
+
+export function relocateProtectedTextTokens(
+  previousValue: string,
+  previousTokens: ProtectedTextToken[],
+  nextValue: string,
+): ProtectedTextToken[] | null {
+  const relocatedTokens: ProtectedTextToken[] = [];
+  let cursor = 0;
+
+  for (const token of normalizeTokens(previousTokens)) {
+    const rawToken = previousValue.slice(token.start, token.end);
+    const nextOffset = nextValue.indexOf(rawToken, cursor);
+    if (nextOffset < 0) {
+      return null;
+    }
+
+    relocatedTokens.push({
+      ...token,
+      start: nextOffset,
+      end: nextOffset + rawToken.length,
+    });
+    cursor = nextOffset + rawToken.length;
   }
 
-  return previousStructure.every((entry, index) => entry === nextStructure[index]);
+  return relocatedTokens;
+}
+
+function preservesProtectedTextTokenSequence({
+  previousValue,
+  previousTokens,
+  nextValue,
+}: {
+  previousValue: string;
+  previousTokens: ProtectedTextToken[];
+  nextValue: string;
+}): boolean {
+  return relocateProtectedTextTokens(previousValue, previousTokens, nextValue) !== null;
 }
 
 function getProtectedTextTokenStructure(value: string, tokens: ProtectedTextToken[]): string[] {
@@ -148,15 +261,26 @@ export function extractIcuProtectedTextTokens(value: string): ProtectedTextToken
   return normalizeTokens(collectIcuTokens(ast));
 }
 
-export function getIcuPluralOptionInsertions(value: string): IcuPluralOptionInsertion[] {
+export function getIcuFormInsertions(value: string): IcuFormInsertion[] {
   const ast = parseIcuMessage(value);
   if (!ast) {
     return [];
   }
 
-  const insertions: IcuPluralOptionInsertion[] = [];
-  collectIcuPluralOptionInsertions(value, ast, insertions);
+  const insertions: IcuFormInsertion[] = [];
+  collectIcuFormInsertions(value, ast, insertions);
   return insertions;
+}
+
+export function getIcuMovableTextRanges(value: string): ProtectedTextMovableRange[] {
+  const ast = parseIcuMessage(value);
+  if (!ast) {
+    return [];
+  }
+
+  const ranges: ProtectedTextMovableRange[] = [];
+  collectIcuMovableTextRanges(ast, ranges);
+  return normalizeMovableRanges(value, ranges);
 }
 
 export type IcuExactPluralOptionInsertionResult =
@@ -173,7 +297,7 @@ export type IcuExactPluralOptionInsertionResult =
 
 export function buildIcuExactPluralOptionInsertion(
   value: string,
-  insertion: IcuPluralOptionInsertion,
+  insertion: IcuFormInsertion,
   rawExactValue: string,
 ): IcuExactPluralOptionInsertionResult {
   if (insertion.kind !== 'exact-value') {
@@ -190,8 +314,9 @@ export function buildIcuExactPluralOptionInsertion(
     return { ok: false, error: `${optionName} already exists.` };
   }
 
-  const text = `${optionName} {# } `;
-  const selectionStart = insertion.selectionStart + `${optionName} {# `.length;
+  const prefix = optionInsertionPrefix(value, insertion.selectionStart);
+  const text = `${prefix}${optionName} {# } `;
+  const selectionStart = insertion.selectionStart + prefix.length + `${optionName} {# `.length;
   return {
     ok: true,
     nextValue: `${value.slice(0, insertion.selectionStart)}${text}${value.slice(
@@ -203,7 +328,189 @@ export function buildIcuExactPluralOptionInsertion(
 }
 
 export function extractIcuAndHtmlProtectedTextTokens(value: string): ProtectedTextToken[] {
-  return normalizeTokens([...extractIcuProtectedTextTokens(value), ...extractHtmlTagTokens(value)]);
+  return normalizeTokens([
+    ...extractIcuProtectedTextTokens(value),
+    ...extractHtmlTagTokens(value),
+    ...extractPlatformPlaceholderTokens(value),
+  ]);
+}
+
+export function extractPlatformPlaceholderTokens(value: string): ProtectedTextToken[] {
+  const tokens: ProtectedTextToken[] = [];
+
+  for (const match of value.matchAll(APPLE_STRINGSDICT_PLACEHOLDER_PATTERN)) {
+    const raw = match[0];
+    const start = match.index ?? 0;
+    if (hasOddEscapingPercentRun(value, start)) {
+      continue;
+    }
+    tokens.push({
+      start,
+      end: start + raw.length,
+      label: `Apple stringsdict placeholder ${raw}`,
+      kind: 'platform-placeholder',
+    });
+  }
+
+  for (const match of value.matchAll(PYTHON_NAMED_PLACEHOLDER_PATTERN)) {
+    const raw = match[0];
+    const start = match.index ?? 0;
+    if (hasOddEscapingPercentRun(value, start)) {
+      continue;
+    }
+    tokens.push({
+      start,
+      end: start + raw.length,
+      label: `Platform placeholder ${raw}`,
+      kind: 'platform-placeholder',
+    });
+  }
+
+  for (const match of value.matchAll(PLATFORM_PLACEHOLDER_PATTERN)) {
+    const raw = match[0];
+    const start = match.index ?? 0;
+    if (
+      hasOddEscapingPercentRun(value, start) ||
+      isLikelyPythonNamedPlaceholderPrefix(value, start, raw) ||
+      isLikelyAppleStringsdictPlaceholderPrefix(value, start, raw)
+    ) {
+      continue;
+    }
+    tokens.push({
+      start,
+      end: start + raw.length,
+      label: `Platform placeholder ${raw}`,
+      kind: 'platform-placeholder',
+    });
+  }
+
+  return normalizeTokens(tokens);
+}
+
+export function extractPlatformPlaceholderDiagnostics(value: string): ProtectedTextDiagnostic[] {
+  const tokens = extractPlatformPlaceholderTokens(value);
+  const diagnostics: ProtectedTextDiagnostic[] = [];
+
+  tokens.forEach((token) => {
+    if (
+      token.label.startsWith('Platform placeholder %#@') &&
+      APPLE_STRINGSDICT_PLACEHOLDER_LIKE_PREFIX_PATTERN.test(value.slice(token.start))
+    ) {
+      return;
+    }
+
+    const nextChar = value.charAt(token.end);
+    if (!PLACEHOLDER_ADJACENT_TEXT_PATTERN.test(nextChar)) {
+      return;
+    }
+
+    const end = consumeIdentifierText(value, token.end);
+    diagnostics.push({
+      start: token.start,
+      end,
+      severity: 'warning',
+      code: 'placeholder-adjacent-text',
+      message: `Platform placeholder ${value.slice(
+        token.start,
+        token.end,
+      )} touches text; add a separator or verify the placeholder syntax.`,
+    });
+  });
+
+  for (const match of value.matchAll(APPLE_STRINGSDICT_PLACEHOLDER_LIKE_PATTERN)) {
+    const raw = match[0];
+    const start = match.index ?? 0;
+    const end = start + raw.length;
+    if (hasOddEscapingPercentRun(value, start) || value.charAt(end) === '@') {
+      continue;
+    }
+
+    diagnostics.push({
+      start,
+      end,
+      severity: 'warning',
+      code: 'placeholder-malformed',
+      message: `Apple stringsdict placeholder ${raw} is missing its closing @.`,
+    });
+  }
+
+  for (const match of value.matchAll(PYTHON_NAMED_PLACEHOLDER_LIKE_PATTERN)) {
+    const raw = match[0];
+    const start = match.index ?? 0;
+    const end = start + raw.length;
+    if (hasOddEscapingPercentRun(value, start) || overlapsToken(start, end, tokens)) {
+      continue;
+    }
+
+    diagnostics.push({
+      start,
+      end,
+      severity: 'warning',
+      code: 'placeholder-malformed',
+      message: raw.endsWith(')')
+        ? `Named placeholder ${raw} is missing its conversion type.`
+        : `Named placeholder ${raw} is missing its closing ).`,
+    });
+  }
+
+  for (const match of value.matchAll(PLATFORM_PLACEHOLDER_LIKE_PATTERN)) {
+    const raw = match[0];
+    const start = match.index ?? 0;
+    const end = start + raw.length;
+    if (hasOddEscapingPercentRun(value, start) || overlapsToken(start, end, tokens)) {
+      continue;
+    }
+
+    const diagnosticEnd = PLACEHOLDER_ADJACENT_TEXT_PATTERN.test(value.charAt(end))
+      ? consumeIdentifierText(value, end)
+      : end;
+    diagnostics.push({
+      start,
+      end: diagnosticEnd,
+      severity: 'warning',
+      code: 'placeholder-malformed',
+      message: `Placeholder-like sequence ${raw} is incomplete or malformed.`,
+    });
+  }
+
+  return normalizeDiagnostics(diagnostics);
+}
+
+function isLikelyPythonNamedPlaceholderPrefix(value: string, start: number, raw: string): boolean {
+  if (!raw.startsWith('%(')) {
+    return false;
+  }
+  return /[\p{L}\p{N}_)]/u.test(value.charAt(start + raw.length));
+}
+
+function isLikelyAppleStringsdictPlaceholderPrefix(
+  value: string,
+  start: number,
+  raw: string,
+): boolean {
+  return (
+    raw === '%#@' && APPLE_STRINGSDICT_PLACEHOLDER_LIKE_PREFIX_PATTERN.test(value.slice(start))
+  );
+}
+
+function hasOddEscapingPercentRun(value: string, offset: number): boolean {
+  let count = 0;
+  for (let index = offset - 1; index >= 0 && value.charAt(index) === '%'; index -= 1) {
+    count += 1;
+  }
+  return count % 2 === 1;
+}
+
+function consumeIdentifierText(value: string, start: number): number {
+  let end = start;
+  while (end < value.length && PLACEHOLDER_ADJACENT_TEXT_PATTERN.test(value.charAt(end))) {
+    end += 1;
+  }
+  return end;
+}
+
+function overlapsToken(start: number, end: number, tokens: ProtectedTextToken[]): boolean {
+  return tokens.some((token) => start < token.end && end > token.start);
 }
 
 function normalizeExactPluralValue(value: string): string | null {
@@ -347,16 +654,16 @@ function collectIcuStructuredTokens(element: LocatedElement): ProtectedTextToken
   return tokens;
 }
 
-function collectIcuPluralOptionInsertions(
+function collectIcuFormInsertions(
   value: string,
   elements: MessageFormatElement[],
-  insertions: IcuPluralOptionInsertion[],
+  insertions: IcuFormInsertion[],
 ) {
   elements.forEach((element) => {
-    if (element.type !== TYPE.plural) {
+    if (element.type !== TYPE.plural && element.type !== TYPE.select) {
       if ('options' in element) {
         Object.values(element.options as Record<string, OptionWithLocation>).forEach((option) => {
-          collectIcuPluralOptionInsertions(value, option.value, insertions);
+          collectIcuFormInsertions(value, option.value, insertions);
         });
       }
       return;
@@ -369,49 +676,85 @@ function collectIcuPluralOptionInsertions(
 
     const options = element.options as Record<string, OptionWithLocation>;
     const existingForms = new Set(Object.keys(options));
-    const insertionPoint = pluralInsertionPoint(value, range, options);
+    const insertionPoint = icuFormInsertionPoint(value, range, options);
     if (!insertionPoint) {
       return;
     }
 
-    ICU_PLURAL_FORM_ORDER.filter((form) => form !== 'other' && !existingForms.has(form)).forEach(
-      (form) => {
-        const text = `${form} {# } `;
-        const selectionStart = insertionPoint.offset + `${form} {# `.length;
-        const argumentName = element.value.trim() || 'plural';
-        insertions.push({
-          id: `${range.start}:${form}`,
-          kind: 'category',
-          label: `${argumentName}: ${form}`,
-          nextValue: `${value.slice(0, insertionPoint.offset)}${text}${value.slice(
-            insertionPoint.offset,
-          )}`,
-          pluralEnd: range.end,
-          pluralStart: range.start,
-          selectionStart,
-          selectionEnd: selectionStart,
-        });
-      },
-    );
+    const availableForms =
+      element.type === TYPE.plural
+        ? ICU_PLURAL_FORM_ORDER.filter((form) => !existingForms.has(form))
+        : existingForms.has('other')
+          ? []
+          : ['other'];
 
-    insertions.push({
-      id: `${range.start}:exact-value`,
-      kind: 'exact-value',
-      label: `${element.value.trim() || 'plural'}: exact value...`,
-      pluralEnd: range.end,
-      pluralStart: range.start,
-      selectionStart: insertionPoint.offset,
-      selectionEnd: insertionPoint.offset,
-      existingForms: [...existingForms],
+    availableForms.forEach((form) => {
+      const prefix = optionInsertionPrefix(value, insertionPoint.offset);
+      const bodyPrefix = element.type === TYPE.plural ? '# ' : ' ';
+      const text = `${prefix}${form} {${bodyPrefix}} `;
+      const selectionStart =
+        insertionPoint.offset + prefix.length + `${form} {${bodyPrefix}`.length;
+      const argumentName =
+        element.value.trim() || (element.type === TYPE.plural ? 'plural' : 'select');
+      insertions.push({
+        id: `${range.start}:${form}`,
+        kind: 'category',
+        label: `${argumentName}: ${form}`,
+        messageType: element.type === TYPE.plural ? 'plural' : 'select',
+        nextValue: `${value.slice(0, insertionPoint.offset)}${text}${value.slice(
+          insertionPoint.offset,
+        )}`,
+        messageEnd: range.end,
+        messageStart: range.start,
+        selectionStart,
+        selectionEnd: selectionStart,
+      });
     });
 
+    if (element.type === TYPE.plural) {
+      insertions.push({
+        id: `${range.start}:exact-value`,
+        kind: 'exact-value',
+        label: `${element.value.trim() || 'plural'}: exact value...`,
+        messageType: 'plural',
+        messageEnd: range.end,
+        messageStart: range.start,
+        selectionStart: insertionPoint.offset,
+        selectionEnd: insertionPoint.offset,
+        existingForms: [...existingForms],
+      });
+    }
+
     Object.values(options).forEach((option) => {
-      collectIcuPluralOptionInsertions(value, option.value, insertions);
+      collectIcuFormInsertions(value, option.value, insertions);
     });
   });
 }
 
-function pluralInsertionPoint(
+function collectIcuMovableTextRanges(
+  elements: MessageFormatElement[],
+  ranges: ProtectedTextMovableRange[],
+) {
+  elements.forEach((element) => {
+    if (element.type === TYPE.plural || element.type === TYPE.select) {
+      const range = rangeFromLocation(element.location);
+      if (range) {
+        ranges.push({
+          ...range,
+          label: `ICU ${element.type === TYPE.plural ? 'plural' : 'select'} message`,
+        });
+      }
+    }
+
+    if ('options' in element) {
+      Object.values(element.options as Record<string, OptionWithLocation>).forEach((option) => {
+        collectIcuMovableTextRanges(option.value, ranges);
+      });
+    }
+  });
+}
+
+function icuFormInsertionPoint(
   value: string,
   range: { start: number; end: number },
   options: Record<string, OptionWithLocation>,
@@ -424,6 +767,13 @@ function pluralInsertionPoint(
   }
 
   return { offset: Math.max(range.start, range.end - 1) };
+}
+
+function optionInsertionPrefix(value: string, offset: number): string {
+  if (offset <= 0 || /\s/u.test(value.charAt(offset - 1))) {
+    return '';
+  }
+  return ' ';
 }
 
 function optionKeywordStart(
@@ -485,6 +835,33 @@ function normalizeTokens(tokens: ProtectedTextToken[]): ProtectedTextToken[] {
     }
     output.push(token);
     cursor = token.end;
+  });
+
+  return output;
+}
+
+function normalizeMovableRanges(
+  value: string,
+  ranges: ProtectedTextMovableRange[],
+): ProtectedTextMovableRange[] {
+  return ranges
+    .filter((range) => range.start >= 0 && range.end > range.start && range.end <= value.length)
+    .sort((a, b) => a.start - b.start || a.end - b.end);
+}
+
+function normalizeDiagnostics(diagnostics: ProtectedTextDiagnostic[]): ProtectedTextDiagnostic[] {
+  const sorted = diagnostics
+    .filter((diagnostic) => diagnostic.start >= 0 && diagnostic.end > diagnostic.start)
+    .sort((a, b) => a.start - b.start || b.end - a.end);
+  const output: ProtectedTextDiagnostic[] = [];
+  let cursor = 0;
+
+  sorted.forEach((diagnostic) => {
+    if (diagnostic.start < cursor) {
+      return;
+    }
+    output.push(diagnostic);
+    cursor = diagnostic.end;
   });
 
   return output;

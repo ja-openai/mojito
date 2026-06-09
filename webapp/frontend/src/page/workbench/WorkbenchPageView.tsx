@@ -8,7 +8,11 @@ import type { TextUnitSearchRequest } from '../../api/text-units';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { IntegrityCheckAlertModal } from '../../components/IntegrityCheckAlertModal';
 import { Modal } from '../../components/Modal';
-import type { VisibleTextEditorHandle } from '../../components/VisibleTextEditor';
+import type {
+  VisibleTextEditorHandle,
+  VisibleTextMarksMode,
+} from '../../components/VisibleTextEditor';
+import { useVisibleTextEditorEnabled } from '../../hooks/useVisibleTextEditorEnabled';
 import type { GlossaryWorkbenchContext } from '../../utils/glossaryWorkbench';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
 import type { RepositorySelectionOption } from '../../utils/repositorySelection';
@@ -337,6 +341,9 @@ export function WorkbenchPageView({
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const isVisibleTextEditorEnabled = useVisibleTextEditorEnabled();
+  const [translationMarksMode, setTranslationMarksMode] = useState<VisibleTextMarksMode>('auto');
+  const [showProtectedTokens, setShowProtectedTokens] = useState(true);
   const editedCount = editedRowIds.size;
   const rowCount = rows.length;
   return (
@@ -410,6 +417,11 @@ export function WorkbenchPageView({
         isApplyingBulkAction={isApplyingBulkAction}
         onRequestDeleteAll={onRequestDeleteAll}
         onRequestBulkStatusChange={onRequestBulkStatusChange}
+        showDisplayOptions={isVisibleTextEditorEnabled}
+        marksMode={translationMarksMode}
+        onChangeMarksMode={setTranslationMarksMode}
+        showProtectedTokens={showProtectedTokens}
+        onChangeShowProtectedTokens={setShowProtectedTokens}
         onOpenExportModal={() => setIsExportModalOpen(true)}
         onOpenImportModal={() => setIsImportModalOpen(true)}
         collections={collections}
@@ -473,6 +485,10 @@ export function WorkbenchPageView({
         restoreScrollTop={restoreScrollTop}
         restoreRowId={restoreRowId}
         onRestoreScrollConsumed={onRestoreScrollConsumed}
+        isVisibleTextEditorEnabled={isVisibleTextEditorEnabled}
+        translationMarksMode={translationMarksMode}
+        onChangeTranslationMarksMode={setTranslationMarksMode}
+        showProtectedTokens={showProtectedTokens}
       />
       <HydrationModal data={hydrationModal} onClose={onDismissHydrationModal} />
       <ConfirmModal

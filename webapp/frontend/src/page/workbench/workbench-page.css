@@ -208,6 +208,10 @@
   min-width: 0;
 }
 
+.workbench-worksetbar__displaychip {
+  min-width: 0;
+}
+
 .workbench-worksetbar__sortbutton {
   border: 0;
   background: transparent;
@@ -239,6 +243,10 @@
 
 .workbench-worksetbar__sortchip .workbench-worksetbar__panel {
   min-width: 14rem;
+}
+
+.workbench-worksetbar__displaypanel {
+  min-width: 13rem;
 }
 
 .workbench-worksetbar__collection {

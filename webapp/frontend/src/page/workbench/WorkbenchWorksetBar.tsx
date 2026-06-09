@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { MultiSectionFilterChip } from '../../components/filters/MultiSectionFilterChip';
 import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
+import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
 import { resultSizePresets } from './workbench-constants';
 import type {
   WorkbenchCollection,
@@ -21,6 +22,21 @@ const resultSortDirectionOptions = [
   { value: 'default' as const, label: 'Default' },
   { value: 'asc' as const, label: 'A to Z' },
   { value: 'desc' as const, label: 'Z to A' },
+];
+
+const marksModeOptions = [
+  { value: 'auto' as const, label: 'Auto', helper: 'Show risky hidden characters.' },
+  { value: 'all' as const, label: 'All', helper: 'Show all supported hidden characters.' },
+  { value: 'off' as const, label: 'Off', helper: 'Hide hidden character markers.' },
+];
+
+const tokenDisplayOptions = [
+  {
+    value: 'on' as const,
+    label: 'On',
+    helper: 'Highlight placeholders, tags, and ICU markers.',
+  },
+  { value: 'off' as const, label: 'Off', helper: 'Render placeholder text without highlights.' },
 ];
 
 type WorkbenchWorksetBarProps = {
@@ -44,6 +60,11 @@ type WorkbenchWorksetBarProps = {
   isApplyingBulkAction: boolean;
   onRequestDeleteAll: () => void;
   onRequestBulkStatusChange: (status: string) => void;
+  showDisplayOptions: boolean;
+  marksMode: VisibleTextMarksMode;
+  onChangeMarksMode: (mode: VisibleTextMarksMode) => void;
+  showProtectedTokens: boolean;
+  onChangeShowProtectedTokens: (show: boolean) => void;
   onOpenExportModal: () => void;
   onOpenImportModal: () => void;
   onOpenShareModal: () => void;
@@ -85,6 +106,11 @@ export function WorkbenchWorksetBar({
   isApplyingBulkAction,
   onRequestDeleteAll,
   onRequestBulkStatusChange,
+  showDisplayOptions,
+  marksMode,
+  onChangeMarksMode,
+  showProtectedTokens,
+  onChangeShowProtectedTokens,
   onOpenExportModal,
   onOpenImportModal,
   onOpenShareModal,
@@ -179,6 +205,19 @@ export function WorkbenchWorksetBar({
     );
   }
 
+  if (hasSearched && showDisplayOptions) {
+    parts.push(
+      <DisplayDropdown
+        key="display"
+        disabled={disabled}
+        marksMode={marksMode}
+        onChangeMarksMode={onChangeMarksMode}
+        showProtectedTokens={showProtectedTokens}
+        onChangeShowProtectedTokens={onChangeShowProtectedTokens}
+      />,
+    );
+  }
+
   parts.push(
     <button
       key="reset"
@@ -266,6 +305,56 @@ export function WorkbenchWorksetBar({
     <div className="workbench-worksetbar">
       <div className="workbench-worksetbar__cluster">{content}</div>
     </div>
+  );
+}
+
+function DisplayDropdown({
+  disabled,
+  marksMode,
+  onChangeMarksMode,
+  showProtectedTokens,
+  onChangeShowProtectedTokens,
+}: {
+  disabled: boolean;
+  marksMode: VisibleTextMarksMode;
+  onChangeMarksMode: (mode: VisibleTextMarksMode) => void;
+  showProtectedTokens: boolean;
+  onChangeShowProtectedTokens: (show: boolean) => void;
+}) {
+  const marksModeLabel =
+    marksModeOptions.find((option) => option.value === marksMode)?.label ?? 'Auto';
+  const tokenDisplayValue = showProtectedTokens ? 'on' : 'off';
+  const tokenDisplayLabel = showProtectedTokens ? 'On' : 'Off';
+
+  return (
+    <MultiSectionFilterChip
+      align="left"
+      ariaLabel="Display options"
+      className="workbench-worksetbar__displaychip"
+      classNames={{
+        button: 'workbench-worksetbar__sortbutton',
+        panel: 'workbench-worksetbar__panel workbench-worksetbar__displaypanel',
+      }}
+      closeOnSelection
+      disabled={disabled}
+      summary={`Display: Hidden chars ${marksModeLabel.toLowerCase()} · Placeholders ${tokenDisplayLabel.toLowerCase()}`}
+      sections={[
+        {
+          kind: 'radio',
+          label: 'Hidden characters',
+          options: marksModeOptions,
+          value: marksMode,
+          onChange: (value) => onChangeMarksMode(value as VisibleTextMarksMode),
+        },
+        {
+          kind: 'radio',
+          label: 'Placeholder highlights',
+          options: tokenDisplayOptions,
+          value: tokenDisplayValue,
+          onChange: (value) => onChangeShowProtectedTokens(value === 'on'),
+        },
+      ]}
+    />
   );
 }
 

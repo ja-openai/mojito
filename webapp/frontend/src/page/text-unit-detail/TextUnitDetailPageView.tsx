@@ -21,8 +21,9 @@ import {
   type TextUnitHistoryTimelineEntry as TextUnitDetailHistoryRow,
 } from '../../components/TextUnitHistoryTimeline';
 import { TranslationTextEditor } from '../../components/TranslationTextEditor';
+import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
 import { getGlossaryTermScreenshotEvidence } from '../../utils/glossaryTermEvidence';
-import type { ProtectedTextToken } from '../../utils/protectedTextTokens';
+import type { ProtectedTextDiagnostic, ProtectedTextToken } from '../../utils/protectedTextTokens';
 
 export type TextUnitDetailMetaRow = {
   label: string;
@@ -79,8 +80,9 @@ type TextUnitDetailPageViewProps = {
   };
   visibleTextEditor: {
     enabled: boolean;
-    showInvisibles: boolean;
-    onToggleInvisibles: () => void;
+    marksMode: VisibleTextMarksMode;
+    onChangeMarksMode: (mode: VisibleTextMarksMode) => void;
+    protectedDiagnostics: ProtectedTextDiagnostic[];
     protectedTokens: ProtectedTextToken[];
     validateNextValue: (nextValue: string) => boolean;
     dir: 'ltr' | 'rtl' | 'auto';
@@ -307,7 +309,8 @@ export function TextUnitDetailPageView({
                 controlBar={
                   visibleTextEditor.enabled
                     ? {
-                        onToggleInvisibles: visibleTextEditor.onToggleInvisibles,
+                        marksMode: visibleTextEditor.marksMode,
+                        onChangeMarksMode: visibleTextEditor.onChangeMarksMode,
                         protectedTokenCount: visibleTextEditor.protectedTokens.length,
                       }
                     : undefined
@@ -317,8 +320,9 @@ export function TextUnitDetailPageView({
                 lang={previewLocale}
                 minRows={1}
                 placeholder="Add translated copy"
+                protectedDiagnostics={visibleTextEditor.protectedDiagnostics}
                 protectedTokens={visibleTextEditor.protectedTokens}
-                showInvisibles={visibleTextEditor.showInvisibles}
+                marksMode={visibleTextEditor.marksMode}
                 spellCheck={true}
                 style={{ resize: 'none' }}
                 validateNextValue={
