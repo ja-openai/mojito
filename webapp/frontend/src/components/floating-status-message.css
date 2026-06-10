@@ -1,0 +1,33 @@
+.floating-status-message {
+  position: fixed;
+  right: max(var(--space-5), env(safe-area-inset-right));
+  bottom: max(var(--space-5), env(safe-area-inset-bottom));
+  z-index: 80;
+  max-width: min(26rem, calc(100vw - var(--space-5) - var(--space-5)));
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid
+    color-mix(in srgb, var(--color-success, #1a7f37) 35%, transparent);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--color-success, #1a7f37) 9%, var(--color-surface));
+  color: var(--color-text);
+  box-shadow: 0 1rem 2.5rem -1.5rem rgba(15, 23, 42, 0.38);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  animation: fade-in-quick 0.18s ease-out;
+}
+
+.floating-status-message--error {
+  border-color: color-mix(in srgb, var(--color-danger) 42%, transparent);
+  background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
+  color: var(--color-danger);
+}
+
+@media (max-width: 600px) {
+  .floating-status-message {
+    right: max(var(--space-3), env(safe-area-inset-right));
+    bottom: max(var(--space-3), env(safe-area-inset-bottom));
+    left: max(var(--space-3), env(safe-area-inset-left));
+    max-width: none;
+  }
+}

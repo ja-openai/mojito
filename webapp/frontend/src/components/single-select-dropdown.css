@@ -38,6 +38,18 @@
   background: color-mix(in srgb, var(--color-border) 35%, transparent);
 }
 
+.single-select-dropdown__option:disabled,
+.single-select-dropdown__option.is-disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+  opacity: 0.72;
+}
+
+.single-select-dropdown__option:disabled:hover,
+.single-select-dropdown__option:disabled:focus-visible {
+  background: transparent;
+}
+
 .single-select-dropdown__option.is-selected {
   background: var(--color-surface-selected);
   color: var(--color-text);

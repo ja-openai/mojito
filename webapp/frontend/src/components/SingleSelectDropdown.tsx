@@ -11,6 +11,7 @@ export type SingleSelectOption<T extends string | number> = {
   value: T;
   label: string;
   helper?: string;
+  disabled?: boolean;
 };
 
 export type SingleSelectFooterAction = {
@@ -37,6 +38,8 @@ type Props<T extends string | number> = {
   searchable?: boolean;
   getOptionClassName?: (option: SingleSelectOption<T>) => string | undefined;
   footerAction?: SingleSelectFooterAction | null;
+  customValueLabel?: (query: string) => string;
+  onCustomValue?: (query: string) => void;
 };
 
 export function SingleSelectDropdown<T extends string | number>({
@@ -56,6 +59,8 @@ export function SingleSelectDropdown<T extends string | number>({
   searchable = true,
   getOptionClassName,
   footerAction = null,
+  customValueLabel,
+  onCustomValue,
 }: Props<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [filterQuery, setFilterQuery] = useState('');
@@ -121,8 +126,12 @@ export function SingleSelectDropdown<T extends string | number>({
   const resolvedPlaceholder = placeholder ?? label;
   const summary = buttonSummary ?? (selectedOption ? selectedOption.label : resolvedPlaceholder);
   const isPlaceholder = !selectedOption;
+  const supportsCustomValue = onCustomValue != null;
   const hasAnyPanelContent =
-    normalizedOptions.length > 0 || noneLabel != null || footerAction != null;
+    normalizedOptions.length > 0 ||
+    noneLabel != null ||
+    footerAction != null ||
+    supportsCustomValue;
   const isDisabled = disabled || (!hasAnyPanelContent && value === null);
 
   const visibleOptions = useMemo(() => {
@@ -132,6 +141,16 @@ export function SingleSelectDropdown<T extends string | number>({
     }
     return normalizedOptions.filter((option) => option.label.toLowerCase().includes(query));
   }, [filterQuery, normalizedOptions]);
+  const customQuery = filterQuery.trim();
+  const hasExactCustomMatch =
+    customQuery.length > 0 &&
+    normalizedOptions.some(
+      (option) =>
+        option.label.toLowerCase() === customQuery.toLowerCase() ||
+        String(option.value).toLowerCase() === customQuery.toLowerCase(),
+    );
+  const showCustomValueAction =
+    onCustomValue != null && customQuery.length > 0 && !hasExactCustomMatch;
 
   const filterInputPlaceholder = searchPlaceholder ?? `Filter ${label.toLowerCase()}`;
   const emptyLabel = noResultsLabel ?? 'No matches';
@@ -160,7 +179,7 @@ export function SingleSelectDropdown<T extends string | number>({
             <div className="chip-dropdown__panel" role="menu" ref={panelRef} style={panelStyle}>
               {hasAnyPanelContent ? (
                 <>
-                  {normalizedOptions.length && searchable ? (
+                  {(normalizedOptions.length || supportsCustomValue) && searchable ? (
                     <input
                       type="search"
                       value={filterQuery}
@@ -182,6 +201,18 @@ export function SingleSelectDropdown<T extends string | number>({
                       disabled={footerAction.disabled}
                     >
                       {footerAction.label}
+                    </button>
+                  ) : null}
+                  {showCustomValueAction ? (
+                    <button
+                      type="button"
+                      className="single-select-dropdown__footer-action single-select-dropdown__footer-action--top"
+                      onClick={() => {
+                        onCustomValue(customQuery);
+                        setIsOpen(false);
+                      }}
+                    >
+                      {customValueLabel?.(customQuery) ?? `Use ${customQuery}`}
                     </button>
                   ) : null}
                   <div className="single-select-dropdown__options">
@@ -208,10 +239,12 @@ export function SingleSelectDropdown<T extends string | number>({
                             className={[
                               'single-select-dropdown__option',
                               option.value === value ? 'is-selected' : '',
+                              option.disabled ? 'is-disabled' : '',
                               getOptionClassName?.(option) ?? '',
                             ]
                               .filter(Boolean)
                               .join(' ')}
+                            disabled={option.disabled}
                             onClick={() => {
                               onChange(option.value);
                               setIsOpen(false);

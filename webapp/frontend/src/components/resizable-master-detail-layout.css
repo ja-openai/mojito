@@ -1,0 +1,104 @@
+.resizable-master-detail-layout {
+  --resizable-master-detail-resize-handle-size: 0.625rem;
+  display: grid;
+  grid-template-columns:
+    minmax(17rem, var(--resizable-master-detail-sidebar-width, 34%))
+    var(--resizable-master-detail-resize-handle-size)
+    minmax(0, 1fr);
+  gap: 0;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 0;
+}
+
+.resizable-master-detail-layout__sidebar {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding-right: var(--space-4);
+}
+
+.resizable-master-detail-layout__detail {
+  min-width: 0;
+  min-height: 0;
+  padding-left: var(--space-4);
+}
+
+.resizable-master-detail-layout__resize-handle {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 100%;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.resizable-master-detail-layout__resize-handle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  height: 100%;
+  width: 1px;
+  background: color-mix(in srgb, var(--color-border) 55%, transparent);
+  z-index: 0;
+}
+
+.resizable-master-detail-layout__resize-handle:hover,
+.resizable-master-detail-layout__resize-handle:focus-visible,
+.resizable-master-detail-layout__resize-handle.is-resizing {
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  outline: none;
+}
+
+.resizable-master-detail-layout__handle-grip {
+  width: 0.625rem;
+  height: 3.125rem;
+  border-radius: var(--radius-pill);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 2px var(--color-surface);
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.resizable-master-detail-layout__resize-handle:hover .resizable-master-detail-layout__handle-grip,
+.resizable-master-detail-layout__resize-handle:focus-visible
+  .resizable-master-detail-layout__handle-grip,
+.resizable-master-detail-layout__resize-handle.is-resizing
+  .resizable-master-detail-layout__handle-grip {
+  border-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+@media (max-width: 70rem) {
+  .resizable-master-detail-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .resizable-master-detail-layout__sidebar,
+  .resizable-master-detail-layout__detail {
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .resizable-master-detail-layout__resize-handle {
+    display: none;
+  }
+}

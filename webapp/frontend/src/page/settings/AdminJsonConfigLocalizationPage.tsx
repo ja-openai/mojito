@@ -5,12 +5,7 @@ import './admin-json-config-localization-page.css';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { VirtualItem } from '@tanstack/react-virtual';
-import type {
-  CSSProperties,
-  KeyboardEvent as ReactKeyboardEvent,
-  PointerEvent as ReactPointerEvent,
-  ReactNode,
-} from 'react';
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
@@ -51,6 +46,7 @@ import {
 import { JsonCodeEditor, type JsonCodeEditorHandle } from '../../components/JsonCodeEditor';
 import { Modal } from '../../components/Modal';
 import { RepositoryMultiSelect } from '../../components/RepositoryMultiSelect';
+import { ResizableMasterDetailLayout } from '../../components/ResizableMasterDetailLayout';
 import { SearchControl } from '../../components/SearchControl';
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
@@ -172,9 +168,6 @@ const SOURCE_SEARCH_LIMIT = 500;
 const TARGET_SEARCH_LIMIT = 5000;
 const AI_TRANSLATE_TIMEOUT_MS = 5 * 60 * 1000;
 const STRING_LIST_WIDTH_STORAGE_KEY = 'json-config-localization:string-list-width-percent';
-const DEFAULT_STRING_LIST_WIDTH_PERCENT = 34;
-const MIN_STRING_LIST_WIDTH_PERCENT = 24;
-const MAX_STRING_LIST_WIDTH_PERCENT = 48;
 const JSON_CONFIG_LOCALIZATION_TABS: Array<{ id: JsonConfigLocalizationTab; label: string }> = [
   { id: 'CONFIG', label: 'Config' },
   { id: 'STRINGS', label: 'Strings' },
@@ -960,76 +953,9 @@ function JsonConfigLocalizationWorkspace({
   const [statsigSyncProgress, setStatsigSyncProgress] = useState<StatsigSyncProgress | null>(null);
   const [translateProgress, setTranslateProgress] = useState<StatsigSyncProgress | null>(null);
   const configEditorRef = useRef<JsonCodeEditorHandle | null>(null);
-  const stringLayoutRef = useRef<HTMLDivElement | null>(null);
   const pendingSchemaPresetTextRef = useRef<string | null>(null);
   const [pendingConfigFocusTarget, setPendingConfigFocusTarget] =
     useState<ConfigEditorFocusTarget | null>(null);
-  const [stringListWidthPercent, setStringListWidthPercentState] = useState(() =>
-    clampNumber(
-      readStoredNumber(STRING_LIST_WIDTH_STORAGE_KEY, DEFAULT_STRING_LIST_WIDTH_PERCENT),
-      MIN_STRING_LIST_WIDTH_PERCENT,
-      MAX_STRING_LIST_WIDTH_PERCENT,
-    ),
-  );
-  const [isStringListResizing, setIsStringListResizing] = useState(false);
-  const setStringListWidthPercent = useCallback((nextValue: number) => {
-    const clampedValue = clampNumber(
-      nextValue,
-      MIN_STRING_LIST_WIDTH_PERCENT,
-      MAX_STRING_LIST_WIDTH_PERCENT,
-    );
-    setStringListWidthPercentState(clampedValue);
-    try {
-      window.localStorage.setItem(STRING_LIST_WIDTH_STORAGE_KEY, String(clampedValue));
-    } catch {
-      // Ignore storage failures; resizing should still work for the current session.
-    }
-  }, []);
-  const handleStringListResizePointerDown = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      const layoutElement = stringLayoutRef.current;
-      if (!layoutElement) {
-        return;
-      }
-      setIsStringListResizing(true);
-
-      const resizeFromClientX = (clientX: number) => {
-        const rect = layoutElement.getBoundingClientRect();
-        if (!rect.width) {
-          return;
-        }
-        setStringListWidthPercent(((clientX - rect.left) / rect.width) * 100);
-      };
-
-      resizeFromClientX(event.clientX);
-
-      const handlePointerMove = (moveEvent: PointerEvent) => {
-        resizeFromClientX(moveEvent.clientX);
-      };
-      const stopResize = () => {
-        setIsStringListResizing(false);
-        window.removeEventListener('pointermove', handlePointerMove);
-        window.removeEventListener('pointerup', stopResize);
-        window.removeEventListener('pointercancel', stopResize);
-      };
-
-      window.addEventListener('pointermove', handlePointerMove);
-      window.addEventListener('pointerup', stopResize);
-      window.addEventListener('pointercancel', stopResize);
-    },
-    [setStringListWidthPercent],
-  );
-  const handleStringListResizeKeyDown = useCallback(
-    (event: ReactKeyboardEvent<HTMLDivElement>) => {
-      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
-        return;
-      }
-      event.preventDefault();
-      setStringListWidthPercent(stringListWidthPercent + (event.key === 'ArrowRight' ? 2 : -2));
-    },
-    [setStringListWidthPercent, stringListWidthPercent],
-  );
 
   const jsonConfigLocalizationSetupsQuery = useQuery({
     queryKey: ['json-config-localizations', 'repository', repositoryId, 'setups'],
@@ -2962,9 +2888,6 @@ function JsonConfigLocalizationWorkspace({
       ? 'Add an entry here, or use Config to paste, pull, and extract JSON.'
       : 'Add a source string to start authoring translations.';
   const showStringListEmpty = hasStringFilters || Boolean(selectedString);
-  const stringLayoutStyle = {
-    '--json-config-localization-list-width': `${stringListWidthPercent}%`,
-  } as CSSProperties;
   const publishConfigStrip = isStatsigProvider ? (
     <div className="json-config-localization-page__publish-strip">
       <strong>Publish config</strong>
@@ -3714,330 +3637,315 @@ function JsonConfigLocalizationWorkspace({
                   />
                 </div>
               ) : null}
-              <div
-                ref={stringLayoutRef}
-                className={`json-config-localization-page__layout json-config-localization-page__layout--resizable ${
-                  isStringListResizing ? 'is-resizing' : ''
-                }`}
-                style={stringLayoutStyle}
-              >
-                <aside
-                  className="json-config-localization-page__list-pane"
-                  aria-label="Source strings"
-                >
-                  <div className="json-config-localization-page__list-toolbar">
-                    <SearchControl
-                      value={stringSearch}
-                      onChange={setStringSearch}
-                      placeholder="Search strings"
-                      inputAriaLabel="Search source strings"
-                      className="json-config-localization-page__list-search"
-                    />
-                    <MultiSectionFilterChip
-                      sections={stringFilterSections}
-                      align="left"
-                      summary={stringFilterSummary}
-                      ariaLabel="Filter source strings"
-                      className="json-config-localization-page__filter-chip"
-                      classNames={{
-                        button: 'json-config-localization-page__filter-chip-button',
-                        panel: 'json-config-localization-page__filter-chip-panel',
-                      }}
-                      disabled={isBusy}
-                    />
-                    {isSourceConfigBacked ? (
-                      <button
-                        type="button"
-                        className="settings-button settings-button--primary"
-                        onClick={addConfigString}
-                        disabled={isBusy}
-                      >
-                        Add entry
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="settings-button settings-button--primary"
-                        onClick={addString}
-                      >
-                        Add string
-                      </button>
-                    )}
-                  </div>
-                  <div className="json-config-localization-page__string-list">
-                    {sourceRowsQuery.isLoading ? (
-                      <div className="json-config-localization-page__empty">Loading strings...</div>
-                    ) : visibleStrings.length ? (
-                      <VirtualList
-                        scrollRef={stringListScrollRef}
-                        items={stringVirtualItems}
-                        totalSize={stringListTotalSize}
-                        renderRow={(virtualItem: VirtualItem) => {
-                          const sourceString = visibleStrings[virtualItem.index];
-                          if (!sourceString) {
-                            return null;
-                          }
-                          return {
-                            key: virtualItem.key,
-                            props: {
-                              ref: measureStringRow,
-                            },
-                            content: (
-                              <StringListRow
-                                sourceString={sourceString}
-                                readiness={readinessByString[sourceString.clientId]}
-                                isActive={sourceString.clientId === selectedClientId}
-                                isDraft={sourceString.tmTextUnitId == null}
-                                onSelect={() => setSelectedClientId(sourceString.clientId)}
-                              />
-                            ),
-                          };
-                        }}
+              <ResizableMasterDetailLayout
+                className="json-config-localization-page__string-layout"
+                storageKey={STRING_LIST_WIDTH_STORAGE_KEY}
+                sidebarLabel="Source strings"
+                detailLabel="String editor"
+                resizeLabel="Resize source string list"
+                sidebarClassName="json-config-localization-page__list-pane"
+                detailClassName="json-config-localization-page__detail-pane"
+                sidebar={
+                  <>
+                    <div className="json-config-localization-page__list-toolbar">
+                      <SearchControl
+                        value={stringSearch}
+                        onChange={setStringSearch}
+                        placeholder="Search strings"
+                        inputAriaLabel="Search source strings"
+                        className="json-config-localization-page__list-search"
                       />
-                    ) : showStringListEmpty ? (
-                      <div className="json-config-localization-page__list-empty">
-                        <strong>{stringEmptyTitle}</strong>
-                        <span>{stringEmptyMessage}</span>
-                      </div>
-                    ) : (
-                      <div aria-hidden="true" />
-                    )}
-                  </div>
-                </aside>
-
-                <div
-                  className={`json-config-localization-page__resize-handle ${
-                    isStringListResizing ? 'is-resizing' : ''
-                  }`}
-                  role="separator"
-                  aria-label="Resize source string list"
-                  aria-orientation="vertical"
-                  aria-valuemin={MIN_STRING_LIST_WIDTH_PERCENT}
-                  aria-valuemax={MAX_STRING_LIST_WIDTH_PERCENT}
-                  aria-valuenow={Math.round(stringListWidthPercent)}
-                  tabIndex={0}
-                  onPointerDown={handleStringListResizePointerDown}
-                  onKeyDown={handleStringListResizeKeyDown}
-                />
-
-                <section
-                  className="json-config-localization-page__detail-pane"
-                  aria-label="String editor"
-                >
-                  {selectedString ? (
-                    <>
-                      <div className="json-config-localization-page__editor-header">
-                        <div>
-                          <div className="json-config-localization-page__eyebrow">
-                            {selectedString.tmTextUnitId ? (
-                              <span className="json-config-localization-page__text-unit-meta">
-                                <span>Text unit {selectedString.tmTextUnitId}</span>
-                                <button
-                                  type="button"
-                                  className="json-config-localization-page__text-unit-action"
-                                  onClick={() =>
-                                    selectedString.tmTextUnitId
-                                      ? openTextUnitInWorkbench(selectedString.tmTextUnitId)
-                                      : undefined
-                                  }
-                                >
-                                  Show in Workbench
-                                </button>
-                              </span>
-                            ) : (
-                              'New string'
-                            )}
-                          </div>
-                          <h2>{selectedString.stringId || 'Untitled string'}</h2>
-                          {selectedString.createdDate ? (
-                            <div className="json-config-localization-page__detail-meta">
-                              Created {formatDateTime(selectedString.createdDate)}
-                            </div>
-                          ) : null}
-                        </div>
-                        <label className="settings-toggle">
-                          <input
-                            type="checkbox"
-                            checked={selectedString.used}
-                            onChange={(event) =>
-                              updateSelectedString({ used: event.target.checked })
-                            }
-                          />
-                          Include in bundle
-                        </label>
-                      </div>
-                      {selectedStringIsMissingFromSourceConfig ? (
-                        <div className="json-config-localization-page__empty is-error">
-                          This active string is from an older extraction and is not in the current
-                          Config JSON. Extract again after the backend restarts, or remove it from
-                          the bundle.
-                        </div>
-                      ) : null}
-
-                      <div className="json-config-localization-page__editor-grid">
-                        <label className="settings-field">
-                          <span className="settings-field__label">String id</span>
-                          <span className="settings-field__row">
-                            <input
-                              className="settings-input"
-                              value={selectedString.stringId}
-                              readOnly={isSourceConfigBacked}
-                              onChange={(event) => {
-                                if (!isSourceConfigBacked) {
-                                  updateSelectedString({ stringId: event.target.value });
-                                }
-                              }}
-                              onBlur={() =>
-                                !isSourceConfigBacked
-                                  ? updateSelectedString({
-                                      stringId: normalizeSourceStringId(selectedString.stringId),
-                                    })
-                                  : undefined
-                              }
-                            />
-                            {isSourceConfigBacked ? null : (
-                              <button
-                                type="button"
-                                className="settings-button"
-                                onClick={() =>
-                                  updateSelectedString({
-                                    stringId: normalizeSourceStringId(selectedString.stringId),
-                                  })
-                                }
-                              >
-                                Normalize
-                              </button>
-                            )}
-                          </span>
-                          {isSourceConfigBacked ? (
-                            <span className="settings-hint">
-                              Generated from Config JSON and extraction mapping.
-                            </span>
-                          ) : null}
-                        </label>
-                        <label className="settings-field">
-                          <span className="settings-field__label">English source</span>
-                          <textarea
-                            className="settings-input json-config-localization-page__textarea"
-                            value={selectedString.source}
-                            readOnly={false}
-                            onChange={(event) => {
-                              updateSelectedString({ source: event.target.value });
-                            }}
-                          />
-                          {isSourceConfigBacked ? (
-                            <span className="settings-hint">
-                              Save this string to create the Mojito text unit and update Config
-                              JSON.
-                            </span>
-                          ) : null}
-                        </label>
-                        <label className="settings-field">
-                          <span className="settings-field__label">Source comment</span>
-                          <textarea
-                            className="settings-input json-config-localization-page__textarea json-config-localization-page__textarea--compact"
-                            value={selectedString.comment}
-                            readOnly={false}
-                            onChange={(event) => {
-                              updateSelectedString({ comment: event.target.value });
-                            }}
-                          />
-                        </label>
-                        <label className="settings-toggle">
-                          <input
-                            type="checkbox"
-                            checked={selectedString.doNotTranslate}
-                            onChange={(event) =>
-                              updateSelectedString({ doNotTranslate: event.target.checked })
-                            }
-                          />
-                          Do not translate
-                        </label>
-                      </div>
-
-                      <div className="json-config-localization-page__actions">
+                      <MultiSectionFilterChip
+                        sections={stringFilterSections}
+                        align="left"
+                        summary={stringFilterSummary}
+                        ariaLabel="Filter source strings"
+                        className="json-config-localization-page__filter-chip"
+                        classNames={{
+                          button: 'json-config-localization-page__filter-chip-button',
+                          panel: 'json-config-localization-page__filter-chip-panel',
+                        }}
+                        disabled={isBusy}
+                      />
+                      {isSourceConfigBacked ? (
                         <button
                           type="button"
                           className="settings-button settings-button--primary"
-                          onClick={() => saveMutation.mutate()}
-                          disabled={isBusy || !draftStrings.length}
+                          onClick={addConfigString}
+                          disabled={isBusy}
                         >
-                          Save
+                          Add entry
                         </button>
+                      ) : (
                         <button
                           type="button"
-                          className="settings-button"
-                          onClick={toggleSelectedBundleInclusion}
+                          className="settings-button settings-button--primary"
+                          onClick={addString}
                         >
-                          {selectedString.tmTextUnitId == null
-                            ? 'Discard draft'
-                            : selectedString.used
-                              ? 'Remove from bundle'
-                              : 'Restore to bundle'}
+                          Add string
                         </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="json-config-localization-page__empty-state-card">
-                      <div>
-                        <h3>{stringEmptyTitle}</h3>
-                        <p>{stringEmptyMessage}</p>
-                      </div>
-                      <div className="json-config-localization-page__empty-state-actions">
-                        {hasStringFilters ? (
-                          <button
-                            type="button"
-                            className="settings-button"
-                            onClick={clearStringFilters}
-                            disabled={isBusy}
-                          >
-                            Show all strings
-                          </button>
-                        ) : null}
-                        {isSourceConfigBacked ? (
-                          <>
-                            <button
-                              type="button"
-                              className="settings-button settings-button--primary"
-                              onClick={addConfigString}
-                              disabled={isBusy}
-                            >
-                              Add entry
-                            </button>
-                            <button
-                              type="button"
-                              className="settings-button"
-                              onClick={() => setActiveTab('CONFIG')}
-                              disabled={isBusy}
-                            >
-                              Open Config
-                            </button>
-                            {isStatsigProvider ? (
-                              <button
-                                type="button"
-                                className="settings-button"
-                                onClick={() => pullStatsigMutation.mutate(true)}
-                                disabled={isBusy || !providerConfigId.trim()}
-                              >
-                                Pull from Statsig
-                              </button>
+                      )}
+                    </div>
+                    <div className="json-config-localization-page__string-list">
+                      {sourceRowsQuery.isLoading ? (
+                        <div className="json-config-localization-page__empty">
+                          Loading strings...
+                        </div>
+                      ) : visibleStrings.length ? (
+                        <VirtualList
+                          scrollRef={stringListScrollRef}
+                          items={stringVirtualItems}
+                          totalSize={stringListTotalSize}
+                          renderRow={(virtualItem: VirtualItem) => {
+                            const sourceString = visibleStrings[virtualItem.index];
+                            if (!sourceString) {
+                              return null;
+                            }
+                            return {
+                              key: virtualItem.key,
+                              props: {
+                                ref: measureStringRow,
+                              },
+                              content: (
+                                <StringListRow
+                                  sourceString={sourceString}
+                                  readiness={readinessByString[sourceString.clientId]}
+                                  isActive={sourceString.clientId === selectedClientId}
+                                  isDraft={sourceString.tmTextUnitId == null}
+                                  onSelect={() => setSelectedClientId(sourceString.clientId)}
+                                />
+                              ),
+                            };
+                          }}
+                        />
+                      ) : showStringListEmpty ? (
+                        <div className="json-config-localization-page__list-empty">
+                          <strong>{stringEmptyTitle}</strong>
+                          <span>{stringEmptyMessage}</span>
+                        </div>
+                      ) : (
+                        <div aria-hidden="true" />
+                      )}
+                    </div>
+                  </>
+                }
+                detail={
+                  <>
+                    {selectedString ? (
+                      <>
+                        <div className="json-config-localization-page__editor-header">
+                          <div>
+                            <div className="json-config-localization-page__eyebrow">
+                              {selectedString.tmTextUnitId ? (
+                                <span className="json-config-localization-page__text-unit-meta">
+                                  <span>Text unit {selectedString.tmTextUnitId}</span>
+                                  <button
+                                    type="button"
+                                    className="json-config-localization-page__text-unit-action"
+                                    onClick={() =>
+                                      selectedString.tmTextUnitId
+                                        ? openTextUnitInWorkbench(selectedString.tmTextUnitId)
+                                        : undefined
+                                    }
+                                  >
+                                    Show in Workbench
+                                  </button>
+                                </span>
+                              ) : (
+                                'New string'
+                              )}
+                            </div>
+                            <h2>{selectedString.stringId || 'Untitled string'}</h2>
+                            {selectedString.createdDate ? (
+                              <div className="json-config-localization-page__detail-meta">
+                                Created {formatDateTime(selectedString.createdDate)}
+                              </div>
                             ) : null}
-                          </>
-                        ) : (
+                          </div>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={selectedString.used}
+                              onChange={(event) =>
+                                updateSelectedString({ used: event.target.checked })
+                              }
+                            />
+                            Include in bundle
+                          </label>
+                        </div>
+                        {selectedStringIsMissingFromSourceConfig ? (
+                          <div className="json-config-localization-page__empty is-error">
+                            This active string is from an older extraction and is not in the current
+                            Config JSON. Extract again after the backend restarts, or remove it from
+                            the bundle.
+                          </div>
+                        ) : null}
+
+                        <div className="json-config-localization-page__editor-grid">
+                          <label className="settings-field">
+                            <span className="settings-field__label">String id</span>
+                            <span className="settings-field__row">
+                              <input
+                                className="settings-input"
+                                value={selectedString.stringId}
+                                readOnly={isSourceConfigBacked}
+                                onChange={(event) => {
+                                  if (!isSourceConfigBacked) {
+                                    updateSelectedString({ stringId: event.target.value });
+                                  }
+                                }}
+                                onBlur={() =>
+                                  !isSourceConfigBacked
+                                    ? updateSelectedString({
+                                        stringId: normalizeSourceStringId(selectedString.stringId),
+                                      })
+                                    : undefined
+                                }
+                              />
+                              {isSourceConfigBacked ? null : (
+                                <button
+                                  type="button"
+                                  className="settings-button"
+                                  onClick={() =>
+                                    updateSelectedString({
+                                      stringId: normalizeSourceStringId(selectedString.stringId),
+                                    })
+                                  }
+                                >
+                                  Normalize
+                                </button>
+                              )}
+                            </span>
+                            {isSourceConfigBacked ? (
+                              <span className="settings-hint">
+                                Generated from Config JSON and extraction mapping.
+                              </span>
+                            ) : null}
+                          </label>
+                          <label className="settings-field">
+                            <span className="settings-field__label">English source</span>
+                            <textarea
+                              className="settings-input json-config-localization-page__textarea"
+                              value={selectedString.source}
+                              readOnly={false}
+                              onChange={(event) => {
+                                updateSelectedString({ source: event.target.value });
+                              }}
+                            />
+                            {isSourceConfigBacked ? (
+                              <span className="settings-hint">
+                                Save this string to create the Mojito text unit and update Config
+                                JSON.
+                              </span>
+                            ) : null}
+                          </label>
+                          <label className="settings-field">
+                            <span className="settings-field__label">Source comment</span>
+                            <textarea
+                              className="settings-input json-config-localization-page__textarea json-config-localization-page__textarea--compact"
+                              value={selectedString.comment}
+                              readOnly={false}
+                              onChange={(event) => {
+                                updateSelectedString({ comment: event.target.value });
+                              }}
+                            />
+                          </label>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={selectedString.doNotTranslate}
+                              onChange={(event) =>
+                                updateSelectedString({ doNotTranslate: event.target.checked })
+                              }
+                            />
+                            Do not translate
+                          </label>
+                        </div>
+
+                        <div className="json-config-localization-page__actions">
                           <button
                             type="button"
                             className="settings-button settings-button--primary"
-                            onClick={addString}
-                            disabled={isBusy}
+                            onClick={() => saveMutation.mutate()}
+                            disabled={isBusy || !draftStrings.length}
                           >
-                            Add string
+                            Save
                           </button>
-                        )}
+                          <button
+                            type="button"
+                            className="settings-button"
+                            onClick={toggleSelectedBundleInclusion}
+                          >
+                            {selectedString.tmTextUnitId == null
+                              ? 'Discard draft'
+                              : selectedString.used
+                                ? 'Remove from bundle'
+                                : 'Restore to bundle'}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="json-config-localization-page__empty-state-card">
+                        <div>
+                          <h3>{stringEmptyTitle}</h3>
+                          <p>{stringEmptyMessage}</p>
+                        </div>
+                        <div className="json-config-localization-page__empty-state-actions">
+                          {hasStringFilters ? (
+                            <button
+                              type="button"
+                              className="settings-button"
+                              onClick={clearStringFilters}
+                              disabled={isBusy}
+                            >
+                              Show all strings
+                            </button>
+                          ) : null}
+                          {isSourceConfigBacked ? (
+                            <>
+                              <button
+                                type="button"
+                                className="settings-button settings-button--primary"
+                                onClick={addConfigString}
+                                disabled={isBusy}
+                              >
+                                Add entry
+                              </button>
+                              <button
+                                type="button"
+                                className="settings-button"
+                                onClick={() => setActiveTab('CONFIG')}
+                                disabled={isBusy}
+                              >
+                                Open Config
+                              </button>
+                              {isStatsigProvider ? (
+                                <button
+                                  type="button"
+                                  className="settings-button"
+                                  onClick={() => pullStatsigMutation.mutate(true)}
+                                  disabled={isBusy || !providerConfigId.trim()}
+                                >
+                                  Pull from Statsig
+                                </button>
+                              ) : null}
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              className="settings-button settings-button--primary"
+                              onClick={addString}
+                              disabled={isBusy}
+                            >
+                              Add string
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </section>
-              </div>
+                    )}
+                  </>
+                }
+              />
             </div>
           </section>
         ) : null}
@@ -5079,23 +4987,6 @@ function formatJsonText(value: string | null | undefined): string {
     return JSON.stringify(JSON.parse(text), null, 2);
   } catch {
     return text;
-  }
-}
-
-function clampNumber(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
-function readStoredNumber(storageKey: string, fallbackValue: number): number {
-  try {
-    const storedValue = window.localStorage.getItem(storageKey);
-    if (!storedValue) {
-      return fallbackValue;
-    }
-    const parsedValue = Number(storedValue);
-    return Number.isFinite(parsedValue) ? parsedValue : fallbackValue;
-  } catch {
-    return fallbackValue;
   }
 }
 

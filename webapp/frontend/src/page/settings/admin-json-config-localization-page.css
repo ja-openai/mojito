@@ -511,7 +511,8 @@
   min-height: 24rem;
 }
 
-.json-config-localization-page__blocked-region.is-blocked .json-config-localization-page__layout {
+.json-config-localization-page__blocked-region.is-blocked
+  .json-config-localization-page__string-layout {
   pointer-events: none;
   user-select: none;
   opacity: 0.24;
@@ -712,67 +713,10 @@
   margin-top: var(--space-2);
 }
 
-.json-config-localization-page__layout {
-  display: grid;
-  grid-template-columns: minmax(17rem, 0.34fr) minmax(0, 1fr);
-  gap: var(--space-6);
-  align-items: stretch;
-  min-height: min(46rem, calc(100vh - 11rem));
-  min-width: 0;
-}
-
-.json-config-localization-page__tab-panel--strings .json-config-localization-page__layout {
+.json-config-localization-page__string-layout {
   height: 100%;
   min-height: 0;
   overflow: hidden;
-}
-
-.json-config-localization-page__layout--resizable {
-  --json-config-localization-resize-handle-size: 0.625rem;
-  grid-template-columns:
-    minmax(17rem, var(--json-config-localization-list-width, 34%))
-    var(--json-config-localization-resize-handle-size)
-    minmax(0, 1fr);
-  gap: 0;
-}
-
-.json-config-localization-page__layout--resizable .json-config-localization-page__list-pane {
-  padding-right: var(--space-4);
-}
-
-.json-config-localization-page__layout--resizable .json-config-localization-page__detail-pane {
-  padding-left: var(--space-4);
-}
-
-.json-config-localization-page__resize-handle {
-  position: relative;
-  display: flex;
-  width: 100%;
-  min-height: 100%;
-  align-items: stretch;
-  justify-content: center;
-  background: transparent;
-  cursor: col-resize;
-  touch-action: none;
-}
-
-.json-config-localization-page__resize-handle::before {
-  content: '';
-  width: 1px;
-  background: color-mix(in srgb, var(--color-border) 70%, transparent);
-}
-
-.json-config-localization-page__resize-handle:hover,
-.json-config-localization-page__resize-handle:focus-visible,
-.json-config-localization-page__resize-handle.is-resizing {
-  background: color-mix(in srgb, var(--color-surface-muted) 45%, transparent);
-  outline: none;
-}
-
-.json-config-localization-page__resize-handle:hover::before,
-.json-config-localization-page__resize-handle:focus-visible::before,
-.json-config-localization-page__resize-handle.is-resizing::before {
-  background: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
 }
 
 .json-config-localization-page__list-pane {
@@ -1379,7 +1323,6 @@
 }
 
 @media (max-width: 70rem) {
-  .json-config-localization-page__layout,
   .json-config-localization-page__provider-grid,
   .json-config-localization-page__schema-controls,
   .json-config-localization-page__sync-grid {
@@ -1388,21 +1331,6 @@
 
   .json-config-localization-page__schema-preset-row {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .json-config-localization-page__layout--resizable {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-4);
-  }
-
-  .json-config-localization-page__layout--resizable .json-config-localization-page__list-pane,
-  .json-config-localization-page__layout--resizable .json-config-localization-page__detail-pane {
-    padding-right: 0;
-    padding-left: 0;
-  }
-
-  .json-config-localization-page__resize-handle {
-    display: none;
   }
 
   .json-config-localization-page__profile-grid,
