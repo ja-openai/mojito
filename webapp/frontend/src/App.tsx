@@ -41,6 +41,7 @@ import { AdminReviewFeatureBatchPage } from './page/settings/AdminReviewFeatureB
 import { AdminReviewFeatureDetailPage } from './page/settings/AdminReviewFeatureDetailPage';
 import { AdminReviewFeaturesPage } from './page/settings/AdminReviewFeaturesPage';
 import { AdminSettingsPage } from './page/settings/AdminSettingsPage';
+import { AdminStringAuthoringPage } from './page/settings/AdminStringAuthoringPage';
 import { AdminTeamPoolsPage } from './page/settings/AdminTeamPoolsPage';
 import { AdminTeamsPage } from './page/settings/AdminTeamsPage';
 import { AdminTemporaryBulkTranslationAcceptPage } from './page/settings/AdminTemporaryBulkTranslationAcceptPage';
@@ -92,16 +93,30 @@ function LegacyGlossarySettingsRedirect() {
   return <Navigate to={`/glossaries/${params.glossaryId}/settings`} replace />;
 }
 
+function LegacyStringAuthoringRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/string-authoring${location.search}`} replace />;
+}
+
+function isNavPathActive(pathname: string, navPath: string) {
+  return pathname === navPath || pathname.startsWith(`${navPath}/`);
+}
+
 function AppLayout({ showHeader }: { showHeader: boolean }) {
   const user = useUser();
   const location = useLocation();
   const canAccessIncidents = user.role === 'ROLE_ADMIN' || user.role === 'ROLE_PM';
+  const canAccessStringAuthoring = user.role === 'ROLE_ADMIN';
   const headerNavItems = [
     ...navItems.map(({ to, label }) => ({ to, label })),
+    ...(canAccessStringAuthoring ? [{ to: '/string-authoring', label: 'String Authoring' }] : []),
     ...(canAccessIncidents ? [{ to: '/translation-incidents', label: 'Incidents' }] : []),
     ...(canAccessGlossaries(user) ? [{ to: '/glossaries', label: 'Glossaries' }] : []),
     { to: '/settings/system', label: 'Settings' },
   ];
+  const hasSpecificActiveNavItem = headerNavItems.some(
+    ({ to }) => to !== '/settings/system' && isNavPathActive(location.pathname, to),
+  );
 
   return (
     <div className={`app-shell${showHeader ? '' : ' app-shell--bare'}`}>
@@ -115,11 +130,10 @@ function AppLayout({ showHeader }: { showHeader: boolean }) {
                   to={to}
                   className={({ isActive }) => {
                     const isSettingsSection =
-                      to === '/settings/system' && location.pathname.startsWith('/settings/');
-                    const isIncidentSection =
-                      to === '/translation-incidents' &&
-                      location.pathname.startsWith('/translation-incidents');
-                    return `app-shell__nav-link${isActive || isSettingsSection || isIncidentSection ? ' is-active' : ''}`;
+                      to === '/settings/system' &&
+                      location.pathname.startsWith('/settings/') &&
+                      !hasSpecificActiveNavItem;
+                    return `app-shell__nav-link${isActive || isSettingsSection ? ' is-active' : ''}`;
                   }}
                 >
                   {label}
@@ -159,6 +173,7 @@ export function App() {
             {navItems.map(({ to, element }) => (
               <Route key={to} path={to} element={element} />
             ))}
+            <Route path="/string-authoring" element={<AdminStringAuthoringPage />} />
             <Route path="/glossaries" element={<GlossariesPage />} />
             <Route path="/glossaries/:glossaryId/settings" element={<AdminGlossaryDetailPage />} />
             <Route path="/ai-translate" element={<AiTranslatePage />} />
@@ -225,6 +240,14 @@ export function App() {
             <Route
               path="/settings/system/json-config-localization/:repositoryId"
               element={<AdminJsonConfigLocalizationPage />}
+            />
+            <Route
+              path="/settings/admin/string-authoring"
+              element={<LegacyStringAuthoringRedirect />}
+            />
+            <Route
+              path="/settings/system/string-authoring"
+              element={<LegacyStringAuthoringRedirect />}
             />
             <Route
               path="/settings/admin/linguist-time-spent"

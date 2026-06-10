@@ -272,7 +272,7 @@ export function ReviewProjectCreateForm({
                 sourceMode === 'TEXT_UNITS' ? ' is-active' : ''
               }`}
               onClick={() => onChangeSourceMode('TEXT_UNITS')}
-              disabled={isSubmitting || !collectionOptions?.length}
+              disabled={isSubmitting || (!collectionOptions?.length && !tmTextUnitIds.length)}
             >
               Selected text units
             </button>
@@ -314,7 +314,7 @@ export function ReviewProjectCreateForm({
           </div>
         ) : null}
 
-        {sourceMode === 'TEXT_UNITS' && collectionOptions && onChangeCollection ? (
+        {sourceMode === 'TEXT_UNITS' && collectionOptions?.length && onChangeCollection ? (
           <label className="review-create__field">
             <span className="review-create__label">Collection</span>
             <CollectionSelect
@@ -327,7 +327,7 @@ export function ReviewProjectCreateForm({
           </label>
         ) : null}
 
-        {sourceMode === 'TEXT_UNITS' && !collectionOptions && collectionName ? (
+        {sourceMode === 'TEXT_UNITS' && !collectionOptions?.length && collectionName ? (
           <div className="review-create__field">
             <span className="review-create__label">Collection</span>
             <div className="review-create__pill">{collectionName}</div>

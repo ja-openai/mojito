@@ -5,6 +5,7 @@ import com.box.l10n.mojito.rest.View;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.persistence.*;
+import java.time.ZonedDateTime;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -29,7 +30,8 @@ import org.springframework.data.annotation.CreatedBy;
           name = "UK__BRANCH__REPOSITORY_ID__PATH",
           columnList = "repository_id, name",
           unique = true),
-      @Index(name = "I__BRANCH__DELETED", columnList = "deleted")
+      @Index(name = "I__BRANCH__DELETED", columnList = "deleted"),
+      @Index(name = "I__BRANCH__CLEANUP_DATE", columnList = "cleanup_date")
     })
 @NamedEntityGraph(
     name = "Branch.legacy",
@@ -72,6 +74,10 @@ public class Branch extends SettableAuditableEntity {
   @JsonView(View.BranchSummary.class)
   @Column(name = "deleted", nullable = false)
   Boolean deleted = false;
+
+  @JsonView(View.BranchSummary.class)
+  @Column(name = "cleanup_date")
+  ZonedDateTime cleanupDate;
 
   @JsonView(View.BranchSummary.class)
   @OneToMany(mappedBy = "branch", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
@@ -119,6 +125,14 @@ public class Branch extends SettableAuditableEntity {
 
   public void setDeleted(Boolean deleted) {
     this.deleted = deleted;
+  }
+
+  public ZonedDateTime getCleanupDate() {
+    return cleanupDate;
+  }
+
+  public void setCleanupDate(ZonedDateTime cleanupDate) {
+    this.cleanupDate = cleanupDate;
   }
 
   public Set<Screenshot> getScreenshots() {

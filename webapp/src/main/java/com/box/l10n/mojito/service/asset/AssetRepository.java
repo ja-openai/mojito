@@ -1,8 +1,10 @@
 package com.box.l10n.mojito.service.asset;
 
 import com.box.l10n.mojito.entity.Asset;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.EntityGraph.EntityGraphType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,6 +25,13 @@ public interface AssetRepository
 
   @EntityGraph(value = "Asset.legacy", type = EntityGraphType.FETCH)
   Asset findByPathAndRepositoryId(String path, Long repositoryId);
+
+  List<Asset> findByRepositoryIdAndDeletedFalseAndVirtualFalseOrderByPathAsc(
+      Long repositoryId, Pageable pageable);
+
+  List<Asset>
+      findByRepositoryIdAndDeletedFalseAndVirtualFalseAndPathContainingIgnoreCaseOrderByPathAsc(
+          Long repositoryId, String path, Pageable pageable);
 
   @Query(value = "select a.id from Asset a where a.repository.id = :repositoryId")
   Set<Long> findIdByRepositoryId(@Param("repositoryId") Long repositoryId);

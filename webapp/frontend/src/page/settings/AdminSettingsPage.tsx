@@ -50,9 +50,9 @@ export function AdminSettingsPage() {
             </div>
           </section>
 
-          <section className="settings-card" aria-labelledby="settings-json-config-localization">
+          <section className="settings-card" aria-labelledby="settings-config-localization">
             <div className="settings-card__header">
-              <h2 id="settings-json-config-localization">JSON config localization</h2>
+              <h2 id="settings-config-localization">Config localization</h2>
             </div>
             <div className="settings-directory">
               <button
@@ -62,7 +62,7 @@ export function AdminSettingsPage() {
                   void navigate('/settings/system/json-config-localization');
                 }}
               >
-                <div className="settings-directory__title">Localize config</div>
+                <div className="settings-directory__title">Localize JSON config</div>
                 <div className="settings-directory__description">
                   Import JSON config, extract source strings, run MT and review, and export
                   localized JSON.
@@ -299,7 +299,7 @@ export function AdminSettingsPage() {
                   void navigate('/settings/system/json-config-localization');
                 }}
               >
-                <div className="settings-directory__title">Localize config</div>
+                <div className="settings-directory__title">Localize JSON config</div>
                 <div className="settings-directory__description">
                   Import JSON config, extract source strings, run MT and review, and export
                   localized JSON.

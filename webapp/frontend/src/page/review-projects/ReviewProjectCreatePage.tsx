@@ -225,7 +225,7 @@ export function ReviewProjectCreatePage() {
   const repositoriesQuery = useRepositories();
   const repositories = repositoriesQuery.data ?? [];
   const { collections, activeCollection } = useWorkbenchCollections();
-  const [tmIds, setTmIds] = useState<number[]>([]);
+  const [tmIds, setTmIds] = useState<number[]>(() => normalizeIds(navState?.tmTextUnitIds));
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
   const [sourceMode, setSourceMode] = useState<ReviewProjectSourceMode>(() =>
     getInitialSourceMode(location.search, navState),
@@ -290,10 +290,12 @@ export function ReviewProjectCreatePage() {
   );
   const repositoryOptions = useRepositorySelectionOptions(repositories);
   const hasCollections = collectionOptions.length > 0;
+  const hasSelectedTextUnits = tmIds.length > 0;
+  const hasTextUnitSource = hasCollections || hasSelectedTextUnits;
   const hasRepositories = repositoryOptions.length > 0;
   const hasReviewFeatures = reviewFeatureOptions.length > 0;
   const showCreateForm =
-    hasCollections ||
+    hasTextUnitSource ||
     hasRepositories ||
     hasReviewFeatures ||
     repositoriesQuery.isLoading ||
@@ -344,14 +346,14 @@ export function ReviewProjectCreatePage() {
     }
 
     const currentModeIsAvailable =
-      (sourceMode === 'TEXT_UNITS' && hasCollections) ||
+      (sourceMode === 'TEXT_UNITS' && hasTextUnitSource) ||
       (sourceMode === 'REPOSITORIES' && hasRepositories) ||
       (sourceMode === 'REVIEW_FEATURE' && hasReviewFeatures);
     if (currentModeIsAvailable) {
       return;
     }
 
-    if (hasCollections) {
+    if (hasTextUnitSource) {
       setSourceMode('TEXT_UNITS');
       return;
     }
@@ -363,8 +365,8 @@ export function ReviewProjectCreatePage() {
       setSourceMode('REVIEW_FEATURE');
     }
   }, [
-    hasCollections,
     hasRepositories,
+    hasTextUnitSource,
     hasReviewFeatures,
     repositoriesQuery.isLoading,
     reviewFeatureOptionsQuery.isLoading,
@@ -575,7 +577,7 @@ export function ReviewProjectCreatePage() {
               sourceMode={sourceMode}
               onChangeSourceMode={setSourceMode}
               collectionName={prefillCollectionName ?? null}
-              collectionOptions={collectionOptions}
+              collectionOptions={collectionOptions.length ? collectionOptions : undefined}
               selectedCollectionId={selectedCollectionId}
               onChangeCollection={(id) => {
                 setSelectedCollectionId(id);
