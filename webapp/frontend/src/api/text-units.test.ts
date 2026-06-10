@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { searchTextUnits } from './text-units';
+import { importTextUnitsBatch, searchTextUnits } from './text-units';
 
 function mockSearchResponse() {
   const fetchMock = vi.fn().mockResolvedValue({
@@ -22,6 +22,7 @@ function getPostedBody(fetchMock: ReturnType<typeof vi.fn>) {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -92,5 +93,34 @@ describe('searchTextUnits', () => {
     expect(getPostedBody(fetchMock)).toMatchObject({
       tmTextUnitIds: [30690, 30691],
     });
+  });
+});
+
+describe('importTextUnitsBatch', () => {
+  it('waits longer than the default async timeout for imports', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const fetchMock = vi.fn((url: string) => {
+      const body =
+        url === '/api/textunitsBatch'
+          ? { id: 123, allFinished: false }
+          : { id: 123, allFinished: Date.now() >= 61_000 };
+
+      return Promise.resolve({
+        ok: true,
+        text: () => Promise.resolve(JSON.stringify(body)),
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const importPromise = importTextUnitsBatch({ textUnits: [] });
+    const importExpectation = expect(importPromise).resolves.toMatchObject({
+      id: 123,
+      isAllFinished: true,
+    });
+
+    await vi.advanceTimersByTimeAsync(61_000);
+
+    await importExpectation;
   });
 });

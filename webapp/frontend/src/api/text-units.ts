@@ -61,6 +61,7 @@ export type ApiTextUnit = {
 // Backend default (TextUnitSearchBody.limit) is 10; keep the client aligned if a caller omits limit.
 const DEFAULT_SEARCH_LIMIT = 10;
 const ASYNC_POLL_TIMEOUT_MS = 60_000;
+const IMPORT_POLL_TIMEOUT_MS = 60 * 60_000;
 const DEFAULT_POLL_INTERVAL_MS = 1000;
 const MAX_POLL_INTERVAL_MS = 8000;
 
@@ -646,7 +647,7 @@ async function waitForPollableTaskToFinish(taskId: number): Promise<ApiPollableT
   return poll(() => fetchPollableTask(taskId), {
     intervalMs: DEFAULT_POLL_INTERVAL_MS,
     maxIntervalMs: MAX_POLL_INTERVAL_MS,
-    timeoutMs: ASYNC_POLL_TIMEOUT_MS,
+    timeoutMs: IMPORT_POLL_TIMEOUT_MS,
     timeoutMessage: 'Timed out while waiting for import to finish',
     isTransientError: isTransientHttpError,
     shouldStop: (task) => task.isAllFinished,
