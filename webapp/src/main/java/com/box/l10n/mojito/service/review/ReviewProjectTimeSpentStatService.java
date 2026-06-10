@@ -119,6 +119,14 @@ public class ReviewProjectTimeSpentStatService {
         .forEach(window -> computeWindowStat(reviewProject, window, finalizedAt));
   }
 
+  @Transactional
+  public int deleteByReviewProjectIds(List<Long> projectIds) {
+    if (projectIds == null || projectIds.isEmpty()) {
+      return 0;
+    }
+    return statRepository.deleteByReviewProjectIds(projectIds);
+  }
+
   private BackfilledAssignmentWindows getOrBackfillAssignmentWindows(ReviewProject reviewProject) {
     List<ReviewProjectAssignmentWindow> assignmentWindows =
         assignmentWindowRepository.findByReviewProjectIdOrderByAssignedAt(reviewProject.getId());

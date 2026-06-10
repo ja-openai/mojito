@@ -72,6 +72,7 @@ import java.util.Set;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -501,9 +502,23 @@ public class ReviewProjectServiceTest {
     reviewProjectService.adminBatchDeleteProjects(List.of(11L, 12L));
 
     verify(reviewProjectAssignmentHistoryRepository).deleteByReviewProjectIds(List.of(11L, 12L));
+    verify(reviewProjectTimeSpentStatService).deleteByReviewProjectIds(List.of(11L, 12L));
+    verify(reviewProjectAssignmentWindowRepository).deleteByReviewProjectIds(List.of(11L, 12L));
     verify(reviewProjectTextUnitDecisionRepository).deleteByReviewProjectIds(List.of(11L, 12L));
     verify(reviewProjectTextUnitFeedbackRepository).deleteByReviewProjectIds(List.of(11L, 12L));
     verify(reviewProjectTextUnitRepository).deleteByReviewProjectIds(List.of(11L, 12L));
+    InOrder deleteOrder =
+        Mockito.inOrder(
+            reviewProjectTimeSpentStatService,
+            reviewProjectAssignmentWindowRepository,
+            reviewProjectRepository);
+    deleteOrder
+        .verify(reviewProjectTimeSpentStatService)
+        .deleteByReviewProjectIds(List.of(11L, 12L));
+    deleteOrder
+        .verify(reviewProjectAssignmentWindowRepository)
+        .deleteByReviewProjectIds(List.of(11L, 12L));
+    deleteOrder.verify(reviewProjectRepository).deleteByProjectIds(List.of(11L, 12L));
     verify(reviewProjectRequestScreenshotRepository).deleteByReviewProjectRequestIdIn(List.of(44L));
     verify(reviewProjectRequestSlackThreadRepository)
         .deleteByReviewProjectRequestIdIn(List.of(44L));

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
@@ -16,6 +17,14 @@ public interface ReviewProjectTimeSpentStatRepository
     extends JpaRepository<ReviewProjectTimeSpentStat, Long> {
 
   Optional<ReviewProjectTimeSpentStat> findByAssignmentWindow_Id(Long assignmentWindowId);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(
+      """
+      delete from ReviewProjectTimeSpentStat stat
+      where stat.reviewProject.id in :projectIds
+      """)
+  int deleteByReviewProjectIds(@Param("projectIds") List<Long> projectIds);
 
   @Query(
       """

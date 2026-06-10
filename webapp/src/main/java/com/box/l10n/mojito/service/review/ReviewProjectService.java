@@ -2166,6 +2166,8 @@ public class ReviewProjectService {
     List<Long> requestIds = reviewProjectRepository.findRequestIdsByProjectIds(distinctIds);
 
     reviewProjectAssignmentHistoryRepository.deleteByReviewProjectIds(distinctIds);
+    reviewProjectTimeSpentStatService.deleteByReviewProjectIds(distinctIds);
+    reviewProjectAssignmentWindowRepository.deleteByReviewProjectIds(distinctIds);
     reviewProjectTextUnitDecisionRepository.deleteByReviewProjectIds(distinctIds);
     reviewProjectTextUnitFeedbackRepository.deleteByReviewProjectIds(distinctIds);
     reviewProjectTextUnitRepository.deleteByReviewProjectIds(distinctIds);
