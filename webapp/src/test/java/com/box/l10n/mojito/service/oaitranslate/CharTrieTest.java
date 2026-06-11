@@ -75,6 +75,61 @@ public class CharTrieTest {
   }
 
   @Test
+  void testDoesNotMatchInsideWord() {
+    CharTrie<TestTerm> trie = new CharTrie<>(false);
+    TestTerm pr = new TestTerm("PR");
+    trie.addTerm(pr);
+
+    Set<TestTerm> matches = trie.findTerms("Show mobile previews and approved strings.");
+
+    assertTrue(matches.isEmpty());
+  }
+
+  @Test
+  void testDoesNotMatchShortTermPluralWithoutExplicitPluralTerm() {
+    CharTrie<TestTerm> trie = new CharTrie<>(false);
+    TestTerm pr = new TestTerm("PR");
+    trie.addTerm(pr);
+
+    Set<TestTerm> matches = trie.findTerms("Review open PRs.");
+
+    assertTrue(matches.isEmpty());
+  }
+
+  @Test
+  void testDoesNotMatchAcronymInsideBrandToken() {
+    CharTrie<TestTerm> trie = new CharTrie<>(false);
+    TestTerm gpt = new TestTerm("GPT");
+    trie.addTerm(gpt);
+
+    Set<TestTerm> matches = trie.findTerms("Sync files to ChatGPT.");
+
+    assertTrue(matches.isEmpty());
+  }
+
+  @Test
+  void testMatchesShortTermAsWholeToken() {
+    CharTrie<TestTerm> trie = new CharTrie<>(false);
+    TestTerm pr = new TestTerm("PR");
+    trie.addTerm(pr);
+
+    Set<TestTerm> matches = trie.findTerms("Open (pr).");
+
+    assertTrue(matches.contains(pr));
+  }
+
+  @Test
+  void testMatchesPhraseWithPunctuationBoundary() {
+    CharTrie<TestTerm> trie = new CharTrie<>(false);
+    TestTerm mobilePreview = new TestTerm("mobile preview");
+    trie.addTerm(mobilePreview);
+
+    Set<TestTerm> matches = trie.findTerms("Show mobile preview.");
+
+    assertTrue(matches.contains(mobilePreview));
+  }
+
+  @Test
   void testDuplicatedTerm() {
     CharTrie<TestTerm> trie = new CharTrie<>(true);
     TestTerm hello1 = new TestTerm("hello");

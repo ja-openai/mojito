@@ -50,6 +50,9 @@ public class CharTrie<T extends CharTrie.Term> {
         cur = cur.child().get(text.charAt(j));
         if (cur == null) break;
         if (!cur.terms().isEmpty()) {
+          if (!isBoundaryMatch(originalText, i, j + 1)) {
+            continue;
+          }
           String matchedText = originalText.substring(i, j + 1);
           for (T term : cur.terms()) {
             matches.add(new Match<>(term, i, j + 1, matchedText));
@@ -58,6 +61,34 @@ public class CharTrie<T extends CharTrie.Term> {
       }
     }
     return matches;
+  }
+
+  private boolean isBoundaryMatch(String text, int startIndex, int endIndex) {
+    return isStartBoundary(text, startIndex) && isEndBoundary(text, endIndex);
+  }
+
+  private boolean isStartBoundary(String text, int startIndex) {
+    if (startIndex <= 0) {
+      return true;
+    }
+    int firstCodePoint = text.codePointAt(startIndex);
+    if (!Character.isLetterOrDigit(firstCodePoint)) {
+      return true;
+    }
+    int previousCodePoint = text.codePointBefore(startIndex);
+    return !Character.isLetterOrDigit(previousCodePoint);
+  }
+
+  private boolean isEndBoundary(String text, int endIndex) {
+    if (endIndex >= text.length()) {
+      return true;
+    }
+    int lastCodePoint = text.codePointBefore(endIndex);
+    if (!Character.isLetterOrDigit(lastCodePoint)) {
+      return true;
+    }
+    int nextCodePoint = text.codePointAt(endIndex);
+    return !Character.isLetterOrDigit(nextCodePoint);
   }
 
   public interface Term {

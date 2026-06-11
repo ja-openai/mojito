@@ -1,9 +1,12 @@
 import './glossary-matches-panel.css';
 
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { ApiMatchedGlossaryTerm } from '../api/glossaries';
+import { getGlossaryTermScreenshotEvidence } from '../utils/glossaryTermEvidence';
 import { resolveAttachmentUrl } from '../utils/request-attachments';
+import { Modal } from './Modal';
 
 type Props = {
   matches: ApiMatchedGlossaryTerm[];
@@ -14,6 +17,18 @@ type Props = {
   showHeader?: boolean;
 };
 
+const getGlossaryMatchKey = (match: ApiMatchedGlossaryTerm) =>
+  [
+    match.glossaryId ?? 'none',
+    match.tmTextUnitId,
+    match.startIndex,
+    match.endIndex,
+    match.matchedText,
+  ].join(':');
+
+const getGlossaryTermHref = (match: ApiMatchedGlossaryTerm) =>
+  match.glossaryId == null ? null : `/glossaries/${match.glossaryId}/terms/${match.tmTextUnitId}`;
+
 export function GlossaryMatchesPanel({
   matches,
   isLoading = false,
@@ -22,8 +37,23 @@ export function GlossaryMatchesPanel({
   currentTarget = null,
   showHeader = true,
 }: Props) {
+  const [selectedMatch, setSelectedMatch] = useState<ApiMatchedGlossaryTerm | null>(null);
+  const selectedMatchKey = selectedMatch ? getGlossaryMatchKey(selectedMatch) : null;
+
+  useEffect(() => {
+    if (selectedMatchKey == null) {
+      return;
+    }
+
+    const updatedMatch = matches.find((match) => getGlossaryMatchKey(match) === selectedMatchKey);
+    setSelectedMatch(updatedMatch ?? null);
+  }, [matches, selectedMatchKey]);
+
   const normalizeForContains = (value: string, caseSensitive: boolean) =>
     caseSensitive ? value : value.toLocaleLowerCase();
+
+  const getRequiredTarget = (match: ApiMatchedGlossaryTerm) =>
+    match.doNotTranslate ? 'Do not translate' : match.target || 'No target translation yet';
 
   const getComplianceMessage = (match: ApiMatchedGlossaryTerm) => {
     const targetText = currentTarget?.trim();
@@ -85,108 +115,211 @@ export function GlossaryMatchesPanel({
     return parts.length > 0 ? parts.join(' · ') : null;
   };
 
+  const selectedMatchComplianceMessage = selectedMatch ? getComplianceMessage(selectedMatch) : null;
+
   return (
-    <section className="glossary-match-panel">
-      {showHeader ? (
-        <div className="glossary-match-panel__header">
-          <div className="glossary-match-panel__title">Glossary</div>
-          {isLoading ? <div className="glossary-match-panel__summary">Loading…</div> : null}
-        </div>
-      ) : null}
+    <>
+      <section className="glossary-match-panel">
+        {showHeader ? (
+          <div className="glossary-match-panel__header">
+            <div className="glossary-match-panel__title">Glossary</div>
+            {isLoading ? <div className="glossary-match-panel__summary">Loading…</div> : null}
+          </div>
+        ) : null}
 
-      {errorMessage ? (
-        <div className="glossary-match-panel__state glossary-match-panel__state--error">
-          {errorMessage}
-        </div>
-      ) : isLoading ? (
-        <div className="glossary-match-panel__state">
-          <span className="spinner spinner--md" aria-hidden />
-          <span>Loading glossary…</span>
-        </div>
-      ) : matches.length === 0 ? (
-        <div className="glossary-match-panel__state">{emptyMessage}</div>
-      ) : (
-        <div className="glossary-match-panel__list">
-          {matches.map((match) => {
-            const evidenceSummary = formatEvidenceSummary(match);
-            const complianceMessage = getComplianceMessage(match);
-            const imageEvidence = match.evidence.filter(
-              (evidence): evidence is typeof evidence & { imageKey: string } =>
-                Boolean(evidence.imageKey),
-            );
-            const requiredTarget = match.doNotTranslate
-              ? 'Do not translate'
-              : match.target || 'No target translation yet';
-            const requiredTargetClassName = match.doNotTranslate
-              ? 'glossary-match-panel__pair-value glossary-match-panel__pair-value--muted'
-              : 'glossary-match-panel__pair-value';
-            const note = match.targetComment || match.comment || match.definition || null;
-            const hasDetails = Boolean(complianceMessage || imageEvidence.length);
+        {errorMessage ? (
+          <div className="glossary-match-panel__state glossary-match-panel__state--error">
+            {errorMessage}
+          </div>
+        ) : isLoading ? (
+          <div className="glossary-match-panel__state">
+            <span className="spinner spinner--md" aria-hidden />
+            <span>Loading glossary…</span>
+          </div>
+        ) : matches.length === 0 ? (
+          <div className="glossary-match-panel__state">{emptyMessage}</div>
+        ) : (
+          <div className="glossary-match-panel__list">
+            {matches.map((match) => {
+              const requiredTarget = getRequiredTarget(match);
+              const requiredTargetClassName = match.doNotTranslate
+                ? 'glossary-match-panel__pair-value glossary-match-panel__pair-value--muted'
+                : 'glossary-match-panel__pair-value';
 
-            return (
-              <article
-                key={`${match.tmTextUnitId}:${match.startIndex}:${match.endIndex}:${match.target ?? ''}`}
-                className="glossary-match-panel__item"
-              >
-                <div className="glossary-match-panel__pair">
-                  <div className="glossary-match-panel__pair-value">
-                    {match.glossaryId ? (
-                      <Link
-                        className="glossary-match-panel__term-link"
-                        to={`/glossaries/${match.glossaryId}?termId=${match.tmTextUnitId}`}
+              return (
+                <article key={getGlossaryMatchKey(match)} className="glossary-match-panel__item">
+                  <div className="glossary-match-panel__pair">
+                    <div className="glossary-match-panel__pair-header">
+                      <div className="glossary-match-panel__pair-value">{match.source}</div>
+                      <button
+                        type="button"
+                        className="glossary-match-panel__details-button"
+                        onClick={() => setSelectedMatch(match)}
                       >
-                        {match.source}
-                      </Link>
-                    ) : (
-                      <span>{match.source}</span>
-                    )}
+                        Details
+                      </button>
+                    </div>
+                    <div className={requiredTargetClassName}>{requiredTarget}</div>
                   </div>
-                  <div className={requiredTargetClassName}>{requiredTarget}</div>
-                </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
-                {note ? <div className="glossary-match-panel__note">{note}</div> : null}
+      <GlossaryMatchDetailsModal
+        match={selectedMatch}
+        complianceMessage={selectedMatchComplianceMessage}
+        evidenceSummary={selectedMatch ? formatEvidenceSummary(selectedMatch) : null}
+        requiredTarget={selectedMatch ? getRequiredTarget(selectedMatch) : null}
+        onClose={() => setSelectedMatch(null)}
+      />
+    </>
+  );
+}
 
-                {hasDetails ? (
-                  <details className="glossary-match-panel__details">
-                    <summary>Details</summary>
+function GlossaryMatchDetailsModal({
+  match,
+  complianceMessage,
+  evidenceSummary,
+  requiredTarget,
+  onClose,
+}: {
+  match: ApiMatchedGlossaryTerm | null;
+  complianceMessage: string | null;
+  evidenceSummary: string | null;
+  requiredTarget: string | null;
+  onClose: () => void;
+}) {
+  const imageEvidence = getGlossaryTermScreenshotEvidence(match?.evidence);
+  const noteEvidence =
+    match?.evidence.filter((evidence) => !evidence.imageKey && evidence.caption) ?? [];
+  const termHref = match ? getGlossaryTermHref(match) : null;
+  const detailRows = match
+    ? [
+        { label: 'Matched text', value: match.matchedText },
+        { label: 'Glossary', value: match.glossaryName },
+        { label: 'Definition', value: match.definition },
+        { label: 'Source note', value: match.comment },
+        { label: 'Translation note', value: match.targetComment },
+        { label: 'Part of speech', value: match.partOfSpeech },
+        { label: 'Term type', value: match.termType },
+        { label: 'Enforcement', value: match.enforcement },
+        { label: 'Status', value: match.status },
+        { label: 'Provenance', value: match.provenance },
+        { label: 'Match type', value: match.matchType },
+        { label: 'Evidence', value: evidenceSummary },
+      ].filter((row) => row.value && row.value.trim())
+    : [];
 
-                    {complianceMessage ? (
-                      <div className="glossary-match-panel__compliance-note">
-                        {complianceMessage}
-                      </div>
-                    ) : null}
+  return (
+    <Modal
+      open={match != null}
+      size="xl"
+      ariaLabel="Glossary term details"
+      closeOnBackdrop
+      onClose={onClose}
+      className="glossary-match-panel__modal"
+    >
+      {match ? (
+        <>
+          <div className="modal__header glossary-match-panel__modal-header">
+            <div>
+              <h2 className="modal__title glossary-match-panel__modal-title">
+                Glossary term details
+              </h2>
+              <div className="glossary-match-panel__modal-subtitle">
+                <span>Source term: {match.source}</span>
+                <span>Translation: {requiredTarget}</span>
+              </div>
+            </div>
+            <div className="glossary-match-panel__modal-actions">
+              {termHref ? (
+                <Link className="modal__button" to={termHref} target="_blank" rel="noreferrer">
+                  Open term
+                </Link>
+              ) : null}
+              <button type="button" className="modal__button" onClick={onClose}>
+                Close
+              </button>
+            </div>
+          </div>
 
-                    {evidenceSummary ? (
-                      <div className="glossary-match-panel__meta">
-                        <span>{evidenceSummary}</span>
-                      </div>
-                    ) : null}
+          <div className="glossary-match-panel__modal-body">
+            {complianceMessage ? (
+              <div className="glossary-match-panel__compliance-note">{complianceMessage}</div>
+            ) : null}
 
-                    {imageEvidence.length > 0 ? (
-                      <div className="glossary-match-panel__evidence">
-                        {imageEvidence.map((evidence, index) => (
-                          <a
-                            key={`${match.tmTextUnitId}:${evidence.imageKey}:${index}`}
-                            className="glossary-match-panel__evidence-thumb"
-                            href={resolveAttachmentUrl(evidence.imageKey)}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            <img
-                              src={resolveAttachmentUrl(evidence.imageKey)}
-                              alt={evidence.caption || 'Evidence'}
-                            />
-                          </a>
-                        ))}
-                      </div>
-                    ) : null}
-                  </details>
+            <section className="glossary-match-panel__modal-section glossary-match-panel__screenshots-section">
+              <div className="glossary-match-panel__modal-section-header">
+                <h3>Evidence screenshots</h3>
+                {imageEvidence.length > 0 ? (
+                  <span>
+                    {imageEvidence.length} screenshot{imageEvidence.length === 1 ? '' : 's'}
+                  </span>
                 ) : null}
-              </article>
-            );
-          })}
-        </div>
-      )}
-    </section>
+              </div>
+              {imageEvidence.length > 0 ? (
+                <div className="glossary-match-panel__evidence">
+                  {imageEvidence.map((evidence, index) => (
+                    <a
+                      key={`${match.tmTextUnitId}:${evidence.imageKey}:${index}`}
+                      className="glossary-match-panel__evidence-preview"
+                      href={resolveAttachmentUrl(evidence.imageKey)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <img
+                        src={resolveAttachmentUrl(evidence.imageKey)}
+                        alt={evidence.caption || 'Evidence screenshot'}
+                      />
+                      {evidence.caption ? (
+                        <span className="glossary-match-panel__evidence-caption">
+                          {evidence.caption}
+                        </span>
+                      ) : null}
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p className="glossary-match-panel__empty-evidence">
+                  No screenshots attached yet
+                  {termHref ? '; open the term to add screenshot evidence.' : '.'}
+                </p>
+              )}
+            </section>
+
+            <dl className="glossary-match-panel__detail-list">
+              <div>
+                <dt>Source term</dt>
+                <dd>{match.source}</dd>
+              </div>
+              <div>
+                <dt>Translation</dt>
+                <dd>{requiredTarget}</dd>
+              </div>
+              {detailRows.map((row) => (
+                <div key={row.label}>
+                  <dt>{row.label}</dt>
+                  <dd>{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+
+            {noteEvidence.length > 0 ? (
+              <section className="glossary-match-panel__modal-section">
+                <h3>Evidence notes</h3>
+                <ul className="glossary-match-panel__evidence-notes">
+                  {noteEvidence.map((evidence, index) => (
+                    <li key={`${match.tmTextUnitId}:note:${index}`}>{evidence.caption}</li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+          </div>
+        </>
+      ) : null}
+    </Modal>
   );
 }
