@@ -505,6 +505,7 @@ export function WorkbenchBody({
               const isEditing = editingRowId === row.id;
               const useAssistedTranslationEditor = isVisibleTextEditorEnabled && isEditing;
               const useAssistedTranslationPreview = isVisibleTextEditorEnabled && !isEditing;
+              const useAssistedSourcePreview = isVisibleTextEditorEnabled;
               const translationValue = isEditing ? editingValue : (row.translation ?? '');
               const translationDirection = isRtlLocale(row.locale) ? 'rtl' : 'ltr';
               const translationLocale = row.locale;
@@ -623,9 +624,20 @@ export function WorkbenchBody({
                       </div>
                     </div>
                     <div className="workbench-page__cell workbench-page__cell--source">
-                      <div className="workbench-page__text-block workbench-page__source-text">
-                        {row.source ?? ''}
-                      </div>
+                      {useAssistedSourcePreview ? (
+                        <VisibleTextRenderer
+                          className="workbench-page__text-block workbench-page__source-text"
+                          value={row.source ?? ''}
+                          marksMode={translationMarksMode}
+                          showProtectedTokens={showProtectedTokens}
+                          spellCheck={false}
+                          tokenMode="icu-html"
+                        />
+                      ) : (
+                        <div className="workbench-page__text-block workbench-page__source-text">
+                          {row.source ?? ''}
+                        </div>
+                      )}
                       <div className="workbench-page__text-block workbench-page__source-comment">
                         {row.comment ?? ''}
                       </div>

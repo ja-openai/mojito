@@ -153,6 +153,70 @@ describe('WorkbenchBody', () => {
     expect(handleStartEditing).toHaveBeenCalledWith(editingRow.id, editingRow.translation);
   });
 
+  it('renders source placeholders with the same protected token highlighting', () => {
+    const { container } = renderWorkbenchBody({
+      editingRowId: null,
+      editingValue: '',
+      rows: [
+        {
+          ...editingRow,
+          source: 'Delete {count} apps',
+          translation: 'Supprimer les apps',
+        },
+      ],
+    });
+
+    const sourceToken = container.querySelector(
+      '.workbench-page__source-text .visible-text-editor__protected-token',
+    );
+    expect(sourceToken).toHaveTextContent('{count}');
+    expect(sourceToken).toHaveClass('visible-text-editor__protected-token--icu-placeholder');
+  });
+
+  it('renders source text without placeholder highlights when protected token display is off', () => {
+    const { container } = renderWorkbenchBody({
+      editingRowId: null,
+      editingValue: '',
+      showProtectedTokens: false,
+      rows: [
+        {
+          ...editingRow,
+          source: 'Delete {count} apps',
+          translation: 'Supprimer les apps',
+        },
+      ],
+    });
+
+    const sourceText = container.querySelector('.workbench-page__source-text');
+    expect(sourceText).toHaveTextContent('Delete {count} apps');
+    expect(sourceText).toHaveClass('visible-text-renderer');
+    expect(
+      container.querySelector('.workbench-page__source-text .visible-text-editor__protected-token'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('keeps source text plain when visible text rendering is disabled', () => {
+    const { container } = renderWorkbenchBody({
+      editingRowId: null,
+      editingValue: '',
+      isVisibleTextEditorEnabled: false,
+      rows: [
+        {
+          ...editingRow,
+          source: 'Delete {count} apps',
+          translation: 'Supprimer les apps',
+        },
+      ],
+    });
+
+    const sourceText = container.querySelector('.workbench-page__source-text');
+    expect(sourceText).toHaveTextContent('Delete {count} apps');
+    expect(sourceText).not.toHaveClass('visible-text-renderer');
+    expect(
+      container.querySelector('.workbench-page__source-text .visible-text-editor__protected-token'),
+    ).not.toBeInTheDocument();
+  });
+
   it('can render inactive translation rows without protected token highlights', () => {
     const { container } = renderWorkbenchBody({
       editingRowId: null,
