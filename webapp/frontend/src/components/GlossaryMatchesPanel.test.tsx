@@ -58,19 +58,36 @@ describe('GlossaryMatchesPanel', () => {
     const card = screen.getByText('View').closest('article');
     expect(card).not.toBeNull();
     expect(within(card!).getByText('View translation')).toBeInTheDocument();
-    expect(within(card!).getByRole('button', { name: 'Details' })).toBeInTheDocument();
+    expect(within(card!).getByRole('button', { name: 'Details for View' })).toHaveTextContent(
+      'Details',
+    );
     expect(within(card!).queryByRole('link')).not.toBeInTheDocument();
+    expect(within(card!).queryByText('Action label in mobile settings.')).not.toBeInTheDocument();
+    expect(
+      within(card!).queryByText('A command that opens a detail screen.'),
+    ).not.toBeInTheDocument();
+    expect(within(card!).queryByText('Settings screenshot reference.')).not.toBeInTheDocument();
     expect(screen.queryByText('Action label in mobile settings.')).not.toBeInTheDocument();
     expect(screen.queryByText('Settings screenshot reference.')).not.toBeInTheDocument();
 
-    fireEvent.click(within(card!).getByRole('button', { name: 'Details' }));
+    fireEvent.click(within(card!).getByRole('button', { name: 'Details for View' }));
 
-    const dialog = screen.getByRole('dialog', { name: 'Glossary term details' });
+    const dialog = screen.getByRole('dialog', { name: 'Glossary term details for View' });
+    const summary = within(dialog).getByLabelText('Selected glossary term');
     expect(within(dialog).getByText('Glossary term details')).toBeInTheDocument();
-    expect(within(dialog).getByText('Source term: View')).toBeInTheDocument();
-    expect(within(dialog).getByText('Translation: View translation')).toBeInTheDocument();
+    expect(within(summary).getByText('Source term')).toBeInTheDocument();
+    expect(within(summary).getByText('View')).toBeInTheDocument();
+    expect(within(summary).getByText('Glossary translation')).toBeInTheDocument();
+    expect(within(summary).getByText('View translation')).toBeInTheDocument();
+    expect(within(dialog).getByText('Term details')).toBeInTheDocument();
+    expect(within(dialog).getByText('Match details')).toBeInTheDocument();
+    expect(within(dialog).getByText('Glossary name')).toBeInTheDocument();
     expect(within(dialog).getByText('Product UI')).toBeInTheDocument();
+    expect(within(dialog).getByText('Term description')).toBeInTheDocument();
+    expect(within(dialog).getByText('Matched source text')).toBeInTheDocument();
+    expect(within(dialog).getByText('Match type')).toBeInTheDocument();
     expect(within(dialog).getByText('Action label in mobile settings.')).toBeInTheDocument();
+    expect(within(dialog).getByText('A command that opens a detail screen.')).toBeInTheDocument();
     expect(within(dialog).getByText('Evidence screenshots')).toBeInTheDocument();
     expect(within(dialog).getByText('1 screenshot')).toBeInTheDocument();
     expect(
@@ -83,6 +100,11 @@ describe('GlossaryMatchesPanel', () => {
     expect(
       within(dialog).getByRole('img', { name: 'Settings screenshot reference.' }),
     ).toHaveAttribute('src', '/api/images/settings-view.png');
+    expect(
+      within(dialog).getByRole('link', {
+        name: 'Open evidence screenshot: Settings screenshot reference.',
+      }),
+    ).toHaveAttribute('href', '/api/images/settings-view.png');
     expect(within(dialog).getByRole('link', { name: 'Open term' })).toHaveAttribute(
       'href',
       '/glossaries/12/terms/34',
@@ -90,7 +112,9 @@ describe('GlossaryMatchesPanel', () => {
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
 
-    expect(screen.queryByRole('dialog', { name: 'Glossary term details' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('dialog', { name: 'Glossary term details for View' }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows a screenshot empty state with the term link when no screenshots are attached', () => {
@@ -105,9 +129,9 @@ describe('GlossaryMatchesPanel', () => {
 
     const card = screen.getByText('View').closest('article');
     expect(card).not.toBeNull();
-    fireEvent.click(within(card!).getByRole('button', { name: 'Details' }));
+    fireEvent.click(within(card!).getByRole('button', { name: 'Details for View' }));
 
-    const dialog = screen.getByRole('dialog', { name: 'Glossary term details' });
+    const dialog = screen.getByRole('dialog', { name: 'Glossary term details for View' });
     expect(
       within(dialog).getByText(
         'No screenshots attached yet; open the term to add screenshot evidence.',
@@ -129,11 +153,14 @@ describe('GlossaryMatchesPanel', () => {
 
     const card = screen.getByText('ChatGPT').closest('article');
     expect(card).not.toBeNull();
-    fireEvent.click(within(card!).getByRole('button', { name: 'Details' }));
+    fireEvent.click(within(card!).getByRole('button', { name: 'Details for ChatGPT' }));
 
-    const dialog = screen.getByRole('dialog', { name: 'Glossary term details' });
-    expect(within(dialog).getByText('Source term: ChatGPT')).toBeInTheDocument();
-    expect(within(dialog).getByText('Translation: Do not translate')).toBeInTheDocument();
+    const dialog = screen.getByRole('dialog', { name: 'Glossary term details for ChatGPT' });
+    const summary = within(dialog).getByLabelText('Selected glossary term');
+    expect(within(summary).getByText('Source term')).toBeInTheDocument();
+    expect(within(summary).getByText('ChatGPT')).toBeInTheDocument();
+    expect(within(summary).getByText('Glossary translation')).toBeInTheDocument();
+    expect(within(summary).getByText('Do not translate')).toBeInTheDocument();
     expect(within(dialog).queryByText('ChatGPT to Do not translate')).not.toBeInTheDocument();
   });
 
@@ -151,8 +178,10 @@ describe('GlossaryMatchesPanel', () => {
 
     const card = screen.getByText('View').closest('article');
     expect(card).not.toBeNull();
-    fireEvent.click(within(card!).getByRole('button', { name: 'Details' }));
-    expect(screen.getByRole('dialog', { name: 'Glossary term details' })).toBeInTheDocument();
+    fireEvent.click(within(card!).getByRole('button', { name: 'Details for View' }));
+    expect(
+      screen.getByRole('dialog', { name: 'Glossary term details for View' }),
+    ).toBeInTheDocument();
 
     rerender(
       <MemoryRouter>
@@ -176,7 +205,7 @@ describe('GlossaryMatchesPanel', () => {
 
     await waitFor(() => {
       expect(
-        screen.queryByRole('dialog', { name: 'Glossary term details' }),
+        screen.queryByRole('dialog', { name: 'Glossary term details for View' }),
       ).not.toBeInTheDocument();
     });
   });
@@ -195,8 +224,10 @@ describe('GlossaryMatchesPanel', () => {
 
     const card = screen.getByText('View').closest('article');
     expect(card).not.toBeNull();
-    fireEvent.click(within(card!).getByRole('button', { name: 'Details' }));
-    expect(screen.getByText('Translation: View translation')).toBeInTheDocument();
+    fireEvent.click(within(card!).getByRole('button', { name: 'Details for View' }));
+    expect(
+      within(screen.getByLabelText('Selected glossary term')).getByText('View translation'),
+    ).toBeInTheDocument();
 
     rerender(
       <MemoryRouter>
@@ -216,8 +247,28 @@ describe('GlossaryMatchesPanel', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Translation: Updated view translation')).toBeInTheDocument();
+      expect(
+        within(screen.getByLabelText('Selected glossary term')).getByText(
+          'Updated view translation',
+        ),
+      ).toBeInTheDocument();
     });
     expect(screen.getByText('Updated target note.')).toBeInTheDocument();
+  });
+
+  it('does not show duplicate source note when it matches the term description', () => {
+    renderPanel({
+      comment: 'Shared product meaning.',
+      definition: 'Shared product meaning.',
+    });
+
+    const card = screen.getByText('View').closest('article');
+    expect(card).not.toBeNull();
+    fireEvent.click(within(card!).getByRole('button', { name: 'Details for View' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Glossary term details for View' });
+    expect(within(dialog).getByText('Term description')).toBeInTheDocument();
+    expect(within(dialog).getByText('Shared product meaning.')).toBeInTheDocument();
+    expect(within(dialog).queryByText('Source note')).not.toBeInTheDocument();
   });
 });

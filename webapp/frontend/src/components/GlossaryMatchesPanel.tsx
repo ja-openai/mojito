@@ -149,18 +149,17 @@ export function GlossaryMatchesPanel({
               return (
                 <article key={getGlossaryMatchKey(match)} className="glossary-match-panel__item">
                   <div className="glossary-match-panel__pair">
-                    <div className="glossary-match-panel__pair-header">
-                      <div className="glossary-match-panel__pair-value">{match.source}</div>
-                      <button
-                        type="button"
-                        className="glossary-match-panel__details-button"
-                        onClick={() => setSelectedMatch(match)}
-                      >
-                        Details
-                      </button>
-                    </div>
+                    <div className="glossary-match-panel__pair-value">{match.source}</div>
                     <div className={requiredTargetClassName}>{requiredTarget}</div>
                   </div>
+                  <button
+                    type="button"
+                    className="glossary-match-panel__details-button"
+                    aria-label={`Details for ${match.source || 'glossary term'}`}
+                    onClick={() => setSelectedMatch(match)}
+                  >
+                    Details
+                  </button>
                 </article>
               );
             })}
@@ -196,20 +195,30 @@ function GlossaryMatchDetailsModal({
   const noteEvidence =
     match?.evidence.filter((evidence) => !evidence.imageKey && evidence.caption) ?? [];
   const termHref = match ? getGlossaryTermHref(match) : null;
-  const detailRows = match
+  const modalAriaLabel = match?.source
+    ? `Glossary term details for ${match.source}`
+    : 'Glossary term details';
+  const termDescription = match?.definition?.trim() || null;
+  const sourceNote = match?.comment?.trim() || null;
+  const shouldShowSourceNote = sourceNote && sourceNote !== termDescription;
+  const termDetailRows = match
     ? [
-        { label: 'Matched text', value: match.matchedText },
-        { label: 'Glossary', value: match.glossaryName },
-        { label: 'Definition', value: match.definition },
-        { label: 'Source note', value: match.comment },
+        { label: 'Glossary name', value: match.glossaryName },
+        { label: 'Term description', value: termDescription },
+        { label: 'Source note', value: shouldShowSourceNote ? sourceNote : null },
         { label: 'Translation note', value: match.targetComment },
         { label: 'Part of speech', value: match.partOfSpeech },
         { label: 'Term type', value: match.termType },
         { label: 'Enforcement', value: match.enforcement },
         { label: 'Status', value: match.status },
         { label: 'Provenance', value: match.provenance },
+      ].filter((row) => row.value && row.value.trim())
+    : [];
+  const matchDetailRows = match
+    ? [
+        { label: 'Matched source text', value: match.matchedText },
         { label: 'Match type', value: match.matchType },
-        { label: 'Evidence', value: evidenceSummary },
+        { label: 'Evidence summary', value: evidenceSummary },
       ].filter((row) => row.value && row.value.trim())
     : [];
 
@@ -217,7 +226,7 @@ function GlossaryMatchDetailsModal({
     <Modal
       open={match != null}
       size="xl"
-      ariaLabel="Glossary term details"
+      ariaLabel={modalAriaLabel}
       closeOnBackdrop
       onClose={onClose}
       className="glossary-match-panel__modal"
@@ -229,10 +238,19 @@ function GlossaryMatchDetailsModal({
               <h2 className="modal__title glossary-match-panel__modal-title">
                 Glossary term details
               </h2>
-              <div className="glossary-match-panel__modal-subtitle">
-                <span>Source term: {match.source}</span>
-                <span>Translation: {requiredTarget}</span>
-              </div>
+              <dl
+                className="glossary-match-panel__modal-summary"
+                aria-label="Selected glossary term"
+              >
+                <div>
+                  <dt>Source term</dt>
+                  <dd>{match.source}</dd>
+                </div>
+                <div>
+                  <dt>Glossary translation</dt>
+                  <dd>{requiredTarget}</dd>
+                </div>
+              </dl>
             </div>
             <div className="glossary-match-panel__modal-actions">
               {termHref ? (
@@ -249,6 +267,34 @@ function GlossaryMatchDetailsModal({
           <div className="glossary-match-panel__modal-body">
             {complianceMessage ? (
               <div className="glossary-match-panel__compliance-note">{complianceMessage}</div>
+            ) : null}
+
+            {termDetailRows.length > 0 ? (
+              <section className="glossary-match-panel__modal-section">
+                <h3>Term details</h3>
+                <dl className="glossary-match-panel__detail-list">
+                  {termDetailRows.map((row) => (
+                    <div key={row.label}>
+                      <dt>{row.label}</dt>
+                      <dd>{row.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            ) : null}
+
+            {matchDetailRows.length > 0 ? (
+              <section className="glossary-match-panel__modal-section">
+                <h3>Match details</h3>
+                <dl className="glossary-match-panel__detail-list">
+                  {matchDetailRows.map((row) => (
+                    <div key={row.label}>
+                      <dt>{row.label}</dt>
+                      <dd>{row.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
             ) : null}
 
             <section className="glossary-match-panel__modal-section glossary-match-panel__screenshots-section">
@@ -269,6 +315,9 @@ function GlossaryMatchDetailsModal({
                       href={resolveAttachmentUrl(evidence.imageKey)}
                       target="_blank"
                       rel="noreferrer"
+                      aria-label={`Open evidence screenshot${
+                        evidence.caption ? `: ${evidence.caption}` : ''
+                      }`}
                     >
                       <img
                         src={resolveAttachmentUrl(evidence.imageKey)}
@@ -289,23 +338,6 @@ function GlossaryMatchDetailsModal({
                 </p>
               )}
             </section>
-
-            <dl className="glossary-match-panel__detail-list">
-              <div>
-                <dt>Source term</dt>
-                <dd>{match.source}</dd>
-              </div>
-              <div>
-                <dt>Translation</dt>
-                <dd>{requiredTarget}</dd>
-              </div>
-              {detailRows.map((row) => (
-                <div key={row.label}>
-                  <dt>{row.label}</dt>
-                  <dd>{row.value}</dd>
-                </div>
-              ))}
-            </dl>
 
             {noteEvidence.length > 0 ? (
               <section className="glossary-match-panel__modal-section">

@@ -11,9 +11,13 @@ import com.box.l10n.mojito.service.glossary.GlossaryTermService;
 import com.box.l10n.mojito.service.oaitranslate.GlossaryService;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.security.user.UserService;
+import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.UncheckedExecutionException;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,6 +30,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.http.HttpHeaders;
@@ -49,8 +55,12 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/glossaries")
 public class GlossaryWS {
 
+  static Logger logger = LoggerFactory.getLogger(GlossaryWS.class);
+
   private static final String GLOSSARY_WORKSPACE_CANDIDATE_SOURCE_NAME = "glossary-workspace";
   private static final String GLOSSARY_WORKSPACE_CANDIDATE_SOURCE_TYPE = "HUMAN";
+  static final String MATCH_DURATION_METRIC = "GlossaryWS.matchDuration";
+  private static final long MATCH_SLOW_LOG_THRESHOLD_MS = 250;
 
   private final GlossaryManagementService glossaryManagementService;
   private final GlossaryImportExportService glossaryImportExportService;
@@ -62,6 +72,7 @@ public class GlossaryWS {
   private final TermIndexEntriesHybridProperties termIndexEntriesHybridProperties;
   private final AsyncTaskExecutor termIndexEntriesHybridExecutor;
   private final UserService userService;
+  private final MeterRegistry meterRegistry;
 
   public GlossaryWS(
       GlossaryManagementService glossaryManagementService,
@@ -73,7 +84,8 @@ public class GlossaryWS {
       @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper,
       TermIndexEntriesHybridProperties termIndexEntriesHybridProperties,
       @Qualifier("termIndexEntriesHybridExecutor") AsyncTaskExecutor termIndexEntriesHybridExecutor,
-      UserService userService) {
+      UserService userService,
+      MeterRegistry meterRegistry) {
     this.glossaryManagementService = glossaryManagementService;
     this.glossaryImportExportService = glossaryImportExportService;
     this.glossaryTermService = glossaryTermService;
@@ -85,6 +97,7 @@ public class GlossaryWS {
         Objects.requireNonNull(termIndexEntriesHybridProperties);
     this.termIndexEntriesHybridExecutor = Objects.requireNonNull(termIndexEntriesHybridExecutor);
     this.userService = Objects.requireNonNull(userService);
+    this.meterRegistry = Objects.requireNonNull(meterRegistry);
   }
 
   public record SearchGlossariesResponse(List<GlossarySummary> glossaries, long totalCount) {
@@ -555,8 +568,11 @@ public class GlossaryWS {
   @PostMapping("/match")
   public MatchGlossaryTermsResponse matchGlossaryTerms(
       @RequestBody MatchGlossaryTermsRequest request) {
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    String result = "success";
+    int matchCount = -1;
     try {
-      return new MatchGlossaryTermsResponse(
+      List<MatchGlossaryTermsResponse.MatchedGlossaryTermResponse> matchedTerms =
           glossaryService
               .findMatchesForRepositoryAndLocale(
                   request != null ? request.repositoryId() : null,
@@ -567,10 +583,71 @@ public class GlossaryWS {
                   request != null ? request.excludeTmTextUnitId() : null)
               .stream()
               .map(this::toMatchedTermResponse)
-              .toList());
+              .toList();
+      matchCount = matchedTerms.size();
+      return new MatchGlossaryTermsResponse(matchedTerms);
     } catch (IllegalArgumentException ex) {
+      result = "bad_request";
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+    } catch (RuntimeException ex) {
+      result = "error";
+      throw ex;
+    } finally {
+      recordGlossaryMatchDuration(request, result, matchCount, stopwatch);
     }
+  }
+
+  private void recordGlossaryMatchDuration(
+      MatchGlossaryTermsRequest request, String result, int matchCount, Stopwatch stopwatch) {
+    Duration elapsed = stopwatch.elapsed();
+    long elapsedMillis = elapsed.toMillis();
+    String scope = getGlossaryMatchScope(request);
+    meterRegistry
+        .timer(MATCH_DURATION_METRIC, Tags.of("result", result, "scope", scope))
+        .record(elapsed);
+
+    String localeTag = request != null ? request.localeTag() : null;
+    int sourceLength =
+        request != null && request.sourceText() != null ? request.sourceText().length() : 0;
+    if (elapsedMillis >= MATCH_SLOW_LOG_THRESHOLD_MS) {
+      logger.info(
+          "Glossary match completed: result={}, scope={}, elapsedMs={}, localeTag={}, sourceLength={}, matchCount={}",
+          result,
+          scope,
+          elapsedMillis,
+          localeTag,
+          sourceLength,
+          matchCount);
+    } else {
+      logger.debug(
+          "Glossary match completed: result={}, scope={}, elapsedMs={}, localeTag={}, sourceLength={}, matchCount={}",
+          result,
+          scope,
+          elapsedMillis,
+          localeTag,
+          sourceLength,
+          matchCount);
+    }
+  }
+
+  private String getGlossaryMatchScope(MatchGlossaryTermsRequest request) {
+    if (request == null) {
+      return "missing";
+    }
+    if (hasText(request.glossaryName())) {
+      return "glossary_name";
+    }
+    if (request.repositoryId() != null) {
+      return "repository_id";
+    }
+    if (hasText(request.repositoryName())) {
+      return "repository_name";
+    }
+    return "missing";
+  }
+
+  private boolean hasText(String value) {
+    return value != null && !value.isBlank();
   }
 
   @GetMapping("/{glossaryId}/export")
