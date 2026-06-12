@@ -26,6 +26,8 @@ import com.box.l10n.mojito.service.tm.search.TextUnitTextSearchPredicate;
 import com.box.l10n.mojito.service.tm.search.UsedFilter;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
+import io.micrometer.core.instrument.Timer;
+import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -39,6 +41,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
@@ -50,6 +54,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class GlossaryTermIndexCurationService {
+
+  private static final Logger logger =
+      LoggerFactory.getLogger(GlossaryTermIndexCurationService.class);
 
   private static final int DEFAULT_SUGGESTION_LIMIT = 50;
   private static final int EXAMPLE_LIMIT = 4;
@@ -105,6 +112,7 @@ public class GlossaryTermIndexCurationService {
   private final QuartzPollableTaskScheduler quartzPollableTaskScheduler;
   private final PollableTaskService pollableTaskService;
   private final TransactionTemplate requiresNewTransactionTemplate;
+  private final TermIndexJobObservability termIndexJobObservability;
 
   public GlossaryTermIndexCurationService(
       GlossaryRepository glossaryRepository,
@@ -123,7 +131,8 @@ public class GlossaryTermIndexCurationService {
       @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper,
       QuartzPollableTaskScheduler quartzPollableTaskScheduler,
       PollableTaskService pollableTaskService,
-      PlatformTransactionManager transactionManager) {
+      PlatformTransactionManager transactionManager,
+      TermIndexJobObservability termIndexJobObservability) {
     this.glossaryRepository = Objects.requireNonNull(glossaryRepository);
     this.repositoryRepository = Objects.requireNonNull(repositoryRepository);
     this.glossaryTermMetadataRepository = Objects.requireNonNull(glossaryTermMetadataRepository);
@@ -147,6 +156,7 @@ public class GlossaryTermIndexCurationService {
         new TransactionTemplate(Objects.requireNonNull(transactionManager));
     this.requiresNewTransactionTemplate.setPropagationBehavior(
         TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    this.termIndexJobObservability = Objects.requireNonNull(termIndexJobObservability);
   }
 
   @Transactional(readOnly = true)
@@ -367,54 +377,95 @@ public class GlossaryTermIndexCurationService {
   @Transactional
   GenerateCandidatesResult generateCandidatesForGlossaryInternal(
       Long glossaryId, GenerateCandidatesCommand command) {
-    Glossary glossary = getGlossary(glossaryId);
-    GenerateCandidatesCommand normalized = normalize(command);
-    List<Long> scopeRepositoryIds = resolveScopeRepositoryIds(glossary);
-    if (scopeRepositoryIds.isEmpty()) {
-      return new GenerateCandidatesResult(0, 0, 0, 0, List.of());
-    }
-
-    List<TermIndexExtractedTermRepository.SearchRow> rows =
-        termIndexExtractedTermRepository.searchEntries(
-            false,
-            repositoryIdsOrSentinel(scopeRepositoryIds),
-            normalizeOptional(normalized.searchQuery()),
-            normalizeOptional(normalized.extractionMethod()),
-            TermIndexReview.STATUS_FILTER_NON_REJECTED,
-            null,
-            Math.max(1L, normalized.minOccurrences() == null ? 1L : normalized.minOccurrences()),
-            null,
-            null,
-            null,
-            null,
-            "HITS",
-            PageRequest.of(0, normalizeGenerationLimit(normalized.limit())));
-
-    Map<Long, List<GeneratedCandidateFields>> candidateFieldsByExtractedTermId =
-        candidateFieldsByExtractedTermId(
-            rows, false, repositoryIdsOrSentinel(scopeRepositoryIds), null);
-    List<SeededTermView> generatedCandidates = new ArrayList<>(rows.size());
-    int createdCandidateCount = 0;
-    int updatedCandidateCount = 0;
-    for (TermIndexExtractedTermRepository.SearchRow row : rows) {
-      for (GeneratedCandidateFields fields :
-          candidateFieldsForRow(candidateFieldsByExtractedTermId, row)) {
-        CandidateWriteResult writeResult = upsertExtractionCandidate(row, fields);
-        if (writeResult.created()) {
-          createdCandidateCount++;
-        } else {
-          updatedCandidateCount++;
-        }
-        generatedCandidates.add(toSeededTermView(writeResult.candidate()));
+    Timer.Sample jobTimer = termIndexJobObservability.startTimer();
+    termIndexJobObservability.recordJobStarted(TermIndexJobObservability.JOB_CANDIDATE_GENERATION);
+    try {
+      Glossary glossary = getGlossary(glossaryId);
+      GenerateCandidatesCommand normalized = normalize(command);
+      List<Long> scopeRepositoryIds = resolveScopeRepositoryIds(glossary);
+      logger.info(
+          "Term index candidate generation started: source=glossary, glossaryId={}, repositoryCount={}, limit={}",
+          glossaryId,
+          scopeRepositoryIds.size(),
+          normalizeGenerationLimit(normalized.limit()));
+      if (scopeRepositoryIds.isEmpty()) {
+        GenerateCandidatesResult result = new GenerateCandidatesResult(0, 0, 0, 0, List.of());
+        termIndexJobObservability.recordJobFinished(
+            TermIndexJobObservability.JOB_CANDIDATE_GENERATION,
+            TermIndexJobObservability.RESULT_SUCCEEDED,
+            jobTimer);
+        logger.info(
+            "Term index candidate generation completed: source=glossary, glossaryId={}, entryCount=0, candidateCount=0, createdCandidateCount=0, updatedCandidateCount=0",
+            glossaryId);
+        return result;
       }
-    }
 
-    return new GenerateCandidatesResult(
-        generatedCandidates.size(),
-        createdCandidateCount,
-        updatedCandidateCount,
-        0,
-        generatedCandidates);
+      List<TermIndexExtractedTermRepository.SearchRow> rows =
+          termIndexExtractedTermRepository.searchEntries(
+              false,
+              repositoryIdsOrSentinel(scopeRepositoryIds),
+              normalizeOptional(normalized.searchQuery()),
+              normalizeOptional(normalized.extractionMethod()),
+              TermIndexReview.STATUS_FILTER_NON_REJECTED,
+              null,
+              Math.max(1L, normalized.minOccurrences() == null ? 1L : normalized.minOccurrences()),
+              null,
+              null,
+              null,
+              null,
+              "HITS",
+              PageRequest.of(0, normalizeGenerationLimit(normalized.limit())));
+
+      Map<Long, List<GeneratedCandidateFields>> candidateFieldsByExtractedTermId =
+          candidateFieldsByExtractedTermId(
+              rows, false, repositoryIdsOrSentinel(scopeRepositoryIds), null);
+      List<SeededTermView> generatedCandidates = new ArrayList<>(rows.size());
+      int createdCandidateCount = 0;
+      int updatedCandidateCount = 0;
+      for (TermIndexExtractedTermRepository.SearchRow row : rows) {
+        for (GeneratedCandidateFields fields :
+            candidateFieldsForRow(candidateFieldsByExtractedTermId, row)) {
+          CandidateWriteResult writeResult = upsertExtractionCandidate(row, fields);
+          if (writeResult.created()) {
+            createdCandidateCount++;
+          } else {
+            updatedCandidateCount++;
+          }
+          generatedCandidates.add(toSeededTermView(writeResult.candidate()));
+        }
+      }
+
+      GenerateCandidatesResult result =
+          new GenerateCandidatesResult(
+              generatedCandidates.size(),
+              createdCandidateCount,
+              updatedCandidateCount,
+              0,
+              generatedCandidates);
+      termIndexJobObservability.recordJobFinished(
+          TermIndexJobObservability.JOB_CANDIDATE_GENERATION,
+          TermIndexJobObservability.RESULT_SUCCEEDED,
+          jobTimer);
+      logger.info(
+          "Term index candidate generation completed: source=glossary, glossaryId={}, entryCount={}, candidateCount={}, createdCandidateCount={}, updatedCandidateCount={}",
+          glossaryId,
+          rows.size(),
+          result.candidateCount(),
+          result.createdCandidateCount(),
+          result.updatedCandidateCount());
+      return result;
+    } catch (RuntimeException e) {
+      termIndexJobObservability.recordJobFinished(
+          TermIndexJobObservability.JOB_CANDIDATE_GENERATION,
+          TermIndexJobObservability.RESULT_FAILED,
+          jobTimer);
+      logger.info(
+          "Term index candidate generation failed: source=glossary, glossaryId={}, errorClass={}, errorMessage={}",
+          glossaryId,
+          e.getClass().getSimpleName(),
+          errorMessage(e));
+      throw e;
+    }
   }
 
   public GenerateCandidatesResult generateCandidatesFromExtractedTerms(
@@ -492,6 +543,42 @@ public class GlossaryTermIndexCurationService {
       GenerateCandidatesFromExtractedTermsCommand command,
       User reviewChangedByUser,
       Long pollableTaskId) {
+    Timer.Sample jobTimer = termIndexJobObservability.startTimer();
+    termIndexJobObservability.recordJobStarted(TermIndexJobObservability.JOB_CANDIDATE_GENERATION);
+    try {
+      GenerateCandidatesResult result =
+          generateCandidatesFromExtractedTermsInternalObserved(
+              command, reviewChangedByUser, pollableTaskId);
+      termIndexJobObservability.recordJobFinished(
+          TermIndexJobObservability.JOB_CANDIDATE_GENERATION,
+          TermIndexJobObservability.RESULT_SUCCEEDED,
+          jobTimer);
+      logger.info(
+          "Term index candidate generation completed: source=extracted_terms, pollableTaskId={}, candidateCount={}, createdCandidateCount={}, updatedCandidateCount={}, skippedExistingCandidateCount={}",
+          pollableTaskId,
+          result.candidateCount(),
+          result.createdCandidateCount(),
+          result.updatedCandidateCount(),
+          result.skippedExistingCandidateCount());
+      return result;
+    } catch (RuntimeException e) {
+      termIndexJobObservability.recordJobFinished(
+          TermIndexJobObservability.JOB_CANDIDATE_GENERATION,
+          TermIndexJobObservability.RESULT_FAILED,
+          jobTimer);
+      logger.info(
+          "Term index candidate generation failed: source=extracted_terms, pollableTaskId={}, errorClass={}, errorMessage={}",
+          pollableTaskId,
+          e.getClass().getSimpleName(),
+          errorMessage(e));
+      throw e;
+    }
+  }
+
+  private GenerateCandidatesResult generateCandidatesFromExtractedTermsInternalObserved(
+      GenerateCandidatesFromExtractedTermsCommand command,
+      User reviewChangedByUser,
+      Long pollableTaskId) {
     GenerateCandidatesFromExtractedTermsCommand normalized = normalize(command);
     createAutomationRunIfMissing(
         TermIndexAutomationRun.TYPE_GENERATE_CANDIDATES,
@@ -512,6 +599,14 @@ public class GlossaryTermIndexCurationService {
     int processedRowCount = 0;
     int batchCount = ceilDiv(requestedRowCount, AI_CANDIDATE_BATCH_SIZE);
     int completedBatchCount = 0;
+    logger.info(
+        "Term index candidate generation started: source=extracted_terms, pollableTaskId={}, repositoryCount={}, requestedEntryCount={}, batchCount={}, explicitEntryIds={}, skipExistingCandidates={}",
+        pollableTaskId,
+        normalized.repositoryIds().size(),
+        requestedRowCount,
+        batchCount,
+        !normalized.termIndexExtractedTermIds().isEmpty(),
+        normalized.skipExistingCandidates());
     updateCandidateGenerationProgress(
         pollableTaskId,
         new GenerateCandidatesProgressView(
@@ -541,13 +636,15 @@ public class GlossaryTermIndexCurationService {
           termIndexExtractedTermRepository.findCandidateGenerationRowsByIdIn(
               batchIds, repositoryIdsEmpty, repositoryIds);
       GenerateCandidatesBatchResult batchResult =
-          generateCandidateGenerationRowsBatch(
+          generateCandidateGenerationRowsBatchWithObservability(
               batch,
               repositoryIdsEmpty,
               repositoryIds,
               overrides,
               normalized.skipExistingCandidates(),
-              reviewChangedByUser);
+              reviewChangedByUser,
+              completedBatchCount + 1,
+              batchCount);
       createdCandidateCount += batchResult.createdCandidateCount();
       updatedCandidateCount += batchResult.updatedCandidateCount();
       skippedExistingCandidateCount += batchResult.skippedExistingCandidateCount();
@@ -588,13 +685,15 @@ public class GlossaryTermIndexCurationService {
           batch = batch.subList(0, remainingRows);
         }
         GenerateCandidatesBatchResult batchResult =
-            generateCandidateGenerationRowsBatch(
+            generateCandidateGenerationRowsBatchWithObservability(
                 batch,
                 repositoryIdsEmpty,
                 repositoryIds,
                 overrides,
                 normalized.skipExistingCandidates(),
-                reviewChangedByUser);
+                reviewChangedByUser,
+                completedBatchCount + 1,
+                batchCount);
         createdCandidateCount += batchResult.createdCandidateCount();
         updatedCandidateCount += batchResult.updatedCandidateCount();
         skippedExistingCandidateCount += batchResult.skippedExistingCandidateCount();
@@ -673,6 +772,62 @@ public class GlossaryTermIndexCurationService {
         existingCandidateFilter.skippedExistingCandidateCount()
             + batchResult.skippedExistingCandidateCount(),
         batchResult.candidates());
+  }
+
+  private GenerateCandidatesBatchResult generateCandidateGenerationRowsBatchWithObservability(
+      List<TermIndexExtractedTermRepository.SearchRow> rows,
+      boolean repositoryIdsEmpty,
+      List<Long> repositoryIds,
+      CandidateFieldOverrides overrides,
+      boolean skipExistingCandidates,
+      User reviewChangedByUser,
+      int batchNumber,
+      int batchCount) {
+    long batchStartNanos = System.nanoTime();
+    logger.info(
+        "Term index candidate generation batch started: batchNumber={}, batchCount={}, entryCount={}",
+        batchNumber,
+        batchCount,
+        rows.size());
+    try {
+      GenerateCandidatesBatchResult result =
+          generateCandidateGenerationRowsBatch(
+              rows,
+              repositoryIdsEmpty,
+              repositoryIds,
+              overrides,
+              skipExistingCandidates,
+              reviewChangedByUser);
+      termIndexJobObservability.recordBatch(
+          TermIndexJobObservability.JOB_CANDIDATE_GENERATION,
+          TermIndexJobObservability.TYPE_CANDIDATE_GENERATION_BATCH,
+          TermIndexJobObservability.RESULT_SUCCEEDED,
+          elapsedSince(batchStartNanos));
+      logger.info(
+          "Term index candidate generation batch completed: batchNumber={}, batchCount={}, entryCount={}, candidateCount={}, createdCandidateCount={}, updatedCandidateCount={}, skippedExistingCandidateCount={}",
+          batchNumber,
+          batchCount,
+          rows.size(),
+          result.candidateCount(),
+          result.createdCandidateCount(),
+          result.updatedCandidateCount(),
+          result.skippedExistingCandidateCount());
+      return result;
+    } catch (RuntimeException e) {
+      termIndexJobObservability.recordBatch(
+          TermIndexJobObservability.JOB_CANDIDATE_GENERATION,
+          TermIndexJobObservability.TYPE_CANDIDATE_GENERATION_BATCH,
+          TermIndexJobObservability.RESULT_FAILED,
+          elapsedSince(batchStartNanos));
+      logger.info(
+          "Term index candidate generation batch failed: batchNumber={}, batchCount={}, entryCount={}, errorClass={}, errorMessage={}",
+          batchNumber,
+          batchCount,
+          rows.size(),
+          e.getClass().getSimpleName(),
+          errorMessage(e));
+      throw e;
+    }
   }
 
   private GenerateCandidatesBatchResult writeGeneratedCandidatesBatchInNewTransaction(
@@ -788,6 +943,41 @@ public class GlossaryTermIndexCurationService {
 
   public TriageExtractedTermsResult triageExtractedTerms(
       TriageExtractedTermsCommand command, Long pollableTaskId) {
+    Timer.Sample jobTimer = termIndexJobObservability.startTimer();
+    termIndexJobObservability.recordJobStarted(TermIndexJobObservability.JOB_EXTRACTED_TERM_TRIAGE);
+    try {
+      TriageExtractedTermsResult result = triageExtractedTermsObserved(command, pollableTaskId);
+      termIndexJobObservability.recordJobFinished(
+          TermIndexJobObservability.JOB_EXTRACTED_TERM_TRIAGE,
+          TermIndexJobObservability.RESULT_SUCCEEDED,
+          jobTimer);
+      logger.info(
+          "Term index extracted-term triage completed: pollableTaskId={}, entryCount={}, reviewedEntryCount={}, updatedEntryCount={}, acceptedCount={}, toReviewCount={}, rejectedCount={}, skippedHumanReviewedCount={}",
+          pollableTaskId,
+          result.entryCount(),
+          result.reviewedEntryCount(),
+          result.updatedEntryCount(),
+          result.acceptedCount(),
+          result.toReviewCount(),
+          result.rejectedCount(),
+          result.skippedHumanReviewedCount());
+      return result;
+    } catch (RuntimeException e) {
+      termIndexJobObservability.recordJobFinished(
+          TermIndexJobObservability.JOB_EXTRACTED_TERM_TRIAGE,
+          TermIndexJobObservability.RESULT_FAILED,
+          jobTimer);
+      logger.info(
+          "Term index extracted-term triage failed: pollableTaskId={}, errorClass={}, errorMessage={}",
+          pollableTaskId,
+          e.getClass().getSimpleName(),
+          errorMessage(e));
+      throw e;
+    }
+  }
+
+  private TriageExtractedTermsResult triageExtractedTermsObserved(
+      TriageExtractedTermsCommand command, Long pollableTaskId) {
     TriageExtractedTermsCommand normalized = normalize(command);
     createAutomationRunIfMissing(
         TermIndexAutomationRun.TYPE_REVIEW_EXTRACTED_TERMS,
@@ -815,6 +1005,15 @@ public class GlossaryTermIndexCurationService {
     int processedEntryCount = 0;
     int batchCount = ceilDiv(reviewableRows.size(), AI_CANDIDATE_BATCH_SIZE);
     int completedBatchCount = 0;
+    logger.info(
+        "Term index extracted-term triage started: pollableTaskId={}, repositoryCount={}, entryCount={}, reviewableEntryCount={}, skippedHumanReviewedCount={}, batchCount={}, overwriteHumanReview={}",
+        pollableTaskId,
+        normalized.repositoryIds().size(),
+        rows.size(),
+        reviewableRows.size(),
+        skippedHumanReviewedCount,
+        batchCount,
+        overwriteHumanReview);
 
     updateTriageProgress(
         pollableTaskId,
@@ -836,6 +1035,13 @@ public class GlossaryTermIndexCurationService {
       List<TermIndexExtractedTermRepository.SearchRow> batch =
           reviewableRows.subList(
               start, Math.min(reviewableRows.size(), start + AI_CANDIDATE_BATCH_SIZE));
+      long batchStartNanos = System.nanoTime();
+      int batchNumber = completedBatchCount + 1;
+      logger.info(
+          "Term index extracted-term triage batch started: batchNumber={}, batchCount={}, entryCount={}",
+          batchNumber,
+          batchCount,
+          batch.size());
       List<GlossaryAiExtractionService.CandidateSignal> signals =
           batch.stream()
               .map(row -> toCandidateSignal(row, repositoryIdsEmpty, repositoryIds))
@@ -862,6 +1068,19 @@ public class GlossaryTermIndexCurationService {
                 skippedHumanReviewedCount,
                 batchCount,
                 completedBatchCount));
+        termIndexJobObservability.recordBatch(
+            TermIndexJobObservability.JOB_EXTRACTED_TERM_TRIAGE,
+            TermIndexJobObservability.TYPE_TRIAGE_BATCH,
+            TermIndexJobObservability.RESULT_FAILED,
+            elapsedSince(batchStartNanos));
+        logger.info(
+            "Term index extracted-term triage batch failed: batchNumber={}, batchCount={}, entryCount={}, completedBatchCount={}, errorClass={}, errorMessage={}",
+            batchNumber,
+            batchCount,
+            batch.size(),
+            completedBatchCount,
+            e.getClass().getSimpleName(),
+            errorMessage(e));
         throw new IllegalStateException(
             "AI review failed for extracted term batch "
                 + (completedBatchCount + 1)
@@ -885,6 +1104,20 @@ public class GlossaryTermIndexCurationService {
         }
       }
       completedBatchCount++;
+      termIndexJobObservability.recordBatch(
+          TermIndexJobObservability.JOB_EXTRACTED_TERM_TRIAGE,
+          TermIndexJobObservability.TYPE_TRIAGE_BATCH,
+          TermIndexJobObservability.RESULT_SUCCEEDED,
+          elapsedSince(batchStartNanos));
+      logger.info(
+          "Term index extracted-term triage batch completed: batchNumber={}, batchCount={}, entryCount={}, updatedEntryCount={}, acceptedCount={}, toReviewCount={}, rejectedCount={}",
+          batchNumber,
+          batchCount,
+          batch.size(),
+          triagedBatch.size(),
+          acceptedCount,
+          toReviewCount,
+          rejectedCount);
       updateTriageProgress(
           pollableTaskId,
           new TriageProgressView(
@@ -1646,10 +1879,18 @@ public class GlossaryTermIndexCurationService {
 
   private List<GlossaryAiExtractionService.AiExtractedTermReviewView> reviewExtractedTermsWithRetry(
       List<GlossaryAiExtractionService.CandidateSignal> signals) {
+    long aiBatchStartNanos = System.nanoTime();
     RuntimeException lastException = null;
     for (int attempt = 1; attempt <= AI_REVIEW_MAX_ATTEMPTS; attempt++) {
       try {
-        return glossaryAiExtractionService.reviewExtractedTerms(signals);
+        List<GlossaryAiExtractionService.AiExtractedTermReviewView> reviews =
+            glossaryAiExtractionService.reviewExtractedTerms(signals);
+        termIndexJobObservability.recordAiBatch(
+            TermIndexJobObservability.JOB_EXTRACTED_TERM_TRIAGE,
+            TermIndexJobObservability.TYPE_AI_EXTRACTED_TERM_REVIEW,
+            TermIndexJobObservability.RESULT_SUCCEEDED,
+            elapsedSince(aiBatchStartNanos));
+        return reviews;
       } catch (RuntimeException e) {
         lastException = e;
         if (attempt >= AI_REVIEW_MAX_ATTEMPTS) {
@@ -1658,6 +1899,11 @@ public class GlossaryTermIndexCurationService {
         sleepBeforeAiReviewRetry(attempt);
       }
     }
+    termIndexJobObservability.recordAiBatch(
+        TermIndexJobObservability.JOB_EXTRACTED_TERM_TRIAGE,
+        TermIndexJobObservability.TYPE_AI_EXTRACTED_TERM_REVIEW,
+        TermIndexJobObservability.RESULT_FAILED,
+        elapsedSince(aiBatchStartNanos));
     throw lastException == null ? new IllegalStateException("AI review failed") : lastException;
   }
 
@@ -1925,6 +2171,7 @@ public class GlossaryTermIndexCurationService {
                     TermIndexExtractedTermRepository.SearchRow::getId,
                     (left, ignored) -> left,
                     LinkedHashMap::new));
+    int batchCount = ceilDiv(rows.size(), AI_CANDIDATE_BATCH_SIZE);
     for (int start = 0; start < rows.size(); start += AI_CANDIDATE_BATCH_SIZE) {
       List<TermIndexExtractedTermRepository.SearchRow> batch =
           rows.subList(start, Math.min(rows.size(), start + AI_CANDIDATE_BATCH_SIZE));
@@ -1933,9 +2180,39 @@ public class GlossaryTermIndexCurationService {
               .map(row -> toCandidateSignal(row, repositoryIdsEmpty, repositoryIds))
               .toList();
       List<GlossaryAiExtractionService.AiCandidateView> aiCandidates;
+      long aiBatchStartNanos = System.nanoTime();
+      int batchNumber = start / AI_CANDIDATE_BATCH_SIZE + 1;
+      logger.info(
+          "Term index candidate AI enrichment batch started: batchNumber={}, batchCount={}, entryCount={}",
+          batchNumber,
+          batchCount,
+          signals.size());
       try {
         aiCandidates = glossaryAiExtractionService.enrichCandidates(signals);
-      } catch (RuntimeException ignored) {
+        termIndexJobObservability.recordAiBatch(
+            TermIndexJobObservability.JOB_CANDIDATE_GENERATION,
+            TermIndexJobObservability.TYPE_AI_CANDIDATE_ENRICHMENT,
+            TermIndexJobObservability.RESULT_SUCCEEDED,
+            elapsedSince(aiBatchStartNanos));
+        logger.info(
+            "Term index candidate AI enrichment batch completed: batchNumber={}, batchCount={}, entryCount={}, returnedCandidateCount={}",
+            batchNumber,
+            batchCount,
+            signals.size(),
+            aiCandidates.size());
+      } catch (RuntimeException e) {
+        termIndexJobObservability.recordAiBatch(
+            TermIndexJobObservability.JOB_CANDIDATE_GENERATION,
+            TermIndexJobObservability.TYPE_AI_CANDIDATE_ENRICHMENT,
+            TermIndexJobObservability.RESULT_FAILED,
+            elapsedSince(aiBatchStartNanos));
+        logger.info(
+            "Term index candidate AI enrichment batch failed: batchNumber={}, batchCount={}, entryCount={}, errorClass={}, errorMessage={}",
+            batchNumber,
+            batchCount,
+            signals.size(),
+            e.getClass().getSimpleName(),
+            errorMessage(e));
         continue;
       }
       for (GlossaryAiExtractionService.AiCandidateView aiCandidate : aiCandidates) {
@@ -2675,6 +2952,21 @@ public class GlossaryTermIndexCurationService {
       return 0;
     }
     return (dividend + divisor - 1) / divisor;
+  }
+
+  private Duration elapsedSince(long startNanos) {
+    return Duration.ofNanos(System.nanoTime() - startNanos);
+  }
+
+  private String errorMessage(Throwable throwable) {
+    if (throwable == null) {
+      return null;
+    }
+    String message = throwable.getMessage();
+    if (message == null || message.isBlank()) {
+      message = throwable.getClass().getSimpleName();
+    }
+    return truncate(message, 2048);
   }
 
   private long nullToZero(Long value) {

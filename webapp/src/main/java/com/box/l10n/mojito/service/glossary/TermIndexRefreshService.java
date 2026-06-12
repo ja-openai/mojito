@@ -12,6 +12,7 @@ import com.box.l10n.mojito.quartz.QuartzJobInfo;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
+import io.micrometer.core.instrument.Timer;
 import java.lang.management.ManagementFactory;
 import java.time.Duration;
 import java.time.ZonedDateTime;
@@ -30,6 +31,8 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -37,6 +40,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class TermIndexRefreshService {
+
+  private static final Logger logger = LoggerFactory.getLogger(TermIndexRefreshService.class);
 
   static final int DEFAULT_BATCH_SIZE = 1_000;
   static final int MAX_BATCH_SIZE = 10_000;
@@ -107,6 +112,7 @@ public class TermIndexRefreshService {
   private final TermIndexRefreshRunEntryRepository termIndexRefreshRunEntryRepository;
   private final TransactionTemplate transactionTemplate;
   private final QuartzPollableTaskScheduler quartzPollableTaskScheduler;
+  private final TermIndexJobObservability termIndexJobObservability;
 
   public TermIndexRefreshService(
       com.box.l10n.mojito.service.repository.RepositoryRepository repositoryRepository,
@@ -119,7 +125,8 @@ public class TermIndexRefreshService {
       TermIndexRefreshRunRepository termIndexRefreshRunRepository,
       TermIndexRefreshRunEntryRepository termIndexRefreshRunEntryRepository,
       TransactionTemplate transactionTemplate,
-      QuartzPollableTaskScheduler quartzPollableTaskScheduler) {
+      QuartzPollableTaskScheduler quartzPollableTaskScheduler,
+      TermIndexJobObservability termIndexJobObservability) {
     this.repositoryRepository = Objects.requireNonNull(repositoryRepository);
     this.tmTextUnitRepository = Objects.requireNonNull(tmTextUnitRepository);
     this.glossaryRepository = Objects.requireNonNull(glossaryRepository);
@@ -134,6 +141,7 @@ public class TermIndexRefreshService {
         Objects.requireNonNull(termIndexRefreshRunEntryRepository);
     this.transactionTemplate = Objects.requireNonNull(transactionTemplate);
     this.quartzPollableTaskScheduler = Objects.requireNonNull(quartzPollableTaskScheduler);
+    this.termIndexJobObservability = Objects.requireNonNull(termIndexJobObservability);
   }
 
   public PollableFuture<RefreshResult> scheduleRefresh(RefreshCommand command) {
@@ -158,32 +166,133 @@ public class TermIndexRefreshService {
     int batchSize = normalizeBatchSize(validatedCommand.batchSize());
     boolean fullRefresh = Boolean.TRUE.equals(validatedCommand.fullRefresh());
 
+    Timer.Sample jobTimer = termIndexJobObservability.startTimer();
     TermIndexRefreshRun refreshRun = createRefreshRun(repositories, pollableTaskId);
+    termIndexJobObservability.recordJobStarted(TermIndexJobObservability.JOB_REFRESH);
+    logger.info(
+        "Term index refresh started: refreshRunId={}, repositoryCount={}, fullRefresh={}, batchSize={}, pollableTaskId={}",
+        refreshRun.getId(),
+        repositories.size(),
+        fullRefresh,
+        batchSize,
+        pollableTaskId);
     long processedTextUnitCount = 0;
     long occurrenceCount = 0;
 
     try {
       for (Long repositoryId : repositoryIds) {
-        RepositoryRefreshResult repositoryRefreshResult =
-            refreshRepository(repositoryId, refreshRun.getId(), fullRefresh, batchSize);
+        long repositoryStartNanos = System.nanoTime();
+        logger.info(
+            "Term index refresh repository started: refreshRunId={}, repositoryId={}, fullRefresh={}, batchSize={}",
+            refreshRun.getId(),
+            repositoryId,
+            fullRefresh,
+            batchSize);
+        RepositoryRefreshResult repositoryRefreshResult;
+        try {
+          repositoryRefreshResult =
+              refreshRepository(repositoryId, refreshRun.getId(), fullRefresh, batchSize);
+          termIndexJobObservability.recordPhase(
+              TermIndexJobObservability.JOB_REFRESH,
+              TermIndexJobObservability.PHASE_REFRESH_REPOSITORY,
+              TermIndexJobObservability.RESULT_SUCCEEDED,
+              elapsedSince(repositoryStartNanos));
+        } catch (RuntimeException e) {
+          termIndexJobObservability.recordPhase(
+              TermIndexJobObservability.JOB_REFRESH,
+              TermIndexJobObservability.PHASE_REFRESH_REPOSITORY,
+              TermIndexJobObservability.RESULT_FAILED,
+              elapsedSince(repositoryStartNanos));
+          logger.info(
+              "Term index refresh repository failed: refreshRunId={}, repositoryId={}, processedTextUnitCount={}, occurrenceCount={}, errorClass={}, errorMessage={}",
+              refreshRun.getId(),
+              repositoryId,
+              processedTextUnitCount,
+              occurrenceCount,
+              e.getClass().getSimpleName(),
+              errorMessage(e));
+          throw e;
+        }
         processedTextUnitCount += repositoryRefreshResult.processedTextUnitCount();
         occurrenceCount += repositoryRefreshResult.occurrenceCount();
         updateRefreshRunProgress(refreshRun.getId(), processedTextUnitCount, occurrenceCount);
+        logger.info(
+            "Term index refresh repository completed: refreshRunId={}, repositoryId={}, repositoryProcessedTextUnitCount={}, repositoryOccurrenceCount={}, totalProcessedTextUnitCount={}, totalOccurrenceCount={}",
+            refreshRun.getId(),
+            repositoryId,
+            repositoryRefreshResult.processedTextUnitCount(),
+            repositoryRefreshResult.occurrenceCount(),
+            processedTextUnitCount,
+            occurrenceCount);
       }
 
-      long extractedTermCount = recomputeAggregatesForRefreshRun(refreshRun.getId(), batchSize);
+      long aggregateStartNanos = System.nanoTime();
+      logger.info(
+          "Term index refresh aggregate recomputation started: refreshRunId={}, batchSize={}",
+          refreshRun.getId(),
+          batchSize);
+      long extractedTermCount;
+      try {
+        extractedTermCount = recomputeAggregatesForRefreshRun(refreshRun.getId(), batchSize);
+        termIndexJobObservability.recordPhase(
+            TermIndexJobObservability.JOB_REFRESH,
+            TermIndexJobObservability.PHASE_REFRESH_AGGREGATES,
+            TermIndexJobObservability.RESULT_SUCCEEDED,
+            elapsedSince(aggregateStartNanos));
+      } catch (RuntimeException e) {
+        termIndexJobObservability.recordPhase(
+            TermIndexJobObservability.JOB_REFRESH,
+            TermIndexJobObservability.PHASE_REFRESH_AGGREGATES,
+            TermIndexJobObservability.RESULT_FAILED,
+            elapsedSince(aggregateStartNanos));
+        logger.info(
+            "Term index refresh aggregate recomputation failed: refreshRunId={}, processedTextUnitCount={}, occurrenceCount={}, errorClass={}, errorMessage={}",
+            refreshRun.getId(),
+            processedTextUnitCount,
+            occurrenceCount,
+            e.getClass().getSimpleName(),
+            errorMessage(e));
+        throw e;
+      }
+      logger.info(
+          "Term index refresh aggregate recomputation completed: refreshRunId={}, extractedTermCount={}",
+          refreshRun.getId(),
+          extractedTermCount);
       refreshRun =
           completeRefreshRun(
               refreshRun.getId(), processedTextUnitCount, occurrenceCount, extractedTermCount);
-      return new RefreshResult(
+      RefreshResult result =
+          new RefreshResult(
+              refreshRun.getId(),
+              refreshRun.getStatus(),
+              repositories.size(),
+              processedTextUnitCount,
+              refreshRun.getExtractedTermCount(),
+              occurrenceCount);
+      termIndexJobObservability.recordJobFinished(
+          TermIndexJobObservability.JOB_REFRESH,
+          TermIndexJobObservability.RESULT_SUCCEEDED,
+          jobTimer);
+      logger.info(
+          "Term index refresh completed: refreshRunId={}, repositoryCount={}, processedTextUnitCount={}, extractedTermCount={}, occurrenceCount={}",
           refreshRun.getId(),
-          refreshRun.getStatus(),
           repositories.size(),
           processedTextUnitCount,
           refreshRun.getExtractedTermCount(),
           occurrenceCount);
+      return result;
     } catch (RuntimeException e) {
       failRefreshRun(refreshRun.getId(), processedTextUnitCount, occurrenceCount, e);
+      termIndexJobObservability.recordJobFinished(
+          TermIndexJobObservability.JOB_REFRESH, TermIndexJobObservability.RESULT_FAILED, jobTimer);
+      logger.info(
+          "Term index refresh failed: refreshRunId={}, repositoryCount={}, processedTextUnitCount={}, occurrenceCount={}, errorClass={}, errorMessage={}",
+          refreshRun.getId(),
+          repositories.size(),
+          processedTextUnitCount,
+          occurrenceCount,
+          e.getClass().getSimpleName(),
+          errorMessage(e));
       throw e;
     }
   }
@@ -199,16 +308,42 @@ public class TermIndexRefreshService {
         prepareFullRefresh(lease);
       }
       GlossaryDictionary glossaryDictionary = loadGlossaryDictionary(repositoryId);
+      int batchNumber = 0;
 
       while (true) {
-        BatchRefreshResult batchRefreshResult =
-            refreshNextBatch(lease, fullRefresh, batchSize, glossaryDictionary);
+        long batchStartNanos = System.nanoTime();
+        BatchRefreshResult batchRefreshResult;
+        try {
+          batchRefreshResult = refreshNextBatch(lease, fullRefresh, batchSize, glossaryDictionary);
+          termIndexJobObservability.recordBatch(
+              TermIndexJobObservability.JOB_REFRESH,
+              TermIndexJobObservability.TYPE_REFRESH_TEXT_UNIT_BATCH,
+              TermIndexJobObservability.RESULT_SUCCEEDED,
+              elapsedSince(batchStartNanos));
+        } catch (RuntimeException e) {
+          termIndexJobObservability.recordBatch(
+              TermIndexJobObservability.JOB_REFRESH,
+              TermIndexJobObservability.TYPE_REFRESH_TEXT_UNIT_BATCH,
+              TermIndexJobObservability.RESULT_FAILED,
+              elapsedSince(batchStartNanos));
+          throw e;
+        }
         if (batchRefreshResult.processedTextUnitCount() == 0) {
           break;
         }
 
+        batchNumber++;
         processedTextUnitCount += batchRefreshResult.processedTextUnitCount();
         occurrenceCount += batchRefreshResult.occurrenceCount();
+        logger.info(
+            "Term index refresh batch completed: refreshRunId={}, repositoryId={}, batchNumber={}, processedTextUnitCount={}, occurrenceCount={}, totalRepositoryProcessedTextUnitCount={}, totalRepositoryOccurrenceCount={}",
+            refreshRunId,
+            repositoryId,
+            batchNumber,
+            batchRefreshResult.processedTextUnitCount(),
+            batchRefreshResult.occurrenceCount(),
+            processedTextUnitCount,
+            occurrenceCount);
 
         if (batchRefreshResult.processedTextUnitCount() < batchSize) {
           break;
@@ -671,6 +806,10 @@ public class TermIndexRefreshService {
 
   private ZonedDateTime nextLeaseExpiresAt() {
     return ZonedDateTime.now().plus(LEASE_DURATION);
+  }
+
+  private Duration elapsedSince(long startNanos) {
+    return Duration.ofNanos(System.nanoTime() - startNanos);
   }
 
   private String leaseOwner() {

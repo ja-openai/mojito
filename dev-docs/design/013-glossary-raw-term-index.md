@@ -182,6 +182,39 @@ Together the system pages can start asynchronous repository-scoped refreshes,
 inspect repository cursors and capped recent-run lists, search virtualized rows
 with Workbench-style result limits, and drill into capped source occurrence
 examples where they exist.
+
+## Operational Visibility
+
+Long-running term-index work emits structured info logs at job start, batch or
+phase progress, completion, and failure. The log messages include operational
+context such as refresh-run id, pollable-task id, repository id when the phase is
+repository-specific, batch number/count, entry counts, candidate counts, and
+review counts. Logs are emitted at batch/phase boundaries, not per extracted
+term, occurrence, text unit, or candidate row.
+
+Micrometer metrics are emitted through `TermIndexJobObservability` with bounded
+tag values only:
+
+- `term_index.job.events` counter and `term_index.job.duration` timer use
+  `job={refresh|candidate_generation|extracted_term_triage}` and
+  `result={started|succeeded|failed}`.
+- `term_index.phase.events` counter and `term_index.phase.duration` timer cover
+  refresh phases with `job=refresh`,
+  `phase={refresh_repository|refresh_aggregates}`, and terminal `result`.
+- `term_index.batch.events` counter and `term_index.batch.duration` timer cover
+  batch work with
+  `type={refresh_text_unit_batch|candidate_generation_batch|triage_batch}`,
+  plus `job` and terminal `result`.
+- `term_index.ai_batch.events` counter and `term_index.ai_batch.duration` timer
+  cover AI calls with `job={candidate_generation|extracted_term_triage}`,
+  `type={candidate_enrichment|extracted_term_review}`, and terminal `result`.
+
+Metric tags must stay bounded. Do not add repository ids, glossary ids,
+text-unit ids, candidate ids, extracted-term ids, source text, normalized terms,
+locale names derived from arbitrary data, exception messages, or provider
+payload values as metric tags. Entity identifiers may appear in logs where they
+help operators correlate a run with persisted job history.
+
 Extracted-term search uses the same hybrid async shape as Workbench: try the
 request synchronously first, return a polling token if it crosses the configured
 threshold, and store the eventual result briefly in blob storage.

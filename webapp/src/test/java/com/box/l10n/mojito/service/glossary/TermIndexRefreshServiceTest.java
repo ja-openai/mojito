@@ -20,6 +20,8 @@ import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRefreshRun;
 import com.box.l10n.mojito.entity.glossary.termindex.TermIndexRepositoryCursor;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -58,6 +60,7 @@ public class TermIndexRefreshServiceTest {
   @Mock QuartzPollableTaskScheduler quartzPollableTaskScheduler;
 
   TermIndexRefreshService termIndexRefreshService;
+  SimpleMeterRegistry meterRegistry;
   AtomicReference<TermIndexRefreshRun> refreshRun = new AtomicReference<>();
   AtomicReference<TermIndexRepositoryCursor> cursor = new AtomicReference<>();
   Map<Long, TermIndexExtractedTerm> termIndexExtractedTerms = new LinkedHashMap<>();
@@ -65,6 +68,7 @@ public class TermIndexRefreshServiceTest {
 
   @Before
   public void setUp() {
+    meterRegistry = new SimpleMeterRegistry();
     termIndexRefreshService =
         new TermIndexRefreshService(
             repositoryRepository,
@@ -77,7 +81,8 @@ public class TermIndexRefreshServiceTest {
             termIndexRefreshRunRepository,
             termIndexRefreshRunEntryRepository,
             transactionTemplate(),
-            quartzPollableTaskScheduler);
+            quartzPollableTaskScheduler,
+            new TermIndexJobObservability(meterRegistry));
 
     when(termIndexRefreshRunRepository.save(any(TermIndexRefreshRun.class)))
         .thenAnswer(
@@ -286,6 +291,55 @@ public class TermIndexRefreshServiceTest {
     assertThat(occurrence.getEndIndex()).isEqualTo(4);
     assertThat(cursor.get().getStatus()).isEqualTo(TermIndexRepositoryCursor.STATUS_IDLE);
     assertThat(cursor.get().getLeaseToken()).isNull();
+    assertThat(
+            meterRegistry
+                .get(TermIndexJobObservability.METRIC_JOB_EVENTS)
+                .tags(
+                    "job",
+                    TermIndexJobObservability.JOB_REFRESH,
+                    "result",
+                    TermIndexJobObservability.RESULT_SUCCEEDED)
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get(TermIndexJobObservability.METRIC_JOB_DURATION)
+                .tags(
+                    "job",
+                    TermIndexJobObservability.JOB_REFRESH,
+                    "result",
+                    TermIndexJobObservability.RESULT_SUCCEEDED)
+                .timer()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get(TermIndexJobObservability.METRIC_PHASE_EVENTS)
+                .tags(
+                    "job",
+                    TermIndexJobObservability.JOB_REFRESH,
+                    "phase",
+                    TermIndexJobObservability.PHASE_REFRESH_REPOSITORY,
+                    "result",
+                    TermIndexJobObservability.RESULT_SUCCEEDED)
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get(TermIndexJobObservability.METRIC_BATCH_EVENTS)
+                .tags(
+                    "job",
+                    TermIndexJobObservability.JOB_REFRESH,
+                    "type",
+                    TermIndexJobObservability.TYPE_REFRESH_TEXT_UNIT_BATCH,
+                    "result",
+                    TermIndexJobObservability.RESULT_SUCCEEDED)
+                .counter()
+                .count())
+        .isGreaterThanOrEqualTo(1);
+    assertNoUnboundedEntityIdentifierMetricTags("5", "7", "100", "200");
   }
 
   @Test
@@ -441,6 +495,49 @@ public class TermIndexRefreshServiceTest {
 
     assertThat(refreshRun.get().getStatus()).isEqualTo(TermIndexRefreshRun.STATUS_FAILED);
     assertThat(refreshRun.get().getErrorMessage()).contains("already running");
+    assertThat(
+            meterRegistry
+                .get(TermIndexJobObservability.METRIC_JOB_EVENTS)
+                .tags(
+                    "job",
+                    TermIndexJobObservability.JOB_REFRESH,
+                    "result",
+                    TermIndexJobObservability.RESULT_FAILED)
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get(TermIndexJobObservability.METRIC_JOB_DURATION)
+                .tags(
+                    "job",
+                    TermIndexJobObservability.JOB_REFRESH,
+                    "result",
+                    TermIndexJobObservability.RESULT_FAILED)
+                .timer()
+                .count())
+        .isEqualTo(1);
+    assertNoUnboundedEntityIdentifierMetricTags("5", "7");
+  }
+
+  private void assertNoUnboundedEntityIdentifierMetricTags(String... forbiddenValues) {
+    List<Tag> tags =
+        meterRegistry.getMeters().stream()
+            .flatMap(meter -> meter.getId().getTags().stream())
+            .toList();
+    assertThat(tags)
+        .extracting(Tag::getKey)
+        .doesNotContain(
+            "repositoryId",
+            "repositoryIds",
+            "glossaryId",
+            "textUnitId",
+            "tmTextUnitId",
+            "candidateId",
+            "termIndexCandidateId",
+            "extractedTermId",
+            "termIndexExtractedTermId");
+    assertThat(tags).extracting(Tag::getValue).doesNotContain(forbiddenValues);
   }
 
   private TransactionTemplate transactionTemplate() {

@@ -24,6 +24,8 @@ import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -58,9 +60,11 @@ public class GlossaryTermIndexCurationServiceTest {
   @Mock PlatformTransactionManager transactionManager;
 
   GlossaryTermIndexCurationService glossaryTermIndexCurationService;
+  SimpleMeterRegistry meterRegistry;
 
   @Before
   public void setUp() {
+    meterRegistry = new SimpleMeterRegistry();
     glossaryTermIndexCurationService =
         new GlossaryTermIndexCurationService(
             glossaryRepository,
@@ -79,7 +83,8 @@ public class GlossaryTermIndexCurationServiceTest {
             ObjectMapper.withNoFailOnUnknownProperties(),
             quartzPollableTaskScheduler,
             pollableTaskService,
-            transactionManager);
+            transactionManager,
+            new TermIndexJobObservability(meterRegistry));
     when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
   }
 
@@ -348,6 +353,137 @@ public class GlossaryTermIndexCurationServiceTest {
     assertThat(result.skippedExistingCandidateCount()).isEqualTo(1);
     verify(termIndexCandidateRepository, never()).save(any());
     verify(termIndexExtractedTermRepository, never()).getReferenceById(501L);
+  }
+
+  @Test
+  public void generateCandidatesFromExtractedTermsRecordsBoundedMetricsForAiBatch() {
+    TermIndexExtractedTerm extractedTerm = extractedTerm(501L, "en", "api", "API");
+    TermIndexExtractedTermRepository.SearchRow row = searchRow(501L, "en", "api", "API");
+
+    when(termIndexExtractedTermRepository.findCandidateGenerationRowsByIdIn(
+            eq(List.of(501L)), eq(true), any()))
+        .thenReturn(List.of(row));
+    when(termIndexOccurrenceRepository.findDetailsByTermIndexExtractedTermId(
+            eq(501L), eq(true), any(), isNull(), any(Pageable.class)))
+        .thenReturn(List.of());
+    when(glossaryAiExtractionService.enrichCandidates(any()))
+        .thenReturn(
+            List.of(
+                new GlossaryAiExtractionService.AiCandidateView(
+                    "501",
+                    "API",
+                    null,
+                    null,
+                    90,
+                    "Application programming interface",
+                    "Common technical acronym.",
+                    null,
+                    null,
+                    null,
+                    true)));
+    when(termIndexCandidateRepository.findBySourceTypeAndSourceNameAndCandidateHash(
+            eq(TermIndexCandidate.SOURCE_TYPE_EXTRACTION), eq("term-index"), any()))
+        .thenReturn(Optional.empty());
+    when(termIndexExtractedTermRepository.getReferenceById(501L)).thenReturn(extractedTerm);
+    when(termIndexCandidateRepository.save(any(TermIndexCandidate.class)))
+        .thenAnswer(
+            invocation -> {
+              TermIndexCandidate candidate = invocation.getArgument(0);
+              candidate.setId(900L);
+              return candidate;
+            });
+
+    GlossaryTermIndexCurationService.GenerateCandidatesResult result =
+        glossaryTermIndexCurationService.generateCandidatesFromExtractedTermsInternal(
+            new GlossaryTermIndexCurationService.GenerateCandidatesFromExtractedTermsCommand(
+                List.of(501L),
+                null,
+                null,
+                null,
+                TermIndexReview.STATUS_ACCEPTED,
+                TermIndexReview.AUTHORITY_FILTER_ALL,
+                1L,
+                25,
+                null,
+                null,
+                null,
+                null,
+                false,
+                null));
+
+    assertThat(result.candidateCount()).isEqualTo(1);
+    assertThat(result.createdCandidateCount()).isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get(TermIndexJobObservability.METRIC_JOB_EVENTS)
+                .tags(
+                    "job",
+                    TermIndexJobObservability.JOB_CANDIDATE_GENERATION,
+                    "result",
+                    TermIndexJobObservability.RESULT_SUCCEEDED)
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get(TermIndexJobObservability.METRIC_BATCH_EVENTS)
+                .tags(
+                    "job",
+                    TermIndexJobObservability.JOB_CANDIDATE_GENERATION,
+                    "type",
+                    TermIndexJobObservability.TYPE_CANDIDATE_GENERATION_BATCH,
+                    "result",
+                    TermIndexJobObservability.RESULT_SUCCEEDED)
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get(TermIndexJobObservability.METRIC_AI_BATCH_EVENTS)
+                .tags(
+                    "job",
+                    TermIndexJobObservability.JOB_CANDIDATE_GENERATION,
+                    "type",
+                    TermIndexJobObservability.TYPE_AI_CANDIDATE_ENRICHMENT,
+                    "result",
+                    TermIndexJobObservability.RESULT_SUCCEEDED)
+                .counter()
+                .count())
+        .isEqualTo(1);
+    assertThat(
+            meterRegistry
+                .get(TermIndexJobObservability.METRIC_AI_BATCH_DURATION)
+                .tags(
+                    "job",
+                    TermIndexJobObservability.JOB_CANDIDATE_GENERATION,
+                    "type",
+                    TermIndexJobObservability.TYPE_AI_CANDIDATE_ENRICHMENT,
+                    "result",
+                    TermIndexJobObservability.RESULT_SUCCEEDED)
+                .timer()
+                .count())
+        .isEqualTo(1);
+    assertNoUnboundedEntityIdentifierMetricTags("501", "900");
+  }
+
+  private void assertNoUnboundedEntityIdentifierMetricTags(String... forbiddenValues) {
+    List<Tag> tags =
+        meterRegistry.getMeters().stream()
+            .flatMap(meter -> meter.getId().getTags().stream())
+            .toList();
+    assertThat(tags)
+        .extracting(Tag::getKey)
+        .doesNotContain(
+            "repositoryId",
+            "repositoryIds",
+            "glossaryId",
+            "textUnitId",
+            "tmTextUnitId",
+            "candidateId",
+            "termIndexCandidateId",
+            "extractedTermId",
+            "termIndexExtractedTermId");
+    assertThat(tags).extracting(Tag::getValue).doesNotContain(forbiddenValues);
   }
 
   private Glossary glossary(Long id, String sourceLocaleTag) {
