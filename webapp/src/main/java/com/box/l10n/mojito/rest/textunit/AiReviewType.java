@@ -213,7 +213,7 @@ public enum AiReviewType {
 
     record DescriptionRating(String explanation, int score) {}
 
-    record ExistingTargetRating(String explanation, int score) {}
+    record ExistingTargetRating(String explanation, Integer score) {}
 
     record ReviewRequired(boolean required, String reason) {}
   }

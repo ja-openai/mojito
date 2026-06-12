@@ -179,7 +179,7 @@ public class AiReviewChatWS {
     }
 
     AiReviewChatReview review = null;
-    if (output.existingTargetRating() != null) {
+    if (hasUsefulExistingTargetRating(output.existingTargetRating())) {
       review =
           new AiReviewChatReview(
               output.existingTargetRating().score(), output.existingTargetRating().explanation());
@@ -252,6 +252,15 @@ public class AiReviewChatWS {
 
   private boolean hasText(String value) {
     return value != null && !value.trim().isEmpty();
+  }
+
+  private boolean hasUsefulExistingTargetRating(
+      AiReviewTextUnitVariantOutput.ExistingTargetRating rating) {
+    return rating != null && isUsefulRatingScore(rating.score()) && hasText(rating.explanation());
+  }
+
+  private boolean isUsefulRatingScore(Integer score) {
+    return score != null && score >= 0 && score <= 2;
   }
 
   private Duration resolveRequestTimeout(

@@ -11,6 +11,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   type AiReviewMessage,
   type AiReviewSuggestion,
+  fetchPrecomputedAiReview,
   formatAiReviewError,
   requestAiReview,
 } from '../../api/ai-review';
@@ -202,7 +203,7 @@ type TerminologyResolutionStatusChoice = ApiTerminologyResolutionStatus;
 type ContextTab = 'glossary' | 'icu' | 'history' | 'context';
 type DetailEditorField = 'translation' | 'comment' | 'decisionNotes';
 
-const SAVING_INDICATOR_MIN_MS = 600;
+const SAVING_INDICATOR_DELAY_MS = 200;
 const DEFAULT_AI_REVIEW_PROMPT = 'Review the translation and suggest improvements.';
 const DEFAULT_TERMINOLOGY_CONFIDENCE: TerminologyConfidenceChoice = '5';
 const TERMINOLOGY_FEEDBACK_RECOMMENDATION_OPTIONS: ApiTerminologyFeedbackRecommendation[] = [
@@ -1729,8 +1730,9 @@ function DetailPane({
   const translationRef = useRef<VisibleTextEditorHandle | null>(null);
   const commentRef = useRef<HTMLTextAreaElement | null>(null);
   const decisionNotesRef = useRef<HTMLTextAreaElement | null>(null);
-  const savingIndicatorStartRef = useRef<number | null>(null);
   const savingIndicatorTimeoutRef = useRef<number | null>(null);
+  const aiRequestAttemptRef = useRef(0);
+  const aiRequestAbortControllerRef = useRef<AbortController | null>(null);
   const workbenchTextUnitId = textUnit.tmTextUnit?.id ?? null;
   const repositoryId = textUnit.tmTextUnit?.asset?.repository?.id ?? null;
   const repositoryName = textUnit.tmTextUnit?.asset?.repository?.name ?? null;
@@ -1759,6 +1761,15 @@ function DetailPane({
     textUnit.currentTmTextUnitVariant?.id,
     textUnit.id,
   ]);
+  const aiPrecomputedVariantId = getEffectiveVariant(textUnit)?.id ?? null;
+
+  useEffect(() => {
+    return () => {
+      aiRequestAttemptRef.current += 1;
+      aiRequestAbortControllerRef.current?.abort();
+      aiRequestAbortControllerRef.current = null;
+    };
+  }, []);
 
   const [draftTarget, setDraftTarget] = useState(snapshot.target);
   const [draftStatusChoice, setDraftStatusChoice] = useState<StatusChoice>(snapshot.statusChoice);
@@ -2107,6 +2118,9 @@ function DetailPane({
   }, [terminologyResolutionSnapshot, textUnit.id]);
 
   useEffect(() => {
+    const requestAttempt = (aiRequestAttemptRef.current += 1);
+    aiRequestAbortControllerRef.current?.abort();
+    aiRequestAbortControllerRef.current = null;
     if (isTerminologyProject || !localeTag) {
       setAiMessages([]);
       setAiInput('');
@@ -2117,6 +2131,16 @@ function DetailPane({
     let cancelled = false;
     setAiMessages([]);
     setAiInput('');
+    setIsAiResponding(false);
+
+    if (glossaryMatchesQuery.isLoading) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const abortController = new AbortController();
+    aiRequestAbortControllerRef.current = abortController;
     setIsAiResponding(true);
     setIsAiCollapsed(false);
 
@@ -2133,15 +2157,48 @@ function DetailPane({
         const contextMessages = [warningContextMessage, glossaryContextMessage].filter(
           (message): message is AiReviewMessage => message != null,
         );
-        const response = await requestAiReview({
-          source: source ?? '',
-          target: snapshot.target,
-          localeTag,
-          sourceDescription: sourceComment ?? '',
-          tmTextUnitId: workbenchTextUnitId ?? undefined,
-          messages: [...contextMessages, initialMessage],
-        });
+        if (contextMessages.length === 0) {
+          try {
+            const precomputedResponse = await fetchPrecomputedAiReview(aiPrecomputedVariantId, {
+              signal: abortController.signal,
+            });
+            if (cancelled || aiRequestAttemptRef.current !== requestAttempt) {
+              return;
+            }
+            if (precomputedResponse) {
+              setAiMessages([
+                {
+                  id: `assistant-${Date.now()}`,
+                  sender: 'assistant',
+                  content: precomputedResponse.message.content,
+                  suggestions: precomputedResponse.suggestions,
+                  review: precomputedResponse.review,
+                },
+              ]);
+              setIsAiResponding(false);
+              return;
+            }
+          } catch {
+            if (abortController.signal.aborted) {
+              return;
+            }
+          }
+        }
+        const response = await requestAiReview(
+          {
+            source: source ?? '',
+            target: snapshot.target,
+            localeTag,
+            sourceDescription: sourceComment ?? '',
+            tmTextUnitId: workbenchTextUnitId ?? undefined,
+            messages: [...contextMessages, initialMessage],
+          },
+          { signal: abortController.signal },
+        );
         if (cancelled) {
+          return;
+        }
+        if (aiRequestAttemptRef.current !== requestAttempt) {
           return;
         }
 
@@ -2158,6 +2215,9 @@ function DetailPane({
         if (cancelled) {
           return;
         }
+        if (aiRequestAttemptRef.current !== requestAttempt) {
+          return;
+        }
 
         const aiError = formatAiReviewError(error);
         setAiMessages([
@@ -2170,18 +2230,27 @@ function DetailPane({
           },
         ]);
       } finally {
-        if (!cancelled) {
+        if (!cancelled && aiRequestAttemptRef.current === requestAttempt) {
           setIsAiResponding(false);
+        }
+        if (aiRequestAbortControllerRef.current === abortController) {
+          aiRequestAbortControllerRef.current = null;
         }
       }
     })();
 
     return () => {
       cancelled = true;
+      abortController.abort();
+      if (aiRequestAbortControllerRef.current === abortController) {
+        aiRequestAbortControllerRef.current = null;
+      }
     };
   }, [
     aiContextKey,
+    aiPrecomputedVariantId,
     glossaryMatchesQuery.data,
+    glossaryMatchesQuery.isLoading,
     isTerminologyProject,
     localeTag,
     snapshot.target,
@@ -2580,6 +2649,10 @@ function DetailPane({
     };
 
     const baseMessages = aiMessages.filter((message) => !message.isError);
+    const requestAttempt = (aiRequestAttemptRef.current += 1);
+    aiRequestAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    aiRequestAbortControllerRef.current = abortController;
     setAiMessages((previous) => [...previous, userMessage]);
     setAiInput('');
     setIsAiResponding(true);
@@ -2598,14 +2671,20 @@ function DetailPane({
           (message): message is AiReviewMessage => message != null,
         );
 
-        const response = await requestAiReview({
-          source: source ?? '',
-          target: draftTarget,
-          localeTag,
-          sourceDescription: sourceComment ?? '',
-          tmTextUnitId: workbenchTextUnitId ?? undefined,
-          messages: [...contextMessages, ...conversation],
-        });
+        const response = await requestAiReview(
+          {
+            source: source ?? '',
+            target: draftTarget,
+            localeTag,
+            sourceDescription: sourceComment ?? '',
+            tmTextUnitId: workbenchTextUnitId ?? undefined,
+            messages: [...contextMessages, ...conversation],
+          },
+          { signal: abortController.signal },
+        );
+        if (aiRequestAttemptRef.current !== requestAttempt) {
+          return;
+        }
 
         const assistantMessage: AiChatReviewMessage = {
           id: `assistant-${Date.now()}`,
@@ -2617,6 +2696,9 @@ function DetailPane({
 
         setAiMessages((previous) => [...previous, assistantMessage]);
       } catch (error: unknown) {
+        if (aiRequestAttemptRef.current !== requestAttempt) {
+          return;
+        }
         const aiError = formatAiReviewError(error);
         setAiMessages((previous) => [
           ...previous.filter((message) => !message.isError),
@@ -2629,7 +2711,12 @@ function DetailPane({
           },
         ]);
       } finally {
-        setIsAiResponding(false);
+        if (aiRequestAttemptRef.current === requestAttempt) {
+          setIsAiResponding(false);
+        }
+        if (aiRequestAbortControllerRef.current === abortController) {
+          aiRequestAbortControllerRef.current = null;
+        }
       }
     })();
   }, [
@@ -2664,19 +2751,29 @@ function DetailPane({
     const glossaryContextMessage = buildGlossaryContextMessage(glossaryMatchesQuery.data);
 
     setIsAiResponding(true);
+    const requestAttempt = (aiRequestAttemptRef.current += 1);
+    aiRequestAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    aiRequestAbortControllerRef.current = abortController;
     void (async () => {
       try {
         const contextMessages = [warningContextMessage, glossaryContextMessage].filter(
           (message): message is AiReviewMessage => message != null,
         );
-        const response = await requestAiReview({
-          source: source ?? '',
-          target: retryTarget,
-          localeTag,
-          sourceDescription: sourceComment ?? '',
-          tmTextUnitId: workbenchTextUnitId ?? undefined,
-          messages: [...contextMessages, ...conversation],
-        });
+        const response = await requestAiReview(
+          {
+            source: source ?? '',
+            target: retryTarget,
+            localeTag,
+            sourceDescription: sourceComment ?? '',
+            tmTextUnitId: workbenchTextUnitId ?? undefined,
+            messages: [...contextMessages, ...conversation],
+          },
+          { signal: abortController.signal },
+        );
+        if (aiRequestAttemptRef.current !== requestAttempt) {
+          return;
+        }
         const assistantMessage: AiChatReviewMessage = {
           id: `assistant-${Date.now()}`,
           sender: 'assistant',
@@ -2689,6 +2786,9 @@ function DetailPane({
           assistantMessage,
         ]);
       } catch (error: unknown) {
+        if (aiRequestAttemptRef.current !== requestAttempt) {
+          return;
+        }
         const aiError = formatAiReviewError(error);
         setAiMessages((previous) => [
           ...previous.filter((message) => !message.isError),
@@ -2701,7 +2801,12 @@ function DetailPane({
           },
         ]);
       } finally {
-        setIsAiResponding(false);
+        if (aiRequestAttemptRef.current === requestAttempt) {
+          setIsAiResponding(false);
+        }
+        if (aiRequestAbortControllerRef.current === abortController) {
+          aiRequestAbortControllerRef.current = null;
+        }
       }
     })();
   }, [
@@ -2971,30 +3076,24 @@ function DetailPane({
         window.clearTimeout(savingIndicatorTimeoutRef.current);
         savingIndicatorTimeoutRef.current = null;
       }
-      savingIndicatorStartRef.current = Date.now();
-      setShowSavingIndicator(true);
+      if (showSavingIndicator) {
+        return;
+      }
+      savingIndicatorTimeoutRef.current = window.setTimeout(() => {
+        setShowSavingIndicator(true);
+        savingIndicatorTimeoutRef.current = null;
+      }, SAVING_INDICATOR_DELAY_MS);
       return;
     }
 
-    if (!showSavingIndicator) {
-      return;
-    }
-
-    const startedAt = savingIndicatorStartRef.current;
-    const elapsed = startedAt != null ? Date.now() - startedAt : SAVING_INDICATOR_MIN_MS;
-    const remaining = SAVING_INDICATOR_MIN_MS - elapsed;
-
-    if (remaining <= 0) {
-      setShowSavingIndicator(false);
-      savingIndicatorStartRef.current = null;
-      return;
-    }
-
-    savingIndicatorTimeoutRef.current = window.setTimeout(() => {
-      setShowSavingIndicator(false);
-      savingIndicatorStartRef.current = null;
+    if (savingIndicatorTimeoutRef.current != null) {
+      window.clearTimeout(savingIndicatorTimeoutRef.current);
       savingIndicatorTimeoutRef.current = null;
-    }, remaining);
+    }
+
+    if (showSavingIndicator) {
+      setShowSavingIndicator(false);
+    }
 
     return () => {
       if (savingIndicatorTimeoutRef.current != null) {
@@ -3003,6 +3102,15 @@ function DetailPane({
       }
     };
   }, [isSaving, showSavingIndicator]);
+
+  useEffect(() => {
+    return () => {
+      if (savingIndicatorTimeoutRef.current != null) {
+        window.clearTimeout(savingIndicatorTimeoutRef.current);
+        savingIndicatorTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div className="review-project-detail">

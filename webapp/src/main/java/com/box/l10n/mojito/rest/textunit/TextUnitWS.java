@@ -41,8 +41,12 @@ import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.box.l10n.mojito.service.tm.search.UsedFilter;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.UncheckedExecutionException;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -79,6 +83,8 @@ public class TextUnitWS {
   /** logger */
   static Logger logger = LoggerFactory.getLogger(TextUnitWS.class);
 
+  private static final long INTEGRITY_CHECK_SLOW_LOG_THRESHOLD_MS = 250;
+
   @Autowired TextUnitSearcher textUnitSearcher;
 
   @Autowired RepositoryRepository repositoryRepository;
@@ -106,6 +112,8 @@ public class TextUnitWS {
   @Autowired UserService userService;
 
   @Autowired StructuredBlobStorage structuredBlobStorage;
+
+  @Autowired MeterRegistry meterRegistry;
 
   @Autowired
   @Qualifier("fail_on_unknown_properties_false")
@@ -551,22 +559,51 @@ public class TextUnitWS {
       @RequestBody TextUnitCheckBody textUnitCheckBody) {
     logger.debug("Checking TextUnit, id: {}", textUnitCheckBody.getTmTextUnitId());
 
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    String resultTag = "error";
     TMTextUnitIntegrityCheckResult result = new TMTextUnitIntegrityCheckResult();
     try {
       tmTextUnitIntegrityCheckService.checkTMTextUnitIntegrity(
           textUnitCheckBody.getTmTextUnitId(), textUnitCheckBody.getContent());
       result.setCheckResult(true);
+      resultTag = "success";
     } catch (IntegrityCheckException e) {
       logger.info(
-          "Integrity check failed for string with tmTextUnitId: {}, content:\n{}",
+          "Integrity check failed for string with tmTextUnitId: {}, contentLength: {}, failure: {}",
           textUnitCheckBody.getTmTextUnitId(),
-          textUnitCheckBody.getContent(),
-          e);
+          textUnitCheckBody.getContent() != null ? textUnitCheckBody.getContent().length() : 0,
+          e.getMessage());
       result.setCheckResult(false);
       result.setFailureDetail(e.getMessage());
+      resultTag = "failure";
+    } finally {
+      recordIntegrityCheckDuration(textUnitCheckBody.getTmTextUnitId(), resultTag, stopwatch);
     }
 
     return result;
+  }
+
+  private void recordIntegrityCheckDuration(
+      Long tmTextUnitId, String resultTag, Stopwatch stopwatch) {
+    Duration elapsed = stopwatch.elapsed();
+    long elapsedMillis = elapsed.toMillis();
+    meterRegistry
+        .timer("TextUnitWS.integrityCheckDuration", Tags.of("result", resultTag))
+        .record(elapsed);
+
+    if (elapsedMillis >= INTEGRITY_CHECK_SLOW_LOG_THRESHOLD_MS) {
+      logger.info(
+          "Text unit integrity check completed: result={}, elapsedMs={}, tmTextUnitId={}",
+          resultTag,
+          elapsedMillis,
+          tmTextUnitId);
+    } else {
+      logger.debug(
+          "Text unit integrity check completed: result={}, elapsedMs={}, tmTextUnitId={}",
+          resultTag,
+          elapsedMillis,
+          tmTextUnitId);
+    }
   }
 
   /**

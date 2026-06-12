@@ -155,19 +155,11 @@ public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Lo
   @Query(
       """
       update ReviewProject rp
-      set rp.decidedCount = rp.decidedCount + 1
+      set rp.decidedCount = rp.decidedCount + 1,
+          rp.decidedWordCount = rp.decidedWordCount + :wordCount
       where rp.id = :projectId
       """)
-  int incrementDecidedCount(@Param("projectId") Long projectId);
-
-  @Modifying(clearAutomatically = true, flushAutomatically = true)
-  @Query(
-      """
-      update ReviewProject rp
-      set rp.decidedWordCount = rp.decidedWordCount + :wordCount
-      where rp.id = :projectId
-      """)
-  int incrementDecidedWordCount(
+  int incrementDecidedProgress(
       @Param("projectId") Long projectId, @Param("wordCount") Long wordCount);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
@@ -178,23 +170,15 @@ public interface ReviewProjectRepository extends JpaRepository<ReviewProject, Lo
         case
           when rp.decidedCount > 0 then rp.decidedCount - 1
           else 0
-        end
-      where rp.id = :projectId
-      """)
-  int decrementDecidedCount(@Param("projectId") Long projectId);
-
-  @Modifying(clearAutomatically = true, flushAutomatically = true)
-  @Query(
-      """
-      update ReviewProject rp
-      set rp.decidedWordCount =
+        end,
+        rp.decidedWordCount =
         case
           when rp.decidedWordCount > :wordCount then rp.decidedWordCount - :wordCount
           else 0
         end
       where rp.id = :projectId
       """)
-  int decrementDecidedWordCount(
+  int decrementDecidedProgress(
       @Param("projectId") Long projectId, @Param("wordCount") Long wordCount);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)

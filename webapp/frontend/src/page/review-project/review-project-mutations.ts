@@ -143,6 +143,26 @@ export type ReviewProjectMutationControls = {
 };
 
 type MutationError = Error & { status?: number; data?: ApiReviewProjectTextUnit | null };
+type PreflightIntegrityCheckAction = Extract<PendingAction, { kind: 'save-decision' }> & {
+  request: SaveDecisionRequest & { tmTextUnitId: number };
+};
+
+export function shouldInvalidateGlossaryQueriesForAction(action: PendingAction) {
+  return action.kind === 'terminology-metadata' || action.kind === 'terminology-resolution';
+}
+
+export function shouldPreflightIntegrityCheckForAction(
+  action: PendingAction,
+  userRole: string,
+  skipIntegrityCheck = false,
+): action is PreflightIntegrityCheckAction {
+  return (
+    action.kind === 'save-decision' &&
+    userRole !== 'ROLE_TRANSLATOR' &&
+    !skipIntegrityCheck &&
+    action.request.tmTextUnitId != null
+  );
+}
 
 export function useReviewProjectMutations(
   projectId: number | undefined,
@@ -152,6 +172,7 @@ export function useReviewProjectMutations(
   const actionAttemptRef = useRef(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activeTextUnitId, setActiveTextUnitId] = useState<number | null>(null);
+  const [pendingTextUnitId, setPendingTextUnitId] = useState<number | null>(null);
   const [conflictTextUnit, setConflictTextUnit] = useState<ApiReviewProjectTextUnit | null>(null);
   const [conflictAction, setConflictAction] = useState<PendingAction | null>(null);
   const [pendingValidationSave, setPendingValidationSave] = useState<PendingValidationSave | null>(
@@ -382,40 +403,88 @@ export function useReviewProjectMutations(
           return;
         }
         updateTextUnitInCache(updated);
-        void queryClient.invalidateQueries({
-          queryKey: [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId],
-        });
         void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
         void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
         void queryClient.invalidateQueries({
           queryKey: ['review-project-text-unit-history'],
         });
-        void queryClient.invalidateQueries({ queryKey: ['review-project-glossary-term'] });
-        void queryClient.invalidateQueries({ queryKey: ['glossary-terms'] });
+        if (shouldInvalidateGlossaryQueriesForAction(action)) {
+          void queryClient.invalidateQueries({ queryKey: ['review-project-glossary-term'] });
+          void queryClient.invalidateQueries({ queryKey: ['glossary-terms'] });
+        }
         setErrorMessage(null);
         setConflictTextUnit(null);
         setConflictAction(null);
         setPendingValidationSave(null);
+        setActiveTextUnitId(null);
+        setPendingTextUnitId(null);
       } catch (error) {
         if (attemptId !== actionAttemptRef.current) {
           return;
         }
         const err = error as MutationError;
         if (err.status === 409 && err.data) {
+          setPendingTextUnitId(null);
           void queryClient.invalidateQueries({
             queryKey: ['review-project-text-unit-history'],
           });
           setConflictTextUnit(err.data);
           setConflictAction(action);
           setErrorMessage(null);
+        } else if (
+          err.status === 403 &&
+          action.kind === 'save-decision' &&
+          user.role === 'ROLE_TRANSLATOR' &&
+          action.request.tmTextUnitId != null
+        ) {
+          try {
+            const integrityResult = await checkTextUnitIntegrityWithRetry({
+              tmTextUnitId: action.request.tmTextUnitId,
+              content: action.request.target,
+            });
+            if (attemptId !== actionAttemptRef.current) {
+              return;
+            }
+            if (integrityResult?.checkResult === false) {
+              const failure = buildTranslatorCheckFailure(action, integrityResult);
+              setActiveTextUnitId(null);
+              setPendingTextUnitId(null);
+              setConflictTextUnit(null);
+              setConflictAction(null);
+              setErrorMessage(null);
+              setPendingValidationSave({
+                title: 'Unable to save translation',
+                body: failure.body,
+                failureDetail: failure.failureDetail,
+                reportUrl: failure.reportUrl,
+                reportMessage: failure.reportMessage,
+                reportHtml: failure.reportHtml,
+              });
+              return;
+            }
+          } catch {
+            // Fall through to the original save error if the follow-up check cannot add detail.
+          }
+          setPendingTextUnitId(null);
+          setConflictTextUnit(null);
+          setConflictAction(null);
+          setErrorMessage(err.message || 'Failed to save changes');
         } else {
+          setPendingTextUnitId(null);
           setConflictTextUnit(null);
           setConflictAction(null);
           setErrorMessage(err.message || 'Failed to save changes');
         }
       }
     },
-    [mutation, projectId, queryClient, updateTextUnitInCache],
+    [
+      buildTranslatorCheckFailure,
+      mutation,
+      projectId,
+      queryClient,
+      updateTextUnitInCache,
+      user.role,
+    ],
   );
 
   const performAction = useCallback(
@@ -425,16 +494,13 @@ export function useReviewProjectMutations(
       }
       const attemptId = (actionAttemptRef.current += 1);
       setActiveTextUnitId(action.request.textUnitId);
+      setPendingTextUnitId(action.request.textUnitId);
       setErrorMessage(null);
       setConflictTextUnit(null);
       setConflictAction(null);
       setPendingValidationSave(null);
 
-      if (
-        action.kind === 'save-decision' &&
-        !skipIntegrityCheck &&
-        action.request.tmTextUnitId != null
-      ) {
+      if (shouldPreflightIntegrityCheckForAction(action, user.role, skipIntegrityCheck)) {
         void checkTextUnitIntegrityWithRetry({
           tmTextUnitId: action.request.tmTextUnitId,
           content: action.request.target,
@@ -444,18 +510,6 @@ export function useReviewProjectMutations(
               return;
             }
             if (result?.checkResult === false) {
-              if (user.role === 'ROLE_TRANSLATOR') {
-                const failure = buildTranslatorCheckFailure(action, result);
-                setPendingValidationSave({
-                  title: 'Unable to save translation',
-                  body: failure.body,
-                  failureDetail: failure.failureDetail,
-                  reportUrl: failure.reportUrl,
-                  reportMessage: failure.reportMessage,
-                  reportHtml: failure.reportHtml,
-                });
-                return;
-              }
               const detail = result.failureDetail?.trim();
               const reportUrl = action.request.reportUrl?.trim() || window.location.href;
               const report = buildIntegrityCheckErrorReport({
@@ -469,6 +523,8 @@ export function useReviewProjectMutations(
                 suggestedTranslation: action.request.target.trim() || '(empty translation)',
                 errorMessage: detail || 'Unavailable',
               });
+              setActiveTextUnitId(null);
+              setPendingTextUnitId(null);
               setPendingValidationSave({
                 title: 'Unable to save translation',
                 body: INTEGRITY_CHECK_FAILURE_MESSAGE,
@@ -485,6 +541,8 @@ export function useReviewProjectMutations(
             if (attemptId !== actionAttemptRef.current) {
               return;
             }
+            setActiveTextUnitId(null);
+            setPendingTextUnitId(null);
             setPendingValidationSave({
               title: INTEGRITY_CHECK_UNAVAILABLE_TITLE,
               body: INTEGRITY_CHECK_UNAVAILABLE_MESSAGE,
@@ -496,7 +554,7 @@ export function useReviewProjectMutations(
 
       void executeAction(action, attemptId);
     },
-    [buildTranslatorCheckFailure, executeAction, projectId, user.role],
+    [executeAction, projectId, user.role],
   );
 
   const onRequestSaveDecision = useCallback(
@@ -677,6 +735,7 @@ export function useReviewProjectMutations(
     actionAttemptRef.current += 1;
     setErrorMessage(null);
     setActiveTextUnitId(null);
+    setPendingTextUnitId(null);
     setConflictTextUnit(null);
     setConflictAction(null);
     setPendingValidationSave(null);
@@ -684,7 +743,7 @@ export function useReviewProjectMutations(
 
   return useMemo(
     () => ({
-      isSaving: mutation.isPending,
+      isSaving: mutation.isPending || pendingTextUnitId != null,
       isProjectStatusSaving: projectStatusMutation.isPending,
       isProjectRequestSaving: projectRequestMutation.isPending,
       isProjectDueDateSaving: projectDueDateMutation.isPending,
@@ -735,6 +794,7 @@ export function useReviewProjectMutations(
       onUseConflictCurrent,
       onRetryValidationSave,
       pendingValidationSave,
+      pendingTextUnitId,
       projectAssignmentMutation.isPending,
       projectDueDateMutation.isPending,
       projectRequestMutation.isPending,

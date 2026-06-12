@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.rest.textunit;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -130,6 +131,87 @@ public class AiReviewChatWSTest {
             .count());
     verify(aiTranslateLocalePromptSuffixService).getLocalePromptSuffix("fr-FR");
     verify(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrity(42L, "Bonjour");
+  }
+
+  @Test
+  public void chatDoesNotReturnIncompleteExistingTargetRating() {
+    when(openAIClient.getResponses(any(), any()))
+        .thenReturn(
+            CompletableFuture.completedFuture(
+                new OpenAIClient.ResponsesResponse(
+                    "resp-1",
+                    "response",
+                    1712975853L,
+                    "completed",
+                    null,
+                    null,
+                    "gpt-5.4",
+                    List.of(
+                        responseOutput(
+                            """
+                            {
+                              "existingTargetRating": {
+                                "explanation": "Rating without score should not be rendered."
+                              }
+                            }
+                            """)),
+                    null,
+                    null)));
+
+    AiReviewChatWS.AiReviewChatResponse response =
+        aiReviewChatWS.chat(
+            new AiReviewChatWS.AiReviewChatRequest(
+                "Save",
+                "保存",
+                "ja-JP",
+                null,
+                null,
+                List.of(
+                    new AiReviewChatWS.AiReviewChatMessage("user", "Review this translation."))));
+
+    assertNull(response.review());
+    assertEquals("Here are the latest suggestions.", response.message().content());
+  }
+
+  @Test
+  public void chatDoesNotReturnOutOfRangeExistingTargetRating() {
+    when(openAIClient.getResponses(any(), any()))
+        .thenReturn(
+            CompletableFuture.completedFuture(
+                new OpenAIClient.ResponsesResponse(
+                    "resp-1",
+                    "response",
+                    1712975853L,
+                    "completed",
+                    null,
+                    null,
+                    "gpt-5.4",
+                    List.of(
+                        responseOutput(
+                            """
+                            {
+                              "existingTargetRating": {
+                                "score": 82,
+                                "explanation": "Out-of-range score should not be rendered."
+                              }
+                            }
+                            """)),
+                    null,
+                    null)));
+
+    AiReviewChatWS.AiReviewChatResponse response =
+        aiReviewChatWS.chat(
+            new AiReviewChatWS.AiReviewChatRequest(
+                "Save",
+                "保存",
+                "ja-JP",
+                null,
+                null,
+                List.of(
+                    new AiReviewChatWS.AiReviewChatMessage("user", "Review this translation."))));
+
+    assertNull(response.review());
+    assertEquals("Here are the latest suggestions.", response.message().content());
   }
 
   @Test

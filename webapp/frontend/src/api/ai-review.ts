@@ -29,17 +29,64 @@ export type AiReviewResponse = {
   review?: AiReviewReview;
 };
 
+type ProtoAiReviewTarget = {
+  content?: string | null;
+  explanation?: string | null;
+  confidenceLevel?: number | null;
+};
+
+type ProtoAiReviewReview = {
+  score?: number | null;
+  explanation?: string | null;
+};
+
+type ProtoAiReviewOutput = {
+  target?: ProtoAiReviewTarget | null;
+  altTarget?: ProtoAiReviewTarget | null;
+  existingTargetRating?: ProtoAiReviewReview | null;
+  reviewRequired?: {
+    required?: boolean | null;
+    reason?: string | null;
+  } | null;
+};
+
+type ProtoAiReviewSingleTextUnitResponse = {
+  aiReviewOutput?: ProtoAiReviewOutput | null;
+};
+
 export type AiReviewRequestError = Error & {
   status?: number;
   detail?: string;
 };
 
-export async function requestAiReview(payload: AiReviewRequest): Promise<AiReviewResponse> {
+export async function requestAiReview(
+  payload: AiReviewRequest,
+  options: { signal?: AbortSignal } = {},
+): Promise<AiReviewResponse> {
   if (!payload.messages.length) {
     throw new Error('AI review requires at least one message.');
   }
 
-  return postJson<AiReviewResponse>('/api/ai/review', payload);
+  return postJson<AiReviewResponse>('/api/ai/review', payload, options);
+}
+
+export async function fetchPrecomputedAiReview(
+  tmTextUnitVariantId: number | null | undefined,
+  options: { signal?: AbortSignal } = {},
+): Promise<AiReviewResponse | null> {
+  if (tmTextUnitVariantId == null) {
+    return null;
+  }
+
+  const params = new URLSearchParams({
+    tmTextUnitVariantId: String(tmTextUnitVariantId),
+    onlyPrecomputed: 'true',
+  });
+  const response = await getJson<ProtoAiReviewSingleTextUnitResponse>(
+    `/api/proto-ai-review-single-text-unit?${params.toString()}`,
+    options,
+  );
+  return toAiReviewResponse(response.aiReviewOutput);
 }
 
 export function formatAiReviewError(error: unknown): {
@@ -83,10 +130,49 @@ export function formatAiReviewError(error: unknown): {
   return { message: message || fallback };
 }
 
-async function postJson<TResponse>(url: string, body: unknown): Promise<TResponse> {
+async function getJson<TResponse>(
+  url: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<TResponse> {
+  const response = await fetch(url, {
+    method: 'GET',
+    credentials: 'same-origin',
+    signal: options.signal,
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  const text = await response.text();
+  if (!response.ok) {
+    const contentType = response.headers.get('content-type');
+    const details = extractErrorDetails(text, contentType);
+    const error: AiReviewRequestError = new Error(
+      details.message ?? `Request failed with status ${response.status}`,
+    );
+    error.status = response.status;
+    if (details.detail) {
+      error.detail = details.detail;
+    }
+    throw error;
+  }
+
+  if (!text) {
+    throw new Error('AI review returned an empty response.');
+  }
+
+  return JSON.parse(text) as TResponse;
+}
+
+async function postJson<TResponse>(
+  url: string,
+  body: unknown,
+  options: { signal?: AbortSignal } = {},
+): Promise<TResponse> {
   const response = await fetch(url, {
     method: 'POST',
     credentials: 'same-origin',
+    signal: options.signal,
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
@@ -113,6 +199,86 @@ async function postJson<TResponse>(url: string, body: unknown): Promise<TRespons
   }
 
   return JSON.parse(text) as TResponse;
+}
+
+function toAiReviewResponse(
+  output: ProtoAiReviewOutput | null | undefined,
+): AiReviewResponse | null {
+  if (!output) {
+    return null;
+  }
+
+  const suggestions = dedupeSuggestions(
+    [output.target, output.altTarget]
+      .map(toAiReviewSuggestion)
+      .filter((suggestion): suggestion is AiReviewSuggestion => suggestion != null),
+  );
+  const review = toAiReviewReview(output.existingTargetRating) ?? undefined;
+  const reviewRequiredReason = normalizeOptionalText(output.reviewRequired?.reason);
+  const reviewRequired = output.reviewRequired?.required === true;
+  const reviewRequiredFallback = reviewRequired
+    ? 'AI review marked this translation for review.'
+    : null;
+  if (suggestions.length === 0 && !review && !reviewRequiredReason && !reviewRequiredFallback) {
+    return null;
+  }
+
+  const reply =
+    normalizeOptionalText(output.target?.explanation) ??
+    reviewRequiredReason ??
+    reviewRequiredFallback ??
+    'Here are the latest suggestions.';
+
+  return {
+    message: {
+      role: 'assistant',
+      content: reply,
+    },
+    suggestions,
+    review,
+  };
+}
+
+function toAiReviewSuggestion(
+  target: ProtoAiReviewTarget | null | undefined,
+): AiReviewSuggestion | null {
+  const content = normalizeOptionalText(target?.content);
+  if (!content) {
+    return null;
+  }
+  return {
+    content,
+    confidenceLevel: target?.confidenceLevel ?? undefined,
+    explanation: normalizeOptionalText(target?.explanation) ?? undefined,
+  };
+}
+
+function toAiReviewReview(review: ProtoAiReviewReview | null | undefined): AiReviewReview | null {
+  const explanation = normalizeOptionalText(review?.explanation);
+  const score = review?.score;
+  if (!isAiReviewScore(score) || !explanation) {
+    return null;
+  }
+
+  return {
+    score,
+    explanation,
+  };
+}
+
+function isAiReviewScore(score: number | null | undefined): score is number {
+  return typeof score === 'number' && Number.isInteger(score) && score >= 0 && score <= 2;
+}
+
+function dedupeSuggestions(suggestions: AiReviewSuggestion[]): AiReviewSuggestion[] {
+  const seen = new Set<string>();
+  return suggestions.filter((suggestion) => {
+    if (seen.has(suggestion.content)) {
+      return false;
+    }
+    seen.add(suggestion.content);
+    return true;
+  });
 }
 
 function extractErrorDetails(
@@ -169,6 +335,11 @@ function truncateText(value: string, maxLength: number): string {
     return value;
   }
   return `${value.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function normalizeOptionalText(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
 }
 
 function isLikelyHtml(value: string): boolean {

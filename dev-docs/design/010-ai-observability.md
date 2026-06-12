@@ -76,6 +76,22 @@ Use `AiReviewChatWS_requestDuration_seconds_*` for interactive review chat laten
 `AiReviewService_requestDuration_seconds_*` for async/legacy review request latency. Both expose a
 `result` tag with `completed`, `timeout`, `provider_failed`, or `failed`.
 
+Review-project pages first check `/api/proto-ai-review-single-text-unit` with
+`onlyPrecomputed=true` when the automatic review has no page-only context messages. The backend reads
+the `for-frontend` cached run. Cache hits are rendered without calling the live interactive review
+endpoint, after the cached variant is revalidated through the existing text-unit lookup. If the page
+has deterministic warning context or matched glossary context, the review page skips the precomputed
+cache and calls live review so speed does not weaken review quality. Cache misses, unreadable cache
+rows, stale cached rows, and cached rows that contain no useful review content fall through to the
+live review path so translators do not see an empty AI panel. Cached output is considered useful when
+it contains a target suggestion, alternate suggestion, a complete existing-target rating with a
+`0..2` score and explanation, a review-required reason, or a `reviewRequired=true` flag. The
+translator page should not start provider work just to warm this cache; precompute should come from
+an explicit PM/admin/scheduled path that calls the async proto review job ahead of translator review.
+
+Precomputed lookup outcomes are counted by `AiReviewWS.precomputedReviewLookup` with bounded tags:
+`requestMode={cache_only|live_or_compute}` and `result={hit|miss|unreadable|stale|empty}`.
+
 Prometheus currently exposes the AI Review timers as `*_sum`, `*_count`, and `*_max`, not as
 histogram buckets. Use average/max panels instead of `histogram_quantile(...)` unless buckets are
 enabled later.
@@ -161,6 +177,34 @@ sum by (locale) (
 ```promql
 sum by (statusCode, locale) (
   increase(AiReviewService_providerFailures_total{mode="noBatch"}[$__range])
+)
+```
+
+Review-project precompute cache hit rate:
+
+```promql
+sum(
+  increase(AiReviewWS_precomputedReviewLookup_total{requestMode="cache_only", result="hit"}[$__range])
+)
+/
+sum(
+  increase(AiReviewWS_precomputedReviewLookup_total{requestMode="cache_only"}[$__range])
+)
+```
+
+Unreadable precompute cache rows:
+
+```promql
+sum(
+  increase(AiReviewWS_precomputedReviewLookup_total{requestMode="cache_only", result="unreadable"}[$__range])
+)
+```
+
+Stale precompute cache rows:
+
+```promql
+sum(
+  increase(AiReviewWS_precomputedReviewLookup_total{requestMode="cache_only", result="stale"}[$__range])
 )
 ```
 

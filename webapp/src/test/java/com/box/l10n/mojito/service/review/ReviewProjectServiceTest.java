@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.review;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -13,9 +14,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Repository;
+import com.box.l10n.mojito.entity.TM;
 import com.box.l10n.mojito.entity.TMTextUnit;
+import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
+import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.Team;
 import com.box.l10n.mojito.entity.TeamUser;
 import com.box.l10n.mojito.entity.TeamUserRole;
@@ -55,6 +60,7 @@ import com.box.l10n.mojito.service.team.TeamRepository;
 import com.box.l10n.mojito.service.team.TeamService;
 import com.box.l10n.mojito.service.team.TeamSlackNotificationService;
 import com.box.l10n.mojito.service.team.TeamUserRepository;
+import com.box.l10n.mojito.service.tm.AddTMTextUnitCurrentVariantResult;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
@@ -877,6 +883,272 @@ public class ReviewProjectServiceTest {
             anyBoolean(),
             any(),
             any());
+    assertNotNull(
+        meterRegistry
+            .find("ReviewProjectService.saveDecisionDuration")
+            .tag("phase", "initialRead")
+            .tag("result", "success")
+            .tag("hasTarget", "true")
+            .timer());
+    assertNotNull(
+        meterRegistry
+            .find("ReviewProjectService.saveDecisionDuration")
+            .tag("phase", "integrityCheck")
+            .tag("result", "failure")
+            .tag("hasTarget", "true")
+            .timer());
+    assertNotNull(
+        meterRegistry
+            .find("ReviewProjectService.saveDecisionDuration")
+            .tag("phase", "total")
+            .tag("result", "forbidden")
+            .tag("hasTarget", "true")
+            .timer());
+  }
+
+  @Test
+  public void saveDecisionRecordsConflictMetric() {
+    Team team = team(7L);
+    Locale locale = locale(14L, "ja-JP");
+    ReviewProject reviewProject = project(12L, team, locale, user(101L, "pm-a"), currentUser);
+    TMTextUnit tmTextUnit = new TMTextUnit();
+    tmTextUnit.setId(321L);
+    ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
+    reviewProjectTextUnit.setId(55L);
+    reviewProjectTextUnit.setReviewProject(reviewProject);
+    reviewProjectTextUnit.setTmTextUnit(tmTextUnit);
+
+    TMTextUnitVariant currentVariant = new TMTextUnitVariant();
+    currentVariant.setId(777L);
+    TMTextUnitCurrentVariant current = new TMTextUnitCurrentVariant();
+    current.setTmTextUnitVariant(currentVariant);
+
+    when(reviewProjectTextUnitRepository.findById(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnit));
+    when(tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(14L, 321L))
+        .thenReturn(current);
+    when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
+
+    try {
+      reviewProjectService.saveDecision(
+          55L,
+          "Bonjour",
+          null,
+          "ACCEPTED",
+          true,
+          com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState.DECIDED,
+          776L,
+          false,
+          null);
+      fail("Expected ReviewProjectCurrentVariantConflictException");
+    } catch (ReviewProjectCurrentVariantConflictException e) {
+      assertEquals(Long.valueOf(776L), e.getExpectedVariantId());
+      assertEquals(Long.valueOf(777L), e.getCurrentVariantId());
+    }
+
+    assertNotNull(
+        meterRegistry
+            .find("ReviewProjectService.saveDecisionDuration")
+            .tag("phase", "initialRead")
+            .tag("result", "conflict")
+            .tag("hasTarget", "true")
+            .timer());
+    assertNotNull(
+        meterRegistry
+            .find("ReviewProjectService.saveDecisionDuration")
+            .tag("phase", "total")
+            .tag("result", "conflict")
+            .tag("hasTarget", "true")
+            .timer());
+    verify(tmService, never())
+        .addTMTextUnitCurrentVariantWithResult(
+            any(),
+            anyLong(),
+            anyLong(),
+            anyLong(),
+            anyLong(),
+            any(),
+            any(),
+            any(),
+            anyBoolean(),
+            any(),
+            any());
+  }
+
+  @Test
+  public void saveDecisionRecordsSuccessPhaseMetrics() {
+    Team team = team(7L);
+    Locale locale = locale(14L, "ja-JP");
+    ReviewProject reviewProject = project(12L, team, locale, user(101L, "pm-a"), currentUser);
+
+    TM tm = new TM();
+    tm.setId(91L);
+    Asset asset = new Asset();
+    asset.setId(81L);
+    TMTextUnit tmTextUnit = new TMTextUnit();
+    tmTextUnit.setId(321L);
+    tmTextUnit.setTm(tm);
+    tmTextUnit.setAsset(asset);
+    tmTextUnit.setWordCount(7);
+    ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
+    reviewProjectTextUnit.setId(55L);
+    reviewProjectTextUnit.setReviewProject(reviewProject);
+    reviewProjectTextUnit.setTmTextUnit(tmTextUnit);
+
+    TMTextUnitVariant decisionVariant = new TMTextUnitVariant();
+    decisionVariant.setId(888L);
+    TMTextUnitCurrentVariant currentVariant = new TMTextUnitCurrentVariant();
+    currentVariant.setTmTextUnitVariant(decisionVariant);
+
+    when(reviewProjectTextUnitRepository.findById(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnit));
+    when(reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.empty());
+    when(tmService.addTMTextUnitCurrentVariantWithResult(
+            any(),
+            anyLong(),
+            anyLong(),
+            anyLong(),
+            anyLong(),
+            any(),
+            any(),
+            any(),
+            anyBoolean(),
+            any(),
+            any()))
+        .thenReturn(new AddTMTextUnitCurrentVariantResult(true, currentVariant));
+    when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
+
+    ReviewProjectTextUnitDetail detail =
+        reviewProjectService.saveDecision(
+            55L,
+            "Bonjour",
+            "Accepted",
+            "APPROVED",
+            true,
+            com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState.DECIDED,
+            null,
+            false,
+            "Looks good");
+
+    assertEquals(Long.valueOf(55L), detail.reviewProjectTextUnitId());
+    verify(reviewProjectTextUnitDecisionRepository).saveAndFlush(any());
+    verify(reviewProjectRepository).incrementDecidedProgress(12L, 7L);
+    assertEquals(1L, saveDecisionDurationCount("initialRead", "success", true));
+    assertEquals(1L, saveDecisionDurationCount("currentVariantWrite", "success", true));
+    assertEquals(1L, saveDecisionDurationCount("decisionWrite", "success", true));
+    assertEquals(1L, saveDecisionDurationCount("decidedCountUpdate", "success", true));
+    assertEquals(1L, saveDecisionDurationCount("detailReload", "success", true));
+    assertEquals(1L, saveDecisionDurationCount("total", "success", true));
+  }
+
+  @Test
+  public void saveDecisionRecordsFailedPhaseMetric() {
+    Team team = team(7L);
+    Locale locale = locale(14L, "ja-JP");
+    ReviewProject reviewProject = project(12L, team, locale, user(101L, "pm-a"), currentUser);
+
+    TM tm = new TM();
+    tm.setId(91L);
+    Asset asset = new Asset();
+    asset.setId(81L);
+    TMTextUnit tmTextUnit = new TMTextUnit();
+    tmTextUnit.setId(321L);
+    tmTextUnit.setTm(tm);
+    tmTextUnit.setAsset(asset);
+    tmTextUnit.setWordCount(7);
+    ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
+    reviewProjectTextUnit.setId(55L);
+    reviewProjectTextUnit.setReviewProject(reviewProject);
+    reviewProjectTextUnit.setTmTextUnit(tmTextUnit);
+
+    TMTextUnitVariant decisionVariant = new TMTextUnitVariant();
+    decisionVariant.setId(888L);
+    TMTextUnitCurrentVariant currentVariant = new TMTextUnitCurrentVariant();
+    currentVariant.setTmTextUnitVariant(decisionVariant);
+
+    when(reviewProjectTextUnitRepository.findById(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnit));
+    when(reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.empty());
+    when(tmService.addTMTextUnitCurrentVariantWithResult(
+            any(),
+            anyLong(),
+            anyLong(),
+            anyLong(),
+            anyLong(),
+            any(),
+            any(),
+            any(),
+            anyBoolean(),
+            any(),
+            any()))
+        .thenReturn(new AddTMTextUnitCurrentVariantResult(true, currentVariant));
+    when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.empty());
+
+    try {
+      reviewProjectService.saveDecision(
+          55L,
+          "Bonjour",
+          "Accepted",
+          "APPROVED",
+          true,
+          com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState.DECIDED,
+          null,
+          false,
+          "Looks good");
+      fail("Expected IllegalArgumentException");
+    } catch (IllegalArgumentException e) {
+      assertEquals("reviewProjectTextUnit with id: 55 not found", e.getMessage());
+    }
+
+    assertEquals(1L, saveDecisionDurationCount("initialRead", "success", true));
+    assertEquals(1L, saveDecisionDurationCount("detailReload", "bad_request", true));
+    assertEquals(1L, saveDecisionDurationCount("total", "bad_request", true));
+  }
+
+  @Test
+  public void saveDecisionRecordsNoopDetailReloadMetric() {
+    Team team = team(7L);
+    Locale locale = locale(14L, "ja-JP");
+    ReviewProject reviewProject = project(12L, team, locale, user(101L, "pm-a"), currentUser);
+
+    TMTextUnit tmTextUnit = new TMTextUnit();
+    tmTextUnit.setId(321L);
+    ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
+    reviewProjectTextUnit.setId(55L);
+    reviewProjectTextUnit.setReviewProject(reviewProject);
+    reviewProjectTextUnit.setTmTextUnit(tmTextUnit);
+
+    when(reviewProjectTextUnitRepository.findById(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnit));
+    when(reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.empty());
+    when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
+
+    ReviewProjectTextUnitDetail detail =
+        reviewProjectService.saveDecision(
+            55L,
+            null,
+            null,
+            null,
+            null,
+            com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState.PENDING,
+            null,
+            false,
+            null);
+
+    assertEquals(Long.valueOf(55L), detail.reviewProjectTextUnitId());
+    verify(reviewProjectTextUnitDecisionRepository, never()).saveAndFlush(any());
+    verify(reviewProjectRepository, never()).incrementDecidedProgress(anyLong(), anyLong());
+    verify(reviewProjectRepository, never()).decrementDecidedProgress(anyLong(), anyLong());
+    assertEquals(1L, saveDecisionDurationCount("initialRead", "success", false));
+    assertEquals(1L, saveDecisionDurationCount("detailReload", "success", false));
+    assertEquals(1L, saveDecisionDurationCount("total", "noop", false));
   }
 
   @Test
@@ -953,8 +1225,7 @@ public class ReviewProjectServiceTest {
     assertEquals(reviewProjectTextUnit, decision.getReviewProjectTextUnit());
     assertEquals(ReviewProjectTextUnitDecision.DecisionState.DECIDED, decision.getDecisionState());
     assertEquals("final", decision.getNotes());
-    verify(reviewProjectRepository).incrementDecidedCount(12L);
-    verify(reviewProjectRepository).incrementDecidedWordCount(12L, 7L);
+    verify(reviewProjectRepository).incrementDecidedProgress(12L, 7L);
   }
 
   @Test
@@ -1399,6 +1670,16 @@ public class ReviewProjectServiceTest {
     when(userService.isCurrentUserTranslator()).thenReturn(isTranslator);
     when(userService.isCurrentUserAdminOrPm()).thenReturn(isAdmin || isPm);
     when(userRepository.findById(99L)).thenReturn(Optional.of(currentUser));
+  }
+
+  private long saveDecisionDurationCount(String phase, String result, boolean hasTarget) {
+    return meterRegistry
+        .find("ReviewProjectService.saveDecisionDuration")
+        .tag("phase", phase)
+        .tag("result", result)
+        .tag("hasTarget", Boolean.toString(hasTarget))
+        .timer()
+        .count();
   }
 
   private ReviewFeature reviewFeature(Long id, String name, Repository... repositories) {

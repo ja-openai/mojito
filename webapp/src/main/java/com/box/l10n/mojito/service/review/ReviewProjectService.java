@@ -55,9 +55,11 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.*;
+import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,6 +78,8 @@ public class ReviewProjectService {
   private static final String SEARCH_MODE_REQUESTS = "requests";
   private static final long SEARCH_PHASE_SLOW_LOG_THRESHOLD_MS = 250;
   private static final long SEARCH_TOTAL_SLOW_LOG_THRESHOLD_MS = 1_000;
+  private static final long SAVE_DECISION_PHASE_SLOW_LOG_THRESHOLD_MS = 250;
+  private static final long SAVE_DECISION_TOTAL_SLOW_LOG_THRESHOLD_MS = 1_000;
   private static final String TRANSLATOR_INTEGRITY_BYPASS_DENIED_MESSAGE =
       "This translation failed the placeholder/integrity check. "
           + "Please fix the translation and try saving again.";
@@ -992,9 +996,10 @@ public class ReviewProjectService {
   }
 
   private void recordSearchPhase(String mode, String phase, Stopwatch stopwatch, int resultCount) {
-    long elapsedMillis = stopwatch.elapsed().toMillis();
+    Duration elapsed = stopwatch.elapsed();
+    long elapsedMillis = elapsed.toMillis();
     Tags tags = Tags.of("mode", mode, "phase", phase);
-    meterRegistry.timer(metricName("searchPhaseDuration"), tags).record(stopwatch.elapsed());
+    meterRegistry.timer(metricName("searchPhaseDuration"), tags).record(elapsed);
     meterRegistry.summary(metricName("searchPhaseResultCount"), tags).record(resultCount);
 
     long slowLogThresholdMillis =
@@ -1021,6 +1026,89 @@ public class ReviewProjectService {
   private String metricName(String suffix) {
     return METRIC_PREFIX + "." + suffix;
   }
+
+  private void recordSaveDecisionPhase(
+      String phase,
+      String result,
+      Long reviewProjectTextUnitId,
+      boolean hasTarget,
+      Stopwatch stopwatch) {
+    Duration elapsed = stopwatch.elapsed();
+    long elapsedMillis = elapsed.toMillis();
+    Tags tags = Tags.of("phase", phase, "result", result, "hasTarget", Boolean.toString(hasTarget));
+    meterRegistry.timer(metricName("saveDecisionDuration"), tags).record(elapsed);
+
+    long slowLogThresholdMillis =
+        "total".equals(phase)
+            ? SAVE_DECISION_TOTAL_SLOW_LOG_THRESHOLD_MS
+            : SAVE_DECISION_PHASE_SLOW_LOG_THRESHOLD_MS;
+    if (elapsedMillis >= slowLogThresholdMillis) {
+      logger.info(
+          "Review project save decision phase completed: phase={}, result={}, elapsedMs={}, reviewProjectTextUnitId={}",
+          phase,
+          result,
+          elapsedMillis,
+          reviewProjectTextUnitId);
+    } else {
+      logger.debug(
+          "Review project save decision phase completed: phase={}, result={}, elapsedMs={}, reviewProjectTextUnitId={}",
+          phase,
+          result,
+          elapsedMillis,
+          reviewProjectTextUnitId);
+    }
+  }
+
+  private String getSaveDecisionResultTag(RuntimeException exception) {
+    if (exception instanceof ReviewProjectCurrentVariantConflictException) {
+      return "conflict";
+    }
+    if (exception instanceof AccessDeniedException) {
+      return "forbidden";
+    }
+    if (exception instanceof IllegalArgumentException) {
+      return "bad_request";
+    }
+    return "error";
+  }
+
+  private <T> T timeSaveDecisionPhase(
+      String phase, Long reviewProjectTextUnitId, boolean hasTarget, Supplier<T> operation) {
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    String result = "success";
+    try {
+      return operation.get();
+    } catch (RuntimeException exception) {
+      result = getSaveDecisionResultTag(exception);
+      throw exception;
+    } finally {
+      recordSaveDecisionPhase(phase, result, reviewProjectTextUnitId, hasTarget, stopwatch);
+    }
+  }
+
+  private void runSaveDecisionPhase(
+      String phase, Long reviewProjectTextUnitId, boolean hasTarget, Runnable operation) {
+    timeSaveDecisionPhase(
+        phase,
+        reviewProjectTextUnitId,
+        hasTarget,
+        () -> {
+          operation.run();
+          return null;
+        });
+  }
+
+  private record SaveDecisionInitialRead(
+      ReviewProjectTextUnit textUnit,
+      ReviewProject project,
+      User currentUser,
+      boolean isTranslator,
+      TMTextUnitVariant baselineVariant,
+      TMTextUnit tmTextUnit,
+      TMTextUnitCurrentVariant currentVariant,
+      TMTextUnitVariant currentTmTextUnitVariant,
+      Optional<ReviewProjectTextUnitDecision> existingDecision,
+      boolean wasDecided) {}
 
   private List<ReviewProjectStatus> getRequestModeStatuses(List<ReviewProjectStatus> statuses) {
     if (statuses == null || statuses.isEmpty()) {
@@ -2198,130 +2286,213 @@ public class ReviewProjectService {
       boolean overrideChangedCurrent,
       String decisionNotes) {
 
+    Stopwatch totalStopwatch = Stopwatch.createStarted();
+    String totalResult = "success";
     boolean hasTarget = target != null;
-    if (hasTarget) {
-      if (status == null) {
-        throw new IllegalArgumentException("Status is required");
-      }
-      if (includedInLocalizedFile == null) {
-        throw new IllegalArgumentException("includedInLocalizedFile is required");
-      }
-    }
-
-    if (decisionState == null) {
-      throw new IllegalArgumentException("decisionState is required");
-    }
-
-    boolean requireCurrentVariantMatch = hasTarget || decisionState == DecisionState.DECIDED;
-
-    ReviewProjectTextUnit textUnit =
-        reviewProjectTextUnitRepository
-            .findById(reviewProjectTextUnitId)
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        "reviewProjectTextUnit with id: "
-                            + reviewProjectTextUnitId
-                            + " not found"));
-
-    ReviewProject project = textUnit.getReviewProject();
-    assertCurrentUserCanReadProject(project);
-    userService.checkUserCanEditLocale(project.getLocale().getId());
-    User currentUser =
-        userRepository
-            .findById(teamService.getCurrentUserIdOrThrow())
-            .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
-    boolean isTranslator = userService.isCurrentUserTranslator();
-
-    TMTextUnitVariant baselineVariant = textUnit.getTmTextUnitVariant();
-    TMTextUnit tmTextUnit = textUnit.getTmTextUnit();
-
-    TMTextUnitCurrentVariant currentVariant =
-        tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
-            project.getLocale().getId(), tmTextUnit.getId());
-    TMTextUnitVariant currentTmTextUnitVariant =
-        currentVariant != null ? currentVariant.getTmTextUnitVariant() : null;
-    Long currentVariantId =
-        currentTmTextUnitVariant != null ? currentTmTextUnitVariant.getId() : null;
-
-    if (requireCurrentVariantMatch
-        && !overrideChangedCurrent
-        && expectedCurrentTmTextUnitVariantId != null
-        && !expectedCurrentTmTextUnitVariantId.equals(currentVariantId)) {
-      throw new ReviewProjectCurrentVariantConflictException(
-          expectedCurrentTmTextUnitVariantId,
-          currentVariantId,
-          fetchReviewProjectTextUnitDetail(reviewProjectTextUnitId));
-    }
-
-    Optional<ReviewProjectTextUnitDecision> existingDecision =
-        reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(
-            reviewProjectTextUnitId);
-    boolean wasDecided =
-        existingDecision
-            .map(decision -> decision.getDecisionState() == DecisionState.DECIDED)
-            .orElse(false);
-    if (!hasTarget && decisionState == DecisionState.PENDING && existingDecision.isEmpty()) {
-      return fetchReviewProjectTextUnitDetail(reviewProjectTextUnitId);
-    }
-
-    ReviewProjectTextUnitDecision decision =
-        existingDecision.orElseGet(
-            () -> {
-              ReviewProjectTextUnitDecision entity = new ReviewProjectTextUnitDecision();
-              entity.setReviewProjectTextUnit(textUnit);
-              return entity;
-            });
-    TMTextUnitVariant reviewedVariant =
-        baselineVariant != null ? baselineVariant : currentTmTextUnitVariant;
-
-    if (hasTarget) {
-      String normalizedTarget = NormalizationUtils.normalize(target);
-      if (isTranslator) {
-        try {
-          tmTextUnitIntegrityCheckService.checkTMTextUnitIntegrity(
-              tmTextUnit.getId(), normalizedTarget);
-        } catch (IntegrityCheckException e) {
-          throw new AccessDeniedException(TRANSLATOR_INTEGRITY_BYPASS_DENIED_MESSAGE);
+    try {
+      if (hasTarget) {
+        if (status == null) {
+          throw new IllegalArgumentException("Status is required");
+        }
+        if (includedInLocalizedFile == null) {
+          throw new IllegalArgumentException("includedInLocalizedFile is required");
         }
       }
-      TMTextUnitVariant.Status statusEnum = TMTextUnitVariant.Status.valueOf(status);
 
-      AddTMTextUnitCurrentVariantResult addResult =
-          tmService.addTMTextUnitCurrentVariantWithResult(
-              currentVariant,
-              tmTextUnit.getTm().getId(),
-              tmTextUnit.getAsset().getId(),
-              tmTextUnit.getId(),
-              project.getLocale().getId(),
-              normalizedTarget,
-              comment,
-              statusEnum,
-              includedInLocalizedFile,
-              null,
-              currentUser);
-      TMTextUnitVariant decidedVariant =
-          addResult.getTmTextUnitCurrentVariant().getTmTextUnitVariant();
+      if (decisionState == null) {
+        throw new IllegalArgumentException("decisionState is required");
+      }
 
-      decision.setReviewedVariant(reviewedVariant);
-      decision.setDecisionVariant(decidedVariant);
-      decision.setNotes(decisionNotes);
-    } else if (decisionState == DecisionState.DECIDED && decision.getDecisionVariant() == null) {
-      TMTextUnitVariant fallbackVariant =
-          currentTmTextUnitVariant != null ? currentTmTextUnitVariant : baselineVariant;
-      decision.setDecisionVariant(fallbackVariant);
-      decision.setReviewedVariant(reviewedVariant);
+      boolean requireCurrentVariantMatch = hasTarget || decisionState == DecisionState.DECIDED;
+
+      SaveDecisionInitialRead initialRead =
+          timeSaveDecisionPhase(
+              "initialRead",
+              reviewProjectTextUnitId,
+              hasTarget,
+              () -> {
+                ReviewProjectTextUnit textUnit =
+                    reviewProjectTextUnitRepository
+                        .findById(reviewProjectTextUnitId)
+                        .orElseThrow(
+                            () ->
+                                new IllegalArgumentException(
+                                    "reviewProjectTextUnit with id: "
+                                        + reviewProjectTextUnitId
+                                        + " not found"));
+
+                ReviewProject project = textUnit.getReviewProject();
+                assertCurrentUserCanReadProject(project);
+                userService.checkUserCanEditLocale(project.getLocale().getId());
+                User currentUser =
+                    userRepository
+                        .findById(teamService.getCurrentUserIdOrThrow())
+                        .orElseThrow(
+                            () -> new IllegalStateException("Authenticated user not found"));
+                boolean isTranslator = userService.isCurrentUserTranslator();
+
+                TMTextUnitVariant baselineVariant = textUnit.getTmTextUnitVariant();
+                TMTextUnit tmTextUnit = textUnit.getTmTextUnit();
+
+                TMTextUnitCurrentVariant currentVariant =
+                    tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
+                        project.getLocale().getId(), tmTextUnit.getId());
+                TMTextUnitVariant currentTmTextUnitVariant =
+                    currentVariant != null ? currentVariant.getTmTextUnitVariant() : null;
+                Long currentVariantId =
+                    currentTmTextUnitVariant != null ? currentTmTextUnitVariant.getId() : null;
+
+                if (requireCurrentVariantMatch
+                    && !overrideChangedCurrent
+                    && expectedCurrentTmTextUnitVariantId != null
+                    && !expectedCurrentTmTextUnitVariantId.equals(currentVariantId)) {
+                  throw new ReviewProjectCurrentVariantConflictException(
+                      expectedCurrentTmTextUnitVariantId,
+                      currentVariantId,
+                      fetchReviewProjectTextUnitDetail(reviewProjectTextUnitId));
+                }
+
+                Optional<ReviewProjectTextUnitDecision> existingDecision =
+                    reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(
+                        reviewProjectTextUnitId);
+                boolean wasDecided =
+                    existingDecision
+                        .map(decision -> decision.getDecisionState() == DecisionState.DECIDED)
+                        .orElse(false);
+                return new SaveDecisionInitialRead(
+                    textUnit,
+                    project,
+                    currentUser,
+                    isTranslator,
+                    baselineVariant,
+                    tmTextUnit,
+                    currentVariant,
+                    currentTmTextUnitVariant,
+                    existingDecision,
+                    wasDecided);
+              });
+
+      ReviewProjectTextUnit textUnit = initialRead.textUnit();
+      ReviewProject project = initialRead.project();
+      User currentUser = initialRead.currentUser();
+      boolean isTranslator = initialRead.isTranslator();
+      TMTextUnitVariant baselineVariant = initialRead.baselineVariant();
+      TMTextUnit tmTextUnit = initialRead.tmTextUnit();
+      TMTextUnitCurrentVariant currentVariant = initialRead.currentVariant();
+      TMTextUnitVariant currentTmTextUnitVariant = initialRead.currentTmTextUnitVariant();
+      Optional<ReviewProjectTextUnitDecision> existingDecision = initialRead.existingDecision();
+      boolean wasDecided = initialRead.wasDecided();
+      if (!hasTarget && decisionState == DecisionState.PENDING && existingDecision.isEmpty()) {
+        totalResult = "noop";
+        return timeSaveDecisionPhase(
+            "detailReload",
+            reviewProjectTextUnitId,
+            hasTarget,
+            () -> fetchReviewProjectTextUnitDetail(reviewProjectTextUnitId));
+      }
+
+      ReviewProjectTextUnitDecision decision =
+          existingDecision.orElseGet(
+              () -> {
+                ReviewProjectTextUnitDecision entity = new ReviewProjectTextUnitDecision();
+                entity.setReviewProjectTextUnit(textUnit);
+                return entity;
+              });
+      TMTextUnitVariant reviewedVariant =
+          baselineVariant != null ? baselineVariant : currentTmTextUnitVariant;
+
+      if (hasTarget) {
+        String normalizedTarget = NormalizationUtils.normalize(target);
+        if (isTranslator) {
+          Stopwatch integrityCheckStopwatch = Stopwatch.createStarted();
+          try {
+            tmTextUnitIntegrityCheckService.checkTMTextUnitIntegrity(
+                tmTextUnit.getId(), normalizedTarget);
+            recordSaveDecisionPhase(
+                "integrityCheck",
+                "success",
+                reviewProjectTextUnitId,
+                hasTarget,
+                integrityCheckStopwatch);
+          } catch (IntegrityCheckException e) {
+            recordSaveDecisionPhase(
+                "integrityCheck",
+                "failure",
+                reviewProjectTextUnitId,
+                hasTarget,
+                integrityCheckStopwatch);
+            throw new AccessDeniedException(TRANSLATOR_INTEGRITY_BYPASS_DENIED_MESSAGE);
+          }
+        }
+        TMTextUnitVariant.Status statusEnum = TMTextUnitVariant.Status.valueOf(status);
+
+        AddTMTextUnitCurrentVariantResult addResult =
+            timeSaveDecisionPhase(
+                "currentVariantWrite",
+                reviewProjectTextUnitId,
+                hasTarget,
+                () ->
+                    tmService.addTMTextUnitCurrentVariantWithResult(
+                        currentVariant,
+                        tmTextUnit.getTm().getId(),
+                        tmTextUnit.getAsset().getId(),
+                        tmTextUnit.getId(),
+                        project.getLocale().getId(),
+                        normalizedTarget,
+                        comment,
+                        statusEnum,
+                        includedInLocalizedFile,
+                        null,
+                        currentUser));
+        TMTextUnitVariant decidedVariant =
+            addResult.getTmTextUnitCurrentVariant().getTmTextUnitVariant();
+
+        decision.setReviewedVariant(reviewedVariant);
+        decision.setDecisionVariant(decidedVariant);
+        decision.setNotes(decisionNotes);
+      } else if (decisionState == DecisionState.DECIDED && decision.getDecisionVariant() == null) {
+        TMTextUnitVariant fallbackVariant =
+            currentTmTextUnitVariant != null ? currentTmTextUnitVariant : baselineVariant;
+        decision.setDecisionVariant(fallbackVariant);
+        decision.setReviewedVariant(reviewedVariant);
+      }
+
+      decision.setDecisionState(decisionState);
+      runSaveDecisionPhase(
+          "decisionWrite",
+          reviewProjectTextUnitId,
+          hasTarget,
+          () -> {
+            reviewProjectAssignmentWindowService.acceptCurrentAssignmentIfAssignedTranslator(
+                project);
+            reviewProjectTextUnitDecisionRepository.saveAndFlush(decision);
+          });
+
+      runSaveDecisionPhase(
+          "decidedCountUpdate",
+          reviewProjectTextUnitId,
+          hasTarget,
+          () ->
+              updateProjectDecidedCount(
+                  project.getId(),
+                  getWordCount(textUnit),
+                  wasDecided,
+                  decisionState == DecisionState.DECIDED));
+
+      ReviewProjectTextUnitDetail detail =
+          timeSaveDecisionPhase(
+              "detailReload",
+              reviewProjectTextUnitId,
+              hasTarget,
+              () -> fetchReviewProjectTextUnitDetail(reviewProjectTextUnitId));
+      return detail;
+    } catch (RuntimeException exception) {
+      totalResult = getSaveDecisionResultTag(exception);
+      throw exception;
+    } finally {
+      recordSaveDecisionPhase(
+          "total", totalResult, reviewProjectTextUnitId, hasTarget, totalStopwatch);
     }
-
-    decision.setDecisionState(decisionState);
-    reviewProjectAssignmentWindowService.acceptCurrentAssignmentIfAssignedTranslator(project);
-    reviewProjectTextUnitDecisionRepository.saveAndFlush(decision);
-    updateProjectDecidedCount(
-        project.getId(),
-        getWordCount(textUnit),
-        wasDecided,
-        decisionState == DecisionState.DECIDED);
-    return fetchReviewProjectTextUnitDetail(reviewProjectTextUnitId);
   }
 
   @Transactional
@@ -2773,11 +2944,9 @@ public class ReviewProjectService {
       return;
     }
     if (isDecided) {
-      reviewProjectRepository.incrementDecidedCount(projectId);
-      reviewProjectRepository.incrementDecidedWordCount(projectId, wordCount);
+      reviewProjectRepository.incrementDecidedProgress(projectId, wordCount);
     } else {
-      reviewProjectRepository.decrementDecidedCount(projectId);
-      reviewProjectRepository.decrementDecidedWordCount(projectId, wordCount);
+      reviewProjectRepository.decrementDecidedProgress(projectId, wordCount);
     }
   }
 

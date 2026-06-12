@@ -1,12 +1,18 @@
 package com.box.l10n.mojito.rest.textunit;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
+import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
+import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.box.l10n.mojito.service.tm.search.TextUnitTextSearch;
 import com.box.l10n.mojito.service.tm.search.TextUnitTextSearchBooleanOperator;
 import com.box.l10n.mojito.service.tm.search.TextUnitTextSearchField;
 import com.box.l10n.mojito.service.tm.search.TextUnitTextSearchPredicate;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -69,5 +75,53 @@ public class TextUnitWSSearchValidationTest {
     assertEquals(
         TextUnitTextSearchField.COMMENT,
         parameters.getTextSearch().getPredicates().get(2).getField());
+  }
+
+  @Test
+  public void checkTMTextUnitRecordsSuccessMetric() {
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    TMTextUnitIntegrityCheckService integrityCheckService =
+        mock(TMTextUnitIntegrityCheckService.class);
+    textUnitWS.meterRegistry = meterRegistry;
+    textUnitWS.tmTextUnitIntegrityCheckService = integrityCheckService;
+    TextUnitCheckBody body = new TextUnitCheckBody();
+    body.setTmTextUnitId(321L);
+    body.setContent("Bonjour");
+
+    TMTextUnitIntegrityCheckResult result = textUnitWS.checkTMTextUnit(body);
+
+    assertEquals(Boolean.TRUE, result.getCheckResult());
+    assertEquals(1.0, integrityCheckDurationCount(meterRegistry, "success"), 0.0);
+    verify(integrityCheckService).checkTMTextUnitIntegrity(321L, "Bonjour");
+  }
+
+  @Test
+  public void checkTMTextUnitRecordsFailureMetric() {
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    TMTextUnitIntegrityCheckService integrityCheckService =
+        mock(TMTextUnitIntegrityCheckService.class);
+    doThrow(new IntegrityCheckException("Missing placeholder"))
+        .when(integrityCheckService)
+        .checkTMTextUnitIntegrity(321L, "Bonjour");
+    textUnitWS.meterRegistry = meterRegistry;
+    textUnitWS.tmTextUnitIntegrityCheckService = integrityCheckService;
+    TextUnitCheckBody body = new TextUnitCheckBody();
+    body.setTmTextUnitId(321L);
+    body.setContent("Bonjour");
+
+    TMTextUnitIntegrityCheckResult result = textUnitWS.checkTMTextUnit(body);
+
+    assertEquals(Boolean.FALSE, result.getCheckResult());
+    assertEquals("Missing placeholder", result.getFailureDetail());
+    assertEquals(1.0, integrityCheckDurationCount(meterRegistry, "failure"), 0.0);
+    verify(integrityCheckService).checkTMTextUnitIntegrity(321L, "Bonjour");
+  }
+
+  private double integrityCheckDurationCount(SimpleMeterRegistry meterRegistry, String result) {
+    return meterRegistry
+        .find("TextUnitWS.integrityCheckDuration")
+        .tag("result", result)
+        .timer()
+        .count();
   }
 }
