@@ -7,6 +7,7 @@ import com.box.l10n.mojito.okapi.TextUnitUtils;
 import com.box.l10n.mojito.okapi.asset.AssetPathToFilterConfigMapper;
 import com.box.l10n.mojito.okapi.asset.FilterConfigurationMappers;
 import com.box.l10n.mojito.okapi.asset.UnsupportedAssetFilterTypeException;
+import com.box.l10n.mojito.okapi.filters.UnescapeUtils;
 import java.util.Arrays;
 import java.util.List;
 import org.assertj.core.api.Assertions;
@@ -25,6 +26,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
       AssetPathToFilterConfigMapper.class,
       FilterConfigurationMappers.class,
       TextUnitUtils.class,
+      UnescapeUtils.class,
       AssetExtractorTest.class
     })
 @EnableSpringConfigured
@@ -49,6 +51,28 @@ public class AssetExtractorTest {
     Assertions.assertThat(assetExtractorTextUnitsForAsset)
         .extracting(AssetExtractorTextUnit::getName, AssetExtractorTextUnit::getSource)
         .containsExactly(tuple("key1", "value1"), tuple("key2", "value2"));
+  }
+
+  @Test
+  public void extractAndroidStringWithAnnotationOnly() throws UnsupportedAssetFilterTypeException {
+    List<AssetExtractorTextUnit> assetExtractorTextUnitsForAsset =
+        assetExtractor.getAssetExtractorTextUnitsForAsset(
+            "res/values/strings.xml",
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                + "<resources>\n"
+                + "  <string name=\"neutral_annotation\">"
+                + "<annotation key=\"tone\">This is a neutral sentence.</annotation>"
+                + "</string>\n"
+                + "</resources>\n",
+            null,
+            null);
+
+    Assertions.assertThat(assetExtractorTextUnitsForAsset)
+        .extracting(AssetExtractorTextUnit::getName, AssetExtractorTextUnit::getSource)
+        .containsExactly(
+            tuple(
+                "neutral_annotation",
+                "<annotation key=\"tone\">This is a neutral sentence.</annotation>"));
   }
 
   @Test
