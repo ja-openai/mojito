@@ -1217,6 +1217,30 @@
   overflow-wrap: anywhere;
 }
 
+.workbench-page__date-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-muted);
+}
+
+.workbench-page__date-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.workbench-page__date-label {
+  color: var(--color-text-subtle);
+  font-weight: var(--font-weight-semibold);
+}
+
+.workbench-page__date-value {
+  overflow-wrap: anywhere;
+}
+
 .workbench-page__meta-link {
   display: inline-flex;
   align-items: center;

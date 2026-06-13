@@ -132,12 +132,16 @@ const DEFAULT_GLOSSARY_STATUS_FILTER: GlossaryStatusFilterValue = 'ALL';
 function getWorkbenchRowSortValue(
   row: WorkbenchRow,
   field: WorkbenchResultSortField,
-): string | number {
+): string | number | null {
   switch (field) {
     case 'tmTextUnitId':
       return row.tmTextUnitId;
     case 'translation':
       return row.translation ?? '';
+    case 'sourceCreatedDate':
+      return getDateSortValue(row.sourceCreatedDate);
+    case 'translationCreatedDate':
+      return getDateSortValue(row.translationCreatedDate);
     case 'assetPath':
       return row.assetPath ?? '';
     case 'comment':
@@ -146,6 +150,14 @@ function getWorkbenchRowSortValue(
     default:
       return row.source;
   }
+}
+
+function getDateSortValue(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
 }
 
 function createTextSearchCondition(
@@ -708,6 +720,13 @@ export function useWorkbenchSearch({ initialSearchRequest, canEditLocale }: Para
         const direction = resultSortDirection === 'desc' ? -1 : 1;
         const leftValue = getWorkbenchRowSortValue(left.row, resultSortField);
         const rightValue = getWorkbenchRowSortValue(right.row, resultSortField);
+
+        if (leftValue === null || rightValue === null) {
+          if (leftValue === rightValue) {
+            return left.index - right.index;
+          }
+          return leftValue === null ? 1 : -1;
+        }
 
         const compareValue =
           typeof leftValue === 'number' && typeof rightValue === 'number'

@@ -43,6 +43,8 @@ const editingRow: WorkbenchRow = {
   localeId: 17,
   source: 'Pay {price} now',
   translation: 'Pay {price} now',
+  sourceCreatedDate: '2026-05-01T10:15:00Z',
+  translationCreatedDate: '2026-05-02T11:30:00Z',
   status: 'TRANSLATED',
   comment: null,
   tmTextUnitId: 3,
@@ -98,6 +100,7 @@ function renderWorkbenchBody(overrides: Partial<WorkbenchBodyProps> = {}) {
     translationMarksMode: 'auto',
     onChangeTranslationMarksMode: noop,
     showProtectedTokens: true,
+    showDateMetadata: true,
     ...overrides,
   };
 
@@ -128,6 +131,28 @@ describe('WorkbenchBody', () => {
       expect(protectedToken).toHaveTextContent('{price}');
       expect(protectedToken).toHaveClass('visible-text-editor__protected-token--icu-placeholder');
     });
+  });
+
+  it('renders source and translation created dates in row metadata', () => {
+    const { container } = renderWorkbenchBody({
+      editingRowId: null,
+      editingValue: '',
+    });
+
+    expect(screen.getByLabelText('Text unit dates')).toHaveTextContent('Created');
+    expect(screen.getByLabelText('Text unit dates')).toHaveTextContent('Translated');
+    expect(container.querySelector('time[datetime="2026-05-01T10:15:00Z"]')).toBeInTheDocument();
+    expect(container.querySelector('time[datetime="2026-05-02T11:30:00Z"]')).toBeInTheDocument();
+  });
+
+  it('hides source and translation created dates when date metadata is off', () => {
+    renderWorkbenchBody({
+      editingRowId: null,
+      editingValue: '',
+      showDateMetadata: false,
+    });
+
+    expect(screen.queryByLabelText('Text unit dates')).not.toBeInTheDocument();
   });
 
   it('uses a lightweight protected renderer for inactive translation rows', () => {

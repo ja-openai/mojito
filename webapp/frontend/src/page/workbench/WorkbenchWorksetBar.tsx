@@ -14,6 +14,8 @@ const resultSortFieldOptions = [
   { value: 'tmTextUnitId' as const, label: 'ID' },
   { value: 'source' as const, label: 'Source' },
   { value: 'translation' as const, label: 'Translation' },
+  { value: 'sourceCreatedDate' as const, label: 'Created date' },
+  { value: 'translationCreatedDate' as const, label: 'Translated date' },
   { value: 'assetPath' as const, label: 'Asset' },
   { value: 'comment' as const, label: 'Comment' },
 ];
@@ -37,6 +39,11 @@ const tokenDisplayOptions = [
     helper: 'Highlight placeholders, tags, and ICU markers.',
   },
   { value: 'off' as const, label: 'Off', helper: 'Render placeholder text without highlights.' },
+];
+
+const dateMetadataOptions = [
+  { value: 'on' as const, label: 'On', helper: 'Show created and translated dates.' },
+  { value: 'off' as const, label: 'Off', helper: 'Hide row date metadata.' },
 ];
 
 type WorkbenchWorksetBarProps = {
@@ -65,6 +72,8 @@ type WorkbenchWorksetBarProps = {
   onChangeMarksMode: (mode: VisibleTextMarksMode) => void;
   showProtectedTokens: boolean;
   onChangeShowProtectedTokens: (show: boolean) => void;
+  showDateMetadata: boolean;
+  onChangeShowDateMetadata: (show: boolean) => void;
   onOpenExportModal: () => void;
   onOpenImportModal: () => void;
   onOpenShareModal: () => void;
@@ -111,6 +120,8 @@ export function WorkbenchWorksetBar({
   onChangeMarksMode,
   showProtectedTokens,
   onChangeShowProtectedTokens,
+  showDateMetadata,
+  onChangeShowDateMetadata,
   onOpenExportModal,
   onOpenImportModal,
   onOpenShareModal,
@@ -214,6 +225,8 @@ export function WorkbenchWorksetBar({
         onChangeMarksMode={onChangeMarksMode}
         showProtectedTokens={showProtectedTokens}
         onChangeShowProtectedTokens={onChangeShowProtectedTokens}
+        showDateMetadata={showDateMetadata}
+        onChangeShowDateMetadata={onChangeShowDateMetadata}
       />,
     );
   }
@@ -314,17 +327,19 @@ function DisplayDropdown({
   onChangeMarksMode,
   showProtectedTokens,
   onChangeShowProtectedTokens,
+  showDateMetadata,
+  onChangeShowDateMetadata,
 }: {
   disabled: boolean;
   marksMode: VisibleTextMarksMode;
   onChangeMarksMode: (mode: VisibleTextMarksMode) => void;
   showProtectedTokens: boolean;
   onChangeShowProtectedTokens: (show: boolean) => void;
+  showDateMetadata: boolean;
+  onChangeShowDateMetadata: (show: boolean) => void;
 }) {
-  const marksModeLabel =
-    marksModeOptions.find((option) => option.value === marksMode)?.label ?? 'Auto';
   const tokenDisplayValue = showProtectedTokens ? 'on' : 'off';
-  const tokenDisplayLabel = showProtectedTokens ? 'On' : 'Off';
+  const dateMetadataValue = showDateMetadata ? 'on' : 'off';
 
   return (
     <MultiSectionFilterChip
@@ -337,7 +352,7 @@ function DisplayDropdown({
       }}
       closeOnSelection
       disabled={disabled}
-      summary={`Display: Hidden chars ${marksModeLabel.toLowerCase()} · Placeholders ${tokenDisplayLabel.toLowerCase()}`}
+      summary="Display"
       sections={[
         {
           kind: 'radio',
@@ -352,6 +367,13 @@ function DisplayDropdown({
           options: tokenDisplayOptions,
           value: tokenDisplayValue,
           onChange: (value) => onChangeShowProtectedTokens(value === 'on'),
+        },
+        {
+          kind: 'radio',
+          label: 'Dates',
+          options: dateMetadataOptions,
+          value: dateMetadataValue,
+          onChange: (value) => onChangeShowDateMetadata(value === 'on'),
         },
       ]}
     />

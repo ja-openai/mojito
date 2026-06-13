@@ -16,6 +16,8 @@ export type WorkbenchRow = {
   localeId: number | null;
   source: string;
   translation: string | null;
+  sourceCreatedDate: string | null;
+  translationCreatedDate: string | null;
   status: string;
   comment: string | null;
   tmTextUnitId: number;
@@ -52,6 +54,8 @@ export type WorkbenchResultSortField =
   | 'tmTextUnitId'
   | 'source'
   | 'translation'
+  | 'sourceCreatedDate'
+  | 'translationCreatedDate'
   | 'assetPath'
   | 'comment';
 

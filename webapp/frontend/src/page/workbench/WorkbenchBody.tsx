@@ -22,6 +22,7 @@ import type {
 } from '../../components/VisibleTextEditor';
 import { VisibleTextRenderer } from '../../components/VisibleTextRenderer';
 import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
+import { formatLocalDateTime, getLocalAndUtcDateTimeTooltip } from '../../utils/dateTime';
 import type { GlossaryWorkbenchContext } from '../../utils/glossaryWorkbench';
 import { isPrimaryActionShortcut } from '../../utils/keyboardShortcuts';
 import { isRtlLocale } from '../../utils/localeDirection';
@@ -68,6 +69,7 @@ type WorkbenchBodyProps = {
   translationMarksMode: VisibleTextMarksMode;
   onChangeTranslationMarksMode: (mode: VisibleTextMarksMode) => void;
   showProtectedTokens: boolean;
+  showDateMetadata: boolean;
 };
 
 type GlossaryWorkbenchTarget = {
@@ -120,6 +122,7 @@ export function WorkbenchBody({
   translationMarksMode,
   onChangeTranslationMarksMode,
   showProtectedTokens,
+  showDateMetadata,
 }: WorkbenchBodyProps) {
   const navigate = useNavigate();
   const editingTextTokenGuard = useProtectedTextTokenGuard(
@@ -622,6 +625,7 @@ export function WorkbenchBody({
                           </span>
                         ) : null}
                       </div>
+                      {showDateMetadata ? <WorkbenchDateMetadata row={row} /> : null}
                     </div>
                     <div className="workbench-page__cell workbench-page__cell--source">
                       {useAssistedSourcePreview ? (
@@ -802,6 +806,34 @@ export function WorkbenchBody({
           />
         )}
       </div>
+    </div>
+  );
+}
+
+function WorkbenchDateMetadata({ row }: { row: WorkbenchRow }) {
+  const dates = [
+    row.sourceCreatedDate ? { label: 'Created', value: row.sourceCreatedDate } : null,
+    row.translationCreatedDate ? { label: 'Translated', value: row.translationCreatedDate } : null,
+  ].filter((item): item is { label: string; value: string } => item !== null);
+
+  if (dates.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="workbench-page__date-meta" aria-label="Text unit dates">
+      {dates.map((date) => {
+        const displayValue = formatLocalDateTime(date.value, date.value);
+        const tooltip = getLocalAndUtcDateTimeTooltip(date.value) ?? displayValue;
+        return (
+          <span key={date.label} className="workbench-page__date-item">
+            <span className="workbench-page__date-label">{date.label}</span>
+            <time dateTime={date.value} title={tooltip} className="workbench-page__date-value">
+              {displayValue}
+            </time>
+          </span>
+        );
+      })}
     </div>
   );
 }

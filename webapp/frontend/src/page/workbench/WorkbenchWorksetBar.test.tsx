@@ -11,10 +11,14 @@ function renderWorksetBar({
   canManageTranslations,
   onChangeMarksMode = noop,
   onChangeShowProtectedTokens = noop,
+  onChangeShowDateMetadata = noop,
+  showDateMetadata = false,
 }: {
   canManageTranslations: boolean;
   onChangeMarksMode?: (mode: 'auto' | 'all' | 'off') => void;
   onChangeShowProtectedTokens?: (show: boolean) => void;
+  onChangeShowDateMetadata?: (show: boolean) => void;
+  showDateMetadata?: boolean;
 }) {
   const collections: WorkbenchCollection[] = [];
 
@@ -45,6 +49,8 @@ function renderWorksetBar({
       onChangeMarksMode={onChangeMarksMode}
       showProtectedTokens
       onChangeShowProtectedTokens={onChangeShowProtectedTokens}
+      showDateMetadata={showDateMetadata}
+      onChangeShowDateMetadata={onChangeShowDateMetadata}
       onOpenExportModal={noop}
       onOpenImportModal={noop}
       onOpenShareModal={noop}
@@ -110,6 +116,16 @@ describe('WorkbenchWorksetBar permissions', () => {
     expect(handleChangeMarksMode).toHaveBeenCalledWith('all');
   });
 
+  it('offers created and translated date sorting for loaded results', async () => {
+    const user = userEvent.setup();
+    renderWorksetBar({ canManageTranslations: true });
+
+    await user.click(screen.getByRole('button', { name: 'Sort loaded results' }));
+
+    expect(screen.getByRole('button', { name: /Created date/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Translated date/ })).toBeInTheDocument();
+  });
+
   it('changes workbench display placeholder highlighting from the subbar', async () => {
     const user = userEvent.setup();
     const handleChangeShowProtectedTokens = vi.fn();
@@ -118,7 +134,7 @@ describe('WorkbenchWorksetBar permissions', () => {
       onChangeShowProtectedTokens: handleChangeShowProtectedTokens,
     });
 
-    expect(screen.getByText('Display: Hidden chars auto · Placeholders on')).toBeInTheDocument();
+    expect(screen.getByText('Display')).toBeInTheDocument();
     expect(screen.queryByText(/Tokens on/)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Display options' }));
@@ -130,5 +146,24 @@ describe('WorkbenchWorksetBar permissions', () => {
     );
 
     expect(handleChangeShowProtectedTokens).toHaveBeenCalledWith(false);
+  });
+
+  it('changes workbench display date metadata from the subbar', async () => {
+    const user = userEvent.setup();
+    const handleChangeShowDateMetadata = vi.fn();
+    renderWorksetBar({
+      canManageTranslations: true,
+      onChangeShowDateMetadata: handleChangeShowDateMetadata,
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Display options' }));
+    expect(screen.getByText('Dates')).toBeInTheDocument();
+    await user.click(
+      within(screen.getByRole('menu')).getByRole('button', {
+        name: /Show created and translated dates/,
+      }),
+    );
+
+    expect(handleChangeShowDateMetadata).toHaveBeenCalledWith(true);
   });
 });
