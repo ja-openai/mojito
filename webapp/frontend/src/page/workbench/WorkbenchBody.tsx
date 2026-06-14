@@ -83,6 +83,12 @@ const getGlossaryWorkbenchKey = (repositoryName: string, assetPath: string | nul
 const normalizeWorkbenchToken = (value: string | null | undefined) =>
   (value ?? '').trim().toLowerCase();
 
+const buildTextUnitDetailPath = (row: WorkbenchRow) => {
+  const params = new URLSearchParams();
+  params.set('locale', row.locale);
+  return `/text-units/${row.tmTextUnitId}?${params.toString()}`;
+};
+
 export function WorkbenchBody({
   rows,
   editingRowId,
@@ -317,21 +323,9 @@ export function WorkbenchBody({
     [getRepositoryScope, navigate],
   );
 
-  const openTextUnitDetail = useCallback(
-    (row: WorkbenchRow) => {
-      const params = new URLSearchParams();
-      params.set('locale', row.locale);
-      void navigate(`/text-units/${row.tmTextUnitId}?${params.toString()}`, {
-        state: {
-          from: '/workbench',
-          workbenchSearch: activeSearchRequest,
-          workbenchScrollTop: scrollElementRef.current?.scrollTop ?? 0,
-          workbenchRowId: row.id,
-        },
-      });
-    },
-    [activeSearchRequest, navigate],
-  );
+  const openTextUnitDetailInNewWindow = useCallback((row: WorkbenchRow) => {
+    window.open(buildTextUnitDetailPath(row), '_blank', 'noopener,noreferrer');
+  }, []);
 
   const openGlossaryTerm = useCallback(
     (row: WorkbenchRow, glossaryTarget: GlossaryWorkbenchTarget) => {
@@ -753,7 +747,7 @@ export function WorkbenchBody({
                             className="workbench-page__translation-button"
                             onClick={(event) => {
                               event.stopPropagation();
-                              openTextUnitDetail(row);
+                              openTextUnitDetailInNewWindow(row);
                             }}
                           >
                             Details

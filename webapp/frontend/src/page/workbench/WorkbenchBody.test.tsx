@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { type ComponentProps, createRef } from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { VisibleTextEditorHandle } from '../../components/VisibleTextEditor';
 import type { WorkbenchRow } from './workbench-types';
@@ -113,7 +113,20 @@ function renderWorkbenchBody(overrides: Partial<WorkbenchBodyProps> = {}) {
   );
 }
 
+function getDetailsButton() {
+  return screen.getByRole('button', { name: 'Details' });
+}
+
 describe('WorkbenchBody', () => {
+  beforeEach(() => {
+    noop.mockClear();
+    vi.spyOn(window, 'open').mockImplementation(() => null);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('uses the assisted protected editor for the active translation row', async () => {
     const { container } = renderWorkbenchBody();
 
@@ -256,5 +269,20 @@ describe('WorkbenchBody', () => {
     expect(
       container.querySelector('.visible-text-editor__protected-token'),
     ).not.toBeInTheDocument();
+  });
+
+  it('opens Details in a new window', () => {
+    renderWorkbenchBody({
+      editingRowId: null,
+      editingValue: '',
+    });
+
+    fireEvent.click(getDetailsButton());
+
+    expect(window.open).toHaveBeenCalledWith(
+      '/text-units/3?locale=pt-PT',
+      '_blank',
+      'noopener,noreferrer',
+    );
   });
 });
