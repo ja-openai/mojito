@@ -206,12 +206,13 @@ Current matching is lexical:
 - matched spans and matched text are carried in the result
 
 The review/workbench match endpoint currently builds the repository+locale
-matcher on demand from the glossary backing repository, term metadata, and
-evidence, then scans the selected source string. `GlossaryWS.matchDuration`
-captures request timing by result and lookup scope; if this proves noisy in
-review, the next low-risk optimization is caching the compiled glossary trie per
-repository/glossary+locale with explicit eviction on glossary writes where
-practical.
+matcher on demand from each enabled managed glossary's canonical asset, term
+metadata, locale targets, and evidence, then scans the selected source string.
+Legacy repository-name glossary lookup still falls back to the raw backing
+repository. `GlossaryWS.matchDuration` captures request timing by result and
+lookup scope; if this proves noisy in review, the next low-risk optimization is
+caching the compiled glossary trie per repository/glossary+locale with explicit
+eviction on glossary writes where practical.
 
 Review project detail and text-unit detail can show matched glossary terms and
 include glossary context in AI review requests.

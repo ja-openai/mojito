@@ -1,9 +1,11 @@
 package com.box.l10n.mojito.service.oaitranslate;
 
+import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.glossary.Glossary;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermEvidence;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
 import com.box.l10n.mojito.service.glossary.GlossaryRepository;
+import com.box.l10n.mojito.service.glossary.GlossaryStorageService;
 import com.box.l10n.mojito.service.glossary.GlossaryTermEvidenceRepository;
 import com.box.l10n.mojito.service.glossary.GlossaryTermMetadataRepository;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
@@ -32,6 +34,7 @@ public class GlossaryService {
 
   TextUnitSearcher textUnitSearcher;
   GlossaryRepository glossaryRepository;
+  GlossaryStorageService glossaryStorageService;
   GlossaryTermMetadataRepository glossaryTermMetadataRepository;
   GlossaryTermEvidenceRepository glossaryTermEvidenceRepository;
   RepositoryRepository repositoryRepository;
@@ -39,11 +42,13 @@ public class GlossaryService {
   public GlossaryService(
       TextUnitSearcher textUnitSearcher,
       GlossaryRepository glossaryRepository,
+      GlossaryStorageService glossaryStorageService,
       GlossaryTermMetadataRepository glossaryTermMetadataRepository,
       GlossaryTermEvidenceRepository glossaryTermEvidenceRepository,
       RepositoryRepository repositoryRepository) {
     this.textUnitSearcher = textUnitSearcher;
     this.glossaryRepository = glossaryRepository;
+    this.glossaryStorageService = glossaryStorageService;
     this.glossaryTermMetadataRepository = glossaryTermMetadataRepository;
     this.glossaryTermEvidenceRepository = glossaryTermEvidenceRepository;
     this.repositoryRepository = repositoryRepository;
@@ -147,8 +152,14 @@ public class GlossaryService {
 
   private GlossaryTrie loadGlossaryTrieForRepository(
       GlossaryTrie glossaryTrie, Glossary glossary, String repositoryName, String bcp47Locale) {
+    Asset canonicalAsset =
+        glossary == null ? null : glossaryStorageService.ensureCanonicalAsset(glossary);
     List<TextUnitDTO> textUnitDTOForGlossary =
-        getTextUnitDTOForGlossary(repositoryName, bcp47Locale);
+        getTextUnitDTOForGlossary(canonicalAsset, repositoryName, bcp47Locale);
+    Map<String, TextUnitDTO> localizedTextUnitByTermKey =
+        canonicalAsset == null
+            ? Map.of()
+            : getLocalizedTextUnitByTermKey(canonicalAsset, bcp47Locale);
     Map<Long, GlossaryTermMetadata> metadataByTmTextUnitId =
         getMetadataByTmTextUnitId(glossary, textUnitDTOForGlossary);
     Map<Long, List<GlossaryEvidence>> evidenceByTmTextUnitId =
@@ -170,11 +181,13 @@ public class GlossaryService {
         target = textUnitDTO.getSource();
       }
 
-      if (textUnitDTO.isIncludedInLocalizedFile()) {
-        if (textUnitDTO.getTarget() != null) {
-          target = textUnitDTO.getTarget();
+      TextUnitDTO localizedTextUnit =
+          localizedTextUnitByTermKey.getOrDefault(textUnitDTO.getName(), textUnitDTO);
+      if (localizedTextUnit.isIncludedInLocalizedFile()) {
+        if (localizedTextUnit.getTarget() != null) {
+          target = localizedTextUnit.getTarget();
         }
-        targetComment = textUnitDTO.getTargetComment();
+        targetComment = localizedTextUnit.getTargetComment();
       }
 
       glossaryTrie.addTerm(
@@ -214,6 +227,20 @@ public class GlossaryService {
    * <p>A global DNT for example just need an entry for English.
    */
   List<TextUnitDTO> getTextUnitDTOForGlossary(String repositoryName, String bcp47Locale) {
+    return getTextUnitDTOForGlossary(null, repositoryName, bcp47Locale);
+  }
+
+  List<TextUnitDTO> getTextUnitDTOForGlossary(
+      Asset canonicalAsset, String repositoryName, String bcp47Locale) {
+    if (canonicalAsset != null) {
+      TextUnitSearcherParameters parameters = new TextUnitSearcherParameters();
+      parameters.setAssetId(canonicalAsset.getId());
+      parameters.setUsedFilter(UsedFilter.USED);
+      parameters.setForRootLocale(true);
+      parameters.setRootLocaleExcluded(false);
+      return textUnitSearcher.search(parameters);
+    }
+
     TextUnitSearcherParameters textUnitSearcherParameters = new TextUnitSearcherParameters();
 
     textUnitSearcherParameters.setRepositoryNames(List.of(repositoryName));
@@ -221,6 +248,21 @@ public class GlossaryService {
     textUnitSearcherParameters.setUsedFilter(UsedFilter.USED);
 
     return textUnitSearcher.search(textUnitSearcherParameters);
+  }
+
+  private Map<String, TextUnitDTO> getLocalizedTextUnitByTermKey(
+      Asset canonicalAsset, String bcp47Locale) {
+    TextUnitSearcherParameters parameters = new TextUnitSearcherParameters();
+    parameters.setAssetId(canonicalAsset.getId());
+    parameters.setUsedFilter(UsedFilter.USED);
+    parameters.setLocaleTags(List.of(bcp47Locale));
+    parameters.setRootLocaleExcluded(false);
+
+    Map<String, TextUnitDTO> textUnitByTermKey = new LinkedHashMap<>();
+    for (TextUnitDTO textUnitDTO : textUnitSearcher.search(parameters)) {
+      textUnitByTermKey.putIfAbsent(textUnitDTO.getName(), textUnitDTO);
+    }
+    return textUnitByTermKey;
   }
 
   private Map<Long, GlossaryTermMetadata> getMetadataByTmTextUnitId(

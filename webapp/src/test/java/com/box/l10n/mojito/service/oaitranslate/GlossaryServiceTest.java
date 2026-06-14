@@ -8,11 +8,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.glossary.Glossary;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
 import com.box.l10n.mojito.service.glossary.GlossaryRepository;
+import com.box.l10n.mojito.service.glossary.GlossaryStorageService;
 import com.box.l10n.mojito.service.glossary.GlossaryTermEvidenceRepository;
 import com.box.l10n.mojito.service.glossary.GlossaryTermMetadataRepository;
 import com.box.l10n.mojito.service.oaitranslate.GlossaryService.GlossaryTerm;
@@ -177,6 +179,7 @@ public class GlossaryServiceTest {
   public void linkedGlossariesAreMergedByRepository() {
     TextUnitSearcher textUnitSearcher = mock(TextUnitSearcher.class);
     GlossaryRepository glossaryRepository = mock(GlossaryRepository.class);
+    GlossaryStorageService glossaryStorageService = mock(GlossaryStorageService.class);
     GlossaryTermMetadataRepository glossaryTermMetadataRepository =
         mock(GlossaryTermMetadataRepository.class);
     GlossaryTermEvidenceRepository glossaryTermEvidenceRepository =
@@ -186,15 +189,20 @@ public class GlossaryServiceTest {
         new GlossaryService(
             textUnitSearcher,
             glossaryRepository,
+            glossaryStorageService,
             glossaryTermMetadataRepository,
             glossaryTermEvidenceRepository,
             repositoryRepository);
 
     Glossary coreGlossary = glossary(201L, "Core", "core-glossary");
     Glossary brandGlossary = glossary(202L, "Brand", "brand-glossary");
+    Asset coreAsset = asset(301L);
+    Asset brandAsset = asset(302L);
 
     when(glossaryRepository.findEnabledByRepositoryId(77L))
         .thenReturn(List.of(coreGlossary, brandGlossary));
+    when(glossaryStorageService.ensureCanonicalAsset(coreGlossary)).thenReturn(coreAsset);
+    when(glossaryStorageService.ensureCanonicalAsset(brandGlossary)).thenReturn(brandAsset);
     when(glossaryTermMetadataRepository.findByGlossaryIdAndTmTextUnitIdIn(any(), any()))
         .thenReturn(List.of());
     when(glossaryTermEvidenceRepository.findByGlossaryTermMetadataIdInOrderBySortOrderAsc(any()))
@@ -203,11 +211,11 @@ public class GlossaryServiceTest {
         .thenAnswer(
             invocation -> {
               TextUnitSearcherParameters parameters = invocation.getArgument(0);
-              String repositoryName = parameters.getRepositoryNames().getFirst();
-              if ("core-glossary".equals(repositoryName)) {
+              Long assetId = parameters.getAssetId();
+              if (coreAsset.getId().equals(assetId)) {
                 return List.of(textUnitDTO(11L, "Settings"));
               }
-              if ("brand-glossary".equals(repositoryName)) {
+              if (brandAsset.getId().equals(assetId)) {
                 return List.of(textUnitDTO(12L, "Workspace"));
               }
               return List.of();
@@ -227,6 +235,7 @@ public class GlossaryServiceTest {
   public void linkedGlossariesSkipNonApprovedTerms() {
     TextUnitSearcher textUnitSearcher = mock(TextUnitSearcher.class);
     GlossaryRepository glossaryRepository = mock(GlossaryRepository.class);
+    GlossaryStorageService glossaryStorageService = mock(GlossaryStorageService.class);
     GlossaryTermMetadataRepository glossaryTermMetadataRepository =
         mock(GlossaryTermMetadataRepository.class);
     GlossaryTermEvidenceRepository glossaryTermEvidenceRepository =
@@ -236,12 +245,14 @@ public class GlossaryServiceTest {
         new GlossaryService(
             textUnitSearcher,
             glossaryRepository,
+            glossaryStorageService,
             glossaryTermMetadataRepository,
             glossaryTermEvidenceRepository,
             repositoryRepository);
 
     Glossary glossary = glossary(201L, "Core", "core-glossary");
     when(glossaryRepository.findEnabledByRepositoryId(77L)).thenReturn(List.of(glossary));
+    when(glossaryStorageService.ensureCanonicalAsset(glossary)).thenReturn(asset(301L));
     when(glossaryTermMetadataRepository.findByGlossaryIdAndTmTextUnitIdIn(any(), any()))
         .thenReturn(
             List.of(
@@ -266,6 +277,7 @@ public class GlossaryServiceTest {
         new GlossaryService(
             mock(TextUnitSearcher.class),
             mock(GlossaryRepository.class),
+            mock(GlossaryStorageService.class),
             mock(GlossaryTermMetadataRepository.class),
             mock(GlossaryTermEvidenceRepository.class),
             mock(RepositoryRepository.class));
@@ -279,6 +291,7 @@ public class GlossaryServiceTest {
   public void findMatchesForRepositoryAndLocaleUsesRepositoryLinkedGlossaries() {
     TextUnitSearcher textUnitSearcher = mock(TextUnitSearcher.class);
     GlossaryRepository glossaryRepository = mock(GlossaryRepository.class);
+    GlossaryStorageService glossaryStorageService = mock(GlossaryStorageService.class);
     GlossaryTermMetadataRepository glossaryTermMetadataRepository =
         mock(GlossaryTermMetadataRepository.class);
     GlossaryTermEvidenceRepository glossaryTermEvidenceRepository =
@@ -288,12 +301,14 @@ public class GlossaryServiceTest {
         new GlossaryService(
             textUnitSearcher,
             glossaryRepository,
+            glossaryStorageService,
             glossaryTermMetadataRepository,
             glossaryTermEvidenceRepository,
             repositoryRepository);
 
-    when(glossaryRepository.findEnabledByRepositoryId(77L))
-        .thenReturn(List.of(glossary(201L, "Core", "core-glossary")));
+    Glossary glossary = glossary(201L, "Core", "core-glossary");
+    when(glossaryRepository.findEnabledByRepositoryId(77L)).thenReturn(List.of(glossary));
+    when(glossaryStorageService.ensureCanonicalAsset(glossary)).thenReturn(asset(301L));
     when(glossaryTermMetadataRepository.findByGlossaryIdAndTmTextUnitIdIn(any(), any()))
         .thenReturn(List.of());
     when(glossaryTermEvidenceRepository.findByGlossaryTermMetadataIdInOrderBySortOrderAsc(any()))
@@ -311,9 +326,10 @@ public class GlossaryServiceTest {
   }
 
   @Test
-  public void findMatchesForRepositoryAndLocaleCanExcludeActiveGlossaryTerm() {
+  public void managedGlossaryMatchingUsesCanonicalAssetTermsOnly() {
     TextUnitSearcher textUnitSearcher = mock(TextUnitSearcher.class);
     GlossaryRepository glossaryRepository = mock(GlossaryRepository.class);
+    GlossaryStorageService glossaryStorageService = mock(GlossaryStorageService.class);
     GlossaryTermMetadataRepository glossaryTermMetadataRepository =
         mock(GlossaryTermMetadataRepository.class);
     GlossaryTermEvidenceRepository glossaryTermEvidenceRepository =
@@ -323,12 +339,60 @@ public class GlossaryServiceTest {
         new GlossaryService(
             textUnitSearcher,
             glossaryRepository,
+            glossaryStorageService,
             glossaryTermMetadataRepository,
             glossaryTermEvidenceRepository,
             repositoryRepository);
 
-    when(glossaryRepository.findEnabledByRepositoryId(77L))
-        .thenReturn(List.of(glossary(201L, "Core", "core-glossary")));
+    Glossary glossary = glossary(201L, "Core", "core-glossary");
+    Asset canonicalAsset = asset(301L);
+    when(glossaryRepository.findEnabledByRepositoryId(77L)).thenReturn(List.of(glossary));
+    when(glossaryStorageService.ensureCanonicalAsset(glossary)).thenReturn(canonicalAsset);
+    when(glossaryTermMetadataRepository.findByGlossaryIdAndTmTextUnitIdIn(any(), any()))
+        .thenReturn(List.of());
+    when(glossaryTermEvidenceRepository.findByGlossaryTermMetadataIdInOrderBySortOrderAsc(any()))
+        .thenReturn(List.of());
+    when(textUnitSearcher.search(any(TextUnitSearcherParameters.class)))
+        .thenAnswer(
+            invocation -> {
+              TextUnitSearcherParameters parameters = invocation.getArgument(0);
+              if (canonicalAsset.getId().equals(parameters.getAssetId())) {
+                return List.of(textUnitDTO(11L, "Settings"));
+              }
+              return List.of(textUnitDTO(99L, "Stray repository term"));
+            });
+
+    List<MatchedGlossaryTerm> matches =
+        glossaryService.findMatchesForRepositoryAndLocale(
+            77L, null, null, "fr-FR", "Open Settings and Stray repository term", null);
+
+    assertEquals(1, matches.size());
+    assertEquals(11L, matches.get(0).glossaryTerm().tmTextUnitId());
+    assertEquals("Settings", matches.get(0).matchedText());
+  }
+
+  @Test
+  public void findMatchesForRepositoryAndLocaleCanExcludeActiveGlossaryTerm() {
+    TextUnitSearcher textUnitSearcher = mock(TextUnitSearcher.class);
+    GlossaryRepository glossaryRepository = mock(GlossaryRepository.class);
+    GlossaryStorageService glossaryStorageService = mock(GlossaryStorageService.class);
+    GlossaryTermMetadataRepository glossaryTermMetadataRepository =
+        mock(GlossaryTermMetadataRepository.class);
+    GlossaryTermEvidenceRepository glossaryTermEvidenceRepository =
+        mock(GlossaryTermEvidenceRepository.class);
+    RepositoryRepository repositoryRepository = mock(RepositoryRepository.class);
+    GlossaryService glossaryService =
+        new GlossaryService(
+            textUnitSearcher,
+            glossaryRepository,
+            glossaryStorageService,
+            glossaryTermMetadataRepository,
+            glossaryTermEvidenceRepository,
+            repositoryRepository);
+
+    Glossary glossary = glossary(201L, "Core", "core-glossary");
+    when(glossaryRepository.findEnabledByRepositoryId(77L)).thenReturn(List.of(glossary));
+    when(glossaryStorageService.ensureCanonicalAsset(glossary)).thenReturn(asset(301L));
     when(glossaryTermMetadataRepository.findByGlossaryIdAndTmTextUnitIdIn(any(), any()))
         .thenReturn(List.of());
     when(glossaryTermEvidenceRepository.findByGlossaryTermMetadataIdInOrderBySortOrderAsc(any()))
@@ -362,6 +426,12 @@ public class GlossaryServiceTest {
     glossary.setName(glossaryName);
     glossary.setBackingRepository(repository);
     return glossary;
+  }
+
+  private Asset asset(long assetId) {
+    Asset asset = new Asset();
+    asset.setId(assetId);
+    return asset;
   }
 
   private GlossaryTermMetadata metadata(Glossary glossary, long tmTextUnitId, String status) {
