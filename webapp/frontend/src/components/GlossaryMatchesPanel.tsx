@@ -258,7 +258,11 @@ function GlossaryMatchDetailsModal({
                   Open term
                 </Link>
               ) : null}
-              <button type="button" className="modal__button" onClick={onClose}>
+              <button
+                type="button"
+                className="modal__button modal__button--primary"
+                onClick={onClose}
+              >
                 Close
               </button>
             </div>
@@ -284,8 +288,8 @@ function GlossaryMatchDetailsModal({
             ) : null}
 
             {matchDetailRows.length > 0 ? (
-              <section className="glossary-match-panel__modal-section">
-                <h3>Match details</h3>
+              <details className="glossary-match-panel__modal-section glossary-match-panel__technical-details">
+                <summary>Technical match details</summary>
                 <dl className="glossary-match-panel__detail-list">
                   {matchDetailRows.map((row) => (
                     <div key={row.label}>
@@ -294,7 +298,7 @@ function GlossaryMatchDetailsModal({
                     </div>
                   ))}
                 </dl>
-              </section>
+              </details>
             ) : null}
 
             <section className="glossary-match-panel__modal-section glossary-match-panel__screenshots-section">

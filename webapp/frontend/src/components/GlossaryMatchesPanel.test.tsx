@@ -80,7 +80,7 @@ describe('GlossaryMatchesPanel', () => {
     expect(within(summary).getByText('Glossary translation')).toBeInTheDocument();
     expect(within(summary).getByText('View translation')).toBeInTheDocument();
     expect(within(dialog).getByText('Term details')).toBeInTheDocument();
-    expect(within(dialog).getByText('Match details')).toBeInTheDocument();
+    expect(within(dialog).getByText('Technical match details')).toBeInTheDocument();
     expect(within(dialog).getByText('Glossary name')).toBeInTheDocument();
     expect(within(dialog).getByText('Product UI')).toBeInTheDocument();
     expect(within(dialog).getByText('Term description')).toBeInTheDocument();
