@@ -23,6 +23,12 @@ public enum AiTranslateType {
         Use the input context:
         • "sourceDescription" gives additional context about the source string.
         • "relatedStrings" provides strings appearing before/after in context (such as emails). Use these to ensure translations sound fluent and cohesive in the full text.
+        • "glossaryTerms" lists terminology matches for the string. When "termTarget" is provided, use it as the preferred translation for the source "term".
+
+        **Using glossary terms:**
+        • Glossary terms constrain terminology, not blind character-for-character casing.
+        • By default, adapt capitalization and casing of glossary targets naturally to the target sentence and locale.
+        • Preserve exact casing for brands, product names, acronyms, code-like terms, do-not-translate terms, or when the glossary description/comment indicates fixed casing.
 
         **Handling tags, placeholders, and code:**
         • Leave all tags (e.g., {atag}), variables, and code elements untouched.
@@ -37,6 +43,7 @@ public enum AiTranslateType {
           - "sourceDescription": Context for the string.
           - "existingTarget" (optional): Existing translation, for review/fixing. "integrityCheckErrors" tell you what tags need fixing.
           - "relatedStrings": Additional context.
+          - "glossaryTerms": Terminology guidance for matched source terms.
 
         **Output:**
         Return a single JSON object:
@@ -87,6 +94,12 @@ public enum AiTranslateType {
     Use the input context:
     • "sourceDescription" gives additional context about the source string.
     • "relatedStrings" provides strings appearing before/after in context (such as emails). Use these to ensure translations sound fluent and cohesive in the full text.
+    • "glossaryTerms" lists terminology matches for the string. When "termTarget" is provided, use it as the preferred translation for the source "term".
+
+    **Using glossary terms:**
+    • Glossary terms constrain terminology, not blind character-for-character casing.
+    • By default, adapt capitalization and casing of glossary targets naturally to the target sentence and locale.
+    • Preserve exact casing for brands, product names, acronyms, code-like terms, do-not-translate terms, or when the glossary description/comment indicates fixed casing.
 
     **Handling tags, placeholders, and code:**
     • Leave all tags (e.g., {atag}), variables, and code elements untouched.
@@ -101,6 +114,7 @@ public enum AiTranslateType {
       - "sourceDescription": Context for the string.
       - "existingTarget" (optional): Existing translation, for review/fixing. "integrityCheckErrors" tell you what tags need fixing.
       - "relatedStrings": Additional context.
+      - "glossaryTerms": Terminology guidance for matched source terms.
 
     **Output:**
     Return a single JSON object:
@@ -133,11 +147,14 @@ public enum AiTranslateType {
         •	"sourceDescription": A description providing context for the source text.
         •	"existingTarget" (optional): An existing translation to review. Indicates if it has broken placeholders. Also, adjust your translation according to the existing target comment.
         •	"relatedStrings": A list of strings related to the source, providing additional context. For example, when translating an email, this may include preceding and following sentences. Use this context to improve the accuracy and naturalness of each individual translation.
+        •	"glossaryTerms": A list of terminology matches for the source string. When "termTarget" is provided, use it as the preferred translation for the source "term".
 
     Instructions:
 
         •	If the source is colloquial, keep the translation colloquial; if it’s formal, maintain formality in the translation.
         •	Pay attention to regional variations specified in the "locale" field (e.g., “es” vs. “es-419”, “fr” vs. “fr-CA”, “zh” vs. “zh-Hant”), and ensure the translation length remains similar to the source text.
+        •	Glossary terms constrain terminology, not blind character-for-character casing. By default, adapt capitalization and casing of glossary targets naturally to the target sentence and locale.
+        •	Preserve exact glossary casing for brands, product names, acronyms, code-like terms, do-not-translate terms, or when the glossary description/comment indicates fixed casing.
 
     Handling Tags and Code:
 
@@ -199,6 +216,7 @@ public enum AiTranslateType {
     - "sourceDescription": Context or intended usage of the text.
     - "relatedStrings": Strings that appear before or after this text, to help you match tone and context.
     - "existingTarget" (optional): An existing translation to review and improve. Fix any broken placeholders and update the translation based on the target comment.
+    - "glossaryTerms": Terminology matches for the source string. When "termTarget" is provided, use it as the preferred translation for the source "term".
 
     Instructions:
 
@@ -206,6 +224,8 @@ public enum AiTranslateType {
     - Pay special attention to marketing/UX copy—make it sound persuasive and “native,” not just accurate.
     - Leave all code elements, tags, and placeholders exactly as they are.
     - If the context or related strings suggest a certain style, match it for cohesion.
+    - Glossary terms constrain terminology, not blind character-for-character casing. By default, adapt capitalization and casing of glossary targets naturally to the target sentence and locale.
+    - Preserve exact glossary casing for brands, product names, acronyms, code-like terms, do-not-translate terms, or when the glossary description/comment indicates fixed casing.
 
     If there is ambiguity in the source text and you need to make a choice, choose the interpretation that is most likely intended in context.
 
