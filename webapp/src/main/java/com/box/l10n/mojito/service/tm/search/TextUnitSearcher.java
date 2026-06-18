@@ -36,6 +36,7 @@ import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
 import org.hibernate.query.criteria.JpaCrossJoin;
 import org.hibernate.query.criteria.JpaEntityJoin;
+import org.hibernate.query.criteria.JpaExpression;
 import org.hibernate.query.criteria.JpaJoin;
 import org.hibernate.query.criteria.JpaRoot;
 import org.hibernate.query.criteria.JpaSetJoin;
@@ -470,13 +471,13 @@ public class TextUnitSearcher {
   }
 
   private Predicate textUnitIdSearchPredicate(
-      CriteriaBuilder cb, Expression<Long> idColumn, SearchType searchType, String value) {
+      CriteriaBuilder cb, JpaExpression<Long> idColumn, SearchType searchType, String value) {
     SearchType effectiveSearchType = searchType == null ? SearchType.EXACT : searchType;
     if (SearchType.EXACT.equals(effectiveSearchType)) {
       return idColumn.in(parseTextUnitIds(value));
     }
 
-    return searchTypePredicate(cb, idColumn.as(String.class), null, effectiveSearchType, value);
+    return searchTypePredicate(cb, idColumn.cast(String.class), null, effectiveSearchType, value);
   }
 
   private Predicate searchTypePredicate(
