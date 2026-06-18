@@ -1,3 +1,7 @@
+import './filter-chip.css';
+import '../multi-select-chip.css';
+import '../single-select-dropdown.css';
+
 import {
   type CSSProperties,
   useCallback,
@@ -21,6 +25,51 @@ export type RadioSection<T extends string | number = string> = {
   options: Array<FilterOption<T>>;
   value: T;
   onChange: (value: T) => void;
+};
+
+export type SearchableRadioSection<T extends string | number = string> = {
+  kind: 'searchable-radio';
+  label: string;
+  description?: string;
+  options: Array<FilterOption<T>>;
+  value: T;
+  onChange: (value: T) => void;
+  searchPlaceholder?: string;
+  noResultsLabel?: string;
+  emptyQueryLabel?: string;
+  selectionHint?: string;
+  clearLabel?: string;
+  onClear?: () => void;
+  indented?: boolean;
+  showOptionsBeforeSearch?: boolean;
+  pinnedOptionValues?: T[];
+  maxVisibleOptions?: number;
+};
+
+export type SearchableMultiSection<T extends string | number = string> = {
+  kind: 'searchable-multi';
+  label: string;
+  description?: string;
+  options: Array<FilterOption<T>>;
+  values: T[];
+  onChange: (values: T[]) => void;
+  quickActions?: Array<{
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+    active?: boolean;
+    ariaLabel?: string;
+  }>;
+  summary?: string;
+  searchPlaceholder?: string;
+  noResultsLabel?: string;
+  emptyQueryLabel?: string;
+  selectionHint?: string;
+  clearLabel?: string;
+  onClear?: () => void;
+  indented?: boolean;
+  showOptionsBeforeSearch?: boolean;
+  maxVisibleOptions?: number;
 };
 
 export type SizeSection = {
@@ -52,7 +101,12 @@ export type DateSection = {
   beforeLabel?: string;
 };
 
-export type FilterSection = RadioSection<string | number> | SizeSection | DateSection;
+export type FilterSection =
+  | RadioSection<string | number>
+  | SearchableRadioSection<string | number>
+  | SearchableMultiSection<string | number>
+  | SizeSection
+  | DateSection;
 
 type ResolvedClassNames = {
   button: string;
@@ -68,8 +122,10 @@ type ResolvedClassNames = {
   custom: string;
   customLabel: string;
   customInput: string;
+  searchInput: string;
   dateInput: string;
   clear: string;
+  empty: string;
 };
 
 export type MultiSectionFilterChipClassNames = Partial<ResolvedClassNames>;
@@ -99,8 +155,10 @@ const defaultClassNames: ResolvedClassNames = {
   custom: 'workbench-worksetcustom',
   customLabel: 'workbench-worksetcustom__label',
   customInput: 'workbench-worksetcustom__input',
+  searchInput: 'multi-select-chip__search',
   dateInput: 'workbench-datefilter__input',
   clear: 'workbench-filterchip__clear-link',
+  empty: 'single-select-dropdown__empty',
 };
 
 export function MultiSectionFilterChip({
@@ -193,9 +251,22 @@ export function MultiSectionFilterChip({
     if (summary) return summary;
     const parts: string[] = [];
     sections.forEach((section) => {
-      if (section.kind === 'radio') {
+      if (section.kind === 'radio' || section.kind === 'searchable-radio') {
         const selected = section.options.find((opt) => opt.value === section.value);
         if (selected) parts.push(selected.label);
+      } else if (section.kind === 'searchable-multi') {
+        if (section.summary) {
+          parts.push(section.summary);
+        } else {
+          const selectedLabels = section.options
+            .filter((opt) => section.values.includes(opt.value))
+            .map((opt) => opt.label);
+          if (selectedLabels.length === 1) {
+            parts.push(selectedLabels[0]);
+          } else if (selectedLabels.length > 1) {
+            parts.push(`${selectedLabels.length} selected`);
+          }
+        }
       } else if (section.kind === 'size') {
         const sizeOptions =
           section.options && section.options.length > 0 ? section.options : resultSizePresets;
@@ -295,6 +366,26 @@ export function MultiSectionFilterChip({
                     </div>
                   );
                 }
+                if (section.kind === 'searchable-radio') {
+                  return (
+                    <SearchableRadioFilterSection
+                      key={`searchable-radio-${index}`}
+                      section={section}
+                      classNames={mergedClassNames}
+                      closeOnSelection={closeOnSelection}
+                      onClose={() => setIsOpen(false)}
+                    />
+                  );
+                }
+                if (section.kind === 'searchable-multi') {
+                  return (
+                    <SearchableMultiFilterSection
+                      key={`searchable-multi-${index}`}
+                      section={section}
+                      classNames={mergedClassNames}
+                    />
+                  );
+                }
                 if (section.kind === 'size') {
                   return (
                     <SizeFilterSection
@@ -389,6 +480,295 @@ export function MultiSectionFilterChip({
             document.body,
           )
         : null}
+    </div>
+  );
+}
+
+function SearchableRadioFilterSection({
+  section,
+  classNames,
+  closeOnSelection,
+  onClose,
+}: {
+  section: SearchableRadioSection<string | number>;
+  classNames: ResolvedClassNames;
+  closeOnSelection: boolean;
+  onClose: () => void;
+}) {
+  const [query, setQuery] = useState('');
+  const visibleOptions = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    const pinnedOptionValues = section.pinnedOptionValues ?? [];
+    const isPinned = (option: FilterOption<string | number>) =>
+      pinnedOptionValues.some((value) => value === option.value);
+    const dedupeOptions = (options: Array<FilterOption<string | number>>) => {
+      const seen = new Set<string>();
+      return options.filter((option) => {
+        const key = `${typeof option.value}:${option.value}`;
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+    };
+
+    if (!normalizedQuery && section.showOptionsBeforeSearch === false) {
+      return dedupeOptions(section.options.filter(isPinned));
+    }
+
+    const matches = normalizedQuery
+      ? section.options.filter(
+          (option) =>
+            option.label.toLowerCase().includes(normalizedQuery) ||
+            String(option.value).toLowerCase().includes(normalizedQuery),
+        )
+      : section.options;
+
+    const limitedMatches =
+      section.maxVisibleOptions != null ? matches.slice(0, section.maxVisibleOptions) : matches;
+    return dedupeOptions([...section.options.filter(isPinned), ...limitedMatches]);
+  }, [query, section]);
+  const shouldShowSearchPrompt =
+    !query.trim() && section.showOptionsBeforeSearch === false && section.options.length > 0;
+
+  return (
+    <div className={`${classNames.section}${section.indented ? ' filter-chip__subsection' : ''}`}>
+      <div className={`${classNames.label} workbench-searchmode__label-row`}>
+        <span>{section.label}</span>
+        {section.selectionHint ? (
+          <span className="filter-chip__section-hint">{section.selectionHint}</span>
+        ) : null}
+        {section.onClear ? (
+          <button type="button" className={classNames.clear} onClick={section.onClear}>
+            {section.clearLabel ?? 'Clear'}
+          </button>
+        ) : null}
+        {section.description ? (
+          <span
+            className="workbench-searchmode__info"
+            aria-label={section.description}
+            tabIndex={0}
+          >
+            i
+          </span>
+        ) : null}
+      </div>
+      {section.description ? (
+        <div className="workbench-searchmode__description">{section.description}</div>
+      ) : null}
+      <input
+        type="search"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={section.searchPlaceholder ?? `Filter ${section.label.toLowerCase()}`}
+        className={classNames.searchInput}
+        aria-label={section.searchPlaceholder ?? `Filter ${section.label.toLowerCase()}`}
+      />
+      <div className={`${classNames.list} filter-chip__scroll-list`}>
+        {visibleOptions.length > 0 ? (
+          visibleOptions.map((option) => (
+            <button
+              type="button"
+              key={String(option.value)}
+              className={`${classNames.option}${option.value === section.value ? ' is-active' : ''}${
+                (section.pinnedOptionValues ?? []).some((value) => value === option.value)
+                  ? ' is-pinned'
+                  : ''
+              }`}
+              onClick={() => {
+                section.onChange(option.value);
+                if (closeOnSelection) {
+                  onClose();
+                }
+              }}
+            >
+              <span>{option.label}</span>
+              {option.helper ? <span className={classNames.helper}>{option.helper}</span> : null}
+            </button>
+          ))
+        ) : !shouldShowSearchPrompt ? (
+          <div className={classNames.empty}>{section.noResultsLabel ?? 'No matches'}</div>
+        ) : null}
+        {shouldShowSearchPrompt ? (
+          <div className={classNames.empty}>
+            {section.emptyQueryLabel ?? `Type to search ${section.label.toLowerCase()}`}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function SearchableMultiFilterSection({
+  section,
+  classNames,
+}: {
+  section: SearchableMultiSection<string | number>;
+  classNames: ResolvedClassNames;
+}) {
+  const [query, setQuery] = useState('');
+  const visibleOptions = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    if (!normalizedQuery && section.showOptionsBeforeSearch === false) {
+      return [];
+    }
+
+    const matches = normalizedQuery
+      ? section.options.filter(
+          (option) =>
+            option.label.toLowerCase().includes(normalizedQuery) ||
+            String(option.value).toLowerCase().includes(normalizedQuery),
+        )
+      : section.options;
+
+    return section.maxVisibleOptions != null
+      ? matches.slice(0, section.maxVisibleOptions)
+      : matches;
+  }, [query, section]);
+  const shouldShowSearchPrompt =
+    !query.trim() && section.showOptionsBeforeSearch === false && section.options.length > 0;
+  const selectedValues = section.values;
+  const selectedSet = new Set(selectedValues);
+  const allVisibleSelected =
+    visibleOptions.length > 0 && visibleOptions.every((option) => selectedSet.has(option.value));
+  const quickActionStrip = section.quickActions?.length ? (
+    <div className="multi-select-chip__actions multi-select-chip__actions--strip">
+      {section.quickActions.map((action) => (
+        <button
+          type="button"
+          key={action.label}
+          className={`multi-select-chip__action-button multi-select-chip__action-button--strip${
+            action.active ? ' is-active' : ''
+          }`}
+          onClick={action.onClick}
+          disabled={Boolean(action.disabled)}
+          aria-label={action.ariaLabel ?? action.label}
+          aria-pressed={Boolean(action.active)}
+        >
+          {action.label}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
+  const selectAllVisible = () => {
+    if (!visibleOptions.length) {
+      return;
+    }
+    const next = [...selectedValues];
+    const nextSet = new Set(selectedValues);
+    visibleOptions.forEach((option) => {
+      if (!nextSet.has(option.value)) {
+        next.push(option.value);
+        nextSet.add(option.value);
+      }
+    });
+    section.onChange(next);
+  };
+
+  const clearAll = () => {
+    section.onChange([]);
+  };
+
+  return (
+    <div className={`${classNames.section}${section.indented ? ' filter-chip__subsection' : ''}`}>
+      <div className={`${classNames.label} workbench-searchmode__label-row`}>
+        <span>{section.label}</span>
+        {section.selectionHint ? (
+          <span className="filter-chip__section-hint">{section.selectionHint}</span>
+        ) : null}
+        {section.description ? (
+          <span
+            className="workbench-searchmode__info"
+            aria-label={section.description}
+            tabIndex={0}
+          >
+            i
+          </span>
+        ) : null}
+      </div>
+      {section.description ? (
+        <div className="workbench-searchmode__description">{section.description}</div>
+      ) : null}
+      <input
+        type="search"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={section.searchPlaceholder ?? `Filter ${section.label.toLowerCase()}`}
+        className={classNames.searchInput}
+        aria-label={section.searchPlaceholder ?? `Filter ${section.label.toLowerCase()}`}
+      />
+      {quickActionStrip ?? (
+        <div className="multi-select-chip__actions">
+          <button
+            type="button"
+            className="multi-select-chip__action-button"
+            onClick={selectAllVisible}
+            disabled={allVisibleSelected}
+          >
+            Select all
+          </button>
+          <button
+            type="button"
+            className="multi-select-chip__action-button"
+            onClick={section.onClear ?? clearAll}
+            disabled={selectedValues.length === 0}
+          >
+            {section.clearLabel ?? 'Clear'}
+          </button>
+        </div>
+      )}
+      <div className="multi-select-chip__options filter-chip__multi-options">
+        {visibleOptions.length > 0 ? (
+          visibleOptions.map((option) => {
+            const isSelected = selectedSet.has(option.value);
+            return (
+              <label
+                key={String(option.value)}
+                className="multi-select-chip__option filter-chip__multi-option"
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => {
+                    section.onChange(
+                      isSelected
+                        ? selectedValues.filter((value) => value !== option.value)
+                        : [...selectedValues, option.value],
+                    );
+                  }}
+                />
+                <span className="multi-select-chip__option-label">
+                  <span className="multi-select-chip__option-primary">{option.label}</span>
+                  {option.helper ? (
+                    <span className="multi-select-chip__option-secondary">{option.helper}</span>
+                  ) : null}
+                </span>
+                <button
+                  type="button"
+                  className="multi-select-chip__only"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    section.onChange([option.value]);
+                  }}
+                >
+                  Only
+                </button>
+              </label>
+            );
+          })
+        ) : !shouldShowSearchPrompt ? (
+          <div className="multi-select-chip__empty">{section.noResultsLabel ?? 'No matches'}</div>
+        ) : null}
+        {shouldShowSearchPrompt ? (
+          <div className="multi-select-chip__empty">
+            {section.emptyQueryLabel ?? `Type to search ${section.label.toLowerCase()}`}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

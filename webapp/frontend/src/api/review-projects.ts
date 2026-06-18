@@ -341,6 +341,7 @@ export type ReviewProjectsSearchRequest = {
   projectStatuses?: ApiReviewProjectStatus[];
   types?: ApiReviewProjectType[];
   assignedScope?: ApiReviewProjectAssignedScope;
+  teamIds?: number[] | null;
   createdAfter?: string | null;
   createdBefore?: string | null;
   dueAfter?: string | null;

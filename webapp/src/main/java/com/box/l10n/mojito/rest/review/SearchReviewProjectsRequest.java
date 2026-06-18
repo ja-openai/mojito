@@ -11,6 +11,8 @@ public record SearchReviewProjectsRequest(
     List<ReviewProjectStatus> projectStatuses,
     List<ReviewProjectType> types,
     AssignedScope assignedScope,
+    Long teamId,
+    List<Long> teamIds,
     ZonedDateTime createdAfter,
     ZonedDateTime createdBefore,
     ZonedDateTime dueAfter,

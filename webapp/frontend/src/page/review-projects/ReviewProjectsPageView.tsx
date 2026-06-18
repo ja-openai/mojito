@@ -43,6 +43,7 @@ import {
   REVIEW_PROJECT_REQUESTS_QUERY_KEY,
   REVIEW_PROJECTS_QUERY_KEY,
 } from '../../hooks/useReviewProjects';
+import { hasSameSet } from '../../utils/arraySelection';
 import { getStandardDateQuickRanges } from '../../utils/dateQuickRanges';
 import {
   formatLocalDateTime as formatDateTime,
@@ -96,6 +97,11 @@ type FiltersProps = {
   onCreatorFilterChange: (value: 'all' | 'mine') => void;
   assignedScope: ApiReviewProjectAssignedScope;
   onAssignedScopeChange: (value: ApiReviewProjectAssignedScope) => void;
+  showTeamFilter: boolean;
+  teamOptions: FilterOption<number>[];
+  teamValues: number[];
+  myTeamIds?: number[];
+  onTeamChange: (values: number[]) => void;
 };
 
 export type ReviewProjectRow = {
@@ -1079,6 +1085,79 @@ function FilterControls({
   displayMode: 'list' | 'requests';
 }) {
   const dateQuickRanges = getStandardDateQuickRanges();
+  const assignedOptions = [
+    { value: 'TO_ME', label: 'To me' },
+    { value: 'TO_TEAM', label: 'To team' },
+  ];
+  const selectedTeamLabels = filters.teamOptions
+    .filter((option) => filters.teamValues.includes(option.value))
+    .map((option) => option.label);
+  const allTeamValues = filters.teamOptions.map((option) => option.value);
+  const availableTeamValueSet = new Set(allTeamValues);
+  const myTeamValues =
+    filters.myTeamIds?.filter((teamId) => availableTeamValueSet.has(teamId)) ?? [];
+  const isMyTeamSelectionActive =
+    myTeamValues.length > 0 && hasSameSet(filters.teamValues, myTeamValues);
+  const isAllTeamSelectionActive =
+    !isMyTeamSelectionActive &&
+    allTeamValues.length > 0 &&
+    hasSameSet(filters.teamValues, allTeamValues);
+  const teamSummary =
+    filters.teamValues.length === 0
+      ? undefined
+      : isMyTeamSelectionActive
+        ? 'My teams'
+        : selectedTeamLabels.length === 1
+          ? selectedTeamLabels[0]
+          : `${filters.teamValues.length} teams`;
+  const teamSection = filters.showTeamFilter
+    ? [
+        {
+          kind: 'searchable-multi' as const,
+          label: 'Team',
+          options: filters.teamOptions.map((option) => ({
+            value: option.value,
+            label: option.label,
+          })),
+          values: filters.teamValues,
+          onChange: (values: Array<string | number>) =>
+            filters.onTeamChange(values.map((value) => Number(value))),
+          quickActions: [
+            {
+              label: 'All',
+              onClick: () => filters.onTeamChange(allTeamValues),
+              disabled: allTeamValues.length === 0,
+              active: isAllTeamSelectionActive,
+              ariaLabel: 'Select all teams',
+            },
+            ...(myTeamValues.length > 0
+              ? [
+                  {
+                    label: 'My teams',
+                    onClick: () => filters.onTeamChange(myTeamValues),
+                    active: isMyTeamSelectionActive,
+                    ariaLabel: 'Select my teams',
+                  },
+                ]
+              : []),
+            {
+              label: 'None',
+              onClick: () => filters.onTeamChange([]),
+              active: filters.teamValues.length === 0,
+              ariaLabel: 'Clear team selection',
+            },
+          ],
+          summary: teamSummary,
+          searchPlaceholder: 'Search teams',
+          noResultsLabel: 'No teams',
+          selectionHint:
+            filters.teamValues.length === 0 ? 'All teams' : `${filters.teamValues.length} selected`,
+          clearLabel: 'Clear',
+          onClear: filters.teamValues.length > 0 ? () => filters.onTeamChange([]) : undefined,
+          indented: true,
+        },
+      ]
+    : [];
   const modeSpecificSections =
     displayMode === 'requests'
       ? [
@@ -1230,21 +1309,19 @@ function FilterControls({
         }
       />
       <MultiSectionFilterChip
-        ariaLabel="Filter by type, request status, project status, project completion, size, and date"
+        ariaLabel="Filter by assigned scope, team, type, request status, project status, project completion, size, and date"
         align="right"
         className="review-projects-page__filter-chip"
         sections={[
           {
             kind: 'radio',
             label: 'Assigned',
-            options: [
-              { value: 'TO_ME', label: 'To me' },
-              { value: 'TO_TEAM', label: 'To team' },
-            ],
+            options: assignedOptions,
             value: filters.assignedScope,
             onChange: (value) =>
               filters.onAssignedScopeChange(value as ApiReviewProjectAssignedScope),
           },
+          ...teamSection,
           {
             kind: 'radio',
             label: 'Type',

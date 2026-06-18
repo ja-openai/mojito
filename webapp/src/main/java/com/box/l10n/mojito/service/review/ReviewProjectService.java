@@ -1300,6 +1300,9 @@ public class ReviewProjectService {
     if (projectStatuses != null && !projectStatuses.isEmpty()) {
       predicates.add(root.get(ReviewProject_.status).in(projectStatuses));
     }
+    if (request.hasTeamFilter()) {
+      predicates.add(teamJoin.get(Team_.id).in(request.teamIds()));
+    }
     predicates.add(
         buildScopePredicate(
             cb,
@@ -1443,6 +1446,10 @@ public class ReviewProjectService {
 
     if (request.localeTags() != null) {
       predicates.add(buildLocaleFilterPredicate(cb, root, localeJoin, request.localeTags()));
+    }
+
+    if (request.hasTeamFilter()) {
+      predicates.add(teamJoin.get(Team_.id).in(request.teamIds()));
     }
 
     if (request.createdAfter() != null) {
