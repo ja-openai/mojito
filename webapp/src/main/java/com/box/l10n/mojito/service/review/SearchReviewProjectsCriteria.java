@@ -14,6 +14,7 @@ public record SearchReviewProjectsCriteria(
     List<ReviewProjectType> types,
     List<String> localeTags,
     AssignedScope assignedScope,
+    List<Long> teamIds,
     ZonedDateTime createdAfter,
     ZonedDateTime createdBefore,
     ZonedDateTime dueAfter,
@@ -40,6 +41,13 @@ public record SearchReviewProjectsCriteria(
       }
     }
 
+    if (teamIds != null) {
+      teamIds = teamIds.stream().filter(teamId -> teamId != null && teamId > 0).distinct().toList();
+      if (teamIds.isEmpty()) {
+        teamIds = null;
+      }
+    }
+
     if (searchField == null) {
       searchField = SearchField.NAME;
     }
@@ -60,6 +68,10 @@ public record SearchReviewProjectsCriteria(
     CONTAINS,
     EXACT,
     ILIKE
+  }
+
+  public boolean hasTeamFilter() {
+    return teamIds != null && !teamIds.isEmpty() && assignedScope == AssignedScope.TO_TEAM;
   }
 
   public enum AssignedScope {

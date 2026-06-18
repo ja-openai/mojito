@@ -43,6 +43,7 @@ export type ReviewProjectsSessionState = {
   searchType: SearchType;
   creatorFilter: CreatorFilter;
   assignedScope: ApiReviewProjectAssignedScope;
+  teamFilterIds: number[];
   createdAfter: string | null;
   createdBefore: string | null;
   dueAfter: string | null;
@@ -66,6 +67,7 @@ const DEFAULT_STATE: ReviewProjectsSessionState = {
   searchType: 'contains',
   creatorFilter: 'all',
   assignedScope: 'TO_ME',
+  teamFilterIds: [],
   createdAfter: null,
   createdBefore: null,
   dueAfter: null,
@@ -104,6 +106,27 @@ function sanitizeNumber(value: unknown, fallback: number): number {
     return fallback;
   }
   return Math.floor(value);
+}
+
+function sanitizeNullableNumber(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  return Math.floor(value);
+}
+
+function sanitizeNumberArray(value: unknown): number[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const deduped = new Set(
+    value
+      .filter(
+        (item): item is number => typeof item === 'number' && Number.isFinite(item) && item > 0,
+      )
+      .map((item) => Math.floor(item)),
+  );
+  return Array.from(deduped);
 }
 
 function sanitizeEnum<T extends string>(value: unknown, options: readonly T[], fallback: T): T {
@@ -179,6 +202,14 @@ export function normalizeReviewProjectsSessionState(
       REVIEW_PROJECT_ASSIGNED_SCOPES,
       DEFAULT_STATE.assignedScope,
     ),
+    teamFilterIds: (() => {
+      const teamFilterIds = sanitizeNumberArray(input.teamFilterIds);
+      const legacyTeamFilterId = sanitizeNullableNumber(input.teamFilterId);
+      if (teamFilterIds.length > 0 || legacyTeamFilterId == null) {
+        return teamFilterIds;
+      }
+      return [legacyTeamFilterId];
+    })(),
     createdAfter: sanitizeNullableString(input.createdAfter),
     createdBefore: sanitizeNullableString(input.createdBefore),
     dueAfter: sanitizeNullableString(input.dueAfter),

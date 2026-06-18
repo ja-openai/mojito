@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -19,6 +19,7 @@ import {
   REVIEW_PROJECT_TYPE_LABELS,
   REVIEW_PROJECT_TYPES,
 } from '../../api/review-projects';
+import { fetchTeams } from '../../api/teams';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { useRepositories } from '../../hooks/useRepositories';
 import {
@@ -267,6 +268,7 @@ export function ReviewProjectsPage() {
   const isPm = user.role === 'ROLE_PM';
   const isTranslator = user.role === 'ROLE_TRANSLATOR';
   const canUseRequestMode = isAdmin || user.role === 'ROLE_PM';
+  const canUseTeamFilter = isAdmin || isPm;
   const assignmentControls = {
     canReassignPm: isAdmin || isPm,
     canReassignTranslator: isAdmin || isPm,
@@ -292,6 +294,7 @@ export function ReviewProjectsPage() {
   const [searchType, setSearchType] = useState<'contains' | 'exact' | 'ilike'>('contains');
   const [creatorFilter, setCreatorFilter] = useState<'all' | 'mine'>('all');
   const [assignedScope, setAssignedScope] = useState<ApiReviewProjectAssignedScope>('TO_ME');
+  const [teamFilterIds, setTeamFilterIds] = useState<number[]>([]);
   const [createdAfter, setCreatedAfter] = useState<string | null>(null);
   const [createdBefore, setCreatedBefore] = useState<string | null>(null);
   const [dueAfter, setDueAfter] = useState<string | null>(null);
@@ -308,8 +311,39 @@ export function ReviewProjectsPage() {
   const pendingSessionHydrationKeyRef = useRef<string | null>(reviewSessionKey);
   const pendingSessionHydrationSignatureRef = useRef<string | null>(null);
   const lastPersistedSessionSignatureRef = useRef<string | null>(null);
+  const teamsQuery = useQuery({
+    queryKey: ['review-projects-team-filter'],
+    queryFn: fetchTeams,
+    enabled: canUseTeamFilter,
+    staleTime: 60_000,
+  });
 
   const repositories = useMemo(() => repositoryData ?? [], [repositoryData]);
+  const teamOptions = useMemo(
+    () =>
+      (teamsQuery.data ?? []).map((team) => ({
+        value: team.id,
+        label: team.name,
+      })),
+    [teamsQuery.data],
+  );
+  const isTeamFilterActive = canUseTeamFilter && assignedScope === 'TO_TEAM';
+  useEffect(() => {
+    if (!isTeamFilterActive) {
+      if (teamFilterIds.length > 0) {
+        setTeamFilterIds([]);
+      }
+      return;
+    }
+
+    if (teamsQuery.isSuccess && teamFilterIds.length > 0) {
+      const availableTeamIds = new Set(teamOptions.map((option) => option.value));
+      const validTeamFilterIds = teamFilterIds.filter((teamId) => availableTeamIds.has(teamId));
+      if (validTeamFilterIds.length !== teamFilterIds.length) {
+        setTeamFilterIds(validTeamFilterIds);
+      }
+    }
+  }, [isTeamFilterActive, teamFilterIds, teamOptions, teamsQuery.isSuccess]);
   const localeOptions = useLocaleOptionsWithDisplayNames(repositories);
   const userLocales = useMemo(() => user.userLocales ?? [], [user.userLocales]);
   const isLimitedTranslator = useMemo(
@@ -347,6 +381,7 @@ export function ReviewProjectsPage() {
       searchType,
       creatorFilter,
       assignedScope,
+      teamFilterIds,
       createdAfter,
       createdBefore,
       dueAfter,
@@ -360,6 +395,7 @@ export function ReviewProjectsPage() {
       createdBefore,
       creatorFilter,
       assignedScope,
+      teamFilterIds,
       displayMode,
       dueAfter,
       dueBefore,
@@ -425,6 +461,7 @@ export function ReviewProjectsPage() {
     setSearchType(normalizedState.searchType);
     setCreatorFilter(normalizedState.creatorFilter);
     setAssignedScope(normalizedState.assignedScope);
+    setTeamFilterIds(normalizedState.teamFilterIds);
     setCreatedAfter(normalizedState.createdAfter);
     setCreatedBefore(normalizedState.createdBefore);
     setDueAfter(normalizedState.dueAfter);
@@ -498,6 +535,7 @@ export function ReviewProjectsPage() {
       localeTags,
       types: typeFilter === 'all' ? undefined : [typeFilter],
       assignedScope,
+      teamIds: isTeamFilterActive && teamFilterIds.length > 0 ? teamFilterIds : undefined,
       createdAfter,
       createdBefore,
       dueAfter,
@@ -514,6 +552,8 @@ export function ReviewProjectsPage() {
     dueAfter,
     dueBefore,
     assignedScope,
+    isTeamFilterActive,
+    teamFilterIds,
     limit,
     searchField,
     searchQuery,
@@ -668,6 +708,16 @@ export function ReviewProjectsPage() {
       }),
     [isAdmin, isLimitedTranslator, localeOptionsFiltered, preferredLocales, userLocales],
   );
+  const myTeamSelections = useMemo(() => {
+    const availableTeamIds = new Set(teamOptions.map((option) => option.value));
+    const savedDefaultTeams = defaultReviewProjectTeamIds.filter((teamId) =>
+      availableTeamIds.has(teamId),
+    );
+    if (savedDefaultTeams.length > 0) {
+      return savedDefaultTeams;
+    }
+    return (user.teamIds ?? []).filter((teamId) => availableTeamIds.has(teamId));
+  }, [defaultReviewProjectTeamIds, teamOptions, user.teamIds]);
 
   const isLoading = isRequestMode ? isLoadingRequestGroups : isLoadingList;
   const isError = isRequestMode ? isErrorRequestGroups : isErrorList;
@@ -829,6 +879,20 @@ export function ReviewProjectsPage() {
     [creatorFilter],
   );
 
+  const handleAssignedScopeChange = useCallback((value: ApiReviewProjectAssignedScope) => {
+    setAssignedScope(value);
+    if (value !== 'TO_TEAM') {
+      setTeamFilterIds([]);
+    }
+  }, []);
+
+  const handleTeamFilterChange = useCallback((values: number[]) => {
+    setTeamFilterIds(values);
+    if (values.length > 0) {
+      setAssignedScope('TO_TEAM');
+    }
+  }, []);
+
   const toggleProjectSelection = useCallback((projectId: number) => {
     setSelectedProjectIds((prev) => {
       const exists = prev.includes(projectId);
@@ -982,7 +1046,12 @@ export function ReviewProjectsPage() {
           creatorFilter,
           onCreatorFilterChange: setCreatorFilter,
           assignedScope,
-          onAssignedScopeChange: setAssignedScope,
+          onAssignedScopeChange: handleAssignedScopeChange,
+          showTeamFilter: isTeamFilterActive,
+          teamOptions,
+          teamValues: isTeamFilterActive ? teamFilterIds : [],
+          myTeamIds: myTeamSelections,
+          onTeamChange: handleTeamFilterChange,
         }}
         canCreate={isAdmin}
         adminControls={adminControls}

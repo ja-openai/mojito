@@ -922,6 +922,10 @@ public class ReviewProjectWS {
     if (request == null) {
       return null;
     }
+    List<Long> teamIds = request.teamIds();
+    if ((teamIds == null || teamIds.isEmpty()) && request.teamId() != null) {
+      teamIds = List.of(request.teamId());
+    }
     return new SearchReviewProjectsCriteria(
         request.statuses(),
         request.projectStatuses(),
@@ -935,6 +939,7 @@ public class ReviewProjectWS {
                       case TO_TEAM -> SearchReviewProjectsCriteria.AssignedScope.TO_TEAM;
                     })
             .orElse(null),
+        teamIds,
         request.createdAfter(),
         request.createdBefore(),
         request.dueAfter(),
