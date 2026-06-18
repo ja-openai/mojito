@@ -30,6 +30,7 @@ public class NewFrontendControllerTest {
     assertTrue(Arrays.asList(requestMapping.value()).contains("/glossaries/{path:[^.]*}/**"));
     assertTrue(Arrays.asList(requestMapping.value()).contains("/project-requests"));
     assertTrue(Arrays.asList(requestMapping.value()).contains("/branches"));
+    assertTrue(Arrays.asList(requestMapping.value()).contains("/string-authoring"));
     assertTrue(Arrays.asList(requestMapping.value()).contains("/screenshots-legacy"));
     assertTrue(Arrays.asList(requestMapping.value()).contains("/settings/{path:[^.]*}"));
     assertTrue(Arrays.asList(requestMapping.value()).contains("/translation-incidents"));

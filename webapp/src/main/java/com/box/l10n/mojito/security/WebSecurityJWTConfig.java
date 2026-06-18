@@ -126,6 +126,7 @@ public class WebSecurityJWTConfig {
                 "/review-projects/**",
                 "/workbench",
                 "/branches",
+                "/string-authoring",
                 "/monitoring",
                 "/statistics",
                 "/screenshots",

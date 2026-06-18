@@ -23,6 +23,7 @@ public class NewFrontendController {
     "/glossaries",
     "/glossaries/{path:[^.]*}",
     "/glossaries/{path:[^.]*}/**",
+    "/string-authoring",
     "/translation-incidents",
     "/workbench",
     "/branches",
