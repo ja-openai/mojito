@@ -57,4 +57,37 @@ public class MiscAiTranslateIntegrityCheckerTest {
     assertDoesNotThrow(() -> checker.checkSingleHashtag("NotAHashtag", "randomoutput"));
     assertDoesNotThrow(() -> checker.checkSingleHashtag("Section for debugger", "randomoutput"));
   }
+
+  @Test
+  void testUnexpectedAiArtifactRejectedWhenMissingFromSource() {
+    IntegrityCheckException ex =
+        assertThrows(
+            IntegrityCheckException.class,
+            () ->
+                checker.check(
+                    "Open Settings to continue.",
+                    "Ouvrez Settings pour continuer. output_json_schema"));
+
+    assertTrue(ex.getMessage().contains("output_json_schema"));
+    assertTrue(ex.getMessage().contains("not present in the source"));
+  }
+
+  @Test
+  void testUnexpectedAiArtifactAllowedWhenPresentInSource() {
+    assertDoesNotThrow(
+        () ->
+            checker.check(
+                "Use output_json_schema for this config value.",
+                "Utilisez output_json_schema pour cette valeur de configuration."));
+  }
+
+  @Test
+  void testUnexpectedAiArtifactDetectionIsCaseInsensitive() {
+    assertThrows(
+        IntegrityCheckException.class,
+        () ->
+            checker.check(
+                "Open Settings to continue.",
+                "Ouvrez Settings pour continuer. Output_JSON_Schema"));
+  }
 }
