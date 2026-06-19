@@ -1,0 +1,13 @@
+{
+  "id": "sw-v1",
+  "locale": "sw",
+  "features": ["nounClass", "agreementClass", "number"],
+  "functions": {
+    "term": {
+      "requires": ["text", "nounClass", "number"]
+    },
+    "agree": {
+      "requires": ["agreementClass", "forms"]
+    }
+  }
+}

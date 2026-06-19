@@ -1,0 +1,64 @@
+{
+  "schema": "mf2-grammar-agreement/v0",
+  "locale": "ru",
+  "profile": "ru-v1",
+  "messages": {
+    "inventory.see": {
+      "value": "Я вижу {$item :term case=accusative article=none}.",
+      "expects": {
+        "item": {
+          "type": "term",
+          "requires": ["text", "animacy", "forms.cases.accusative"]
+        }
+      },
+      "examples": [
+        {
+          "args": {
+            "item": "item.sword"
+          },
+          "output": "Я вижу меч."
+        },
+        {
+          "args": {
+            "item": "creature.dragon"
+          },
+          "output": "Я вижу дракона."
+        }
+      ]
+    }
+  },
+  "terms": {
+    "item.sword": {
+      "text": "меч",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "masculine",
+        "number": "singular",
+        "animacy": "inanimate",
+        "forms": {
+          "cases": {
+            "nominative": "меч",
+            "accusative": "меч",
+            "genitive": "меча"
+          }
+        }
+      }
+    },
+    "creature.dragon": {
+      "text": "дракон",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "masculine",
+        "number": "singular",
+        "animacy": "animate",
+        "forms": {
+          "cases": {
+            "nominative": "дракон",
+            "accusative": "дракона",
+            "genitive": "дракона"
+          }
+        }
+      }
+    }
+  }
+}

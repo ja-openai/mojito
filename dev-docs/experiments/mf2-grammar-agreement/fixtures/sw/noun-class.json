@@ -1,0 +1,62 @@
+{
+  "schema": "mf2-grammar-agreement/v0",
+  "locale": "sw",
+  "profile": "sw-v1",
+  "messages": {
+    "item.available": {
+      "value": "{$item :term} {$available :agree with=$item}.",
+      "expects": {
+        "item": {
+          "type": "term",
+          "requires": ["nounClass", "number"]
+        }
+      },
+      "examples": [
+        {
+          "args": {
+            "item": "item.book",
+            "available": "adjective.available"
+          },
+          "output": "kitabu kinapatikana."
+        },
+        {
+          "args": {
+            "item": "item.books",
+            "available": "adjective.available"
+          },
+          "output": "vitabu vinapatikana."
+        }
+      ]
+    }
+  },
+  "terms": {
+    "item.book": {
+      "text": "kitabu",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "nounClass": "ki-vi",
+        "number": "singular",
+        "agreementClass": "ki"
+      }
+    },
+    "item.books": {
+      "text": "vitabu",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "nounClass": "ki-vi",
+        "number": "plural",
+        "agreementClass": "vi"
+      }
+    },
+    "adjective.available": {
+      "text": "available",
+      "morphology": {
+        "partOfSpeech": "predicate",
+        "forms": {
+          "agreement.ki": "kinapatikana",
+          "agreement.vi": "vinapatikana"
+        }
+      }
+    }
+  }
+}

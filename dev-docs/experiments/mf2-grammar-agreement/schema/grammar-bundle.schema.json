@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mojito.local/schemas/mf2-grammar-agreement/grammar-bundle.schema.json",
+  "title": "MF2 Grammar Agreement Bundle",
+  "type": "object",
+  "required": ["schema", "locale", "messages"],
+  "additionalProperties": true,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "mf2-grammar-agreement/v0"
+    },
+    "locale": {
+      "type": "string",
+      "minLength": 2
+    },
+    "profile": {
+      "type": "string"
+    },
+    "messages": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/message"
+      }
+    },
+    "terms": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/term"
+      }
+    },
+    "people": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/person"
+      }
+    },
+    "compactTerms": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "message": {
+      "type": "object",
+      "required": ["value"],
+      "additionalProperties": true,
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "comment": {
+          "type": "string"
+        },
+        "expects": {
+          "type": "object"
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/example"
+          }
+        }
+      }
+    },
+    "example": {
+      "type": "object",
+      "required": ["args"],
+      "oneOf": [
+        {
+          "required": ["output"],
+          "not": {
+            "required": ["error"]
+          }
+        },
+        {
+          "required": ["error"],
+          "not": {
+            "required": ["output"]
+          }
+        }
+      ],
+      "properties": {
+        "args": {
+          "type": "object"
+        },
+        "output": {
+          "type": "string"
+        },
+        "error": {
+          "$ref": "#/$defs/diagnostic"
+        }
+      }
+    },
+    "term": {
+      "type": "object",
+      "required": ["text"],
+      "additionalProperties": true,
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "morphology": {
+          "$ref": "#/$defs/morphology"
+        },
+        "forms": {
+          "$ref": "#/$defs/forms"
+        }
+      }
+    },
+    "person": {
+      "type": "object",
+      "required": ["displayName"],
+      "additionalProperties": true,
+      "properties": {
+        "displayName": {
+          "type": "string"
+        },
+        "morphology": {
+          "$ref": "#/$defs/morphology"
+        }
+      }
+    },
+    "morphology": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "partOfSpeech": {
+          "type": "string"
+        },
+        "gender": {
+          "type": "string"
+        },
+        "number": {
+          "type": "string"
+        },
+        "nounClass": {
+          "type": "string"
+        },
+        "agreementClass": {
+          "type": "string"
+        },
+        "animacy": {
+          "type": "string"
+        },
+        "classifier": {
+          "type": "string"
+        },
+        "mutationClass": {
+          "type": "string"
+        },
+        "phonology": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "forms": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "forms": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "default": {
+          "type": "string",
+          "description": "MF2 pattern selecting localized term forms across usage, number, case, count, or locale-defined dimensions."
+        }
+      }
+    },
+    "diagnostic": {
+      "$ref": "grammar-diagnostic.schema.json"
+    }
+  }
+}

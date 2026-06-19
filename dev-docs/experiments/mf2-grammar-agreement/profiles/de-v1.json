@@ -1,0 +1,24 @@
+{
+  "id": "de-v1",
+  "locale": "de",
+  "features": ["gender", "number", "case", "article"],
+  "functions": {
+    "term": {
+      "requires": ["text", "gender", "number"],
+      "options": {
+        "article=definite": ["gender", "case"],
+        "case=accusative": ["gender"]
+      }
+    }
+  },
+  "compactFlags": {
+    "gender": {
+      "bits": [0, 1],
+      "values": ["unknown", "masculine", "feminine", "neuter"]
+    },
+    "number": {
+      "bits": [2, 3],
+      "values": ["unknown", "singular", "plural", "invariant"]
+    }
+  }
+}

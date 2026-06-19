@@ -1,0 +1,35 @@
+{
+  "schema": "mf2-grammar-agreement/v0",
+  "locale": "fr",
+  "profile": "fr-v1",
+  "messages": {
+    "inventory.pickup": {
+      "value": "Vous avez ramassé {$item :term article=definite}.",
+      "examples": [
+        {
+          "args": {
+            "item": "item.bad_pattern"
+          },
+          "error": {
+            "code": "invalid-term-pattern",
+            "feature": "input",
+            "value": "usage"
+          }
+        }
+      ]
+    }
+  },
+  "terms": {
+    "item.bad_pattern": {
+      "text": "épée",
+      "forms": {
+        "default": ".input {$number :string}\n.match $usage $number\ndefinite singular {{l'épée}}\n* * {{épée}}"
+      },
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "feminine",
+        "number": "singular"
+      }
+    }
+  }
+}

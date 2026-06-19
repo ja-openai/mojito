@@ -1,0 +1,62 @@
+{
+  "schema": "mf2-grammar-agreement/v0",
+  "locale": "ar",
+  "profile": "ar-v1",
+  "messages": {
+    "user.connected": {
+      "value": "{$user :person} {$connected :verb with=$user tense=past}.",
+      "expects": {
+        "user": {
+          "type": "person",
+          "requires": ["gender", "number", "person"]
+        }
+      },
+      "examples": [
+        {
+          "args": {
+            "user": "person.ali",
+            "connected": "verb.connected"
+          },
+          "output": "علي اتصل."
+        },
+        {
+          "args": {
+            "user": "person.maryam",
+            "connected": "verb.connected"
+          },
+          "output": "مريم اتصلت."
+        }
+      ]
+    }
+  },
+  "people": {
+    "person.ali": {
+      "displayName": "علي",
+      "morphology": {
+        "person": "third",
+        "gender": "masculine",
+        "number": "singular"
+      }
+    },
+    "person.maryam": {
+      "displayName": "مريم",
+      "morphology": {
+        "person": "third",
+        "gender": "feminine",
+        "number": "singular"
+      }
+    }
+  },
+  "terms": {
+    "verb.connected": {
+      "text": "اتصل",
+      "morphology": {
+        "partOfSpeech": "verb",
+        "forms": {
+          "past.third.masculine.singular": "اتصل",
+          "past.third.feminine.singular": "اتصلت"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "id": "fr-v1",
+  "locale": "fr",
+  "features": ["usage", "gender", "number", "article", "plural", "agreement"],
+  "functions": {
+    "term": {
+      "requires": ["text"],
+      "options": {
+        "article=definite": ["forms.default"],
+        "article=indefinite": ["forms.default"],
+        "number=plural": ["forms.default"]
+      }
+    },
+    "agree": {
+      "requires": ["forms"]
+    },
+    "count": {
+      "requires": ["forms.default"]
+    }
+  },
+  "compactFlags": {
+    "gender": {
+      "bits": [0, 1],
+      "values": ["unknown", "masculine", "feminine", "reserved"]
+    },
+    "number": {
+      "bits": [2, 3],
+      "values": ["unknown", "singular", "plural", "invariant"]
+    },
+    "hasExplicitForms": {
+      "bit": 4
+    },
+    "hAspired": {
+      "bit": 5
+    },
+    "countable": {
+      "bit": 6
+    },
+    "hasExplicitForms": {
+      "bit": 7
+    }
+  }
+}

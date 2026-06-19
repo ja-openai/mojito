@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MF2 Grammar Agreement Playground</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>MF2 Grammar Agreement Playground</h1>
+          <p>Demo of MF2 term forms, KV resource bundles, and grammar functions.</p>
+        </div>
+        <label>
+          Scenario
+          <select id="scenario"></select>
+        </label>
+      </header>
+
+      <section class="result-band">
+        <div>
+          <span class="label">Formatted output</span>
+          <output id="formatted"></output>
+        </div>
+        <div>
+          <span class="label">Locale profile</span>
+          <strong id="profile"></strong>
+        </div>
+      </section>
+
+      <section class="grid">
+        <article>
+          <h2>Message Pattern</h2>
+          <pre id="pattern"></pre>
+        </article>
+
+        <article>
+          <h2>Runtime Args</h2>
+          <pre id="args"></pre>
+        </article>
+
+        <article>
+          <h2>Resolved Terms</h2>
+          <pre id="terms"></pre>
+        </article>
+
+        <article>
+          <h2>Inferred Requirements</h2>
+          <pre id="requirements"></pre>
+        </article>
+
+        <article class="wide">
+          <h2>Resource Bundle / KV View</h2>
+          <pre id="bundle"></pre>
+        </article>
+
+        <article class="wide">
+          <h2>What This Demonstrates</h2>
+          <ul id="notes"></ul>
+        </article>
+
+        <article>
+          <h2>Apple Support Probe</h2>
+          <pre id="apple-support"></pre>
+        </article>
+
+        <article>
+          <h2>Performance Snapshot</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Runtime</th>
+                <th>Cost</th>
+                <th>Scope</th>
+              </tr>
+            </thead>
+            <tbody id="perf-rows"></tbody>
+          </table>
+        </article>
+
+        <article class="wide">
+          <h2>Apple vs Explicit Term Forms</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Case</th>
+                <th>Apple Foundation</th>
+                <th>Explicit MF2 Term</th>
+              </tr>
+            </thead>
+            <tbody id="apple-rows"></tbody>
+          </table>
+        </article>
+      </section>
+    </main>
+    <script type="module" src="./app.js?v=term-pattern-model-apple-perf"></script>
+  </body>
+</html>

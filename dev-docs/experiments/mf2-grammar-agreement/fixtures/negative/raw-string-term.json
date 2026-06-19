@@ -1,0 +1,23 @@
+{
+  "schema": "mf2-grammar-agreement/v0",
+  "locale": "fr",
+  "profile": "fr-v1",
+  "messages": {
+    "inventory.pickup": {
+      "value": "Vous avez ramassé {$item :term article=definite fallback=error}.",
+      "examples": [
+        {
+          "args": {
+            "item": "raw:épée"
+          },
+          "error": {
+            "code": "invalid-argument-type",
+            "argument": "item",
+            "expected": "term"
+          }
+        }
+      ]
+    }
+  },
+  "terms": {}
+}

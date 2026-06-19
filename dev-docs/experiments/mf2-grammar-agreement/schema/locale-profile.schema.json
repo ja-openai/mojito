@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mojito.local/schemas/mf2-grammar-agreement/locale-profile.schema.json",
+  "title": "MF2 Grammar Agreement Locale Profile",
+  "type": "object",
+  "required": ["id", "locale", "features", "functions"],
+  "additionalProperties": true,
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "locale": {
+      "type": "string"
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "functions": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/functionProfile"
+      }
+    },
+    "compactFlags": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "functionProfile": {
+      "type": "object",
+      "required": ["requires"],
+      "additionalProperties": true,
+      "properties": {
+        "requires": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "options": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "fallback": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

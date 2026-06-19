@@ -1,0 +1,49 @@
+{
+  "schema": "mf2-grammar-agreement/apple-foundation-comparison/v0",
+  "description": "Comparison cases for Apple's local Foundation morphology/inflection API versus explicit term-level MF2 forms. Apple outputs are observed locally, not normative.",
+  "appleProbe": "dev-docs/experiments/mf2-grammar-agreement/apple_morphology_probe.swift",
+  "cases": [
+    {
+      "id": "fr-explicit-feminine-sword",
+      "locale": "fr",
+      "intent": "definite singular feminine noun with elision",
+      "appleObserved": "Vous avez ramassé épée.",
+      "oursExpected": "Vous avez ramassé l'épée."
+    },
+    {
+      "id": "fr-explicit-masculine-shield",
+      "locale": "fr",
+      "intent": "definite singular masculine noun without elision",
+      "appleObserved": "Vous avez ramassé bouclier.",
+      "oursExpected": "Vous avez ramassé le bouclier."
+    },
+    {
+      "id": "fr-auto-aspired-h",
+      "locale": "fr",
+      "intent": "French h aspire should not elide",
+      "appleObserved": "Vous avez ramassé héros.",
+      "oursExpected": "Vous avez ramassé le héros."
+    },
+    {
+      "id": "fr-auto-silent-h",
+      "locale": "fr",
+      "intent": "French silent h should elide",
+      "appleObserved": "Vous avez réservé hôtel.",
+      "oursExpected": "Vous avez réservé l'hôtel."
+    },
+    {
+      "id": "de-explicit-accusative-shield",
+      "locale": "de",
+      "intent": "German definite accusative masculine noun",
+      "appleObserved": "Du hast den Schild aufgehoben.",
+      "oursExpected": "Du hast den Schild aufgehoben."
+    },
+    {
+      "id": "de-auto-shield",
+      "locale": "de",
+      "intent": "Apple automatic rule without explicit morphology does not infer the needed article in this construction",
+      "appleObserved": "Du hast Schild aufgehoben.",
+      "oursExpected": "Du hast den Schild aufgehoben."
+    }
+  ]
+}

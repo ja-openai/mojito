@@ -1,0 +1,29 @@
+{
+  "id": "ru-v1",
+  "locale": "ru",
+  "features": ["gender", "number", "case", "animacy"],
+  "functions": {
+    "term": {
+      "requires": ["text"],
+      "options": {
+        "case=accusative": ["forms.cases.accusative", "animacy"]
+      }
+    }
+  },
+  "compactFlags": {
+    "gender": {
+      "bits": [0, 1],
+      "values": ["unknown", "masculine", "feminine", "neuter"]
+    },
+    "number": {
+      "bits": [2, 3],
+      "values": ["unknown", "singular", "plural", "invariant"]
+    },
+    "animate": {
+      "bit": 4
+    },
+    "hasCaseForms": {
+      "bit": 5
+    }
+  }
+}

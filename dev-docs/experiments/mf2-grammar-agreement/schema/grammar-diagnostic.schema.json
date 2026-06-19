@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mojito.local/schemas/mf2-grammar-agreement/grammar-diagnostic.schema.json",
+  "title": "MF2 Grammar Agreement Diagnostic",
+  "type": "object",
+  "required": ["code"],
+  "additionalProperties": true,
+  "properties": {
+    "code": {
+      "type": "string",
+      "enum": [
+        "missing-morphology",
+        "invalid-argument-type",
+        "unsupported-option-value",
+        "unknown-function",
+        "unknown-resource",
+        "ambiguous-term",
+        "unsupported-locale-profile",
+        "invalid-term-pattern",
+        "missing-term-form"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["error", "warning", "info"]
+    },
+    "messageId": {
+      "type": "string"
+    },
+    "argument": {
+      "type": "string"
+    },
+    "termId": {
+      "type": "string"
+    },
+    "feature": {
+      "type": "string"
+    },
+    "option": {
+      "type": "string"
+    },
+    "value": {
+      "type": "string"
+    },
+    "expected": {
+      "type": "string"
+    }
+  }
+}

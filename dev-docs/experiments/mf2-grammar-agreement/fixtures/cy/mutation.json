@@ -1,0 +1,38 @@
+{
+  "schema": "mf2-grammar-agreement/v0",
+  "locale": "cy",
+  "profile": "cy-v1",
+  "messages": {
+    "inventory.with": {
+      "value": "gyda {$item :term mutation=soft}",
+      "expects": {
+        "item": {
+          "type": "term",
+          "requires": ["mutationClass", "forms.mutations.soft"]
+        }
+      },
+      "examples": [
+        {
+          "args": {
+            "item": "item.sword"
+          },
+          "output": "gyda gleddyf"
+        }
+      ]
+    }
+  },
+  "terms": {
+    "item.sword": {
+      "text": "cleddyf",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "mutationClass": "c-soft-g",
+        "forms": {
+          "mutations": {
+            "soft": "gleddyf"
+          }
+        }
+      }
+    }
+  }
+}

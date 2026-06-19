@@ -1,0 +1,13 @@
+{
+  "id": "ja-v1",
+  "locale": "ja",
+  "features": ["classifier", "count"],
+  "functions": {
+    "term": {
+      "requires": ["text"]
+    },
+    "count": {
+      "requires": ["classifier"]
+    }
+  }
+}

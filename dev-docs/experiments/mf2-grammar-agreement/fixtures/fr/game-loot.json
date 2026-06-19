@@ -1,0 +1,87 @@
+{
+  "schema": "mf2-grammar-agreement/v0",
+  "locale": "fr",
+  "profile": "fr-v1",
+  "messages": {
+    "loot.found": {
+      "value": "Vous avez trouvé {$count :count of=$item}.",
+      "examples": [
+        {
+          "args": {
+            "count": 1,
+            "item": "item.potion"
+          },
+          "output": "Vous avez trouvé une potion."
+        },
+        {
+          "args": {
+            "count": 3,
+            "item": "item.potion"
+          },
+          "output": "Vous avez trouvé 3 potions."
+        }
+      ]
+    },
+    "loot.quality": {
+      "value": "{$quality :agree with=$item number=plural} {$item :term number=plural}.",
+      "examples": [
+        {
+          "args": {
+            "quality": "adjective.rare",
+            "item": "item.potion"
+          },
+          "output": "rares potions."
+        },
+        {
+          "args": {
+            "quality": "adjective.rare",
+            "item": "item.shield"
+          },
+          "output": "rares boucliers."
+        }
+      ]
+    }
+  },
+  "terms": {
+    "item.potion": {
+      "text": "potion",
+      "forms": {
+        "default": ".input {$usage :string}\n.input {$number :string}\n.input {$count :number}\n.match $usage $number $count\nbare singular * {{potion}}\nbare plural * {{potions}}\ndefinite singular * {{la potion}}\ndefinite plural * {{les potions}}\nindefinite singular * {{une potion}}\nindefinite plural * {{des potions}}\ncount * one {{une potion}}\ncount * other {{{$count} potions}}\n* * * {{potion}}"
+      },
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "feminine",
+        "number": "singular",
+        "forms": {
+          "plural": "potions"
+        }
+      }
+    },
+    "item.shield": {
+      "text": "bouclier",
+      "forms": {
+        "default": ".input {$usage :string}\n.input {$number :string}\n.input {$count :number}\n.match $usage $number $count\nbare singular * {{bouclier}}\nbare plural * {{boucliers}}\ndefinite singular * {{le bouclier}}\ndefinite plural * {{les boucliers}}\nindefinite singular * {{un bouclier}}\nindefinite plural * {{des boucliers}}\ncount * one {{un bouclier}}\ncount * other {{{$count} boucliers}}\n* * * {{bouclier}}"
+      },
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "masculine",
+        "number": "singular",
+        "forms": {
+          "plural": "boucliers"
+        }
+      }
+    },
+    "adjective.rare": {
+      "text": "rare",
+      "morphology": {
+        "partOfSpeech": "adjective",
+        "forms": {
+          "masculine.singular": "rare",
+          "feminine.singular": "rare",
+          "masculine.plural": "rares",
+          "feminine.plural": "rares"
+        }
+      }
+    }
+  }
+}

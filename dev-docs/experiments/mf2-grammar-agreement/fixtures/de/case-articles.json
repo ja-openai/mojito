@@ -1,0 +1,60 @@
+{
+  "schema": "mf2-grammar-agreement/v0",
+  "locale": "de",
+  "profile": "de-v1",
+  "messages": {
+    "inventory.pickup": {
+      "value": "Du hast {$item :term article=definite case=accusative} aufgehoben.",
+      "expects": {
+        "item": {
+          "type": "term",
+          "requires": ["text", "gender", "number", "case"]
+        }
+      },
+      "examples": [
+        {
+          "args": {
+            "item": "item.sword"
+          },
+          "output": "Du hast das Schwert aufgehoben."
+        },
+        {
+          "args": {
+            "item": "item.shield"
+          },
+          "output": "Du hast den Schild aufgehoben."
+        }
+      ]
+    }
+  },
+  "terms": {
+    "item.sword": {
+      "text": "Schwert",
+      "forms": {
+        "default": ".input {$usage :string}\n.input {$case :string}\n.input {$number :string}\n.match $usage $case $number\nbare * singular {{Schwert}}\nbare * plural {{Schwerter}}\ndefinite nominative singular {{das Schwert}}\ndefinite accusative singular {{das Schwert}}\ndefinite dative singular {{dem Schwert}}\ndefinite nominative plural {{die Schwerter}}\ndefinite accusative plural {{die Schwerter}}\ndefinite dative plural {{den Schwertern}}\n* * * {{Schwert}}"
+      },
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "neuter",
+        "number": "singular",
+        "forms": {
+          "plural": "Schwerter"
+        }
+      }
+    },
+    "item.shield": {
+      "text": "Schild",
+      "forms": {
+        "default": ".input {$usage :string}\n.input {$case :string}\n.input {$number :string}\n.match $usage $case $number\nbare * singular {{Schild}}\nbare * plural {{Schilde}}\ndefinite nominative singular {{der Schild}}\ndefinite accusative singular {{den Schild}}\ndefinite dative singular {{dem Schild}}\ndefinite nominative plural {{die Schilde}}\ndefinite accusative plural {{die Schilde}}\ndefinite dative plural {{den Schilden}}\n* * * {{Schild}}"
+      },
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "masculine",
+        "number": "singular",
+        "forms": {
+          "plural": "Schilde"
+        }
+      }
+    }
+  }
+}

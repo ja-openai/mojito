@@ -1,0 +1,16 @@
+{
+  "id": "ar-v1",
+  "locale": "ar",
+  "features": ["gender", "number", "person", "verbAgreement", "definiteness"],
+  "functions": {
+    "person": {
+      "requires": ["displayName", "gender", "number", "person"]
+    },
+    "verb": {
+      "requires": ["forms"],
+      "options": {
+        "tense=past": ["person", "gender", "number"]
+      }
+    }
+  }
+}

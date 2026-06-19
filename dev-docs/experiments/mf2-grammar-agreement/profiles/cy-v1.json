@@ -1,0 +1,13 @@
+{
+  "id": "cy-v1",
+  "locale": "cy",
+  "features": ["mutation", "mutationClass"],
+  "functions": {
+    "term": {
+      "requires": ["text"],
+      "options": {
+        "mutation=soft": ["mutationClass", "forms.mutations.soft"]
+      }
+    }
+  }
+}

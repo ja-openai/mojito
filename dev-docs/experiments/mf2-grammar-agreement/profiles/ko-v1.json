@@ -1,0 +1,20 @@
+{
+  "id": "ko-v1",
+  "locale": "ko",
+  "features": ["politeness", "verbForm"],
+  "functions": {
+    "term": {
+      "requires": ["text"]
+    },
+    "context": {
+      "requires": ["politeness"]
+    },
+    "verb": {
+      "requires": ["forms"],
+      "options": {
+        "politeness=formal": ["forms.politeness.formal"],
+        "politeness=plain": ["forms.politeness.plain"]
+      }
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "schema": "mf2-grammar-agreement/v0",
+  "locale": "ko",
+  "profile": "ko-v1",
+  "messages": {
+    "inventory.pickup": {
+      "value": "{$item :term}을 {$pickup :verb politeness=$politeness}.",
+      "expects": {
+        "politeness": {
+          "type": "context",
+          "requires": ["politeness"]
+        }
+      },
+      "examples": [
+        {
+          "args": {
+            "item": "item.sword",
+            "pickup": "verb.pickup",
+            "politeness": "formal"
+          },
+          "output": "검을 획득했습니다."
+        },
+        {
+          "args": {
+            "item": "item.sword",
+            "pickup": "verb.pickup",
+            "politeness": "plain"
+          },
+          "output": "검을 획득했다."
+        }
+      ]
+    }
+  },
+  "terms": {
+    "item.sword": {
+      "text": "검",
+      "morphology": {
+        "partOfSpeech": "noun"
+      }
+    },
+    "verb.pickup": {
+      "text": "획득하다",
+      "morphology": {
+        "partOfSpeech": "verb",
+        "forms": {
+          "politeness.formal": "획득했습니다",
+          "politeness.plain": "획득했다"
+        }
+      }
+    }
+  }
+}
