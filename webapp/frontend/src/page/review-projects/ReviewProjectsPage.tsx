@@ -42,6 +42,7 @@ import {
   REQUEST_STATUS_FILTERS,
   type RequestStatusFilter,
 } from './review-projects-filters';
+import { loadDefaultReviewProjectTeamIds } from './review-projects-preferences';
 import {
   loadReviewProjectsSessionState,
   REVIEW_PROJECTS_SESSION_QUERY_KEY,
@@ -327,6 +328,10 @@ export function ReviewProjectsPage() {
       })),
     [teamsQuery.data],
   );
+  const defaultReviewProjectTeamIds = useMemo(
+    () => (canUseTeamFilter ? loadDefaultReviewProjectTeamIds(user.username) : []),
+    [canUseTeamFilter, user.username],
+  );
   const isTeamFilterActive = canUseTeamFilter && assignedScope === 'TO_TEAM';
   useEffect(() => {
     if (!isTeamFilterActive) {
@@ -420,6 +425,28 @@ export function ReviewProjectsPage() {
       pendingSessionHydrationKeyRef.current = null;
       pendingSessionHydrationSignatureRef.current = null;
       hydratedSessionKeyRef.current = null;
+
+      if (
+        canUseTeamFilter &&
+        defaultReviewProjectTeamIds.length > 0 &&
+        !teamsQuery.isSuccess &&
+        !teamsQuery.isError
+      ) {
+        setHasHydratedSessionState(false);
+        return;
+      }
+
+      if (canUseTeamFilter && defaultReviewProjectTeamIds.length > 0 && teamsQuery.isSuccess) {
+        const availableTeamIds = new Set(teamOptions.map((option) => option.value));
+        const validDefaultTeamIds = defaultReviewProjectTeamIds.filter((teamId) =>
+          availableTeamIds.has(teamId),
+        );
+        if (validDefaultTeamIds.length > 0) {
+          setAssignedScope('TO_TEAM');
+          setTeamFilterIds(validDefaultTeamIds);
+        }
+      }
+
       setHasHydratedSessionState(true);
       return;
     }
@@ -469,7 +496,15 @@ export function ReviewProjectsPage() {
     setDisplayMode(normalizedState.displayMode);
     setExpandedRequestKey(normalizedState.expandedRequestKey);
     setHasHydratedSessionState(true);
-  }, [canUseRequestMode, reviewSessionKey]);
+  }, [
+    canUseRequestMode,
+    canUseTeamFilter,
+    defaultReviewProjectTeamIds,
+    reviewSessionKey,
+    teamOptions,
+    teamsQuery.isError,
+    teamsQuery.isSuccess,
+  ]);
 
   useEffect(() => {
     if (!hasHydratedSessionState) {

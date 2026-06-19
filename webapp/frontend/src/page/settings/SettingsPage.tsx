@@ -1,10 +1,14 @@
 import './settings-page.css';
 
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 
+import { fetchTeams } from '../../api/teams';
 import { LocaleMultiSelect } from '../../components/LocaleMultiSelect';
+import { TeamMultiSelect, type TeamMultiSelectOption } from '../../components/TeamMultiSelect';
 import { useRepositories } from '../../hooks/useRepositories';
 import { useUser } from '../../hooks/useUser';
+import { hasSameSet } from '../../utils/arraySelection';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 import { buildLocaleOptionsFromRepositories } from '../../utils/localeSelection';
 import {
@@ -17,6 +21,10 @@ import {
   type ReviewProjectShortcutHelpPreference,
   saveReviewProjectShortcutHelpPreference,
 } from '../review-project/review-project-preferences';
+import {
+  loadDefaultReviewProjectTeamIds,
+  saveDefaultReviewProjectTeamIds,
+} from '../review-projects/review-projects-preferences';
 import { WORKSET_SIZE_DEFAULT } from '../workbench/workbench-constants';
 import { clampWorksetSize } from '../workbench/workbench-helpers';
 import {
@@ -29,12 +37,25 @@ import {
 
 export function SettingsPage() {
   const user = useUser();
+  const username = user.username;
   const defaultShortcutHelpPreference = getDefaultReviewProjectShortcutHelpPreference(user.role);
+  const canConfigureDefaultReviewTeams = user.role === 'ROLE_ADMIN' || user.role === 'ROLE_PM';
   const { data: repositories } = useRepositories();
+  const teamsQuery = useQuery({
+    queryKey: ['teams', 'settings-default-review-teams'],
+    queryFn: fetchTeams,
+    enabled: canConfigureDefaultReviewTeams,
+  });
   const resolveLocaleName = useLocaleDisplayNameResolver();
   const [savedWorkset, setSavedWorkset] = useState<number | null>(() => loadPreferredWorksetSize());
   const [savedPreferredLocales, setSavedPreferredLocales] = useState<string[]>(() =>
     loadPreferredLocales(),
+  );
+  const [savedDefaultReviewTeamIds, setSavedDefaultReviewTeamIds] = useState<number[]>(() =>
+    loadDefaultReviewProjectTeamIds(username),
+  );
+  const [defaultReviewTeamDraft, setDefaultReviewTeamDraft] = useState<number[]>(() =>
+    loadDefaultReviewProjectTeamIds(username),
   );
   const [shortcutHelpPreference, setShortcutHelpPreference] =
     useState<ReviewProjectShortcutHelpPreference>(() =>
@@ -81,6 +102,28 @@ export function SettingsPage() {
     savedPreferredLocales,
     user.userLocales,
   ]);
+  const defaultReviewTeamOptions = useMemo<TeamMultiSelectOption[]>(() => {
+    const seen = new Set<number>();
+    return (teamsQuery.data ?? [])
+      .map((team) => ({
+        id: team.id,
+        name: team.name.trim() || `Team #${team.id}`,
+      }))
+      .filter((option) => {
+        if (!Number.isInteger(option.id) || option.id <= 0 || seen.has(option.id)) {
+          return false;
+        }
+        seen.add(option.id);
+        return true;
+      })
+      .sort((first, second) =>
+        first.name.localeCompare(second.name, undefined, { sensitivity: 'base' }),
+      );
+  }, [teamsQuery.data]);
+  const availableDefaultReviewTeamIdSet = useMemo(
+    () => new Set(defaultReviewTeamOptions.map((option) => option.id)),
+    [defaultReviewTeamOptions],
+  );
 
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
@@ -94,6 +137,29 @@ export function SettingsPage() {
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
+
+  useEffect(() => {
+    const nextDefaultReviewTeamIds = loadDefaultReviewProjectTeamIds(username);
+    setSavedDefaultReviewTeamIds(nextDefaultReviewTeamIds);
+    setDefaultReviewTeamDraft(nextDefaultReviewTeamIds);
+  }, [username]);
+
+  useEffect(() => {
+    if (!teamsQuery.isSuccess) {
+      return;
+    }
+    const pruneUnavailableTeamIds = (teamIds: number[]) =>
+      teamIds.filter((teamId) => availableDefaultReviewTeamIdSet.has(teamId));
+
+    setSavedDefaultReviewTeamIds((previous) => {
+      const next = pruneUnavailableTeamIds(previous);
+      return hasSameSet(previous, next) ? previous : next;
+    });
+    setDefaultReviewTeamDraft((previous) => {
+      const next = pruneUnavailableTeamIds(previous);
+      return hasSameSet(previous, next) ? previous : next;
+    });
+  }, [availableDefaultReviewTeamIdSet, teamsQuery.isSuccess]);
 
   const trimmedWorkset = worksetDraft.trim();
   const parsedWorkset = useMemo(() => {
@@ -131,6 +197,12 @@ export function SettingsPage() {
       (value, index) => value.toLowerCase() !== (savedPreferredLocales[index]?.toLowerCase() ?? ''),
     );
   }, [preferredLocalesDraft, savedPreferredLocales]);
+  const isDefaultReviewTeamsDirty = useMemo(
+    () => !hasSameSet(defaultReviewTeamDraft, savedDefaultReviewTeamIds),
+    [defaultReviewTeamDraft, savedDefaultReviewTeamIds],
+  );
+  const canResetDefaultReviewTeams =
+    savedDefaultReviewTeamIds.length > 0 || defaultReviewTeamDraft.length > 0;
 
   const handleSaveWorksetPreference = () => {
     if (!parsedWorkset.valid || !isWorksetDirty) {
@@ -152,6 +224,19 @@ export function SettingsPage() {
     const next = loadPreferredLocales();
     setSavedPreferredLocales(next);
     setPreferredLocalesDraft(next);
+  };
+
+  const handleSaveDefaultReviewTeams = () => {
+    saveDefaultReviewProjectTeamIds(defaultReviewTeamDraft, username);
+    const next = loadDefaultReviewProjectTeamIds(username);
+    setSavedDefaultReviewTeamIds(next);
+    setDefaultReviewTeamDraft(next);
+  };
+
+  const handleResetDefaultReviewTeams = () => {
+    saveDefaultReviewProjectTeamIds([], username);
+    setSavedDefaultReviewTeamIds([]);
+    setDefaultReviewTeamDraft([]);
   };
 
   const handleShortcutBarVisibilityChange = (visible: boolean) => {
@@ -268,6 +353,59 @@ export function SettingsPage() {
             Default is {defaultShortcutHelpPreference === 'bottom' ? 'shown' : 'hidden'}.
           </p>
         </div>
+        {canConfigureDefaultReviewTeams ? (
+          <div className="settings-field">
+            <div className="settings-field__header">
+              <div className="settings-field__label">Default team filter</div>
+            </div>
+            <TeamMultiSelect
+              label="Default teams"
+              options={defaultReviewTeamOptions}
+              selectedIds={defaultReviewTeamDraft}
+              onChange={setDefaultReviewTeamDraft}
+              className="settings-repository-select"
+              disabled={teamsQuery.isLoading}
+              buttonAriaLabel="Select default review teams"
+              placeholder="No default teams"
+              emptyOptionsLabel={teamsQuery.isLoading ? 'Loading teams' : 'No teams'}
+              allTeamsLabel="All teams"
+              myTeamIds={user.teamIds ?? []}
+              showSelectionPresets
+            />
+            {teamsQuery.isLoading ? (
+              <p className="settings-hint">Loading teams...</p>
+            ) : teamsQuery.isError ? (
+              <p className="settings-hint is-error">Unable to load teams.</p>
+            ) : defaultReviewTeamOptions.length === 0 ? (
+              <p className="settings-hint">No teams available.</p>
+            ) : (
+              <p className="settings-hint">
+                When set, Review Projects opens to To team with these teams selected unless the URL
+                already contains a saved filter.
+              </p>
+            )}
+            <div className="settings-card__footer">
+              <div className="settings-actions">
+                <button
+                  type="button"
+                  className="settings-button settings-button--primary"
+                  onClick={handleSaveDefaultReviewTeams}
+                  disabled={!isDefaultReviewTeamsDirty}
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  className="settings-button settings-button--ghost"
+                  onClick={handleResetDefaultReviewTeams}
+                  disabled={!canResetDefaultReviewTeams}
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section className="settings-card" aria-labelledby="settings-preferred-locales">
