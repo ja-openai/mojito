@@ -1213,6 +1213,7 @@ function FilterControls({
         onChange={filters.onLocaleChange}
         buttonAriaLabel="Filter by locale"
         myLocaleTags={filters.myLocaleTags}
+        showSelectionPresets
       />
       <SearchControl
         value={filters.searchQuery}
