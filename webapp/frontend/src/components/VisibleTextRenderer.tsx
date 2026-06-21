@@ -1,6 +1,11 @@
 import './visible-text-editor.css';
 
-import { type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, useMemo } from 'react';
+import {
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  useMemo,
+} from 'react';
 
 import {
   extractProtectedTextTokens,
@@ -10,6 +15,12 @@ import {
   type ProtectedTextTokenMode,
 } from '../utils/protectedTextTokens';
 import { getVisibleTextMarker } from '../utils/textCharacters';
+import {
+  getVisibleTextIcuMessagesForValue,
+  visibleIcuSyntaxDisplay,
+  visibleProtectedTokenText,
+  type VisibleTextIcuMessage,
+} from '../utils/visibleTextIcuDisplay';
 import {
   resolveVisibleTextMarksMode,
   shouldRenderVisibleTextWidget,
@@ -43,24 +54,32 @@ type TextPart =
   | {
       kind: 'text';
       diagnostic?: ProtectedTextDiagnostic;
+      end: number;
+      start: number;
       text: string;
     }
   | {
       diagnostic?: ProtectedTextDiagnostic;
+      end: number;
       kind: 'marked';
       char: string;
       label: string;
       markerText: string;
+      start: number;
     }
   | {
+      end: number;
       kind: 'marker-widget';
       char: string;
       label: string;
       markerText: string;
+      start: number;
     }
   | {
       kind: 'protected-token';
       diagnostic?: ProtectedTextDiagnostic;
+      end: number;
+      start: number;
       text: string;
       token: ProtectedTextToken;
     };
@@ -81,25 +100,28 @@ function normalizeTokens(value: string, tokens: ProtectedTextToken[]): Protected
   return output;
 }
 
-function appendTextPart(parts: TextPart[], text: string) {
+function appendTextPart(parts: TextPart[], text: string, start: number, end: number) {
   if (!text) {
     return;
   }
   const previous = parts[parts.length - 1];
-  if (previous?.kind === 'text' && !previous.diagnostic) {
+  if (previous?.kind === 'text' && !previous.diagnostic && previous.end === start) {
     previous.text += text;
+    previous.end = end;
     return;
   }
-  parts.push({ kind: 'text', text });
+  parts.push({ end, kind: 'text', start, text });
 }
 
 function appendDiagnosticTextPart(
   parts: TextPart[],
   text: string,
+  start: number,
+  end: number,
   diagnostic?: ProtectedTextDiagnostic,
 ) {
   if (!diagnostic) {
-    appendTextPart(parts, text);
+    appendTextPart(parts, text, start, end);
     return;
   }
 
@@ -108,12 +130,14 @@ function appendDiagnosticTextPart(
     previous?.kind === 'text' &&
     previous.diagnostic?.start === diagnostic.start &&
     previous.diagnostic?.end === diagnostic.end &&
-    previous.diagnostic?.code === diagnostic.code
+    previous.diagnostic?.code === diagnostic.code &&
+    previous.end === start
   ) {
     previous.text += text;
+    previous.end = end;
     return;
   }
-  parts.push({ diagnostic, kind: 'text', text });
+  parts.push({ diagnostic, end, kind: 'text', start, text });
 }
 
 function diagnosticForRange(
@@ -145,7 +169,13 @@ function appendVisibleTextParts({
       const rawStart = offset + localOffset;
       const rawEnd = rawStart + char.length;
       localOffset += char.length;
-      appendDiagnosticTextPart(parts, char, diagnosticForRange(diagnostics, rawStart, rawEnd));
+      appendDiagnosticTextPart(
+        parts,
+        char,
+        rawStart,
+        rawEnd,
+        diagnosticForRange(diagnostics, rawStart, rawEnd),
+      );
     }
     return;
   }
@@ -161,7 +191,13 @@ function appendVisibleTextParts({
       !marker ||
       (marksMode === 'auto' && !shouldShowVisibleTextIssueMarker(value, { char, rawEnd, rawStart }))
     ) {
-      appendDiagnosticTextPart(parts, char, diagnosticForRange(diagnostics, rawStart, rawEnd));
+      appendDiagnosticTextPart(
+        parts,
+        char,
+        rawStart,
+        rawEnd,
+        diagnosticForRange(diagnostics, rawStart, rawEnd),
+      );
       continue;
     }
 
@@ -169,31 +205,37 @@ function appendVisibleTextParts({
     if (shouldRenderVisibleTextWidget(char, marker.text)) {
       if (char === '\n' || char === '\r') {
         parts.push({
-          kind: 'marker-widget',
           char,
+          end: rawStart,
+          kind: 'marker-widget',
           label: marker.label,
           markerText,
+          start: rawStart,
         });
-        appendTextPart(parts, char);
+        appendTextPart(parts, char, rawStart, rawEnd);
         continue;
       }
 
       parts.push({
-        kind: 'marker-widget',
         char,
+        end: rawStart,
+        kind: 'marker-widget',
         label: marker.label,
         markerText,
+        start: rawStart,
       });
-      appendTextPart(parts, char);
+      appendTextPart(parts, char, rawStart, rawEnd);
       continue;
     }
 
     parts.push({
-      kind: 'marked',
       char,
       diagnostic: diagnosticForRange(diagnostics, rawStart, rawEnd),
+      end: rawEnd,
+      kind: 'marked',
       label: marker.label,
       markerText,
+      start: rawStart,
     });
   }
 }
@@ -218,7 +260,9 @@ function buildTextParts(
     });
     parts.push({
       diagnostic: diagnosticForRange(diagnostics, token.start, token.end),
+      end: token.end,
       kind: 'protected-token',
+      start: token.start,
       text: value.slice(token.start, token.end),
       token,
     });
@@ -237,16 +281,91 @@ function buildTextParts(
   return parts;
 }
 
-function renderPart(part: TextPart, index: number) {
+function renderIcuSyntaxTokenContent(raw: string) {
+  const display = visibleIcuSyntaxDisplay(raw);
+
+  if (display.kind === 'empty') {
+    return null;
+  }
+
+  if (display.kind === 'argument-form') {
+    return (
+      <span className="visible-text-editor__icu-syntax-label">
+        <span className="visible-text-editor__icu-syntax-argument">{display.argument}</span>{' '}
+        <span className="visible-text-editor__icu-syntax-form">{display.form}</span>
+      </span>
+    );
+  }
+
+  return <span className="visible-text-editor__icu-syntax-form">{display.form}</span>;
+}
+
+function icuEditableTextClassName(enabled: boolean) {
+  return enabled ? ' visible-text-editor__icu-editable-text' : '';
+}
+
+function renderIcuEditableText(text: string, keyPrefix: string, markNumberPlaceholder: boolean) {
+  if (!markNumberPlaceholder || !text.includes('#')) {
+    return text;
+  }
+
+  const output: ReactNode[] = [];
+  let pending = '';
+  let index = 0;
+
+  for (const char of Array.from(text)) {
+    if (char !== '#') {
+      pending += char;
+      index += 1;
+      continue;
+    }
+
+    if (pending) {
+      output.push(pending);
+      pending = '';
+    }
+
+    output.push(
+      <span
+        key={`${keyPrefix}-icu-number-${index}`}
+        className="visible-text-editor__icu-number-placeholder"
+        title="ICU number placeholder"
+      >
+        #
+      </span>,
+    );
+    index += 1;
+  }
+
+  if (pending) {
+    output.push(pending);
+  }
+
+  return output;
+}
+
+function renderPart(part: TextPart, index: number, icuGroup: VisibleTextIcuMessage | null = null) {
+  const insideIcuMessage = Boolean(icuGroup);
+  const markNumberPlaceholder = icuGroup?.messageType === 'plural';
+
   if (part.kind === 'text') {
     if (part.diagnostic) {
       return (
         <span
           key={index}
-          className={diagnosticClassName(part.diagnostic)}
+          className={`${diagnosticClassName(part.diagnostic)}${icuEditableTextClassName(
+            insideIcuMessage,
+          )}`}
           title={part.diagnostic.message}
         >
-          {part.text}
+          {renderIcuEditableText(part.text, `text-${index}`, markNumberPlaceholder)}
+        </span>
+      );
+    }
+    if (insideIcuMessage) {
+      return (
+        <span key={index} className="visible-text-editor__icu-editable-text">
+          {renderIcuEditableText(part.text, `text-${index}`, markNumberPlaceholder)}
         </span>
       );
     }
@@ -254,17 +373,22 @@ function renderPart(part: TextPart, index: number) {
   }
 
   if (part.kind === 'protected-token') {
+    const displayText = visibleProtectedTokenText(part.token.kind, part.text);
+    const emptySyntaxClass =
+      part.token.kind === 'icu-syntax' && !displayText
+        ? ' visible-text-editor__protected-token--empty-icu-syntax'
+        : '';
     return (
       <span
         key={index}
         aria-label={part.token.label}
-        className={`visible-text-editor__protected-token visible-text-editor__protected-token--${part.token.kind}${
+        className={`visible-text-editor__protected-token visible-text-editor__protected-token--${part.token.kind}${emptySyntaxClass}${
           part.diagnostic ? ` ${diagnosticClassName(part.diagnostic)}` : ''
         }`}
         data-raw={part.text}
         title={part.diagnostic?.message ?? part.token.label}
       >
-        {part.text}
+        {part.token.kind === 'icu-syntax' ? renderIcuSyntaxTokenContent(part.text) : displayText}
       </span>
     );
   }
@@ -275,7 +399,7 @@ function renderPart(part: TextPart, index: number) {
         key={index}
         className={`visible-text-editor__marker-widget visible-text-editor__marker-widget--${visibleTextMarkerClassFor(
           part.char,
-        )}`}
+        )}${icuEditableTextClassName(insideIcuMessage)}`}
         title={part.label}
         aria-hidden="true"
       >
@@ -289,13 +413,149 @@ function renderPart(part: TextPart, index: number) {
       key={index}
       className={`visible-text-editor__marked-char visible-text-editor__marked-char--${visibleTextMarkerClassFor(
         part.char,
-      )}${part.diagnostic ? ` ${diagnosticClassName(part.diagnostic)}` : ''}`}
+      )}${part.diagnostic ? ` ${diagnosticClassName(part.diagnostic)}` : ''}${icuEditableTextClassName(
+        insideIcuMessage,
+      )}`}
       data-marker={part.markerText}
       title={part.diagnostic?.message ?? part.label}
     >
       {part.char}
     </span>
   );
+}
+
+function renderPartsWithIcuGroups(parts: TextPart[], groups: VisibleTextIcuMessage[]): ReactNode[] {
+  if (groups.length === 0) {
+    return parts.map((part, index) => renderPart(part, index));
+  }
+
+  const output: ReactNode[] = [];
+  let groupIndex = 0;
+  let partIndex = 0;
+
+  while (partIndex < parts.length) {
+    const group = groups[groupIndex];
+    const part = parts[partIndex];
+
+    if (!group) {
+      output.push(renderPart(part, output.length));
+      partIndex += 1;
+      continue;
+    }
+
+    if (part.end <= group.messageStart) {
+      output.push(renderPart(part, output.length));
+      partIndex += 1;
+      continue;
+    }
+
+    if (part.start >= group.messageEnd) {
+      groupIndex += 1;
+      continue;
+    }
+
+    if (part.start < group.messageStart || part.end > group.messageEnd) {
+      output.push(renderPart(part, output.length));
+      partIndex += 1;
+      continue;
+    }
+
+    const groupParts: TextPart[] = [];
+    while (partIndex < parts.length) {
+      const candidate = parts[partIndex];
+      if (candidate.start >= group.messageEnd) {
+        break;
+      }
+      if (candidate.start >= group.messageStart && candidate.end <= group.messageEnd) {
+        groupParts.push(candidate);
+      } else {
+        output.push(renderPart(candidate, output.length));
+      }
+      partIndex += 1;
+    }
+
+    if (groupParts.length > 0) {
+      output.push(
+        <span key={`icu-message-${group.key}`} className="visible-text-renderer__icu-message">
+          {renderPartsWithIcuFormBodies(groupParts, group)}
+        </span>,
+      );
+    }
+
+    groupIndex += 1;
+  }
+
+  return output;
+}
+
+function renderPartsWithIcuFormBodies(
+  parts: TextPart[],
+  group: VisibleTextIcuMessage,
+): ReactNode[] {
+  if (group.formBodies.length === 0) {
+    return parts.map((part, index) => renderPart(part, index, group));
+  }
+
+  const output: ReactNode[] = [];
+  let bodyIndex = 0;
+  let partIndex = 0;
+
+  while (partIndex < parts.length) {
+    const body = group.formBodies[bodyIndex];
+    const part = parts[partIndex];
+
+    if (!body) {
+      output.push(renderPart(part, output.length, group));
+      partIndex += 1;
+      continue;
+    }
+
+    if (part.end <= body.start) {
+      output.push(renderPart(part, output.length, group));
+      partIndex += 1;
+      continue;
+    }
+
+    if (part.start >= body.end) {
+      bodyIndex += 1;
+      continue;
+    }
+
+    if (part.start < body.start || part.end > body.end) {
+      output.push(renderPart(part, output.length, group));
+      partIndex += 1;
+      continue;
+    }
+
+    const bodyParts: TextPart[] = [];
+    while (partIndex < parts.length) {
+      const candidate = parts[partIndex];
+      if (candidate.start >= body.end) {
+        break;
+      }
+      if (candidate.start >= body.start && candidate.end <= body.end) {
+        bodyParts.push(candidate);
+      } else {
+        output.push(renderPart(candidate, output.length, group));
+      }
+      partIndex += 1;
+    }
+
+    if (bodyParts.length > 0) {
+      output.push(
+        <span
+          key={`icu-form-body-${group.key}-${body.form}-${body.start}`}
+          className="visible-text-editor__icu-form-body"
+        >
+          {bodyParts.map((bodyPart, index) => renderPart(bodyPart, index, group))}
+        </span>,
+      );
+    }
+
+    bodyIndex += 1;
+  }
+
+  return output;
 }
 
 function diagnosticClassName(diagnostic: ProtectedTextDiagnostic): string {
@@ -341,6 +601,14 @@ export function VisibleTextRenderer({
       ),
     [resolvedMarksMode, resolvedProtectedDiagnostics, resolvedProtectedTokens, value],
   );
+  const icuMessageGroups = useMemo(
+    () =>
+      getVisibleTextIcuMessagesForValue(
+        value,
+        showProtectedTokens && resolvedProtectedTokens.some((token) => token.kind === 'icu-syntax'),
+      ),
+    [resolvedProtectedTokens, showProtectedTokens, value],
+  );
   const isInteractive = Boolean(onFocus && !disabled);
   const rootClassName = `visible-text-renderer${
     isInteractive ? ' visible-text-renderer--interactive' : ''
@@ -364,7 +632,7 @@ export function VisibleTextRenderer({
       style={style}
       tabIndex={isInteractive ? 0 : undefined}
     >
-      {parts.map(renderPart)}
+      {renderPartsWithIcuGroups(parts, icuMessageGroups)}
     </div>
   );
 }

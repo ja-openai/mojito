@@ -16,13 +16,61 @@ describe('VisibleTextRenderer', () => {
     ).toHaveTextContent('<b>');
     expect(
       container.querySelector('.visible-text-editor__protected-token--icu-placeholder'),
-    ).toHaveTextContent('{price}');
+    ).toHaveTextContent('price');
     expect(
       container.querySelector('.visible-text-editor__protected-token--icu-placeholder'),
     ).toHaveAttribute('aria-label', 'ICU argument price');
     expect(
       container.querySelector('.visible-text-editor__protected-token--icu-placeholder'),
     ).toHaveAttribute('data-raw', '{price}');
+  });
+
+  it('uses the shared compact ICU syntax rendering', () => {
+    const { container } = render(
+      <VisibleTextRenderer
+        value="{count, plural, one {# file} other {# files}}"
+        tokenMode="icu-html"
+      />,
+    );
+
+    const syntaxTokens = Array.from(
+      container.querySelectorAll<HTMLElement>('.visible-text-editor__protected-token--icu-syntax'),
+    );
+    const icuMessage = container.querySelector('.visible-text-renderer__icu-message');
+    expect(icuMessage).toBeInTheDocument();
+    expect(icuMessage).toHaveTextContent('count one# fileother# files');
+    expect(
+      Array.from(icuMessage?.querySelectorAll('.visible-text-editor__icu-editable-text') ?? []).map(
+        (element) => element.textContent,
+      ),
+    ).toEqual([' file', ' files']);
+    expect(
+      Array.from(
+        icuMessage?.querySelectorAll('.visible-text-editor__protected-token--icu-placeholder') ??
+          [],
+      ).map((element) => element.textContent),
+    ).toEqual(['#', '#']);
+    expect(syntaxTokens[0]).toHaveTextContent('count one');
+    expect(syntaxTokens[0]).not.toHaveTextContent('plural');
+    expect(
+      syntaxTokens[0].querySelector('.visible-text-editor__icu-syntax-form'),
+    ).toHaveTextContent('one');
+    expect(syntaxTokens[syntaxTokens.length - 1]).toHaveClass(
+      'visible-text-editor__protected-token--empty-icu-syntax',
+    );
+  });
+
+  it('does not group ICU-looking text when protected token rendering is off', () => {
+    const { container } = render(
+      <VisibleTextRenderer
+        value="{count, plural, one {# file} other {# files}}"
+        showProtectedTokens={false}
+        tokenMode="icu-html"
+      />,
+    );
+
+    expect(container).toHaveTextContent('{count, plural, one {# file} other {# files}}');
+    expect(container.querySelector('.visible-text-renderer__icu-message')).not.toBeInTheDocument();
   });
 
   it('renders platform placeholders in composite protected text', () => {

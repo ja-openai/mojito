@@ -6,10 +6,36 @@ import { useProtectedTextTokenGuard } from '../hooks/useProtectedTextTokenGuard'
 import { TranslationTextEditor } from './TranslationTextEditor';
 import type { VisibleTextEditorHandle } from './VisibleTextEditor';
 
-function getAddFormOptions() {
-  return within(screen.getByRole('combobox', { name: /Add .* form/ }))
-    .getAllByRole('option')
-    .map((option) => option.textContent);
+function queryIcuFormTrigger(text: RegExp | string) {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>(
+      '.visible-text-editor__protected-token--icu-form-trigger:not(.visible-text-editor__protected-token--empty-icu-syntax)',
+    ),
+  ).find((element) => {
+    const content = element.textContent ?? '';
+    return typeof text === 'string' ? content === text : text.test(content);
+  });
+}
+
+function expectIcuFormTrigger(text: RegExp | string) {
+  const trigger = queryIcuFormTrigger(text);
+  expect(trigger).toBeInTheDocument();
+  return trigger as HTMLElement;
+}
+
+function openFormMenu(text: RegExp | string = /\s/) {
+  fireEvent.click(expectIcuFormTrigger(text));
+  return screen.getByRole('menu');
+}
+
+function getFormCheckboxLabels() {
+  return within(screen.getByRole('menu'))
+    .getAllByRole('checkbox')
+    .map((checkbox) => checkbox.closest('label')?.textContent);
+}
+
+function toggleForm(form: string) {
+  fireEvent.click(within(screen.getByRole('menu')).getByRole('checkbox', { name: form }));
 }
 
 function restoreDescriptor(target: object, name: string, descriptor?: PropertyDescriptor) {
@@ -147,7 +173,7 @@ describe('TranslationTextEditor', () => {
       />,
     );
 
-    await screen.findByRole('combobox', { name: 'Add plural form' });
+    await waitFor(() => expectIcuFormTrigger('count one'));
 
     act(() => {
       const nestedCaret = value.indexOf('item}') + 'it'.length;
@@ -155,9 +181,16 @@ describe('TranslationTextEditor', () => {
     });
 
     await waitFor(() => {
-      expect(getAddFormOptions()).toContain('itemCount: zero');
-      expect(getAddFormOptions()).not.toContain('count: zero');
+      expectIcuFormTrigger('itemCount one');
+      expect(queryIcuFormTrigger('count one')).toBeUndefined();
     });
+
+    openFormMenu('itemCount one');
+
+    expect(
+      within(screen.getByRole('menu')).getByRole('checkbox', { name: 'zero' }),
+    ).not.toBeChecked();
+    expect(getFormCheckboxLabels()).not.toContain('count: zero');
   });
 
   it('does not scope add-form actions to a plural when the caret is after it', async () => {
@@ -176,7 +209,7 @@ describe('TranslationTextEditor', () => {
       />,
     );
 
-    await screen.findByRole('combobox', { name: 'Add plural form' });
+    await waitFor(() => expectIcuFormTrigger('fileCount one'));
 
     act(() => {
       const afterFirstPlural = value.indexOf(' and');
@@ -184,12 +217,12 @@ describe('TranslationTextEditor', () => {
     });
 
     await waitFor(() => {
-      expect(getAddFormOptions()).toContain('fileCount: zero');
-      expect(getAddFormOptions()).toContain('folderCount: zero');
+      expectIcuFormTrigger('fileCount one');
+      expectIcuFormTrigger('folderCount one');
     });
   });
 
-  it('offers only the required other form for ICU select messages', async () => {
+  it('marks required other forms as fixed for ICU select messages', async () => {
     const handleChange = vi.fn();
     const value = '{gender, select, male {his}} file';
 
@@ -203,15 +236,15 @@ describe('TranslationTextEditor', () => {
       />,
     );
 
-    await screen.findByRole('combobox', { name: 'Add select form' });
+    await waitFor(() => expectIcuFormTrigger('gender male'));
 
-    expect(getAddFormOptions()).toEqual(['Add select form', 'gender: other']);
+    openFormMenu('gender male');
 
-    fireEvent.change(screen.getByLabelText('Add select form'), {
-      target: { value: '0:other' },
-    });
+    const other = within(screen.getByRole('menu')).getByRole('checkbox', { name: /other/ });
 
-    expect(handleChange).toHaveBeenCalledWith('{gender, select, male {his} other { } } file');
+    expect(other).toBeDisabled();
+    expect(other).not.toBeChecked();
+    expect(handleChange).not.toHaveBeenCalled();
   });
 
   it('keeps ICU form insertion undoable by the editor', async () => {
@@ -228,11 +261,10 @@ describe('TranslationTextEditor', () => {
       />,
     );
 
-    await screen.findByRole('combobox', { name: 'Add plural form' });
+    await waitFor(() => expectIcuFormTrigger('count one'));
 
-    fireEvent.change(screen.getByLabelText('Add plural form'), {
-      target: { value: '0:few' },
-    });
+    openFormMenu('count one');
+    toggleForm('few');
 
     await waitFor(() => expect(handleChange).toHaveBeenLastCalledWith(insertedValue));
 
@@ -246,6 +278,56 @@ describe('TranslationTextEditor', () => {
     }
 
     await waitFor(() => expect(handleChange).toHaveBeenLastCalledWith(value));
+  });
+
+  it('removes existing exact ICU plural forms from the inline form menu', async () => {
+    const handleChange = vi.fn();
+    const value = '{count, plural, one {# file} =15 {# files} other {# files}}';
+    const removedValue = '{count, plural, one {# file} other {# files}}';
+
+    render(
+      <ControlledTranslationTextEditor
+        editorRef={createRef<VisibleTextEditorHandle>()}
+        initialValue={value}
+        onValueChange={handleChange}
+      />,
+    );
+
+    await waitFor(() => expectIcuFormTrigger('count one'));
+    openFormMenu('count one');
+
+    const exactForm = within(screen.getByRole('menu')).getByRole('checkbox', { name: '=15' });
+    expect(exactForm).toBeChecked();
+
+    toggleForm('=15');
+
+    await waitFor(() => expect(handleChange).toHaveBeenLastCalledWith(removedValue));
+  });
+
+  it('adds ICU plural forms while placeholder protection is locked', async () => {
+    const ref = createRef<VisibleTextEditorHandle>();
+    const handleChange = vi.fn();
+    const value = 'Delete {count, plural, one {# app} other {# apps}} forever.';
+    const insertedValue = 'Delete {count, plural, one {# app} few {# } other {# apps}} forever.';
+
+    render(
+      <GuardedTranslationTextEditor
+        editorRef={ref}
+        initialValue={value}
+        onValueChange={handleChange}
+      />,
+    );
+
+    await waitFor(() => expectIcuFormTrigger('count one'));
+    openFormMenu('count one');
+    toggleForm('few');
+
+    await waitFor(() => expect(handleChange).toHaveBeenLastCalledWith(insertedValue));
+    expect(
+      screen.queryByText(
+        'Placeholder edit blocked. Use Edit placeholders to change placeholders or tags.',
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it.each([
@@ -265,12 +347,11 @@ describe('TranslationTextEditor', () => {
       />,
     );
 
-    await screen.findByRole('combobox', { name: 'Add plural form' });
+    await waitFor(() => expectIcuFormTrigger('count one'));
     const editor = screen.getByRole('textbox', { name: 'Text editor' });
 
-    fireEvent.change(screen.getByLabelText('Add plural form'), {
-      target: { value: '0:few' },
-    });
+    openFormMenu('count one');
+    toggleForm('few');
 
     await waitFor(() => expect(handleChange).toHaveBeenLastCalledWith(insertedValue));
 
@@ -345,7 +426,7 @@ describe('TranslationTextEditor', () => {
     await waitFor(() => {
       expect(
         Array.from(container.querySelectorAll('.visible-text-editor__protected-token')).some(
-          (token) => token.textContent === '{draft}',
+          (token) => token.textContent === 'draft',
         ),
       ).toBe(true);
     });

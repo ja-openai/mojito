@@ -10,7 +10,6 @@ export type ProtectedTextTokenKind =
   | 'html-tag'
   | 'icu-placeholder'
   | 'icu-syntax'
-  | 'icu-pound'
   | 'platform-placeholder'
   | 'mf2-demo';
 export type ProtectedTextTokenMode = 'icu' | 'icu-html' | 'mf2-demo' | 'none';
@@ -68,6 +67,22 @@ export type IcuFormInsertion = {
   selectionStart: number;
   selectionEnd: number;
   existingForms?: string[];
+};
+
+export type IcuFormOption = {
+  id: string;
+  checked: boolean;
+  disabled: boolean;
+  bodyEnd?: number;
+  bodyStart?: number;
+  form: string;
+  label: string;
+  messageEnd: number;
+  messageStart: number;
+  messageType: 'plural' | 'select';
+  nextValue?: string;
+  selectionStart: number;
+  selectionEnd: number;
 };
 
 const ICU_PLURAL_FORM_ORDER = ['zero', 'one', 'two', 'few', 'many', 'other'];
@@ -194,8 +209,15 @@ function preservesRequiredProtectedTextTokenStructure({
       return false;
     }
 
-    // Extra tokens before an existing ICU boundary mean a plural/select skeleton was reshaped.
-    if (previousIndex > 0 && nextIndex > searchStart && isIcuStructuralTokenEntry(previousEntry)) {
+    const insertedEntries = nextStructure.slice(searchStart, nextIndex);
+    // Extra ICU syntax before an existing ICU boundary means a plural/select skeleton was reshaped.
+    // Non-structural tokens are still allowed so translators can add normal placeholders inside
+    // an existing plural/select form body.
+    if (
+      previousIndex > 0 &&
+      insertedEntries.some(isIcuStructuralTokenEntry) &&
+      isIcuStructuralTokenEntry(previousEntry)
+    ) {
       return false;
     }
 
@@ -205,7 +227,7 @@ function preservesRequiredProtectedTextTokenStructure({
 }
 
 function isIcuStructuralTokenEntry(entry: string): boolean {
-  return entry.startsWith('icu-syntax\u0000') || entry.startsWith('icu-pound\u0000');
+  return entry.startsWith('icu-syntax\u0000');
 }
 
 export function relocateProtectedTextTokens(
@@ -270,6 +292,17 @@ export function getIcuFormInsertions(value: string): IcuFormInsertion[] {
   const insertions: IcuFormInsertion[] = [];
   collectIcuFormInsertions(value, ast, insertions);
   return insertions;
+}
+
+export function getIcuFormOptions(value: string): IcuFormOption[] {
+  const ast = parseIcuMessage(value);
+  if (!ast) {
+    return [];
+  }
+
+  const options: IcuFormOption[] = [];
+  collectIcuFormOptions(value, ast, options);
+  return options;
 }
 
 export function getIcuMovableTextRanges(value: string): ProtectedTextMovableRange[] {
@@ -596,8 +629,8 @@ function collectIcuTokens(elements: MessageFormatElement[]): ProtectedTextToken[
         if (range) {
           tokens.push({
             ...range,
-            label: 'ICU plural #',
-            kind: 'icu-pound',
+            label: 'ICU number placeholder',
+            kind: 'icu-placeholder',
           });
         }
         return;
@@ -676,10 +709,6 @@ function collectIcuFormInsertions(
 
     const options = element.options as Record<string, OptionWithLocation>;
     const existingForms = new Set(Object.keys(options));
-    const insertionPoint = icuFormInsertionPoint(value, range, options);
-    if (!insertionPoint) {
-      return;
-    }
 
     const availableForms =
       element.type === TYPE.plural
@@ -689,6 +718,17 @@ function collectIcuFormInsertions(
           : ['other'];
 
     availableForms.forEach((form) => {
+      const insertionPoint = icuCategoryFormInsertionPoint(
+        value,
+        range,
+        options,
+        form,
+        element.type === TYPE.plural ? 'plural' : 'select',
+      );
+      if (!insertionPoint) {
+        return;
+      }
+
       const prefix = optionInsertionPrefix(value, insertionPoint.offset);
       const bodyPrefix = element.type === TYPE.plural ? '# ' : ' ';
       const text = `${prefix}${form} {${bodyPrefix}} `;
@@ -712,6 +752,7 @@ function collectIcuFormInsertions(
     });
 
     if (element.type === TYPE.plural) {
+      const insertionPoint = icuExactFormInsertionPoint(value, range, options);
       insertions.push({
         id: `${range.start}:exact-value`,
         kind: 'exact-value',
@@ -729,6 +770,214 @@ function collectIcuFormInsertions(
       collectIcuFormInsertions(value, option.value, insertions);
     });
   });
+}
+
+function collectIcuFormOptions(
+  value: string,
+  elements: MessageFormatElement[],
+  formOptions: IcuFormOption[],
+) {
+  elements.forEach((element) => {
+    if (element.type !== TYPE.plural && element.type !== TYPE.select) {
+      if ('options' in element) {
+        Object.values(element.options as Record<string, OptionWithLocation>).forEach((option) => {
+          collectIcuFormOptions(value, option.value, formOptions);
+        });
+      }
+      return;
+    }
+
+    const range = rangeFromLocation(element.location);
+    if (!range) {
+      return;
+    }
+
+    const options = element.options as Record<string, OptionWithLocation>;
+    const existingForms = new Set(Object.keys(options));
+    const argumentName =
+      element.value.trim() || (element.type === TYPE.plural ? 'plural' : 'select');
+    const messageType = element.type === TYPE.plural ? 'plural' : 'select';
+
+    if (element.type === TYPE.plural) {
+      ICU_PLURAL_FORM_ORDER.forEach((form) => {
+        const existingOptionRange = rangeFromLocation(options[form]?.location);
+        const bodyRange =
+          existingOptionRange && options[form]
+            ? bodyRangeFromOption(options[form], existingOptionRange)
+            : undefined;
+        formOptions.push(
+          buildIcuFormOption({
+            argumentName,
+            bodyRange,
+            existing: existingForms.has(form),
+            form,
+            insertionPoint: icuCategoryFormInsertionPoint(value, range, options, form, messageType),
+            messageType,
+            optionRange: existingOptionRange,
+            required: form === 'other',
+            range,
+            value,
+          }),
+        );
+      });
+
+      Object.keys(options)
+        .filter((form) => form.startsWith('='))
+        .sort((first, second) => Number(first.slice(1)) - Number(second.slice(1)))
+        .forEach((form) => {
+          const existingOptionRange = rangeFromLocation(options[form]?.location);
+          const bodyRange =
+            existingOptionRange && options[form]
+              ? bodyRangeFromOption(options[form], existingOptionRange)
+              : undefined;
+          formOptions.push(
+            buildIcuFormOption({
+              argumentName,
+              bodyRange,
+              existing: true,
+              form,
+              insertionPoint: null,
+              messageType,
+              optionRange: existingOptionRange,
+              required: false,
+              range,
+              value,
+            }),
+          );
+        });
+    } else {
+      const selectForms = [...Object.keys(options)].sort((first, second) =>
+        first.localeCompare(second),
+      );
+      if (!existingForms.has('other')) {
+        selectForms.push('other');
+      }
+
+      selectForms.forEach((form) => {
+        const existingOptionRange = rangeFromLocation(options[form]?.location);
+        const bodyRange =
+          existingOptionRange && options[form]
+            ? bodyRangeFromOption(options[form], existingOptionRange)
+            : undefined;
+        formOptions.push(
+          buildIcuFormOption({
+            argumentName,
+            bodyRange,
+            existing: existingForms.has(form),
+            form,
+            insertionPoint: icuCategoryFormInsertionPoint(value, range, options, form, messageType),
+            messageType,
+            optionRange: existingOptionRange,
+            required: form === 'other',
+            range,
+            value,
+          }),
+        );
+      });
+    }
+
+    Object.values(options).forEach((option) => {
+      collectIcuFormOptions(value, option.value, formOptions);
+    });
+  });
+}
+
+function buildIcuFormOption({
+  argumentName,
+  bodyRange,
+  existing,
+  form,
+  insertionPoint,
+  messageType,
+  optionRange,
+  range,
+  required,
+  value,
+}: {
+  argumentName: string;
+  bodyRange?: { start: number; end: number };
+  existing: boolean;
+  form: string;
+  insertionPoint: { offset: number } | null;
+  messageType: 'plural' | 'select';
+  optionRange: { start: number; end: number } | null;
+  range: { start: number; end: number };
+  required: boolean;
+  value: string;
+}): IcuFormOption {
+  let nextValue: string | undefined;
+  let selectionStart = range.end;
+  let selectionEnd = selectionStart;
+
+  if (!required && existing && optionRange) {
+    const removal = buildIcuFormRemoval(value, range, form, optionRange);
+    nextValue = removal.nextValue;
+    selectionStart = removal.selectionStart;
+    selectionEnd = removal.selectionEnd;
+  } else if (!required && !existing && insertionPoint) {
+    const insertion = buildIcuCategoryFormInsertion(
+      value,
+      insertionPoint.offset,
+      form,
+      messageType,
+    );
+    nextValue = insertion.nextValue;
+    selectionStart = insertion.selectionStart;
+    selectionEnd = insertion.selectionEnd;
+  }
+
+  return {
+    id: `${range.start}:${form}`,
+    checked: existing,
+    disabled: required || !nextValue,
+    bodyEnd: existing ? bodyRange?.end : undefined,
+    bodyStart: existing ? bodyRange?.start : undefined,
+    form,
+    label: `${argumentName}: ${form}`,
+    messageEnd: range.end,
+    messageStart: range.start,
+    messageType,
+    nextValue,
+    selectionEnd,
+    selectionStart,
+  };
+}
+
+function buildIcuCategoryFormInsertion(
+  value: string,
+  insertionOffset: number,
+  form: string,
+  messageType: 'plural' | 'select',
+) {
+  const prefix = optionInsertionPrefix(value, insertionOffset);
+  const bodyPrefix = messageType === 'plural' ? '# ' : ' ';
+  const text = `${prefix}${form} {${bodyPrefix}} `;
+  const selectionStart = insertionOffset + prefix.length + `${form} {${bodyPrefix}`.length;
+  return {
+    nextValue: `${value.slice(0, insertionOffset)}${text}${value.slice(insertionOffset)}`,
+    selectionStart,
+    selectionEnd: selectionStart,
+  };
+}
+
+function buildIcuFormRemoval(
+  value: string,
+  range: { start: number; end: number },
+  form: string,
+  optionRange: { start: number; end: number },
+) {
+  const start =
+    optionKeywordStart(value, range.start, optionRange.start, form) ?? optionRange.start;
+  let end = optionRange.end;
+  while (end < value.length && /\s/u.test(value.charAt(end))) {
+    end += 1;
+  }
+
+  return {
+    nextValue: `${value.slice(0, start)}${value.slice(end)}`,
+    selectionStart: start,
+    selectionEnd: start,
+  };
 }
 
 function collectIcuMovableTextRanges(
@@ -754,16 +1003,52 @@ function collectIcuMovableTextRanges(
   });
 }
 
-function icuFormInsertionPoint(
+function icuExactFormInsertionPoint(
   value: string,
   range: { start: number; end: number },
   options: Record<string, OptionWithLocation>,
-): { offset: number } | null {
+): { offset: number } {
   const otherRange = rangeFromLocation(options.other?.location);
   if (otherRange) {
     return {
       offset: optionKeywordStart(value, range.start, otherRange.start, 'other') ?? otherRange.start,
     };
+  }
+
+  return { offset: Math.max(range.start, range.end - 1) };
+}
+
+function icuCategoryFormInsertionPoint(
+  value: string,
+  range: { start: number; end: number },
+  options: Record<string, OptionWithLocation>,
+  form: string,
+  messageType: 'plural' | 'select',
+): { offset: number } | null {
+  if (messageType !== 'plural') {
+    if (form !== 'other' || options.other) {
+      return null;
+    }
+    return { offset: Math.max(range.start, range.end - 1) };
+  }
+
+  const formIndex = ICU_PLURAL_FORM_ORDER.indexOf(form);
+  if (formIndex < 0) {
+    return null;
+  }
+
+  const nextExistingForm = ICU_PLURAL_FORM_ORDER.slice(formIndex + 1).find(
+    (candidate) => options[candidate],
+  );
+  if (nextExistingForm) {
+    const nextRange = rangeFromLocation(options[nextExistingForm]?.location);
+    if (nextRange) {
+      return {
+        offset:
+          optionKeywordStart(value, range.start, nextRange.start, nextExistingForm) ??
+          nextRange.start,
+      };
+    }
   }
 
   return { offset: Math.max(range.start, range.end - 1) };
@@ -783,8 +1068,17 @@ function optionKeywordStart(
   optionName: string,
 ): number | null {
   const prefix = value.slice(rangeStart, optionBodyStart);
-  const match = new RegExp(`\\b${optionName}\\s*$`, 'u').exec(prefix);
-  return match ? rangeStart + match.index : null;
+  const escapedOptionName = escapeRegExp(optionName);
+  const match = new RegExp(`(?:^|\\s)(${escapedOptionName})\\s*$`, 'u').exec(prefix);
+  if (!match || match.index < 0) {
+    return null;
+  }
+  const optionNameOffset = match[0].indexOf(match[1]);
+  return rangeStart + match.index + optionNameOffset;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
 }
 
 function bodyRangeFromOption(

@@ -11,9 +11,10 @@ import {
 
 import {
   buildIcuExactPluralOptionInsertion,
+  extractIcuProtectedTextTokens,
   getIcuFormInsertions,
+  getIcuFormOptions,
   getIcuMovableTextRanges,
-  type IcuFormInsertion,
   type ProtectedTextDiagnostic,
   type ProtectedTextToken,
 } from '../utils/protectedTextTokens';
@@ -29,6 +30,7 @@ export type TranslationTextEditorKeyDownEvent =
   | ReactKeyboardEvent<HTMLTextAreaElement>;
 
 type ControlBarOptions = {
+  icuForms?: boolean;
   marksMode?: VisibleTextMarksMode;
   onChangeMarksMode?: (mode: VisibleTextMarksMode) => void;
   position?: 'bottom' | 'top';
@@ -60,10 +62,10 @@ type Props = {
   validateNextValue?: (nextValue: string) => boolean;
 };
 
-function getScopedIcuFormInsertions(
-  insertions: IcuFormInsertion[],
+function getScopedIcuFormItems<T extends { messageEnd: number; messageStart: number }>(
+  insertions: T[],
   selection: { start: number; end: number } | null,
-): IcuFormInsertion[] {
+): T[] {
   if (!selection) {
     return insertions;
   }
@@ -124,6 +126,8 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
     );
     const usesVisibleEditor = assisted;
     const hasControlBar = Boolean(controlBar);
+    const enableIcuFormControls = Boolean(controlBar && controlBar.icuForms !== false);
+    const enableIcuFormMetadata = assisted && !rawMode && !disabled && !readOnly;
     const usesVisibleEditorRef = useRef(usesVisibleEditor);
     const disabledRef = useRef(disabled);
     const readOnlyRef = useRef(readOnly);
@@ -140,21 +144,36 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
       }
     }, [assisted, hasControlBar]);
 
-    const icuFormInsertions = useMemo(
-      () =>
-        assisted && !rawMode && controlBar && !disabled && !readOnly
-          ? getIcuFormInsertions(value)
-          : [],
-      [assisted, controlBar, disabled, rawMode, readOnly, value],
+    const icuFormOptions = useMemo(
+      () => (enableIcuFormMetadata ? getIcuFormOptions(value) : []),
+      [enableIcuFormMetadata, value],
     );
 
-    const scopedIcuFormInsertions = useMemo(() => {
-      return getScopedIcuFormInsertions(icuFormInsertions, editorSelection);
-    }, [editorSelection, icuFormInsertions]);
+    const icuExactFormInsertions = useMemo(
+      () =>
+        enableIcuFormMetadata && enableIcuFormControls
+          ? getIcuFormInsertions(value).filter((insertion) => insertion.kind === 'exact-value')
+          : [],
+      [enableIcuFormControls, enableIcuFormMetadata, value],
+    );
+
+    const scopedIcuFormOptions = useMemo(() => {
+      return getScopedIcuFormItems(icuFormOptions, editorSelection);
+    }, [editorSelection, icuFormOptions]);
+
+    const scopedIcuExactFormInsertions = useMemo(() => {
+      return getScopedIcuFormItems(icuExactFormInsertions, editorSelection);
+    }, [editorSelection, icuExactFormInsertions]);
 
     const movableProtectedRanges = useMemo(
       () => (assisted && !rawMode ? getIcuMovableTextRanges(value) : []),
       [assisted, rawMode, value],
+    );
+    const resolvedProtectedTokens = useMemo(
+      () =>
+        protectedTokens ??
+        (assisted && !rawMode ? extractIcuProtectedTextTokens(value) : undefined),
+      [assisted, protectedTokens, rawMode, value],
     );
 
     const focusCurrentEditor = (nextUsesVisibleEditor = usesVisibleEditorRef.current) => {
@@ -168,7 +187,7 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
     };
 
     const handleAddIcuForm = (insertionId: string, exactValue?: string) => {
-      const insertion = icuFormInsertions.find((item) => item.id === insertionId);
+      const insertion = icuExactFormInsertions.find((item) => item.id === insertionId);
       if (!insertion) {
         return { ok: false as const, error: 'That ICU form is no longer available.' };
       }
@@ -192,6 +211,23 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
         nextValue: resolvedInsertion.nextValue,
         selectionEnd: resolvedInsertion.selectionEnd,
         selectionStart: resolvedInsertion.selectionStart,
+      };
+    };
+
+    const handleToggleIcuForm = (optionId: string, checked: boolean) => {
+      const option = icuFormOptions.find((item) => item.id === optionId);
+      if (!option) {
+        return { ok: false as const, error: 'That ICU form is no longer available.' };
+      }
+      if (option.disabled || option.checked === checked || !option.nextValue) {
+        return { ok: false as const, error: `${option.form} cannot be changed here.` };
+      }
+
+      return {
+        ok: true as const,
+        nextValue: option.nextValue,
+        selectionEnd: option.selectionEnd,
+        selectionStart: option.selectionStart,
       };
     };
 
@@ -314,7 +350,7 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
           placeholder={placeholder}
           movableProtectedRanges={movableProtectedRanges}
           protectedDiagnostics={protectedDiagnostics}
-          protectedTokens={protectedTokens}
+          protectedTokens={resolvedProtectedTokens}
           readOnly={readOnly}
           marksMode={marksMode}
           showInvisibles={showInvisibles}
@@ -334,8 +370,10 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
           className={className}
           controlBar={{
             ...controlBar,
-            icuFormInsertions: rawMode ? [] : scopedIcuFormInsertions,
-            onAddIcuForm: rawMode ? undefined : handleAddIcuForm,
+            icuExactFormInsertions: rawMode ? [] : scopedIcuExactFormInsertions,
+            icuFormOptions: rawMode ? [] : scopedIcuFormOptions,
+            onAddIcuForm: rawMode || !enableIcuFormControls ? undefined : handleAddIcuForm,
+            onToggleIcuForm: rawMode || !enableIcuFormControls ? undefined : handleToggleIcuForm,
             onToggleRawMode: handleToggleRawMode,
             rawMode,
           }}
@@ -349,7 +387,7 @@ export const TranslationTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
           placeholder={placeholder}
           movableProtectedRanges={rawMode ? [] : movableProtectedRanges}
           protectedDiagnostics={protectedDiagnostics}
-          protectedTokens={rawMode ? [] : protectedTokens}
+          protectedTokens={rawMode ? [] : resolvedProtectedTokens}
           readOnly={readOnly}
           marksMode={marksMode}
           showInvisibles={showInvisibles}

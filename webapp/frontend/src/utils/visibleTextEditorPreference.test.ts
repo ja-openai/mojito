@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  getVisibleTextEditorEnabledKey,
   loadVisibleTextEditorEnabled,
   saveVisibleTextEditorEnabled,
   subscribeVisibleTextEditorPreference,
@@ -12,25 +13,36 @@ describe('visibleTextEditorPreference', () => {
     window.localStorage.clear();
   });
 
-  it('defaults to disabled', () => {
-    expect(loadVisibleTextEditorEnabled()).toBe(false);
+  it('defaults to disabled per user', () => {
+    expect(loadVisibleTextEditorEnabled('translator@example.com')).toBe(false);
   });
 
-  it('saves enabled state and removes default disabled state', () => {
-    saveVisibleTextEditorEnabled(true);
-    expect(window.localStorage.getItem(VISIBLE_TEXT_EDITOR_ENABLED_KEY)).toBe('true');
-    expect(loadVisibleTextEditorEnabled()).toBe(true);
+  it('saves enabled state per user and removes default disabled state', () => {
+    const username = 'translator@example.com';
+    const storageKey = getVisibleTextEditorEnabledKey(username);
 
-    saveVisibleTextEditorEnabled(false);
-    expect(window.localStorage.getItem(VISIBLE_TEXT_EDITOR_ENABLED_KEY)).toBeNull();
-    expect(loadVisibleTextEditorEnabled()).toBe(false);
+    saveVisibleTextEditorEnabled(true, username);
+    expect(window.localStorage.getItem(storageKey)).toBe('true');
+    expect(loadVisibleTextEditorEnabled(username)).toBe(true);
+    expect(loadVisibleTextEditorEnabled('admin@example.com')).toBe(false);
+
+    saveVisibleTextEditorEnabled(false, username);
+    expect(window.localStorage.getItem(storageKey)).toBeNull();
+    expect(loadVisibleTextEditorEnabled(username)).toBe(false);
+  });
+
+  it('ignores the legacy browser-level preference for signed-in users', () => {
+    window.localStorage.setItem(VISIBLE_TEXT_EDITOR_ENABLED_KEY, 'true');
+
+    expect(loadVisibleTextEditorEnabled('translator@example.com')).toBe(false);
   });
 
   it('notifies same-tab subscribers when the preference changes', () => {
     const listener = vi.fn();
-    const unsubscribe = subscribeVisibleTextEditorPreference(listener);
+    const username = 'translator@example.com';
+    const unsubscribe = subscribeVisibleTextEditorPreference(username, listener);
 
-    saveVisibleTextEditorEnabled(true);
+    saveVisibleTextEditorEnabled(true, username);
 
     expect(listener).toHaveBeenCalledOnce();
     unsubscribe();

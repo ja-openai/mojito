@@ -10,6 +10,7 @@ import {
   extractPlatformPlaceholderDiagnostics,
   extractPlatformPlaceholderTokens,
   getIcuFormInsertions,
+  getIcuFormOptions,
   getIcuMovableTextRanges,
   getProtectedTextDiagnostics,
   preservesProtectedTextTokenStructure,
@@ -66,6 +67,20 @@ describe('protectedTextTokens', () => {
     expect(few?.nextValue).toBe('You have {count, plural, one {# file} few {# } other {# files}}.');
     expect(few?.selectionStart).toBe('You have {count, plural, one {# file} few {# '.length);
     expect(few?.selectionEnd).toBe(few?.selectionStart);
+  });
+
+  it('keeps ICU plural forms in canonical order when adding several forms', () => {
+    let message = 'You have {count, plural, one {# file} other {# files}}.';
+
+    ['zero', 'two', 'few'].forEach((form) => {
+      const option = getIcuFormOptions(message).find((candidate) => candidate.form === form);
+      expect(option?.nextValue).toBeDefined();
+      message = option!.nextValue!;
+    });
+
+    expect(message).toBe(
+      'You have {count, plural, zero {# } one {# file} two {# } few {# } other {# files}}.',
+    );
   });
 
   it('offers an ICU exact-value plural insertion action', () => {
@@ -160,6 +175,38 @@ describe('protectedTextTokens', () => {
       ok: false,
       error: '=0 already exists.',
     });
+  });
+
+  it('lists existing ICU exact-value plural forms as removable options', () => {
+    const message = 'You have {count, plural, one {# file} =15 {# files} other {# files}}.';
+    const exactOption = getIcuFormOptions(message).find((option) => option.form === '=15');
+
+    expect(exactOption).toMatchObject({
+      checked: true,
+      disabled: false,
+      form: '=15',
+      label: 'count: =15',
+      messageType: 'plural',
+      nextValue: 'You have {count, plural, one {# file} other {# files}}.',
+    });
+    expect(exactOption?.selectionStart).toBe('You have {count, plural, one {# file} '.length);
+    expect(exactOption?.selectionEnd).toBe(exactOption?.selectionStart);
+  });
+
+  it('lists exact-value plural options after categories in numeric order', () => {
+    const message =
+      'You have {count, plural, =15 {# files} one {# file} =2 {# files} other {# files}}.';
+
+    expect(getIcuFormOptions(message).map((option) => option.form)).toEqual([
+      'zero',
+      'one',
+      'two',
+      'few',
+      'many',
+      'other',
+      '=2',
+      '=15',
+    ]);
   });
 
   it('labels ICU form insertions by argument for multiple plurals', () => {
@@ -517,6 +564,20 @@ describe('protectedTextTokens', () => {
   it('allows adding a new ICU placeholder before an existing plural', () => {
     const previousValue = 'You have {count, plural, one {# file} other {# files}}.';
     const nextValue = '{user}, you have {count, plural, one {# file} other {# files}}.';
+
+    expect(
+      preservesProtectedTextTokenStructure({
+        previousValue,
+        previousTokens: extractIcuProtectedTextTokens(previousValue),
+        nextValue,
+        mode: 'icu',
+      }),
+    ).toBe(true);
+  });
+
+  it('allows adding ICU placeholders inside an existing plural form body', () => {
+    const previousValue = 'You have {count, plural, one {# file} other {# files}}.';
+    const nextValue = 'You have {count, plural, one {# {count} file} other {# {count} files}}.';
 
     expect(
       preservesProtectedTextTokenStructure({

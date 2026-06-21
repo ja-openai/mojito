@@ -141,9 +141,41 @@ describe('WorkbenchBody', () => {
 
     await waitFor(() => {
       const protectedToken = container.querySelector('.visible-text-editor__protected-token');
-      expect(protectedToken).toHaveTextContent('{price}');
+      expect(protectedToken).toHaveTextContent('price');
       expect(protectedToken).toHaveClass('visible-text-editor__protected-token--icu-placeholder');
     });
+  });
+
+  it('opens ICU form controls from the active translation row', async () => {
+    const pluralRow: WorkbenchRow = {
+      ...editingRow,
+      source: 'Delete {count, plural, one {# app} other {# apps}}',
+      translation: 'Supprimer {count, plural, one {# application} other {# applications}}',
+    };
+    const { container } = renderWorkbenchBody({
+      rows: [pluralRow],
+      editingValue: pluralRow.translation ?? '',
+    });
+
+    expect(await screen.findByRole('textbox', { name: 'Text editor' })).toHaveClass('ProseMirror');
+
+    await waitFor(() => {
+      expect(
+        container.querySelector('.visible-text-editor__icu-inline-message'),
+      ).toBeInTheDocument();
+    });
+    const formTrigger = container.querySelector<HTMLElement>(
+      '.visible-text-editor__protected-token--icu-form-trigger',
+    );
+    expect(formTrigger).toBeInTheDocument();
+
+    fireEvent.click(formTrigger as HTMLElement);
+
+    expect(screen.getByRole('menu', { name: 'count plural forms: 2/6' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'zero' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'one' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'other' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'other' })).toBeDisabled();
   });
 
   it('renders source and translation created dates in row metadata', () => {
@@ -184,11 +216,34 @@ describe('WorkbenchBody', () => {
     ).not.toBeInTheDocument();
 
     const protectedToken = container.querySelector('.visible-text-editor__protected-token');
-    expect(protectedToken).toHaveTextContent('{price}');
+    expect(protectedToken).toHaveTextContent('price');
     expect(protectedToken).toHaveClass('visible-text-editor__protected-token--icu-placeholder');
 
     fireEvent.focus(renderer);
     expect(handleStartEditing).toHaveBeenCalledWith(editingRow.id, editingRow.translation);
+  });
+
+  it('groups ICU messages in inactive Workbench renderers', () => {
+    const pluralRow: WorkbenchRow = {
+      ...editingRow,
+      source: 'Delete {count, plural, one {# app} other {# apps}}',
+      translation: 'Supprimer {count, plural, one {# application} other {# applications}}',
+    };
+    const { container } = renderWorkbenchBody({
+      editingRowId: null,
+      editingValue: '',
+      rows: [pluralRow],
+    });
+
+    expect(screen.getByRole('textbox', { name: 'Text editor' })).toHaveClass(
+      'visible-text-renderer',
+    );
+    expect(container.querySelectorAll('.visible-text-renderer__icu-message')).toHaveLength(2);
+    expect(
+      container.querySelector(
+        '.workbench-page__cell--translation .visible-text-renderer__icu-message',
+      ),
+    ).toHaveTextContent('count one# applicationother# applications');
   });
 
   it('renders source placeholders with the same protected token highlighting', () => {
@@ -207,7 +262,7 @@ describe('WorkbenchBody', () => {
     const sourceToken = container.querySelector(
       '.workbench-page__source-text .visible-text-editor__protected-token',
     );
-    expect(sourceToken).toHaveTextContent('{count}');
+    expect(sourceToken).toHaveTextContent('count');
     expect(sourceToken).toHaveClass('visible-text-editor__protected-token--icu-placeholder');
   });
 
