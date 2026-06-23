@@ -90,6 +90,10 @@ public final class Mf2RelativeTimeCore {
         return create(data).formatToParts(value, options);
     }
 
+    public String format(Object value) throws Mf2Exception {
+        return format(value, (Options) null);
+    }
+
     public String format(Object value, Options options) throws Mf2Exception {
         Options effectiveOptions = options == null ? Options.builder().build() : options;
         double seconds = parseFiniteNumber(value);
@@ -123,6 +127,10 @@ public final class Mf2RelativeTimeCore {
         String pattern = relativeTimePattern(
                 unitData, locale, effectiveOptions.style(), unit, direction, category);
         return pattern.replace("{0}", Integer.toString(quantity));
+    }
+
+    public List<Mf2FormattedPart> formatToParts(Object value) throws Mf2Exception {
+        return formatToParts(value, (Options) null);
     }
 
     public List<Mf2FormattedPart> formatToParts(Object value, Options options) throws Mf2Exception {

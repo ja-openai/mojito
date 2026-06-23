@@ -134,6 +134,15 @@ public final class RelativeTimeCoreTest {
         if (!parts.equals(List.of(new Mf2FormattedPart.Text("yesterday")))) {
             throw new AssertionError("relative-time parts expected text yesterday, got " + parts);
         }
+        Mf2RelativeTimeCore formatter = Mf2RelativeTimeCore.create(data);
+        assertSameDefault(
+                "instance format",
+                formatter.format(60),
+                Mf2RelativeTimeCore.format(60, data, null));
+        assertSameDefaultParts(
+                "instance formatToParts",
+                formatter.formatToParts(60),
+                Mf2RelativeTimeCore.formatToParts(60, data, null));
 
         try {
             Mf2RelativeTimeCore.format(
@@ -152,6 +161,21 @@ public final class RelativeTimeCoreTest {
                 throw new AssertionError(
                         "huge relative-time quantity expected bad-operand, got " + error.code());
             }
+        }
+    }
+
+    private static void assertSameDefault(String label, String overloaded, String explicitDefault) {
+        if (!overloaded.equals(explicitDefault)) {
+            throw new AssertionError("relative-time core " + label + " default overload expected "
+                    + explicitDefault + ", got " + overloaded);
+        }
+    }
+
+    private static void assertSameDefaultParts(
+            String label, List<Mf2FormattedPart> overloaded, List<Mf2FormattedPart> explicitDefault) {
+        if (!overloaded.equals(explicitDefault)) {
+            throw new AssertionError("relative-time core " + label + " default overload expected "
+                    + explicitDefault + ", got " + overloaded);
         }
     }
 

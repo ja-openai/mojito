@@ -159,6 +159,10 @@ public final class Mf2DateTimeCore {
                 .withFunction("datetime", Mf2DateTimeCore::formatCallDateTime);
     }
 
+    public static String formatDate(Object value) throws Mf2Exception {
+        return formatDate(value, null);
+    }
+
     public static String formatDate(Object value, Options options) throws Mf2Exception {
         Options effectiveOptions = options == null ? Options.builder().build() : options;
         String locale = LocaleKey.option(effectiveOptions.locale(), DEFAULT_LOCALE);
@@ -176,6 +180,10 @@ public final class Mf2DateTimeCore {
             return formatSkeleton(effectiveOptions.skeleton(), date, localeData, hourCycle, preserveSameFamilyHourCycle);
         }
         return formatPattern(localeData.dateFormats().get(styleKey(effectiveOptions.effectiveDateStyle())), date, localeData);
+    }
+
+    public static String formatTime(Object value) throws Mf2Exception {
+        return formatTime(value, null);
     }
 
     public static String formatTime(Object value, Options options) throws Mf2Exception {
@@ -200,6 +208,10 @@ public final class Mf2DateTimeCore {
                 localeData,
                 hourCycle,
                 preserveSameFamilyHourCycle);
+    }
+
+    public static String formatDateTime(Object value) throws Mf2Exception {
+        return formatDateTime(value, null);
     }
 
     public static String formatDateTime(Object value, Options options) throws Mf2Exception {

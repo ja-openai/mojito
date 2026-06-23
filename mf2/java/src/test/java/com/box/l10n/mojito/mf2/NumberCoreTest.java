@@ -21,9 +21,10 @@ public final class NumberCoreTest {
         int errorCases = checkErrorCases(arrayOrEmpty(fixture.get("errorCases")));
         int registryCases = checkRegistryIntegration(arrayOrEmpty(fixture.get("registryCases")));
         int registryErrorCases = checkRegistryErrorCases(arrayOrEmpty(fixture.get("registryErrorCases")));
+        checkDefaultOverload();
         System.out.printf(
                 "Java number core test passed %d format cases, %d JDK reference cases, "
-                        + "%d error cases, %d registry cases, and %d registry error cases.%n",
+                        + "%d error cases, %d registry cases, %d registry error cases, and default overloads.%n",
                 formatCases, referenceCases, errorCases, registryCases, registryErrorCases);
     }
 
@@ -160,6 +161,15 @@ public final class NumberCoreTest {
             checked++;
         }
         return checked;
+    }
+
+    private static void checkDefaultOverload() throws Exception {
+        String overloaded = Mf2NumberCore.format(1234.5);
+        String explicitDefault = Mf2NumberCore.format(1234.5, null);
+        if (!overloaded.equals(explicitDefault)) {
+            throw new AssertionError("number core default overload expected "
+                    + explicitDefault + ", got " + overloaded);
+        }
     }
 
     private static Mf2NumberCore.Options options(String locale, Map<String, Object> rawOptions) {

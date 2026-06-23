@@ -30,6 +30,10 @@ public final class Mf2NumberCore {
                 .withFunction("currency", call -> formatCall(call, Style.CURRENCY));
     }
 
+    public static String format(Object value) throws Mf2Exception {
+        return format(value, null);
+    }
+
     public static String format(Object value, Options options) throws Mf2Exception {
         Options effectiveOptions = options == null ? Options.builder().build() : options;
         String locale = LocaleKey.option(effectiveOptions.locale(), DEFAULT_LOCALE);

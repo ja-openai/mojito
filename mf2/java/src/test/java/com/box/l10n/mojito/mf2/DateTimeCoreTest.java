@@ -29,10 +29,11 @@ public final class DateTimeCoreTest {
         int registryErrorCases = checkRegistryErrorCases(arrayOrEmpty(fixture.get("registryErrorCases")));
         checkRegistryIntegration();
         checkOperandBoundary();
+        checkDefaultOverloads();
         System.out.printf(
                 "Java date/time core test passed %d format cases, %d numeric timestamp cases, "
                         + "%d JDK reference cases, %d semantic style reference cases, %d error cases, %d registry format cases, "
-                        + "%d registry error cases, and registry integration.%n",
+                        + "%d registry error cases, registry integration, and default overloads.%n",
                 formatCases, numericTimestampCases, referenceCases, semanticReferenceCases, errorCases, registryFormatCases, registryErrorCases);
     }
 
@@ -166,6 +167,20 @@ public final class DateTimeCoreTest {
             if (!"bad-operand".equals(error.code())) {
                 throw new AssertionError("date-time core object operand got " + error.code());
             }
+        }
+    }
+
+    private static void checkDefaultOverloads() throws Exception {
+        String value = "2026-05-21T14:30:15Z";
+        assertSameDefault("date", Mf2DateTimeCore.formatDate(value), Mf2DateTimeCore.formatDate(value, null));
+        assertSameDefault("time", Mf2DateTimeCore.formatTime(value), Mf2DateTimeCore.formatTime(value, null));
+        assertSameDefault("datetime", Mf2DateTimeCore.formatDateTime(value), Mf2DateTimeCore.formatDateTime(value, null));
+    }
+
+    private static void assertSameDefault(String kind, String overloaded, String explicitDefault) {
+        if (!overloaded.equals(explicitDefault)) {
+            throw new AssertionError("date/time core " + kind + " default overload expected "
+                    + explicitDefault + ", got " + overloaded);
         }
     }
 
