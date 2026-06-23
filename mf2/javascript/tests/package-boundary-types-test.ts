@@ -30,7 +30,7 @@ import {
   formatTimeCore,
   formatTimeCoreToParts,
 } from "@mojito-mf2/core/date-time-core";
-import { formatNumberCore, formatNumberCoreToParts } from "@mojito-mf2/core/number-core";
+import { createNumberCoreFunctionRegistry, formatNumberCore, formatNumberCoreToParts } from "@mojito-mf2/core/number-core";
 import { parseToModel as parseToModelFromParser } from "@mojito-mf2/core/parser";
 import { createPortableFunctionRegistry } from "@mojito-mf2/core/portable";
 import {
@@ -54,6 +54,7 @@ const options: MF2FormatOptions = {
 const portableRegistry: FunctionRegistry = FunctionRegistry.portable();
 const portableRegistryFromSubpath: FunctionRegistry = createPortableFunctionRegistry(FunctionRegistry);
 const intlRegistry: FunctionRegistry = createIntlFunctionRegistry(FunctionRegistry);
+const numberCoreRegistry: FunctionRegistry = createNumberCoreFunctionRegistry(FunctionRegistry);
 const dateTimeCoreRegistry: FunctionRegistry = createDateTimeCoreFunctionRegistry(FunctionRegistry);
 const relativeTimeData: RelativeTimeDataResource = {
   localeMap: {},
@@ -157,6 +158,7 @@ void parts;
 void error;
 void portableRegistry;
 void portableRegistryFromSubpath;
+void numberCoreRegistry;
 void parsedFromSubpath;
 void dateTimeCoreRegistry;
 void relativeTimeCoreRegistry;

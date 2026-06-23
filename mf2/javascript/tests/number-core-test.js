@@ -73,7 +73,12 @@ for (const item of fixture.errorCases) {
   );
 }
 
-const numberCoreRegistry = FunctionRegistry.portable().withRegistry(createNumberCoreFunctionRegistry(FunctionRegistry));
+const numberCoreRegistry = createNumberCoreFunctionRegistry(FunctionRegistry);
+assert.equal(
+  numberCoreRegistry.hasFormatter({ name: "string" }),
+  true,
+  "number-core registry includes portable formatters",
+);
 for (const item of fixture.registryCases ?? []) {
   const parsed = parseToModel(item.source);
   assert.equal(parsed.hasDiagnostics, false, `${item.name}: parse diagnostics ${JSON.stringify(parsed.diagnostics)}`);

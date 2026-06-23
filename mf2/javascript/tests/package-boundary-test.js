@@ -20,7 +20,7 @@ import {
   formatTimeCore,
   formatTimeCoreToParts,
 } from "@mojito-mf2/core/date-time-core";
-import { formatNumberCore, formatNumberCoreToParts } from "@mojito-mf2/core/number-core";
+import { createNumberCoreFunctionRegistry, formatNumberCore, formatNumberCoreToParts } from "@mojito-mf2/core/number-core";
 import { parseToModel as parseToModelFromParser } from "@mojito-mf2/core/parser";
 import { createPortableFunctionRegistry } from "@mojito-mf2/core/portable";
 import { formatRelativeTimeCore, formatRelativeTimeCoreToParts } from "@mojito-mf2/core/relative-time-core";
@@ -106,6 +106,7 @@ assert.deepEqual(
     },
   ],
 );
+assert.equal(createNumberCoreFunctionRegistry(FunctionRegistry).hasFormatter({ name: "string" }), true);
 assert.equal(typeof decodeNumberDataResource, "function");
 assert.equal(typeof decodeDateTimeDataResource, "function");
 assert.equal(typeof formatRelativeTimeCore, "function");

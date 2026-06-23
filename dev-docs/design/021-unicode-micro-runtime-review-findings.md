@@ -12,6 +12,12 @@ branch is under active implementation.
   asserting those implementation helpers stay off the root package export. This
   catches drift where a parts implementation exists but the published subpath
   surface or declarations stop exposing it.
+- JavaScript number-core registry parity: `createNumberCoreFunctionRegistry`
+  now returns a portable registry with generated `number`, `integer`, `percent`,
+  and `currency` formatters layered on top. This matches the JavaScript
+  date-time/relative-time registry helpers and the JVM number-core helpers
+  instead of returning a constructor-built registry that omits portable
+  fallbacks.
 - Python package-boundary coverage: the package boundary runtime and mypy tests
   now import the explicit number-core, date-time-core, and relative-time-core
   parts helpers from their public submodules while asserting those experimental

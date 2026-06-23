@@ -1,3 +1,5 @@
+import type { MF2Formatter } from "./types.d.ts";
+
 export interface NumberCoreOptions {
   locale?: string;
   style?: "number" | "integer" | "percent" | "currency";
@@ -21,6 +23,6 @@ export function formatNumberCoreToParts(
   options?: NumberCoreOptions,
 ): Array<{ type: "text"; value: string }>;
 
-export function createNumberCoreFunctionRegistry<T>(FunctionRegistry: {
-  new (formatters: Map<string, unknown>, selectors: Map<string, unknown>): T;
-}): T;
+export function createNumberCoreFunctionRegistry<
+  T extends { withFunction(name: string, formatter: MF2Formatter): T },
+>(FunctionRegistry: { portable(): T }): T;

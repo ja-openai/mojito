@@ -54,13 +54,11 @@ export function formatNumberCoreToParts(value, options = {}) {
 }
 
 export function createNumberCoreFunctionRegistry(FunctionRegistry) {
-  const formatters = new Map();
-  const selectors = new Map();
-  formatters.set("number", (call) => formatCallNumber(call, "number"));
-  formatters.set("integer", (call) => formatCallNumber(call, "integer"));
-  formatters.set("percent", (call) => formatCallNumber(call, "percent"));
-  formatters.set("currency", (call) => formatCallNumber(call, "currency"));
-  return new FunctionRegistry(formatters, selectors);
+  return FunctionRegistry.portable()
+    .withFunction("number", (call) => formatCallNumber(call, "number"))
+    .withFunction("integer", (call) => formatCallNumber(call, "integer"))
+    .withFunction("percent", (call) => formatCallNumber(call, "percent"))
+    .withFunction("currency", (call) => formatCallNumber(call, "currency"));
 }
 
 function formatCallNumber(call, style) {
