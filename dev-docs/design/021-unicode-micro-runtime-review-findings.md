@@ -6,6 +6,12 @@ branch is under active implementation.
 
 ## Fixed
 
+- Shared conformance runner coverage: `mf2/conformance/check_all_languages.sh`
+  now runs the shared number-core, date-time-core, and relative-time-core
+  fixture suites for Rust, Swift, Python, Java, Kotlin, and JavaScript instead
+  of only exercising those core fixtures through ad hoc per-runtime commands.
+  Go and PHP already run their full fixture-backed test suites from the
+  umbrella script.
 - Numeric exact selector precedence: exact numeric variant keys now outrank
   plural-category matches for `:number`, `:integer`, `:percent`, and `:offset`
   selectors across JavaScript, Python, Java, Kotlin, Go, Rust, Swift, and PHP.
