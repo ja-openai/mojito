@@ -569,6 +569,26 @@
   font-size: var(--font-size-xs);
 }
 
+.json-config-localization-page__sync-step-label {
+  display: inline-flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.json-config-localization-page__sync-step-link {
+  color: var(--color-accent);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.json-config-localization-page__sync-step-link:hover,
+.json-config-localization-page__sync-step-link:focus-visible {
+  text-decoration: underline;
+}
+
 .json-config-localization-page__sync-step-status {
   display: inline-flex;
   align-items: center;

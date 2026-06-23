@@ -3118,6 +3118,7 @@ function JsonConfigLocalizationWorkspace({
         progress={statsigSyncProgress}
         title={title}
         visibleStepIds={visibleStepIds}
+        statsigConsoleUrl={statsigConsoleUrl}
         onDismiss={() => setStatsigSyncProgress(null)}
       />
     ) : null;
@@ -3816,6 +3817,7 @@ function JsonConfigLocalizationWorkspace({
                     progress={statsigSyncProgress}
                     title="Publish progress"
                     visibleStepIds={PUBLISH_CONFIG_STEP_IDS}
+                    statsigConsoleUrl={statsigConsoleUrl}
                     onDismiss={() => setStatsigSyncProgress(null)}
                   />
                 </div>
@@ -4555,11 +4557,13 @@ function StatsigSyncProgressPanel({
   progress,
   title = 'Sync progress',
   visibleStepIds = Object.keys(STATSIG_SYNC_STEP_LABELS) as StatsigSyncStepId[],
+  statsigConsoleUrl,
   onDismiss,
 }: {
   progress: StatsigSyncProgress;
   title?: string;
   visibleStepIds?: StatsigSyncStepId[];
+  statsigConsoleUrl?: string | null;
   onDismiss?: () => void;
 }) {
   const percent = getStatsigSyncProgressPercent(progress, visibleStepIds);
@@ -4596,7 +4600,19 @@ function StatsigSyncProgressPanel({
           const status = progress.steps[stepId];
           return (
             <div key={stepId} className="json-config-localization-page__sync-step">
-              <span>{STATSIG_SYNC_STEP_LABELS[stepId]}</span>
+              <span className="json-config-localization-page__sync-step-label">
+                <span>{STATSIG_SYNC_STEP_LABELS[stepId]}</span>
+                {stepId === 'PUSH' && statsigConsoleUrl ? (
+                  <a
+                    href={statsigConsoleUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="json-config-localization-page__sync-step-link"
+                  >
+                    Open in Statsig
+                  </a>
+                ) : null}
+              </span>
               <span
                 className={`json-config-localization-page__sync-step-status is-${status.toLowerCase()}`}
               >
