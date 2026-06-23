@@ -8,11 +8,12 @@ export type CmsPublishIntent = {
 };
 
 type StoredCmsPublishIntent = CmsPublishIntent & {
-  version: 1;
+  savedAtEpochMs: number;
+  version: 2;
 };
 
-const STORAGE_PREFIX = 'content-cms.publish-intent.v1:';
-const STORAGE_VERSION = 1;
+const STORAGE_PREFIX = 'content-cms.publish-intent.v2:';
+const STORAGE_VERSION = 2;
 const PUBLISH_REQUEST_KEY_MAX_LENGTH = 128;
 const PUBLISH_REQUEST_KEY_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
 
@@ -45,6 +46,8 @@ function parseStoredPublishIntent(raw: string): StoredCmsPublishIntent | null {
       typeof intent.localeTagsKey !== 'string' ||
       typeof intent.publishStateKey !== 'string' ||
       typeof intent.publishRequestKey !== 'string' ||
+      !Number.isSafeInteger(intent.savedAtEpochMs) ||
+      (intent.savedAtEpochMs ?? 0) < 0 ||
       !isValidPublishRequestKey(intent.publishRequestKey)
     ) {
       return null;
@@ -53,6 +56,11 @@ function parseStoredPublishIntent(raw: string): StoredCmsPublishIntent | null {
   } catch {
     return null;
   }
+}
+
+function toCmsPublishIntent(intent: StoredCmsPublishIntent): CmsPublishIntent {
+  const { projectId, localeTagsKey, publishStateKey, publishRequestKey } = intent;
+  return { projectId, localeTagsKey, publishStateKey, publishRequestKey };
 }
 
 export function buildCmsPublishLocaleTagsKey(localeTags: string[]) {
@@ -97,7 +105,45 @@ export function loadCmsPublishIntent(
     storage.removeItem(storageKey);
     return null;
   }
-  return intent;
+  return toCmsPublishIntent(intent);
+}
+
+export function loadLatestCmsPublishIntentForProject(
+  projectId: number,
+  authoringSha256: string,
+): CmsPublishIntent | null {
+  const storage = getStorage();
+  if (!storage) {
+    return null;
+  }
+  const storagePrefix = `${STORAGE_PREFIX}${projectId}:`;
+  const publishStatePrefix = `${authoringSha256}:`;
+  let latestIntent: StoredCmsPublishIntent | null = null;
+  const staleStorageKeys: string[] = [];
+  for (let index = 0; index < storage.length; index += 1) {
+    const storageKey = storage.key(index);
+    if (!storageKey?.startsWith(storagePrefix)) {
+      continue;
+    }
+    const raw = storage.getItem(storageKey);
+    if (!raw) {
+      continue;
+    }
+    const intent = parseStoredPublishIntent(raw);
+    if (
+      intent == null ||
+      intent.projectId !== projectId ||
+      !intent.publishStateKey.startsWith(publishStatePrefix)
+    ) {
+      staleStorageKeys.push(storageKey);
+      continue;
+    }
+    if (latestIntent == null || intent.savedAtEpochMs > latestIntent.savedAtEpochMs) {
+      latestIntent = intent;
+    }
+  }
+  staleStorageKeys.forEach((storageKey) => storage.removeItem(storageKey));
+  return latestIntent == null ? null : toCmsPublishIntent(latestIntent);
 }
 
 export function saveCmsPublishIntent(intent: CmsPublishIntent) {
@@ -108,7 +154,11 @@ export function saveCmsPublishIntent(intent: CmsPublishIntent) {
   try {
     storage.setItem(
       publishIntentStorageKey(intent.projectId, intent.localeTagsKey),
-      JSON.stringify({ version: STORAGE_VERSION, ...intent } satisfies StoredCmsPublishIntent),
+      JSON.stringify({
+        savedAtEpochMs: Date.now(),
+        version: STORAGE_VERSION,
+        ...intent,
+      } satisfies StoredCmsPublishIntent),
     );
   } catch {
     // In-memory retry still works if session storage is unavailable or full.

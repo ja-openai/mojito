@@ -8,7 +8,7 @@ type Props = TextareaHTMLAttributes<HTMLTextAreaElement> & {
 };
 
 export const AutoTextarea = forwardRef<HTMLTextAreaElement, Props>(function AutoTextarea(
-  { value, minRows, maxRows, style, ...rest },
+  { value, minRows, maxRows, rows, style, ...rest },
   forwardedRef,
 ) {
   const innerRef = useRef<HTMLTextAreaElement | null>(null);
@@ -68,6 +68,7 @@ export const AutoTextarea = forwardRef<HTMLTextAreaElement, Props>(function Auto
       {...rest}
       ref={setRefs}
       value={value}
+      rows={rows ?? minRows}
       style={{
         resize: 'vertical',
         overflow: 'hidden',

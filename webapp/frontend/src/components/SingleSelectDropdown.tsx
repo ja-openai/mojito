@@ -85,6 +85,7 @@ export function SingleSelectDropdown<T extends string | number>({
         viewportPadding,
         gap,
         maxWidth,
+        panelHeight: panelRef.current?.getBoundingClientRect().height,
       }),
     );
   }, [align]);

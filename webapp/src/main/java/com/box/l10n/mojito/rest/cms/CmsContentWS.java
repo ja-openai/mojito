@@ -4,6 +4,7 @@ import com.box.l10n.mojito.service.cms.CmsContentConflictException;
 import com.box.l10n.mojito.service.cms.CmsContentNotFoundException;
 import com.box.l10n.mojito.service.cms.CmsContentService;
 import com.box.l10n.mojito.service.cms.CmsSnapshotSigningService;
+import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -92,6 +93,17 @@ public class CmsContentWS {
     }
   }
 
+  @PatchMapping("/projects/{projectId}/target-locales")
+  public ResponseEntity<CmsContentService.ProjectDetail> addTargetLocales(
+      @PathVariable Long projectId, @RequestBody CmsContentService.TargetLocalesCommand request) {
+    try {
+      return mutableWriteResponse(
+          HttpStatus.OK, cmsContentService.addTargetLocales(projectId, request));
+    } catch (IllegalArgumentException ex) {
+      throw toStatusException(ex);
+    }
+  }
+
   @GetMapping("/projects/{projectId}")
   public ResponseEntity<CmsContentService.ProjectDetail> getProject(@PathVariable Long projectId) {
     try {
@@ -108,6 +120,18 @@ public class CmsContentWS {
     try {
       return mutableWriteResponse(
           HttpStatus.CREATED, cmsContentService.createContentType(projectId, request));
+    } catch (IllegalArgumentException ex) {
+      throw toStatusException(ex);
+    }
+  }
+
+  @PostMapping("/projects/{projectId}/first-copy-block")
+  @ResponseStatus(HttpStatus.CREATED)
+  public ResponseEntity<CmsContentService.ProjectDetail> createFirstCopyBlock(
+      @PathVariable Long projectId, @RequestBody CmsContentService.FirstCopyBlockCommand request) {
+    try {
+      return mutableWriteResponse(
+          HttpStatus.CREATED, cmsContentService.createFirstCopyBlock(projectId, request));
     } catch (IllegalArgumentException ex) {
       throw toStatusException(ex);
     }
@@ -172,6 +196,18 @@ public class CmsContentWS {
     }
   }
 
+  @PostMapping("/entries/{entryId}/private-copy-pieces")
+  public ResponseEntity<CmsContentService.ProjectDetail> makeEntryCopyPiecesPrivate(
+      @PathVariable Long entryId,
+      @RequestBody CmsContentService.EntryCopyPiecesPrivateCommand request) {
+    try {
+      return mutableWriteResponse(
+          HttpStatus.OK, cmsContentService.makeEntryCopyPiecesPrivate(entryId, request));
+    } catch (IllegalArgumentException ex) {
+      throw toStatusException(ex);
+    }
+  }
+
   @PostMapping("/entries/{entryId}/variants")
   @ResponseStatus(HttpStatus.CREATED)
   public ResponseEntity<CmsContentService.ProjectDetail> createVariant(
@@ -218,6 +254,16 @@ public class CmsContentWS {
     }
   }
 
+  @GetMapping("/field-mappings/{mappingId}/translations/{localeTag}")
+  public ResponseEntity<TextUnitDTO> getFieldTranslation(
+      @PathVariable Long mappingId, @PathVariable String localeTag) {
+    try {
+      return mutableReadResponse(cmsContentService.getFieldTranslation(mappingId, localeTag));
+    } catch (IllegalArgumentException ex) {
+      throw toStatusException(ex);
+    }
+  }
+
   @GetMapping("/entries/{entryId}/completeness")
   public ResponseEntity<CmsContentService.EntryCompletenessView> getEntryCompleteness(
       @PathVariable Long entryId,
@@ -237,6 +283,18 @@ public class CmsContentWS {
     try {
       return mutableReadResponse(
           cmsContentService.getProjectCompleteness(projectId, parseLocaleTags(localeTags)));
+    } catch (IllegalArgumentException ex) {
+      throw toStatusException(ex);
+    }
+  }
+
+  @GetMapping("/projects/{projectId}/release-changes")
+  public ResponseEntity<CmsContentService.ReleaseChangeSummaryView> getProjectReleaseChanges(
+      @PathVariable Long projectId,
+      @RequestParam(name = "locales", required = false) String localeTags) {
+    try {
+      return mutableReadResponse(
+          cmsContentService.getProjectReleaseChanges(projectId, parseLocaleTags(localeTags)));
     } catch (IllegalArgumentException ex) {
       throw toStatusException(ex);
     }

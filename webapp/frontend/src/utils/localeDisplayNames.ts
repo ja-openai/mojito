@@ -4,7 +4,7 @@ type LocaleResolver = (tag: string) => string;
 
 const ENGLISH_LOCALE = 'en';
 
-const createLocaleDisplayNameResolver = (): LocaleResolver => {
+export const createLocaleDisplayNameResolver = (): LocaleResolver => {
   // UI is English-only today, so we hardcode the language for display names.
   // If/when we localize the UI we should source preferred locales from FormatJS config.
   const languageNames = new Intl.DisplayNames([ENGLISH_LOCALE], {

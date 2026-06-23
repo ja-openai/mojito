@@ -5,10 +5,11 @@ import { fetchLocales } from '../api/locales';
 
 const LOCALES_QUERY_KEY = ['locales'];
 
-export const useLocales = () => {
+export const useLocales = (enabled = true) => {
   return useQuery<ApiLocale[]>({
     queryKey: LOCALES_QUERY_KEY,
     queryFn: fetchLocales,
+    enabled,
     staleTime: 30_000,
   });
 };

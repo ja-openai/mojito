@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -21,6 +22,7 @@ import com.box.l10n.mojito.service.cms.CmsContentConflictException;
 import com.box.l10n.mojito.service.cms.CmsContentNotFoundException;
 import com.box.l10n.mojito.service.cms.CmsContentService;
 import com.box.l10n.mojito.service.cms.CmsSnapshotSigningService;
+import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.junit.Test;
@@ -57,6 +59,55 @@ public class CmsContentWSTest {
   }
 
   @Test
+  public void createFirstCopyBlockPassesAtomicAuthoringCommand() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    CmsContentService.FirstCopyBlockCommand command =
+        new CmsContentService.FirstCopyBlockCommand(
+            "welcome-email", "Welcome email", "Signup email", "copy", "Welcome", "Headline");
+    when(cmsContentService.createFirstCopyBlock(12L, command)).thenReturn(null);
+
+    ResponseEntity<CmsContentService.ProjectDetail> response =
+        cmsContentWS.createFirstCopyBlock(12L, command);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    assertThat(response.getHeaders().getCacheControl()).isEqualTo("no-store");
+    verify(cmsContentService).createFirstCopyBlock(12L, command);
+  }
+
+  @Test
+  public void addTargetLocalesPassesAuthoringCommand() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    CmsContentService.TargetLocalesCommand command =
+        new CmsContentService.TargetLocalesCommand(List.of("fr-FR", "ja-JP"));
+    when(cmsContentService.addTargetLocales(12L, command)).thenReturn(null);
+
+    ResponseEntity<CmsContentService.ProjectDetail> response =
+        cmsContentWS.addTargetLocales(12L, command);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getHeaders().getCacheControl()).isEqualTo("no-store");
+    verify(cmsContentService).addTargetLocales(12L, command);
+  }
+
+  @Test
+  public void makeEntryCopyPiecesPrivatePassesAuthoringCommand() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    CmsContentService.EntryCopyPiecesPrivateCommand command =
+        new CmsContentService.EntryCopyPiecesPrivateCommand(3L);
+    when(cmsContentService.makeEntryCopyPiecesPrivate(12L, command)).thenReturn(null);
+
+    ResponseEntity<CmsContentService.ProjectDetail> response =
+        cmsContentWS.makeEntryCopyPiecesPrivate(12L, command);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getHeaders().getCacheControl()).isEqualTo("no-store");
+    verify(cmsContentService).makeEntryCopyPiecesPrivate(12L, command);
+  }
+
+  @Test
   public void unmapFieldMappingReturnsConflictForStaleExpectedVersion() {
     CmsContentService cmsContentService = mock(CmsContentService.class);
     CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
@@ -69,6 +120,21 @@ public class CmsContentWSTest {
         .isInstanceOfSatisfying(
             ResponseStatusException.class,
             exception -> assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+  }
+
+  @Test
+  public void getFieldTranslationPassesAuthoringLookup() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    TextUnitDTO translation = new TextUnitDTO();
+    when(cmsContentService.getFieldTranslation(12L, "fr-FR")).thenReturn(translation);
+
+    ResponseEntity<TextUnitDTO> response = cmsContentWS.getFieldTranslation(12L, "fr-FR");
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getHeaders().getCacheControl()).isEqualTo("no-store");
+    assertThat(response.getBody()).isSameAs(translation);
+    verify(cmsContentService).getFieldTranslation(12L, "fr-FR");
   }
 
   @Test
@@ -127,6 +193,21 @@ public class CmsContentWSTest {
         .andExpect(status().isOk());
 
     verify(cmsContentService).unmapFieldMapping(12L, command);
+  }
+
+  @Test
+  public void addTargetLocalesRejectsNullLocaleTagsBeforeServiceCall() throws Exception {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new CmsContentWS(cmsContentService)).build();
+
+    mockMvc
+        .perform(
+            patch("/api/content-cms/projects/12/target-locales")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"localeTags\":null}"))
+        .andExpect(status().isBadRequest());
+
+    verify(cmsContentService, never()).addTargetLocales(anyLong(), any());
   }
 
   @Test
@@ -210,6 +291,9 @@ public class CmsContentWSTest {
                     HttpHeaders.LOCATION,
                     "/api/content-cms/projects/growth-email/publish-snapshots/2/artifact"))
         .andExpect(jsonPath("$.publishedAt").value("2026-01-01T00:00:00Z"))
+        .andExpect(jsonPath("$.publishRequestLocaleTags[0]").value("fr-FR"))
+        .andExpect(jsonPath("$.publishRequestAuthoringSha256").value(AUTHORING_SHA256))
+        .andExpect(jsonPath("$.publishRequestPackageSha256").value(PACKAGE_SHA256))
         .andExpect(jsonPath("$.snapshotSignature").value(SNAPSHOT_SIGNATURE))
         .andExpect(jsonPath("$.artifactSignature").value(ARTIFACT_SIGNATURE))
         .andExpect(jsonPath("$.createdDate").doesNotExist());
@@ -907,7 +991,74 @@ public class CmsContentWSTest {
     mockMvc
         .perform(get("/api/content-cms/projects/12/completeness"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.publishPackageByteSize").value(512));
+        .andExpect(jsonPath("$.publishPackageByteSize").value(512))
+        .andExpect(jsonPath("$.releaseChangeSummary.changes").isArray())
+        .andExpect(jsonPath("$.releaseChangeSummary.changes[0].kind").value("TRANSLATION_CHANGED"))
+        .andExpect(jsonPath("$.releaseChangeSummary.changes[0].entryId").value(12))
+        .andExpect(jsonPath("$.releaseChangeSummary.changes[0].fieldId").value(21))
+        .andExpect(
+            jsonPath("$.releaseChangeSummary.changes[0].lastReleasedSourceContent").isEmpty())
+        .andExpect(
+            jsonPath("$.releaseChangeSummary.changes[0].lastReleasedTranslationContent")
+                .value("Bonjour before release"))
+        .andExpect(jsonPath("$.releaseChangeSummary.hasMore").value(false))
+        .andExpect(jsonPath("$.releaseChangeSummary.actionNeededCount").value(0));
+  }
+
+  @Test
+  public void getProjectReleaseChangesSerializesExactDiff() throws Exception {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentService.ReleaseChangeSummaryView releaseChangeSummary =
+        new CmsContentService.ReleaseChangeSummaryView(
+            List.of(
+                new CmsContentService.ReleaseChangeView(
+                    CmsContentService.ReleaseChangeKind.SOURCE_COPY_CHANGED,
+                    12L,
+                    "Welcome",
+                    21L,
+                    "Header",
+                    null,
+                    "Hello before release",
+                    null)),
+            false,
+            0);
+    when(cmsContentService.getProjectReleaseChanges(12L, List.of("fr-FR")))
+        .thenReturn(releaseChangeSummary);
+    MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new CmsContentWS(cmsContentService)).build();
+
+    mockMvc
+        .perform(get("/api/content-cms/projects/12/release-changes?locales=fr-FR"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.changes").isArray())
+        .andExpect(jsonPath("$.changes[0].kind").value("SOURCE_COPY_CHANGED"))
+        .andExpect(jsonPath("$.changes[0].entryId").value(12))
+        .andExpect(jsonPath("$.changes[0].fieldId").value(21))
+        .andExpect(jsonPath("$.changes[0].lastReleasedSourceContent").value("Hello before release"))
+        .andExpect(jsonPath("$.changes[0].lastReleasedTranslationContent").isEmpty())
+        .andExpect(jsonPath("$.hasMore").value(false))
+        .andExpect(jsonPath("$.actionNeededCount").value(0));
+  }
+
+  @Test
+  public void getEntryCompletenessSerializesFieldReadiness() throws Exception {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentService.LocaleCompleteness french =
+        new CmsContentService.LocaleCompleteness("fr-FR", 1, 0, 0, 0, 1, false);
+    when(cmsContentService.getEntryCompleteness(12L, List.of()))
+        .thenReturn(
+            new CmsContentService.EntryCompletenessView(
+                12L,
+                "welcome",
+                List.of(french),
+                List.of(new CmsContentService.FieldCompleteness(21L, "header", List.of(french)))));
+    MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new CmsContentWS(cmsContentService)).build();
+
+    mockMvc
+        .perform(get("/api/content-cms/entries/12/completeness"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.fields[0].fieldId").value(21))
+        .andExpect(jsonPath("$.fields[0].fieldKey").value("header"))
+        .andExpect(jsonPath("$.fields[0].locales[0].translationNeededFields").value(1));
   }
 
   @Test
@@ -924,6 +1075,9 @@ public class CmsContentWSTest {
         .andExpect(status().isOk())
         .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
         .andExpect(jsonPath("$.snapshots[0].snapshotVersion").value(2))
+        .andExpect(jsonPath("$.snapshots[0].publishRequestLocaleTags[0]").value("fr-FR"))
+        .andExpect(jsonPath("$.snapshots[0].publishRequestAuthoringSha256").value(AUTHORING_SHA256))
+        .andExpect(jsonPath("$.snapshots[0].publishRequestPackageSha256").value(PACKAGE_SHA256))
         .andExpect(jsonPath("$.hasMore").value(true))
         .andExpect(jsonPath("$.nextBeforeSnapshotVersion").value(2));
   }
@@ -955,7 +1109,7 @@ public class CmsContentWSTest {
         new CmsContentService.ProjectDetail(
             null, AUTHORING_SHA256, List.of(), List.of(), List.of(), false, null);
     CmsContentService.EntryCompletenessView completeness =
-        new CmsContentService.EntryCompletenessView(12L, "welcome", List.of());
+        new CmsContentService.EntryCompletenessView(12L, "welcome", List.of(), List.of());
     CmsContentService.ProjectCompletenessView projectCompleteness = projectCompletenessView();
     when(cmsContentService.searchProjects(null, null, null)).thenReturn(projects);
     when(cmsContentService.getProject(12L)).thenReturn(project);
@@ -1098,7 +1252,20 @@ public class CmsContentWSTest {
         List.of(),
         List.of(),
         List.of(),
-        true);
+        true,
+        new CmsContentService.ReleaseChangeSummaryView(
+            List.of(
+                new CmsContentService.ReleaseChangeView(
+                    CmsContentService.ReleaseChangeKind.TRANSLATION_CHANGED,
+                    12L,
+                    "Welcome",
+                    21L,
+                    "Header",
+                    "fr-FR",
+                    null,
+                    "Bonjour before release")),
+            false,
+            0));
   }
 
   private CmsContentService.PublishSnapshotView publishSnapshotView() {
@@ -1108,6 +1275,9 @@ public class CmsContentWSTest {
         2,
         com.box.l10n.mojito.entity.cms.CmsPublishSnapshot.Status.PUBLISHED,
         List.of("en", "fr-FR"),
+        List.of("fr-FR"),
+        AUTHORING_SHA256,
+        PACKAGE_SHA256,
         "abc123",
         20L,
         "test-v1",

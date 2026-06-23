@@ -1,3 +1,5 @@
+import type { ApiTextUnit } from './text-units';
+
 export type ApiCmsRepositoryRef = {
   id: number;
   name: string;
@@ -111,6 +113,9 @@ export type ApiCmsPublishSnapshot = {
   snapshotVersion: number;
   status: 'PUBLISHED';
   localeTags: string[];
+  publishRequestLocaleTags: string[];
+  publishRequestAuthoringSha256: string;
+  publishRequestPackageSha256: string;
   artifactSha256: string;
   artifactByteSize: number;
   snapshotSigningKeyId: string;
@@ -153,10 +158,47 @@ export type ApiCmsLocaleCompleteness = {
   complete: boolean;
 };
 
+export type ApiCmsFieldCompleteness = {
+  fieldId: number;
+  fieldKey: string;
+  locales: ApiCmsLocaleCompleteness[];
+};
+
 export type ApiCmsEntryCompleteness = {
   entryId: number;
   entryKey: string;
   locales: ApiCmsLocaleCompleteness[];
+  fields: ApiCmsFieldCompleteness[];
+};
+
+export type ApiCmsReleaseChangeKind =
+  | 'LOCALE_ADDED'
+  | 'LOCALE_REMOVED'
+  | 'CONTENT_ITEM_ADDED'
+  | 'CONTENT_ITEM_REMOVED'
+  | 'FIELD_ADDED'
+  | 'FIELD_REMOVED'
+  | 'SOURCE_COPY_CHANGED'
+  | 'TRANSLATION_CHANGED'
+  | 'TRANSLATION_NEEDED'
+  | 'TRANSLATION_NEEDS_REVIEW'
+  | 'RELEASE_SETUP_CHANGED';
+
+export type ApiCmsReleaseChange = {
+  kind: ApiCmsReleaseChangeKind;
+  entryId?: number | null;
+  entryName?: string | null;
+  fieldId?: number | null;
+  fieldName?: string | null;
+  localeTag?: string | null;
+  lastReleasedSourceContent?: string | null;
+  lastReleasedTranslationContent?: string | null;
+};
+
+export type ApiCmsReleaseChangeSummary = {
+  changes: ApiCmsReleaseChange[];
+  hasMore: boolean;
+  actionNeededCount: number;
 };
 
 export type ApiCmsProjectCompleteness = {
@@ -169,6 +211,7 @@ export type ApiCmsProjectCompleteness = {
   locales: ApiCmsLocaleCompleteness[];
   entries: ApiCmsEntryCompleteness[];
   complete: boolean;
+  releaseChangeSummary: ApiCmsReleaseChangeSummary;
 };
 
 const jsonHeaders = {
@@ -299,7 +342,7 @@ export async function createCmsProject(payload: {
   name: string;
   description?: string | null;
   enabled: boolean;
-  repositoryId: number;
+  repositoryId?: number | null;
   assetPath?: string | null;
   deliveryHint?: string | null;
 }): Promise<ApiCmsProjectDetail> {
@@ -341,6 +384,24 @@ export async function updateCmsProject(
   return (await response.json()) as ApiCmsProjectDetail;
 }
 
+export async function addCmsProjectTargetLocales(
+  projectId: number,
+  localeTags: string[],
+): Promise<ApiCmsProjectDetail> {
+  const response = await fetch(`/api/content-cms/projects/${projectId}/target-locales`, {
+    method: 'PATCH',
+    credentials: 'same-origin',
+    headers: jsonHeaders,
+    body: JSON.stringify({ localeTags }),
+  });
+
+  if (!response.ok) {
+    await throwCmsError(response, 'Failed to add CMS target locales');
+  }
+
+  return (await response.json()) as ApiCmsProjectDetail;
+}
+
 export async function createCmsContentType(
   projectId: number,
   payload: {
@@ -359,6 +420,31 @@ export async function createCmsContentType(
 
   if (!response.ok) {
     await throwCmsError(response, 'Failed to create content type');
+  }
+
+  return (await response.json()) as ApiCmsProjectDetail;
+}
+
+export async function createCmsFirstCopyBlock(
+  projectId: number,
+  payload: {
+    entryKey: string;
+    entryName: string;
+    entryDescription?: string | null;
+    fieldKey: string;
+    sourceContent: string;
+    sourceComment: string;
+  },
+): Promise<ApiCmsProjectDetail> {
+  const response = await fetch(`/api/content-cms/projects/${projectId}/first-copy-block`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    await throwCmsError(response, 'Failed to create first copy block');
   }
 
   return (await response.json()) as ApiCmsProjectDetail;
@@ -397,6 +483,11 @@ export async function createCmsContentTypeField(
     localizable: boolean;
     required: boolean;
     sortOrder?: number | null;
+    initialFieldSource?: {
+      variantId: number;
+      sourceContent: string;
+      sourceComment: string;
+    };
   },
 ): Promise<ApiCmsProjectDetail> {
   const response = await fetch(`/api/content-cms/content-types/${contentTypeId}/fields`, {
@@ -448,6 +539,11 @@ export async function createCmsEntry(
     description?: string | null;
     status: ApiCmsEntryStatus;
     metadataJson?: string | null;
+    initialFieldMappings?: Array<{
+      fieldId: number;
+      sourceContent: string;
+      sourceComment: string;
+    }>;
   },
 ): Promise<ApiCmsProjectDetail> {
   const response = await fetch(`/api/content-cms/projects/${projectId}/entries`, {
@@ -483,6 +579,26 @@ export async function updateCmsEntry(
 
   if (!response.ok) {
     await throwCmsError(response, 'Failed to update CMS entry');
+  }
+
+  return (await response.json()) as ApiCmsProjectDetail;
+}
+
+export async function makeCmsEntryCopyPiecesPrivate(
+  entryId: number,
+  payload: {
+    expectedVersion: number;
+  },
+): Promise<ApiCmsProjectDetail> {
+  const response = await fetch(`/api/content-cms/entries/${entryId}/private-copy-pieces`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    await throwCmsError(response, 'Failed to make copy pieces private');
   }
 
   return (await response.json()) as ApiCmsProjectDetail;
@@ -581,6 +697,28 @@ export async function unmapCmsFieldMapping(
   return (await response.json()) as ApiCmsProjectDetail;
 }
 
+export async function fetchCmsFieldTranslation(
+  mapping: Pick<ApiCmsFieldMapping, 'id'>,
+  localeTag: string,
+): Promise<ApiTextUnit | null> {
+  const response = await fetch(
+    `/api/content-cms/field-mappings/${mapping.id}/translations/${encodeURIComponent(localeTag)}`,
+    {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    },
+  );
+
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    await throwCmsError(response, 'Failed to load CMS translation');
+  }
+
+  return (await response.json()) as ApiTextUnit;
+}
+
 export async function fetchCmsEntryCompleteness(
   entryId: number,
   locales?: string,
@@ -621,10 +759,33 @@ export async function fetchCmsProjectCompleteness(
   );
 
   if (!response.ok) {
-    await throwCmsError(response, 'Failed to validate CMS package completeness');
+    await throwCmsError(response, 'Failed to check CMS release readiness');
   }
 
   return (await response.json()) as ApiCmsProjectCompleteness;
+}
+
+export async function fetchCmsProjectReleaseChanges(
+  projectId: number,
+  locales?: string,
+): Promise<ApiCmsReleaseChangeSummary> {
+  const params = new URLSearchParams();
+  if (locales?.trim()) {
+    params.set('locales', locales.trim());
+  }
+  const response = await fetch(
+    `/api/content-cms/projects/${projectId}/release-changes${params.size ? `?${params}` : ''}`,
+    {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    },
+  );
+
+  if (!response.ok) {
+    await throwCmsError(response, 'Failed to load CMS release changes');
+  }
+
+  return (await response.json()) as ApiCmsReleaseChangeSummary;
 }
 
 export async function publishCmsProject(

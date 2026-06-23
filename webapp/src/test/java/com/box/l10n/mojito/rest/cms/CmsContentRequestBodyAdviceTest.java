@@ -124,10 +124,6 @@ public class CmsContentRequestBodyAdviceTest {
   @Test
   public void beforeBodyReadRejectsNullNonNullableCmsCommandFields() throws Exception {
     assertRejectsNullCommandField(
-        createProjectRequestParameter(),
-        CmsContentService.ProjectCommand.class,
-        "{\"repositoryId\":null}");
-    assertRejectsNullCommandField(
         updateProjectRequestParameter(),
         CmsContentService.ProjectUpdateCommand.class,
         "{\"enabled\":null,\"expectedVersion\":1}");
@@ -172,9 +168,25 @@ public class CmsContentRequestBodyAdviceTest {
         CmsContentService.EntryUpdateCommand.class,
         "{\"expectedVersion\":null}");
     assertRejectsNullCommandField(
+        makeEntryCopyPiecesPrivateRequestParameter(),
+        CmsContentService.EntryCopyPiecesPrivateCommand.class,
+        "{\"expectedVersion\":null}");
+    assertRejectsNullCommandField(
+        addTargetLocalesRequestParameter(),
+        CmsContentService.TargetLocalesCommand.class,
+        "{\"localeTags\":null}");
+    assertRejectsNullCommandField(
         createEntryRequestParameter(),
         CmsContentService.EntryCommand.class,
         "{\"contentTypeId\":null}");
+    assertRejectsNullCommandField(
+        createEntryRequestParameter(),
+        CmsContentService.EntryCommand.class,
+        "{\"initialFieldMappings\":[{\"fieldId\":null}]}");
+    assertRejectsNullCommandField(
+        createContentTypeFieldRequestParameter(),
+        CmsContentService.ContentTypeFieldCommand.class,
+        "{\"initialFieldSource\":{\"variantId\":null}}");
     assertRejectsNullCommandField(
         upsertFieldMappingRequestParameter(),
         CmsContentService.FieldMappingCommand.class,
@@ -271,15 +283,6 @@ public class CmsContentRequestBodyAdviceTest {
 
     mockMvc
         .perform(
-            post("/api/content-cms/projects")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"repositoryId\":null}"))
-        .andExpect(status().isBadRequest());
-
-    verify(cmsContentService, never()).createProject(any());
-
-    mockMvc
-        .perform(
             post("/api/content-cms/projects/12/entries")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"contentTypeId\":null}"))
@@ -301,18 +304,36 @@ public class CmsContentRequestBodyAdviceTest {
   public void beforeBodyReadPreservesValidCmsRequestBodyForBinding() throws Exception {
     String requestJson = "{\"name\":\"Welcome\",\"expectedVersion\":2}";
 
-    String bufferedRequestJson =
-        new String(
-            advice
-                .beforeBodyRead(
-                    new MockHttpInputMessage(requestJson.getBytes()),
-                    updateEntryRequestParameter(),
-                    CmsContentService.EntryUpdateCommand.class,
-                    MappingJackson2HttpMessageConverter.class)
-                .getBody()
-                .readAllBytes());
+    assertPreservesValidRequestBody(
+        updateEntryRequestParameter(), CmsContentService.EntryUpdateCommand.class, requestJson);
+  }
 
-    assertThat(bufferedRequestJson).isEqualTo(requestJson);
+  @Test
+  public void beforeBodyReadPreservesOptionalCmsCreateSourceHandoffsForBinding() throws Exception {
+    assertPreservesValidRequestBody(
+        createProjectRequestParameter(),
+        CmsContentService.ProjectCommand.class,
+        "{\"projectKey\":\"campaign-copy\",\"name\":\"Campaign copy\",\"enabled\":true,\"repositoryId\":null}");
+    assertPreservesValidRequestBody(
+        createFirstCopyBlockRequestParameter(),
+        CmsContentService.FirstCopyBlockCommand.class,
+        "{\"entryKey\":\"welcome-email\",\"entryName\":\"Welcome email\",\"entryDescription\":\"Signup email\",\"fieldKey\":\"copy\",\"sourceContent\":\"Welcome\",\"sourceComment\":\"Headline\"}");
+    assertPreservesValidRequestBody(
+        makeEntryCopyPiecesPrivateRequestParameter(),
+        CmsContentService.EntryCopyPiecesPrivateCommand.class,
+        "{\"expectedVersion\":3}");
+    assertPreservesValidRequestBody(
+        addTargetLocalesRequestParameter(),
+        CmsContentService.TargetLocalesCommand.class,
+        "{\"localeTags\":[\"fr-FR\",\"ja-JP\"]}");
+    assertPreservesValidRequestBody(
+        createContentTypeFieldRequestParameter(),
+        CmsContentService.ContentTypeFieldCommand.class,
+        "{\"fieldKey\":\"cta\",\"name\":\"CTA\",\"fieldType\":\"TEXT\",\"localizable\":true,\"required\":true,\"sortOrder\":1,\"initialFieldSource\":{\"variantId\":21,\"sourceContent\":\"Start now\",\"sourceComment\":\"Button label\"}}");
+    assertPreservesValidRequestBody(
+        createEntryRequestParameter(),
+        CmsContentService.EntryCommand.class,
+        "{\"contentTypeId\":12,\"entryKey\":\"welcome-email\",\"name\":\"Welcome email\",\"status\":\"DRAFT\",\"initialFieldMappings\":[{\"fieldId\":13,\"sourceContent\":\"Welcome\",\"sourceComment\":\"Headline\"}]}");
   }
 
   private MethodParameter updateEntryRequestParameter() throws Exception {
@@ -349,12 +370,42 @@ public class CmsContentRequestBodyAdviceTest {
     return new MethodParameter(method, 1);
   }
 
+  private MethodParameter createFirstCopyBlockRequestParameter() throws Exception {
+    Method method =
+        CmsContentWS.class.getMethod(
+            "createFirstCopyBlock", Long.class, CmsContentService.FirstCopyBlockCommand.class);
+    return new MethodParameter(method, 1);
+  }
+
+  private MethodParameter makeEntryCopyPiecesPrivateRequestParameter() throws Exception {
+    Method method =
+        CmsContentWS.class.getMethod(
+            "makeEntryCopyPiecesPrivate",
+            Long.class,
+            CmsContentService.EntryCopyPiecesPrivateCommand.class);
+    return new MethodParameter(method, 1);
+  }
+
+  private MethodParameter addTargetLocalesRequestParameter() throws Exception {
+    Method method =
+        CmsContentWS.class.getMethod(
+            "addTargetLocales", Long.class, CmsContentService.TargetLocalesCommand.class);
+    return new MethodParameter(method, 1);
+  }
+
   private MethodParameter updateContentTypeFieldRequestParameter() throws Exception {
     Method method =
         CmsContentWS.class.getMethod(
             "updateContentTypeField",
             Long.class,
             CmsContentService.ContentTypeFieldUpdateCommand.class);
+    return new MethodParameter(method, 1);
+  }
+
+  private MethodParameter createContentTypeFieldRequestParameter() throws Exception {
+    Method method =
+        CmsContentWS.class.getMethod(
+            "createContentTypeField", Long.class, CmsContentService.ContentTypeFieldCommand.class);
     return new MethodParameter(method, 1);
   }
 
@@ -410,5 +461,21 @@ public class CmsContentRequestBodyAdviceTest {
                     MappingJackson2HttpMessageConverter.class))
         .isInstanceOf(HttpMessageNotReadableException.class)
         .hasMessageContaining("must match the command schema");
+  }
+
+  private void assertPreservesValidRequestBody(
+      MethodParameter requestParameter, Class<?> commandType, String requestJson) throws Exception {
+    String bufferedRequestJson =
+        new String(
+            advice
+                .beforeBodyRead(
+                    new MockHttpInputMessage(requestJson.getBytes()),
+                    requestParameter,
+                    commandType,
+                    MappingJackson2HttpMessageConverter.class)
+                .getBody()
+                .readAllBytes());
+
+    assertThat(bufferedRequestJson).isEqualTo(requestJson);
   }
 }

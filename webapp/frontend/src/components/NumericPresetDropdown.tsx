@@ -107,6 +107,7 @@ export function NumericPresetDropdown({
         viewportPadding,
         gap,
         maxWidth,
+        panelHeight: panelRef.current?.getBoundingClientRect().height,
       }),
     );
   }, []);

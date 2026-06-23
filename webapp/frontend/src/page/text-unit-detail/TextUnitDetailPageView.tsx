@@ -1,7 +1,7 @@
 import '../review-project/review-project-page.css';
 import './text-unit-detail-page.css';
 
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { AiReviewSuggestion } from '../../api/ai-review';
@@ -21,7 +21,10 @@ import {
   type TextUnitHistoryTimelineEntry as TextUnitDetailHistoryRow,
 } from '../../components/TextUnitHistoryTimeline';
 import { TranslationTextEditor } from '../../components/TranslationTextEditor';
-import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
+import type {
+  VisibleTextEditorHandle,
+  VisibleTextMarksMode,
+} from '../../components/VisibleTextEditor';
 import { getGlossaryTermScreenshotEvidence } from '../../utils/glossaryTermEvidence';
 import type { ProtectedTextDiagnostic, ProtectedTextToken } from '../../utils/protectedTextTokens';
 
@@ -65,6 +68,9 @@ const formatGlossaryMetadataValue = (value?: string | null) =>
 type TextUnitDetailPageViewProps = {
   tmTextUnitId: number;
   onBack: () => void;
+  backLabel: string;
+  isCmsHandoff: boolean;
+  originContext: string | null;
   editorInfo: {
     target: string;
     status: string;
@@ -162,6 +168,9 @@ type TextUnitDetailPageViewProps = {
 export function TextUnitDetailPageView({
   tmTextUnitId,
   onBack,
+  backLabel,
+  isCmsHandoff,
+  originContext,
   editorInfo,
   visibleTextEditor,
   keyInfo,
@@ -236,9 +245,15 @@ export function TextUnitDetailPageView({
   const glossaryTermScreenshots = getGlossaryTermScreenshotEvidence(glossaryTerm?.evidence);
   const [isGlossaryScreenshotsCollapsed, setIsGlossaryScreenshotsCollapsed] = useState(false);
   const [isSourceScreenshotsCollapsed, setIsSourceScreenshotsCollapsed] = useState(false);
+  const [isCmsToolsExpanded, setIsCmsToolsExpanded] = useState(false);
+  const translationEditorRef = useRef<VisibleTextEditorHandle | null>(null);
   const historyCount =
     historyRows.length + (showDeletedHistoryEntry ? 1 : 0) + (historyInitialDate ? 1 : 0);
   const historyTitle = isHistoryCountReady ? `History (${historyCount})` : 'History';
+  const detailTitle = getDetailTitle({ editorInfo, isCmsHandoff });
+  const showCmsTools = isCmsHandoff && !editorInfo.isSourceOnly;
+  const cmsToolsTitle = getCmsToolsTitle(editorInfo);
+  const detailHeaderName = isCmsHandoff ? detailTitle : `Text unit #${tmTextUnitId}`;
 
   useEffect(() => {
     setIsGlossaryScreenshotsCollapsed(false);
@@ -248,6 +263,125 @@ export function TextUnitDetailPageView({
     setIsSourceScreenshotsCollapsed(false);
   }, [tmTextUnitId, sourceScreenshots.length]);
 
+  useEffect(() => {
+    setIsCmsToolsExpanded(false);
+  }, [isCmsHandoff, tmTextUnitId]);
+
+  const focusTranslationEditor = () => {
+    translationEditorRef.current?.focus();
+  };
+
+  const icuPreviewPanel = !editorInfo.isSourceOnly ? (
+    <IcuPreviewSection
+      sourceMessage={keyInfo.source}
+      targetMessage={editorInfo.target}
+      targetLocale={previewLocale}
+      mode={icuPreviewMode}
+      isCollapsed={isIcuPreviewCollapsed}
+      onToggleCollapsed={onToggleIcuPreviewCollapsed}
+      onChangeMode={onChangeIcuPreviewMode}
+      className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--icu-inline"
+      titleClassName="text-unit-detail-page__section-title"
+    />
+  ) : null;
+  const aiReviewPanel = !editorInfo.isSourceOnly ? (
+    <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--ai-inline">
+      <SectionHeader
+        title="AI Chat Review"
+        expanded={!isAiCollapsed}
+        onToggle={onToggleAiCollapsed}
+      />
+      {!isAiCollapsed ? (
+        <AiChatReview
+          messages={aiMessages}
+          input={aiInput}
+          onChangeInput={onChangeAiInput}
+          onSubmit={onSubmitAi}
+          onRetryError={onRetryAi}
+          onUseSuggestion={onUseAiSuggestion}
+          isResponding={isAiResponding}
+        />
+      ) : null}
+    </section>
+  ) : null;
+  const glossaryPanel = (
+    <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
+      <SectionHeader
+        title="Glossary"
+        expanded={!isGlossaryCollapsed}
+        onToggle={onToggleGlossaryCollapsed}
+        summary={isGlossaryLoading ? 'Loading…' : null}
+      />
+      {!isGlossaryCollapsed ? (
+        <GlossaryMatchesPanel
+          matches={glossaryMatches}
+          isLoading={isGlossaryLoading}
+          errorMessage={glossaryErrorMessage}
+          currentTarget={editorInfo.target}
+          showHeader={false}
+        />
+      ) : null}
+    </section>
+  );
+  const historyPanel = (
+    <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
+      <SectionHeader
+        title={historyTitle}
+        expanded={!isHistoryCollapsed}
+        onToggle={onToggleHistoryCollapsed}
+      />
+      {!isHistoryCollapsed ? (
+        <TextUnitHistoryTimeline
+          isLoading={isHistoryLoading}
+          errorMessage={historyErrorMessage}
+          missingLocale={historyMissingLocale}
+          entries={historyRows}
+          showDeletedEntry={showDeletedHistoryEntry}
+          initialDate={historyInitialDate}
+        />
+      ) : null}
+    </section>
+  );
+  const metadataPanel = (
+    <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
+      <SectionHeader
+        title="Metadata"
+        expanded={!isMetaCollapsed}
+        onToggle={onToggleMetaCollapsed}
+      />
+
+      {!isMetaCollapsed ? (
+        isMetaLoading ? (
+          <div className="text-unit-detail-page__state">
+            <span className="spinner spinner--md" aria-hidden />
+            <span>Loading text unit details…</span>
+          </div>
+        ) : metaErrorMessage ? (
+          <div className="text-unit-detail-page__state text-unit-detail-page__state--error">
+            {metaErrorMessage}
+          </div>
+        ) : (
+          <div className="text-unit-detail-page__sections">
+            {metaSections.map((section) => (
+              <MetaSection
+                key={section.title}
+                title={section.title}
+                rows={section.rows}
+                targetCommentEditor={targetCommentEditor}
+              />
+            ))}
+
+            {metaWarningMessage ? (
+              <div className="text-unit-detail-page__state text-unit-detail-page__state--warning">
+                {metaWarningMessage}
+              </div>
+            ) : null}
+          </div>
+        )
+      ) : null}
+    </section>
+  );
+
   return (
     <div className="review-project-page text-unit-detail-page">
       <header className="review-project-page__header">
@@ -255,10 +389,12 @@ export function TextUnitDetailPageView({
           <div className="review-project-page__header-group review-project-page__header-group--left">
             <button
               type="button"
-              className="review-project-page__header-back-link"
+              className={`review-project-page__header-back-link${
+                isCmsHandoff ? ' text-unit-detail-page__header-back-link--cms-handoff' : ''
+              }`}
               onClick={onBack}
-              aria-label="Back to workbench"
-              title="Back to workbench"
+              aria-label={backLabel}
+              title={backLabel}
             >
               <svg
                 className="review-project-page__header-back-icon"
@@ -275,16 +411,26 @@ export function TextUnitDetailPageView({
                   strokeLinejoin="round"
                 />
               </svg>
+              {isCmsHandoff ? (
+                <span className="text-unit-detail-page__header-back-label">{backLabel}</span>
+              ) : null}
             </button>
-            <span className="review-project-page__header-name">Text unit #{tmTextUnitId}</span>
+            <span className="review-project-page__header-name">{detailHeaderName}</span>
             <div className="text-unit-detail-page__header-context">
               <Pill>{keyInfo.locale}</Pill>
-              <span
-                className="text-unit-detail-page__header-repository"
-                title={keyInfo.repositoryName}
-              >
-                {keyInfo.repositoryName}
-              </span>
+              {!isCmsHandoff ? (
+                <span
+                  className="text-unit-detail-page__header-repository"
+                  title={keyInfo.repositoryName}
+                >
+                  {keyInfo.repositoryName}
+                </span>
+              ) : null}
+              {originContext ? (
+                <span className="text-unit-detail-page__header-origin" title={originContext}>
+                  {originContext}
+                </span>
+              ) : null}
             </div>
           </div>
           <div className="review-project-page__header-group review-project-page__header-group--stats" />
@@ -293,14 +439,18 @@ export function TextUnitDetailPageView({
       </header>
 
       <div className="text-unit-detail-page__content">
-        <div className="text-unit-detail-page__layout">
+        <div
+          className={`text-unit-detail-page__layout${
+            isCmsHandoff ? ' text-unit-detail-page__layout--cms-handoff' : ''
+          }`}
+        >
           <section className="text-unit-detail-page__panel text-unit-detail-page__panel--editor">
-            <h1 className="text-unit-detail-page__title">
-              {editorInfo.isSourceOnly ? 'Source' : 'Translation'}
-            </h1>
+            {isCmsHandoff ? <p className="text-unit-detail-page__eyebrow">Product copy</p> : null}
+            <h1 className="text-unit-detail-page__title">{detailTitle}</h1>
 
             <div className="text-unit-detail-page__editor-field">
               <TranslationTextEditor
+                ref={translationEditorRef}
                 assisted={visibleTextEditor.enabled}
                 ariaLabel={editorInfo.isSourceOnly ? 'Source text' : 'Translation'}
                 className="text-unit-detail-page__editor-textarea"
@@ -384,40 +534,9 @@ export function TextUnitDetailPageView({
               </div>
             ) : null}
 
-            {!editorInfo.isSourceOnly ? (
-              <IcuPreviewSection
-                sourceMessage={keyInfo.source}
-                targetMessage={editorInfo.target}
-                targetLocale={previewLocale}
-                mode={icuPreviewMode}
-                isCollapsed={isIcuPreviewCollapsed}
-                onToggleCollapsed={onToggleIcuPreviewCollapsed}
-                onChangeMode={onChangeIcuPreviewMode}
-                className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--icu-inline"
-                titleClassName="text-unit-detail-page__section-title"
-              />
-            ) : null}
+            {!isCmsHandoff ? icuPreviewPanel : null}
 
-            {!editorInfo.isSourceOnly ? (
-              <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--ai-inline">
-                <SectionHeader
-                  title="AI Chat Review"
-                  expanded={!isAiCollapsed}
-                  onToggle={onToggleAiCollapsed}
-                />
-                {!isAiCollapsed ? (
-                  <AiChatReview
-                    messages={aiMessages}
-                    input={aiInput}
-                    onChangeInput={onChangeAiInput}
-                    onSubmit={onSubmitAi}
-                    onRetryError={onRetryAi}
-                    onUseSuggestion={onUseAiSuggestion}
-                    isResponding={isAiResponding}
-                  />
-                ) : null}
-              </section>
-            ) : null}
+            {!isCmsHandoff ? aiReviewPanel : null}
 
             {editorInfo.warningMessage ? (
               <div className="text-unit-detail-page__state text-unit-detail-page__state--warning">
@@ -432,12 +551,15 @@ export function TextUnitDetailPageView({
           </section>
 
           <div className="text-unit-detail-page__side">
-            <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
+            <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--source-context">
+              {isCmsHandoff ? (
+                <h2 className="text-unit-detail-page__source-context-title">Source context</h2>
+              ) : null}
               <dl className="text-unit-detail-page__key-info">
                 <div className="text-unit-detail-page__key-info-row">
                   <dt className="text-unit-detail-page__key-info-label">
-                    <span>Source</span>
-                    {glossaryTermHref ? (
+                    <span>{isCmsHandoff ? 'Source copy' : 'Source'}</span>
+                    {!isCmsHandoff && glossaryTermHref ? (
                       <Link
                         className="text-unit-detail-page__source-affordance"
                         to={glossaryTermHref}
@@ -453,14 +575,14 @@ export function TextUnitDetailPageView({
                   </dd>
                 </div>
                 <div className="text-unit-detail-page__key-info-row">
-                  <dt>Comment</dt>
+                  <dt>{isCmsHandoff ? 'Translator note' : 'Comment'}</dt>
                   <dd>
                     <pre className="text-unit-detail-page__key-info-text text-unit-detail-page__key-info-text--primary">
                       {glossaryTermComment}
                     </pre>
                   </dd>
                 </div>
-                {sourceScreenshots.length > 0 ? (
+                {!isCmsHandoff && sourceScreenshots.length > 0 ? (
                   <div className="text-unit-detail-page__key-info-row">
                     <dt className="text-unit-detail-page__key-info-label">
                       <span>Screenshots</span>
@@ -480,7 +602,7 @@ export function TextUnitDetailPageView({
                     </dd>
                   </div>
                 ) : null}
-                {glossaryPartOfSpeech ? (
+                {!isCmsHandoff && glossaryPartOfSpeech ? (
                   <div className="text-unit-detail-page__key-info-row">
                     <dt>POS</dt>
                     <dd>
@@ -490,7 +612,7 @@ export function TextUnitDetailPageView({
                     </dd>
                   </div>
                 ) : null}
-                {glossaryTermType ? (
+                {!isCmsHandoff && glossaryTermType ? (
                   <div className="text-unit-detail-page__key-info-row">
                     <dt>Type</dt>
                     <dd>
@@ -498,7 +620,7 @@ export function TextUnitDetailPageView({
                     </dd>
                   </div>
                 ) : null}
-                {glossaryTermScreenshots.length > 0 ? (
+                {!isCmsHandoff && glossaryTermScreenshots.length > 0 ? (
                   <div className="text-unit-detail-page__key-info-row">
                     <dt className="text-unit-detail-page__key-info-label">
                       <span>Glossary screenshots</span>
@@ -518,7 +640,7 @@ export function TextUnitDetailPageView({
                     </dd>
                   </div>
                 ) : null}
-                {!glossaryTermMetadata ? (
+                {!isCmsHandoff && !glossaryTermMetadata ? (
                   <div className="text-unit-detail-page__key-info-row">
                     <dt>Id</dt>
                     <dd>
@@ -529,79 +651,42 @@ export function TextUnitDetailPageView({
               </dl>
             </section>
 
-            <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
-              <SectionHeader
-                title="Glossary"
-                expanded={!isGlossaryCollapsed}
-                onToggle={onToggleGlossaryCollapsed}
-                summary={isGlossaryLoading ? 'Loading…' : null}
-              />
-              {!isGlossaryCollapsed ? (
-                <GlossaryMatchesPanel
-                  matches={glossaryMatches}
-                  isLoading={isGlossaryLoading}
-                  errorMessage={glossaryErrorMessage}
-                  currentTarget={editorInfo.target}
-                  showHeader={false}
+            {showCmsTools ? (
+              <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section text-unit-detail-page__panel--cms-tools">
+                <SectionHeader
+                  title={cmsToolsTitle}
+                  expanded={isCmsToolsExpanded}
+                  onToggle={() => setIsCmsToolsExpanded((current) => !current)}
+                  summary={
+                    <span className="text-unit-detail-page__cms-tools-summary">Optional</span>
+                  }
                 />
-              ) : null}
-            </section>
-
-            <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
-              <SectionHeader
-                title={historyTitle}
-                expanded={!isHistoryCollapsed}
-                onToggle={onToggleHistoryCollapsed}
-              />
-              {!isHistoryCollapsed ? (
-                <TextUnitHistoryTimeline
-                  isLoading={isHistoryLoading}
-                  errorMessage={historyErrorMessage}
-                  missingLocale={historyMissingLocale}
-                  entries={historyRows}
-                  showDeletedEntry={showDeletedHistoryEntry}
-                  initialDate={historyInitialDate}
-                />
-              ) : null}
-            </section>
-
-            <section className="text-unit-detail-page__panel text-unit-detail-page__panel--section">
-              <SectionHeader
-                title="Metadata"
-                expanded={!isMetaCollapsed}
-                onToggle={onToggleMetaCollapsed}
-              />
-
-              {!isMetaCollapsed ? (
-                isMetaLoading ? (
-                  <div className="text-unit-detail-page__state">
-                    <span className="spinner spinner--md" aria-hidden />
-                    <span>Loading text unit details…</span>
+                {isCmsToolsExpanded ? (
+                  <div className="text-unit-detail-page__cms-tools-body">
+                    {icuPreviewPanel}
+                    {aiReviewPanel}
+                    {glossaryPanel}
+                    {historyPanel}
+                    {metadataPanel}
+                    <div className="text-unit-detail-page__cms-tools-return">
+                      <button
+                        type="button"
+                        className="text-unit-detail-page__button"
+                        onClick={focusTranslationEditor}
+                      >
+                        Back to translation
+                      </button>
+                    </div>
                   </div>
-                ) : metaErrorMessage ? (
-                  <div className="text-unit-detail-page__state text-unit-detail-page__state--error">
-                    {metaErrorMessage}
-                  </div>
-                ) : (
-                  <div className="text-unit-detail-page__sections">
-                    {metaSections.map((section) => (
-                      <MetaSection
-                        key={section.title}
-                        title={section.title}
-                        rows={section.rows}
-                        targetCommentEditor={targetCommentEditor}
-                      />
-                    ))}
-
-                    {metaWarningMessage ? (
-                      <div className="text-unit-detail-page__state text-unit-detail-page__state--warning">
-                        {metaWarningMessage}
-                      </div>
-                    ) : null}
-                  </div>
-                )
-              ) : null}
-            </section>
+                ) : null}
+              </section>
+            ) : !isCmsHandoff ? (
+              <>
+                {glossaryPanel}
+                {historyPanel}
+                {metadataPanel}
+              </>
+            ) : null}
           </div>
         </div>
       </div>
@@ -645,6 +730,32 @@ export function TextUnitDetailPageView({
       />
     </div>
   );
+}
+
+function getDetailTitle({
+  editorInfo,
+  isCmsHandoff,
+}: {
+  editorInfo: TextUnitDetailPageViewProps['editorInfo'];
+  isCmsHandoff: boolean;
+}) {
+  if (editorInfo.isSourceOnly) {
+    return isCmsHandoff ? 'Source copy' : 'Source';
+  }
+
+  if (!isCmsHandoff) {
+    return 'Translation';
+  }
+
+  return editorInfo.status === 'To review' || editorInfo.status === 'Accepted'
+    ? 'Review translation'
+    : 'Translate copy';
+}
+
+function getCmsToolsTitle(editorInfo: TextUnitDetailPageViewProps['editorInfo']) {
+  return editorInfo.status === 'To review' || editorInfo.status === 'Accepted'
+    ? 'Review help'
+    : 'Translation help';
 }
 
 function TextUnitScreenshotThumbnails({

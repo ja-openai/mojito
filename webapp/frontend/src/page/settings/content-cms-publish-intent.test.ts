@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   buildCmsPublishLocaleTagsKey,
   buildCmsPublishStateKey,
   loadCmsPublishIntent,
+  loadLatestCmsPublishIntentForProject,
   saveCmsPublishIntent,
 } from './content-cms-publish-intent';
 
@@ -63,5 +64,38 @@ describe('content CMS publish intents', () => {
 
     expect(loadCmsPublishIntent(12, 'fr-FR', 'revision')).toBeNull();
     expect(window.sessionStorage.length).toBe(0);
+  });
+
+  it('restores the latest same-authoring publish intent for reload recovery', () => {
+    const nowSpy = vi.spyOn(Date, 'now');
+    nowSpy.mockReturnValueOnce(100).mockReturnValueOnce(200).mockReturnValueOnce(300);
+    const authoringSha256 = 'a'.repeat(64);
+    saveCmsPublishIntent({
+      projectId: 12,
+      localeTagsKey: 'fr-FR',
+      publishStateKey: `${authoringSha256}:${'b'.repeat(64)}`,
+      publishRequestKey: 'publish-request',
+    });
+    saveCmsPublishIntent({
+      projectId: 12,
+      localeTagsKey: 'de-DE',
+      publishStateKey: `${authoringSha256}:${'c'.repeat(64)}`,
+      publishRequestKey: 'publish-request-2',
+    });
+    saveCmsPublishIntent({
+      projectId: 12,
+      localeTagsKey: 'ja-JP',
+      publishStateKey: `${'d'.repeat(64)}:${'e'.repeat(64)}`,
+      publishRequestKey: 'publish-request-3',
+    });
+
+    expect(loadLatestCmsPublishIntentForProject(12, authoringSha256)).toEqual({
+      projectId: 12,
+      localeTagsKey: 'de-DE',
+      publishStateKey: `${authoringSha256}:${'c'.repeat(64)}`,
+      publishRequestKey: 'publish-request-2',
+    });
+    expect(loadLatestCmsPublishIntentForProject(12, 'f'.repeat(64))).toBeNull();
+    nowSpy.mockRestore();
   });
 });

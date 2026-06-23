@@ -556,7 +556,7 @@ public class TextUnitWS {
 
   @RequestMapping(method = RequestMethod.POST, value = "/api/textunits/check")
   public TMTextUnitIntegrityCheckResult checkTMTextUnit(
-      @RequestBody TextUnitCheckBody textUnitCheckBody) {
+      @RequestBody TextUnitCheckBody textUnitCheckBody) throws TMTextUnitWithIdNotFoundException {
     logger.debug("Checking TextUnit, id: {}", textUnitCheckBody.getTmTextUnitId());
 
     Stopwatch stopwatch = Stopwatch.createStarted();

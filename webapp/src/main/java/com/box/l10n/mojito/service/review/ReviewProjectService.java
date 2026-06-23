@@ -21,6 +21,7 @@ import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.entity.security.user.User_;
 import com.box.l10n.mojito.quartz.QuartzJobInfo;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
+import com.box.l10n.mojito.rest.textunit.TMTextUnitWithIdNotFoundException;
 import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.WordCountService;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
@@ -2429,6 +2430,14 @@ public class ReviewProjectService {
                 hasTarget,
                 integrityCheckStopwatch);
             throw new AccessDeniedException(TRANSLATOR_INTEGRITY_BYPASS_DENIED_MESSAGE);
+          } catch (TMTextUnitWithIdNotFoundException e) {
+            recordSaveDecisionPhase(
+                "integrityCheck",
+                "failure",
+                reviewProjectTextUnitId,
+                hasTarget,
+                integrityCheckStopwatch);
+            throw new IllegalStateException(e);
           }
         }
         TMTextUnitVariant.Status statusEnum = TMTextUnitVariant.Status.valueOf(status);

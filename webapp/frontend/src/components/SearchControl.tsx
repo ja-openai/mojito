@@ -1,6 +1,6 @@
 import './search-control.css';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 
 type Props = {
   value: string;
@@ -27,6 +27,7 @@ export function SearchControl({
   trailing,
   inputId,
 }: Props) {
+  const inputRef = useRef<HTMLInputElement>(null);
   const showClear = value.length > 0 && !disabled;
   const hasLeading = Boolean(leading);
   const hasTrailing = Boolean(trailing);
@@ -56,6 +57,7 @@ export function SearchControl({
           }}
         >
           <input
+            ref={inputRef}
             id={inputId}
             className="search-control__input"
             type="search"
@@ -72,7 +74,10 @@ export function SearchControl({
                 <button
                   type="button"
                   className="search-control__clear"
-                  onClick={() => onChange('')}
+                  onClick={() => {
+                    onChange('');
+                    window.setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 0);
+                  }}
                   aria-label="Clear search text"
                 >
                   ×

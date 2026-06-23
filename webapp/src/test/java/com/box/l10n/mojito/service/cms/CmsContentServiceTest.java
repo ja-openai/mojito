@@ -37,10 +37,16 @@ import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.asset.VirtualAssetService;
 import com.box.l10n.mojito.service.asset.VirtualTextUnitBatchUpdaterService;
 import com.box.l10n.mojito.service.assetExtraction.AssetTextUnitToTMTextUnitRepository;
+import com.box.l10n.mojito.service.locale.LocaleService;
+import com.box.l10n.mojito.service.repository.RepositoryNameAlreadyUsedException;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
+import com.box.l10n.mojito.service.repository.RepositoryService;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantMutationLockService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
+import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
+import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
+import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -57,9 +63,11 @@ import java.util.Set;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.springframework.boot.test.system.OutputCaptureRule;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.test.util.ReflectionTestUtils;
 
 public class CmsContentServiceTest {
 
@@ -83,6 +91,8 @@ public class CmsContentServiceTest {
   private final CmsPublishSnapshotSealRepository snapshotSealRepository =
       mock(CmsPublishSnapshotSealRepository.class);
   private final RepositoryRepository repositoryRepository = mock(RepositoryRepository.class);
+  private final RepositoryService repositoryService = mock(RepositoryService.class);
+  private final LocaleService localeService = mock(LocaleService.class);
   private final AssetRepository assetRepository = mock(AssetRepository.class);
   private final VirtualAssetService virtualAssetService = mock(VirtualAssetService.class);
   private final VirtualTextUnitBatchUpdaterService virtualTextUnitBatchUpdaterService =
@@ -93,6 +103,7 @@ public class CmsContentServiceTest {
   private final TMTextUnitCurrentVariantMutationLockService
       tmTextUnitCurrentVariantMutationLockService =
           mock(TMTextUnitCurrentVariantMutationLockService.class);
+  private final TextUnitSearcher textUnitSearcher = mock(TextUnitSearcher.class);
   private final TextUnitUtils textUnitUtils = mock(TextUnitUtils.class);
   private final UserService userService = mock(UserService.class);
   private final ObjectMapper objectMapper = new ObjectMapper();
@@ -112,12 +123,15 @@ public class CmsContentServiceTest {
           snapshotRepository,
           snapshotSealRepository,
           repositoryRepository,
+          repositoryService,
+          localeService,
           assetRepository,
           virtualAssetService,
           virtualTextUnitBatchUpdaterService,
           assetTextUnitToTMTextUnitRepository,
           tmTextUnitRepository,
           tmTextUnitCurrentVariantMutationLockService,
+          textUnitSearcher,
           textUnitUtils,
           userService,
           objectMapper,
@@ -158,6 +172,30 @@ public class CmsContentServiceTest {
         .isInstanceOf(org.springframework.security.access.AccessDeniedException.class)
         .hasMessageContaining("Admin role required");
     verify(projectRepository, never()).search(any(), any(), any());
+  }
+
+  @Test
+  public void getFieldTranslationUsesCmsExactTargetLookupWithoutRootLocaleFilter() {
+    CmsFixture fixture = setupFixture();
+    TextUnitDTO translation = new TextUnitDTO();
+    translation.setTmTextUnitId(fixture.tmTextUnit.getId());
+    translation.setTargetLocale("fr-FR");
+    when(textUnitSearcher.search(any(TextUnitSearcherParameters.class)))
+        .thenReturn(List.of(translation));
+
+    TextUnitDTO result = service.getFieldTranslation(fixture.mapping.getId(), "fr-FR");
+
+    ArgumentCaptor<TextUnitSearcherParameters> parameters =
+        ArgumentCaptor.forClass(TextUnitSearcherParameters.class);
+    verify(textUnitSearcher).search(parameters.capture());
+    assertThat(result).isSameAs(translation);
+    assertThat(parameters.getValue().getTmTextUnitIds())
+        .containsExactly(fixture.tmTextUnit.getId());
+    assertThat(parameters.getValue().getLocaleTags()).containsExactly("fr-FR");
+    assertThat(parameters.getValue().isRootLocaleExcluded()).isFalse();
+    assertThat(parameters.getValue().isPluralFormsFiltered()).isFalse();
+    assertThat(parameters.getValue().getLimit()).isEqualTo(1);
+    assertThat(parameters.getValue().getOffset()).isEqualTo(0);
   }
 
   @Test
@@ -202,6 +240,11 @@ public class CmsContentServiceTest {
         .lockCurrentVariantRows(Set.of(fixture.tmTextUnit.getId()), List.of("en", "fr-FR"));
     assertThat(view.snapshotVersion()).isEqualTo(1);
     assertThat(view.localeTags()).containsExactly("en", "fr-FR");
+    assertThat(view.publishRequestLocaleTags()).containsExactly("fr-FR");
+    assertThat(view.publishRequestAuthoringSha256())
+        .isEqualTo(publishRequestAuthoringSha256(fixture));
+    assertThat(view.publishRequestPackageSha256())
+        .isEqualTo(fixture.savedSnapshot.getPublishRequestPackageSha256());
     assertThat(view.artifactSha256()).isEqualTo(fixture.savedSnapshot.getArtifactSha256());
     assertThat(view.artifactByteSize()).isEqualTo(fixture.savedSnapshot.getArtifactByteSize());
     assertThat(view.snapshotSigningKeyId()).isEqualTo("test-v1");
@@ -2746,12 +2789,215 @@ public class CmsContentServiceTest {
         .containsExactly("welcome");
     assertThat(completeness.entries().getFirst().locales())
         .allMatch(CmsContentService.LocaleCompleteness::complete);
+    assertThat(completeness.releaseChangeSummary().changes()).isEmpty();
     verify(mappingRepository, times(2)).findMappingsByProjectId(fixture.project.getId());
     verify(mappingRepository, never()).findMappingsByEntryId(fixture.entry.getId());
     verify(projectRepository).findByIdWithRepositoryAndAssetForUpdate(fixture.project.getId());
     verify(projectRepository, never()).findByIdWithRepositoryAndAsset(fixture.project.getId());
     assertThat(completeness.authoringSha256()).isEqualTo(publishRequestAuthoringSha256(fixture));
     assertThat(completeness.publishPackageSha256()).hasSize(64);
+  }
+
+  @Test
+  public void getProjectCompletenessNamesTranslationChangedSinceLatestRelease() {
+    CmsFixture fixture = setupFixture();
+    when(snapshotRepository.findCurrentVariantRows(any(), any()))
+        .thenReturn(
+            List.of(
+                new CmsCurrentVariantRow(
+                    fixture.tmTextUnit.getId(),
+                    "fr-FR",
+                    "Bonjour",
+                    TMTextUnitVariant.Status.APPROVED,
+                    true)));
+    when(snapshotRepository.findMaxSnapshotVersionByProjectId(fixture.project.getId()))
+        .thenReturn(0);
+    when(snapshotRepository.save(any(CmsPublishSnapshot.class)))
+        .thenAnswer(
+            invocation -> {
+              CmsPublishSnapshot snapshot = invocation.getArgument(0);
+              snapshot.setId(99L);
+              snapshot.setCreatedByUser(user(100L, "admin"));
+              snapshot.setCreatedDate(ZonedDateTime.parse("2026-01-01T00:00:00Z"));
+              fixture.savedSnapshot = snapshot;
+              return snapshot;
+            });
+    when(snapshotSealRepository.save(any(CmsPublishSnapshotSeal.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    publishProject(fixture.project.getId(), validatedPublishCommand(fixture, List.of("fr-FR")));
+
+    stubSnapshotHistory(fixture.project, fixture.savedSnapshot.getSnapshotVersion());
+    when(snapshotRepository.findByProjectIdOrderBySnapshotVersionDesc(
+            fixture.project.getId(), PageRequest.of(0, 10)))
+        .thenReturn(List.of(fixture.savedSnapshot));
+    when(snapshotRepository.findFirstByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId()))
+        .thenReturn(Optional.of(fixture.savedSnapshot));
+    when(snapshotRepository.findCurrentVariantRows(any(), any()))
+        .thenReturn(
+            List.of(
+                new CmsCurrentVariantRow(
+                    fixture.tmTextUnit.getId(),
+                    "fr-FR",
+                    "Salut",
+                    TMTextUnitVariant.Status.APPROVED,
+                    true)));
+
+    CmsContentService.ProjectCompletenessView completeness =
+        service.getProjectCompleteness(fixture.project.getId(), List.of("fr-FR"));
+
+    assertThat(completeness.releaseChangeSummary().changes())
+        .containsExactly(
+            new CmsContentService.ReleaseChangeView(
+                CmsContentService.ReleaseChangeKind.TRANSLATION_CHANGED,
+                fixture.entry.getId(),
+                "Welcome",
+                fixture.field.getId(),
+                "Header",
+                "fr-FR",
+                null,
+                "Bonjour"));
+  }
+
+  @Test
+  public void getProjectCompletenessIncludesLastReleasedSourceCopyForExactSourceChange() {
+    CmsFixture fixture = setupFixture();
+    when(snapshotRepository.findCurrentVariantRows(any(), any()))
+        .thenReturn(
+            List.of(
+                new CmsCurrentVariantRow(
+                    fixture.tmTextUnit.getId(),
+                    "fr-FR",
+                    "Bonjour",
+                    TMTextUnitVariant.Status.APPROVED,
+                    true)));
+    when(snapshotRepository.findMaxSnapshotVersionByProjectId(fixture.project.getId()))
+        .thenReturn(0);
+
+    when(snapshotRepository.save(any(CmsPublishSnapshot.class)))
+        .thenAnswer(
+            invocation -> {
+              CmsPublishSnapshot snapshot = invocation.getArgument(0);
+              snapshot.setId(901L);
+              snapshot.setCreatedByUser(user(100L, "admin"));
+              snapshot.setCreatedDate(ZonedDateTime.parse("2026-01-01T00:00:00Z"));
+              fixture.savedSnapshot = snapshot;
+              return snapshot;
+            });
+    when(snapshotSealRepository.save(any(CmsPublishSnapshotSeal.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    publishProject(fixture.project.getId(), validatedPublishCommand(fixture, List.of("fr-FR")));
+
+    fixture.tmTextUnit.setContent("Current source");
+    stubSnapshotHistory(fixture.project, fixture.savedSnapshot.getSnapshotVersion());
+    when(snapshotRepository.findByProjectIdOrderBySnapshotVersionDesc(
+            fixture.project.getId(), PageRequest.of(0, 10)))
+        .thenReturn(List.of(fixture.savedSnapshot));
+    when(snapshotRepository.findFirstByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId()))
+        .thenReturn(Optional.of(fixture.savedSnapshot));
+
+    CmsContentService.ProjectCompletenessView completeness =
+        service.getProjectCompleteness(fixture.project.getId(), List.of("fr-FR"));
+
+    assertThat(completeness.releaseChangeSummary().changes())
+        .containsExactly(
+            new CmsContentService.ReleaseChangeView(
+                CmsContentService.ReleaseChangeKind.SOURCE_COPY_CHANGED,
+                fixture.entry.getId(),
+                "Welcome",
+                fixture.field.getId(),
+                "Header",
+                null,
+                "Hello",
+                null));
+  }
+
+  @Test
+  public void toReleaseChangeSummaryKeepsActionNeededRowsBeforePassiveOverflow() {
+    List<CmsContentService.ReleaseChangeView> changes = new ArrayList<>();
+    for (int index = 0; index < 14; index++) {
+      changes.add(
+          new CmsContentService.ReleaseChangeView(
+              index == 12
+                  ? CmsContentService.ReleaseChangeKind.TRANSLATION_NEEDS_REVIEW
+                  : CmsContentService.ReleaseChangeKind.CONTENT_ITEM_ADDED,
+              (long) index,
+              "Entry " + index,
+              index == 12 ? 21L : null,
+              index == 12 ? "Header" : null,
+              index == 12 ? "fr-FR" : null,
+              null,
+              null));
+    }
+
+    CmsContentService.ReleaseChangeSummaryView summary =
+        ReflectionTestUtils.invokeMethod(service, "toReleaseChangeSummary", changes, 12);
+
+    assertThat(summary.changes()).hasSize(13);
+    assertThat(summary.changes())
+        .extracting(CmsContentService.ReleaseChangeView::entryName)
+        .contains("Entry 11")
+        .contains("Entry 12")
+        .doesNotContain("Entry 13");
+    assertThat(summary.hasMore()).isTrue();
+    assertThat(summary.actionNeededCount()).isEqualTo(1);
+  }
+
+  @Test
+  public void toReleaseChangeSummaryDoesNotOverflowWhenOnlyActionNeededRowsExceedCap() {
+    List<CmsContentService.ReleaseChangeView> changes = new ArrayList<>();
+    for (int index = 0; index < 13; index++) {
+      changes.add(
+          new CmsContentService.ReleaseChangeView(
+              index == 12
+                  ? CmsContentService.ReleaseChangeKind.TRANSLATION_NEEDED
+                  : CmsContentService.ReleaseChangeKind.CONTENT_ITEM_ADDED,
+              (long) index,
+              "Entry " + index,
+              index == 12 ? 21L : null,
+              index == 12 ? "Header" : null,
+              index == 12 ? "fr-FR" : null,
+              null,
+              null));
+    }
+
+    CmsContentService.ReleaseChangeSummaryView summary =
+        ReflectionTestUtils.invokeMethod(service, "toReleaseChangeSummary", changes, 12);
+
+    assertThat(summary.changes()).hasSize(13);
+    assertThat(summary.changes())
+        .extracting(CmsContentService.ReleaseChangeView::entryName)
+        .contains("Entry 12");
+    assertThat(summary.hasMore()).isFalse();
+    assertThat(summary.actionNeededCount()).isEqualTo(1);
+  }
+
+  @Test
+  public void toReleaseChangeSummaryReturnsEveryExactChangeOnDemand() {
+    List<CmsContentService.ReleaseChangeView> changes = new ArrayList<>();
+    for (int index = 0; index < 13; index++) {
+      changes.add(
+          new CmsContentService.ReleaseChangeView(
+              CmsContentService.ReleaseChangeKind.CONTENT_ITEM_ADDED,
+              (long) index,
+              "Entry " + index,
+              null,
+              null,
+              null,
+              null,
+              null));
+    }
+
+    CmsContentService.ReleaseChangeSummaryView summary =
+        ReflectionTestUtils.invokeMethod(service, "toReleaseChangeSummary", changes, null);
+
+    assertThat(summary.changes()).hasSize(13);
+    assertThat(summary.changes())
+        .extracting(CmsContentService.ReleaseChangeView::entryName)
+        .contains("Entry 12");
+    assertThat(summary.hasMore()).isFalse();
+    assertThat(summary.actionNeededCount()).isZero();
   }
 
   @Test
@@ -3063,6 +3309,25 @@ public class CmsContentServiceTest {
                         "BLOB_CDN")))
         .isInstanceOf(CmsContentNotFoundException.class)
         .hasMessageContaining("Repository not found: " + fixture.project.getRepository().getId());
+    verify(virtualAssetService, never()).createOrUpdateVirtualAsset(any());
+    verify(projectRepository, never()).saveAndFlush(any(CmsContentProject.class));
+  }
+
+  @Test
+  public void createProjectRejectsDuplicateDedicatedRepositoryBeforeCreatingAsset()
+      throws Exception {
+    setupFixture();
+    when(repositoryService.createRepository(
+            "cms-new-project", "CMS backing repository for New project", null, false))
+        .thenThrow(new RepositoryNameAlreadyUsedException("exists"));
+
+    assertThatThrownBy(
+            () ->
+                service.createProject(
+                    new CmsContentService.ProjectCommand(
+                        "new-project", "New project", null, true, null, null, "BLOB_CDN")))
+        .isInstanceOf(CmsContentConflictException.class)
+        .hasMessageContaining("CMS backing repository already exists for content project");
     verify(virtualAssetService, never()).createOrUpdateVirtualAsset(any());
     verify(projectRepository, never()).saveAndFlush(any(CmsContentProject.class));
   }
@@ -4826,6 +5091,9 @@ public class CmsContentServiceTest {
             1,
             CmsPublishSnapshot.Status.PUBLISHED,
             "en",
+            "",
+            "b".repeat(64),
+            "c".repeat(64),
             "a".repeat(64),
             512L,
             overlongKeyId,
@@ -4858,6 +5126,9 @@ public class CmsContentServiceTest {
             1,
             CmsPublishSnapshot.Status.PUBLISHED,
             "en",
+            "",
+            "b".repeat(64),
+            "c".repeat(64),
             "a".repeat(64),
             0L,
             "test-v1",
@@ -4966,6 +5237,8 @@ public class CmsContentServiceTest {
 
     Locale sourceLocale = locale(1L, "en");
     Locale targetLocale = locale(2L, "fr-FR");
+    when(localeService.findByBcp47Tag(sourceLocale.getBcp47Tag())).thenReturn(sourceLocale);
+    when(localeService.findByBcp47Tag(targetLocale.getBcp47Tag())).thenReturn(targetLocale);
 
     Repository repository = new Repository();
     repository.setId(10L);
@@ -5203,6 +5476,9 @@ public class CmsContentServiceTest {
         snapshotVersion,
         CmsPublishSnapshot.Status.PUBLISHED,
         "en",
+        "",
+        "b".repeat(64),
+        "c".repeat(64),
         "a".repeat(64),
         512L,
         "test-v1",

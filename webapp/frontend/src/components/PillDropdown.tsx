@@ -66,6 +66,7 @@ export function PillDropdown<T extends string | number>({
         align,
         viewportPadding,
         maxWidth,
+        panelHeight: panelRef.current?.getBoundingClientRect().height,
       }),
     );
   }, [align]);

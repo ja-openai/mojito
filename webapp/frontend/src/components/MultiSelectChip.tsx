@@ -46,6 +46,7 @@ export type MultiSelectChipProps<T extends string | number> = {
   disabled?: boolean;
   buttonAriaLabel?: string;
   searchPlaceholder?: string;
+  emptyFilterLabel?: string;
   noResultsLabel?: string;
   selectAllLabel?: string;
   clearAllLabel?: string;
@@ -53,6 +54,8 @@ export type MultiSelectChipProps<T extends string | number> = {
   summaryFormatter?: SummaryFormatter<T>;
   customActions?: MultiSelectCustomAction[];
   quickActions?: MultiSelectCustomAction[];
+  showBulkActions?: boolean;
+  showOptionsWhenFilterEmpty?: boolean;
 };
 
 export function MultiSelectChip<T extends string | number>({
@@ -67,6 +70,7 @@ export function MultiSelectChip<T extends string | number>({
   disabled = false,
   buttonAriaLabel,
   searchPlaceholder,
+  emptyFilterLabel,
   noResultsLabel,
   selectAllLabel,
   clearAllLabel,
@@ -74,6 +78,8 @@ export function MultiSelectChip<T extends string | number>({
   summaryFormatter,
   customActions,
   quickActions,
+  showBulkActions = true,
+  showOptionsWhenFilterEmpty = true,
 }: MultiSelectChipProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -99,6 +105,7 @@ export function MultiSelectChip<T extends string | number>({
         viewportPadding,
         gap,
         maxWidth,
+        panelHeight: panelRef.current?.getBoundingClientRect().height,
       }),
     );
   }, [align]);
@@ -196,13 +203,16 @@ export function MultiSelectChip<T extends string | number>({
     onChange([...selectedValues, value]);
   };
 
-  const visibleOptions = filterQuery
+  const trimmedFilterQuery = filterQuery.trim();
+  const visibleOptions = trimmedFilterQuery
     ? options.filter((option) =>
         (option.searchText ?? option.label)
           .toLowerCase()
-          .includes(filterQuery.trim().toLowerCase()),
+          .includes(trimmedFilterQuery.toLowerCase()),
       )
-    : options;
+    : showOptionsWhenFilterEmpty
+      ? options
+      : [];
 
   const allVisibleSelected =
     visibleOptions.length > 0 && visibleOptions.every((option) => selectedSet.has(option.value));
@@ -230,6 +240,7 @@ export function MultiSelectChip<T extends string | number>({
     .filter(Boolean)
     .join(' ');
   const resolvedButtonAriaLabel = buttonAriaLabel ?? label;
+  const emptyFilterText = emptyFilterLabel ?? `Type to search ${label.toLowerCase()}.`;
   const noResultsText = noResultsLabel ?? 'No matches';
   const selectAllText = selectAllLabel ?? 'Select all';
   const clearAllText = clearAllLabel ?? 'Clear';
@@ -304,26 +315,27 @@ export function MultiSelectChip<T extends string | number>({
                     placeholder={filterInputPlaceholder}
                     className="multi-select-chip__search"
                   />
-                  {quickActionStrip ?? (
-                    <div className="multi-select-chip__actions">
-                      <button
-                        type="button"
-                        className="multi-select-chip__action-button"
-                        onClick={selectAll}
-                        disabled={allVisibleSelected}
-                      >
-                        {selectAllText}
-                      </button>
-                      <button
-                        type="button"
-                        className="multi-select-chip__action-button"
-                        onClick={clearAll}
-                        disabled={selectedValues.length === 0}
-                      >
-                        {clearAllText}
-                      </button>
-                    </div>
-                  )}
+                  {quickActionStrip ??
+                    (showBulkActions ? (
+                      <div className="multi-select-chip__actions">
+                        <button
+                          type="button"
+                          className="multi-select-chip__action-button"
+                          onClick={selectAll}
+                          disabled={allVisibleSelected}
+                        >
+                          {selectAllText}
+                        </button>
+                        <button
+                          type="button"
+                          className="multi-select-chip__action-button"
+                          onClick={clearAll}
+                          disabled={selectedValues.length === 0}
+                        >
+                          {clearAllText}
+                        </button>
+                      </div>
+                    ) : null)}
                   {resolvedCustomActions.length ? (
                     <div className="multi-select-chip__actions multi-select-chip__actions--secondary">
                       {resolvedCustomActions.map((action) => (
@@ -376,7 +388,11 @@ export function MultiSelectChip<T extends string | number>({
                         );
                       })
                     ) : (
-                      <div className="multi-select-chip__empty">{noResultsText}</div>
+                      <div className="multi-select-chip__empty">
+                        {!showOptionsWhenFilterEmpty && trimmedFilterQuery.length === 0
+                          ? emptyFilterText
+                          : noResultsText}
+                      </div>
                     )}
                   </div>
                 </>

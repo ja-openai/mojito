@@ -16,11 +16,16 @@ type Props = {
   disabled?: boolean;
   align?: 'left' | 'right';
   buttonAriaLabel?: string;
+  searchPlaceholder?: string;
+  emptyFilterLabel?: string;
   myLocaleTags?: string[];
   myLocalesLabel?: string;
   myLocalesAriaLabel?: string;
   customActions?: MultiSelectCustomAction[];
   showSelectionPresets?: boolean;
+  showBulkActions?: boolean;
+  showOptionsWhenFilterEmpty?: boolean;
+  allSelectedSummary?: string | null;
 };
 
 export function LocaleMultiSelect({
@@ -32,11 +37,16 @@ export function LocaleMultiSelect({
   disabled = false,
   align = 'left',
   buttonAriaLabel,
+  searchPlaceholder,
+  emptyFilterLabel,
   myLocaleTags,
   myLocalesLabel = 'My locales',
   myLocalesAriaLabel = 'Select your locales',
   customActions,
   showSelectionPresets = false,
+  showBulkActions = true,
+  showOptionsWhenFilterEmpty = true,
+  allSelectedSummary = 'All locales',
 }: Props) {
   const multiOptions: Array<MultiSelectOption<string>> = options.map((option) => ({
     value: option.tag,
@@ -109,8 +119,12 @@ export function LocaleMultiSelect({
       align={align}
       disabled={disabled}
       buttonAriaLabel={buttonAriaLabel ?? label}
+      searchPlaceholder={searchPlaceholder}
+      emptyFilterLabel={emptyFilterLabel}
       customActions={mergedCustomActions.length > 0 ? mergedCustomActions : undefined}
       quickActions={quickActions}
+      showBulkActions={showBulkActions}
+      showOptionsWhenFilterEmpty={showOptionsWhenFilterEmpty}
       summaryFormatter={({ options: opts, selectedValues }) => {
         if (!opts.length) {
           return label ?? 'Locales';
@@ -124,8 +138,8 @@ export function LocaleMultiSelect({
         if (isMyLocaleSelectionActive) {
           return myLocalesLabel;
         }
-        if (selectedValues.length === opts.length) {
-          return 'All locales';
+        if (selectedValues.length === opts.length && allSelectedSummary != null) {
+          return allSelectedSummary;
         }
         if (selectedValues.length <= 2) {
           const selectedSet = new Set(selectedValues);

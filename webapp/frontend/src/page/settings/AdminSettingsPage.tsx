@@ -18,6 +18,26 @@ export function AdminSettingsPage() {
     <div className="settings-page">
       {isAdmin ? (
         <>
+          <section className="settings-card" aria-labelledby="settings-copy-authoring">
+            <div className="settings-card__header">
+              <h2 id="settings-copy-authoring">Copy authoring</h2>
+            </div>
+            <div className="settings-directory">
+              <button
+                type="button"
+                className="settings-directory__card"
+                onClick={() => {
+                  void navigate('/settings/system/content-cms');
+                }}
+              >
+                <div className="settings-directory__title">Product copy</div>
+                <div className="settings-directory__description">
+                  Write product copy, translate it, and release approved copy.
+                </div>
+              </button>
+            </div>
+          </section>
+
           <section className="settings-card" aria-labelledby="settings-ai-translation">
             <div className="settings-card__header">
               <h2 id="settings-ai-translation">AI Translation</h2>
@@ -130,27 +150,6 @@ export function AdminSettingsPage() {
                 <div className="settings-directory__title">Linguist time spent</div>
                 <div className="settings-directory__description">
                   Compare self-reported and computed review time by linguist, language, and project.
-                </div>
-              </button>
-            </div>
-          </section>
-
-          <section className="settings-card" aria-labelledby="settings-content-cms">
-            <div className="settings-card__header">
-              <h2 id="settings-content-cms">Content CMS</h2>
-            </div>
-            <div className="settings-directory">
-              <button
-                type="button"
-                className="settings-directory__card"
-                onClick={() => {
-                  void navigate('/settings/system/content-cms');
-                }}
-              >
-                <div className="settings-directory__title">Product copy CMS</div>
-                <div className="settings-directory__description">
-                  Define i18n-first copy blocks, map fields to text units, and publish JSON
-                  packages.
                 </div>
               </button>
             </div>

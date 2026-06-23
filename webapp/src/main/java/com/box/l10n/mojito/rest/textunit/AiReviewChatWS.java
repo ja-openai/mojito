@@ -244,6 +244,9 @@ public class AiReviewChatWS {
           Prioritize preserving placeholders, tags, and ICU/message-format structure in suggestions.
           """
           .formatted(failureDetail);
+    } catch (TMTextUnitWithIdNotFoundException e) {
+      logger.debug("Skipping AI review integrity context for missing text unit", e);
+      return null;
     } catch (RuntimeException e) {
       logger.debug("Failed to run integrity check for AI review", e);
       return null;

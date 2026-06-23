@@ -64,7 +64,7 @@ public class AiReviewChatWSTest {
   }
 
   @Test
-  public void chatAppendsLocalePromptSuffixToSystemPrompt() {
+  public void chatAppendsLocalePromptSuffixToSystemPrompt() throws Exception {
     when(aiTranslateLocalePromptSuffixService.getLocalePromptSuffix("fr-FR"))
         .thenReturn("Use Canadian French terminology.");
     doNothing().when(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrity(42L, "Bonjour");

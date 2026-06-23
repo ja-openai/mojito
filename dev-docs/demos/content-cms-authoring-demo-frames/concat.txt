@@ -1,0 +1,9 @@
+file '01-authoring-workspace.png'
+duration 3
+file '02-inline-translation.png'
+duration 3
+file '03-translation-tools.png'
+duration 3
+file '04-release-repair-retry.png'
+duration 4
+file '04-release-repair-retry.png'

@@ -4,6 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
@@ -17,6 +19,10 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 public class TextUnitWSSearchValidationTest {
 
@@ -78,7 +84,7 @@ public class TextUnitWSSearchValidationTest {
   }
 
   @Test
-  public void checkTMTextUnitRecordsSuccessMetric() {
+  public void checkTMTextUnitRecordsSuccessMetric() throws Exception {
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     TMTextUnitIntegrityCheckService integrityCheckService =
         mock(TMTextUnitIntegrityCheckService.class);
@@ -96,7 +102,7 @@ public class TextUnitWSSearchValidationTest {
   }
 
   @Test
-  public void checkTMTextUnitRecordsFailureMetric() {
+  public void checkTMTextUnitRecordsFailureMetric() throws Exception {
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     TMTextUnitIntegrityCheckService integrityCheckService =
         mock(TMTextUnitIntegrityCheckService.class);
@@ -123,5 +129,23 @@ public class TextUnitWSSearchValidationTest {
         .tag("result", result)
         .timer()
         .count();
+  }
+
+  @Test
+  public void missingIntegrityTextUnitReturnsNotFound() throws Exception {
+    TMTextUnitIntegrityCheckService integrityCheckService =
+        Mockito.mock(TMTextUnitIntegrityCheckService.class);
+    Mockito.doThrow(new TMTextUnitWithIdNotFoundException(123L))
+        .when(integrityCheckService)
+        .checkTMTextUnitIntegrity(123L, "Bonjour");
+    textUnitWS.tmTextUnitIntegrityCheckService = integrityCheckService;
+    MockMvc mockMvc = MockMvcBuilders.standaloneSetup(textUnitWS).build();
+
+    mockMvc
+        .perform(
+            post("/api/textunits/check")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"tmTextUnitId\":123,\"content\":\"Bonjour\"}"))
+        .andExpect(status().isNotFound());
   }
 }

@@ -2,6 +2,7 @@ package com.box.l10n.mojito.service.tm;
 
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.TMTextUnit;
+import com.box.l10n.mojito.rest.textunit.TMTextUnitWithIdNotFoundException;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckerFactory;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.TextUnitIntegrityChecker;
@@ -28,7 +29,8 @@ public class TMTextUnitIntegrityCheckServiceTest {
   @Mock TMTextUnitRepository tmTextUnitRepository;
 
   @Test
-  public void testCheckTMTextUnitIntegrityWillRunThroughIfAssetHasNoIntegrityChecker() {
+  public void testCheckTMTextUnitIntegrityWillRunThroughIfAssetHasNoIntegrityChecker()
+      throws Exception {
     Asset asset = Mockito.mock(Asset.class);
     TMTextUnit tmTextUnit = Mockito.mock(TMTextUnit.class);
 
@@ -44,7 +46,7 @@ public class TMTextUnitIntegrityCheckServiceTest {
   }
 
   @Test
-  public void testCheckTMTextUnitIntegrityWillRunThroughAndCheck() {
+  public void testCheckTMTextUnitIntegrityWillRunThroughAndCheck() throws Exception {
     Asset asset = Mockito.mock(Asset.class);
     TMTextUnit tmTextUnit = Mockito.mock(TMTextUnit.class);
     Mockito.when(tmTextUnit.getContent()).thenReturn("some content");
@@ -62,7 +64,7 @@ public class TMTextUnitIntegrityCheckServiceTest {
   }
 
   @Test(expected = IntegrityCheckException.class)
-  public void testCheckTMTextUnitIntegrityWillThrowWhenCheckFails() {
+  public void testCheckTMTextUnitIntegrityWillThrowWhenCheckFails() throws Exception {
     Asset asset = Mockito.mock(Asset.class);
     TMTextUnit tmTextUnit = Mockito.mock(TMTextUnit.class);
     Mockito.when(tmTextUnit.getContent()).thenReturn("some content");
@@ -80,5 +82,12 @@ public class TMTextUnitIntegrityCheckServiceTest {
     integrityCheckService.checkTMTextUnitIntegrity(1L, "string to check");
 
     Mockito.verify(checker, Mockito.times(1)).check(Mockito.anyString(), Mockito.anyString());
+  }
+
+  @Test(expected = TMTextUnitWithIdNotFoundException.class)
+  public void testCheckTMTextUnitIntegrityWillThrowWhenTextUnitIsMissing() throws Exception {
+    Mockito.when(tmTextUnitRepository.findById(Mockito.anyLong())).thenReturn(Optional.empty());
+
+    integrityCheckService.checkTMTextUnitIntegrity(1L, "string to check");
   }
 }

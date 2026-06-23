@@ -4,6 +4,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.TMTextUnit;
+import com.box.l10n.mojito.rest.textunit.TMTextUnitWithIdNotFoundException;
 import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckerFactory;
@@ -34,12 +35,16 @@ public class TMTextUnitIntegrityCheckService {
    * Checks the integrity of the content given the {@link com.box.l10n.mojito.entity.TMTextUnit#id}
    *
    * @throws IntegrityCheckException
+   * @throws TMTextUnitWithIdNotFoundException
    */
   public void checkTMTextUnitIntegrity(Long tmTextUnitId, String contentToCheck)
-      throws IntegrityCheckException {
+      throws IntegrityCheckException, TMTextUnitWithIdNotFoundException {
     logger.debug("Checking Integrity of the TMTextUnit");
 
-    TMTextUnit tmTextUnit = tmTextUnitRepository.findById(tmTextUnitId).orElse(null);
+    TMTextUnit tmTextUnit =
+        tmTextUnitRepository
+            .findById(tmTextUnitId)
+            .orElseThrow(() -> new TMTextUnitWithIdNotFoundException(tmTextUnitId));
     Asset asset = tmTextUnit.getAsset();
 
     Set<TextUnitIntegrityChecker> textUnitCheckers =

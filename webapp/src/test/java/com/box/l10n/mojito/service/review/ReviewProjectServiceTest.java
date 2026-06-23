@@ -825,7 +825,7 @@ public class ReviewProjectServiceTest {
   }
 
   @Test
-  public void saveDecisionBlocksTranslatorIntegrityBypass() {
+  public void saveDecisionBlocksTranslatorIntegrityBypass() throws Exception {
     when(userService.isCurrentUserAdmin()).thenReturn(false);
     when(userService.isCurrentUserTranslator()).thenReturn(true);
 

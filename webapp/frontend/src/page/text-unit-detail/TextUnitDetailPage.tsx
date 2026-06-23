@@ -52,7 +52,15 @@ import {
 } from '../../utils/integrityCheck';
 import { isRtlLocale } from '../../utils/localeDirection';
 import { canEditLocale as canEditLocaleForUser } from '../../utils/permissions';
-import { buildTextUnitDetailUrl } from '../../utils/textUnitDetailUrl';
+import {
+  buildTextUnitDetailUrl,
+  type CmsTextUnitContext,
+  formatCmsTextUnitContext,
+  getCmsTextUnitContextFromSearchParams,
+  getCmsTextUnitReturnTo,
+  isCmsAuthoringPath,
+  isCmsTextUnitContext,
+} from '../../utils/textUnitDetailUrl';
 import { formatStatus, mapUiStatusToApi } from '../workbench/workbench-helpers';
 import {
   type TextUnitDetailAiMessage,
@@ -66,6 +74,7 @@ import {
 
 type LocationState = {
   from?: string;
+  cmsContext?: CmsTextUnitContext | null;
   workbenchSearch?: TextUnitSearchRequest | null;
   workbenchScrollTop?: number | null;
   workbenchRowId?: string | null;
@@ -84,15 +93,28 @@ export function TextUnitDetailPage() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const locationState = (location.state as LocationState | null) ?? null;
+  const cmsStateContext = isCmsTextUnitContext(locationState?.cmsContext)
+    ? locationState.cmsContext
+    : null;
+  const cmsQueryContext = useMemo(
+    () => getCmsTextUnitContextFromSearchParams(searchParams),
+    [searchParams],
+  );
+  const cmsContext = cmsStateContext ?? cmsQueryContext;
+  const locationStateFrom = locationState?.from ?? null;
+  const cmsStateReturnTo = isCmsAuthoringPath(locationStateFrom) ? locationStateFrom : null;
+  const cmsQueryReturnTo = useMemo(() => getCmsTextUnitReturnTo(searchParams), [searchParams]);
+  const cmsReturnTo = cmsStateReturnTo ?? cmsQueryReturnTo;
+  const isCmsHandoff = cmsReturnTo != null;
   const currentUser = useUser();
   const queryClient = useQueryClient();
 
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(true);
   const [isMetaCollapsed, setIsMetaCollapsed] = useState(true);
-  const [isGlossaryCollapsed, setIsGlossaryCollapsed] = useState(false);
+  const [isGlossaryCollapsed, setIsGlossaryCollapsed] = useState(isCmsHandoff);
   const [isIcuPreviewCollapsed, setIsIcuPreviewCollapsed] = useState(true);
   const [icuPreviewMode, setIcuPreviewMode] = useState<'source' | 'target'>('target');
-  const [isAiCollapsed, setIsAiCollapsed] = useState(false);
+  const [isAiCollapsed, setIsAiCollapsed] = useState(isCmsHandoff);
   const isVisibleTextEditorEnabled = useVisibleTextEditorEnabled();
   const [translationMarksMode, setTranslationMarksMode] = useState<VisibleTextMarksMode>('auto');
 
@@ -125,6 +147,11 @@ export function TextUnitDetailPage() {
 
   const localeTag = useMemo(() => searchParams.get('locale')?.trim() ?? null, [searchParams]);
   const isSourceOnly = !localeTag;
+
+  useEffect(() => {
+    setIsAiCollapsed(isCmsHandoff);
+    setIsGlossaryCollapsed(isCmsHandoff);
+  }, [isCmsHandoff]);
 
   const textUnitQuery = useQuery({
     queryKey: ['text-unit-detail', tmTextUnitId, localeTag ?? 'source'],
@@ -436,6 +463,10 @@ export function TextUnitDetailPage() {
       return;
     }
 
+    if (isAiCollapsed || glossaryMatchesQuery.isLoading) {
+      return;
+    }
+
     let cancelled = false;
     setAiMessages([]);
     setAiInput('');
@@ -497,7 +528,14 @@ export function TextUnitDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeTextUnit, aiContextKey, glossaryMatchesQuery.data, localeForEditing]);
+  }, [
+    activeTextUnit,
+    aiContextKey,
+    glossaryMatchesQuery.data,
+    glossaryMatchesQuery.isLoading,
+    isAiCollapsed,
+    localeForEditing,
+  ]);
 
   const sortedHistoryItems = useMemo(() => {
     return [...(historyQuery.data ?? [])].sort((a, b) => {
@@ -673,8 +711,13 @@ export function TextUnitDetailPage() {
       .map((entry) => entry.row);
   }, [activeTextUnit?.targetLocale, aiTranslateTimelineData, localeTag, sortedHistoryItems]);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     if (locationState?.from === '/workbench' && window.history.length > 1) {
+      void navigate(-1);
+      return;
+    }
+
+    if (cmsStateReturnTo != null && window.history.length > 1) {
       void navigate(-1);
       return;
     }
@@ -689,8 +732,19 @@ export function TextUnitDetailPage() {
       });
       return;
     }
-    void navigate(locationState?.from ?? '/workbench');
-  };
+    void navigate(cmsReturnTo ?? locationState?.from ?? '/workbench');
+  }, [cmsReturnTo, cmsStateReturnTo, locationState, navigate]);
+  const isOpeningCmsTranslation = isCmsHandoff && localeTag != null && textUnitQuery.isPending;
+  const shouldReturnToCmsForUnavailableTranslation =
+    isCmsHandoff && localeTag != null && !textUnitQuery.isPending && activeTextUnit == null;
+
+  useEffect(() => {
+    if (!shouldReturnToCmsForUnavailableTranslation) {
+      return;
+    }
+
+    handleBack();
+  }, [handleBack, shouldReturnToCmsForUnavailableTranslation]);
 
   const isEditorDirty = draftTarget !== baselineTarget || draftStatus !== baselineStatus;
   const hasCurrentTranslation = typeof activeTextUnit?.tmTextUnitVariantId === 'number';
@@ -1090,10 +1144,25 @@ export function TextUnitDetailPage() {
     );
   }
 
+  if (isOpeningCmsTranslation || shouldReturnToCmsForUnavailableTranslation) {
+    return (
+      <div className="review-project-page__state">
+        <div>
+          {shouldReturnToCmsForUnavailableTranslation
+            ? 'Returning to Product copy...'
+            : 'Opening translation...'}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <TextUnitDetailPageView
       tmTextUnitId={tmTextUnitId}
       onBack={handleBack}
+      backLabel={isCmsHandoff ? 'Back to Product copy' : 'Back to workbench'}
+      isCmsHandoff={isCmsHandoff}
+      originContext={cmsContext ? `Product copy: ${formatCmsTextUnitContext(cmsContext)}` : null}
       editorInfo={{
         target: draftTarget,
         status: draftStatus,

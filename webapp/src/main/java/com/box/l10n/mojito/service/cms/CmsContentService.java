@@ -26,10 +26,17 @@ import com.box.l10n.mojito.service.asset.VirtualTextUnitBatchUpdaterService;
 import com.box.l10n.mojito.service.assetExtraction.AssetTextUnitToTMTextUnitRepository;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.MessageFormatIntegrityChecker;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.MessageFormatIntegrityCheckerException;
+import com.box.l10n.mojito.service.locale.LocaleService;
+import com.box.l10n.mojito.service.repository.RepositoryLocaleCreationException;
+import com.box.l10n.mojito.service.repository.RepositoryNameAlreadyUsedException;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
+import com.box.l10n.mojito.service.repository.RepositoryService;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantMutationLockService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
+import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
+import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
+import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -74,6 +81,7 @@ public class CmsContentService {
 
   private static final int PUBLISH_SNAPSHOT_HISTORY_PAGE_LIMIT = 10;
   private static final int MAX_PUBLISH_SNAPSHOT_HISTORY_PAGE_LIMIT = 50;
+  private static final int MAX_RELEASE_CHANGE_SUMMARY_ITEMS = 12;
   private static final String SNAPSHOT_ARTIFACT_FORMAT_VERSION = "mojito.microCms.v1";
   private static final String SNAPSHOT_DELIVERY_DESCRIPTOR_FORMAT_VERSION =
       "mojito.microCms.snapshot-delivery-descriptor.v1";
@@ -85,6 +93,9 @@ public class CmsContentService {
       Set.of("BLOB_CDN", "STATSIG_DYNAMIC_CONFIG", "EXPERIENCE_FRAMEWORK");
   private static final List<String> SUPPORTED_DELIVERY_TARGETS =
       List.of("statsig-dynamic-config", "blob-cdn", "experience-framework");
+  private static final String FIRST_COPY_CONTENT_TYPE_KEY = "copy-block";
+  private static final String FIRST_COPY_CONTENT_TYPE_NAME = "Copy block";
+  private static final String FIRST_COPY_FIELD_NAME = "Copy";
   private static final Set<String> SNAPSHOT_ARTIFACT_FIELDS =
       Set.of(
           "formatVersion",
@@ -141,6 +152,8 @@ public class CmsContentService {
   private final CmsPublishSnapshotRepository snapshotRepository;
   private final CmsPublishSnapshotSealRepository snapshotSealRepository;
   private final RepositoryRepository repositoryRepository;
+  private final RepositoryService repositoryService;
+  private final LocaleService localeService;
   private final AssetRepository assetRepository;
   private final VirtualAssetService virtualAssetService;
   private final VirtualTextUnitBatchUpdaterService virtualTextUnitBatchUpdaterService;
@@ -148,6 +161,7 @@ public class CmsContentService {
   private final TMTextUnitRepository tmTextUnitRepository;
   private final TMTextUnitCurrentVariantMutationLockService
       tmTextUnitCurrentVariantMutationLockService;
+  private final TextUnitSearcher textUnitSearcher;
   private final TextUnitUtils textUnitUtils;
   private final UserService userService;
   private final ObjectMapper objectMapper;
@@ -167,12 +181,15 @@ public class CmsContentService {
       CmsPublishSnapshotRepository snapshotRepository,
       CmsPublishSnapshotSealRepository snapshotSealRepository,
       RepositoryRepository repositoryRepository,
+      RepositoryService repositoryService,
+      LocaleService localeService,
       AssetRepository assetRepository,
       VirtualAssetService virtualAssetService,
       VirtualTextUnitBatchUpdaterService virtualTextUnitBatchUpdaterService,
       AssetTextUnitToTMTextUnitRepository assetTextUnitToTMTextUnitRepository,
       TMTextUnitRepository tmTextUnitRepository,
       TMTextUnitCurrentVariantMutationLockService tmTextUnitCurrentVariantMutationLockService,
+      TextUnitSearcher textUnitSearcher,
       TextUnitUtils textUnitUtils,
       UserService userService,
       ObjectMapper objectMapper,
@@ -187,12 +204,15 @@ public class CmsContentService {
     this.snapshotRepository = snapshotRepository;
     this.snapshotSealRepository = snapshotSealRepository;
     this.repositoryRepository = repositoryRepository;
+    this.repositoryService = repositoryService;
+    this.localeService = localeService;
     this.assetRepository = assetRepository;
     this.virtualAssetService = virtualAssetService;
     this.virtualTextUnitBatchUpdaterService = virtualTextUnitBatchUpdaterService;
     this.assetTextUnitToTMTextUnitRepository = assetTextUnitToTMTextUnitRepository;
     this.tmTextUnitRepository = tmTextUnitRepository;
     this.tmTextUnitCurrentVariantMutationLockService = tmTextUnitCurrentVariantMutationLockService;
+    this.textUnitSearcher = textUnitSearcher;
     this.textUnitUtils = textUnitUtils;
     this.userService = userService;
     this.objectMapper = objectMapper;
@@ -244,8 +264,7 @@ public class CmsContentService {
     String key = normalizeKey(command.projectKey(), "Project key");
     ensureProjectKeyAvailable(key, null);
     String name = normalizeName(command.name(), CmsContentProject.NAME_MAX_LENGTH, "Project name");
-    Repository repository =
-        resolveRepository(requireBodySelectorId(command.repositoryId(), "Repository id"));
+    Repository repository = resolveProjectRepository(command.repositoryId(), key, name);
     Asset asset = resolveProjectAsset(repository, normalizeAssetPath(command.assetPath(), key));
     ensureProjectAssetAvailable(asset, null);
 
@@ -292,6 +311,40 @@ public class CmsContentService {
   }
 
   @Transactional(isolation = Isolation.READ_COMMITTED)
+  public ProjectDetail addTargetLocales(Long projectId, TargetLocalesCommand command) {
+    requireAdmin();
+    command = command == null ? new TargetLocalesCommand(null) : command;
+    CmsContentProject project = findProjectForUpdate(projectId);
+    List<String> targetLocaleTags = normalizeTargetLocaleTags(command.localeTags());
+    if (targetLocaleTags.isEmpty()) {
+      throw new IllegalArgumentException("At least one target locale is required");
+    }
+
+    Repository repository = project.getRepository();
+    String sourceLocaleTag = repository.getSourceLocale().getBcp47Tag();
+    Set<String> configuredLocaleTags =
+        repository.getRepositoryLocales().stream()
+            .map(repositoryLocale -> repositoryLocale.getLocale().getBcp47Tag())
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+    for (String targetLocaleTag : targetLocaleTags) {
+      if (sourceLocaleTag.equals(targetLocaleTag)) {
+        throw new IllegalArgumentException(
+            "Target locales must not include the source locale: " + sourceLocaleTag);
+      }
+      if (configuredLocaleTags.contains(targetLocaleTag)) {
+        continue;
+      }
+      try {
+        repositoryService.addRepositoryLocale(repository, targetLocaleTag);
+      } catch (RepositoryLocaleCreationException exception) {
+        throw new IllegalArgumentException(exception.getMessage(), exception);
+      }
+      configuredLocaleTags.add(targetLocaleTag);
+    }
+    return getProject(project.getId());
+  }
+
+  @Transactional(isolation = Isolation.READ_COMMITTED)
   public ProjectDetail createContentType(Long projectId, ContentTypeCommand command) {
     requireAdmin();
     command = command == null ? new ContentTypeCommand(null, null, null, null, null) : command;
@@ -311,6 +364,61 @@ public class CmsContentService {
     contentType.setMetadataSchemaJson(normalizeMetadataSchemaJson(command.metadataSchemaJson()));
     contentTypeRepository.saveAndFlush(contentType);
     return getProject(project.getId());
+  }
+
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+  public ProjectDetail createFirstCopyBlock(Long projectId, FirstCopyBlockCommand command) {
+    requireAdmin();
+    command =
+        command == null ? new FirstCopyBlockCommand(null, null, null, null, null, null) : command;
+    CmsContentProject project = findProjectForUpdate(projectId);
+    ensureFirstCopyBlockStartAvailable(project.getId());
+
+    ProjectDetail contentTypeDetail =
+        createContentType(
+            projectId,
+            new ContentTypeCommand(
+                FIRST_COPY_CONTENT_TYPE_KEY, FIRST_COPY_CONTENT_TYPE_NAME, null, 1, null));
+    Long contentTypeId =
+        contentTypeDetail.contentTypes().stream()
+            .filter(contentType -> FIRST_COPY_CONTENT_TYPE_KEY.equals(contentType.typeKey()))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("First copy block type was not created"))
+            .id();
+
+    String fieldKey = normalizeKey(command.fieldKey(), "Field key");
+    ProjectDetail fieldDetail =
+        createContentTypeField(
+            contentTypeId,
+            new ContentTypeFieldCommand(
+                fieldKey,
+                FIRST_COPY_FIELD_NAME,
+                null,
+                CmsContentTypeField.FieldType.TEXT,
+                true,
+                true,
+                0));
+    Long fieldId =
+        fieldDetail.contentTypes().stream()
+            .filter(contentType -> Objects.equals(contentType.id(), contentTypeId))
+            .flatMap(contentType -> contentType.fields().stream())
+            .filter(field -> fieldKey.equals(field.fieldKey()))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("First copy field was not created"))
+            .id();
+
+    return createEntry(
+        projectId,
+        new EntryCommand(
+            contentTypeId,
+            command.entryKey(),
+            command.entryName(),
+            command.entryDescription(),
+            CmsContentEntry.Status.DRAFT,
+            null,
+            List.of(
+                new InitialFieldMappingCommand(
+                    fieldId, command.sourceContent(), command.sourceComment()))));
   }
 
   @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -355,7 +463,7 @@ public class CmsContentService {
     requireAdmin();
     command =
         command == null
-            ? new ContentTypeFieldCommand(null, null, null, null, null, null, null)
+            ? new ContentTypeFieldCommand(null, null, null, null, null, null, null, null)
             : command;
     lockProjectForContentTypeUpdate(contentTypeId);
     CmsContentType contentType = findContentType(contentTypeId);
@@ -374,7 +482,8 @@ public class CmsContentService {
     field.setLocalizable(requireLocalizableField(command.localizable()));
     field.setRequired(command.required() == null ? Boolean.FALSE : command.required());
     field.setSortOrder(normalizeSortOrder(command.sortOrder()));
-    fieldRepository.saveAndFlush(field);
+    CmsContentTypeField savedField = fieldRepository.saveAndFlush(field);
+    createInitialFieldSource(savedField, command.initialFieldSource());
     validateReadyEntriesForContentType(contentType);
     bumpContentTypeSchemaVersion(contentType);
     return getProject(contentType.getProject().getId());
@@ -439,7 +548,8 @@ public class CmsContentService {
   @Transactional(isolation = Isolation.READ_COMMITTED)
   public ProjectDetail createEntry(Long projectId, EntryCommand command) {
     requireAdmin();
-    command = command == null ? new EntryCommand(null, null, null, null, null, null) : command;
+    command =
+        command == null ? new EntryCommand(null, null, null, null, null, null, List.of()) : command;
     CmsContentProject project = findProjectForUpdate(projectId);
     CmsContentType contentType =
         findContentType(requireBodySelectorId(command.contentTypeId(), "Content type id"));
@@ -473,7 +583,8 @@ public class CmsContentService {
     defaultVariant.setName("Default");
     setVariantStatus(defaultVariant, CmsContentEntryVariant.Status.CONTROL);
     defaultVariant.setSortOrder(0);
-    variantRepository.saveAndFlush(defaultVariant);
+    CmsContentEntryVariant savedDefaultVariant = variantRepository.saveAndFlush(defaultVariant);
+    createInitialFieldMappings(savedDefaultVariant, command.initialFieldMappings());
 
     return getProject(project.getId());
   }
@@ -503,6 +614,28 @@ public class CmsContentService {
             : entry.getMetadataJson());
     validateReadyEntryStructure(entry);
     entryRepository.saveAndFlush(entry);
+    return getProject(entry.getProject().getId());
+  }
+
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+  public ProjectDetail makeEntryCopyPiecesPrivate(
+      Long entryId, EntryCopyPiecesPrivateCommand command) {
+    requireAdmin();
+    command = command == null ? new EntryCopyPiecesPrivateCommand(null) : command;
+    lockProjectForEntryUpdate(entryId);
+    CmsContentEntry entry = findEntryForUpdate(entryId);
+    requireExpectedVersion(entry.getEntityVersion(), command.expectedVersion(), "Content entry");
+    List<CmsContentEntry> sharedEntries =
+        entryRepository.findByContentTypeIdOrderByNameAscIdAsc(entry.getContentType().getId());
+    if (sharedEntries.size() <= 1) {
+      throw new IllegalArgumentException(
+          "Copy pieces are already private for block: " + entry.getEntryKey());
+    }
+
+    CmsContentType privateContentType = clonePrivateContentType(entry);
+    Map<Long, CmsContentTypeField> privateFieldsBySourceFieldId =
+        clonePrivateContentTypeFields(entry.getContentType(), privateContentType);
+    rebindEntryToPrivateContentType(entry, privateContentType, privateFieldsBySourceFieldId);
     return getProject(entry.getProject().getId());
   }
 
@@ -584,6 +717,87 @@ public class CmsContentService {
     CmsContentEntryVariant variant = findVariant(variantId);
     CmsContentTypeField field =
         findField(requireBodySelectorId(command.fieldId(), "Content type field id"));
+    persistFieldMapping(variant, field, command);
+
+    return getProject(variant.getEntry().getProject().getId());
+  }
+
+  @Transactional(readOnly = true)
+  public TextUnitDTO getFieldTranslation(Long mappingId, String localeTag) {
+    requireAdmin();
+    CmsContentFieldMapping mapping = findFieldMapping(mappingId);
+    String normalizedLocaleTag =
+        normalizeConfiguredTargetLocaleTag(mapping.getVariant().getEntry().getProject(), localeTag);
+    TextUnitSearcherParameters parameters = new TextUnitSearcherParameters();
+    parameters.setTmTextUnitIds(mapping.getTmTextUnit().getId());
+    parameters.setLocaleTags(List.of(normalizedLocaleTag));
+    parameters.setRootLocaleExcluded(false);
+    parameters.setPluralFormsFiltered(false);
+    parameters.setLimit(1);
+    parameters.setOffset(0);
+
+    return textUnitSearcher.search(parameters).stream()
+        .filter(textUnit -> normalizedLocaleTag.equals(textUnit.getTargetLocale()))
+        .findFirst()
+        .orElseThrow(
+            () ->
+                new CmsContentNotFoundException(
+                    "Field translation not found: mapping="
+                        + mappingId
+                        + ", locale="
+                        + normalizedLocaleTag));
+  }
+
+  private void createInitialFieldMappings(
+      CmsContentEntryVariant variant, List<InitialFieldMappingCommand> initialFieldMappings) {
+    if (initialFieldMappings == null || initialFieldMappings.isEmpty()) {
+      return;
+    }
+
+    Set<Long> fieldIds = new LinkedHashSet<>();
+    for (InitialFieldMappingCommand initialFieldMapping : initialFieldMappings) {
+      if (initialFieldMapping == null) {
+        throw new IllegalArgumentException("Initial field mapping is required");
+      }
+      Long fieldId = requireBodySelectorId(initialFieldMapping.fieldId(), "Content type field id");
+      if (!fieldIds.add(fieldId)) {
+        throw new IllegalArgumentException("Initial field mapping field ids must be unique");
+      }
+      CmsContentTypeField field = findField(fieldId);
+      persistFieldMapping(
+          variant,
+          field,
+          new FieldMappingCommand(
+              fieldId,
+              null,
+              initialFieldMapping.sourceContent(),
+              initialFieldMapping.sourceComment(),
+              null));
+    }
+  }
+
+  private void createInitialFieldSource(
+      CmsContentTypeField field, InitialFieldSourceCommand initialFieldSource) {
+    if (initialFieldSource == null) {
+      return;
+    }
+
+    CmsContentEntryVariant variant =
+        findVariant(
+            requireBodySelectorId(initialFieldSource.variantId(), "Content entry variant id"));
+    persistFieldMapping(
+        variant,
+        field,
+        new FieldMappingCommand(
+            field.getId(),
+            null,
+            initialFieldSource.sourceContent(),
+            initialFieldSource.sourceComment(),
+            null));
+  }
+
+  private void persistFieldMapping(
+      CmsContentEntryVariant variant, CmsContentTypeField field, FieldMappingCommand command) {
     CmsContentEntry entry = variant.getEntry();
     validateProjectRepositoryAvailable(entry.getProject());
     validateProjectVirtualAssetAvailable(entry.getProject());
@@ -637,8 +851,125 @@ public class CmsContentService {
     mapping.setTmTextUnit(tmTextUnit);
     mappingRepository.saveAndFlush(mapping);
     validateReadyEntryStructure(entry);
+  }
 
-    return getProject(entry.getProject().getId());
+  private CmsContentType clonePrivateContentType(CmsContentEntry entry) {
+    CmsContentType sourceContentType = entry.getContentType();
+    CmsContentType privateContentType = new CmsContentType();
+    privateContentType.setProject(entry.getProject());
+    privateContentType.setTypeKey(allocatePrivateContentTypeKey(sourceContentType, entry));
+    privateContentType.setName(
+        normalizeGeneratedName(
+            sourceContentType.getName() + " for " + entry.getName(),
+            CmsContentType.NAME_MAX_LENGTH,
+            "Content type name"));
+    privateContentType.setDescription(sourceContentType.getDescription());
+    privateContentType.setSchemaVersion(sourceContentType.getSchemaVersion());
+    privateContentType.setMetadataSchemaJson(sourceContentType.getMetadataSchemaJson());
+    return contentTypeRepository.saveAndFlush(privateContentType);
+  }
+
+  private Map<Long, CmsContentTypeField> clonePrivateContentTypeFields(
+      CmsContentType sourceContentType, CmsContentType privateContentType) {
+    Map<Long, CmsContentTypeField> privateFieldsBySourceFieldId = new LinkedHashMap<>();
+    fieldRepository
+        .findByContentTypeIdOrderBySortOrderAscFieldKeyAscIdAsc(sourceContentType.getId())
+        .forEach(
+            field -> {
+              CmsContentTypeField privateField = new CmsContentTypeField();
+              privateField.setContentType(privateContentType);
+              privateField.setFieldKey(field.getFieldKey());
+              privateField.setName(field.getName());
+              privateField.setDescription(field.getDescription());
+              privateField.setFieldType(field.getFieldType());
+              privateField.setLocalizable(field.getLocalizable());
+              privateField.setRequired(field.getRequired());
+              privateField.setSortOrder(field.getSortOrder());
+              privateFieldsBySourceFieldId.put(
+                  field.getId(), fieldRepository.saveAndFlush(privateField));
+            });
+    return privateFieldsBySourceFieldId;
+  }
+
+  private void rebindEntryToPrivateContentType(
+      CmsContentEntry entry,
+      CmsContentType privateContentType,
+      Map<Long, CmsContentTypeField> privateFieldsBySourceFieldId) {
+    List<CmsContentEntryVariant> variants =
+        variantRepository.findByEntryIdOrderBySortOrderAscVariantKeyAscIdAsc(entry.getId());
+    List<EntryVariantSnapshot> variantSnapshots =
+        variants.stream().map(this::toEntryVariantSnapshot).toList();
+    List<CmsContentFieldMapping> mappings = mappingRepository.findMappingsByEntryId(entry.getId());
+    List<FieldMappingSnapshot> mappingSnapshots =
+        mappings.stream().map(this::toFieldMappingSnapshot).toList();
+
+    mappingRepository.deleteAll(mappings);
+    mappingRepository.flush();
+    variantRepository.deleteAll(variants);
+    variantRepository.flush();
+
+    entry.setContentType(privateContentType);
+    entryRepository.saveAndFlush(entry);
+
+    Map<Long, CmsContentEntryVariant> privateVariantsBySourceVariantId = new LinkedHashMap<>();
+    for (EntryVariantSnapshot variantSnapshot : variantSnapshots) {
+      CmsContentEntryVariant privateVariant = new CmsContentEntryVariant();
+      privateVariant.setEntry(entry);
+      privateVariant.setContentType(privateContentType);
+      privateVariant.setContentProjectId(entry.getProject().getId());
+      privateVariant.setVariantKey(variantSnapshot.variantKey());
+      privateVariant.setName(variantSnapshot.name());
+      privateVariant.setCandidateGroupKey(variantSnapshot.candidateGroupKey());
+      privateVariant.setMetadataJson(variantSnapshot.metadataJson());
+      privateVariant.setSortOrder(variantSnapshot.sortOrder());
+      setVariantStatus(privateVariant, variantSnapshot.status());
+      privateVariantsBySourceVariantId.put(
+          variantSnapshot.id(), variantRepository.saveAndFlush(privateVariant));
+    }
+
+    for (FieldMappingSnapshot mappingSnapshot : mappingSnapshots) {
+      CmsContentEntryVariant privateVariant =
+          Optional.ofNullable(privateVariantsBySourceVariantId.get(mappingSnapshot.variantId()))
+              .orElseThrow(
+                  () ->
+                      new IllegalStateException(
+                          "Private copy pieces lost variant: " + mappingSnapshot.variantId()));
+      CmsContentTypeField privateField =
+          Optional.ofNullable(privateFieldsBySourceFieldId.get(mappingSnapshot.fieldId()))
+              .orElseThrow(
+                  () ->
+                      new IllegalStateException(
+                          "Private copy pieces lost field: " + mappingSnapshot.fieldId()));
+      CmsContentFieldMapping privateMapping = new CmsContentFieldMapping();
+      privateMapping.setVariant(privateVariant);
+      privateMapping.setField(privateField);
+      privateMapping.setContentType(privateContentType);
+      privateMapping.setContentProjectId(entry.getProject().getId());
+      privateMapping.setAssetId(mappingSnapshot.assetId());
+      privateMapping.setTmTextUnit(mappingSnapshot.tmTextUnit());
+      mappingRepository.saveAndFlush(privateMapping);
+    }
+
+    validateReadyEntryStructure(entry);
+  }
+
+  private EntryVariantSnapshot toEntryVariantSnapshot(CmsContentEntryVariant variant) {
+    return new EntryVariantSnapshot(
+        variant.getId(),
+        variant.getVariantKey(),
+        variant.getName(),
+        variant.getCandidateGroupKey(),
+        variant.getStatus(),
+        variant.getMetadataJson(),
+        variant.getSortOrder());
+  }
+
+  private FieldMappingSnapshot toFieldMappingSnapshot(CmsContentFieldMapping mapping) {
+    return new FieldMappingSnapshot(
+        mapping.getVariant().getId(),
+        mapping.getField().getId(),
+        mapping.getAssetId(),
+        mapping.getTmTextUnit());
   }
 
   @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -682,31 +1013,38 @@ public class CmsContentService {
   public ProjectCompletenessView getProjectCompleteness(Long projectId, List<String> localeTags) {
     requireAdmin();
     CmsContentProject project = findProjectForUpdate(projectId);
-    validatePublishSnapshotHistory(project);
-    validateRecentPublishSnapshotArtifacts(project, PUBLISH_SNAPSHOT_HISTORY_PAGE_LIMIT);
-    String authoringSha256 = buildPublishRequestAuthoringSha256(project);
-    PublishPreflight preflight = buildPublishPreflight(project, localeTags, false);
-    List<EntryCompletenessView> entries =
-        preflight.entries().stream()
-            .map(
-                entry ->
-                    toEntryCompletenessView(
-                        entry,
-                        preflight.mappings(),
-                        preflight.localeTags(),
-                        preflight.currentVariants()))
-            .toList();
-    PublishPackage publishPackage = buildPublishPackage(project, preflight);
+    ProjectReleaseValidation validation = buildProjectReleaseValidation(project, localeTags);
+    ReleaseChangeSummaryView releaseChangeSummary =
+        buildReleaseChangeSummary(
+            project,
+            validation.authoringSha256(),
+            validation.publishPackage(),
+            validation.entries());
     return new ProjectCompletenessView(
         project.getId(),
         project.getProjectKey(),
-        authoringSha256,
-        publishPackage.sha256(),
-        publishPackage.byteSize(),
-        preflight.localeTags(),
-        preflight.completeness(),
-        entries,
-        preflight.completeness().stream().allMatch(LocaleCompleteness::complete));
+        validation.authoringSha256(),
+        validation.publishPackage().sha256(),
+        validation.publishPackage().byteSize(),
+        validation.preflight().localeTags(),
+        validation.preflight().completeness(),
+        validation.entries(),
+        validation.preflight().completeness().stream().allMatch(LocaleCompleteness::complete),
+        releaseChangeSummary);
+  }
+
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+  public ReleaseChangeSummaryView getProjectReleaseChanges(
+      Long projectId, List<String> localeTags) {
+    requireAdmin();
+    CmsContentProject project = findProjectForUpdate(projectId);
+    ProjectReleaseValidation validation = buildProjectReleaseValidation(project, localeTags);
+    return buildReleaseChangeSummary(
+        project,
+        validation.authoringSha256(),
+        validation.publishPackage(),
+        validation.entries(),
+        null);
   }
 
   @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -982,6 +1320,484 @@ public class CmsContentService {
     }
     return new PublishPackage(
         payload, DigestUtils.sha256Hex(publishPackageJson), publishPackageByteSize);
+  }
+
+  private ReleaseChangeSummaryView buildReleaseChangeSummary(
+      CmsContentProject project,
+      String authoringSha256,
+      PublishPackage publishPackage,
+      List<EntryCompletenessView> entries) {
+    return buildReleaseChangeSummary(
+        project, authoringSha256, publishPackage, entries, MAX_RELEASE_CHANGE_SUMMARY_ITEMS);
+  }
+
+  private ReleaseChangeSummaryView buildReleaseChangeSummary(
+      CmsContentProject project,
+      String authoringSha256,
+      PublishPackage publishPackage,
+      List<EntryCompletenessView> entries,
+      Integer maxChanges) {
+    Optional<CmsPublishSnapshot> latestSnapshot =
+        snapshotRepository.findFirstByProjectIdOrderBySnapshotVersionDesc(project.getId());
+    if (latestSnapshot.isEmpty()) {
+      return emptyReleaseChangeSummary();
+    }
+    CmsPublishSnapshot snapshot = latestSnapshot.get();
+    if (Objects.equals(snapshot.getPublishRequestAuthoringSha256(), authoringSha256)
+        && Objects.equals(snapshot.getPublishRequestPackageSha256(), publishPackage.sha256())) {
+      return emptyReleaseChangeSummary();
+    }
+
+    JsonNode previousArtifact = validateSnapshotArtifactIntegrity(snapshot);
+    JsonNode currentArtifact = objectMapper.valueToTree(publishPackage.payload());
+    List<ReleaseChangeView> changes = new ArrayList<>();
+    Set<String> seenChangeKeys = new LinkedHashSet<>();
+    Set<String> changedLocaleTags =
+        collectReleaseLocaleChanges(changes, seenChangeKeys, previousArtifact, currentArtifact);
+    Map<String, Long> currentEntryIdsByKey = releaseEntryIdsByKey(entries);
+    Map<String, Long> currentFieldIdsByEntryField = releaseFieldIdsByEntryField(entries);
+    Map<String, ReleaseArtifactEntry> previousEntries =
+        releaseArtifactEntries(previousArtifact, Map.of());
+    Map<String, ReleaseArtifactEntry> currentEntries =
+        releaseArtifactEntries(currentArtifact, currentEntryIdsByKey);
+    collectReleaseEntryChanges(changes, seenChangeKeys, previousEntries, currentEntries);
+    Map<String, ReleaseArtifactField> previousFields =
+        releaseArtifactFields(previousArtifact, Map.of(), Map.of());
+    Map<String, ReleaseArtifactField> currentFields =
+        releaseArtifactFields(currentArtifact, currentEntryIdsByKey, currentFieldIdsByEntryField);
+    Set<String> readinessChangeKeys =
+        collectReleaseFieldReadinessChanges(
+            changes,
+            seenChangeKeys,
+            currentFields,
+            entries,
+            project.getRepository().getSourceLocale().getBcp47Tag());
+    collectReleaseFieldChanges(
+        changes,
+        seenChangeKeys,
+        previousEntries,
+        currentEntries,
+        previousFields,
+        currentFields,
+        readinessChangeKeys,
+        changedLocaleTags,
+        project.getRepository().getSourceLocale().getBcp47Tag());
+    if (changes.isEmpty()) {
+      addReleaseChange(
+          changes,
+          seenChangeKeys,
+          new ReleaseChangeView(
+              ReleaseChangeKind.RELEASE_SETUP_CHANGED, null, null, null, null, null, null, null));
+    }
+    return toReleaseChangeSummary(changes, maxChanges);
+  }
+
+  private ReleaseChangeSummaryView emptyReleaseChangeSummary() {
+    return new ReleaseChangeSummaryView(List.of(), false, 0);
+  }
+
+  private ReleaseChangeSummaryView toReleaseChangeSummary(
+      List<ReleaseChangeView> changes, Integer maxChanges) {
+    int actionNeededCount = Math.toIntExact(changes.stream().filter(this::isActionNeeded).count());
+    if (maxChanges == null) {
+      return new ReleaseChangeSummaryView(List.copyOf(changes), false, actionNeededCount);
+    }
+    List<ReleaseChangeView> summaryChanges =
+        new ArrayList<>(changes.stream().limit(maxChanges).toList());
+    changes.stream().skip(maxChanges).filter(this::isActionNeeded).forEach(summaryChanges::add);
+    boolean hasMore = changes.size() > summaryChanges.size();
+    return new ReleaseChangeSummaryView(List.copyOf(summaryChanges), hasMore, actionNeededCount);
+  }
+
+  private boolean isActionNeeded(ReleaseChangeView change) {
+    return change.kind() == ReleaseChangeKind.TRANSLATION_NEEDED
+        || change.kind() == ReleaseChangeKind.TRANSLATION_NEEDS_REVIEW;
+  }
+
+  private ProjectReleaseValidation buildProjectReleaseValidation(
+      CmsContentProject project, List<String> localeTags) {
+    validatePublishSnapshotHistory(project);
+    validateRecentPublishSnapshotArtifacts(project, PUBLISH_SNAPSHOT_HISTORY_PAGE_LIMIT);
+    String authoringSha256 = buildPublishRequestAuthoringSha256(project);
+    PublishPreflight preflight = buildPublishPreflight(project, localeTags, false);
+    List<EntryCompletenessView> entries =
+        preflight.entries().stream()
+            .map(
+                entry ->
+                    toEntryCompletenessView(
+                        entry,
+                        preflight.mappings(),
+                        preflight.localeTags(),
+                        preflight.currentVariants()))
+            .toList();
+    PublishPackage publishPackage = buildPublishPackage(project, preflight);
+    return new ProjectReleaseValidation(authoringSha256, preflight, entries, publishPackage);
+  }
+
+  private Set<String> collectReleaseLocaleChanges(
+      List<ReleaseChangeView> changes,
+      Set<String> seenChangeKeys,
+      JsonNode previousArtifact,
+      JsonNode currentArtifact) {
+    List<String> previousLocaleTags = releaseArtifactLocaleTags(previousArtifact);
+    List<String> currentLocaleTags = releaseArtifactLocaleTags(currentArtifact);
+    Set<String> changedLocaleTags = new LinkedHashSet<>();
+    for (String localeTag : currentLocaleTags) {
+      if (!previousLocaleTags.contains(localeTag)) {
+        changedLocaleTags.add(localeTag);
+        addReleaseChange(
+            changes,
+            seenChangeKeys,
+            new ReleaseChangeView(
+                ReleaseChangeKind.LOCALE_ADDED, null, null, null, null, localeTag, null, null));
+      }
+    }
+    for (String localeTag : previousLocaleTags) {
+      if (!currentLocaleTags.contains(localeTag)) {
+        changedLocaleTags.add(localeTag);
+        addReleaseChange(
+            changes,
+            seenChangeKeys,
+            new ReleaseChangeView(
+                ReleaseChangeKind.LOCALE_REMOVED, null, null, null, null, localeTag, null, null));
+      }
+    }
+    return changedLocaleTags;
+  }
+
+  private void collectReleaseEntryChanges(
+      List<ReleaseChangeView> changes,
+      Set<String> seenChangeKeys,
+      Map<String, ReleaseArtifactEntry> previousEntries,
+      Map<String, ReleaseArtifactEntry> currentEntries) {
+    for (ReleaseArtifactEntry currentEntry : currentEntries.values()) {
+      if (!previousEntries.containsKey(currentEntry.entryKey())) {
+        addReleaseChange(
+            changes,
+            seenChangeKeys,
+            new ReleaseChangeView(
+                ReleaseChangeKind.CONTENT_ITEM_ADDED,
+                currentEntry.entryId(),
+                currentEntry.entryName(),
+                null,
+                null,
+                null,
+                null,
+                null));
+      }
+    }
+    for (ReleaseArtifactEntry previousEntry : previousEntries.values()) {
+      if (!currentEntries.containsKey(previousEntry.entryKey())) {
+        addReleaseChange(
+            changes,
+            seenChangeKeys,
+            new ReleaseChangeView(
+                ReleaseChangeKind.CONTENT_ITEM_REMOVED,
+                null,
+                previousEntry.entryName(),
+                null,
+                null,
+                null,
+                null,
+                null));
+      }
+    }
+  }
+
+  private Set<String> collectReleaseFieldReadinessChanges(
+      List<ReleaseChangeView> changes,
+      Set<String> seenChangeKeys,
+      Map<String, ReleaseArtifactField> currentFields,
+      List<EntryCompletenessView> entries,
+      String sourceLocale) {
+    Map<String, FieldCompleteness> fieldCompletenessByEntryField =
+        releaseFieldCompletenessByEntryField(entries);
+    Set<String> readinessChangeKeys = new LinkedHashSet<>();
+    for (ReleaseArtifactField field : currentFields.values()) {
+      FieldCompleteness fieldCompleteness =
+          fieldCompletenessByEntryField.get(
+              releaseEntryFieldKey(field.entryKey(), field.fieldKey()));
+      if (fieldCompleteness == null) {
+        continue;
+      }
+      for (LocaleCompleteness localeCompleteness : fieldCompleteness.locales()) {
+        if (sourceLocale.equals(localeCompleteness.localeTag()) || localeCompleteness.complete()) {
+          continue;
+        }
+        ReleaseChangeKind releaseChangeKind = getReleaseReadinessChangeKind(localeCompleteness);
+        if (releaseChangeKind == null) {
+          continue;
+        }
+        String readinessChangeKey = releaseFieldLocaleKey(field, localeCompleteness.localeTag());
+        readinessChangeKeys.add(readinessChangeKey);
+        addReleaseChange(
+            changes,
+            seenChangeKeys,
+            new ReleaseChangeView(
+                releaseChangeKind,
+                field.entryId(),
+                field.entryName(),
+                field.fieldId(),
+                field.fieldName(),
+                localeCompleteness.localeTag(),
+                null,
+                null));
+      }
+    }
+    return readinessChangeKeys;
+  }
+
+  private ReleaseChangeKind getReleaseReadinessChangeKind(LocaleCompleteness localeCompleteness) {
+    if (localeCompleteness.missingFields() > 0
+        || localeCompleteness.translationNeededFields() > 0) {
+      return ReleaseChangeKind.TRANSLATION_NEEDED;
+    }
+    if (localeCompleteness.reviewNeededFields() > 0) {
+      return ReleaseChangeKind.TRANSLATION_NEEDS_REVIEW;
+    }
+    return null;
+  }
+
+  private void collectReleaseFieldChanges(
+      List<ReleaseChangeView> changes,
+      Set<String> seenChangeKeys,
+      Map<String, ReleaseArtifactEntry> previousEntries,
+      Map<String, ReleaseArtifactEntry> currentEntries,
+      Map<String, ReleaseArtifactField> previousFields,
+      Map<String, ReleaseArtifactField> currentFields,
+      Set<String> readinessChangeKeys,
+      Set<String> changedLocaleTags,
+      String sourceLocale) {
+    for (ReleaseArtifactField currentField : currentFields.values()) {
+      ReleaseArtifactField previousField = previousFields.get(currentField.identityKey());
+      if (previousField == null) {
+        if (previousEntries.containsKey(currentField.entryKey())) {
+          addReleaseChange(
+              changes,
+              seenChangeKeys,
+              new ReleaseChangeView(
+                  ReleaseChangeKind.FIELD_ADDED,
+                  currentField.entryId(),
+                  currentField.entryName(),
+                  currentField.fieldId(),
+                  currentField.fieldName(),
+                  null,
+                  null,
+                  null));
+        }
+        continue;
+      }
+      if (!Objects.equals(previousField.sourceContent(), currentField.sourceContent())) {
+        addReleaseChange(
+            changes,
+            seenChangeKeys,
+            new ReleaseChangeView(
+                ReleaseChangeKind.SOURCE_COPY_CHANGED,
+                currentField.entryId(),
+                currentField.entryName(),
+                currentField.fieldId(),
+                currentField.fieldName(),
+                null,
+                previousField.sourceContent(),
+                null));
+      }
+      Set<String> localeTags = new LinkedHashSet<>();
+      previousField.values().fieldNames().forEachRemaining(localeTags::add);
+      currentField.values().fieldNames().forEachRemaining(localeTags::add);
+      for (String localeTag : localeTags) {
+        if (sourceLocale.equals(localeTag)
+            || changedLocaleTags.contains(localeTag)
+            || readinessChangeKeys.contains(releaseFieldLocaleKey(currentField, localeTag))
+            || Objects.equals(
+                previousField.values().path(localeTag), currentField.values().path(localeTag))) {
+          continue;
+        }
+        addReleaseChange(
+            changes,
+            seenChangeKeys,
+            new ReleaseChangeView(
+                ReleaseChangeKind.TRANSLATION_CHANGED,
+                currentField.entryId(),
+                currentField.entryName(),
+                currentField.fieldId(),
+                currentField.fieldName(),
+                localeTag,
+                null,
+                previousField.values().path(localeTag).asText()));
+      }
+    }
+    for (ReleaseArtifactField previousField : previousFields.values()) {
+      if (!currentFields.containsKey(previousField.identityKey())
+          && currentEntries.containsKey(previousField.entryKey())) {
+        addReleaseChange(
+            changes,
+            seenChangeKeys,
+            new ReleaseChangeView(
+                ReleaseChangeKind.FIELD_REMOVED,
+                currentEntries.get(previousField.entryKey()).entryId(),
+                previousField.entryName(),
+                null,
+                previousField.fieldName(),
+                null,
+                null,
+                null));
+      }
+    }
+  }
+
+  private Map<String, FieldCompleteness> releaseFieldCompletenessByEntryField(
+      List<EntryCompletenessView> entries) {
+    Map<String, FieldCompleteness> fieldCompletenessByEntryField = new LinkedHashMap<>();
+    for (EntryCompletenessView entry : entries) {
+      for (FieldCompleteness field : entry.fields()) {
+        fieldCompletenessByEntryField.put(
+            releaseEntryFieldKey(entry.entryKey(), field.fieldKey()), field);
+      }
+    }
+    return fieldCompletenessByEntryField;
+  }
+
+  private Map<String, Long> releaseEntryIdsByKey(List<EntryCompletenessView> entries) {
+    Map<String, Long> entryIdsByKey = new LinkedHashMap<>();
+    for (EntryCompletenessView entry : entries) {
+      entryIdsByKey.put(entry.entryKey(), entry.entryId());
+    }
+    return entryIdsByKey;
+  }
+
+  private Map<String, Long> releaseFieldIdsByEntryField(List<EntryCompletenessView> entries) {
+    Map<String, Long> fieldIdsByEntryField = new LinkedHashMap<>();
+    for (EntryCompletenessView entry : entries) {
+      for (FieldCompleteness field : entry.fields()) {
+        fieldIdsByEntryField.put(
+            releaseEntryFieldKey(entry.entryKey(), field.fieldKey()), field.fieldId());
+      }
+    }
+    return fieldIdsByEntryField;
+  }
+
+  private List<String> releaseArtifactLocaleTags(JsonNode artifact) {
+    List<String> localeTags = new ArrayList<>();
+    artifact.path("locales").forEach(localeTag -> localeTags.add(localeTag.asText()));
+    return localeTags;
+  }
+
+  private Map<String, ReleaseArtifactEntry> releaseArtifactEntries(
+      JsonNode artifact, Map<String, Long> entryIdsByKey) {
+    Map<String, ReleaseArtifactEntry> entries = new LinkedHashMap<>();
+    artifact
+        .path("entries")
+        .forEach(
+            entry ->
+                entries.put(
+                    entry.path("key").asText(),
+                    new ReleaseArtifactEntry(
+                        entryIdsByKey.get(entry.path("key").asText()),
+                        entry.path("key").asText(),
+                        entry.path("name").asText())));
+    return entries;
+  }
+
+  private Map<String, ReleaseArtifactField> releaseArtifactFields(
+      JsonNode artifact, Map<String, Long> entryIdsByKey, Map<String, Long> fieldIdsByEntryField) {
+    Map<String, String> fieldNamesByTypeField = releaseArtifactFieldNamesByTypeField(artifact);
+    Map<String, ReleaseArtifactField> fields = new LinkedHashMap<>();
+    artifact
+        .path("entries")
+        .forEach(
+            entry -> {
+              String entryKey = entry.path("key").asText();
+              String entryName = entry.path("name").asText();
+              String entryType = entry.path("type").asText();
+              entry
+                  .path("variants")
+                  .forEach(
+                      variant -> {
+                        String variantKey = variant.path("key").asText();
+                        variant
+                            .path("fields")
+                            .fields()
+                            .forEachRemaining(
+                                field -> {
+                                  String fieldKey = field.getKey();
+                                  JsonNode fieldJson = field.getValue();
+                                  String identityKey =
+                                      releaseFieldIdentityKey(entryKey, variantKey, fieldKey);
+                                  fields.put(
+                                      identityKey,
+                                      new ReleaseArtifactField(
+                                          entryIdsByKey.get(entryKey),
+                                          identityKey,
+                                          entryKey,
+                                          entryName,
+                                          fieldIdsByEntryField.get(
+                                              releaseEntryFieldKey(entryKey, fieldKey)),
+                                          fieldKey,
+                                          fieldNamesByTypeField.getOrDefault(
+                                              releaseTypeFieldKey(entryType, fieldKey), fieldKey),
+                                          fieldJson.path("source").asText(),
+                                          fieldJson.path("values")));
+                                });
+                      });
+            });
+    return fields;
+  }
+
+  private Map<String, String> releaseArtifactFieldNamesByTypeField(JsonNode artifact) {
+    Map<String, String> fieldNamesByTypeField = new LinkedHashMap<>();
+    artifact
+        .path("contentTypes")
+        .forEach(
+            contentType -> {
+              String typeKey = contentType.path("key").asText();
+              contentType
+                  .path("fields")
+                  .forEach(
+                      field ->
+                          fieldNamesByTypeField.put(
+                              releaseTypeFieldKey(typeKey, field.path("key").asText()),
+                              field.path("name").asText()));
+            });
+    return fieldNamesByTypeField;
+  }
+
+  private void addReleaseChange(
+      List<ReleaseChangeView> changes,
+      Set<String> seenChangeKeys,
+      ReleaseChangeView releaseChange) {
+    if (seenChangeKeys.add(releaseChangeKey(releaseChange))) {
+      changes.add(releaseChange);
+    }
+  }
+
+  private String releaseChangeKey(ReleaseChangeView releaseChange) {
+    return releaseChange.kind()
+        + ":"
+        + Objects.toString(releaseChange.entryId(), "")
+        + ":"
+        + Objects.toString(releaseChange.entryName(), "")
+        + ":"
+        + Objects.toString(releaseChange.fieldId(), "")
+        + ":"
+        + Objects.toString(releaseChange.fieldName(), "")
+        + ":"
+        + Objects.toString(releaseChange.localeTag(), "");
+  }
+
+  private String releaseFieldLocaleKey(ReleaseArtifactField field, String localeTag) {
+    return field.identityKey() + ":" + localeTag;
+  }
+
+  private String releaseFieldIdentityKey(String entryKey, String variantKey, String fieldKey) {
+    return entryKey + ":" + variantKey + ":" + fieldKey;
+  }
+
+  private String releaseEntryFieldKey(String entryKey, String fieldKey) {
+    return entryKey + ":" + fieldKey;
+  }
+
+  private String releaseTypeFieldKey(String typeKey, String fieldKey) {
+    return typeKey + ":" + fieldKey;
   }
 
   private void validatePublishPackageArtifact(
@@ -1789,6 +2605,12 @@ public class CmsContentService {
       Map<Long, Map<String, CmsCurrentVariantRow>> currentVariants,
       List<LocaleCompleteness> completeness) {}
 
+  private record ProjectReleaseValidation(
+      String authoringSha256,
+      PublishPreflight preflight,
+      List<EntryCompletenessView> entries,
+      PublishPackage publishPackage) {}
+
   private JsonNode readSnapshotJson(String json, String label, CmsPublishSnapshot snapshot) {
     if (json == null || json.isBlank()) {
       throw new IllegalStateException(
@@ -1842,10 +2664,15 @@ public class CmsContentService {
   }
 
   private List<String> parseSnapshotPublishRequestLocaleTags(CmsPublishSnapshot snapshot) {
-    String publishRequestLocaleTags = snapshot.getPublishRequestLocaleTags();
+    return parseSnapshotPublishRequestLocaleTags(
+        snapshot.getPublishRequestLocaleTags(), snapshot.getId());
+  }
+
+  private List<String> parseSnapshotPublishRequestLocaleTags(
+      String publishRequestLocaleTags, Long snapshotId) {
     if (publishRequestLocaleTags == null) {
       throw new IllegalStateException(
-          "Publish snapshot request locale tags are missing: " + snapshot.getId());
+          "Publish snapshot request locale tags are missing: " + snapshotId);
     }
     if (publishRequestLocaleTags.isEmpty()) {
       return List.of();
@@ -1858,7 +2685,7 @@ public class CmsContentService {
         || !Objects.equals(localeTags, localeTags.stream().sorted().toList())
         || !Objects.equals(publishRequestLocaleTags, String.join(",", localeTags))) {
       throw new IllegalStateException(
-          "Publish snapshot request locale tags are invalid: " + snapshot.getId());
+          "Publish snapshot request locale tags are invalid: " + snapshotId);
     }
     return List.copyOf(localeTags);
   }
@@ -1959,7 +2786,30 @@ public class CmsContentService {
     return new EntryCompletenessView(
         entry.getId(),
         entry.getEntryKey(),
-        buildCompleteness(entry.getProject(), entryMappings, localeTags, currentVariants));
+        buildCompleteness(entry.getProject(), entryMappings, localeTags, currentVariants),
+        buildFieldCompleteness(entry.getProject(), entryMappings, localeTags, currentVariants));
+  }
+
+  private List<FieldCompleteness> buildFieldCompleteness(
+      CmsContentProject project,
+      List<CmsContentFieldMapping> mappings,
+      List<String> localeTags,
+      Map<Long, Map<String, CmsCurrentVariantRow>> currentVariants) {
+    return mappings.stream()
+        .collect(
+            Collectors.groupingBy(
+                mapping -> mapping.getField().getId(), LinkedHashMap::new, Collectors.toList()))
+        .values()
+        .stream()
+        .map(
+            fieldMappings -> {
+              CmsContentTypeField field = fieldMappings.get(0).getField();
+              return new FieldCompleteness(
+                  field.getId(),
+                  field.getFieldKey(),
+                  buildCompleteness(project, fieldMappings, localeTags, currentVariants));
+            })
+        .toList();
   }
 
   private PublishPreflight buildPublishPreflight(
@@ -3061,6 +3911,20 @@ public class CmsContentService {
     return repositories.get(0);
   }
 
+  private Repository resolveProjectRepository(Long repositoryId, String projectKey, String name) {
+    if (repositoryId != null) {
+      return resolveRepository(requireBodySelectorId(repositoryId, "Repository id"));
+    }
+
+    try {
+      return repositoryService.createRepository(
+          "cms-" + projectKey, "CMS backing repository for " + name, null, false);
+    } catch (RepositoryNameAlreadyUsedException exception) {
+      throw new CmsContentConflictException(
+          "CMS backing repository already exists for content project: " + projectKey);
+    }
+  }
+
   private List<String> resolveLocaleTags(CmsContentProject project, List<String> requestedTags) {
     String sourceTag = project.getRepository().getSourceLocale().getBcp47Tag();
     Set<String> availableTags = new LinkedHashSet<>();
@@ -3111,6 +3975,47 @@ public class CmsContentService {
       }
     }
     return normalizedTags.stream().sorted().toList();
+  }
+
+  private List<String> normalizeTargetLocaleTags(List<String> requestedTags) {
+    if (requestedTags == null || requestedTags.isEmpty()) {
+      return List.of();
+    }
+    LinkedHashSet<String> normalizedTags = new LinkedHashSet<>();
+    for (String requestedTag : requestedTags) {
+      if (requestedTag == null || requestedTag.trim().isEmpty()) {
+        throw new IllegalArgumentException("Target locale tags must not contain blank values");
+      }
+      String requestedTagTrimmed = requestedTag.trim();
+      com.box.l10n.mojito.entity.Locale locale = localeService.findByBcp47Tag(requestedTagTrimmed);
+      if (locale == null) {
+        throw new IllegalArgumentException("Unknown locale: " + requestedTagTrimmed);
+      }
+      String normalizedTag = locale.getBcp47Tag();
+      if (!normalizedTags.add(normalizedTag)) {
+        throw new IllegalArgumentException(
+            "Target locale tags must not contain duplicate values: " + normalizedTag);
+      }
+    }
+    return normalizedTags.stream().sorted().toList();
+  }
+
+  private String normalizeConfiguredTargetLocaleTag(
+      CmsContentProject project, String requestedLocaleTag) {
+    if (requestedLocaleTag == null) {
+      throw new IllegalArgumentException("Target locale tags must not contain blank values");
+    }
+    String normalizedLocaleTag = normalizeTargetLocaleTags(List.of(requestedLocaleTag)).getFirst();
+    String sourceLocaleTag = project.getRepository().getSourceLocale().getBcp47Tag();
+    if (sourceLocaleTag.equals(normalizedLocaleTag)) {
+      throw new IllegalArgumentException(
+          "Translation locale must not use the source locale: " + sourceLocaleTag);
+    }
+    if (!repositoryLocalesByTag(project).containsKey(normalizedLocaleTag)) {
+      throw new IllegalArgumentException(
+          "Translation locale is not configured on the project repository: " + normalizedLocaleTag);
+    }
+    return normalizedLocaleTag;
   }
 
   private String buildPublishRequestAuthoringSha256(CmsContentProject project) {
@@ -3259,6 +4164,13 @@ public class CmsContentService {
             });
   }
 
+  private void ensureFirstCopyBlockStartAvailable(Long projectId) {
+    if (!contentTypeRepository.findByProjectIdOrderByNameAscIdAsc(projectId).isEmpty()
+        || !entryRepository.findByProjectIdOrderByNameAscIdAsc(projectId).isEmpty()) {
+      throw new IllegalArgumentException("First copy block can only start an empty writing space");
+    }
+  }
+
   private void ensureFieldKeyAvailable(Long contentTypeId, String key, Long currentId) {
     fieldRepository
         .findByContentTypeIdAndFieldKeyIgnoreCase(contentTypeId, key)
@@ -3267,6 +4179,42 @@ public class CmsContentService {
             existing -> {
               throw new IllegalArgumentException("Content type field already exists: " + key);
             });
+  }
+
+  private String allocatePrivateContentTypeKey(
+      CmsContentType sourceContentType, CmsContentEntry entry) {
+    String keySeed = sourceContentType.getTypeKey() + "-" + entry.getEntryKey() + "-private";
+    for (int attempt = 0; ; attempt++) {
+      String suffix = attempt == 0 ? "" : "-" + (attempt + 1);
+      String key = generatedKeyWithSuffix(keySeed, suffix);
+      if (contentTypeRepository
+          .findByProjectIdAndTypeKeyIgnoreCase(entry.getProject().getId(), key)
+          .isEmpty()) {
+        return key;
+      }
+    }
+  }
+
+  private String generatedKeyWithSuffix(String keySeed, String suffix) {
+    int maxBaseLength = CmsContentType.KEY_MAX_LENGTH - suffix.length();
+    if (maxBaseLength < 1) {
+      throw new IllegalStateException("Generated content type key suffix is too long");
+    }
+    String keyBase =
+        keySeed.length() <= maxBaseLength ? keySeed : keySeed.substring(0, maxBaseLength);
+    keyBase = keyBase.replaceAll("[-_]+$", "");
+    if (keyBase.isEmpty()) {
+      throw new IllegalStateException("Generated content type key is empty");
+    }
+    return normalizeKey(keyBase + suffix, "Content type key");
+  }
+
+  private String normalizeGeneratedName(String name, int maxLength, String label) {
+    String normalized = name.trim().replaceAll("\\s+", " ");
+    if (normalized.length() > maxLength) {
+      normalized = normalized.substring(0, maxLength).trim();
+    }
+    return normalizeName(normalized, maxLength, label);
   }
 
   private void ensureEntryKeyAvailable(Long projectId, String key, Long currentId) {
@@ -3457,6 +4405,9 @@ public class CmsContentService {
         snapshot.getSnapshotVersion(),
         snapshot.getStatus(),
         parseSnapshotLocaleTags(snapshot),
+        parseSnapshotPublishRequestLocaleTags(snapshot),
+        snapshot.getPublishRequestAuthoringSha256(),
+        snapshot.getPublishRequestPackageSha256(),
         snapshot.getArtifactSha256(),
         snapshot.getArtifactByteSize(),
         snapshot.getSnapshotSigningKeyId(),
@@ -3475,6 +4426,9 @@ public class CmsContentService {
         snapshot.snapshotVersion(),
         snapshot.status(),
         parseSnapshotLocaleTags(snapshot.localeTags(), snapshot.id()),
+        parseSnapshotPublishRequestLocaleTags(snapshot.publishRequestLocaleTags(), snapshot.id()),
+        snapshot.publishRequestAuthoringSha256(),
+        snapshot.publishRequestPackageSha256(),
         snapshot.artifactSha256(),
         snapshot.artifactByteSize(),
         snapshot.snapshotSigningKeyId(),
@@ -3491,6 +4445,9 @@ public class CmsContentService {
       Integer snapshotVersion,
       CmsPublishSnapshot.Status status,
       List<String> localeTags,
+      List<String> publishRequestLocaleTags,
+      String publishRequestAuthoringSha256,
+      String publishRequestPackageSha256,
       String artifactSha256,
       Long artifactByteSize,
       String snapshotSigningKeyId,
@@ -3504,6 +4461,9 @@ public class CmsContentService {
         snapshotVersion,
         status,
         localeTags,
+        publishRequestLocaleTags,
+        publishRequestAuthoringSha256,
+        publishRequestPackageSha256,
         artifactSha256,
         artifactByteSize,
         snapshotSigningKeyId,
@@ -3569,6 +4529,8 @@ public class CmsContentService {
         || snapshot.snapshotVersion() == null
         || snapshot.snapshotVersion() < 1
         || !CmsPublishSnapshot.Status.PUBLISHED.equals(snapshot.status())
+        || !isSha256(snapshot.publishRequestAuthoringSha256())
+        || !isSha256(snapshot.publishRequestPackageSha256())
         || !isSha256(snapshot.artifactSha256())
         || snapshot.artifactByteSize() == null
         || snapshot.artifactByteSize() <= 0
@@ -3584,6 +4546,7 @@ public class CmsContentService {
         || snapshot.publishedAt().isBlank()) {
       throw new IllegalStateException("Publish snapshot history row is invalid: " + snapshot.id());
     }
+    parseSnapshotPublishRequestLocaleTags(snapshot.publishRequestLocaleTags(), snapshot.id());
     try {
       if (!Objects.equals(
           Instant.parse(snapshot.publishedAt()).toString(), snapshot.publishedAt())) {
@@ -4347,8 +5310,14 @@ public class CmsContentService {
       int translationNeededFields,
       boolean complete) {}
 
+  public record FieldCompleteness(
+      Long fieldId, String fieldKey, List<LocaleCompleteness> locales) {}
+
   public record EntryCompletenessView(
-      Long entryId, String entryKey, List<LocaleCompleteness> locales) {}
+      Long entryId,
+      String entryKey,
+      List<LocaleCompleteness> locales,
+      List<FieldCompleteness> fields) {}
 
   public record ProjectCompletenessView(
       Long projectId,
@@ -4359,7 +5328,35 @@ public class CmsContentService {
       List<String> localeTags,
       List<LocaleCompleteness> locales,
       List<EntryCompletenessView> entries,
-      boolean complete) {}
+      boolean complete,
+      ReleaseChangeSummaryView releaseChangeSummary) {}
+
+  public enum ReleaseChangeKind {
+    LOCALE_ADDED,
+    LOCALE_REMOVED,
+    CONTENT_ITEM_ADDED,
+    CONTENT_ITEM_REMOVED,
+    FIELD_ADDED,
+    FIELD_REMOVED,
+    SOURCE_COPY_CHANGED,
+    TRANSLATION_CHANGED,
+    TRANSLATION_NEEDED,
+    TRANSLATION_NEEDS_REVIEW,
+    RELEASE_SETUP_CHANGED
+  }
+
+  public record ReleaseChangeView(
+      ReleaseChangeKind kind,
+      Long entryId,
+      String entryName,
+      Long fieldId,
+      String fieldName,
+      String localeTag,
+      String lastReleasedSourceContent,
+      String lastReleasedTranslationContent) {}
+
+  public record ReleaseChangeSummaryView(
+      List<ReleaseChangeView> changes, boolean hasMore, int actionNeededCount) {}
 
   public record PublishSnapshotView(
       Long id,
@@ -4367,6 +5364,9 @@ public class CmsContentService {
       Integer snapshotVersion,
       CmsPublishSnapshot.Status status,
       List<String> localeTags,
+      List<String> publishRequestLocaleTags,
+      String publishRequestAuthoringSha256,
+      String publishRequestPackageSha256,
       String artifactSha256,
       Long artifactByteSize,
       String snapshotSigningKeyId,
@@ -4413,9 +5413,12 @@ public class CmsContentService {
       String name,
       String description,
       Boolean enabled,
-      @JsonSetter(value = "repositoryId", nulls = Nulls.FAIL) Long repositoryId,
+      Long repositoryId,
       String assetPath,
       String deliveryHint) {}
+
+  public record TargetLocalesCommand(
+      @JsonSetter(value = "localeTags", nulls = Nulls.FAIL) List<String> localeTags) {}
 
   public static final class ProjectUpdateCommand {
     private String name;
@@ -4609,7 +5612,19 @@ public class CmsContentService {
       CmsContentTypeField.FieldType fieldType,
       Boolean localizable,
       Boolean required,
-      Integer sortOrder) {}
+      Integer sortOrder,
+      InitialFieldSourceCommand initialFieldSource) {
+    public ContentTypeFieldCommand(
+        String fieldKey,
+        String name,
+        String description,
+        CmsContentTypeField.FieldType fieldType,
+        Boolean localizable,
+        Boolean required,
+        Integer sortOrder) {
+      this(fieldKey, name, description, fieldType, localizable, required, sortOrder, null);
+    }
+  }
 
   public static final class ContentTypeFieldUpdateCommand {
     private String name;
@@ -4745,7 +5760,39 @@ public class CmsContentService {
       String name,
       String description,
       CmsContentEntry.Status status,
-      String metadataJson) {}
+      String metadataJson,
+      List<InitialFieldMappingCommand> initialFieldMappings) {
+    public EntryCommand(
+        Long contentTypeId,
+        String entryKey,
+        String name,
+        String description,
+        CmsContentEntry.Status status,
+        String metadataJson) {
+      this(contentTypeId, entryKey, name, description, status, metadataJson, List.of());
+    }
+  }
+
+  public record FirstCopyBlockCommand(
+      String entryKey,
+      String entryName,
+      String entryDescription,
+      String fieldKey,
+      String sourceContent,
+      String sourceComment) {}
+
+  public record EntryCopyPiecesPrivateCommand(
+      @JsonSetter(value = "expectedVersion", nulls = Nulls.FAIL) Long expectedVersion) {}
+
+  public record InitialFieldMappingCommand(
+      @JsonSetter(value = "fieldId", nulls = Nulls.FAIL) Long fieldId,
+      String sourceContent,
+      String sourceComment) {}
+
+  public record InitialFieldSourceCommand(
+      @JsonSetter(value = "variantId", nulls = Nulls.FAIL) Long variantId,
+      String sourceContent,
+      String sourceComment) {}
 
   public static final class EntryUpdateCommand {
     private String name;
@@ -4977,8 +6024,33 @@ public class CmsContentService {
   public record FieldMappingDeleteCommand(
       @JsonSetter(value = "expectedVersion", nulls = Nulls.FAIL) Long expectedVersion) {}
 
+  private record EntryVariantSnapshot(
+      Long id,
+      String variantKey,
+      String name,
+      String candidateGroupKey,
+      CmsContentEntryVariant.Status status,
+      String metadataJson,
+      Integer sortOrder) {}
+
+  private record FieldMappingSnapshot(
+      Long variantId, Long fieldId, Long assetId, TMTextUnit tmTextUnit) {}
+
   public record PublishCommand(
       List<String> localeTags, String expectedAuthoringSha256, String expectedPackageSha256) {}
 
   private record PublishPackage(Map<String, Object> payload, String sha256, Long byteSize) {}
+
+  private record ReleaseArtifactEntry(Long entryId, String entryKey, String entryName) {}
+
+  private record ReleaseArtifactField(
+      Long entryId,
+      String identityKey,
+      String entryKey,
+      String entryName,
+      Long fieldId,
+      String fieldKey,
+      String fieldName,
+      String sourceContent,
+      JsonNode values) {}
 }

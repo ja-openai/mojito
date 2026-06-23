@@ -41,11 +41,13 @@ import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantMutationLockService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantService;
+import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.test.TestIdWatcher;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.EntityManager;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -118,6 +120,10 @@ public class CmsContentServiceIntegrationTest extends ServiceTestBase {
 
   @Autowired CmsContentProjectRepository projectRepository;
 
+  @Autowired CmsContentEntryRepository entryRepository;
+
+  @Autowired CmsContentTypeFieldRepository fieldRepository;
+
   @Autowired CmsPublishSnapshotRepository snapshotRepository;
 
   @Autowired CmsPublishSnapshotSealRepository snapshotSealRepository;
@@ -139,6 +145,88 @@ public class CmsContentServiceIntegrationTest extends ServiceTestBase {
   @Autowired ObjectMapper objectMapper;
 
   @Rule public TestIdWatcher testIdWatcher = new TestIdWatcher();
+
+  @Test
+  public void createsDedicatedRepositoryWhenProjectRepositoryIsNotSelected() {
+    CmsContentService.ProjectDetail detail =
+        cmsContentService.createProject(
+            new CmsContentService.ProjectCommand(
+                "autocreated-space", "Autocreated space", null, true, null, null, "BLOB_CDN"));
+
+    Repository repository =
+        repositoryRepository.findById(detail.project().repository().id()).orElseThrow();
+
+    assertAdminAudit(detail.project().audit());
+    assertThat(detail.project().repository().name()).isEqualTo("cms-autocreated-space");
+    assertThat(detail.project().asset().path()).isEqualTo("cms/autocreated-space");
+    assertThat(detail.project().sourceLocale()).isEqualTo("en");
+    assertThat(repository.getName()).isEqualTo("cms-autocreated-space");
+    assertThat(repository.getDescription())
+        .isEqualTo("CMS backing repository for Autocreated space");
+    assertThat(repository.getHidden()).isFalse();
+  }
+
+  @Test
+  public void addsTargetLocalesInsideCmsWritingSpace() {
+    CmsContentService.ProjectDetail detail =
+        cmsContentService.createProject(
+            new CmsContentService.ProjectCommand(
+                "localized-space", "Localized space", null, true, null, null, "BLOB_CDN"));
+    Long projectId = detail.project().id();
+
+    cmsContentService.addTargetLocales(
+        projectId, new CmsContentService.TargetLocalesCommand(List.of("ja-JP", "fr-FR")));
+    cmsContentService.addTargetLocales(
+        projectId, new CmsContentService.TargetLocalesCommand(List.of("fr-FR")));
+
+    entityManager.clear();
+    Repository repository =
+        repositoryRepository.findById(detail.project().repository().id()).orElseThrow();
+    assertThat(repositoryService.getRepositoryLocalesWithoutRootLocale(repository))
+        .extracting(repositoryLocale -> repositoryLocale.getLocale().getBcp47Tag())
+        .containsExactlyInAnyOrder("fr-FR", "ja-JP");
+    assertThatThrownBy(
+            () ->
+                cmsContentService.addTargetLocales(
+                    projectId, new CmsContentService.TargetLocalesCommand(List.of("en"))))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("must not include the source locale");
+    assertThatThrownBy(
+            () ->
+                cmsContentService.addTargetLocales(
+                    projectId, new CmsContentService.TargetLocalesCommand(List.of("xx-XX"))))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Unknown locale: xx-XX");
+  }
+
+  @Test
+  public void getFieldTranslationOpensConfiguredUntranslatedTargetRow() {
+    String projectKey =
+        "translation-row-"
+            + DigestUtils.sha256Hex(testIdWatcher.getEntityName("project")).substring(0, 8);
+    CmsContentService.ProjectDetail detail =
+        cmsContentService.createProject(
+            new CmsContentService.ProjectCommand(
+                projectKey, "Translation row space", null, true, null, null, "BLOB_CDN"));
+    Long projectId = detail.project().id();
+    detail =
+        cmsContentService.addTargetLocales(
+            projectId, new CmsContentService.TargetLocalesCommand(List.of("fr-FR")));
+    detail =
+        cmsContentService.createFirstCopyBlock(
+            projectId,
+            new CmsContentService.FirstCopyBlockCommand(
+                "welcome", "Welcome", "Signup email", "headline", "Welcome", "Signup headline"));
+    CmsContentService.FieldMappingView mapping =
+        detail.entries().get(0).variants().get(0).fieldMappings().get(0);
+
+    TextUnitDTO frenchTranslation = cmsContentService.getFieldTranslation(mapping.id(), "fr-FR");
+
+    assertThat(frenchTranslation.getTmTextUnitId()).isEqualTo(mapping.tmTextUnitId());
+    assertThat(frenchTranslation.getTargetLocale()).isEqualTo("fr-FR");
+    assertThat(frenchTranslation.getTarget()).isNull();
+    assertThat(frenchTranslation.getStatus()).isEqualTo(TRANSLATION_NEEDED);
+  }
 
   @Test
   public void createsMojitoBackedEntryAndPublishesReadyArtifact() throws Exception {
@@ -430,6 +518,11 @@ public class CmsContentServiceIntegrationTest extends ServiceTestBase {
     assertThat(publishProject(projectId, publishCommand, "publish-growth-email"))
         .isEqualTo(snapshot);
     assertThat(snapshot.localeTags()).containsExactly("en", "fr-FR");
+    assertThat(snapshot.publishRequestLocaleTags()).isEmpty();
+    assertThat(snapshot.publishRequestAuthoringSha256())
+        .isEqualTo(publishCommand.expectedAuthoringSha256());
+    assertThat(snapshot.publishRequestPackageSha256())
+        .isEqualTo(publishCommand.expectedPackageSha256());
     CmsContentService.SnapshotArtifact snapshotArtifact =
         cmsContentService.getSnapshotArtifact("growth-email", snapshot.snapshotVersion());
     CmsContentService.SnapshotDeliveryDescriptor latestSnapshot =
@@ -475,6 +568,486 @@ public class CmsContentServiceIntegrationTest extends ServiceTestBase {
                 .path("fr-FR")
                 .asText())
         .isEqualTo("Bonjour");
+  }
+
+  @Test
+  public void createsEntryWithInitialGeneratedFieldMappings() throws Exception {
+    Repository repository =
+        repositoryService.createRepository(
+            testIdWatcher.getEntityName("cms_initial_mapping_repository"));
+    repositoryService.addRepositoryLocale(repository, "fr-FR");
+    String projectKey =
+        "initial-mapping-"
+            + DigestUtils.sha256Hex(testIdWatcher.getEntityName("project")).substring(0, 8);
+    CmsContentService.ProjectDetail detail =
+        cmsContentService.createProject(
+            new CmsContentService.ProjectCommand(
+                projectKey, "Initial mapping project", null, true, repository.getId(), null, null));
+    Long projectId = detail.project().id();
+    detail =
+        cmsContentService.createContentType(
+            projectId, new CmsContentService.ContentTypeCommand("email", "Email", null, 1, null));
+    Long contentTypeId = detail.contentTypes().get(0).id();
+    detail =
+        cmsContentService.createContentTypeField(
+            contentTypeId,
+            new CmsContentService.ContentTypeFieldCommand(
+                "header", "Header", null, CmsContentTypeField.FieldType.TEXT, true, true, 0));
+    Long headerFieldId = detail.contentTypes().get(0).fields().get(0).id();
+    detail =
+        cmsContentService.createContentTypeField(
+            contentTypeId,
+            new CmsContentService.ContentTypeFieldCommand(
+                "cta", "CTA", null, CmsContentTypeField.FieldType.TEXT, true, true, 1));
+    Long ctaFieldId =
+        detail.contentTypes().get(0).fields().stream()
+            .filter(field -> "cta".equals(field.fieldKey()))
+            .findFirst()
+            .orElseThrow()
+            .id();
+
+    detail =
+        cmsContentService.createEntry(
+            projectId,
+            new CmsContentService.EntryCommand(
+                contentTypeId,
+                "welcome",
+                "Welcome",
+                null,
+                CmsContentEntry.Status.DRAFT,
+                null,
+                List.of(
+                    new CmsContentService.InitialFieldMappingCommand(
+                        headerFieldId, "Welcome back", "Email header"),
+                    new CmsContentService.InitialFieldMappingCommand(
+                        ctaFieldId, "Start free", "CTA below header"))));
+
+    CmsContentService.VariantView controlVariant = detail.entries().get(0).variants().get(0);
+    assertThat(controlVariant.fieldMappings())
+        .extracting(
+            CmsContentService.FieldMappingView::fieldKey,
+            CmsContentService.FieldMappingView::sourceContent,
+            CmsContentService.FieldMappingView::sourceComment)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple("header", "Welcome back", "Email header"),
+            org.assertj.core.groups.Tuple.tuple("cta", "Start free", "CTA below header"));
+
+    detail = markEntryReady(detail);
+    Locale french = localeService.findByBcp47Tag("fr-FR");
+    CmsContentService.FieldMappingView headerMapping = controlVariant.fieldMappings().get(0);
+    CmsContentService.FieldMappingView ctaMapping = controlVariant.fieldMappings().get(1);
+    tmService.addCurrentTMTextUnitVariant(
+        headerMapping.tmTextUnitId(), french.getId(), "Bienvenue", APPROVED, true);
+    tmService.addCurrentTMTextUnitVariant(
+        ctaMapping.tmTextUnitId(), french.getId(), "Commencer", TRANSLATION_NEEDED, true);
+
+    CmsContentService.EntryCompletenessView completeness =
+        cmsContentService.getEntryCompleteness(detail.entries().get(0).id(), List.of("fr-FR"));
+    assertThat(completeness.locales().get(1).translationNeededFields()).isEqualTo(1);
+    assertThat(completeness.fields())
+        .extracting(CmsContentService.FieldCompleteness::fieldKey)
+        .containsExactly("header", "cta");
+    assertThat(completeness.fields().get(0).locales().get(1).complete()).isTrue();
+    assertThat(completeness.fields().get(1).locales().get(1).translationNeededFields())
+        .isEqualTo(1);
+  }
+
+  @Test
+  public void rollsBackEntryWhenInitialFieldMappingFails() throws Exception {
+    Repository repository =
+        repositoryService.createRepository(
+            testIdWatcher.getEntityName("cms_initial_mapping_rollback_repository"));
+    String projectKey =
+        "initial-rollback-"
+            + DigestUtils.sha256Hex(testIdWatcher.getEntityName("project")).substring(0, 8);
+    CmsContentService.ProjectDetail detail =
+        cmsContentService.createProject(
+            new CmsContentService.ProjectCommand(
+                projectKey,
+                "Initial mapping rollback project",
+                null,
+                true,
+                repository.getId(),
+                null,
+                null));
+    Long projectId = detail.project().id();
+    detail =
+        cmsContentService.createContentType(
+            projectId, new CmsContentService.ContentTypeCommand("email", "Email", null, 1, null));
+    Long emailTypeId = detail.contentTypes().get(0).id();
+    detail =
+        cmsContentService.createContentTypeField(
+            emailTypeId,
+            new CmsContentService.ContentTypeFieldCommand(
+                "header", "Header", null, CmsContentTypeField.FieldType.TEXT, true, true, 0));
+    Long headerFieldId = detail.contentTypes().get(0).fields().get(0).id();
+    detail =
+        cmsContentService.createContentType(
+            projectId, new CmsContentService.ContentTypeCommand("banner", "Banner", null, 1, null));
+    Long bannerTypeId =
+        detail.contentTypes().stream()
+            .filter(contentType -> "banner".equals(contentType.typeKey()))
+            .findFirst()
+            .orElseThrow()
+            .id();
+    detail =
+        cmsContentService.createContentTypeField(
+            bannerTypeId,
+            new CmsContentService.ContentTypeFieldCommand(
+                "body", "Body", null, CmsContentTypeField.FieldType.TEXT, true, true, 0));
+    Long bodyFieldId =
+        detail.contentTypes().stream()
+            .filter(contentType -> "banner".equals(contentType.typeKey()))
+            .findFirst()
+            .orElseThrow()
+            .fields()
+            .get(0)
+            .id();
+
+    assertThatThrownBy(
+            () ->
+                cmsContentService.createEntry(
+                    projectId,
+                    new CmsContentService.EntryCommand(
+                        emailTypeId,
+                        "welcome",
+                        "Welcome",
+                        null,
+                        CmsContentEntry.Status.DRAFT,
+                        null,
+                        List.of(
+                            new CmsContentService.InitialFieldMappingCommand(
+                                headerFieldId, "Welcome back", "Email header"),
+                            new CmsContentService.InitialFieldMappingCommand(
+                                bodyFieldId, "Banner body", "Banner body")))))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Field does not belong to the entry content type: " + bodyFieldId);
+
+    entityManager.clear();
+    assertThat(entryRepository.findByProjectIdAndEntryKeyIgnoreCase(projectId, "welcome"))
+        .isEmpty();
+  }
+
+  @Test
+  public void makesOneSharedBlockCopyPiecesPrivateWithoutLosingMojitoSources() throws Exception {
+    Repository repository =
+        repositoryService.createRepository(
+            testIdWatcher.getEntityName("cms_private_copy_pieces_repository"));
+    String projectKey =
+        "private-pieces-"
+            + DigestUtils.sha256Hex(testIdWatcher.getEntityName("project")).substring(0, 8);
+    CmsContentService.ProjectDetail detail =
+        cmsContentService.createProject(
+            new CmsContentService.ProjectCommand(
+                projectKey, "Private pieces project", null, true, repository.getId(), null, null));
+    Long projectId = detail.project().id();
+    detail =
+        cmsContentService.createContentType(
+            projectId, new CmsContentService.ContentTypeCommand("email", "Email", null, 1, null));
+    Long sharedContentTypeId = detail.contentTypes().get(0).id();
+    detail =
+        cmsContentService.createContentTypeField(
+            sharedContentTypeId,
+            new CmsContentService.ContentTypeFieldCommand(
+                "header", "Header", null, CmsContentTypeField.FieldType.TEXT, true, true, 0));
+    Long sharedHeaderFieldId = detail.contentTypes().get(0).fields().get(0).id();
+    detail =
+        cmsContentService.createEntry(
+            projectId,
+            new CmsContentService.EntryCommand(
+                sharedContentTypeId,
+                "welcome",
+                "Welcome",
+                null,
+                CmsContentEntry.Status.DRAFT,
+                null,
+                List.of(
+                    new CmsContentService.InitialFieldMappingCommand(
+                        sharedHeaderFieldId, "Welcome back", "Welcome email header"))));
+    detail =
+        cmsContentService.createEntry(
+            projectId,
+            new CmsContentService.EntryCommand(
+                sharedContentTypeId,
+                "follow-up",
+                "Follow-up",
+                null,
+                CmsContentEntry.Status.DRAFT,
+                null,
+                List.of(
+                    new CmsContentService.InitialFieldMappingCommand(
+                        sharedHeaderFieldId,
+                        "Start your first project",
+                        "Follow-up email header"))));
+
+    CmsContentService.EntryView welcomeBeforeFork =
+        detail.entries().stream()
+            .filter(entry -> "welcome".equals(entry.entryKey()))
+            .findFirst()
+            .orElseThrow();
+    CmsContentService.FieldMappingView welcomeHeaderBeforeFork =
+        welcomeBeforeFork.variants().get(0).fieldMappings().get(0);
+
+    detail =
+        cmsContentService.makeEntryCopyPiecesPrivate(
+            welcomeBeforeFork.id(),
+            new CmsContentService.EntryCopyPiecesPrivateCommand(welcomeBeforeFork.entityVersion()));
+
+    CmsContentService.EntryView welcomeAfterFork =
+        detail.entries().stream()
+            .filter(entry -> "welcome".equals(entry.entryKey()))
+            .findFirst()
+            .orElseThrow();
+    CmsContentService.EntryView followUpAfterFork =
+        detail.entries().stream()
+            .filter(entry -> "follow-up".equals(entry.entryKey()))
+            .findFirst()
+            .orElseThrow();
+    CmsContentService.ContentTypeView privateContentType =
+        detail.contentTypes().stream()
+            .filter(
+                contentType -> Objects.equals(contentType.id(), welcomeAfterFork.contentTypeId()))
+            .findFirst()
+            .orElseThrow();
+    CmsContentService.FieldMappingView welcomeHeaderAfterFork =
+        welcomeAfterFork.variants().get(0).fieldMappings().get(0);
+
+    assertThat(detail.contentTypes())
+        .extracting(CmsContentService.ContentTypeView::typeKey)
+        .containsExactlyInAnyOrder("email", "email-welcome-private");
+    assertThat(welcomeAfterFork.contentTypeId()).isNotEqualTo(followUpAfterFork.contentTypeId());
+    assertThat(privateContentType.fields())
+        .extracting(CmsContentService.FieldView::fieldKey)
+        .containsExactly("header");
+    assertThat(welcomeHeaderAfterFork.stringId()).isEqualTo(welcomeHeaderBeforeFork.stringId());
+    assertThat(welcomeHeaderAfterFork.tmTextUnitId())
+        .isEqualTo(welcomeHeaderBeforeFork.tmTextUnitId());
+    assertThat(welcomeHeaderAfterFork.sourceContent()).isEqualTo("Welcome back");
+    assertThat(followUpAfterFork.variants().get(0).fieldMappings().get(0).sourceContent())
+        .isEqualTo("Start your first project");
+
+    Long privateVariantId = welcomeAfterFork.variants().get(0).id();
+    detail =
+        cmsContentService.createContentTypeField(
+            welcomeAfterFork.contentTypeId(),
+            new CmsContentService.ContentTypeFieldCommand(
+                "cta",
+                "CTA",
+                "Button copy",
+                CmsContentTypeField.FieldType.TEXT,
+                true,
+                true,
+                1,
+                new CmsContentService.InitialFieldSourceCommand(
+                    privateVariantId, "Start free", "CTA below welcome header")));
+    CmsContentService.ContentTypeView welcomePrivateContentType =
+        detail.contentTypes().stream()
+            .filter(
+                contentType -> Objects.equals(contentType.id(), welcomeAfterFork.contentTypeId()))
+            .findFirst()
+            .orElseThrow();
+    CmsContentService.ContentTypeView followUpSharedContentType =
+        detail.contentTypes().stream()
+            .filter(
+                contentType -> Objects.equals(contentType.id(), followUpAfterFork.contentTypeId()))
+            .findFirst()
+            .orElseThrow();
+    assertThat(welcomePrivateContentType.fields())
+        .extracting(CmsContentService.FieldView::fieldKey)
+        .containsExactly("header", "cta");
+    assertThat(followUpSharedContentType.fields())
+        .extracting(CmsContentService.FieldView::fieldKey)
+        .containsExactly("header");
+  }
+
+  @Test
+  public void createsFirstCopyBlockAtomically() throws Exception {
+    Repository repository =
+        repositoryService.createRepository(
+            testIdWatcher.getEntityName("cms_first_copy_block_repository"));
+    String projectKey =
+        "first-copy-"
+            + DigestUtils.sha256Hex(testIdWatcher.getEntityName("project")).substring(0, 8);
+    CmsContentService.ProjectDetail detail =
+        cmsContentService.createProject(
+            new CmsContentService.ProjectCommand(
+                projectKey, "First copy project", null, true, repository.getId(), null, null));
+
+    detail =
+        cmsContentService.createFirstCopyBlock(
+            detail.project().id(),
+            new CmsContentService.FirstCopyBlockCommand(
+                "welcome-email",
+                "Welcome email",
+                "Signup confirmation",
+                "copy",
+                "Welcome to the product",
+                "Headline"));
+
+    assertThat(detail.contentTypes())
+        .extracting(CmsContentService.ContentTypeView::typeKey)
+        .containsExactly("copy-block");
+    assertThat(detail.contentTypes().get(0).fields())
+        .extracting(CmsContentService.FieldView::fieldKey, CmsContentService.FieldView::name)
+        .containsExactly(org.assertj.core.groups.Tuple.tuple("copy", "Copy"));
+    assertThat(detail.entries())
+        .extracting(CmsContentService.EntryView::entryKey, CmsContentService.EntryView::name)
+        .containsExactly(org.assertj.core.groups.Tuple.tuple("welcome-email", "Welcome email"));
+    assertThat(detail.entries().get(0).variants().get(0).fieldMappings())
+        .extracting(
+            CmsContentService.FieldMappingView::fieldKey,
+            CmsContentService.FieldMappingView::sourceContent,
+            CmsContentService.FieldMappingView::sourceComment)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple("copy", "Welcome to the product", "Headline"));
+  }
+
+  @Test
+  public void rollsBackFirstCopyBlockWhenInitialSourceFails() throws Exception {
+    Repository repository =
+        repositoryService.createRepository(
+            testIdWatcher.getEntityName("cms_first_copy_block_rollback_repository"));
+    String projectKey =
+        "first-copy-rollback-"
+            + DigestUtils.sha256Hex(testIdWatcher.getEntityName("project")).substring(0, 8);
+    CmsContentService.ProjectDetail detail =
+        cmsContentService.createProject(
+            new CmsContentService.ProjectCommand(
+                projectKey,
+                "First copy rollback project",
+                null,
+                true,
+                repository.getId(),
+                null,
+                null));
+    Long projectId = detail.project().id();
+
+    assertThatThrownBy(
+            () ->
+                cmsContentService.createFirstCopyBlock(
+                    projectId,
+                    new CmsContentService.FirstCopyBlockCommand(
+                        "welcome-email",
+                        "Welcome email",
+                        "Signup confirmation",
+                        "copy",
+                        "Welcome to the product",
+                        null)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Translator context is required");
+
+    entityManager.clear();
+    detail = cmsContentService.getProject(projectId);
+    assertThat(detail.contentTypes()).isEmpty();
+    assertThat(detail.entries()).isEmpty();
+  }
+
+  @Test
+  public void createsContentTypeFieldWithInitialGeneratedFieldSource() throws Exception {
+    Repository repository =
+        repositoryService.createRepository(
+            testIdWatcher.getEntityName("cms_initial_field_source_repository"));
+    String projectKey =
+        "initial-field-"
+            + DigestUtils.sha256Hex(testIdWatcher.getEntityName("project")).substring(0, 8);
+    CmsContentService.ProjectDetail detail =
+        cmsContentService.createProject(
+            new CmsContentService.ProjectCommand(
+                projectKey,
+                "Initial field source project",
+                null,
+                true,
+                repository.getId(),
+                null,
+                null));
+    Long projectId = detail.project().id();
+    detail =
+        cmsContentService.createContentType(
+            projectId, new CmsContentService.ContentTypeCommand("email", "Email", null, 1, null));
+    Long contentTypeId = detail.contentTypes().get(0).id();
+    detail =
+        cmsContentService.createEntry(
+            projectId,
+            new CmsContentService.EntryCommand(
+                contentTypeId, "welcome", "Welcome", null, CmsContentEntry.Status.DRAFT, null));
+    Long variantId = detail.entries().get(0).variants().get(0).id();
+
+    detail =
+        cmsContentService.createContentTypeField(
+            contentTypeId,
+            new CmsContentService.ContentTypeFieldCommand(
+                "cta",
+                "CTA",
+                "Button copy",
+                CmsContentTypeField.FieldType.TEXT,
+                true,
+                true,
+                0,
+                new CmsContentService.InitialFieldSourceCommand(
+                    variantId, "Start free", "CTA below header")));
+
+    assertThat(detail.contentTypes().get(0).fields())
+        .extracting(CmsContentService.FieldView::fieldKey)
+        .containsExactly("cta");
+    assertThat(detail.entries().get(0).variants().get(0).fieldMappings())
+        .extracting(
+            CmsContentService.FieldMappingView::fieldKey,
+            CmsContentService.FieldMappingView::sourceContent,
+            CmsContentService.FieldMappingView::sourceComment)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple("cta", "Start free", "CTA below header"));
+  }
+
+  @Test
+  public void rollsBackContentTypeFieldWhenInitialFieldSourceFails() throws Exception {
+    Repository repository =
+        repositoryService.createRepository(
+            testIdWatcher.getEntityName("cms_initial_field_source_rollback_repository"));
+    String projectKey =
+        "field-rollback-"
+            + DigestUtils.sha256Hex(testIdWatcher.getEntityName("project")).substring(0, 8);
+    CmsContentService.ProjectDetail detail =
+        cmsContentService.createProject(
+            new CmsContentService.ProjectCommand(
+                projectKey,
+                "Initial field source rollback project",
+                null,
+                true,
+                repository.getId(),
+                null,
+                null));
+    Long projectId = detail.project().id();
+    detail =
+        cmsContentService.createContentType(
+            projectId, new CmsContentService.ContentTypeCommand("email", "Email", null, 1, null));
+    Long contentTypeId = detail.contentTypes().get(0).id();
+    detail =
+        cmsContentService.createEntry(
+            projectId,
+            new CmsContentService.EntryCommand(
+                contentTypeId, "welcome", "Welcome", null, CmsContentEntry.Status.DRAFT, null));
+    Long variantId = detail.entries().get(0).variants().get(0).id();
+
+    assertThatThrownBy(
+            () ->
+                cmsContentService.createContentTypeField(
+                    contentTypeId,
+                    new CmsContentService.ContentTypeFieldCommand(
+                        "cta",
+                        "CTA",
+                        "Button copy",
+                        CmsContentTypeField.FieldType.TEXT,
+                        true,
+                        true,
+                        0,
+                        new CmsContentService.InitialFieldSourceCommand(
+                            variantId, "Start free", null))))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Translator context is required for mapping: welcome.default.cta");
+
+    entityManager.clear();
+    assertThat(fieldRepository.findByContentTypeIdAndFieldKeyIgnoreCase(contentTypeId, "cta"))
+        .isEmpty();
   }
 
   @Test

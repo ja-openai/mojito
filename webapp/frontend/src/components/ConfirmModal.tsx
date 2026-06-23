@@ -11,6 +11,7 @@ type Props = {
   onConfirm: () => void;
   onCancel: () => void;
   confirmVariant?: 'danger' | 'primary';
+  confirmDisabled?: boolean;
   requireText?: string;
   requireTextLabel?: string;
 };
@@ -24,6 +25,7 @@ export function ConfirmModal({
   onConfirm,
   onCancel,
   confirmVariant = 'danger',
+  confirmDisabled = false,
   requireText,
   requireTextLabel,
 }: Props) {
@@ -37,7 +39,8 @@ export function ConfirmModal({
   }, [open]);
 
   const isConfirmDisabled =
-    typeof requireText === 'string' && confirmationValue.trim() !== requireText;
+    confirmDisabled ||
+    (typeof requireText === 'string' && confirmationValue.trim() !== requireText);
 
   return (
     <Modal

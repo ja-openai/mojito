@@ -1,4 +1,5 @@
 import './app.css';
+import './page/settings/admin-content-cms-page.css';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { lazy, type ReactNode, Suspense, useState } from 'react';
@@ -86,28 +87,41 @@ const AdminContentCmsPage = lazy(async () => {
   return { default: module.AdminContentCmsPage };
 });
 
-function ContentCmsRouteLoadingState() {
+function ContentCmsRouteLoadingStateForMode({ mode }: { mode: 'author' | 'admin' }) {
+  const isAdminToolsRoute = mode === 'admin';
   return (
     <div className="settings-subpage">
       <SettingsSubpageHeader
-        backTo="/settings/system"
-        backLabel="Back to settings"
+        backTo={isAdminToolsRoute ? '/settings/system/content-cms' : '/settings/system'}
+        backLabel={isAdminToolsRoute ? 'Back to Product copy' : 'Back to settings'}
         context="Settings"
-        title="Content CMS"
+        title={isAdminToolsRoute ? 'Admin tools' : 'Product copy'}
       />
-      <div className="settings-page settings-page--wide">
-        <p className="settings-page__hint" role="status" aria-live="polite">
-          Loading Content CMS...
-        </p>
+      <div
+        className={`settings-page settings-page--wide${
+          isAdminToolsRoute ? '' : ' content-cms-admin-page'
+        }`}
+      >
+        {isAdminToolsRoute ? (
+          <p className="settings-page__hint" role="status" aria-live="polite">
+            Loading admin tools...
+          </p>
+        ) : (
+          <section className="content-cms-admin-page__main" aria-label="Product copy editor">
+            <p className="settings-page__hint" role="status" aria-live="polite">
+              Loading Product copy...
+            </p>
+          </section>
+        )}
       </div>
     </div>
   );
 }
 
-function LazyAdminContentCmsPage() {
+function LazyAdminContentCmsPage({ mode = 'author' }: { mode?: 'author' | 'admin' } = {}) {
   return (
-    <Suspense fallback={<ContentCmsRouteLoadingState />}>
-      <AdminContentCmsPage />
+    <Suspense fallback={<ContentCmsRouteLoadingStateForMode mode={mode} />}>
+      <AdminContentCmsPage mode={mode} />
     </Suspense>
   );
 }
@@ -128,6 +142,10 @@ function LegacyGlossarySettingsRedirect() {
 function LegacyStringAuthoringRedirect() {
   const location = useLocation();
   return <Navigate to={`/string-authoring${location.search}`} replace />;
+}
+
+function isNavPathActive(pathname: string, navPath: string) {
+  return pathname === navPath || pathname.startsWith(`${navPath}/`);
 }
 
 function AppLayout({ showHeader }: { showHeader: boolean }) {
@@ -261,8 +279,14 @@ function AppRoutes() {
           path="/settings/system/json-config-localization/:repositoryId"
           element={<AdminJsonConfigLocalizationPage />}
         />
-        <Route path="/settings/admin/string-authoring" element={<LegacyStringAuthoringRedirect />} />
-        <Route path="/settings/system/string-authoring" element={<LegacyStringAuthoringRedirect />} />
+        <Route
+          path="/settings/admin/string-authoring"
+          element={<LegacyStringAuthoringRedirect />}
+        />
+        <Route
+          path="/settings/system/string-authoring"
+          element={<LegacyStringAuthoringRedirect />}
+        />
         <Route
           path="/settings/admin/linguist-time-spent"
           element={<AdminLinguistTimeSpentPage />}
@@ -411,7 +435,15 @@ function AppRoutes() {
           element={<AdminTranslationIncidentsPage />}
         />
         <Route path="/settings/admin/content-cms" element={<LazyAdminContentCmsPage />} />
+        <Route
+          path="/settings/admin/content-cms/admin"
+          element={<LazyAdminContentCmsPage mode="admin" />}
+        />
         <Route path="/settings/system/content-cms" element={<LazyAdminContentCmsPage />} />
+        <Route
+          path="/settings/system/content-cms/admin"
+          element={<LazyAdminContentCmsPage mode="admin" />}
+        />
       </Route>
       <Route path="*" element={<Navigate to="/repositories" replace />} />
     </Routes>
