@@ -48,6 +48,8 @@ swift_conformance --relative-time-core
 )
 (cd "$ROOT/javascript" && node tools/conformance.js "$FIXTURES")
 (cd "$ROOT/javascript" && node tests/package-boundary-test.js)
+(cd "$ROOT/javascript" && node tests/cldr-packed-resources-test.js)
+(cd "$ROOT/javascript" && node tests/portable-functions-test.js)
 (cd "$ROOT/javascript" && npm run check:types)
 (cd "$ROOT/javascript" && node tests/number-core-test.js)
 (cd "$ROOT/javascript" && node tests/date-time-core-test.js)
