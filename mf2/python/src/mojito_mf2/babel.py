@@ -24,6 +24,7 @@ from .functions import FunctionCall, FunctionRegistry
 __all__ = ["babel_function_registry"]
 
 _MAX_FRACTION_DIGITS = 100
+_ABSENT_OPTION = "\x00__mojito_mf2_absent__"
 
 
 def babel_function_registry() -> FunctionRegistry:
@@ -41,7 +42,7 @@ def babel_function_registry() -> FunctionRegistry:
 
 
 def _format_number(call: FunctionCall) -> str:
-    value = _parse_decimal(call.value, "Number function requires a numeric operand.")
+    value = _parse_call_decimal(call, "Number function requires a numeric operand.")
     return _apply_sign_display(
         format_decimal(
             value,
@@ -55,7 +56,7 @@ def _format_number(call: FunctionCall) -> str:
 
 
 def _format_percent(call: FunctionCall) -> str:
-    value = _parse_decimal(call.value, "Percent function requires a numeric operand.")
+    value = _parse_call_decimal(call, "Percent function requires a numeric operand.")
     return _apply_sign_display(
         format_percent(
             value,
@@ -69,7 +70,7 @@ def _format_percent(call: FunctionCall) -> str:
 
 
 def _format_integer(call: FunctionCall) -> str:
-    value = _parse_decimal(call.value, "Integer function requires a numeric operand.")
+    value = _parse_call_decimal(call, "Integer function requires a numeric operand.")
     integer = value.to_integral_value(rounding=ROUND_DOWN)
     return _apply_sign_display(
         format_decimal(integer, format="#,##0", locale=call.locale),
@@ -79,10 +80,15 @@ def _format_integer(call: FunctionCall) -> str:
 
 
 def _format_currency(call: FunctionCall) -> str:
-    value = _parse_decimal(call.value, "Currency function requires a numeric operand.")
-    currency = call.option_value("currency")
-    if currency is None:
-        raise MF2Error("bad-option", "Currency function requires a currency option.")
+    value = _parse_call_decimal(call, "Currency function requires a numeric operand.")
+    currency = _inherited_option_value(call, "currency")
+    if (
+        currency is None
+        or len(currency) != 3
+        or not currency.isascii()
+        or not currency.isalpha()
+    ):
+        raise MF2Error("bad-option", "Currency function requires a three-letter currency option.")
     try:
         return format_currency(value, currency.upper(), locale=call.locale)
     except Exception as error:
@@ -119,7 +125,7 @@ def _format_datetime(call: FunctionCall) -> str:
 
 
 def _format_relative_time(call: FunctionCall) -> str:
-    value = _parse_decimal(call.value, "Relative time function requires a numeric operand.")
+    value = _parse_call_decimal(call, "Relative time function requires a numeric operand.")
     unit = _option_one_of(
         call,
         "unit",
@@ -177,14 +183,47 @@ def _non_negative_integer_option(call: FunctionCall, name: str) -> int | None:
     return parsed
 
 
-def _parse_decimal(value: Any, message: str) -> Decimal:
-    try:
-        parsed = Decimal(str(value))
-    except InvalidOperation as error:
-        raise MF2Error("bad-operand", message) from error
-    if not parsed.is_finite():
+def _parse_call_decimal(call: FunctionCall, message: str) -> Decimal:
+    parsed = _parse_decimal_or_none(call.value)
+    if parsed is None:
+        parsed = _parse_source_decimal(call.inherited_source)
+    if parsed is None:
         raise MF2Error("bad-operand", message)
     return parsed
+
+
+def _parse_source_decimal(source: object | None) -> Decimal | None:
+    while source is not None:
+        function = getattr(source, "function")
+        if _is_decimal_source_function(function):
+            return _parse_decimal_or_none(getattr(source, "value"))
+        source = getattr(source, "inherited_source")
+    return None
+
+
+def _is_decimal_source_function(function: dict[str, Any]) -> bool:
+    return function.get("name") in {"number", "integer", "percent", "offset", "currency"}
+
+
+def _inherited_option_value(call: FunctionCall, name: str) -> str | None:
+    own = call.option_value(name, _ABSENT_OPTION)
+    if own != _ABSENT_OPTION:
+        return own
+    source = call.inherited_source
+    while source is not None:
+        value = source.option_value(name, _ABSENT_OPTION)
+        if value != _ABSENT_OPTION:
+            return value
+        source = source.inherited_source
+    return None
+
+
+def _parse_decimal_or_none(value: Any) -> Decimal | None:
+    try:
+        parsed = Decimal(str(value))
+    except InvalidOperation:
+        return None
+    return parsed if parsed.is_finite() else None
 
 
 def _date_from(raw_value: Any, rendered: str) -> date:

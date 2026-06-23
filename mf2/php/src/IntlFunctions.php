@@ -126,6 +126,8 @@ final class IntlFunctions
             $value = (float) $rawValue;
         } elseif (is_numeric($call['value'] ?? null)) {
             $value = (float) $call['value'];
+        } elseif (($sourceValue = Internal\parse_source_decimal($call['inheritedSource'] ?? null)) !== null) {
+            $value = $sourceValue;
         } else {
             throw MF2Error::badOperand($message);
         }

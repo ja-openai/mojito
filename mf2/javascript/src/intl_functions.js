@@ -1,5 +1,5 @@
 import { MF2Error } from "./errors.js";
-import { parseDecimalNumber, parseInteger } from "./function_support.js";
+import { isDecimalSourceFunction, parseDecimalNumber, parseInteger } from "./function_support.js";
 import { registerNumericSelectors } from "./numeric_selectors.js";
 import { formatOffset } from "./offset_function.js";
 
@@ -39,7 +39,7 @@ function formatIntlInteger(call) {
 
 function formatIntlCurrency(call) {
   const value = parseCallNumber(call, "Currency function requires a numeric operand.");
-  const currency = call.optionValue("currency", null);
+  const currency = inheritedOptionValue(call, "currency", null);
   if (currency == null || !/^[A-Za-z]{3}$/.test(currency)) throw MF2Error.badOption("Currency function requires a three-letter currency option.");
   return numberFormatter(call.locale, call, { style: "currency", currency: currency.toUpperCase() }).format(value);
 }
@@ -101,9 +101,26 @@ function dateFormatter(locale, call, options) {
 }
 
 function parseCallNumber(call, message) {
-  const parsed = parseDecimalNumber(call.value);
+  let parsed = parseDecimalNumber(call.value);
+  if (parsed == null) parsed = parseSourceNumber(call.inheritedSource);
   if (parsed == null) throw MF2Error.badOperand(message);
   return parsed;
+}
+
+function parseSourceNumber(source) {
+  if (source == null) return null;
+  if (isDecimalSourceFunction(source.function)) return parseDecimalNumber(source.value);
+  return parseSourceNumber(source.inherited);
+}
+
+function inheritedOptionValue(call, name, fallback) {
+  const own = call.optionValue(name, undefined);
+  if (own !== undefined) return own;
+  for (let source = call.inheritedSource; source != null; source = source.inherited) {
+    const value = source.optionValue(name, undefined);
+    if (value !== undefined) return value;
+  }
+  return fallback;
 }
 
 function parseDate(rawValue, rendered, message) {

@@ -69,6 +69,23 @@ $oversizedDigitsOutput = format_message($oversizedDigits, ['amount' => 1], [
 ]);
 assert_error_codes('oversized fraction digits errors', $oversizedDigitsOutput['errors'], ['bad-option']);
 
+$inheritedCurrency = parse_to_model(".local \$price = {\$amount :currency currency=\$currency}\n{{{\$price :currency}}}")['model'];
+$inheritedCurrencyOutput = format_message($inheritedCurrency, ['amount' => 12.3, 'currency' => 'EUR'], [
+    'locale' => 'en-US',
+    'functions' => IntlFunctions::registry(),
+    'bidiIsolation' => 'none',
+]);
+assert_error_codes('inherited currency Intl adapter errors', $inheritedCurrencyOutput['errors'], []);
+assert_same('inherited currency Intl adapter output', expected_currency('en-US', 12.3, 'EUR'), $inheritedCurrencyOutput['value']);
+
+$invalidCurrentCurrency = parse_to_model(".local \$price = {\$amount :currency currency=USD}\n{{{\$price :currency currency=||}}}")['model'];
+$invalidCurrentCurrencyOutput = format_message($invalidCurrentCurrency, ['amount' => 12.3], [
+    'locale' => 'en-US',
+    'functions' => IntlFunctions::registry(),
+    'bidiIsolation' => 'none',
+]);
+assert_error_codes('invalid current currency Intl adapter errors', $invalidCurrentCurrencyOutput['errors'], ['bad-option']);
+
 echo "PHP Intl function registry tests passed.\n";
 
 function expected_output(string $locale, array $arguments): string

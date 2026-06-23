@@ -118,6 +118,24 @@ assert.equal(formattedCurrency.value, "Total: {$amount}");
 assert.deepEqual(formattedCurrency.errors.map((error) => error.code), ["unknown-function"]);
 const intlRegistry = createIntlFunctionRegistry(FunctionRegistry);
 assert.equal(intlRegistry.hasFormatter({ name: "currency" }), true);
+const inheritedIntlCurrency = parseToModelFromParser(".local $price = {$amount :currency currency=$currency}\n{{{$price :currency}}}");
+const inheritedIntlCurrencyResult = formatMessageFromFormatter(
+  inheritedIntlCurrency.model,
+  { amount: 12.3, currency: "EUR" },
+  { locale: "en-US", functions: intlRegistry, bidiIsolation: "none" },
+);
+assert.equal(
+  inheritedIntlCurrencyResult.value,
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "EUR" }).format(12.3),
+);
+assert.deepEqual(inheritedIntlCurrencyResult.errors.map((error) => error.code), []);
+const invalidCurrentIntlCurrency = parseToModelFromParser(".local $price = {$amount :currency currency=USD}\n{{{$price :currency currency=||}}}");
+const invalidCurrentIntlCurrencyResult = formatMessageFromFormatter(
+  invalidCurrentIntlCurrency.model,
+  { amount: 12.3 },
+  { locale: "en-US", functions: intlRegistry, bidiIsolation: "none" },
+);
+assert.deepEqual(invalidCurrentIntlCurrencyResult.errors.map((error) => error.code), ["bad-option"]);
 const relative = parseToModelFromParser("Due {$delta :relativeTime unit=day}");
 for (const locale of ["en", "fr", "ja", "ar"]) {
   assert.equal(

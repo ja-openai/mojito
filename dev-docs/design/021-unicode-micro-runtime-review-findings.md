@@ -354,6 +354,13 @@ branch is under active implementation.
   later, while still treating present empty/invalid current options as
   validation failures. A shared number-core fixture covers
   `.local $price = {$amount :currency currency=$currency} {{{$price :currency}}}`.
+- Host-adapter inherited numeric/currency sources: the JavaScript Intl,
+  Python Babel, and PHP Intl registries now recover numeric operands from
+  inherited numeric/currency sources before reparsing localized local display
+  strings, and JavaScript/Python now inherit variable-valued currency options
+  while still rejecting present invalid current options. Adapter tests cover
+  `.local $price = {$amount :currency currency=$currency} {{{$price :currency}}}`
+  and the invalid-current-option override case.
 - JavaScript primitive BigInt rendering: unannotated `bigint` host values now
   route through number-core with the message locale just like finite numeric
   primitives, including the existing unsafe-BigInt `bad-operand` bound.

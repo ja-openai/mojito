@@ -121,6 +121,31 @@ class BabelIntegrationTest(unittest.TestCase):
         self.assertEqual(f"Total {format_currency(42, 'EUR', locale='fr')}", babel.value)
         self.assertEqual([], babel.errors)
 
+        inherited = parse_to_model(
+            ".local $price = {$amount :currency currency=$currency}\n"
+            "{{{$price :currency}}}"
+        )
+        inherited_babel = format_message(
+            inherited.model,
+            {"amount": 12.3, "currency": "EUR"},
+            locale="en_US",
+            functions=babel_function_registry(),
+        )
+        self.assertEqual(format_currency(12.3, "EUR", locale="en_US"), inherited_babel.value)
+        self.assertEqual([], inherited_babel.errors)
+
+        invalid_current = parse_to_model(
+            ".local $price = {$amount :currency currency=USD}\n"
+            "{{{$price :currency currency=||}}}"
+        )
+        invalid_current_babel = format_message(
+            invalid_current.model,
+            {"amount": 12.3},
+            locale="en_US",
+            functions=babel_function_registry(),
+        )
+        self.assertEqual(["bad-option"], [error.code for error in invalid_current_babel.errors])
+
 
 if __name__ == "__main__":
     unittest.main()
