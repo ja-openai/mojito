@@ -73,13 +73,13 @@ final class Mf2JdkFunctions {
                 call, "Currency function requires a numeric operand.");
         String currency = currencyCode(call);
         if (currency == null) {
-            throw Mf2Exception.badOperand("Currency function requires a currency option.");
+            throw Mf2FunctionSupport.badOption("Currency function requires a currency option.");
         }
         NumberFormat format = NumberFormat.getCurrencyInstance(locale(call.locale()));
         try {
             format.setCurrency(Currency.getInstance(currency));
         } catch (IllegalArgumentException error) {
-            throw Mf2Exception.badOperand("Currency option must be an ISO 4217 currency code.");
+            throw Mf2FunctionSupport.badOption("Currency option must be an ISO 4217 currency code.");
         }
         Integer fractionDigits = currencyFractionDigits(call);
         if (fractionDigits != null) {

@@ -54,6 +54,8 @@ object KotlinJdkRegistryDemo {
             }
             if (!quiet) println("$locale -> ${result.value}")
         }
+        assertErrorCode("invalid currency option", "currency={${'$'}price :currency currency=||}", "bad-option")
+        assertErrorCode("missing currency option", "currency={${'$'}price :currency}", "bad-option")
         if (!quiet) println("Kotlin JDK registry demo passed")
     }
 
@@ -63,6 +65,22 @@ object KotlinJdkRegistryDemo {
             throw Mf2Error("parse-error", result.diagnostics.toString())
         }
         return result.model
+    }
+
+    private fun assertErrorCode(
+        label: String,
+        source: String,
+        expectedCode: String,
+    ) {
+        val result = Mf2Formatter.formatMessage(
+            model = parse(source),
+            arguments = mapOf("price" to PRICE),
+            locale = "en-US",
+            functions = Mf2FunctionRegistry.defaults(),
+        )
+        if (result.errors.size != 1 || result.errors[0].code != expectedCode) {
+            error("$label expected $expectedCode, got ${result.errors}")
+        }
     }
 
     private fun expected(localeTag: String): String {

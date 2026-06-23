@@ -66,6 +66,8 @@ public final class JdkRegistryDemo {
                 System.out.println(locale + " -> " + result.value());
             }
         }
+        assertErrorCode("invalid currency option", "currency={$price :currency currency=||}", "bad-option");
+        assertErrorCode("missing currency option", "currency={$price :currency}", "bad-option");
         if (!quiet) {
             System.out.println("Java JDK registry demo passed");
         }
@@ -77,6 +79,18 @@ public final class JdkRegistryDemo {
             throw new Mf2Exception("parse-error", result.diagnostics().toString());
         }
         return result.model();
+    }
+
+    private static void assertErrorCode(String label, String source, String expectedCode) throws Mf2Exception {
+        Mf2FormatResult result = parse(source).format(
+                Map.of("price", PRICE),
+                Mf2FormatOptions.builder()
+                        .locale("en-US")
+                        .functions(Mf2FunctionRegistry.defaults())
+                        .build());
+        if (result.errors().size() != 1 || !expectedCode.equals(result.errors().get(0).code())) {
+            throw new AssertionError(label + " expected " + expectedCode + ", got " + result.errors());
+        }
     }
 
     private static String expected(String localeTag) {

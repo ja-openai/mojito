@@ -53,12 +53,12 @@ internal object Mf2JdkFunctions {
 
     private fun formatCurrency(call: Mf2FunctionCall): String {
         val value = Mf2PortableFunctions.parseCallDecimal(call, "Currency function requires a numeric operand.")
-        val currency = currencyCode(call) ?: throw Mf2Error.badOperand("Currency function requires a currency option.")
+        val currency = currencyCode(call) ?: throw Mf2Error.badOption("Currency function requires a currency option.")
         val format = NumberFormat.getCurrencyInstance(locale(call.locale))
         try {
             format.currency = Currency.getInstance(currency)
         } catch (error: IllegalArgumentException) {
-            throw Mf2Error.badOperand("Currency option must be an ISO 4217 currency code.")
+            throw Mf2Error.badOption("Currency option must be an ISO 4217 currency code.")
         }
         currencyFractionDigits(call)?.let {
             format.minimumFractionDigits = it

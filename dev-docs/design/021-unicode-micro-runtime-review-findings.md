@@ -367,6 +367,11 @@ branch is under active implementation.
   Kotlin, and Swift host adapters for annotated locals such as
   `.local $date = {$instant :date dateStyle=full ...} {{{$date :date dateStyle=short ...}}}`;
   targeted adapter tests cover the French localized-display repro.
+- JVM host-adapter currency option errors: Java and Kotlin JDK `:currency`
+  formatters now classify missing or invalid `currency` options as `bad-option`
+  instead of `bad-operand`, matching JavaScript Intl, Python Babel, PHP Intl,
+  Swift Foundation, and number-core option semantics. JDK registry demos cover
+  both invalid-current and missing-currency cases.
 - JavaScript primitive BigInt rendering: unannotated `bigint` host values now
   route through number-core with the message locale just like finite numeric
   primitives, including the existing unsafe-BigInt `bad-operand` bound.
