@@ -5,8 +5,16 @@ import unittest
 import mojito_mf2
 import mojito_mf2.parser
 from mojito_mf2._cldr_plural_rules import NumberOperands
-from mojito_mf2.date_time_core import date_time_core_function_registry, format_date_time_core
-from mojito_mf2.number_core import format_number_core
+from mojito_mf2.date_time_core import (
+    date_time_core_function_registry,
+    format_date_core,
+    format_date_core_to_parts,
+    format_date_time_core,
+    format_date_time_core_to_parts,
+    format_time_core,
+    format_time_core_to_parts,
+)
+from mojito_mf2.number_core import format_number_core, format_number_core_to_parts
 from mojito_mf2 import (
     FunctionCall,
     FunctionMatch,
@@ -225,6 +233,41 @@ class PublicApiTest(unittest.TestCase):
                     format_number_core(1, **options)
                 self.assertEqual("bad-option", option_error.exception.code)
 
+    def test_core_parts_helpers_are_public_submodule_apis(self) -> None:
+        number_options = {"locale": "fr-FR"}
+        date_options = {"locale": "fr-FR", "dateStyle": "short", "timeZone": "UTC"}
+        time_options = {"locale": "fr-FR", "timeStyle": "short", "timeZone": "UTC"}
+        date_time_options = {
+            "locale": "fr-FR",
+            "dateStyle": "short",
+            "timeStyle": "short",
+            "timeZone": "UTC",
+        }
+
+        self.assertEqual(
+            [{"type": "text", "value": format_number_core(1234.5, **number_options)}],
+            format_number_core_to_parts(1234.5, **number_options),
+        )
+        self.assertEqual(
+            [{"type": "text", "value": format_date_core("2026-05-21T14:30:15Z", **date_options)}],
+            format_date_core_to_parts("2026-05-21T14:30:15Z", **date_options),
+        )
+        self.assertEqual(
+            [{"type": "text", "value": format_time_core("2026-05-21T14:30:15Z", **time_options)}],
+            format_time_core_to_parts("2026-05-21T14:30:15Z", **time_options),
+        )
+        self.assertEqual(
+            [
+                {
+                    "type": "text",
+                    "value": format_date_time_core(
+                        "2026-05-21T14:30:15Z", **date_time_options
+                    ),
+                }
+            ],
+            format_date_time_core_to_parts("2026-05-21T14:30:15Z", **date_time_options),
+        )
+
     def test_host_object_rendering_failures_are_recoverable(self) -> None:
         class BadObject:
             def __str__(self) -> str:
@@ -349,6 +392,16 @@ class PublicApiTest(unittest.TestCase):
         self.assertFalse(hasattr(mojito_mf2, "lookup_locale"))
         self.assertFalse(hasattr(mojito_mf2, "format_message_strict"))
         self.assertFalse(hasattr(mojito_mf2, "format_message_to_parts_strict"))
+        self.assertFalse(hasattr(mojito_mf2, "format_number_core"))
+        self.assertFalse(hasattr(mojito_mf2, "format_number_core_to_parts"))
+        self.assertFalse(hasattr(mojito_mf2, "format_date_core"))
+        self.assertFalse(hasattr(mojito_mf2, "format_date_core_to_parts"))
+        self.assertFalse(hasattr(mojito_mf2, "format_time_core"))
+        self.assertFalse(hasattr(mojito_mf2, "format_time_core_to_parts"))
+        self.assertFalse(hasattr(mojito_mf2, "format_date_time_core"))
+        self.assertFalse(hasattr(mojito_mf2, "format_date_time_core_to_parts"))
+        self.assertFalse(hasattr(mojito_mf2, "format_relative_time_core"))
+        self.assertFalse(hasattr(mojito_mf2, "format_relative_time_core_to_parts"))
         self.assertFalse(hasattr(mojito_mf2.parser, "ParseDiagnostic"))
 
 def _call(name: str, value: str) -> FunctionCall:

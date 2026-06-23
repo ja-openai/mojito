@@ -15,8 +15,23 @@ from mojito_mf2 import (
     format_message_to_parts,
     parse_to_model,
 )
+from mojito_mf2.date_time_core import (
+    date_time_core_function_registry,
+    format_date_core,
+    format_date_core_to_parts,
+    format_date_time_core,
+    format_date_time_core_to_parts,
+    format_time_core,
+    format_time_core_to_parts,
+)
+from mojito_mf2.number_core import (
+    format_number_core,
+    format_number_core_to_parts,
+    number_core_function_registry,
+)
 from mojito_mf2.relative_time_core import (
     format_relative_time_core,
+    format_relative_time_core_to_parts,
     relative_time_core_function_registry,
 )
 
@@ -70,6 +85,70 @@ relative_time_data: dict[str, object] = {
         }
     ],
 }
+number_core_registry = number_core_function_registry()
+assert_type(number_core_registry, FunctionRegistry)
+number_core_output = format_number_core(
+    1234.5,
+    locale="en-US",
+    style="currency",
+    currency="USD",
+)
+assert_type(number_core_output, str)
+number_core_parts = format_number_core_to_parts(
+    1234.5,
+    locale="en-US",
+    style="currency",
+    currency="USD",
+)
+assert_type(number_core_parts, list[dict[str, str]])
+
+date_time_registry = date_time_core_function_registry()
+assert_type(date_time_registry, FunctionRegistry)
+date_core_output = format_date_core(
+    "2026-05-21T14:30:15Z",
+    locale="en-US",
+    dateStyle="medium",
+    timeZone="UTC",
+)
+assert_type(date_core_output, str)
+date_core_parts = format_date_core_to_parts(
+    "2026-05-21T14:30:15Z",
+    locale="en-US",
+    dateStyle="medium",
+    timeZone="UTC",
+)
+assert_type(date_core_parts, list[dict[str, str]])
+time_core_output = format_time_core(
+    "2026-05-21T14:30:15Z",
+    locale="en-US",
+    timeStyle="short",
+    timeZone="UTC",
+)
+assert_type(time_core_output, str)
+time_core_parts = format_time_core_to_parts(
+    "2026-05-21T14:30:15Z",
+    locale="en-US",
+    timeStyle="short",
+    timeZone="UTC",
+)
+assert_type(time_core_parts, list[dict[str, str]])
+date_time_core_output = format_date_time_core(
+    "2026-05-21T14:30:15Z",
+    locale="en-US",
+    dateStyle="medium",
+    timeStyle="short",
+    timeZone="UTC",
+)
+assert_type(date_time_core_output, str)
+date_time_core_parts = format_date_time_core_to_parts(
+    "2026-05-21T14:30:15Z",
+    locale="en-US",
+    dateStyle="medium",
+    timeStyle="short",
+    timeZone="UTC",
+)
+assert_type(date_time_core_parts, list[dict[str, str]])
+
 relative_time_registry = relative_time_core_function_registry(relative_time_data)
 assert_type(relative_time_registry, FunctionRegistry)
 relative_time_output = format_relative_time_core(
@@ -79,3 +158,10 @@ relative_time_output = format_relative_time_core(
     data=relative_time_data,
 )
 assert_type(relative_time_output, str)
+relative_time_parts = format_relative_time_core_to_parts(
+    60,
+    locale="en",
+    unit="minute",
+    data=relative_time_data,
+)
+assert_type(relative_time_parts, list[dict[str, str]])

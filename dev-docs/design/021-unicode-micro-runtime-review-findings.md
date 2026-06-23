@@ -12,6 +12,11 @@ branch is under active implementation.
   asserting those implementation helpers stay off the root package export. This
   catches drift where a parts implementation exists but the published subpath
   surface or declarations stop exposing it.
+- Python package-boundary coverage: the package boundary runtime and mypy tests
+  now import the explicit number-core, date-time-core, and relative-time-core
+  parts helpers from their public submodules while asserting those experimental
+  helpers remain off the root package export. The Python README now documents
+  the explicit core `*_to_parts` wrappers and type-boundary coverage.
 - Shared conformance runner coverage: `mf2/conformance/check_all_languages.sh`
   now runs the shared number-core, date-time-core, and relative-time-core
   fixture suites for Rust, Swift, Python, Java, Kotlin, and JavaScript instead

@@ -49,7 +49,8 @@ The package root exposes the stable app-facing API only:
 The package ships `py.typed`; type checkers consume the inline annotations and
 the public model aliases directly from the installed package. `sh run.sh
 typecheck` runs a package-boundary mypy fixture that exercises the root exports,
-model typing, formatted parts, registry callbacks, and recovery callbacks.
+model typing, formatted parts, registry callbacks, recovery callbacks, and the
+explicit core formatter submodules.
 
 `format_message` returns `FormatResult(value, errors)` with `ok` and
 `has_errors` convenience properties. `format_message_to_parts` returns
@@ -102,8 +103,9 @@ handlers for Unicode official tests and demos live under `tools`, `tests`, or
 `mojito_mf2.number_core` and `mojito_mf2.date_time_core` are experimental
 generated-data modules for environments that want locale-pretty formatting
 without importing Babel or runtime JSON. They expose explicit formatter
-functions plus `number_core_function_registry()` and
-`date_time_core_function_registry()`. These registries start from
+functions, matching `*_to_parts` wrappers, plus
+`number_core_function_registry()` and `date_time_core_function_registry()`.
+These registries start from
 `FunctionRegistry.portable()` and override only the relevant formatter
 functions, so selector and string behavior stays aligned with the core runtime.
 The shared `number-core` and `date-time-core` fixtures check static outputs,
@@ -114,9 +116,10 @@ integration, and benchmark entry points.
 CLDR relative-time formatting. It intentionally does not embed the all-locale
 relative-time artifact in the package; callers pass an explicit generated data
 resource and can create a registry with
-`relative_time_core_function_registry(data)`. Its tests exercise the shared
-relative-time fixture and, when the optional Babel dependency is installed,
-compare selected numeric outputs against `babel.dates.format_timedelta`.
+`relative_time_core_function_registry(data)`. It exposes matching string and
+parts helpers. Its tests exercise the shared relative-time fixture and, when the
+optional Babel dependency is installed, compare selected numeric outputs against
+`babel.dates.format_timedelta`.
 
 Catalogs can load the official Unicode MF2 model directly or parse source
 messages into the same model. A future package split can keep source parsing out
