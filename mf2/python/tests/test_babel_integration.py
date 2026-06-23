@@ -92,6 +92,19 @@ class BabelIntegrationTest(unittest.TestCase):
         self.assertEqual(f"direct={expected_datetime}; alias={expected_datetime}", local_result.value)
         self.assertEqual([], local_result.errors)
 
+        inherited_date = parse_to_model(
+            ".local $date = {$instant :date dateStyle=full timeZone=UTC}\n"
+            "{{{$date :date dateStyle=short timeZone=UTC}}}"
+        )
+        inherited_date_result = format_message(
+            inherited_date.model,
+            {"instant": instant},
+            locale="fr",
+            functions=functions,
+        )
+        self.assertEqual(format_date(instant.date(), format="short", locale="fr"), inherited_date_result.value)
+        self.assertEqual([], inherited_date_result.errors)
+
         oversized_digits = parse_to_model("{$amount :number minimumFractionDigits=10000}")
         oversized_result = format_message(
             oversized_digits.model,

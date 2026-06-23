@@ -45,18 +45,18 @@ function formatIntlCurrency(call) {
 }
 
 function formatIntlDate(call) {
-  return dateFormatter(call.locale, call, { dateStyle: dateTimeStyle(call, "dateStyle", "length", "medium") }).format(parseDate(call.rawValue, call.value, "Date function requires a date operand."));
+  return dateFormatter(call.locale, call, { dateStyle: dateTimeStyle(call, "dateStyle", "length", "medium") }).format(parseCallDate(call, "Date function requires a date operand."));
 }
 
 function formatIntlTime(call) {
-  return dateFormatter(call.locale, call, { timeStyle: dateTimeStyle(call, "timeStyle", "precision", "medium") }).format(parseDate(call.rawValue, call.value, "Time function requires a date operand."));
+  return dateFormatter(call.locale, call, { timeStyle: dateTimeStyle(call, "timeStyle", "precision", "medium") }).format(parseCallDate(call, "Time function requires a date operand."));
 }
 
 function formatIntlDateTime(call) {
   return dateFormatter(call.locale, call, {
     dateStyle: dateTimeStyle(call, "dateStyle", "dateLength", "medium"),
     timeStyle: dateTimeStyle(call, "timeStyle", "timePrecision", "medium"),
-  }).format(parseDate(call.rawValue, call.value, "Datetime function requires a date operand."));
+  }).format(parseCallDate(call, "Datetime function requires a date operand."));
 }
 
 function formatIntlRelativeTime(call) {
@@ -123,10 +123,28 @@ function inheritedOptionValue(call, name, fallback) {
   return fallback;
 }
 
-function parseDate(rawValue, rendered, message) {
-  const date = rawValue instanceof Date ? rawValue : new Date(rendered);
-  if (Number.isNaN(date.getTime())) throw MF2Error.badOperand(message);
+function parseCallDate(call, message) {
+  const date = parseDateValue(call.rawValue, call.value) ?? parseSourceDate(call.inheritedSource);
+  if (date == null) throw MF2Error.badOperand(message);
   return date;
+}
+
+function parseSourceDate(source) {
+  for (let current = source; current != null; current = current.inherited) {
+    if (!isDateTimeSourceFunction(current.function)) continue;
+    const date = parseDateValue(null, current.value);
+    if (date != null) return date;
+  }
+  return null;
+}
+
+function isDateTimeSourceFunction(functionRef) {
+  return ["date", "time", "datetime"].includes(functionRef?.name);
+}
+
+function parseDateValue(rawValue, rendered) {
+  const date = rawValue instanceof Date ? rawValue : new Date(rendered);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function dateTimeStyle(call, optionName, legacyOptionName, fallback) {

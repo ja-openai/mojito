@@ -96,7 +96,7 @@ def _format_currency(call: FunctionCall) -> str:
 
 
 def _format_date(call: FunctionCall) -> str:
-    value = _date_from(call.raw_value, call.value)
+    value = _parse_call_date(call, "Date function requires a date operand.")
     return format_date(
         value,
         format=_date_style(call),
@@ -105,7 +105,7 @@ def _format_date(call: FunctionCall) -> str:
 
 
 def _format_time(call: FunctionCall) -> str:
-    value = _time_from(call.raw_value, call.value)
+    value = _parse_call_time(call, "Time function requires a time operand.")
     return format_time(
         value,
         format=_time_style(call),
@@ -115,7 +115,7 @@ def _format_time(call: FunctionCall) -> str:
 
 
 def _format_datetime(call: FunctionCall) -> str:
-    value = _datetime_from(call.raw_value, call.value)
+    value = _parse_call_datetime(call, "Datetime function requires a datetime operand.")
     return format_datetime(
         value,
         format=_datetime_style(call),
@@ -226,35 +226,96 @@ def _parse_decimal_or_none(value: Any) -> Decimal | None:
     return parsed if parsed.is_finite() else None
 
 
-def _date_from(raw_value: Any, rendered: str) -> date:
+def _parse_call_date(call: FunctionCall, message: str) -> date:
+    parsed = _date_from(call.raw_value, call.value)
+    if parsed is None:
+        parsed = _parse_source_date(call.inherited_source)
+    if parsed is None:
+        raise MF2Error("bad-operand", message)
+    return parsed
+
+
+def _parse_call_time(call: FunctionCall, message: str) -> time:
+    parsed = _time_from(call.raw_value, call.value)
+    if parsed is None:
+        parsed = _parse_source_time(call.inherited_source)
+    if parsed is None:
+        raise MF2Error("bad-operand", message)
+    return parsed
+
+
+def _parse_call_datetime(call: FunctionCall, message: str) -> datetime:
+    parsed = _datetime_from(call.raw_value, call.value)
+    if parsed is None:
+        parsed = _parse_source_datetime(call.inherited_source)
+    if parsed is None:
+        raise MF2Error("bad-operand", message)
+    return parsed
+
+
+def _parse_source_date(source: object | None) -> date | None:
+    while source is not None:
+        if _is_date_time_source_function(getattr(source, "function")):
+            parsed = _date_from(None, getattr(source, "value"))
+            if parsed is not None:
+                return parsed
+        source = getattr(source, "inherited_source")
+    return None
+
+
+def _parse_source_time(source: object | None) -> time | None:
+    while source is not None:
+        if _is_date_time_source_function(getattr(source, "function")):
+            parsed = _time_from(None, getattr(source, "value"))
+            if parsed is not None:
+                return parsed
+        source = getattr(source, "inherited_source")
+    return None
+
+
+def _parse_source_datetime(source: object | None) -> datetime | None:
+    while source is not None:
+        if _is_date_time_source_function(getattr(source, "function")):
+            parsed = _datetime_from(None, getattr(source, "value"))
+            if parsed is not None:
+                return parsed
+        source = getattr(source, "inherited_source")
+    return None
+
+
+def _is_date_time_source_function(function: dict[str, Any]) -> bool:
+    return function.get("name") in {"date", "time", "datetime"}
+
+
+def _date_from(raw_value: Any, rendered: str) -> date | None:
     if isinstance(raw_value, datetime):
         return raw_value.date()
     if isinstance(raw_value, date):
         return raw_value
     try:
         return date.fromisoformat(rendered)
-    except ValueError as error:
+    except ValueError:
         parsed_datetime = _parse_datetime_or_none(rendered)
         if parsed_datetime is not None:
             return parsed_datetime.date()
-        raise MF2Error("bad-operand", "Date function requires a date operand.") from error
+        return None
 
 
-def _time_from(raw_value: Any, rendered: str) -> time:
+def _time_from(raw_value: Any, rendered: str) -> time | None:
     if isinstance(raw_value, datetime):
         return raw_value.time()
     if isinstance(raw_value, time):
         return raw_value
     try:
         return time.fromisoformat(rendered)
-    except ValueError as error:
+    except ValueError:
         parsed_datetime = _parse_datetime_or_none(rendered)
         if parsed_datetime is not None:
             return parsed_datetime.time()
-        raise MF2Error("bad-operand", "Time function requires a time operand.") from error
+        return None
 
 
-def _datetime_from(raw_value: Any, rendered: str) -> datetime:
+def _datetime_from(raw_value: Any, rendered: str) -> datetime | None:
     if isinstance(raw_value, datetime):
         return raw_value
     if isinstance(raw_value, date):
@@ -262,7 +323,7 @@ def _datetime_from(raw_value: Any, rendered: str) -> datetime:
     parsed_datetime = _parse_datetime_or_none(rendered)
     if parsed_datetime is not None:
         return parsed_datetime
-    raise MF2Error("bad-operand", "Datetime function requires a datetime operand.")
+    return None
 
 
 def _parse_datetime_or_none(rendered: str) -> datetime | None:

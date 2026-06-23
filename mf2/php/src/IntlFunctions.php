@@ -139,19 +139,42 @@ final class IntlFunctions
 
     private static function dateTimeValue(array $call, string $message, \DateTimeZone $timeZone): \DateTimeImmutable
     {
-        $rawValue = $call['rawValue'] ?? null;
+        $value = self::dateTimeValueOrNull($call['rawValue'] ?? null, $call['value'] ?? null, $timeZone)
+            ?? self::sourceDateTimeValue($call['inheritedSource'] ?? null, $timeZone);
+        if ($value === null) {
+            throw MF2Error::badOperand($message);
+        }
+        return $value;
+    }
+
+    private static function dateTimeValueOrNull(mixed $rawValue, mixed $value, \DateTimeZone $timeZone): ?\DateTimeImmutable
+    {
         if ($rawValue instanceof \DateTimeInterface) {
             return \DateTimeImmutable::createFromInterface($rawValue);
         }
-        $text = (string) ($call['value'] ?? '');
+        $text = (string) ($value ?? '');
         if ($text === '') {
-            throw MF2Error::badOperand($message);
+            return null;
         }
         try {
             return new \DateTimeImmutable($text, $timeZone);
         } catch (\Exception) {
-            throw MF2Error::badOperand($message);
+            return null;
         }
+    }
+
+    private static function sourceDateTimeValue(?array $source, \DateTimeZone $timeZone): ?\DateTimeImmutable
+    {
+        for ($current = $source; $current !== null; $current = $current['inherited'] ?? null) {
+            if (!in_array($current['function']['name'] ?? null, ['date', 'time', 'datetime'], true)) {
+                continue;
+            }
+            $value = self::dateTimeValueOrNull(null, $current['value'] ?? null, $timeZone);
+            if ($value !== null) {
+                return $value;
+            }
+        }
+        return null;
     }
 
     private static function setOptionalFractionDigits(\NumberFormatter $formatter, array $call): void

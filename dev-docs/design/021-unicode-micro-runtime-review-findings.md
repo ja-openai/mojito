@@ -361,6 +361,12 @@ branch is under active implementation.
   while still rejecting present invalid current options. Adapter tests cover
   `.local $price = {$amount :currency currency=$currency} {{{$price :currency}}}`
   and the invalid-current-option override case.
+- Host-adapter inherited date/time sources: the JavaScript Intl, Python Babel,
+  and PHP Intl registries now also walk inherited date/time source chains before
+  parsing localized local display strings. This aligns them with the Java,
+  Kotlin, and Swift host adapters for annotated locals such as
+  `.local $date = {$instant :date dateStyle=full ...} {{{$date :date dateStyle=short ...}}}`;
+  targeted adapter tests cover the French localized-display repro.
 - JavaScript primitive BigInt rendering: unannotated `bigint` host values now
   route through number-core with the message locale just like finite numeric
   primitives, including the existing unsafe-BigInt `bad-operand` bound.

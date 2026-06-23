@@ -86,6 +86,15 @@ $invalidCurrentCurrencyOutput = format_message($invalidCurrentCurrency, ['amount
 ]);
 assert_error_codes('invalid current currency Intl adapter errors', $invalidCurrentCurrencyOutput['errors'], ['bad-option']);
 
+$inheritedDate = parse_to_model(".local \$date = {\$instant :date dateStyle=full timeZone=UTC}\n{{{\$date :date dateStyle=short timeZone=UTC}}}")['model'];
+$inheritedDateOutput = format_message($inheritedDate, ['instant' => '2026-05-21T14:30:15Z'], [
+    'locale' => 'fr-FR',
+    'functions' => IntlFunctions::registry(),
+    'bidiIsolation' => 'none',
+]);
+assert_error_codes('inherited date Intl adapter errors', $inheritedDateOutput['errors'], []);
+assert_same('inherited date Intl adapter output', expected_date('fr-FR', '2026-05-21T14:30:15Z', IntlDateFormatter::SHORT, IntlDateFormatter::NONE), $inheritedDateOutput['value']);
+
 echo "PHP Intl function registry tests passed.\n";
 
 function expected_output(string $locale, array $arguments): string

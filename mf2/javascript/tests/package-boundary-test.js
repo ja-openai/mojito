@@ -153,6 +153,17 @@ assert.equal(
   formatMessageFromFormatter(intlLegacyDate.model, { instant: "2026-05-21T14:30:15Z" }, { locale: "fr-FR", functions: intlRegistry }).value,
   `At ${new Intl.DateTimeFormat("fr-FR", { dateStyle: "full", timeStyle: "short", timeZone: "UTC" }).format(new Date("2026-05-21T14:30:15Z"))}`,
 );
+const inheritedIntlDate = parseToModelFromParser(".local $date = {$instant :date dateStyle=full timeZone=UTC}\n{{{$date :date dateStyle=short timeZone=UTC}}}");
+const inheritedIntlDateResult = formatMessageFromFormatter(
+  inheritedIntlDate.model,
+  { instant: "2026-05-21T14:30:15Z" },
+  { locale: "fr-FR", functions: intlRegistry, bidiIsolation: "none" },
+);
+assert.equal(
+  inheritedIntlDateResult.value,
+  new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeZone: "UTC" }).format(new Date("2026-05-21T14:30:15Z")),
+);
+assert.deepEqual(inheritedIntlDateResult.errors.map((error) => error.code), []);
 assert.equal(new MF2Error("test", "test").code, "test");
 assert.equal("partsToString" in core, false);
 assert.equal("formatMessageStrict" in core, false);
