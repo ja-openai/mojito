@@ -37,6 +37,8 @@ swift_conformance --relative-time-core
   sh run.sh --no-prepare number-core-check
   sh run.sh --no-prepare date-time-core-check
   sh run.sh --no-prepare relative-time-core-check
+  sh run.sh --no-prepare public-api-demo
+  sh run.sh --no-prepare jdk-check
 )
 (
   cd "$ROOT/kotlin"
@@ -45,6 +47,7 @@ swift_conformance --relative-time-core
   sh run.sh --no-prepare number-core-check
   sh run.sh --no-prepare date-time-core-check
   sh run.sh --no-prepare relative-time-core-check
+  sh run.sh --no-prepare jdk-check
 )
 (cd "$ROOT/javascript" && node tools/conformance.js "$FIXTURES")
 (cd "$ROOT/javascript" && node tests/package-boundary-test.js)

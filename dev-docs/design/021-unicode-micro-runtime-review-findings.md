@@ -38,6 +38,11 @@ branch is under active implementation.
   unittest/mypy package-boundary checks. The standard cross-runtime command now
   catches direct core parts export drift and JavaScript package check drift
   instead of leaving those checks as separate per-runtime commands.
+- Shared conformance runner JVM API coverage: the all-language runner now
+  includes Java's public API recovery/parts smoke check and the quiet default
+  JDK registry checks for both Java and Kotlin. That keeps the JVM public
+  formatter surfaces and real localized registry wiring in the standard
+  cross-runtime validation path.
 - Shared conformance runner coverage: `mf2/conformance/check_all_languages.sh`
   now runs the shared number-core, date-time-core, and relative-time-core
   fixture suites for Rust, Swift, Python, Java, Kotlin, and JavaScript instead
