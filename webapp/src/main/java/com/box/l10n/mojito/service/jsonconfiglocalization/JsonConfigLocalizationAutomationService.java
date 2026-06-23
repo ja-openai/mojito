@@ -98,7 +98,7 @@ public class JsonConfigLocalizationAutomationService {
     RunStepTracker runSteps = new RunStepTracker();
 
     logger.info(
-        "JSON config localization automation starting: setupId={}, repositoryId={}, pull={}, extract={}, translate={}, merge={}, saveConfig={}, push={}",
+        "JSON config localization automation starting: setupId={}, repositoryId={}, pull={}, extract={}, translate={}, merge={}, saveConfig={}, updateSchema={}, push={}",
         setup.id(),
         setup.repository().id(),
         pull(options),
@@ -106,6 +106,7 @@ public class JsonConfigLocalizationAutomationService {
         translate(options),
         merge(options),
         saveConfig(options),
+        updateSchema(options),
         push(options));
 
     try {
@@ -170,10 +171,12 @@ public class JsonConfigLocalizationAutomationService {
         runSteps.savedConfig = true;
       }
 
-      if (push(options)) {
+      if (updateSchema(options) || push(options)) {
         StatsigPushResult pushResult =
-            statsigJsonConfigLocalizationService.pushForSetupForSystem(setup.id());
-        runSteps.pushed = true;
+            statsigJsonConfigLocalizationService.pushForSetupForSystem(
+                setup.id(), updateSchema(options), push(options));
+        runSteps.schemaUpdated = pushResult.schemaUpdated();
+        runSteps.pushed = push(options);
         runSteps.pushSkipped = pushResult.skipped();
       }
 
@@ -194,7 +197,7 @@ public class JsonConfigLocalizationAutomationService {
 
   private AutomationOptions readOptions(String optionsJson) {
     if (optionsJson == null || optionsJson.isBlank()) {
-      return new AutomationOptions(null, null, null, true, true, true);
+      return new AutomationOptions(null, null, null, true, true, null, true);
     }
     try {
       return objectMapper.readValue(optionsJson, AutomationOptions.class);
@@ -305,6 +308,10 @@ public class JsonConfigLocalizationAutomationService {
     return options.saveConfig() == null || options.saveConfig();
   }
 
+  static boolean updateSchema(AutomationOptions options) {
+    return Boolean.TRUE.equals(options.updateSchema());
+  }
+
   static boolean push(AutomationOptions options) {
     return options.push() == null || options.push();
   }
@@ -315,6 +322,7 @@ public class JsonConfigLocalizationAutomationService {
       Boolean translate,
       Boolean merge,
       Boolean saveConfig,
+      Boolean updateSchema,
       Boolean push) {}
 
   private static class RunStepTracker {
@@ -323,11 +331,13 @@ public class JsonConfigLocalizationAutomationService {
     boolean translated;
     boolean merged;
     boolean savedConfig;
+    boolean schemaUpdated;
     boolean pushed;
     boolean pushSkipped;
 
     RunSteps toRunSteps() {
-      return new RunSteps(pulled, extracted, translated, merged, savedConfig, pushed, pushSkipped);
+      return new RunSteps(
+          pulled, extracted, translated, merged, savedConfig, schemaUpdated, pushed, pushSkipped);
     }
   }
 }

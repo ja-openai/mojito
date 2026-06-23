@@ -117,12 +117,15 @@ export type ApiStatsigPullInput = {
 export type ApiStatsigPushInput = {
   configId?: string | null;
   dryRun?: boolean | null;
+  updateSchema?: boolean | null;
+  pushConfig?: boolean | null;
 };
 
 export type ApiStatsigPushResult = {
   configId: string;
   dryRun: boolean;
   skipped?: boolean;
+  schemaUpdated?: boolean;
   responseJson?: string | null;
   warnings: string[];
 };

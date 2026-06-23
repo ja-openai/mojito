@@ -109,9 +109,17 @@ type StatsigSyncOptions = {
   translate: boolean;
   merge: boolean;
   saveConfig: boolean;
+  updateSchema: boolean;
   push: boolean;
 };
-type StatsigSyncStepId = 'PULL' | 'EXTRACT' | 'TRANSLATE' | 'MERGE' | 'SAVE_CONFIG' | 'PUSH';
+type StatsigSyncStepId =
+  | 'PULL'
+  | 'EXTRACT'
+  | 'TRANSLATE'
+  | 'MERGE'
+  | 'SAVE_CONFIG'
+  | 'UPDATE_SCHEMA'
+  | 'PUSH';
 type StatsigSyncStepStatus = 'PENDING' | 'RUNNING' | 'DONE' | 'SKIPPED' | 'ERROR';
 type StatsigSyncProgress = {
   steps: Record<StatsigSyncStepId, StatsigSyncStepStatus>;
@@ -197,6 +205,7 @@ const STATSIG_SYNC_STEP_LABELS: Record<StatsigSyncStepId, string> = {
   TRANSLATE: 'AI translate',
   MERGE: 'Merge translations into config',
   SAVE_CONFIG: 'Save config in Mojito',
+  UPDATE_SCHEMA: 'Push schema to Statsig',
   PUSH: 'Push config to Statsig',
 };
 const DEFAULT_JSON_CONFIG_AUTOMATION_OPTIONS: StatsigSyncOptions = {
@@ -205,6 +214,7 @@ const DEFAULT_JSON_CONFIG_AUTOMATION_OPTIONS: StatsigSyncOptions = {
   translate: false,
   merge: true,
   saveConfig: true,
+  updateSchema: false,
   push: true,
 };
 const JSON_CONFIG_AUTOMATION_STEP_IDS: StatsigSyncStepId[] = [
@@ -213,9 +223,16 @@ const JSON_CONFIG_AUTOMATION_STEP_IDS: StatsigSyncStepId[] = [
   'TRANSLATE',
   'MERGE',
   'SAVE_CONFIG',
+  'UPDATE_SCHEMA',
   'PUSH',
 ];
-const PUBLISH_CONFIG_STEP_IDS: StatsigSyncStepId[] = ['TRANSLATE', 'MERGE', 'SAVE_CONFIG', 'PUSH'];
+const PUBLISH_CONFIG_STEP_IDS: StatsigSyncStepId[] = [
+  'TRANSLATE',
+  'MERGE',
+  'SAVE_CONFIG',
+  'UPDATE_SCHEMA',
+  'PUSH',
+];
 const JSON_CONFIG_AUTOMATION_CRON_PRESETS = [
   { label: 'Hourly', value: '0 0 * * * ?' },
   { label: 'Daily 2 AM', value: '0 0 2 * * ?' },
@@ -946,6 +963,7 @@ function JsonConfigLocalizationWorkspace({
     translate: false,
     merge: true,
     saveConfig: true,
+    updateSchema: false,
     push: false,
   });
   const activeTab = getJsonConfigLocalizationTab(workspaceSearchParams.get('tab'));
@@ -1722,7 +1740,7 @@ function JsonConfigLocalizationWorkspace({
     return syncedConfig.sourceConfigJson;
   };
 
-  const pushSavedConfigToStatsig = async () => {
+  const pushSavedConfigToStatsig = async (updateSchema = false, pushConfig = true) => {
     if (!repository) {
       throw new Error('Repository not found.');
     }
@@ -1732,7 +1750,11 @@ function JsonConfigLocalizationWorkspace({
     }
 
     const setup = jsonConfigLocalizationQuery.data ?? (await saveJsonConfigLocalizationSetup());
-    return pushJsonConfigToStatsigForSetup(setup.id, { configId: trimmedConfigId });
+    return pushJsonConfigToStatsigForSetup(setup.id, {
+      configId: trimmedConfigId,
+      updateSchema,
+      pushConfig,
+    });
   };
 
   const saveDraftStringsToJsonConfig = async (
@@ -1971,6 +1993,7 @@ function JsonConfigLocalizationWorkspace({
             translate: true,
             merge: false,
             saveConfig: false,
+            updateSchema: false,
             push: false,
           }),
           'TRANSLATE',
@@ -2087,7 +2110,7 @@ function JsonConfigLocalizationWorkspace({
         throw new Error('Repository not found.');
       }
       const trimmedConfigId = providerConfigId.trim();
-      if ((options.pull || options.push) && !trimmedConfigId) {
+      if ((options.pull || options.updateSchema || options.push) && !trimmedConfigId) {
         throw new Error('Provide a Statsig config id.');
       }
       if (
@@ -2096,6 +2119,7 @@ function JsonConfigLocalizationWorkspace({
         !options.translate &&
         !options.merge &&
         !options.saveConfig &&
+        !options.updateSchema &&
         !options.push
       ) {
         throw new Error('Select at least one sync step.');
@@ -2266,29 +2290,77 @@ function JsonConfigLocalizationWorkspace({
         );
       }
 
-      const pushResult = options.push
-        ? await (async () => {
-            setStatsigSyncProgress((current) =>
-              markStatsigSyncStep(current, 'PUSH', 'RUNNING', 'Pushing saved config to Statsig.'),
-            );
-            const result = await pushSavedConfigToStatsig();
-            warnings.push(...result.warnings);
-            setStatsigSyncProgress((current) =>
-              markStatsigSyncStep(
-                current,
-                'PUSH',
-                'DONE',
-                result.skipped
-                  ? `Statsig config ${result.configId} already matched; skipped push.`
-                  : `Pushed Statsig config ${result.configId}.`,
-              ),
-            );
-            return result;
-          })()
-        : null;
-      if (!options.push) {
+      const pushResult =
+        options.updateSchema || options.push
+          ? await (async () => {
+              if (options.updateSchema) {
+                setStatsigSyncProgress((current) =>
+                  markStatsigSyncStep(
+                    current,
+                    'UPDATE_SCHEMA',
+                    'RUNNING',
+                    'Pushing schema to Statsig.',
+                  ),
+                );
+              } else {
+                setStatsigSyncProgress((current) =>
+                  markStatsigSyncStep(
+                    current,
+                    'UPDATE_SCHEMA',
+                    'SKIPPED',
+                    'Statsig schema push skipped.',
+                  ),
+                );
+              }
+              if (options.push) {
+                setStatsigSyncProgress((current) =>
+                  markStatsigSyncStep(
+                    current,
+                    'PUSH',
+                    'RUNNING',
+                    options.updateSchema
+                      ? 'Pushing schema and config to Statsig.'
+                      : 'Pushing saved config to Statsig.',
+                  ),
+                );
+              } else {
+                setStatsigSyncProgress((current) =>
+                  markStatsigSyncStep(current, 'PUSH', 'SKIPPED', 'Statsig config push skipped.'),
+                );
+              }
+              const result = await pushSavedConfigToStatsig(options.updateSchema, options.push);
+              warnings.push(...result.warnings);
+              if (options.updateSchema) {
+                setStatsigSyncProgress((current) =>
+                  markStatsigSyncStep(
+                    current,
+                    'UPDATE_SCHEMA',
+                    'DONE',
+                    'Pushed schema to Statsig.',
+                  ),
+                );
+              }
+              if (options.push) {
+                setStatsigSyncProgress((current) =>
+                  markStatsigSyncStep(
+                    current,
+                    'PUSH',
+                    'DONE',
+                    result.skipped
+                      ? `Statsig config ${result.configId} already matched; skipped push.`
+                      : `Pushed Statsig config ${result.configId}.`,
+                  ),
+                );
+              }
+              return result;
+            })()
+          : null;
+      if (!options.updateSchema && !options.push) {
         setStatsigSyncProgress((current) =>
-          markStatsigSyncStep(current, 'PUSH', 'SKIPPED', 'Statsig push skipped.'),
+          markStatsigSyncStep(current, 'UPDATE_SCHEMA', 'SKIPPED', 'Statsig schema push skipped.'),
+        );
+        setStatsigSyncProgress((current) =>
+          markStatsigSyncStep(current, 'PUSH', 'SKIPPED', 'Statsig config push skipped.'),
         );
       }
 
@@ -2308,7 +2380,8 @@ function JsonConfigLocalizationWorkspace({
         options.translate ? `started AI translation for ${translatedCount}` : null,
         options.merge ? 'merged translations into config' : null,
         options.saveConfig ? 'saved config in Mojito' : null,
-        pushResult ? `pushed Statsig config ${pushResult.configId}` : null,
+        pushResult?.schemaUpdated ? 'pushed Statsig schema' : null,
+        options.push && pushResult ? `pushed Statsig config ${pushResult.configId}` : null,
       ].filter(Boolean);
       setStatusNotice({
         kind: 'success',
@@ -2814,6 +2887,7 @@ function JsonConfigLocalizationWorkspace({
     hasStatsigSyncStepSelected &&
     (!statsigSyncRequiresSavedStrings || !hasUnsavedDraftStrings) &&
     (!effectiveStatsigSyncOptions.pull || Boolean(providerConfigId.trim())) &&
+    (!effectiveStatsigSyncOptions.updateSchema || Boolean(providerConfigId.trim())) &&
     (!effectiveStatsigSyncOptions.push || Boolean(providerConfigId.trim())) &&
     !isBusy;
   const canSaveAutomationSetup =
@@ -2826,13 +2900,20 @@ function JsonConfigLocalizationWorkspace({
     translate: publishConfigOptions.translate && targetLocaleTags.length > 0,
     merge: publishConfigOptions.merge,
     saveConfig: publishConfigOptions.saveConfig,
+    updateSchema: publishConfigOptions.updateSchema,
     push: publishConfigOptions.push,
   };
   const hasPublishConfigStepSelected = Object.values(effectivePublishConfigOptions).some(Boolean);
+  const publishConfigRequiresSavedStrings =
+    effectivePublishConfigOptions.translate ||
+    effectivePublishConfigOptions.merge ||
+    effectivePublishConfigOptions.saveConfig ||
+    effectivePublishConfigOptions.push;
   const canRunPublishConfig =
     isStatsigProvider &&
     hasPublishConfigStepSelected &&
-    !hasUnsavedDraftStrings &&
+    (!publishConfigRequiresSavedStrings || !hasUnsavedDraftStrings) &&
+    (!effectivePublishConfigOptions.updateSchema || Boolean(providerConfigId.trim())) &&
     (!effectivePublishConfigOptions.push || Boolean(providerConfigId.trim())) &&
     !isBusy;
   const canSaveConfigEditor = Boolean(sourceConfigText.trim()) && !isBusy;
@@ -2986,6 +3067,20 @@ function JsonConfigLocalizationWorkspace({
           }
         />
         Save config in Mojito
+      </label>
+      <label className="settings-toggle">
+        <input
+          type="checkbox"
+          checked={publishConfigOptions.updateSchema}
+          disabled={isBusy}
+          onChange={(event) =>
+            setPublishConfigOptions((current) => ({
+              ...current,
+              updateSchema: event.target.checked,
+            }))
+          }
+        />
+        Push schema to Statsig
       </label>
       <label className="settings-toggle">
         <input
@@ -3284,6 +3379,20 @@ function JsonConfigLocalizationWorkspace({
                           }
                         />
                         Save config in Mojito
+                      </label>
+                      <label className="settings-toggle">
+                        <input
+                          type="checkbox"
+                          checked={statsigSyncOptions.updateSchema}
+                          disabled={isBusy}
+                          onChange={(event) =>
+                            setStatsigSyncOptions((current) => ({
+                              ...current,
+                              updateSchema: event.target.checked,
+                            }))
+                          }
+                        />
+                        Push schema to Statsig
                       </label>
                       <label className="settings-toggle">
                         <input
@@ -4894,6 +5003,7 @@ function createStatsigSyncProgress(options: StatsigSyncOptions): StatsigSyncProg
       TRANSLATE: options.translate ? 'PENDING' : 'SKIPPED',
       MERGE: options.merge ? 'PENDING' : 'SKIPPED',
       SAVE_CONFIG: options.saveConfig ? 'PENDING' : 'SKIPPED',
+      UPDATE_SCHEMA: options.updateSchema ? 'PENDING' : 'SKIPPED',
       PUSH: options.push ? 'PENDING' : 'SKIPPED',
     },
     message: 'Starting automation.',
@@ -5164,8 +5274,11 @@ function isStatsigSyncOptions(value: unknown): value is StatsigSyncOptions {
   }
 
   const candidate = value as Partial<StatsigSyncOptions>;
-  return ['pull', 'extract', 'translate', 'merge', 'saveConfig', 'push'].every(
-    (key) => typeof candidate[key as keyof StatsigSyncOptions] === 'boolean',
+  return (
+    ['pull', 'extract', 'translate', 'merge', 'saveConfig', 'push'].every(
+      (key) => typeof candidate[key as keyof StatsigSyncOptions] === 'boolean',
+    ) &&
+    (candidate.updateSchema == null || typeof candidate.updateSchema === 'boolean')
   );
 }
 

@@ -240,13 +240,29 @@ public class StatsigJsonConfigLocalizationService {
   public StatsigPushResult pushForSystem(Long repositoryId) {
     JsonConfigLocalization setup =
         jsonConfigLocalizationService.getByRepositoryIdForSystem(repositoryId);
-    return push(repositoryId, new StatsigPushInput(setup.providerConfigId(), null), setup, true);
+    return push(
+        repositoryId,
+        new StatsigPushInput(setup.providerConfigId(), null, null, null),
+        setup,
+        true);
   }
 
   public StatsigPushResult pushForSetupForSystem(Long setupId) {
+    return pushForSetupForSystem(setupId, false);
+  }
+
+  public StatsigPushResult pushForSetupForSystem(Long setupId, boolean updateSchema) {
+    return pushForSetupForSystem(setupId, updateSchema, true);
+  }
+
+  public StatsigPushResult pushForSetupForSystem(
+      Long setupId, boolean updateSchema, boolean pushConfig) {
     JsonConfigLocalization setup = jsonConfigLocalizationService.getByIdForSystem(setupId);
     return push(
-        setup.repository().id(), new StatsigPushInput(setup.providerConfigId(), null), setup, true);
+        setup.repository().id(),
+        new StatsigPushInput(setup.providerConfigId(), null, updateSchema, pushConfig),
+        setup,
+        true);
   }
 
   private StatsigPushResult push(
@@ -259,25 +275,54 @@ public class StatsigJsonConfigLocalizationService {
             firstNonBlank(input == null ? null : input.configId(), setup.providerConfigId()));
     boolean dryRun =
         input != null && input.dryRun() != null ? input.dryRun() : properties.isDryRunPush();
-
-    ExportResult exportResult =
-        systemAccess
-            ? jsonConfigLocalizationProcessorService.exportForSetupForSystem(setup.id())
-            : jsonConfigLocalizationProcessorService.exportForSetup(setup.id());
-    JsonNode localizedConfig = readJson(exportResult.json(), "localized config export");
-
+    boolean updateSchema = input != null && Boolean.TRUE.equals(input.updateSchema());
+    boolean pushConfig = input == null || input.pushConfig() == null || input.pushConfig();
     List<String> warnings = new ArrayList<>();
-    if (exportResult.warnings() != null) {
-      warnings.addAll(exportResult.warnings());
+
+    JsonNode localizedConfig = null;
+    JsonNode currentDefaultValue = null;
+    if (pushConfig) {
+      ExportResult exportResult =
+          systemAccess
+              ? jsonConfigLocalizationProcessorService.exportForSetupForSystem(setup.id())
+              : jsonConfigLocalizationProcessorService.exportForSetup(setup.id());
+      localizedConfig = readJson(exportResult.json(), "localized config export");
+      if (exportResult.warnings() != null) {
+        warnings.addAll(exportResult.warnings());
+      }
+
+      StatsigDynamicConfig currentConfig = fetchDynamicConfig(configId);
+      currentDefaultValue = readJson(currentConfig.sourceConfigJson(), "current Statsig config");
     }
 
-    StatsigDynamicConfig currentConfig = fetchDynamicConfig(configId);
-    JsonNode currentDefaultValue =
-        readJson(currentConfig.sourceConfigJson(), "current Statsig config");
-    if (currentDefaultValue.equals(localizedConfig)) {
-      warnings.add("Statsig config already matches Mojito output; skipped push.");
+    JsonNode schemaResponse = null;
+    if (updateSchema) {
+      schemaResponse = updateSchema(configId, setup.schemaJson(), dryRun);
+      warnings.add("Pushed Statsig schema from Mojito schema.");
+    }
+
+    if (!pushConfig) {
+      if (!updateSchema) {
+        warnings.add("No Statsig changes requested.");
+      }
       return new StatsigPushResult(
-          configId, dryRun, true, writeJson(currentDefaultValue), warnings);
+          configId,
+          dryRun,
+          true,
+          updateSchema,
+          writeJson(schemaResponse == null ? objectMapper.createObjectNode() : schemaResponse),
+          warnings);
+    }
+
+    if (currentDefaultValue.equals(localizedConfig)) {
+      warnings.add("Statsig config already matches Mojito output; skipped value push.");
+      return new StatsigPushResult(
+          configId,
+          dryRun,
+          true,
+          updateSchema,
+          writeJson(schemaResponse == null ? currentDefaultValue : schemaResponse),
+          warnings);
     }
 
     ObjectNode update = objectMapper.createObjectNode();
@@ -288,7 +333,15 @@ public class StatsigJsonConfigLocalizationService {
       warnings.add("Statsig push ran in dry-run mode; no remote config was changed.");
     }
 
-    return new StatsigPushResult(configId, dryRun, false, writeJson(response), warnings);
+    return new StatsigPushResult(
+        configId, dryRun, false, updateSchema, writeJson(response), warnings);
+  }
+
+  private JsonNode updateSchema(String configId, String schemaJson, boolean dryRun) {
+    String normalizedSchemaJson = normalizedSchemaJson(schemaJson);
+    ObjectNode update = objectMapper.createObjectNode();
+    update.put("schema", normalizedSchemaJson);
+    return send("PATCH", configPath(configId, dryRun), update);
   }
 
   private StatsigDynamicConfig fetchDynamicConfig(String configId) {
@@ -407,6 +460,14 @@ public class StatsigJsonConfigLocalizationService {
     }
   }
 
+  private String normalizedSchemaJson(String schemaJson) {
+    if (schemaJson == null || schemaJson.isBlank()) {
+      throw new IllegalArgumentException(
+          "Mojito schema JSON is required to update the Statsig schema.");
+    }
+    return writeJson(readJson(schemaJson, "schema"));
+  }
+
   private String text(JsonNode node) {
     return node != null && node.isTextual() ? node.asText() : null;
   }
@@ -451,12 +512,22 @@ public class StatsigJsonConfigLocalizationService {
     }
   }
 
-  public record StatsigPushInput(String configId, Boolean dryRun) {}
+  public record StatsigPushInput(
+      String configId, Boolean dryRun, Boolean updateSchema, Boolean pushConfig) {
+    public StatsigPushInput(String configId, Boolean dryRun) {
+      this(configId, dryRun, null, null);
+    }
+
+    public StatsigPushInput(String configId, Boolean dryRun, Boolean updateSchema) {
+      this(configId, dryRun, updateSchema, null);
+    }
+  }
 
   public record StatsigPushResult(
       String configId,
       boolean dryRun,
       boolean skipped,
+      boolean schemaUpdated,
       String responseJson,
       List<String> warnings) {}
 
