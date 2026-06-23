@@ -10,8 +10,12 @@ import {
 } from "@mojito-mf2/core";
 import { formatMessage as formatMessageFromFormatter } from "@mojito-mf2/core/formatter";
 import { createIntlFunctionRegistry } from "@mojito-mf2/core/intl";
+import { decodeDateTimeDataResource, decodeNumberDataResource } from "@mojito-mf2/core/cldr-packed";
+import { createDateTimeCoreFunctionRegistry, formatDateTimeCore } from "@mojito-mf2/core/date-time-core";
+import { formatNumberCore } from "@mojito-mf2/core/number-core";
 import { parseToModel as parseToModelFromParser } from "@mojito-mf2/core/parser";
 import { createPortableFunctionRegistry } from "@mojito-mf2/core/portable";
+import { formatRelativeTimeCore } from "@mojito-mf2/core/relative-time-core";
 
 const parsed = parseToModel("Hello {$name}");
 assert.equal(parsed.diagnostics.length, 0);
@@ -46,9 +50,40 @@ assert.deepEqual(formatMessageToPartsFromRoot(badInteger.model, { name: "abc" },
   { type: "text", value: "Hello " },
   { type: "fallback", source: "$name", value: "" },
 ]);
+const nativeErrorMessage = parseToModel("Hello {$name :nativeError}");
+const nativeErrorRegistry = FunctionRegistry.portable().withFunction("nativeError", () => {
+  throw new Error("custom formatter failed");
+});
+const nativeErrorResult = formatMessage(nativeErrorMessage.model, { name: "Mojito" }, { functions: nativeErrorRegistry });
+assert.deepEqual(nativeErrorResult.errors.map((error) => error.code), ["error"]);
+assert.equal(nativeErrorResult.errors[0] instanceof MF2Error, true);
+const hostileValue = {
+  toString() {
+    throw new Error("value rendering failed");
+  },
+};
+const hostilePlaceholder = parseToModel("Hello {$name}");
+const hostilePlaceholderResult = formatMessage(hostilePlaceholder.model, { name: hostileValue });
+assert.equal(hostilePlaceholderResult.value, "Hello {$name}");
+assert.deepEqual(hostilePlaceholderResult.errors.map((error) => error.code), ["bad-operand"]);
+assert.equal(hostilePlaceholderResult.errors[0] instanceof MF2Error, true);
+const hostileString = parseToModel("Hello {$name :string}");
+const hostileStringResult = formatMessage(hostileString.model, { name: hostileValue });
+assert.equal(hostileStringResult.value, "Hello {$name}");
+assert.deepEqual(hostileStringResult.errors.map((error) => error.code), ["bad-operand"]);
+const hostileSelector = parseToModel(".input {$name :string}\n.match $name\nok {{selected}}\n* {{fallback}}");
+const hostileSelectorResult = formatMessage(hostileSelector.model, { name: hostileValue });
+assert.equal(hostileSelectorResult.value, "fallback");
+assert.deepEqual(hostileSelectorResult.errors.map((error) => error.code), ["bad-operand"]);
 assert.equal(FunctionRegistry.defaults().hasFormatter({ name: "string" }), true);
 assert.equal(FunctionRegistry.portable().hasFormatter({ name: "number" }), true);
 assert.equal(createPortableFunctionRegistry(FunctionRegistry).hasFormatter({ name: "number" }), true);
+assert.equal(formatNumberCore(1234.5, { locale: "fr-FR" }), "1 234,5");
+assert.equal(formatDateTimeCore("2026-05-21T14:30:15Z", { locale: "fr-FR", dateStyle: "short", timeStyle: "short" }), "21/05/2026 14:30");
+assert.equal(typeof decodeNumberDataResource, "function");
+assert.equal(typeof decodeDateTimeDataResource, "function");
+assert.equal(typeof formatRelativeTimeCore, "function");
+assert.equal(createDateTimeCoreFunctionRegistry(FunctionRegistry).hasFormatter({ name: "datetime" }), true);
 const currency = parseToModel("Total: {$amount :currency currency=USD}");
 const formattedCurrency = formatMessage(currency.model, { amount: 42 });
 assert.equal(formattedCurrency.value, "Total: {$amount}");
@@ -82,5 +117,7 @@ assert.equal("canonicalLocaleKey" in core, false);
 assert.equal("selectCardinal" in core, false);
 assert.equal("localeLookupChain" in core, false);
 assert.equal("createIntlFunctionRegistry" in core, false);
+assert.equal("formatNumberCore" in core, false);
+assert.equal("formatDateTimeCore" in core, false);
 
 console.log("MF2 JavaScript package boundary test passed");

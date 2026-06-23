@@ -3,6 +3,8 @@ import { parseDecimalNumber, parseInteger } from "./function_support.js";
 import { registerNumericSelectors } from "./numeric_selectors.js";
 import { formatOffset } from "./offset_function.js";
 
+const MAX_FRACTION_DIGITS = 100;
+
 export function createIntlFunctionRegistry(FunctionRegistry) {
   const formatters = new Map();
   const selectors = new Map();
@@ -127,6 +129,8 @@ function nonNegativeIntegerOption(call, optionName) {
   const value = call.optionValue(optionName, null);
   if (value == null) return null;
   const parsed = parseInteger(value);
-  if (parsed == null || parsed < 0) throw MF2Error.badOption(`${optionName} option must be a non-negative integer.`);
+  if (parsed == null || parsed < 0 || parsed > MAX_FRACTION_DIGITS) {
+    throw MF2Error.badOption(`${optionName} option must be a non-negative integer.`);
+  }
   return parsed;
 }

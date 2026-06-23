@@ -1,11 +1,15 @@
 import { MF2Error } from "./errors.js";
 import {
   functionOptionLiteral,
+  decimalOperandsEqual,
   inheritedExactNumericSource,
   isDecimalSourceFunction,
   numericSelectUsesVariable,
-  parseDecimalNumber,
-  parseInteger,
+  parseDecimalOperand,
+  parseIntegerOperand,
+  parseOffsetInteger,
+  shiftDecimalOperand,
+  truncateDecimalOperandToInteger,
 } from "./function_support.js";
 
 export function registerNumericSelectors(selectors) {
@@ -17,29 +21,29 @@ export function registerNumericSelectors(selectors) {
 
 export function selectNumber(match) {
   if (invalidNumericSelector(match.function, match.inheritedSource)) throw MF2Error.badSelector("Number selector cannot match this operand.");
-  const value = parseMatchDecimal(match, "Number selector requires a numeric operand.");
-  const key = parseDecimalNumber(match.key);
-  return key != null && Object.is(value, key) ? 1 : null;
+  const value = parseMatchDecimalOperand(match, "Number selector requires a numeric operand.");
+  const key = parseDecimalOperand(match.key);
+  return key != null && decimalOperandsEqual(value, key) ? 2 : null;
 }
 
 export function selectPercent(match) {
   if (invalidNumericSelector(match.function, match.inheritedSource)) throw MF2Error.badSelector("Percent selector cannot match this operand.");
-  const value = parseMatchDecimal(match, "Percent selector requires a numeric operand.") * 100;
-  const key = parseDecimalNumber(match.key);
-  return key != null && Object.is(value, key) ? 1 : null;
+  const value = shiftDecimalOperand(parseMatchDecimalOperand(match, "Percent selector requires a numeric operand."), 2);
+  const key = parseDecimalOperand(match.key);
+  return key != null && decimalOperandsEqual(value, key) ? 2 : null;
 }
 
 export function selectInteger(match) {
   if (invalidNumericSelector(match.function, match.inheritedSource)) throw MF2Error.badSelector("Integer selector cannot match this operand.");
-  const value = parseMatchDecimal(match, "Integer selector requires a numeric operand.");
-  const key = parseInteger(match.key);
-  return key != null && Math.trunc(value) === key ? 1 : null;
+  const value = truncateDecimalOperandToInteger(parseMatchDecimalOperand(match, "Integer selector requires a numeric operand."));
+  const key = parseIntegerOperand(match.key);
+  return key != null && decimalOperandsEqual(value, key) ? 2 : null;
 }
 
 export function selectOffset(match) {
-  const value = parseRequiredInteger(match.value, "Offset selector requires a numeric operand.");
-  const key = parseInteger(match.key);
-  return key != null && value === key ? 1 : null;
+  const value = parseRequiredInteger(match.rawValue ?? match.value, "Offset selector requires a numeric operand.");
+  const key = parseOffsetInteger(match.key);
+  return key != null && value === key ? 2 : null;
 }
 
 function invalidNumericSelector(functionRef, source) {
@@ -47,21 +51,21 @@ function invalidNumericSelector(functionRef, source) {
   return numericSelectUsesVariable(functionRef) || (select !== "exact" && inheritedExactNumericSource(source));
 }
 
-function parseMatchDecimal(match, message) {
-  let parsed = parseDecimalNumber(match.value);
-  if (parsed == null) parsed = parseSourceDecimal(match.inheritedSource);
+function parseMatchDecimalOperand(match, message) {
+  let parsed = parseSourceDecimalOperand(match.inheritedSource);
+  if (parsed == null) parsed = parseDecimalOperand(match.value);
   if (parsed == null) throw MF2Error.badSelector(message);
   return parsed;
 }
 
-function parseSourceDecimal(source) {
+function parseSourceDecimalOperand(source) {
   if (source == null) return null;
-  if (isDecimalSourceFunction(source.function)) return parseDecimalNumber(source.value);
-  return parseSourceDecimal(source.inherited);
+  if (isDecimalSourceFunction(source.function)) return parseDecimalOperand(source.value);
+  return parseSourceDecimalOperand(source.inherited);
 }
 
 function parseRequiredInteger(value, message) {
-  const parsed = parseInteger(value);
+  const parsed = parseOffsetInteger(value);
   if (parsed == null) throw MF2Error.badOperand(message);
   return parsed;
 }

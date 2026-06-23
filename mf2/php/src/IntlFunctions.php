@@ -7,6 +7,7 @@ namespace Mojito\MessageFormat2;
 final class IntlFunctions
 {
     private const UTC = 'UTC';
+    private const MAX_FRACTION_DIGITS = 100;
 
     private function __construct()
     {
@@ -211,7 +212,11 @@ final class IntlFunctions
         if (preg_match('/^\d+$/', $value) !== 1) {
             throw MF2Error::badOption("{$name} option must be auto or a non-negative integer.");
         }
-        return (int) $value;
+        $parsed = (int) $value;
+        if ($parsed > self::MAX_FRACTION_DIGITS) {
+            throw MF2Error::badOption("{$name} option must be auto or a non-negative integer.");
+        }
+        return $parsed;
     }
 
     private static function dateStyle(array $call, string $fallback, string ...$optionNames): int

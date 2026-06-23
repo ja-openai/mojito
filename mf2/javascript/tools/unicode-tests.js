@@ -6,8 +6,11 @@ import {
   FunctionRegistry,
   MF2Error,
   formatMessage,
+  formatMessageToParts,
   parseToModel,
 } from "../src/index.js";
+import { createDateTimeCoreFunctionRegistry } from "../src/date_time_core.js";
+import { createNumberCoreFunctionRegistry } from "../src/number_core.js";
 
 const CHECKS = [
   ["tests/syntax.json", "parse"],
@@ -37,6 +40,7 @@ export async function runUnicodeTests(root, baselinePath) {
     passed: 0,
     skipped: 0,
     notWired: 0,
+    partsAssertions: 0,
     files: [],
     skipExamples: [],
   };
@@ -62,7 +66,8 @@ export async function runUnicodeTests(root, baselinePath) {
   }
   console.log(
     `JavaScript Unicode official tests passed=${summary.passed} skipped=${summary.skipped} ` +
-      `not_wired=${summary.notWired} total=${summary.passed + summary.skipped + summary.notWired}`,
+      `not_wired=${summary.notWired} parts_assertions=${summary.partsAssertions} ` +
+      `total=${summary.passed + summary.skipped + summary.notWired}`,
   );
 
   await checkBaseline(summary, baseline);
@@ -75,13 +80,15 @@ async function runFile(root, path, mode, summary) {
   let passed = 0;
   let skipped = 0;
   for (const [index, test] of (suite.tests ?? []).entries()) {
-    const ok = mode === "parse"
+    const check = mode === "parse"
       ? checkParseTest(defaults, test)
       : mode === "data-model"
         ? checkDataModelErrorTest(defaults, test)
         : checkRuntimeTest(defaults, test);
+    const ok = typeof check === "boolean" ? check : check.ok;
     if (ok) {
       passed += 1;
+      if (typeof check !== "boolean") summary.partsAssertions += check.partsAssertions;
     } else {
       skipped += 1;
       recordSkip(summary, path, index, test, `${mode} behavior differs`);
@@ -95,7 +102,9 @@ async function runFile(root, path, mode, summary) {
 function checkParseTest(defaults, test) {
   const expectedSyntaxError = expectedErrors(defaults, test).some((error) => error.type === "syntax-error");
   const result = parseToModel(test.src);
-  return result.hasDiagnostics === expectedSyntaxError;
+  if (result.hasDiagnostics !== expectedSyntaxError) return false;
+  if (result.hasDiagnostics || test.expParts == null) return true;
+  return checkOfficialParts(defaults, test, result.model);
 }
 
 function checkDataModelErrorTest(defaults, test) {
@@ -136,22 +145,168 @@ function checkRuntimeTest(defaults, test) {
   if (result.hasDiagnostics) return false;
   const expectedCodes = expectedLocalCodes(defaults, test);
   try {
-    const actual = formatMessage(result.model, runtimeArgumentsFor(test), {
+    const options = {
       locale: locale(defaults, test),
       bidiIsolation: bidiIsolation(defaults, test),
       functions: officialFunctionRegistry(),
+    };
+    const actual = formatMessage(result.model, runtimeArgumentsFor(test), {
+      locale: options.locale,
+      bidiIsolation: options.bidiIsolation,
+      functions: options.functions,
     });
     const actualCodes = actual.errors.map((error) => error.code);
     if (!expectedCodes.every((expected) => actualCodes.includes(expected))) return false;
     if (expectedCodes.length === 0 && actualCodes.length > 0) return false;
-    return test.exp == null || actual.value === test.exp;
+    if (test.exp != null && actual.value !== test.exp) return false;
+    if (test.expParts != null) {
+      const partsCheck = checkOfficialParts(defaults, test, result.model, expectedCodes);
+      if (!partsCheck.ok) return false;
+      return partsCheck;
+    }
+    return { ok: true, partsAssertions: 0 };
   } catch (error) {
     return expectedCodes.includes(error.code);
   }
 }
 
+function checkOfficialParts(defaults, test, model, expectedCodes = []) {
+  const args = runtimeArgumentsFor(test);
+  const options = {
+    locale: locale(defaults, test),
+    bidiIsolation: bidiIsolation(defaults, test),
+    functions: officialFunctionRegistry(),
+  };
+  const actualParts = formatMessageToParts(model, args, options);
+  const actualCodes = actualParts.errors.map((error) => error.code);
+  if (!expectedCodes.every((expected) => actualCodes.includes(expected))) return { ok: false, partsAssertions: 0 };
+  if (expectedCodes.length === 0 && actualCodes.length > 0) return { ok: false, partsAssertions: 0 };
+  const projectedParts = projectOfficialParts(model, actualParts.parts, options, args);
+  if (!deepEqual(projectedParts, test.expParts)) return { ok: false, partsAssertions: 0 };
+  return { ok: true, partsAssertions: 1 };
+}
+
+function projectOfficialParts(model, parts, options, args) {
+  const expressions = simplePatternExpressions(model).map((expression) => expressionMetadata(model, expression));
+  let expressionIndex = 0;
+  const projected = [];
+  for (const part of parts) {
+    if (part.type === "text") {
+      projected.push({ type: "text", value: part.value });
+      continue;
+    }
+    if (part.type === "fallback") {
+      const fallback = { type: "fallback", source: part.source };
+      if (part.value !== undefined) fallback.value = part.value;
+      projected.push(fallback);
+      continue;
+    }
+    if (part.type === "markup") {
+      projected.push(projectOfficialMarkupPart(part, args));
+      continue;
+    }
+    if (part.type !== "expression") {
+      projected.push(part);
+      continue;
+    }
+    const metadata = expressions[expressionIndex++];
+    const type = officialExpressionPartType(metadata?.function?.name);
+    if (type == null) {
+      projected.push(part);
+      continue;
+    }
+    const expression = { type };
+    const valueParts = officialValueParts(type, part.value);
+    if (valueParts != null) expression.parts = valueParts;
+    if (type === "string") {
+      const id = literalOption(metadata?.function?.options?.["u:id"]);
+      const direction = part.direction === "ltr" || part.direction === "rtl" ? part.direction : null;
+      if (direction != null) expression.dir = direction;
+      if (id != null) expression.id = id;
+      if (id == null && metadata?.function?.name === "string") expression.locale = options.locale;
+      expression.value = part.value;
+    }
+    if (options.bidiIsolation === "default" && part.direction) {
+      projected.push({ type: "bidiIsolation", value: bidiIsolationOpen(part.direction) });
+      projected.push(expression);
+      projected.push({ type: "bidiIsolation", value: "\u2069" });
+    } else {
+      projected.push(expression);
+    }
+  }
+  return projected;
+}
+
+function simplePatternExpressions(model) {
+  if (model?.type !== "message" || !Array.isArray(model.pattern)) return [];
+  return model.pattern.filter((part) => part?.type === "expression");
+}
+
+function expressionMetadata(model, expression) {
+  const locals = new Map();
+  for (const declaration of model?.declarations ?? []) {
+    if (declaration.type === "local") locals.set(declaration.name, declaration.value);
+  }
+  return resolveExpressionMetadata(expression, locals, new Set());
+}
+
+function resolveExpressionMetadata(expression, locals, seen) {
+  if (expression?.function != null) return expression;
+  const name = expression?.arg?.type === "variable" ? expression.arg.name : null;
+  if (name == null || seen.has(name)) return expression;
+  seen.add(name);
+  const local = locals.get(name);
+  return local?.type === "expression" ? resolveExpressionMetadata(local, locals, seen) : expression;
+}
+
+function projectOfficialMarkupPart(part, args) {
+  const projected = { type: "markup", kind: part.kind };
+  const id = literalOption(part.options?.["u:id"]);
+  if (id != null) projected.id = id;
+  projected.name = part.name;
+  const options = officialMarkupOptions(part.options, args);
+  if (Object.keys(options).length > 0) projected.options = options;
+  return projected;
+}
+
+function officialExpressionPartType(functionName) {
+  if (functionName == null) return "string";
+  if (functionName === "number" || functionName === "integer" || functionName === "percent" || functionName === "currency") return "number";
+  if (functionName === "date" || functionName === "time" || functionName === "datetime") return "datetime";
+  if (functionName === "string") return "string";
+  if (isOfficialTestFunction(functionName)) return "test";
+  return null;
+}
+
+function officialValueParts(type, value) {
+  if (type !== "number") return null;
+  if (/^\d+$/.test(value)) return [{ type: "integer", value }];
+  return null;
+}
+
+function literalOption(option) {
+  return option?.type === "literal" ? option.value ?? "" : null;
+}
+
+function officialMarkupOptions(options, args) {
+  const projected = {};
+  for (const [name, option] of Object.entries(options ?? {})) {
+    if (name === "u:id" || name === "u:dir") continue;
+    if (option?.type === "literal") projected[name] = option.value ?? "";
+    else if (option?.type === "variable" && Object.hasOwn(args, option.name)) projected[name] = String(args[option.name]);
+  }
+  return projected;
+}
+
+function bidiIsolationOpen(direction) {
+  if (direction === "ltr") return "\u2066";
+  if (direction === "rtl") return "\u2067";
+  return "\u2068";
+}
+
 function officialFunctionRegistry() {
-  return FunctionRegistry.defaults()
+  return createDateTimeCoreFunctionRegistry(FunctionRegistry)
+    .withRegistry(createNumberCoreFunctionRegistry(FunctionRegistry))
     .withFunction("test:function", officialTestFunction)
     .withFunction("test:select", officialTestSelectResolver)
     .withFunction("test:format", officialTestFormatResolver)
@@ -318,11 +473,18 @@ async function collectJsonPaths(root, paths) {
 async function checkBaseline(summary, baselinePath) {
   const baseline = await readJson(baselinePath);
   const total = summary.passed + summary.skipped + summary.notWired;
-  if (baseline.passed !== summary.passed || baseline.skipped !== summary.skipped || baseline.notWired !== summary.notWired || baseline.total !== total) {
+  if (
+    baseline.passed !== summary.passed ||
+    baseline.skipped !== summary.skipped ||
+    baseline.notWired !== summary.notWired ||
+    baseline.partsAssertions !== summary.partsAssertions ||
+    baseline.total !== total
+  ) {
     throw new UnicodeTestFailure(
       `${baselinePath}: expected official-test counts passed=${baseline.passed} skipped=${baseline.skipped} ` +
-        `notWired=${baseline.notWired} total=${baseline.total}, got passed=${summary.passed} ` +
-        `skipped=${summary.skipped} notWired=${summary.notWired} total=${total}`,
+        `notWired=${baseline.notWired} partsAssertions=${baseline.partsAssertions} total=${baseline.total}, ` +
+        `got passed=${summary.passed} skipped=${summary.skipped} notWired=${summary.notWired} ` +
+        `partsAssertions=${summary.partsAssertions} total=${total}`,
     );
   }
   for (const file of summary.files) {
@@ -338,6 +500,10 @@ async function checkBaseline(summary, baselinePath) {
 
 async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
+}
+
+function deepEqual(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

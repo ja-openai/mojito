@@ -265,7 +265,7 @@ class Parser {
       return "";
     }
     const codePoint = this.peekCodePoint();
-    if (codePoint === code("{") || codePoint === code("}") || codePoint === code("\\")) return this.advanceCodePoint();
+    if (codePoint === code("{") || codePoint === code("}") || codePoint === code("|") || codePoint === code("\\")) return this.advanceCodePoint();
     return "\\";
   }
 
@@ -478,7 +478,37 @@ class Parser {
       this.pushDiagnostic("invalid-function-option", "Option key must be a valid identifier.", start, end);
       return null;
     }
-    return { name: keySplit.name, value: parseLiteralOrVariable(stripSyntaxWhitespace(assignment.rawValue)), nextIndex: assignment.nextIndex };
+    const value = this.parseOptionValue(assignment.rawValue, start, end);
+    if (!value) return null;
+    return { name: keySplit.name, value, nextIndex: assignment.nextIndex };
+  }
+
+  parseOptionValue(rawValue, start, end) {
+    rawValue = stripSyntaxWhitespace(rawValue);
+    if (rawValue.startsWith("|")) {
+      const split = parseQuotedLiteral(rawValue);
+      if (!split) {
+        this.pushDiagnostic("unclosed-quoted-literal", "Quoted literal is missing closing '|'.", start, end);
+        return null;
+      }
+      if (split.rest !== "") {
+        this.pushDiagnostic("invalid-function-option", "Option value must be a single literal or variable.", start, end);
+        return null;
+      }
+      return { type: "literal", value: split.value };
+    }
+    if (rawValue.startsWith("$")) {
+      const split = splitName(rawValue.slice(1));
+      if (split.name !== "" && split.rest === "") return { type: "variable", name: split.name };
+      this.pushDiagnostic(
+        variableNameDiagnosticCode(rawValue.slice(1)),
+        "Option variable value must be a valid variable name.",
+        start,
+        end,
+      );
+      return null;
+    }
+    return parseLiteralOrVariable(rawValue);
   }
 
   parseRequiredAssignment(tokens, index, start, end) {
@@ -779,7 +809,7 @@ function parseQuotedLiteral(input) {
         output += String.fromCodePoint(escaped);
         index += charCount(escaped);
       } else {
-        output += "\\";
+        return null;
       }
     } else {
       output += String.fromCodePoint(codePoint);
@@ -869,7 +899,7 @@ function splitIdentifier(input) {
 
 function isNameStart(codePoint) {
   if (codePoint <= 0x7f) return isAsciiNameStart(codePoint);
-  return codePoint >= 0xa1 && codePoint <= 0x10fffd && !isBidiMarker(codePoint) && !isControl(codePoint) && !isSurrogate(codePoint) && !isSyntaxWhitespace(codePoint) && !isNoncharacter(codePoint);
+  return codePoint >= 0xa1 && codePoint <= 0x10fffd && !isBidiMarker(codePoint) && !isControl(codePoint) && !isSurrogate(codePoint) && !isSyntaxWhitespace(codePoint) && !isUnicodeWhitespace(codePoint) && !isNoncharacter(codePoint);
 }
 
 function isNameChar(codePoint) {
@@ -893,6 +923,10 @@ function isSyntaxWhitespace(codePoint) {
 }
 
 function isWhitespace(codePoint) {
+  return codePoint === 0x09 || codePoint === 0x0a || codePoint === 0x0d || codePoint === 0x20 || codePoint === 0x3000;
+}
+
+function isUnicodeWhitespace(codePoint) {
   return /\s/u.test(String.fromCodePoint(codePoint));
 }
 

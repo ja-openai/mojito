@@ -1,5 +1,9 @@
+const MAX_LOCALE_KEY_LENGTH = 256;
+
 export function canonicalLocaleKey(locale) {
-  const parts = String(locale ?? "")
+  const value = String(locale ?? "");
+  if (value.length > MAX_LOCALE_KEY_LENGTH) return "";
+  const parts = value
     .trim()
     .replaceAll("_", "-")
     .split("-")
@@ -34,11 +38,28 @@ export function localeLookupChain(locale) {
 }
 
 export function pluralLookupChain(locale, parents = {}) {
+  return featureLookupChain(locale, parents);
+}
+
+export function featureLookupChain(locale, parents = {}) {
   const output = [];
-  for (const candidate of localeLookupChain(locale)) {
-    output.push(candidate);
-    const parent = parents[candidate];
-    if (parent != null && !output.includes(parent)) output.push(parent);
-  }
+  appendFeatureLookupChain(canonicalLocaleKey(locale), parents, output);
   return output;
+}
+
+function appendFeatureLookupChain(locale, parents, output) {
+  let current = locale;
+  while (current !== "") {
+    if (current.length > MAX_LOCALE_KEY_LENGTH) return;
+    if (output.includes(current)) return;
+    output.push(current);
+    const parent = parents[current];
+    if (parent != null) appendFeatureLookupChain(parent, parents, output);
+    current = structuralParent(current);
+  }
+}
+
+function structuralParent(locale) {
+  const index = locale.lastIndexOf("-");
+  return index < 0 ? "" : locale.slice(0, index);
 }

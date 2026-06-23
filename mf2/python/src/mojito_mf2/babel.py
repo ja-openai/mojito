@@ -23,6 +23,8 @@ from .functions import FunctionCall, FunctionRegistry
 
 __all__ = ["babel_function_registry"]
 
+_MAX_FRACTION_DIGITS = 100
+
 
 def babel_function_registry() -> FunctionRegistry:
     return (
@@ -167,7 +169,12 @@ def _non_negative_integer_option(call: FunctionCall, name: str) -> int | None:
         return None
     if not value.isdigit():
         raise MF2Error("bad-option", f"{name} option must be a non-negative integer.")
-    return int(value)
+    if len(value) > len(str(_MAX_FRACTION_DIGITS)):
+        raise MF2Error("bad-option", f"{name} option must be a non-negative integer.")
+    parsed = int(value)
+    if parsed > _MAX_FRACTION_DIGITS:
+        raise MF2Error("bad-option", f"{name} option must be a non-negative integer.")
+    return parsed
 
 
 def _parse_decimal(value: Any, message: str) -> Decimal:

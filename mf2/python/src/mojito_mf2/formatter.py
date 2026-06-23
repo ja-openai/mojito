@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+import re
 import unicodedata
 from typing import Any, Callable, cast
 
@@ -21,7 +22,16 @@ from .model import (
     MF2MarkupPart,
     MF2MessageModel,
 )
+from .number_core import format_number_core
 from ._plural import select_plural_category
+
+
+_DECIMAL_LITERAL_RE = re.compile(r"^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$")
+_SOURCE_DECIMAL_RE = re.compile(
+    r"^(?P<sign>-?)(?P<integer>0|[1-9]\d*)(?:\.(?P<fraction>\d+))?(?:[eE](?P<exponent>[+-]?\d+))?$"
+)
+_MAX_SOURCE_DECIMAL_EXPONENT = 1_000_000
+_MAX_SOURCE_DECIMAL_KEY_LENGTH = 4096
 
 
 @dataclass(frozen=True)
@@ -300,14 +310,14 @@ class _FormatContext:
                 if rendered.had_error:
                     self.failed_locals.add(declaration["name"])
                 else:
-                    self.values[declaration["name"]] = rendered.value
+                    self.values[declaration["name"]] = rendered.raw_value
                     self.sources[declaration["name"]] = rendered.source
             elif declaration.get("type") == "local":
                 rendered = self._format_expression_output(declaration["value"])
                 if rendered.had_error:
                     self.failed_locals.add(declaration["name"])
                 else:
-                    self.values[declaration["name"]] = rendered.value
+                    self.values[declaration["name"]] = rendered.raw_value
                     self.sources[declaration["name"]] = rendered.source
 
     def format_select_to_parts(
@@ -319,7 +329,7 @@ class _FormatContext:
         for selector in selectors:
             name = selector["name"]
             annotation = self.selector_annotations.get(name)
-            if name not in self.values:
+            if not self._has_value(name):
                 if self.fallback:
                     if name not in self.failed_locals:
                         self.errors.append(_unresolved_variable(name))
@@ -347,7 +357,31 @@ class _FormatContext:
                     continue
                 raise MF2Error("missing-argument", f"Missing argument ${name}.")
             value = self.values[name]
-            rendered = _render_value(value)
+            try:
+                rendered = _render_value(value)
+                selection_key = self._selection_key(name, value)
+            except MF2Error as error:
+                if not self.fallback:
+                    raise
+                self.errors.append(_fallback_error(error))
+                if annotation is not None and self.functions.has_selector(annotation.function):
+                    self.errors.append(
+                        MF2Error("bad-selector", "Selector operand is not available.")
+                    )
+                selector_values.append(
+                    _SelectorValue(
+                        rendered="",
+                        raw_value="",
+                        normalized_rendered=(
+                            _normalize_string_key("") if self._string_select(name) else None
+                        ),
+                        exact_match=False,
+                        selection_key=None,
+                        function=None,
+                        source=None,
+                    )
+                )
+                continue
             normalized_rendered = (
                 _normalize_string_key(rendered) if self._string_select(name) else None
             )
@@ -357,7 +391,7 @@ class _FormatContext:
                     raw_value=value,
                     normalized_rendered=normalized_rendered,
                     exact_match=self._exact_match(name),
-                    selection_key=self._selection_key(name, value),
+                    selection_key=selection_key,
                     function=annotation.function if annotation else None,
                     source=self.sources.get(name),
                 )
@@ -421,8 +455,15 @@ class _FormatContext:
                     }
                     if attributes := part.get("attributes"):
                         expression_part["attributes"] = attributes
+                    if rendered.direction is not None:
+                        expression_part["direction"] = rendered.direction
                     parts.append(expression_part)
             elif part_type == "markup":
+                if part.get("options", {}).get("u:dir") is not None:
+                    error = MF2Error("bad-option", "u:dir is not valid on markup.")
+                    if not self.fallback:
+                        raise error
+                    self.errors.append(error)
                 markup_part: MF2MarkupPart = {
                     "type": "markup",
                     "kind": part.get("kind", ""),
@@ -452,7 +493,7 @@ class _FormatContext:
             raw_value = value
         elif arg.get("type") == "variable":
             name = arg["name"]
-            if name not in self.values:
+            if not self._has_value(name):
                 if self.fallback:
                     had_error = True
                     error = _unresolved_variable(name)
@@ -474,7 +515,23 @@ class _FormatContext:
                     raise MF2Error("missing-argument", f"Missing argument ${name}.")
             else:
                 raw_value = self.values[name]
-                value = _render_value(raw_value)
+                try:
+                    value = _render_value(raw_value)
+                except MF2Error as error:
+                    if not self.fallback:
+                        raise
+                    recoverable = _fallback_error(error)
+                    self.errors.append(recoverable)
+                    fallback_source = _fallback_source(expression)
+                    return _ExpressionOutput(
+                        value=self._recover_format_error(
+                            expression,
+                            fallback_source,
+                            recoverable,
+                        ),
+                        had_error=True,
+                        fallback_source=fallback_source,
+                    )
                 source = self.sources.get(name)
         else:
             raise MF2Error("unsupported-expression-arg", f"Unsupported expression arg: {arg}")
@@ -482,26 +539,54 @@ class _FormatContext:
         if had_error:
             return _ExpressionOutput(
                 value=value,
+                raw_value=value,
                 had_error=True,
                 fallback_source=_fallback_source(expression),
             )
 
         function = expression.get("function")
         if function is None:
-            return _ExpressionOutput(value=value, had_error=False, source=source)
+            try:
+                value = _render_primitive_value(raw_value, self.locale)
+                direction = _bidi_direction_from_source(source)
+            except MF2Error as error:
+                if not self.fallback:
+                    raise
+                recoverable = _fallback_error(error)
+                self.errors.append(recoverable)
+                fallback_source = _fallback_source(expression)
+                return _ExpressionOutput(
+                    value=self._recover_format_error(
+                        expression,
+                        fallback_source,
+                        recoverable,
+                    ),
+                    had_error=True,
+                    fallback_source=fallback_source,
+                )
+            return _ExpressionOutput(
+                value=value,
+                raw_value=raw_value,
+                had_error=False,
+                source=source,
+                direction=direction,
+            )
         try:
             source_value = value if source is None else source.value
+            direction = _bidi_direction_for_function(function, source)
+            formatted = self.functions.format(
+                FunctionCall(
+                    value=value,
+                    raw_value=raw_value,
+                    function=function,
+                    locale=self.locale,
+                    _option_resolver=lambda name, default: self._option_value(function, name, default),
+                    inherited_source=source,
+                )
+            )
             return _ExpressionOutput(
-                value=self.functions.format(
-                    FunctionCall(
-                        value=value,
-                        raw_value=raw_value,
-                        function=function,
-                        locale=self.locale,
-                        _option_resolver=lambda name, default: self._option_value(function, name, default),
-                        inherited_source=source,
-                    )
-                ),
+                value=formatted,
+                raw_value=formatted,
                 had_error=False,
                 source=FunctionSource(
                     source_value,
@@ -509,6 +594,7 @@ class _FormatContext:
                     source,
                     lambda name, default: self._option_value(function, name, default),
                 ),
+                direction=direction,
             )
         except MF2Error as error:
             if not self.fallback:
@@ -576,11 +662,14 @@ class _FormatContext:
         if option.get("type") == "literal":
             return str(option.get("value", ""))
         if option.get("type") == "variable":
-            return _render_value(self._argument(option["name"]))
+            return _render_option_value(self._argument(option["name"]))
         return default
 
+    def _has_value(self, name: str) -> bool:
+        return name not in self.failed_locals and name in self.values
+
     def _argument(self, name: str) -> Any:
-        if name not in self.values:
+        if not self._has_value(name):
             raise MF2Error("missing-argument", f"Missing argument ${name}.")
         return self.values[name]
 
@@ -619,7 +708,11 @@ class _FormatContext:
         if key.get("type") == "*":
             return 0
         value = str(key.get("value", ""))
-        if (selector.exact_match and _literal_key_matches(value, selector)) or value == selector.selection_key:
+        if selector.exact_match and _numeric_literal_key_matches_source(value, selector):
+            return 3
+        if selector.exact_match and not _is_numeric_function(selector.function) and _literal_key_matches(value, selector):
+            return 2
+        if value == selector.selection_key:
             return 1
         if selector.function is None:
             return None
@@ -693,8 +786,10 @@ class _SelectorValue:
 class _ExpressionOutput:
     value: str
     had_error: bool
+    raw_value: Any = ""
     source: FunctionSource | None = None
     fallback_source: str | None = None
+    direction: str | None = None
 
 
 def _default_recovery(context: MF2RecoveryContext) -> str:
@@ -717,6 +812,118 @@ def _literal_key_matches(value: str, selector: _SelectorValue) -> bool:
     if selector.normalized_rendered is None:
         return value == selector.rendered
     return _normalize_string_key(value) == selector.normalized_rendered
+
+
+def _numeric_literal_key_matches_source(value: str, selector: _SelectorValue) -> bool:
+    source_key = _preferred_numeric_source_key(selector)
+    return source_key is not None and value == source_key and _is_decimal_literal(value)
+
+
+def _preferred_numeric_source_key(selector: _SelectorValue) -> str | None:
+    function_name = (selector.function or {}).get("name")
+    if function_name not in {"number", "percent"}:
+        return None
+    source_value = _numeric_source_value(selector.source, function_name)
+    if source_value is None:
+        return None
+    operand = _parse_source_decimal(source_value)
+    if operand is None:
+        return None
+    if function_name == "percent":
+        return _render_source_decimal(
+            _SourceDecimal(
+                negative=operand.negative,
+                digits=operand.digits,
+                scale=operand.scale - 2,
+                has_exponent=operand.has_exponent,
+            ),
+            trim_fraction_zeros=False,
+        )
+    if operand.has_exponent:
+        return _render_source_decimal(operand, trim_fraction_zeros=True)
+    return source_value
+
+
+def _numeric_source_value(source: FunctionSource | None, function_name: str) -> str | None:
+    while source is not None:
+        if source.function.get("name") == function_name:
+            return source.value
+        source = source.inherited_source
+    return None
+
+
+@dataclass(frozen=True)
+class _SourceDecimal:
+    negative: bool
+    digits: str
+    scale: int
+    has_exponent: bool
+
+
+def _parse_source_decimal(value: str) -> _SourceDecimal | None:
+    match = _SOURCE_DECIMAL_RE.fullmatch(value)
+    if match is None:
+        return None
+    exponent = _parse_source_exponent(match.group("exponent") or "")
+    if exponent is None:
+        return None
+    fraction = match.group("fraction") or ""
+    digits = f"{match.group('integer')}{fraction}".lstrip("0") or "0"
+    return _SourceDecimal(
+        negative=match.group("sign") == "-" and digits != "0",
+        digits=digits,
+        scale=len(fraction) - exponent,
+        has_exponent=match.group("exponent") is not None,
+    )
+
+
+def _parse_source_exponent(value: str) -> int | None:
+    if value == "":
+        return 0
+    negative = value.startswith("-")
+    unsigned = value[1:] if negative or value.startswith("+") else value
+    digits = unsigned.lstrip("0") or "0"
+    if len(digits) > 7:
+        return None
+    parsed = int(digits)
+    if parsed > _MAX_SOURCE_DECIMAL_EXPONENT:
+        return None
+    return -parsed if negative else parsed
+
+
+def _render_source_decimal(
+    operand: _SourceDecimal, *, trim_fraction_zeros: bool
+) -> str | None:
+    extra_length = (
+        operand.scale - len(operand.digits)
+        if operand.scale > len(operand.digits)
+        else max(-operand.scale, 0)
+    )
+    if len(operand.digits) + extra_length + 2 > _MAX_SOURCE_DECIMAL_KEY_LENGTH:
+        return None
+    if operand.scale <= 0:
+        text = f"{operand.digits}{'0' * -operand.scale}"
+    elif operand.scale >= len(operand.digits):
+        text = f"0.{'0' * (operand.scale - len(operand.digits))}{operand.digits}"
+    else:
+        split = len(operand.digits) - operand.scale
+        text = f"{operand.digits[:split]}.{operand.digits[split:]}"
+    if trim_fraction_zeros and "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return f"-{text}" if operand.negative else text
+
+
+def _is_decimal_literal(value: str) -> bool:
+    if _DECIMAL_LITERAL_RE.fullmatch(value) is None:
+        return False
+    try:
+        return Decimal(value).is_finite()
+    except InvalidOperation:
+        return False
+
+
+def _is_numeric_function(function: dict[str, Any] | None) -> bool:
+    return function is not None and function.get("name") in {"number", "integer", "percent", "offset"}
 
 
 def _normalize_string_key(value: str) -> str:
@@ -749,7 +956,7 @@ def _fallback_source(expression: dict[str, Any]) -> str:
         return _expression_arg_source(arg)
     function = expression.get("function")
     if function is not None:
-        return _function_source(function)
+        return _function_name_source(function)
     return ""
 
 
@@ -779,6 +986,10 @@ def _function_source(function: dict[str, Any]) -> str:
     return source
 
 
+def _function_name_source(function: dict[str, Any]) -> str:
+    return f":{function.get('name', '')}"
+
+
 def _quote_literal_source(value: str) -> str:
     return "|" + value.replace("\\", "\\\\").replace("|", "\\|") + "|"
 
@@ -788,7 +999,65 @@ def _render_value(value: Any) -> str:
         return ""
     if isinstance(value, bool):
         return "true" if value else "false"
-    return str(value)
+    try:
+        return str(value)
+    except Exception as error:
+        raise MF2Error("bad-operand", "Value could not be rendered.") from error
+
+
+def _render_primitive_value(value: Any, locale: str) -> str:
+    if isinstance(value, bool):
+        return _render_value(value)
+    if isinstance(value, (int, float, Decimal)):
+        return format_number_core(value, locale=locale)
+    return _render_value(value)
+
+
+def _render_option_value(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    try:
+        return str(value)
+    except Exception as error:
+        raise MF2Error("bad-option", "Function option value is not available.") from error
+
+
+def _bidi_direction_for_function(
+    function: dict[str, Any],
+    source: FunctionSource | None,
+) -> str | None:
+    value = _function_option_literal(function, "u:dir", None)
+    if value is not None:
+        return _parse_bidi_direction(value)
+    return _bidi_direction_from_source(source)
+
+
+def _bidi_direction_from_source(source: FunctionSource | None) -> str | None:
+    if source is None:
+        return None
+    value = _function_option_literal(source.function, "u:dir", None)
+    if value is not None:
+        return _parse_bidi_direction(value)
+    return _bidi_direction_from_source(source.inherited_source)
+
+
+def _function_option_literal(
+    function: dict[str, Any],
+    name: str,
+    default: str | None,
+) -> str | None:
+    option = function.get("options", {}).get(name)
+    if option is None:
+        return default
+    return str(option.get("value", "")) if option.get("type") == "literal" else default
+
+
+def _parse_bidi_direction(value: str) -> str:
+    if value in {"auto", "ltr", "rtl"}:
+        return value
+    raise MF2Error("bad-option", "u:dir option must be auto, ltr, or rtl.")
 
 
 def _parts_to_string(parts: list[MF2FormattedPart], bidi_isolation: str = "none") -> str:
@@ -800,11 +1069,25 @@ def _parts_to_string(parts: list[MF2FormattedPart], bidi_isolation: str = "none"
         elif part_type == "fallback":
             output.append(part["value"] if "value" in part else ("{" + part.get("source", "") + "}"))
         elif part_type == "expression":
-            output.append(_isolate_expression(part.get("value", ""), bidi_isolation))
+            output.append(
+                _isolate_expression(
+                    part.get("value", ""),
+                    bidi_isolation,
+                    part.get("direction"),
+                )
+            )
     return "".join(output)
 
 
-def _isolate_expression(value: str, bidi_isolation: str) -> str:
+def _isolate_expression(value: str, bidi_isolation: str, direction: str | None = None) -> str:
     if bidi_isolation == "default":
-        return f"\u2068{value}\u2069"
+        return f"{_bidi_marker(direction)}{value}\u2069"
     return value
+
+
+def _bidi_marker(direction: str | None) -> str:
+    if direction == "ltr":
+        return "\u2066"
+    if direction == "rtl":
+        return "\u2067"
+    return "\u2068"

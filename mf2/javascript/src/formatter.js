@@ -1,5 +1,6 @@
 import { MF2Error } from "./errors.js";
 import { selectCardinal, selectOrdinal } from "./cldr_plural_rules.js";
+import { formatNumberCore } from "./number_core.js";
 import { createPortableFunctionRegistry } from "./portable_functions.js";
 import {
   functionOptionLiteral,
@@ -7,6 +8,7 @@ import {
   isNumericFunction,
   numericSelectUsesVariable,
   parseDecimalNumber,
+  parseDecimalOperand,
 } from "./function_support.js";
 
 export function formatMessage(model, arguments_ = {}, options = {}) {
@@ -61,6 +63,17 @@ export class FunctionRegistry {
     return new FunctionRegistry(this.formatters, selectors);
   }
 
+  withRegistry(other) {
+    let registry = this;
+    for (const [name, formatter] of other.formatters) {
+      registry = registry.withFunction(name, formatter);
+    }
+    for (const [name, selector] of other.selectors) {
+      registry = registry.withSelector(name, selector);
+    }
+    return registry;
+  }
+
   hasFormatter(functionRef) {
     return this.formatters.has(functionRef.name);
   }
@@ -104,7 +117,7 @@ class FormatContext {
           this.failedLocals.add(declaration.name);
           this.locals.delete(declaration.name);
         } else {
-          this.locals.set(declaration.name, { rawValue: output.value, source: output.source });
+          this.locals.set(declaration.name, { rawValue: output.rawValue, source: output.source });
         }
       }
     }
@@ -122,7 +135,7 @@ class FormatContext {
     const inputValue = this.value(input.name);
     this.recordFunctionResolutionErrors(functionRef, inputValue.source);
     try {
-      const rendered = valueToString(inputValue.rawValue);
+      const rendered = renderValueToString(inputValue.rawValue);
       const formatted = this.functions.format({
         value: rendered,
         rawValue: inputValue.rawValue,
@@ -173,6 +186,7 @@ class FormatContext {
       }
       return {
         rendered: "",
+        rawValue: "",
         normalizedRendered: annotation?.isString ? normalizeStringKey("") : null,
         exactMatch: false,
         selectionKey: null,
@@ -181,13 +195,35 @@ class FormatContext {
       };
     }
     const value = this.value(selector.name);
-    const rendered = valueToString(value.rawValue);
     this.recordSelectorResolutionErrors(annotation);
+    let rendered;
+    let key;
+    try {
+      rendered = renderValueToString(value.rawValue);
+      key = selectionKey(this.locale, annotation, value);
+    } catch (error) {
+      const recoverable = fallbackError(error);
+      if (!this.fallback) throw recoverable;
+      this.errors.push(recoverable);
+      if (annotation != null && this.functions.hasSelector(annotation.function)) {
+        this.errors.push(new MF2Error("bad-selector", "Selector operand is not available."));
+      }
+      return {
+        rendered: "",
+        rawValue: "",
+        normalizedRendered: annotation?.isString ? normalizeStringKey("") : null,
+        exactMatch: false,
+        selectionKey: null,
+        function: null,
+        source: null,
+      };
+    }
     return {
       rendered,
+      rawValue: value.rawValue,
       normalizedRendered: annotation?.isString ? normalizeStringKey(rendered) : null,
       exactMatch: annotation == null || annotation.exactMatch,
-      selectionKey: selectionKey(this.locale, annotation, value),
+      selectionKey: key,
       function: annotation?.function ?? null,
       source: value.source,
     };
@@ -247,6 +283,7 @@ class FormatContext {
         const source = fallbackSource(expression);
         return {
           value: this.recoverMissingArgument(expression, expression.arg.name, source, error),
+          rawValue: "",
           hadError: true,
           source: null,
           direction: null,
@@ -255,16 +292,49 @@ class FormatContext {
       }
       const resolved = this.value(expression.arg.name);
       rawValue = resolved.rawValue;
-      value = valueToString(rawValue);
+      try {
+        value = renderValueToString(rawValue);
+      } catch (error) {
+        if (!this.fallback) throw fallbackError(error);
+        const recoverable = fallbackError(error);
+        this.errors.push(recoverable);
+        const source = fallbackSource(expression);
+        return {
+          value: this.recoverFormatError(expression, source, recoverable),
+          rawValue: "",
+          hadError: true,
+          source: null,
+          direction: null,
+          fallbackSource: source,
+        };
+      }
       source = resolved.source;
     } else {
       throw new MF2Error("unsupported-expression-arg", `Unsupported expression arg: ${expression.arg.type}`);
     }
     const functionRef = expression.function;
-    if (functionRef == null) return { value, hadError: false, source, direction: bidiDirectionFromSource(source) };
+    if (functionRef == null) {
+      try {
+        value = renderPrimitiveValueToString(rawValue, this.locale);
+        return { value, rawValue, hadError: false, source, direction: bidiDirectionFromSource(source) };
+      } catch (error) {
+        if (!this.fallback) throw fallbackError(error);
+        const recoverable = fallbackError(error);
+        this.errors.push(recoverable);
+        const source = fallbackSource(expression);
+        return {
+          value: this.recoverFormatError(expression, source, recoverable),
+          rawValue,
+          hadError: true,
+          source: null,
+          direction: null,
+          fallbackSource: source,
+        };
+      }
+    }
     this.recordFunctionResolutionErrors(functionRef, source);
-    const direction = bidiDirectionForFunction(functionRef, source);
     try {
+      const direction = bidiDirectionForFunction(functionRef, source);
       const formatted = this.functions.format({
         value,
         rawValue,
@@ -276,6 +346,7 @@ class FormatContext {
       const sourceValue = source?.value ?? value;
       return {
         value: formatted,
+        rawValue: formatted,
         hadError: false,
         source: this.functionSource(sourceValue, functionRef, source),
         direction,
@@ -287,6 +358,7 @@ class FormatContext {
       const source = fallbackSource(expression);
       return {
         value: this.recoverFormatError(expression, source, recoverable),
+        rawValue: "",
         hadError: true,
         source: null,
         direction: null,
@@ -327,7 +399,7 @@ class FormatContext {
     if (option.type === "literal") return option.value ?? "";
     if (option.type === "variable") {
       if (!this.hasValue(option.name)) throw MF2Error.missingArgument(option.name);
-      return valueToString(this.value(option.name).rawValue);
+      return optionValueToString(this.value(option.name).rawValue);
     }
     return fallback;
   }
@@ -384,12 +456,14 @@ class FormatContext {
 
   keyMatchRank(key, selector) {
     if (key.type === "*") return 0;
-    if ((selector.exactMatch && literalKeyMatches(key.value ?? "", selector)) || key.value === selector.selectionKey) return 1;
+    if (selector.exactMatch && numericLiteralKeyMatchesSource(key.value ?? "", selector)) return 3;
+    if (selector.exactMatch && !isNumericFunction(selector.function) && literalKeyMatches(key.value ?? "", selector)) return 2;
+    if (key.value === selector.selectionKey) return 1;
     if (selector.function == null) return null;
     try {
       return this.functions.select({
         value: selector.rendered,
-        rawValue: selector.rendered,
+        rawValue: selector.rawValue,
         function: selector.function,
         key: key.value ?? "",
         locale: this.locale,
@@ -551,6 +625,76 @@ function literalKeyMatches(value, selector) {
   return selector.normalizedRendered == null ? value === selector.rendered : normalizeStringKey(value) === selector.normalizedRendered;
 }
 
+function numericLiteralKeyMatchesSource(value, selector) {
+  const sourceKey = preferredNumericSourceKey(selector);
+  return sourceKey != null && value === sourceKey && parseDecimalOperand(value) != null;
+}
+
+function preferredNumericSourceKey(selector) {
+  const functionName = selector.function?.name;
+  if (functionName !== "number" && functionName !== "percent") return null;
+  const sourceValue = numericSourceValue(selector.source, functionName);
+  const operand = parseSourceDecimal(sourceValue);
+  if (operand == null) return null;
+  if (functionName === "percent") {
+    return renderSourceDecimal({ ...operand, scale: operand.scale - 2 }, { trimFractionZeros: false });
+  }
+  return operand.hasExponent ? renderSourceDecimal(operand, { trimFractionZeros: true }) : sourceValue;
+}
+
+function numericSourceValue(source, functionName) {
+  if (source == null) return null;
+  if (source.function?.name === functionName) return source.value;
+  return numericSourceValue(source.inherited, functionName);
+}
+
+const SOURCE_DECIMAL_PATTERN = /^(-?)(0|[1-9]\d*)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/;
+const MAX_SOURCE_DECIMAL_EXPONENT = 1000000;
+const MAX_SOURCE_DECIMAL_KEY_LENGTH = 4096;
+
+function parseSourceDecimal(value) {
+  if (value == null) return null;
+  const match = SOURCE_DECIMAL_PATTERN.exec(String(value));
+  if (!match) return null;
+  const exponent = parseSourceExponent(match[4] ?? "");
+  if (exponent == null) return null;
+  const fraction = match[3] ?? "";
+  const digits = `${match[2]}${fraction}`.replace(/^0+/, "") || "0";
+  return {
+    negative: match[1] === "-" && digits !== "0",
+    digits,
+    scale: fraction.length - exponent,
+    hasExponent: match[4] != null,
+  };
+}
+
+function parseSourceExponent(value) {
+  if (value === "") return 0;
+  const negative = value.startsWith("-");
+  const unsigned = negative || value.startsWith("+") ? value.slice(1) : value;
+  const digits = unsigned.replace(/^0+/, "") || "0";
+  if (digits.length > 7) return null;
+  const parsed = Number(digits);
+  if (!Number.isSafeInteger(parsed) || parsed > MAX_SOURCE_DECIMAL_EXPONENT) return null;
+  return negative ? -parsed : parsed;
+}
+
+function renderSourceDecimal(operand, { trimFractionZeros }) {
+  const extraLength = operand.scale > operand.digits.length ? operand.scale - operand.digits.length : Math.max(-operand.scale, 0);
+  if (operand.digits.length + extraLength + 2 > MAX_SOURCE_DECIMAL_KEY_LENGTH) return null;
+  let text;
+  if (operand.scale <= 0) {
+    text = `${operand.digits}${"0".repeat(-operand.scale)}`;
+  } else if (operand.scale >= operand.digits.length) {
+    text = `0.${"0".repeat(operand.scale - operand.digits.length)}${operand.digits}`;
+  } else {
+    const split = operand.digits.length - operand.scale;
+    text = `${operand.digits.slice(0, split)}.${operand.digits.slice(split)}`;
+  }
+  if (trimFractionZeros && text.includes(".")) text = text.replace(/\.?0+$/, "");
+  return operand.negative ? `-${text}` : text;
+}
+
 function normalizeStringKey(value) {
   return String(value).normalize("NFC");
 }
@@ -560,13 +704,42 @@ function unresolvedVariable(name) {
 }
 
 function fallbackError(error) {
-  if (error.code === "unsupported-function") return new MF2Error("unknown-function", error.message);
-  return error;
+  if (error instanceof MF2Error) {
+    if (error.code === "unsupported-function") return new MF2Error("unknown-function", error.message);
+    return error;
+  }
+  const code = safeErrorCode(error);
+  if (code === "unsupported-function") return new MF2Error("unknown-function", safeErrorMessage(error));
+  if (code != null) return new MF2Error(code, safeErrorMessage(error));
+  return new MF2Error("error", safeErrorMessage(error));
+}
+
+function safeErrorCode(error) {
+  try {
+    return typeof error?.code === "string" ? error.code : null;
+  } catch {
+    return null;
+  }
+}
+
+function safeErrorMessage(error) {
+  if (error instanceof Error) {
+    try {
+      return error.message;
+    } catch {
+      return "Formatting failed.";
+    }
+  }
+  try {
+    return String(error);
+  } catch {
+    return "Formatting failed.";
+  }
 }
 
 function fallbackSource(expression) {
   if (expression.arg) return expressionArgSource(expression.arg);
-  if (expression.function) return functionSource(expression.function);
+  if (expression.function) return functionNameSource(expression.function);
   return "";
 }
 
@@ -598,6 +771,10 @@ function functionSource(functionRef) {
     source += ` ${name}=${expressionArgSource(value)}`;
   }
   return source;
+}
+
+function functionNameSource(functionRef) {
+  return `:${functionRef.name ?? ""}`;
 }
 
 function quoteLiteralSource(value) {
@@ -651,4 +828,29 @@ export function valueToString(value) {
     return String(value);
   }
   return String(value);
+}
+
+function optionValueToString(value) {
+  try {
+    return valueToString(value);
+  } catch {
+    throw MF2Error.badOption("Function option value is not available.");
+  }
+}
+
+function renderValueToString(value) {
+  try {
+    return valueToString(value);
+  } catch {
+    throw MF2Error.badOperand("Value could not be rendered.");
+  }
+}
+
+function renderPrimitiveValueToString(value, locale) {
+  try {
+    if (typeof value === "number" || typeof value === "bigint") return formatNumberCore(value, { locale });
+    return valueToString(value);
+  } catch (error) {
+    throw fallbackError(error);
+  }
 }

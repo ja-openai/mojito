@@ -4,6 +4,9 @@ import unittest
 
 import mojito_mf2
 import mojito_mf2.parser
+from mojito_mf2._cldr_plural_rules import NumberOperands
+from mojito_mf2.date_time_core import date_time_core_function_registry, format_date_time_core
+from mojito_mf2.number_core import format_number_core
 from mojito_mf2 import (
     FunctionCall,
     FunctionMatch,
@@ -33,6 +36,10 @@ class PublicApiTest(unittest.TestCase):
         self.assertIs(FunctionMatch, mojito_mf2.FunctionMatch)
         self.assertIs(FunctionSource, mojito_mf2.FunctionSource)
         self.assertTrue(FunctionRegistry.portable().has_formatter({"name": "string"}))
+
+    def test_oversized_plural_operand_error_is_bounded(self) -> None:
+        with self.assertRaisesRegex(ValueError, "^Unsupported plural operand value$"):
+            NumberOperands("1" * 257)
 
     def test_safe_format_result_and_parts_api(self) -> None:
         result = parse_to_model("Welcome, {$name}!")
@@ -150,6 +157,98 @@ class PublicApiTest(unittest.TestCase):
             parts.parts,
         )
         self.assertEqual(["unknown-function"], [error.code for error in formatted.errors])
+
+    def test_date_time_core_rejects_arbitrary_object_coercion(self) -> None:
+        class IsoObject:
+            def __str__(self) -> str:
+                return "2026-05-21T14:30:15Z"
+
+        class BadObject:
+            def __str__(self) -> str:
+                raise RuntimeError("should not be called")
+
+        class BadTruthiness:
+            def __bool__(self) -> bool:
+                raise RuntimeError("should not be called")
+
+        with self.assertRaises(MF2Error) as direct_error:
+            format_date_time_core(IsoObject())
+        self.assertEqual("bad-operand", direct_error.exception.code)
+
+        for label, options in {
+            "locale": {"locale": BadObject(), "timeZone": "UTC"},
+            "skeleton": {"locale": "en-US", "skeleton": BadObject(), "timeZone": "UTC"},
+            "timeZone": {"locale": "en-US", "timeZone": BadObject()},
+            "calendar": {"locale": "en-US", "calendar": BadTruthiness(), "timeZone": "UTC"},
+            "hourCycle": {"locale": "en-US", "hourCycle": BadTruthiness(), "timeZone": "UTC"},
+            "dateStyle": {"locale": "en-US", "dateStyle": [], "timeZone": "UTC"},
+            "timeStyle": {"locale": "en-US", "timeStyle": [], "timeZone": "UTC"},
+        }.items():
+            with self.subTest(label=label):
+                with self.assertRaises(MF2Error) as direct_option_error:
+                    format_date_time_core("2026-05-21T14:30:15Z", **options)
+                self.assertEqual("bad-option", direct_option_error.exception.code)
+
+        result = parse_to_model("At {$instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}")
+        formatted = format_message(
+            result.model,
+            {"instant": BadObject()},
+            functions=date_time_core_function_registry(),
+        )
+        self.assertEqual(["bad-operand"], [error.code for error in formatted.errors])
+
+        option_result = parse_to_model("At {$instant :datetime timeZone=$tz}")
+        option_formatted = format_message(
+            option_result.model,
+            {"instant": "2026-05-21T14:30:15Z", "tz": BadObject()},
+            functions=date_time_core_function_registry(),
+        )
+        self.assertEqual(["bad-option"], [error.code for error in option_formatted.errors])
+
+    def test_number_core_rejects_arbitrary_object_coercion(self) -> None:
+        class BadObject:
+            def __str__(self) -> str:
+                raise RuntimeError("should not be called")
+
+        with self.assertRaises(MF2Error) as operand_error:
+            format_number_core(BadObject(), locale="en-US")
+        self.assertEqual("bad-operand", operand_error.exception.code)
+
+        for label, options in {
+            "locale": {"locale": BadObject()},
+            "style": {"locale": "en-US", "style": []},
+            "minimumFractionDigits": {"locale": "en-US", "minimumFractionDigits": BadObject()},
+            "maximumFractionDigits": {"locale": "en-US", "maximumFractionDigits": BadObject()},
+        }.items():
+            with self.subTest(label=label):
+                with self.assertRaises(MF2Error) as option_error:
+                    format_number_core(1, **options)
+                self.assertEqual("bad-option", option_error.exception.code)
+
+    def test_host_object_rendering_failures_are_recoverable(self) -> None:
+        class BadObject:
+            def __str__(self) -> str:
+                raise RuntimeError("should not be called")
+
+        placeholder = parse_to_model("Hello {$name}")
+        formatted = format_message(placeholder.model, {"name": BadObject()})
+        self.assertFalse(formatted.ok)
+        self.assertEqual("Hello {$name}", formatted.value)
+        self.assertEqual(["bad-operand"], [error.code for error in formatted.errors])
+
+        string_placeholder = parse_to_model("Hello {$name :string}")
+        string_formatted = format_message(string_placeholder.model, {"name": BadObject()})
+        self.assertFalse(string_formatted.ok)
+        self.assertEqual("Hello {$name}", string_formatted.value)
+        self.assertEqual(["bad-operand"], [error.code for error in string_formatted.errors])
+
+        selector = parse_to_model(
+            ".input {$name :string}\n.match $name\nok {{selected}}\n* {{fallback}}"
+        )
+        selector_formatted = format_message(selector.model, {"name": BadObject()})
+        self.assertFalse(selector_formatted.ok)
+        self.assertEqual("fallback", selector_formatted.value)
+        self.assertEqual(["bad-operand"], [error.code for error in selector_formatted.errors])
 
     def test_custom_selector_can_match_variant_key(self) -> None:
         model = {

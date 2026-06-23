@@ -47,6 +47,7 @@ export class FunctionRegistry {
 
   withFunction(name: string, formatter: MF2Formatter): FunctionRegistry;
   withSelector(name: string, selector: MF2Selector): FunctionRegistry;
+  withRegistry(other: FunctionRegistry): FunctionRegistry;
   hasFormatter(functionRef: MF2FunctionRef): boolean;
   hasSelector(functionRef: MF2FunctionRef): boolean;
   format(call: Parameters<MF2Formatter>[0]): string;

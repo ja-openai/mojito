@@ -40,13 +40,34 @@
       "types": "./src/intl_functions.d.ts",
       "import": "./src/intl_functions.js",
       "default": "./src/intl_functions.js"
+    },
+    "./number-core": {
+      "types": "./src/number_core.d.ts",
+      "import": "./src/number_core.js",
+      "default": "./src/number_core.js"
+    },
+    "./date-time-core": {
+      "types": "./src/date_time_core.d.ts",
+      "import": "./src/date_time_core.js",
+      "default": "./src/date_time_core.js"
+    },
+    "./relative-time-core": {
+      "types": "./src/relative_time_core.d.ts",
+      "import": "./src/relative_time_core.js",
+      "default": "./src/relative_time_core.js"
+    },
+    "./cldr-packed": {
+      "types": "./src/cldr_packed_resources.d.ts",
+      "import": "./src/cldr_packed_resources.js",
+      "default": "./src/cldr_packed_resources.js"
     }
   },
   "scripts": {
     "bench:format": "node tools/benchmark.js",
+    "bench:cldr-data": "node --expose-gc tools/cldr-data-benchmark.js",
     "bench:parse": "node tools/parse-benchmark.js",
     "bench:plural": "node --expose-gc tools/plural-benchmark.js",
-    "check": "node tests/package-boundary-test.js && npm run check:types && node tools/conformance.js ../conformance/fixtures/source-to-model",
+    "check": "node tests/package-boundary-test.js && node tests/number-core-test.js && node tests/date-time-core-test.js && node tests/relative-time-core-test.js && node tests/cldr-packed-resources-test.js && node tests/portable-functions-test.js && npm run check:types && node tools/conformance.js ../conformance/fixtures/source-to-model",
     "check:types": "tsc -p tsconfig.types.json",
     "demo": "node examples/demo.js",
     "demo:intl": "node examples/intl-demo.js",

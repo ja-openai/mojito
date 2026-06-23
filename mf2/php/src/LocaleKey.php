@@ -4,9 +4,15 @@ declare(strict_types=1);
 
 namespace Mojito\MessageFormat2\Internal;
 
+const MAX_LOCALE_KEY_LENGTH = 256;
+
 function canonical_locale_key(?string $locale): string
 {
-    $parts = array_values(array_filter(explode('-', str_replace('_', '-', trim((string) $locale))), static fn($part) => $part !== ''));
+    $value = (string) $locale;
+    if (strlen($value) > MAX_LOCALE_KEY_LENGTH) {
+        return '';
+    }
+    $parts = array_values(array_filter(explode('-', str_replace('_', '-', trim($value))), static fn($part) => $part !== ''));
     $output = [];
     foreach ($parts as $index => $part) {
         $lower = strtolower($part);
@@ -42,13 +48,37 @@ function locale_lookup_chain(?string $locale): array
 
 function plural_lookup_chain(?string $locale, array $parents = []): array
 {
+    return feature_lookup_chain($locale, $parents);
+}
+
+function feature_lookup_chain(?string $locale, array $parents = []): array
+{
     $output = [];
-    foreach (locale_lookup_chain($locale) as $candidate) {
-        $output[] = $candidate;
-        $parent = $parents[$candidate] ?? null;
-        if ($parent !== null && !in_array($parent, $output, true)) {
-            $output[] = $parent;
-        }
-    }
+    append_feature_lookup_chain(canonical_locale_key($locale), $parents, $output);
     return $output;
+}
+
+function append_feature_lookup_chain(string $locale, array $parents, array &$output): void
+{
+    $current = $locale;
+    while ($current !== '') {
+        if (strlen($current) > MAX_LOCALE_KEY_LENGTH) {
+            return;
+        }
+        if (in_array($current, $output, true)) {
+            return;
+        }
+        $output[] = $current;
+        $parent = $parents[$current] ?? null;
+        if ($parent !== null) {
+            append_feature_lookup_chain($parent, $parents, $output);
+        }
+        $current = structural_parent($current);
+    }
+}
+
+function structural_parent(string $locale): string
+{
+    $index = strrpos($locale, '-');
+    return $index === false ? '' : substr($locale, 0, $index);
 }

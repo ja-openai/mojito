@@ -15,6 +15,10 @@ from mojito_mf2 import (
     format_message_to_parts,
     parse_to_model,
 )
+from mojito_mf2.relative_time_core import (
+    format_relative_time_core,
+    relative_time_core_function_registry,
+)
 
 
 parsed = parse_to_model("Welcome, {$name}!")
@@ -49,3 +53,14 @@ def upper(call: FunctionCall) -> str:
 registry = FunctionRegistry.portable().with_function("app:upper", upper)
 function: MF2FunctionAnnotation = {"type": "function", "name": "string"}
 assert registry.has_formatter(function)
+
+relative_time_data: dict[str, object] = {"localeMap": {}, "patternSets": []}
+relative_time_registry = relative_time_core_function_registry(relative_time_data)
+assert_type(relative_time_registry, FunctionRegistry)
+relative_time_output = format_relative_time_core(
+    60,
+    locale="en",
+    unit="minute",
+    data=relative_time_data,
+)
+assert_type(relative_time_output, str)

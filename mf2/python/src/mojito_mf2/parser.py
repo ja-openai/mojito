@@ -366,7 +366,7 @@ class _Parser:
             )
             return ""
         ch = self.peek()
-        if ch in {"{", "}", "\\"}:
+        if ch in {"{", "}", "|", "\\"}:
             self.index += 1
             return ch
         return "\\"
@@ -604,11 +604,43 @@ class _Parser:
         if key_split.name == "" or key_split.rest != "":
             self.push_diagnostic("invalid-function-option", "Option key must be a valid identifier.", start, end)
             return None
+        value = self.parse_option_value(assignment["raw_value"], start, end)
+        if value is None:
+            return None
         return {
             "name": key_split.name,
-            "value": parse_literal_or_variable(strip_syntax_whitespace(assignment["raw_value"])),
+            "value": value,
             "next_index": assignment["next_index"],
         }
+
+    def parse_option_value(self, raw_value: str, start: int, end: int) -> dict[str, str] | None:
+        raw_value = strip_syntax_whitespace(raw_value)
+        if raw_value.startswith("|"):
+            split = parse_quoted_literal(raw_value)
+            if split is None:
+                self.push_diagnostic("unclosed-quoted-literal", "Quoted literal is missing closing '|'.", start, end)
+                return None
+            if split.rest != "":
+                self.push_diagnostic(
+                    "invalid-function-option",
+                    "Option value must be a single literal or variable.",
+                    start,
+                    end,
+                )
+                return None
+            return {"type": "literal", "value": split.value}
+        if raw_value.startswith("$"):
+            split = split_name(raw_value[1:])
+            if split.name != "" and split.rest == "":
+                return {"type": "variable", "name": split.name}
+            self.push_diagnostic(
+                variable_name_diagnostic_code(raw_value[1:]),
+                "Option variable value must be a valid variable name.",
+                start,
+                end,
+            )
+            return None
+        return parse_literal_or_variable(raw_value)
 
     def parse_required_assignment(self, tokens: list[str], index: int, start: int, end: int) -> dict[str, Any] | None:
         token = tokens[index]
@@ -946,7 +978,7 @@ def parse_quoted_literal(input_value: str) -> _Split | None:
                 output += escaped
                 index += 1
             else:
-                output += "\\"
+                return None
         else:
             output += ch
     return None
@@ -1052,6 +1084,7 @@ def is_name_start(ch: str) -> bool:
         and not is_control(ch)
         and not (0xD800 <= code_point <= 0xDFFF)
         and not is_syntax_whitespace(ch)
+        and not is_unicode_whitespace(ch)
         and not is_noncharacter(code_point)
     )
 
@@ -1087,6 +1120,10 @@ def is_syntax_whitespace(ch: str) -> bool:
 
 
 def is_whitespace(ch: str) -> bool:
+    return ch in {"\t", "\n", "\r", " ", "\u3000"}
+
+
+def is_unicode_whitespace(ch: str) -> bool:
     return bool(ch) and ch.isspace()
 
 

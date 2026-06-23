@@ -305,7 +305,7 @@ final class Parser
             return '';
         }
         $cp = $this->peekCodePoint();
-        if ($cp === codepoint('{') || $cp === codepoint('}') || $cp === codepoint('\\')) {
+        if ($cp === codepoint('{') || $cp === codepoint('}') || $cp === codepoint('|') || $cp === codepoint('\\')) {
             return $this->advanceCodePoint();
         }
         return '\\';
@@ -564,7 +564,37 @@ final class Parser
             $this->pushDiagnostic('invalid-function-option', 'Option key must be a valid identifier.', $start, $end);
             return null;
         }
-        return ['name' => $keySplit['name'], 'value' => parse_literal_or_variable(strip_syntax_whitespace($assignment['rawValue'])), 'nextIndex' => $assignment['nextIndex']];
+        $value = $this->parseOptionValue($assignment['rawValue'], $start, $end);
+        if ($value === null) {
+            return null;
+        }
+        return ['name' => $keySplit['name'], 'value' => $value, 'nextIndex' => $assignment['nextIndex']];
+    }
+
+    private function parseOptionValue(string $rawValue, int $start, int $end): ?array
+    {
+        $rawValue = strip_syntax_whitespace($rawValue);
+        if (str_starts_with($rawValue, '|')) {
+            $split = parse_quoted_literal($rawValue);
+            if ($split === null) {
+                $this->pushDiagnostic('unclosed-quoted-literal', "Quoted literal is missing closing '|'.", $start, $end);
+                return null;
+            }
+            if ($split['rest'] !== '') {
+                $this->pushDiagnostic('invalid-function-option', 'Option value must be a single literal or variable.', $start, $end);
+                return null;
+            }
+            return ['type' => 'literal', 'value' => $split['value']];
+        }
+        if (str_starts_with($rawValue, '$')) {
+            $split = split_name(substr($rawValue, 1));
+            if ($split['name'] !== '' && $split['rest'] === '') {
+                return ['type' => 'variable', 'name' => $split['name']];
+            }
+            $this->pushDiagnostic(variable_name_diagnostic_code(substr($rawValue, 1)), 'Option variable value must be a valid variable name.', $start, $end);
+            return null;
+        }
+        return parse_literal_or_variable($rawValue);
     }
 
     private function parseRequiredAssignment(array $tokens, int $index, int $start, int $end): ?array
@@ -940,7 +970,7 @@ function parse_quoted_literal(string $input): ?array
                 $output .= $escaped;
                 $index += strlen($escaped);
             } else {
-                $output .= '\\';
+                return null;
             }
         } else {
             $output .= $char;
@@ -1080,7 +1110,7 @@ function is_name_start(int $cp): bool
     if ($cp <= 0x7f) {
         return is_ascii_name_start($cp);
     }
-    return $cp >= 0xa1 && $cp <= 0x10fffd && !is_bidi_marker($cp) && !is_control_cp($cp) && !is_surrogate($cp) && !is_syntax_whitespace($cp) && !is_noncharacter($cp);
+    return $cp >= 0xa1 && $cp <= 0x10fffd && !is_bidi_marker($cp) && !is_control_cp($cp) && !is_surrogate($cp) && !is_syntax_whitespace($cp) && !is_unicode_whitespace_cp($cp) && !is_noncharacter($cp);
 }
 
 function is_name_char(int $cp): bool
@@ -1109,6 +1139,11 @@ function is_syntax_whitespace(int $cp): bool
 }
 
 function is_whitespace_cp(int $cp): bool
+{
+    return $cp === codepoint("\t") || $cp === codepoint("\n") || $cp === codepoint("\r") || $cp === codepoint(' ') || $cp === 0x3000;
+}
+
+function is_unicode_whitespace_cp(int $cp): bool
 {
     return preg_match('/^\s$/u', cp_to_char($cp)) === 1;
 }

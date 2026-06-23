@@ -1,10 +1,11 @@
 import { MF2Error } from "./errors.js";
-import { parseInteger, sourceOptionValue } from "./function_support.js";
+import { offsetIntegerInRange, parseOffsetInteger, sourceOptionValue } from "./function_support.js";
 
 export function formatOffset(call) {
-  const value = parseRequiredInteger(call.value, "Offset function requires a numeric operand.");
+  const value = parseRequiredInteger(call.rawValue ?? call.value, "Offset function requires a numeric operand.");
   const result = value + offsetDelta(call);
-  return inheritedSignDisplayAlways(call.inheritedSource) && result >= 0 ? `+${result}` : String(result);
+  if (!offsetIntegerInRange(result)) throw MF2Error.badOperand("Offset result is outside the supported integer range.");
+  return inheritedSignDisplayAlways(call.inheritedSource) && result >= 0n ? `+${result}` : result.toString();
 }
 
 function inheritedSignDisplayAlways(source) {
@@ -17,13 +18,13 @@ function offsetDelta(call) {
   const add = call.optionValue("add", null);
   const subtract = call.optionValue("subtract", null);
   if ((add == null && subtract == null) || (add != null && subtract != null)) throw MF2Error.badOption("Offset function requires exactly one of add or subtract.");
-  const value = parseInteger(add ?? subtract);
+  const value = parseOffsetInteger(add ?? subtract);
   if (value == null) throw MF2Error.badOption(add != null ? "Offset add option must be an integer." : "Offset subtract option must be an integer.");
   return add != null ? value : -value;
 }
 
 function parseRequiredInteger(value, message) {
-  const parsed = parseInteger(value);
+  const parsed = parseOffsetInteger(value);
   if (parsed == null) throw MF2Error.badOperand(message);
   return parsed;
 }

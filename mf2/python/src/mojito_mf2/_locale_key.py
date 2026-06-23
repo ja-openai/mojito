@@ -5,9 +5,12 @@ from typing import TypeVar
 
 
 T = TypeVar("T")
+_MAX_LOCALE_KEY_LENGTH = 256
 
 
 def canonical_locale_key(locale: str) -> str:
+    if len(locale) > _MAX_LOCALE_KEY_LENGTH:
+        return ""
     return "-".join(_locale_parts(locale))
 
 
@@ -28,20 +31,26 @@ def lookup_locale(
 
 
 def plural_lookup_chain(locale: str, parents: Mapping[str, str]) -> list[str]:
+    return feature_lookup_chain(locale, parents)
+
+
+def feature_lookup_chain(locale: str, parents: Mapping[str, str]) -> list[str]:
     chain: list[str] = []
-    _append_plural_lookup_chain(canonical_locale_key(locale), parents, chain)
+    _append_feature_lookup_chain(canonical_locale_key(locale), parents, chain)
     return chain
 
 
-def _append_plural_lookup_chain(locale: str, parents: Mapping[str, str], chain: list[str]) -> None:
+def _append_feature_lookup_chain(locale: str, parents: Mapping[str, str], chain: list[str]) -> None:
     current = locale
     while current:
+        if len(current) > _MAX_LOCALE_KEY_LENGTH:
+            return
         if current in chain:
             return
         chain.append(current)
         parent = parents.get(current)
         if parent is not None:
-            _append_plural_lookup_chain(parent, parents, chain)
+            _append_feature_lookup_chain(parent, parents, chain)
         current = _structural_parent(current)
 
 

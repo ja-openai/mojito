@@ -156,7 +156,7 @@ final class FormatContext
                     $this->failedLocals[$name] = true;
                     unset($this->locals[$name]);
                 } else {
-                    $this->locals[$name] = ['rawValue' => $output['value'], 'source' => $output['source']];
+                    $this->locals[$name] = ['rawValue' => $output['rawValue'], 'source' => $output['source']];
                 }
             }
         }
@@ -181,7 +181,7 @@ final class FormatContext
         $inputValue = $this->value($name);
         $this->recordFunctionResolutionErrors($functionRef, $inputValue['source']);
         try {
-            $rendered = value_to_string($inputValue['rawValue']);
+            $rendered = operand_value_to_string($inputValue['rawValue']);
             $formatted = $this->functions->format([
                 'value' => $rendered,
                 'rawValue' => $inputValue['rawValue'],
@@ -242,16 +242,35 @@ final class FormatContext
                 }
                 $this->errors[] = new MF2Error('bad-selector', 'Selector operand is not available.');
             }
-            return ['rendered' => '', 'normalizedRendered' => $annotation?->isString() ? normalize_string_key('') : null, 'exactMatch' => false, 'selectionKey' => null, 'function' => $annotation?->function, 'source' => null];
+            return ['rendered' => '', 'rawValue' => '', 'normalizedRendered' => $annotation?->isString() ? normalize_string_key('') : null, 'exactMatch' => false, 'selectionKey' => null, 'function' => $annotation?->function, 'source' => null];
         }
         $value = $this->value($name);
-        $rendered = value_to_string($value['rawValue']);
+        try {
+            $rendered = operand_value_to_string($value['rawValue']);
+            $selectionKey = selection_key($this->locale, $annotation, $value);
+        } catch (\Throwable $error) {
+            if (!$this->fallback) {
+                throw $error;
+            }
+            $this->errors[] = fallback_error($error);
+            $this->errors[] = new MF2Error('bad-selector', 'Selector operand is not available.');
+            return [
+                'rendered' => '',
+                'rawValue' => '',
+                'normalizedRendered' => $annotation?->isString() ? normalize_string_key('') : null,
+                'exactMatch' => false,
+                'selectionKey' => null,
+                'function' => null,
+                'source' => null,
+            ];
+        }
         $this->recordSelectorResolutionErrors($annotation);
         return [
             'rendered' => $rendered,
+            'rawValue' => $value['rawValue'],
             'normalizedRendered' => $annotation?->isString() ? normalize_string_key($rendered) : null,
             'exactMatch' => $annotation === null || $annotation->exactMatch(),
-            'selectionKey' => selection_key($this->locale, $annotation, $value),
+            'selectionKey' => $selectionKey,
             'function' => $annotation?->function,
             'source' => $value['source'],
         ];
@@ -343,18 +362,36 @@ final class FormatContext
             }
             $resolved = $this->value($name);
             $rawValue = $resolved['rawValue'];
-            $value = value_to_string($rawValue);
+            $value = null;
             $source = $resolved['source'];
         } else {
             throw new MF2Error('unsupported-expression-arg', 'Unsupported expression arg: ' . ($arg['type'] ?? ''));
         }
         $functionRef = $expression['function'] ?? null;
         if ($functionRef === null) {
-            return ['value' => $value, 'hadError' => false, 'source' => $source, 'direction' => bidi_direction_from_source($source)];
+            try {
+                $value = primitive_value_to_string($rawValue, $this->locale);
+            } catch (\Throwable $error) {
+                if (!$this->fallback) {
+                    throw $error;
+                }
+                $recoverable = fallback_error($error);
+                $this->errors[] = $recoverable;
+                $source = fallback_source($expression);
+                return [
+                    'value' => $this->recoverFormatError($expression, $source, $recoverable),
+                    'hadError' => true,
+                    'source' => null,
+                    'direction' => null,
+                    'fallbackSource' => $source,
+                ];
+            }
+            return ['value' => $value, 'rawValue' => $rawValue, 'hadError' => false, 'source' => $source, 'direction' => bidi_direction_from_source($source)];
         }
         $this->recordFunctionResolutionErrors($functionRef, $source);
-        $direction = bidi_direction_for_function($functionRef, $source);
         try {
+            $direction = bidi_direction_for_function($functionRef, $source);
+            $value ??= operand_value_to_string($rawValue);
             $formatted = $this->functions->format([
                 'value' => $value,
                 'rawValue' => $rawValue,
@@ -364,7 +401,7 @@ final class FormatContext
                 'inheritedSource' => $source,
             ]);
             $sourceValue = $source['value'] ?? $value;
-            return ['value' => $formatted, 'hadError' => false, 'source' => $this->functionSource($sourceValue, $functionRef, $source), 'direction' => $direction];
+            return ['value' => $formatted, 'rawValue' => $formatted, 'hadError' => false, 'source' => $this->functionSource($sourceValue, $functionRef, $source), 'direction' => $direction];
         } catch (\Throwable $error) {
             if (!$this->fallback) {
                 throw $error;
@@ -425,7 +462,7 @@ final class FormatContext
             if (!$this->hasValue($name)) {
                 throw MF2Error::missingArgument($name);
             }
-            return value_to_string($this->value($name)['rawValue']);
+            return option_value_to_string($this->value($name)['rawValue']);
         }
         return $fallback;
     }
@@ -510,7 +547,14 @@ final class FormatContext
         if (($key['type'] ?? '') === '*') {
             return 0;
         }
-        if (($selector['exactMatch'] && literal_key_matches((string) ($key['value'] ?? ''), $selector)) || (($key['value'] ?? null) === $selector['selectionKey'])) {
+        $value = (string) ($key['value'] ?? '');
+        if ($selector['exactMatch'] && numeric_literal_key_matches_source($value, $selector)) {
+            return 3;
+        }
+        if ($selector['exactMatch'] && !is_numeric_function($selector['function']) && literal_key_matches($value, $selector)) {
+            return 2;
+        }
+        if (($key['value'] ?? null) === $selector['selectionKey']) {
             return 1;
         }
         if ($selector['function'] === null) {
@@ -519,9 +563,9 @@ final class FormatContext
         try {
             return $this->functions->select([
                 'value' => $selector['rendered'],
-                'rawValue' => $selector['rendered'],
+                'rawValue' => $selector['rawValue'],
                 'function' => $selector['function'],
-                'key' => (string) ($key['value'] ?? ''),
+                'key' => $value,
                 'locale' => $this->locale,
                 'optionValue' => fn(string $name, mixed $fallback): mixed => $this->optionValue($selector['function'], $name, $fallback),
                 'inheritedSource' => $selector['source'],
@@ -700,7 +744,7 @@ function selection_key(string $locale, ?SelectorAnnotation $annotation, array $r
     if ($annotation === null || !$annotation->isNumeric() || $annotation->numberSelect === 'exact') {
         return null;
     }
-    $operand = value_to_string($resolvedValue['rawValue']);
+    $operand = operand_value_to_string($resolvedValue['rawValue']);
     if (($annotation->function['name'] ?? '') === 'percent') {
         $operand = str_ends_with($operand, '%') ? substr($operand, 0, -1) : value_to_string(((float) $operand) * 100);
     }
@@ -746,6 +790,108 @@ function literal_key_matches(string $value, array $selector): bool
     return $selector['normalizedRendered'] === null ? $value === $selector['rendered'] : normalize_string_key($value) === $selector['normalizedRendered'];
 }
 
+function numeric_literal_key_matches_source(string $value, array $selector): bool
+{
+    $sourceKey = preferred_numeric_source_key($selector);
+    return $sourceKey !== null && $value === $sourceKey && parse_decimal_operand($value) !== null;
+}
+
+function preferred_numeric_source_key(array $selector): ?string
+{
+    $functionName = (string) ($selector['function']['name'] ?? '');
+    if ($functionName !== 'number' && $functionName !== 'percent') {
+        return null;
+    }
+    $sourceValue = numeric_source_value($selector['source'], $functionName);
+    if ($sourceValue === null) {
+        return null;
+    }
+    $operand = parse_preferred_source_decimal($sourceValue);
+    if ($operand === null) {
+        return null;
+    }
+    if ($functionName === 'percent') {
+        $operand['scale'] -= 2;
+        return render_preferred_source_decimal($operand, false);
+    }
+    return $operand['hasExponent'] ? render_preferred_source_decimal($operand, true) : $sourceValue;
+}
+
+function numeric_source_value(?array $source, string $functionName): ?string
+{
+    for ($current = $source; $current !== null; $current = $current['inherited'] ?? null) {
+        if (($current['function']['name'] ?? '') === $functionName) {
+            return (string) ($current['value'] ?? '');
+        }
+    }
+    return null;
+}
+
+function parse_preferred_source_decimal(string $value): ?array
+{
+    if (preg_match('/^(-?)(0|[1-9]\d*)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/', $value, $matches) !== 1) {
+        return null;
+    }
+    $exponent = parse_preferred_source_exponent($matches[4] ?? '');
+    if ($exponent === null) {
+        return null;
+    }
+    $fraction = $matches[3] ?? '';
+    $digits = ltrim($matches[2] . $fraction, '0');
+    if ($digits === '') {
+        $digits = '0';
+    }
+    return [
+        'negative' => $matches[1] === '-' && $digits !== '0',
+        'digits' => $digits,
+        'scale' => strlen($fraction) - $exponent,
+        'hasExponent' => ($matches[4] ?? '') !== '',
+    ];
+}
+
+function parse_preferred_source_exponent(string $value): ?int
+{
+    if ($value === '') {
+        return 0;
+    }
+    $negative = str_starts_with($value, '-');
+    $unsigned = $negative || str_starts_with($value, '+') ? substr($value, 1) : $value;
+    $digits = ltrim($unsigned, '0');
+    if ($digits === '') {
+        $digits = '0';
+    }
+    if (strlen($digits) > 7) {
+        return null;
+    }
+    $parsed = intval($digits);
+    if ($parsed > 1000000) {
+        return null;
+    }
+    return $negative ? -$parsed : $parsed;
+}
+
+function render_preferred_source_decimal(array $operand, bool $trimFractionZeros): ?string
+{
+    $digits = (string) $operand['digits'];
+    $scale = (int) $operand['scale'];
+    $extraLength = $scale > strlen($digits) ? $scale - strlen($digits) : max(-$scale, 0);
+    if (strlen($digits) + $extraLength + 2 > 4096) {
+        return null;
+    }
+    if ($scale <= 0) {
+        $text = $digits . str_repeat('0', -$scale);
+    } elseif ($scale >= strlen($digits)) {
+        $text = '0.' . str_repeat('0', $scale - strlen($digits)) . $digits;
+    } else {
+        $split = strlen($digits) - $scale;
+        $text = substr($digits, 0, $split) . '.' . substr($digits, $split);
+    }
+    if ($trimFractionZeros && str_contains($text, '.')) {
+        $text = rtrim(rtrim($text, '0'), '.');
+    }
+    return $operand['negative'] ? "-{$text}" : $text;
+}
+
 function normalize_string_key(string $value): string
 {
     return \Normalizer::normalize($value, \Normalizer::FORM_C) ?: $value;
@@ -773,7 +919,7 @@ function fallback_source(array $expression): string
         return expression_arg_source($expression['arg']);
     }
     if (isset($expression['function'])) {
-        return function_source($expression['function']);
+        return function_name_source($expression['function']);
     }
     return '';
 }
@@ -821,6 +967,11 @@ function function_source(array $functionRef): string
         $source .= ' ' . $name . '=' . expression_arg_source($value);
     }
     return $source;
+}
+
+function function_name_source(array $functionRef): string
+{
+    return ':' . ($functionRef['name'] ?? '');
 }
 
 function quote_literal_source(string $value): string
@@ -904,9 +1055,41 @@ function value_to_string(mixed $value): string
     }
     if (is_float($value)) {
         if (is_finite($value) && floor($value) === $value) {
-            return (string) (int) $value;
+            if ($value >= PHP_INT_MIN && $value <= PHP_INT_MAX) {
+                return (string) (int) $value;
+            }
+            return sprintf('%.0F', $value);
         }
         return rtrim(rtrim(sprintf('%.14F', $value), '0'), '.');
     }
     return (string) $value;
+}
+
+function operand_value_to_string(mixed $value): string
+{
+    try {
+        return value_to_string($value);
+    } catch (\Throwable $error) {
+        if ($error instanceof MF2Error) {
+            throw $error;
+        }
+        throw MF2Error::badOperand($error->getMessage());
+    }
+}
+
+function option_value_to_string(mixed $value): string
+{
+    try {
+        return value_to_string($value);
+    } catch (\Throwable $error) {
+        throw MF2Error::badOption($error->getMessage());
+    }
+}
+
+function primitive_value_to_string(mixed $value, string $locale): string
+{
+    if (is_int($value) || is_float($value)) {
+        return \Mojito\MessageFormat2\NumberCore::format($value, ['locale' => $locale]);
+    }
+    return operand_value_to_string($value);
 }

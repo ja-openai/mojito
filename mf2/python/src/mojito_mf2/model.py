@@ -113,6 +113,7 @@ class MF2ExpressionPart(TypedDict):
     type: Literal["expression"]
     value: str
     attributes: NotRequired[dict[str, MF2AttributeValue]]
+    direction: NotRequired[str]
 
 
 class MF2FallbackPart(TypedDict):

@@ -15,8 +15,21 @@ import {
 } from "@mojito-mf2/core";
 import { formatMessage as formatMessageFromFormatter } from "@mojito-mf2/core/formatter";
 import { createIntlFunctionRegistry } from "@mojito-mf2/core/intl";
+import {
+  decodeDateTimeDataResource,
+  decodeNumberDataResource,
+  type DateTimeDataResource,
+  type NumberDataResource,
+} from "@mojito-mf2/core/cldr-packed";
+import { createDateTimeCoreFunctionRegistry, formatDateTimeCore } from "@mojito-mf2/core/date-time-core";
+import { formatNumberCore } from "@mojito-mf2/core/number-core";
 import { parseToModel as parseToModelFromParser } from "@mojito-mf2/core/parser";
 import { createPortableFunctionRegistry } from "@mojito-mf2/core/portable";
+import {
+  createRelativeTimeCoreFunctionRegistry,
+  formatRelativeTimeCore,
+  type RelativeTimeDataResource,
+} from "@mojito-mf2/core/relative-time-core";
 
 const model: MF2PatternMessage = {
   type: "message",
@@ -32,6 +45,12 @@ const options: MF2FormatOptions = {
 const portableRegistry: FunctionRegistry = FunctionRegistry.portable();
 const portableRegistryFromSubpath: FunctionRegistry = createPortableFunctionRegistry(FunctionRegistry);
 const intlRegistry: FunctionRegistry = createIntlFunctionRegistry(FunctionRegistry);
+const dateTimeCoreRegistry: FunctionRegistry = createDateTimeCoreFunctionRegistry(FunctionRegistry);
+const relativeTimeData: RelativeTimeDataResource = {
+  localeMap: {},
+  patternSets: [],
+};
+const relativeTimeCoreRegistry: FunctionRegistry = createRelativeTimeCoreFunctionRegistry(FunctionRegistry, relativeTimeData);
 
 const parsed = parseToModel("Hello {$name}");
 const parsedFromSubpath = parseToModelFromParser("Hello {$name}");
@@ -39,6 +58,33 @@ const diagnostics: MF2ParseDiagnostic[] = parseToModel("Hello {$name").diagnosti
 const parts: MF2Part[] = formatMessageToParts(parsed.model ?? model, { name: "Mojito" }, options).parts;
 const output: string = formatMessage(model, { name: "Mojito" }, options).value;
 const formatterOutput: string = formatMessageFromFormatter(model, { name: "Mojito" }, { functions: intlRegistry }).value;
+const numberCoreOutput: string = formatNumberCore(1234.5, {
+  locale: "en-US",
+  style: "currency",
+  currency: "USD",
+});
+const dateTimeCoreOutput: string = formatDateTimeCore("2026-05-21T14:30:15Z", {
+  locale: "en-US",
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "UTC",
+});
+const relativeTimeCoreOutput: string = formatRelativeTimeCore(60, {
+  locale: "en",
+  unit: "minute",
+  data: relativeTimeData,
+});
+const decodedDateTimeData: DateTimeDataResource = decodeDateTimeDataResource({
+  version: 6,
+  strings: [],
+  locales: [],
+});
+const decodedNumberData: NumberDataResource = decodeNumberDataResource({
+  version: 1,
+  strings: [],
+  currencyFractions: [],
+  locales: [],
+});
 const safeOutput: MF2FormatResult = formatMessage(model, { name: "Safe" }, options);
 const safeParts: MF2PartsResult = formatMessageToParts(model, { name: "Safe Parts" }, options);
 const recovery: MF2RecoveryContext | null = null;
@@ -47,6 +93,11 @@ const error = new MF2Error("test", "test");
 void diagnostics;
 void output;
 void formatterOutput;
+void numberCoreOutput;
+void dateTimeCoreOutput;
+void relativeTimeCoreOutput;
+void decodedDateTimeData;
+void decodedNumberData;
 void safeOutput;
 void safeParts;
 void recovery;
@@ -55,3 +106,5 @@ void error;
 void portableRegistry;
 void portableRegistryFromSubpath;
 void parsedFromSubpath;
+void dateTimeCoreRegistry;
+void relativeTimeCoreRegistry;

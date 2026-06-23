@@ -8,7 +8,7 @@ import {
   formatMessage,
   parseToModel,
 } from "../src/index.js";
-import { canonicalLocaleKey, localeLookupChain } from "../src/locale-key.js";
+import { canonicalLocaleKey, featureLookupChain, localeLookupChain } from "../src/locale-key.js";
 
 class ConformanceFailure extends Error {}
 
@@ -137,6 +137,11 @@ async function checkLocaleKeyFixtures(fixtureRoot) {
   for (const item of fixture.lookupChains ?? []) {
     const actual = localeLookupChain(item.source);
     assertDeepEqual(item.expected, actual, "locale-key: lookup chain did not match");
+    checkedCases += 1;
+  }
+  for (const item of fixture.featureLookupChains ?? []) {
+    const actual = featureLookupChain(item.source, item.parents ?? {});
+    assertDeepEqual(item.expected, actual, "locale-key: feature lookup chain did not match");
     checkedCases += 1;
   }
   return checkedCases;

@@ -72,6 +72,35 @@ class BabelIntegrationTest(unittest.TestCase):
         )
         self.assertEqual(["bad-option"], [error.code for error in mixed_result.errors])
 
+        local_alias = parse_to_model(
+            ".local $alias = {$instant}\n"
+            "{{direct={$instant :datetime dateStyle=short timeStyle=short timeZone=UTC}; "
+            "alias={$alias :datetime dateStyle=short timeStyle=short timeZone=UTC}}}"
+        )
+        local_result = format_message(
+            local_alias.model,
+            {"instant": instant},
+            locale="en",
+            functions=functions,
+        )
+        expected_datetime = format_datetime(
+            instant,
+            format="short",
+            locale="en",
+            tzinfo=get_timezone("UTC"),
+        )
+        self.assertEqual(f"direct={expected_datetime}; alias={expected_datetime}", local_result.value)
+        self.assertEqual([], local_result.errors)
+
+        oversized_digits = parse_to_model("{$amount :number minimumFractionDigits=10000}")
+        oversized_result = format_message(
+            oversized_digits.model,
+            {"amount": 1},
+            locale="en",
+            functions=functions,
+        )
+        self.assertEqual(["bad-option"], [error.code for error in oversized_result.errors])
+
     @unittest.skipIf(not BABEL_AVAILABLE, "Babel is not installed")
     def test_babel_registry_keeps_currency_out_of_portable_registry(self) -> None:
         from babel.numbers import format_currency

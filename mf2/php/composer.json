@@ -18,7 +18,9 @@
       "src/PortableFunctions.php",
       "src/Formatter.php",
       "src/PluralRules.php",
-      "src/CldrPluralRules.php"
+      "src/CldrPluralRules.php",
+      "src/CldrNumberData.php",
+      "src/CldrDateTimeData.php"
     ]
   },
   "require": {

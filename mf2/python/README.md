@@ -23,10 +23,17 @@ The parser and formatter layers stay separate inside `mojito_mf2`:
   formatted parts, arguments, and function annotations
 - `mojito_mf2.babel`: optional Babel-backed formatter registry, loaded only
   when explicitly imported
+- `mojito_mf2.number_core`: experimental generated-data number formatter for
+  decimal, integer, percent, and simple currency formatting
+- `mojito_mf2.date_time_core`: experimental generated-data Gregorian date/time
+  formatter for UTC/fixed-offset product strings, including semantic CLDR
+  skeleton lookup and `hourCycle` overrides
 
 Internal modules such as `_locale_key`, `_plural`, and `_cldr_plural_rules`
-back formatter behavior and test tooling, but they are intentionally outside
-the stable package contract.
+back formatter behavior and test tooling. `_cldr_number_data` and
+`_cldr_date_time_data` are generated probe tables for the explicit core
+formatter modules. These underscored modules are intentionally outside the
+stable package contract.
 
 The package root exposes the stable app-facing API only:
 
@@ -92,6 +99,25 @@ Babel exposes one combined datetime style, so `:datetime` currently requires
 handlers for Unicode official tests and demos live under `tools`, `tests`, or
 `examples`, not in the production formatter.
 
+`mojito_mf2.number_core` and `mojito_mf2.date_time_core` are experimental
+generated-data modules for environments that want locale-pretty formatting
+without importing Babel or runtime JSON. They expose explicit formatter
+functions plus `number_core_function_registry()` and
+`date_time_core_function_registry()`. These registries start from
+`FunctionRegistry.portable()` and override only the relevant formatter
+functions, so selector and string behavior stays aligned with the core runtime.
+The shared `number-core` and `date-time-core` fixtures check static outputs,
+semantic skeleton outputs, Node/Intl reference witnesses, error cases, registry
+integration, and benchmark entry points.
+
+`mojito_mf2.relative_time_core` is an experimental generated-data module for
+CLDR relative-time formatting. It intentionally does not embed the all-locale
+relative-time artifact in the package; callers pass an explicit generated data
+resource and can create a registry with
+`relative_time_core_function_registry(data)`. Its tests exercise the shared
+relative-time fixture and, when the optional Babel dependency is installed,
+compare selected numeric outputs against `babel.dates.format_timedelta`.
+
 Catalogs can load the official Unicode MF2 model directly or parse source
 messages into the same model. A future package split can keep source parsing out
 of parser-free formatter deployments.
@@ -123,10 +149,18 @@ Current scope:
 - BCP47 locale canonicalization, underscore compatibility, extension stripping,
   and structural fallback for catalog lookup. Plural rules keep their own
   string-only lookup so they do not depend on a locale object.
+- experimental generated-data `number_core` and `date_time_core` modules for
+  the probe locale set, with shared fixture, Node/Intl reference, registry, size
+  gate, and benchmark coverage
+- experimental generated-data `relative_time_core` module with explicit data
+  loading, shared fixture coverage, optional Babel reference witnesses, registry
+  integration, and benchmark coverage
 
 Planned:
 
 - richer locale negotiation
+- generated-data ports for the remaining Rust, Go, and PHP number/date-time
+  core gaps
 
 Run:
 
@@ -136,6 +170,11 @@ sh run.sh test
 sh run.sh typecheck
 sh run.sh demo
 sh run.sh babel-demo
+sh run.sh number-core
+sh run.sh date-time-core
+sh run.sh relative-time-core
 sh run.sh bench
 sh run.sh bench-parse
+sh run.sh number-core-bench
+sh run.sh date-time-core-bench
 ```

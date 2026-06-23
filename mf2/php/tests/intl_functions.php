@@ -63,6 +63,12 @@ $badTimeZoneOutput = format_message($badTimeZone, ['start' => '2026-05-21T14:30:
 ]);
 assert_error_codes('invalid timeZone errors', $badTimeZoneOutput['errors'], ['bad-option']);
 
+$oversizedDigits = parse_to_model('number={$amount :number minimumFractionDigits=10000}')['model'];
+$oversizedDigitsOutput = format_message($oversizedDigits, ['amount' => 1], [
+    'functions' => IntlFunctions::registry(),
+]);
+assert_error_codes('oversized fraction digits errors', $oversizedDigitsOutput['errors'], ['bad-option']);
+
 echo "PHP Intl function registry tests passed.\n";
 
 function expected_output(string $locale, array $arguments): string

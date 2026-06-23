@@ -6,6 +6,8 @@ namespace Mojito\MessageFormat2\Internal;
 
 final class NumberOperands
 {
+    private const MAX_OPERAND_LENGTH = 256;
+
     public float $n;
     public int $i;
     public int $v;
@@ -27,11 +29,17 @@ final class NumberOperands
             return;
         }
         $raw = trim(value_to_string($value));
+        if (strlen($raw) > self::MAX_OPERAND_LENGTH) {
+            throw new \RangeException('Unsupported plural operand value');
+        }
         if (preg_match('/^[+-]?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/', $raw) !== 1) {
             throw new \RangeException("Unsupported plural operand value: {$raw}");
         }
         $n = abs((float) $raw);
         if (!is_finite($n)) {
+            throw new \RangeException("Unsupported plural operand value: {$raw}");
+        }
+        if (floor($n) > PHP_INT_MAX) {
             throw new \RangeException("Unsupported plural operand value: {$raw}");
         }
         $normalized = strtolower(preg_replace('/^[+-]+/', '', $raw) ?? $raw);
