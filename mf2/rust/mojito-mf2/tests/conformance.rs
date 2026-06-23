@@ -5,10 +5,11 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 use mojito_mf2::{
-    date_time_core_function_registry, format_date_core, format_date_time_core, format_message,
-    format_message_to_parts, format_message_to_parts_with_options, format_message_with_options,
-    format_number_core, format_relative_time_core, format_relative_time_core_to_parts,
-    format_time_core, number_core_function_registry, parse_to_model,
+    date_time_core_function_registry, format_date_core, format_date_core_to_parts,
+    format_date_time_core, format_date_time_core_to_parts, format_message, format_message_to_parts,
+    format_message_to_parts_with_options, format_message_with_options, format_number_core,
+    format_number_core_to_parts, format_relative_time_core, format_relative_time_core_to_parts,
+    format_time_core, format_time_core_to_parts, number_core_function_registry, parse_to_model,
     relative_time_core_function_registry, ArgumentValue, Arguments, BidiIsolation,
     DateTimeCoreOptions, Diagnostic, FormatOptions, FormattedPart, FunctionRegistry, MessageModel,
     NumberCoreCurrencyDisplay, NumberCoreOptions, NumberCoreSignDisplay, NumberCoreStyle,
@@ -432,6 +433,22 @@ fn number_core_fixtures_pass() {
         );
     }
 
+    let direct_parts_options = NumberCoreOptions {
+        locale: "en-US".to_string(),
+        ..NumberCoreOptions::default()
+    };
+    let direct_parts_value = 1234.5;
+    let direct_formatted = format_number_core(direct_parts_value, &direct_parts_options)
+        .expect("number-core direct parts string formats");
+    let direct_parts = format_number_core_to_parts(direct_parts_value, &direct_parts_options)
+        .expect("number-core direct parts formats");
+    assert_eq!(
+        direct_parts,
+        vec![FormattedPart::Text {
+            value: direct_formatted,
+        }]
+    );
+
     let registry = number_core_function_registry();
     let currency = parse_to_model("Total: {$amount :currency currency=USD}");
     assert_diagnostics_empty(Path::new("number-core registry"), &currency.diagnostics);
@@ -588,6 +605,51 @@ fn date_time_core_fixtures_pass() {
             item["name"].as_str().unwrap_or("date-time-core error")
         );
     }
+
+    let direct_parts_value = "2026-05-21T14:30:15Z".to_string();
+    let direct_date_options = DateTimeCoreOptions {
+        locale: "en-US".to_string(),
+        date_style: Some("short".to_string()),
+        time_zone: "UTC".to_string(),
+        ..DateTimeCoreOptions::default()
+    };
+    let direct_time_options = DateTimeCoreOptions {
+        locale: "en-US".to_string(),
+        time_style: Some("short".to_string()),
+        time_zone: "UTC".to_string(),
+        ..DateTimeCoreOptions::default()
+    };
+    let direct_date_time_options = DateTimeCoreOptions {
+        locale: "en-US".to_string(),
+        date_style: Some("short".to_string()),
+        time_style: Some("short".to_string()),
+        time_zone: "UTC".to_string(),
+        ..DateTimeCoreOptions::default()
+    };
+    assert_eq!(
+        format_date_core_to_parts(&direct_parts_value, &direct_date_options)
+            .expect("date direct parts"),
+        vec![FormattedPart::Text {
+            value: format_date_core(&direct_parts_value, &direct_date_options)
+                .expect("date direct string"),
+        }]
+    );
+    assert_eq!(
+        format_time_core_to_parts(&direct_parts_value, &direct_time_options)
+            .expect("time direct parts"),
+        vec![FormattedPart::Text {
+            value: format_time_core(&direct_parts_value, &direct_time_options)
+                .expect("time direct string"),
+        }]
+    );
+    assert_eq!(
+        format_date_time_core_to_parts(&direct_parts_value, &direct_date_time_options)
+            .expect("datetime direct parts"),
+        vec![FormattedPart::Text {
+            value: format_date_time_core(&direct_parts_value, &direct_date_time_options)
+                .expect("datetime direct string"),
+        }]
+    );
 
     let registry = date_time_core_function_registry();
     let empty_registry_cases = Vec::new();

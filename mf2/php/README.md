@@ -55,14 +55,15 @@ adapter for that gap.
 
 `NumberCore` and `DateTimeCore` are experimental generated-data formatters for
 the CLDR probe locale set. They are explicit opt-in modules, not default
-registry behavior. `NumberCore::registry()` overrides `:number`, `:integer`,
+registry behavior. They expose direct `format*` and `format*ToParts` helpers.
+`NumberCore::registry()` overrides `:number`, `:integer`,
 `:percent`, and `:currency` with generated number symbols, grouping patterns,
 currency fractions, and decimal numbering-system digits. `DateTimeCore::registry()`
 overrides `:date`, `:time`, and `:datetime` with generated Gregorian
 style-pattern and semantic CLDR skeleton data with `hourCycle` overrides and
 UTC/fixed-offset `timeZone` values. `RelativeTimeCore::create($data)` prepares
 explicit generated relative-time JSON once and provides direct formatting plus
-a `:relativeTime` registry adapter.
+parts formatting plus a `:relativeTime` registry adapter.
 
 ```php
 use Mojito\MessageFormat2\DateTimeCore;
@@ -70,6 +71,7 @@ use Mojito\MessageFormat2\NumberCore;
 use Mojito\MessageFormat2\RelativeTimeCore;
 
 echo NumberCore::format(1234.5, ['locale' => 'fr-FR']);
+var_export(NumberCore::formatToParts(1234.5, ['locale' => 'fr-FR']));
 echo DateTimeCore::formatDateTime('2026-05-21T14:30:15Z', [
     'locale' => 'de-DE',
     'dateStyle' => 'full',

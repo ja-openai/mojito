@@ -120,6 +120,10 @@ Supported now:
 - markup placeholders such as `{#link}`, `{/link}`, and `{#br/}`
 - `format_message_to_parts` for text, expression, and markup boundary output,
   preserving expression/markup attributes for UI renderers
+- explicit generated-data number, date/time, and relative-time core helpers,
+  including matching direct parts helpers such as
+  `format_number_core_to_parts`, `format_date_time_core_to_parts`, and
+  `format_relative_time_core_to_parts`
 - result-based formatting APIs for spec-style fallback output plus collected
   formatting errors, including fallback parts with source metadata
 - opt-in `BidiIsolation::Default` string output around expression values, with

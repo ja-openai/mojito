@@ -160,6 +160,14 @@ function assert_number_core_fixtures(): int
         $checked += 1;
     }
 
+    $directPartsOptions = ['locale' => 'en-US'];
+    assert_json_equal(
+        'number-core direct parts',
+        [['type' => 'text', 'value' => NumberCore::format(1234.5, $directPartsOptions)]],
+        NumberCore::formatToParts(1234.5, $directPartsOptions),
+    );
+    $checked += 1;
+
     assert_mf2_error('number-core direct throwing operand', 'bad-operand', static fn(): string => NumberCore::format(new ThrowingStringValue()));
     assert_mf2_error('number-core direct throwing locale option', 'bad-option', static fn(): string => NumberCore::format(1, ['locale' => new ThrowingStringValue()]));
     assert_mf2_error('number-core direct throwing style option', 'bad-option', static fn(): string => NumberCore::format(1, ['style' => new ThrowingStringValue()]));
@@ -261,6 +269,32 @@ function assert_date_time_core_fixtures(): int
         }
         $checked += 1;
     }
+
+    $directPartsValue = '2026-05-21T14:30:15Z';
+    $directDateOptions = ['locale' => 'en-US', 'dateStyle' => 'short', 'timeZone' => 'UTC'];
+    $directTimeOptions = ['locale' => 'en-US', 'timeStyle' => 'short', 'timeZone' => 'UTC'];
+    $directDateTimeOptions = [
+        'locale' => 'en-US',
+        'dateStyle' => 'short',
+        'timeStyle' => 'short',
+        'timeZone' => 'UTC',
+    ];
+    assert_json_equal(
+        'date-time-core direct date parts',
+        [['type' => 'text', 'value' => DateTimeCore::formatDate($directPartsValue, $directDateOptions)]],
+        DateTimeCore::formatDateToParts($directPartsValue, $directDateOptions),
+    );
+    assert_json_equal(
+        'date-time-core direct time parts',
+        [['type' => 'text', 'value' => DateTimeCore::formatTime($directPartsValue, $directTimeOptions)]],
+        DateTimeCore::formatTimeToParts($directPartsValue, $directTimeOptions),
+    );
+    assert_json_equal(
+        'date-time-core direct datetime parts',
+        [['type' => 'text', 'value' => DateTimeCore::formatDateTime($directPartsValue, $directDateTimeOptions)]],
+        DateTimeCore::formatDateTimeToParts($directPartsValue, $directDateTimeOptions),
+    );
+    $checked += 3;
 
     assert_mf2_error('date-time-core direct throwing locale option', 'bad-option', static fn(): string => DateTimeCore::formatDateTime('2026-05-21T14:30:15Z', ['locale' => new ThrowingStringValue()]));
     assert_mf2_error('date-time-core direct throwing skeleton option', 'bad-option', static fn(): string => DateTimeCore::formatDateTime('2026-05-21T14:30:15Z', ['skeleton' => new ThrowingStringValue()]));

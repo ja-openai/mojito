@@ -17,6 +17,11 @@ branch is under active implementation.
   parts helpers from their public submodules while asserting those experimental
   helpers remain off the root package export. The Python README now documents
   the explicit core `*_to_parts` wrappers and type-boundary coverage.
+- PHP/Rust direct-parts coverage: existing conformance tests now assert that
+  direct number-core and date-time-core parts helpers return the same single
+  text part shape as their direct string helpers, matching the relative-time
+  parts coverage that was already present. The PHP and Rust READMEs now call
+  out the direct core parts helpers alongside the string helpers.
 - Shared conformance runner coverage: `mf2/conformance/check_all_languages.sh`
   now runs the shared number-core, date-time-core, and relative-time-core
   fixture suites for Rust, Swift, Python, Java, Kotlin, and JavaScript instead
