@@ -2087,25 +2087,25 @@ object Mf2DateTimeCore {
                 else -> localizedGmtOffset(localeData, offsetMinutes, count)
             }
         } else {
-        when (symbol) {
-            'z' ->
-                if (count >= 4) {
-                    localeData.timeZoneNames["utcLong"] ?: localeData.timeZoneNames["utcShort"] ?: UTC
-                } else {
-                    localeData.timeZoneNames["utcShort"] ?: UTC
-                }
-            'O', 'v' -> localizedGmtZero(localeData)
-            'V' -> localizedGmtZero(localeData)
-            'Z' ->
-                when {
-                    count <= 3 -> "+0000"
-                    count == 5 -> "Z"
-                    else -> localizedGmtZero(localeData)
-                }
-            'X' -> "Z"
-            'x' -> if (count == 1) "+00" else if (count == 2 || count == 4) "+0000" else "+00:00"
-            else -> UTC
-        }
+            when (symbol) {
+                'z' ->
+                    if (count >= 4) {
+                        localeData.timeZoneNames["utcLong"] ?: localeData.timeZoneNames["utcShort"] ?: UTC
+                    } else {
+                        localeData.timeZoneNames["utcShort"] ?: UTC
+                    }
+                'O', 'v' -> localizedGmtZero(localeData)
+                'V' -> localizedGmtZero(localeData)
+                'Z' ->
+                    when {
+                        count <= 3 -> "+0000"
+                        count == 5 -> "Z"
+                        else -> localizedGmtZero(localeData)
+                    }
+                'X' -> "Z"
+                'x' -> if (count == 1) "+00" else if (count == 2 || count == 4) "+0000" else "+00:00"
+                else -> UTC
+            }
         }
 
     private fun localizedGmtZero(localeData: CldrDateTimeData.LocaleData): String =
