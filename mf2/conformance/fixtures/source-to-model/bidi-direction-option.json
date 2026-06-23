@@ -1,0 +1,40 @@
+{
+  "name": "bidi-direction-option",
+  "source": ".local $fileDisplay = {$fileName :string u:dir=rtl}\n{{File {$fileDisplay} saved.}}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "fileDisplay",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "fileName" },
+          "function": {
+            "type": "function",
+            "name": "string",
+            "options": {
+              "u:dir": { "type": "literal", "value": "rtl" }
+            }
+          }
+        }
+      }
+    ],
+    "pattern": [
+      "File ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "fileDisplay" }
+      },
+      " saved."
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "bidiIsolation": "default",
+      "arguments": { "fileName": "\u05e9\u05dc\u05d5\u05dd.txt" },
+      "expected": "File \u2067\u05e9\u05dc\u05d5\u05dd.txt\u2069 saved."
+    }
+  ]
+}

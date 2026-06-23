@@ -1,0 +1,522 @@
+{
+  "formatCases": [
+    {
+      "name": "en decimal",
+      "locale": "en-US",
+      "value": 1234.5,
+      "options": { "style": "number" },
+      "expected": "1,234.5"
+    },
+    {
+      "name": "string exponent operand",
+      "locale": "en-US",
+      "value": "1e2",
+      "options": { "style": "number" },
+      "expected": "100"
+    },
+    {
+      "name": "fr decimal",
+      "locale": "fr-FR",
+      "value": 1234.5,
+      "options": { "style": "number" },
+      "expected": "1 234,5"
+    },
+    {
+      "name": "de decimal",
+      "locale": "de-DE",
+      "value": 1234.5,
+      "options": { "style": "number" },
+      "expected": "1.234,5"
+    },
+    {
+      "name": "ja decimal",
+      "locale": "ja-JP",
+      "value": 1234.5,
+      "options": { "style": "number" },
+      "expected": "1,234.5"
+    },
+    {
+      "name": "ar decimal",
+      "locale": "ar-EG",
+      "value": 1234.5,
+      "options": { "style": "number" },
+      "expected": "١٬٢٣٤٫٥"
+    },
+    {
+      "name": "integer truncates before formatting",
+      "locale": "en-US",
+      "value": 1234.9,
+      "options": { "style": "integer" },
+      "expected": "1,234"
+    },
+    {
+      "name": "en percent",
+      "locale": "en-US",
+      "value": 0.12,
+      "options": { "style": "percent" },
+      "expected": "12%"
+    },
+    {
+      "name": "fr percent",
+      "locale": "fr-FR",
+      "value": 0.12,
+      "options": { "style": "percent" },
+      "expected": "12 %"
+    },
+    {
+      "name": "ar percent",
+      "locale": "ar-EG",
+      "value": 0.12,
+      "options": { "style": "percent" },
+      "expected": "١٢٪؜"
+    },
+    {
+      "name": "en currency",
+      "locale": "en-US",
+      "value": 1234.5,
+      "options": { "style": "currency", "currency": "USD" },
+      "expected": "$1,234.50"
+    },
+    {
+      "name": "en currency code display spacing",
+      "locale": "en-US",
+      "value": 1234.56,
+      "options": { "style": "currency", "currency": "USD", "currencyDisplay": "code" },
+      "expected": "USD 1,234.56"
+    },
+    {
+      "name": "en negative currency",
+      "locale": "en-US",
+      "value": -1234.56,
+      "options": { "style": "currency", "currency": "USD" },
+      "expected": "-$1,234.56"
+    },
+    {
+      "name": "en explicit positive currency sign",
+      "locale": "en-US",
+      "value": 1234.5,
+      "options": { "style": "currency", "currency": "USD", "signDisplay": "always" },
+      "expected": "+$1,234.50"
+    },
+    {
+      "name": "en hidden negative currency sign",
+      "locale": "en-US",
+      "value": -1234.56,
+      "options": { "style": "currency", "currency": "USD", "signDisplay": "never" },
+      "expected": "$1,234.56"
+    },
+    {
+      "name": "fr currency",
+      "locale": "fr-FR",
+      "value": 1234.5,
+      "options": { "style": "currency", "currency": "EUR" },
+      "expected": "1 234,50 €"
+    },
+    {
+      "name": "ja zero-fraction currency",
+      "locale": "ja-JP",
+      "value": 1234.5,
+      "options": { "style": "currency", "currency": "JPY" },
+      "expected": "￥1,235"
+    },
+    {
+      "name": "ja currency code display spacing",
+      "locale": "ja-JP",
+      "value": 1234.56,
+      "options": { "style": "currency", "currency": "USD", "currencyDisplay": "code" },
+      "expected": "USD 1,234.56"
+    },
+    {
+      "name": "ar currency",
+      "locale": "ar-EG",
+      "value": 1234.5,
+      "options": { "style": "currency", "currency": "USD" },
+      "expected": "‏١٬٢٣٤٫٥٠ US$"
+    },
+    {
+      "name": "grouping off",
+      "locale": "en-US",
+      "value": 1234.5,
+      "options": { "style": "number", "useGrouping": false },
+      "expected": "1234.5"
+    },
+    {
+      "name": "fixed fraction digits",
+      "locale": "en-US",
+      "value": 1.2,
+      "options": { "style": "number", "minimumFractionDigits": 2, "maximumFractionDigits": 2 },
+      "expected": "1.20"
+    },
+    {
+      "name": "number minimum fraction raises implicit maximum",
+      "locale": "en-US",
+      "value": "1.2",
+      "options": { "style": "number", "minimumFractionDigits": 5 },
+      "expected": "1.20000"
+    },
+    {
+      "name": "percent minimum fraction raises implicit maximum",
+      "locale": "en-US",
+      "value": "1.2",
+      "options": { "style": "percent", "minimumFractionDigits": 2 },
+      "expected": "120.00%"
+    },
+    {
+      "name": "currency minimum fraction raises implicit maximum",
+      "locale": "en-US",
+      "value": "1.2",
+      "options": { "style": "currency", "currency": "USD", "minimumFractionDigits": 5 },
+      "expected": "$1.20000"
+    },
+    {
+      "name": "currency maximum fraction lowers implicit minimum",
+      "locale": "en-US",
+      "value": "1234.56",
+      "options": { "style": "currency", "currency": "USD", "maximumFractionDigits": 0 },
+      "expected": "$1,235"
+    },
+    {
+      "name": "currency maximum fraction one lowers implicit minimum",
+      "locale": "en-US",
+      "value": "1234.56",
+      "options": { "style": "currency", "currency": "USD", "maximumFractionDigits": 1 },
+      "expected": "$1,234.6"
+    },
+    {
+      "name": "decimal half rounding string operand",
+      "locale": "en-US",
+      "value": "1.005",
+      "options": { "style": "number", "minimumFractionDigits": 2, "maximumFractionDigits": 2 },
+      "expected": "1.01"
+    },
+    {
+      "name": "decimal half rounding numeric operand",
+      "locale": "en-US",
+      "value": 1.005,
+      "options": { "style": "number", "minimumFractionDigits": 2, "maximumFractionDigits": 2 },
+      "expected": "1.01"
+    },
+    {
+      "name": "currency decimal half rounding string operand",
+      "locale": "en-US",
+      "value": "0.015",
+      "options": { "style": "currency", "currency": "USD" },
+      "expected": "$0.02"
+    },
+    {
+      "name": "negative localized number",
+      "locale": "de-DE",
+      "value": -1234.5,
+      "options": { "style": "number" },
+      "expected": "-1.234,5"
+    },
+    {
+      "name": "explicit positive sign",
+      "locale": "en-US",
+      "value": 1234.5,
+      "options": { "style": "number", "signDisplay": "always" },
+      "expected": "+1,234.5"
+    },
+    {
+      "name": "negative zero number",
+      "locale": "en-US",
+      "value": "-0",
+      "options": { "style": "number" },
+      "expected": "-0"
+    },
+    {
+      "name": "negative zero percent",
+      "locale": "en-US",
+      "value": "-0",
+      "options": { "style": "percent" },
+      "expected": "-0%"
+    },
+    {
+      "name": "negative zero currency",
+      "locale": "en-US",
+      "value": "-0",
+      "options": { "style": "currency", "currency": "USD" },
+      "expected": "-$0.00"
+    },
+    {
+      "name": "explicit positive zero sign",
+      "locale": "en-US",
+      "value": 0,
+      "options": { "style": "number", "signDisplay": "always" },
+      "expected": "+0"
+    },
+    {
+      "name": "explicit positive zero currency sign",
+      "locale": "en-US",
+      "value": 0,
+      "options": { "style": "currency", "currency": "USD", "signDisplay": "always" },
+      "expected": "+$0.00"
+    },
+    {
+      "name": "currency code display",
+      "locale": "fr-FR",
+      "value": 1234.5,
+      "options": { "style": "currency", "currency": "USD", "currencyDisplay": "code" },
+      "expected": "1 234,50 USD"
+    }
+  ],
+  "intlReferenceCases": [
+    { "locale": "en-US", "value": 1234.5, "options": { "style": "number" } },
+    { "locale": "fr-FR", "value": 1234.5, "options": { "style": "number" } },
+    { "locale": "de-DE", "value": 1234.5, "options": { "style": "number" } },
+    { "locale": "ja-JP", "value": 1234.5, "options": { "style": "number" } },
+    { "locale": "ar-EG", "value": 1234.5, "options": { "style": "number" } },
+    { "locale": "en-US", "value": 0.12, "options": { "style": "percent" } },
+    { "locale": "fr-FR", "value": 0.12, "options": { "style": "percent" } },
+    { "locale": "ar-EG", "value": 0.12, "options": { "style": "percent" } },
+    { "locale": "en-US", "value": 1234.5, "options": { "style": "currency", "currency": "USD" } },
+    { "locale": "en-US", "value": -1234.56, "options": { "style": "currency", "currency": "USD" } },
+    { "locale": "fr-FR", "value": 1234.5, "options": { "style": "currency", "currency": "EUR" } },
+    { "locale": "ja-JP", "value": 1234.5, "options": { "style": "currency", "currency": "JPY" } },
+    { "locale": "ar-EG", "value": 1234.5, "options": { "style": "currency", "currency": "USD" } }
+  ],
+  "errorCases": [
+    {
+      "name": "bad operand",
+      "locale": "en-US",
+      "value": "abc",
+      "options": { "style": "number" },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "non-decimal base operand",
+      "locale": "en-US",
+      "value": "0x10",
+      "options": { "style": "number" },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "hex-float operand",
+      "locale": "en-US",
+      "value": "0x1p4",
+      "options": { "style": "number" },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "leading-dot string operand",
+      "locale": "en-US",
+      "value": ".5",
+      "options": { "style": "number" },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "leading-plus string operand",
+      "locale": "en-US",
+      "value": "+16",
+      "options": { "style": "number" },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "trailing-dot string operand",
+      "locale": "en-US",
+      "value": "1.",
+      "options": { "style": "number" },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "leading-zero string operand",
+      "locale": "en-US",
+      "value": "01",
+      "options": { "style": "number" },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "multi-leading-zero string operand",
+      "locale": "en-US",
+      "value": "00",
+      "options": { "style": "number" },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "leading-zero exponent string operand",
+      "locale": "en-US",
+      "value": "042",
+      "options": { "style": "number" },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "fractionless exponent string operand",
+      "locale": "en-US",
+      "value": "1.e3",
+      "options": { "style": "number" },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "oversized number magnitude",
+      "locale": "en-US",
+      "value": "1e21",
+      "options": { "style": "number" },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "oversized integer magnitude",
+      "locale": "en-US",
+      "value": "1e21",
+      "options": { "style": "integer" },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "oversized percent scaled magnitude",
+      "locale": "en-US",
+      "value": "1e19",
+      "options": { "style": "percent" },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "oversized operand text",
+      "locale": "en-US",
+      "value": "0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "options": { "style": "number" },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "missing currency",
+      "locale": "en-US",
+      "value": 1,
+      "options": { "style": "currency" },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "oversized currency option",
+      "locale": "en-US",
+      "value": 1,
+      "options": { "style": "currency", "currency": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "bad fraction range",
+      "locale": "en-US",
+      "value": 1,
+      "options": { "style": "number", "minimumFractionDigits": 3, "maximumFractionDigits": 2 },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "oversized minimum fraction digits",
+      "locale": "en-US",
+      "value": 1,
+      "options": { "style": "number", "minimumFractionDigits": 10000 },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "oversized maximum fraction digits",
+      "locale": "en-US",
+      "value": 1,
+      "options": { "style": "number", "maximumFractionDigits": 10000 },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "oversized locale option",
+      "locale": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "value": 1,
+      "options": { "style": "number" },
+      "expectedError": "bad-option"
+    }
+  ],
+  "registryCases": [
+    {
+      "name": "inherited integer formats as number in Arabic locale",
+      "locale": "ar-EG",
+      "source": ".local $n = {1.25 :integer}\n.local $y = {$n :number}\n{{{$y}}}",
+      "arguments": {},
+      "expected": "١"
+    },
+    {
+      "name": "inherited number formats as percent in French locale",
+      "locale": "fr-FR",
+      "source": ".local $n = {0.42 :number}\n{{{$n :percent}}}",
+      "arguments": {},
+      "expected": "42 %"
+    },
+    {
+      "name": "negative zero number registry",
+      "locale": "en-US",
+      "source": "{-0 :number}",
+      "arguments": {},
+      "expected": "-0"
+    },
+    {
+      "name": "negative zero currency registry",
+      "locale": "en-US",
+      "source": "{-0 :currency currency=USD}",
+      "arguments": {},
+      "expected": "-$0.00"
+    },
+    {
+      "name": "explicit positive zero sign registry",
+      "locale": "en-US",
+      "source": "{0 :number signDisplay=always}",
+      "arguments": {},
+      "expected": "+0"
+    },
+    {
+      "name": "currency code display spacing registry",
+      "locale": "en-US",
+      "source": "Total {1234.56 :currency currency=USD currencyDisplay=code}",
+      "arguments": {},
+      "expected": "Total USD 1,234.56"
+    },
+    {
+      "name": "currency maximum fraction registry",
+      "locale": "en-US",
+      "source": "Total {1234.56 :currency currency=USD maximumFractionDigits=0}",
+      "arguments": {},
+      "expected": "Total $1,235"
+    },
+    {
+      "name": "grouping off registry",
+      "locale": "en-US",
+      "source": "{1234.5 :number useGrouping=false}",
+      "arguments": {},
+      "expected": "1234.5"
+    }
+  ],
+  "registryErrorCases": [
+    {
+      "name": "invalid grouping option registry",
+      "locale": "en-US",
+      "source": "{1234.5 :number useGrouping=bogus}",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
+    },
+    {
+      "name": "empty grouping option registry",
+      "locale": "en-US",
+      "source": "{1234.5 :number useGrouping=||}",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
+    },
+    {
+      "name": "oversized currency option registry",
+      "locale": "en-US",
+      "source": "{1234.5 :currency currency=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
+    },
+    {
+      "name": "oversized currency display option registry",
+      "locale": "en-US",
+      "source": "{1234.5 :currency currency=USD currencyDisplay=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
+    },
+    {
+      "name": "oversized sign display option registry",
+      "locale": "en-US",
+      "source": "{1234.5 :number signDisplay=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
+    },
+    {
+      "name": "oversized grouping option registry",
+      "locale": "en-US",
+      "source": "{1234.5 :number useGrouping=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "name": "bidi-invalid-direction-option",
+  "source": "Bad {$fileName :string u:dir=sideways} done {#link u:dir=rtl}text{/link}.",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Bad ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "fileName" },
+        "function": {
+          "type": "function",
+          "name": "string",
+          "options": {
+            "u:dir": { "type": "literal", "value": "sideways" }
+          }
+        }
+      },
+      " done ",
+      {
+        "type": "markup",
+        "kind": "open",
+        "name": "link",
+        "options": {
+          "u:dir": { "type": "literal", "value": "rtl" }
+        }
+      },
+      "text",
+      { "type": "markup", "kind": "close", "name": "link" },
+      "."
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": { "fileName": "abc" },
+      "expected": "Bad {$fileName} done text.",
+      "expectedErrors": [{ "code": "bad-option" }, { "code": "bad-option" }]
+    }
+  ]
+}

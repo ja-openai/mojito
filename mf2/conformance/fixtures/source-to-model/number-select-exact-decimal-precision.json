@@ -1,0 +1,69 @@
+{
+  "name": "number-select-exact-decimal-precision",
+  "source": ".input {$n :number select=exact}\n.match $n\n1.0000000000000001 {{Rounded}}\n1 {{One}}\n9007199254740992 {{Two}}\n9007199254740993 {{Three}}\n* {{Other}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "n",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "n" },
+          "function": {
+            "type": "function",
+            "name": "number",
+            "options": {
+              "select": { "type": "literal", "value": "exact" }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "n" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "1.0000000000000001" }],
+        "value": ["Rounded"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "1" }],
+        "value": ["One"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "9007199254740992" }],
+        "value": ["Two"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "9007199254740993" }],
+        "value": ["Three"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["Other"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "n": "1" },
+      "expected": "One"
+    },
+    {
+      "locale": "en",
+      "arguments": { "n": "1.0000000000000001" },
+      "expected": "Rounded"
+    },
+    {
+      "locale": "en",
+      "arguments": { "n": "9007199254740993" },
+      "expected": "Three"
+    },
+    {
+      "locale": "en",
+      "arguments": { "n": "9007199254740992" },
+      "expected": "Two"
+    }
+  ]
+}

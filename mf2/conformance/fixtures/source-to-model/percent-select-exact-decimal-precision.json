@@ -1,0 +1,51 @@
+{
+  "name": "percent-select-exact-decimal-precision",
+  "source": ".input {$n :percent select=exact}\n.match $n\n1.0000000000000001 {{Rounded percent}}\n1 {{One percent}}\n* {{Other}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "n",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "n" },
+          "function": {
+            "type": "function",
+            "name": "percent",
+            "options": {
+              "select": { "type": "literal", "value": "exact" }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "n" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "1.0000000000000001" }],
+        "value": ["Rounded percent"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "1" }],
+        "value": ["One percent"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["Other"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "n": "0.01" },
+      "expected": "One percent"
+    },
+    {
+      "locale": "en",
+      "arguments": { "n": "0.010000000000000001" },
+      "expected": "Rounded percent"
+    }
+  ]
+}

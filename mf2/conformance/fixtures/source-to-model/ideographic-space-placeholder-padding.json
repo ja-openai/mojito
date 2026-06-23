@@ -1,0 +1,22 @@
+{
+  "name": "ideographic-space-placeholder-padding",
+  "source": "hello {\u3000world\r}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "hello ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "world" }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "hello world"
+    }
+  ]
+}

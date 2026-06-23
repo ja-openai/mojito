@@ -1,0 +1,24 @@
+{
+  "name": "number-huge-exponent-bad-operand",
+  "source": "Value: {1e1000 :number}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Value: ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "1e1000" },
+        "function": { "type": "function", "name": "number" }
+      }
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "Value: {|1e1000|}",
+      "expectedErrors": [{ "code": "bad-operand" }]
+    }
+  ]
+}

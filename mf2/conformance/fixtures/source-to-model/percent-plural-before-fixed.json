@@ -1,0 +1,45 @@
+{
+  "name": "percent-plural-before-fixed",
+  "source": ".input {$ratio :percent}\n.match $ratio\n* {{fallback}}\none {{plural one percent}}\n1 {{exact one percent}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "ratio",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "ratio" },
+          "function": { "type": "function", "name": "percent" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "ratio" }],
+    "variants": [
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["fallback"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "one" }],
+        "value": ["plural one percent"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "1" }],
+        "value": ["exact one percent"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "ratio": 0.01 },
+      "expected": "exact one percent"
+    },
+    {
+      "locale": "en",
+      "arguments": { "ratio": 0.02 },
+      "expected": "fallback"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "offset-option-bound-bad-option",
+  "source": "Value: {1 :offset add=1000000000000000000000}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Value: ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "1" },
+        "function": {
+          "type": "function",
+          "name": "offset",
+          "options": {
+            "add": { "type": "literal", "value": "1000000000000000000000" }
+          }
+        }
+      }
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "Value: {|1|}",
+      "expectedErrors": [{ "code": "bad-option" }]
+    }
+  ]
+}

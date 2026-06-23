@@ -1,0 +1,47 @@
+{
+  "name": "offset-large-exact-selector",
+  "source": ".input {$n :offset add=2}\n.match $n\n9007199254740993 {{large}}\n* {{other}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "n",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "n" },
+          "function": {
+            "type": "function",
+            "name": "offset",
+            "options": {
+              "add": { "type": "literal", "value": "2" }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "n" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "9007199254740993" }],
+        "value": ["large"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["other"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "n": "9007199254740991" },
+      "expected": "large"
+    },
+    {
+      "locale": "en",
+      "arguments": { "n": "1" },
+      "expected": "other"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "name": "local-number-alias-raw-value",
+  "source": ".local $alias = {$n}\n{{direct={$n :number}; alias={$alias :number}}}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "alias",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "n" }
+        }
+      }
+    ],
+    "pattern": [
+      "direct=",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "n" },
+        "function": {
+          "type": "function",
+          "name": "number"
+        }
+      },
+      "; alias=",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "alias" },
+        "function": {
+          "type": "function",
+          "name": "number"
+        }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "fr-FR",
+      "arguments": { "n": 1234.5 },
+      "expected": "direct=1234.5; alias=1234.5"
+    }
+  ]
+}

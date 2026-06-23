@@ -1,0 +1,7 @@
+{
+  "name": "invalid-option-variable-empty",
+  "source": "{1 :number minimumFractionDigits=$}",
+  "expectedDiagnostics": [
+    { "code": "missing-variable-name" }
+  ]
+}

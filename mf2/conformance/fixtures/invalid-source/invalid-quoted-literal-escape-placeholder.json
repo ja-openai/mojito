@@ -1,0 +1,7 @@
+{
+  "name": "invalid-quoted-literal-escape-placeholder",
+  "source": "{|a\\q|}",
+  "expectedDiagnostics": [
+    { "code": "unclosed-quoted-literal" }
+  ]
+}

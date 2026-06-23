@@ -1,0 +1,38 @@
+{
+  "name": "fallback-unsupported-function-annotation-options",
+  "source": "{:f k=v}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      {
+        "type": "expression",
+        "function": {
+          "type": "function",
+          "name": "f",
+          "options": {
+            "k": { "type": "literal", "value": "v" }
+          }
+        }
+      }
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "{:f}",
+      "expectedErrors": [{ "code": "unknown-function" }]
+    }
+  ],
+  "fallbackPartsCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": [
+        { "type": "fallback", "source": ":f" }
+      ],
+      "expectedErrors": [{ "code": "unknown-function" }]
+    }
+  ]
+}

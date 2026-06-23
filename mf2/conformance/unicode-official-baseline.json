@@ -2,6 +2,7 @@
   "passed": 461,
   "skipped": 0,
   "notWired": 0,
+  "partsAssertions": 20,
   "total": 461,
   "files": {
     "tests/syntax.json": {

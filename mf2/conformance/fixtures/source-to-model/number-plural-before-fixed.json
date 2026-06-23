@@ -1,6 +1,6 @@
 {
-  "name": "integer-plural-before-fixed",
-  "source": ".input {$count :integer}\n.match $count\n* {{fallback}}\none {{plural one}}\n1 {{exact one}}",
+  "name": "number-plural-before-fixed",
+  "source": ".input {$count :number}\n.match $count\n* {{fallback}}\none {{plural one}}\n1 {{exact one}}",
   "expectedModel": {
     "type": "select",
     "declarations": [
@@ -10,7 +10,7 @@
         "value": {
           "type": "expression",
           "arg": { "type": "variable", "name": "count" },
-          "function": { "type": "function", "name": "integer" }
+          "function": { "type": "function", "name": "number" }
         }
       }
     ],
@@ -34,11 +34,6 @@
     {
       "locale": "en",
       "arguments": { "count": 1 },
-      "expected": "exact one"
-    },
-    {
-      "locale": "en",
-      "arguments": { "count": 1.2 },
       "expected": "exact one"
     },
     {

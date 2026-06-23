@@ -1,0 +1,7 @@
+{
+  "name": "invalid-quoted-literal-escape-option",
+  "source": "{$x :string label=|display\\q|}",
+  "expectedDiagnostics": [
+    { "code": "unclosed-quoted-literal" }
+  ]
+}

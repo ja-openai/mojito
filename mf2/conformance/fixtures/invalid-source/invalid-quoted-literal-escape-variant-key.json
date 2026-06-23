@@ -1,0 +1,7 @@
+{
+  "name": "invalid-quoted-literal-escape-variant-key",
+  "source": ".input {$status :string}\n.match $status\n|a\\q| {{Broken}}\n* {{Other}}",
+  "expectedDiagnostics": [
+    { "code": "unclosed-quoted-literal" }
+  ]
+}

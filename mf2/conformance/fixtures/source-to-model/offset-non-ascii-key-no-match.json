@@ -1,0 +1,42 @@
+{
+  "name": "offset-non-ascii-key-no-match",
+  "source": ".local $x = {1 :offset add=1}\n.match $x\n۲ {{hit}}\n* {{other}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "x",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "1" },
+          "function": {
+            "type": "function",
+            "name": "offset",
+            "options": {
+              "add": { "type": "literal", "value": "1" }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "x" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "۲" }],
+        "value": ["hit"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["other"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "other"
+    }
+  ]
+}

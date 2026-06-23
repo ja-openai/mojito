@@ -1,0 +1,51 @@
+{
+  "name": "percent-select-exact-textual-priority",
+  "source": ".input {$n :percent select=exact}\n.match $n\n1 {{One}}\n1.0 {{One zero}}\n* {{Other}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "n",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "n" },
+          "function": {
+            "type": "function",
+            "name": "percent",
+            "options": {
+              "select": { "type": "literal", "value": "exact" }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "n" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "1" }],
+        "value": ["One"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "1.0" }],
+        "value": ["One zero"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["Other"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "n": "0.01" },
+      "expected": "One"
+    },
+    {
+      "locale": "en",
+      "arguments": { "n": "0.010" },
+      "expected": "One zero"
+    }
+  ]
+}

@@ -108,6 +108,46 @@ executes the draft unit-selection and CLDR-pattern substitution algorithm
 against the generated CLDR data, but the normal runtime conformance runners do
 not consume it until the function is implemented.
 
+Unicode micro-runtime fixtures live beside the MF2 message fixtures when they
+test reusable CLDR behavior outside the MF2 grammar. `fixtures/number-core`
+currently covers the JavaScript, Python, Rust, Java, Kotlin, Swift, Go, and PHP generated-data
+number formatters for decimal, integer, percent, and simple currency
+formatting, including static expected outputs, dynamic `Intl.NumberFormat` /
+JDK `NumberFormat` reference cases, Python/Rust/Go/PHP Node/Intl witnesses, Swift
+Foundation `NumberFormatter` reference cases with explicit known difference
+reporting, registry integration, and error cases. `fixtures/date-time-core`
+currently covers the JavaScript, Python, Rust, Java, Kotlin, Swift, Go, and PHP generated-data
+Gregorian date/time formatters for the probe locale set, including static
+expected outputs, CLDR semantic skeleton lookup/composition cases across the
+probe locale set including the legal date, calendar-period, time, zone, and
+composite semantic field-set matrix, explicit `yearMonthDay`/date-time/zone/era/calendar-period
+field-set aliases including duplicate-canonicalization errors, semantic column-alignment outputs, semantic
+style inference for long/full time zones, option field requirements and bounds, cross-locale hour-cycle and fixed-offset
+semantic outputs,
+field-style value aliases such as `2Digit`/`twoDigit`/`abbreviated` plus
+explicit month/quarter/weekday/day-period width overrides,
+era, extended-year, and related Gregorian year skeletons, quarter, stand-alone
+quarter, and stand-alone month skeletons including skeleton-only `l`,
+week-year/week-of-year/week-of-month skeletons, standalone/local weekday
+skeletons including wide/narrow/short width best-fit plus numeric local-day
+pattern synthesis, flexible/exact day-period skeletons, single-field numeric
+day-of-year/day-of-week-in-month/modified-Julian-day/minute/second/milliseconds-in-day
+skeleton synthesis, fractional-second skeleton synthesis, timezone field-family skeleton
+matching, and localized UTC
+zone presentation cases, lowercase ISO and location-style fixed-offset timezone
+cases, hour-cycle override cases, CLDR append-item skeleton fallback cases, plus best-fit field-width skeleton cases, dynamic
+`Intl.DateTimeFormat`, Python/Rust/Go/PHP Node/Intl witnesses, JDK
+`DateTimeFormatter`, and Swift Foundation `DateFormatter` reference cases where
+the checked-in CLDR data and host data agree byte-for-byte, including date-only
+Gregorian calendar alias/override, locale-extension, fixed-offset rollover
+references, and semantic style alias witnesses against equivalent top-level
+`dateStyle`/`timeStyle` options for exact date-only, time-only, and date+time
+host matches, registry
+integration, explicit known Foundation punctuation/spacing differences, and
+unsupported calendar/named-timezone/hour-cycle/skeleton error cases. Skeleton cases stay in
+static expected outputs because ECMA-402 does not expose CLDR skeletons
+directly.
+
 `generate_plural_category_fixtures.py` uses the ICU4J reference harness and the
 generated all-locale CLDR plural data to refresh the `plural-*-cldr-*.json`
 source-to-model fixtures. These fixtures are ordinary conformance data: every

@@ -1,0 +1,7 @@
+{
+  "name": "invalid-option-variable-leading-digit",
+  "source": "{1 :number minimumFractionDigits=$1}",
+  "expectedDiagnostics": [
+    { "code": "invalid-variable-name" }
+  ]
+}

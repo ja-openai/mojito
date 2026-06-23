@@ -1,0 +1,30 @@
+{
+  "name": "offset-operand-bound-bad-operand",
+  "source": "Value: {1000000000000000000000 :offset add=0}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Value: ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "1000000000000000000000" },
+        "function": {
+          "type": "function",
+          "name": "offset",
+          "options": {
+            "add": { "type": "literal", "value": "0" }
+          }
+        }
+      }
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "Value: {|1000000000000000000000|}",
+      "expectedErrors": [{ "code": "bad-operand" }]
+    }
+  ]
+}

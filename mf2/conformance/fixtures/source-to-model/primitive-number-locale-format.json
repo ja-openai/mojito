@@ -1,0 +1,47 @@
+{
+  "name": "primitive-number-locale-format",
+  "source": "{$one} / {$two}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "one" }
+      },
+      " / ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "two" }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en-US",
+      "arguments": { "one": 1.3, "two": 4.2 },
+      "expected": "1.3 / 4.2"
+    },
+    {
+      "locale": "fr-FR",
+      "arguments": { "one": 1.3, "two": 4.2 },
+      "expected": "1,3 / 4,2"
+    },
+    {
+      "locale": "fr-FR",
+      "arguments": { "one": "1.3", "two": "4.2" },
+      "expected": "1.3 / 4.2"
+    }
+  ],
+  "partsCases": [
+    {
+      "locale": "fr-FR",
+      "arguments": { "one": 1.3, "two": 4.2 },
+      "expected": [
+        { "type": "expression", "value": "1,3" },
+        { "type": "text", "value": " / " },
+        { "type": "expression", "value": "4,2" }
+      ]
+    }
+  ]
+}

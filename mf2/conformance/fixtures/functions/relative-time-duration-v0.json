@@ -56,6 +56,36 @@
       }
     },
     {
+      "label": "trimmed-decimal-string-seconds",
+      "source": "{$delta :relativeTime style=short numeric=always policy=precise}",
+      "locale": "en",
+      "arguments": { "delta": "  16  " },
+      "expected": "in 16 sec.",
+      "resolved": {
+        "seconds": 16,
+        "unit": "second",
+        "quantity": 16,
+        "direction": "future",
+        "pluralCategory": "other",
+        "pattern": "in {0} sec."
+      }
+    },
+    {
+      "label": "negative-zero-string-seconds",
+      "source": "{$delta :relativeTime style=long numeric=always policy=precise unit=second}",
+      "locale": "en",
+      "arguments": { "delta": "-0" },
+      "expected": "0 seconds ago",
+      "resolved": {
+        "seconds": "-0",
+        "unit": "second",
+        "quantity": 0,
+        "direction": "past",
+        "pluralCategory": "other",
+        "pattern": "{0} seconds ago"
+      }
+    },
+    {
       "label": "explicit-day-auto-yesterday",
       "source": "{$delta :relativeTime style=long numeric=auto unit=day}",
       "locale": "en",
@@ -67,6 +97,64 @@
         "quantity": 1,
         "direction": "past",
         "relativeOffset": "-1"
+      }
+    },
+    {
+      "label": "explicit-day-auto-fractional-future-numeric",
+      "source": "{$delta :relativeTime style=long numeric=auto unit=day}",
+      "locale": "en",
+      "arguments": { "delta": 51840 },
+      "expected": "in 1 day",
+      "resolved": {
+        "seconds": 51840,
+        "unit": "day",
+        "quantity": 1,
+        "direction": "future",
+        "pluralCategory": "one",
+        "pattern": "in {0} day"
+      }
+    },
+    {
+      "label": "explicit-day-auto-fractional-past-numeric",
+      "source": "{$delta :relativeTime style=long numeric=auto unit=day}",
+      "locale": "en",
+      "arguments": { "delta": -51840 },
+      "expected": "1 day ago",
+      "resolved": {
+        "seconds": -51840,
+        "unit": "day",
+        "quantity": 1,
+        "direction": "past",
+        "pluralCategory": "one",
+        "pattern": "{0} day ago"
+      }
+    },
+    {
+      "label": "french-explicit-day-auto-after-tomorrow",
+      "source": "{$delta :relativeTime style=long numeric=auto unit=day}",
+      "locale": "fr",
+      "arguments": { "delta": 172800 },
+      "expected": "après-demain",
+      "resolved": {
+        "seconds": 172800,
+        "unit": "day",
+        "quantity": 2,
+        "direction": "future",
+        "relativeOffset": "2"
+      }
+    },
+    {
+      "label": "french-explicit-day-auto-before-yesterday",
+      "source": "{$delta :relativeTime style=long numeric=auto unit=day}",
+      "locale": "fr",
+      "arguments": { "delta": -172800 },
+      "expected": "avant-hier",
+      "resolved": {
+        "seconds": -172800,
+        "unit": "day",
+        "quantity": 2,
+        "direction": "past",
+        "relativeOffset": "-2"
       }
     },
     {
@@ -170,6 +258,71 @@
       "expectedError": { "code": "bad-operand" }
     },
     {
+      "label": "huge-quantity-operand",
+      "source": "{$delta :relativeTime style=narrow numeric=always policy=precise}",
+      "locale": "en",
+      "arguments": { "delta": "1e30" },
+      "expectedError": { "code": "bad-operand" }
+    },
+    {
+      "label": "oversized-operand-text",
+      "source": "{$delta :relativeTime style=short numeric=always policy=precise}",
+      "locale": "en",
+      "arguments": {
+        "delta": "1.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expectedError": { "code": "bad-operand" }
+    },
+    {
+      "label": "non-decimal-base-operand",
+      "source": "{$delta :relativeTime style=short numeric=always policy=precise}",
+      "locale": "en",
+      "arguments": { "delta": "0x10" },
+      "expectedError": { "code": "bad-operand" }
+    },
+    {
+      "label": "hex-float-operand",
+      "source": "{$delta :relativeTime style=short numeric=always policy=precise}",
+      "locale": "en",
+      "arguments": { "delta": "0x1p4" },
+      "expectedError": { "code": "bad-operand" }
+    },
+    {
+      "label": "leading-plus-string-operand",
+      "source": "{$delta :relativeTime style=short numeric=always policy=precise}",
+      "locale": "en",
+      "arguments": { "delta": "+16" },
+      "expectedError": { "code": "bad-operand" }
+    },
+    {
+      "label": "leading-dot-string-operand",
+      "source": "{$delta :relativeTime style=short numeric=always policy=precise}",
+      "locale": "en",
+      "arguments": { "delta": ".5" },
+      "expectedError": { "code": "bad-operand" }
+    },
+    {
+      "label": "trailing-dot-string-operand",
+      "source": "{$delta :relativeTime style=short numeric=always policy=precise}",
+      "locale": "en",
+      "arguments": { "delta": "1." },
+      "expectedError": { "code": "bad-operand" }
+    },
+    {
+      "label": "leading-zero-string-operand",
+      "source": "{$delta :relativeTime style=short numeric=always policy=precise}",
+      "locale": "en",
+      "arguments": { "delta": "01" },
+      "expectedError": { "code": "bad-operand" }
+    },
+    {
+      "label": "fractionless-exponent-string-operand",
+      "source": "{$delta :relativeTime style=short numeric=always policy=precise}",
+      "locale": "en",
+      "arguments": { "delta": "1.e3" },
+      "expectedError": { "code": "bad-operand" }
+    },
+    {
       "label": "unknown-style",
       "source": "{$delta :relativeTime style=tiny}",
       "locale": "en",
@@ -184,11 +337,46 @@
       "expectedError": { "code": "bad-option" }
     },
     {
+      "label": "oversized-style-option",
+      "source": "{$delta :relativeTime style=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}",
+      "locale": "en",
+      "arguments": { "delta": 60 },
+      "expectedError": { "code": "bad-option" }
+    },
+    {
+      "label": "oversized-numeric-option",
+      "source": "{$delta :relativeTime numeric=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}",
+      "locale": "en",
+      "arguments": { "delta": 60 },
+      "expectedError": { "code": "bad-option" }
+    },
+    {
+      "label": "oversized-policy-option",
+      "source": "{$delta :relativeTime policy=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}",
+      "locale": "en",
+      "arguments": { "delta": 60 },
+      "expectedError": { "code": "bad-option" }
+    },
+    {
+      "label": "oversized-unit-option",
+      "source": "{$delta :relativeTime unit=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}",
+      "locale": "en",
+      "arguments": { "delta": 60 },
+      "expectedError": { "code": "bad-option" }
+    },
+    {
       "label": "missing-locale-data",
       "source": "{$delta :relativeTime}",
       "locale": "zz",
       "arguments": { "delta": 60 },
       "expectedError": { "code": "missing-locale-data" }
+    },
+    {
+      "label": "oversized-locale-option",
+      "source": "{$delta :relativeTime}",
+      "locale": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "arguments": { "delta": 60 },
+      "expectedError": { "code": "bad-option" }
     }
   ]
 }

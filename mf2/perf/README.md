@@ -17,6 +17,20 @@ Use `compare_parse.sh` for source parser throughput:
 sh perf/compare_parse.sh conformance/fixtures/source-to-model conformance/fixtures/invalid-source 100000 10000
 ```
 
+Use `compare_cldr_data.sh` for frontend-oriented generated CLDR data smoke
+benchmarks:
+
+```sh
+sh perf/compare_cldr_data.sh 100000 10000
+```
+
+This reports raw/gzip sizes, JSON parse cost for the experimental number and
+date/time artifacts, generated-data lookup loops, JavaScript generated number
+and date/time formatter hot loops, and cached `Intl.NumberFormat` /
+`Intl.DateTimeFormat` reference loops. It also includes generated number
+and date-time formatter hot loops for Python, Rust, Swift, Java, Kotlin, Go, and PHP
+against available cached Foundation / JDK reference formatters.
+
 The third argument is untimed warmup iterations. This matters for JVM and other
 managed runtimes, but we use it for every language so the comparison shape stays
 consistent.
@@ -84,6 +98,56 @@ at about 317K format ops/sec, 208K valid-source parses/sec, and 411K
 invalid-source parses/sec on the then-current 52-fixture source corpus. The JS
 plural micro-smoke showed generated CLDR rules at about 424 ns/op and cached
 platform `Intl.PluralRules` at about 299 ns/op for the sampled locales.
+
+The latest CLDR data and formatter smoke runs after quarter/week/weekday,
+flexible day-period, localized UTC timezone-name, best-fit skeleton width
+matching, fixed-offset timezone support, semantic skeleton `hourCycle`
+overrides, and append-item fallback landed showed:
+
+- number data: 8.8 KB raw, 1.2 KB gzip
+- generated JavaScript number data module: about 5.9 KB raw, 1.2 KB gzip
+- compact JavaScript number resource prototype: about 2.0 KB raw, 0.9 KB gzip
+- generated Rust number data module: about 7.6 KB raw, 1.3 KB gzip
+- generated PHP number data module: about 7.2 KB raw, 1.3 KB gzip
+- date/time data with filtered CLDR skeleton `availableFormats`: 56.6 KB raw, 5.2 KB gzip
+- compact JavaScript date/time resource prototype: about 25.3 KB raw, 6.1 KB gzip
+- generated Rust date/time data module: about 43.8 KB raw, 5.1 KB gzip
+- generated PHP date/time data module: about 42.1 KB raw, 5.1 KB gzip
+- generated number symbol lookup: about 20 ns/op
+- cached `Intl.NumberFormat.formatToParts`: about 3.1 us/op
+- JavaScript generated number-core formatting: about 1.3 us/op
+- cached `Intl.NumberFormat.format`: about 0.6 us/op
+- generated date/time name lookup: about 26 ns/op
+- JavaScript generated date-time-core formatting: about 18.3 us/op
+- cached `Intl.DateTimeFormat.format`: about 0.9 us/op
+- cached `Intl.DateTimeFormat.formatToParts`: about 3.0 us/op
+- Python generated number-core formatting: about 4.4 us/op
+- Python generated date-time-core formatting: about 58.1 us/op
+- Rust generated number-core formatting: about 4.0 us/op
+- Rust generated date-time-core formatting: about 34.7 us/op
+- Swift generated number-core formatting: about 13.9 us/op
+- cached Foundation `NumberFormatter.string`: about 0.6 us/op
+- Swift generated date-time-core formatting: about 470 us/op
+- cached Foundation `DateFormatter.string`: about 0.8 us/op
+- Java generated number-core formatting: about 3.7 us/op
+- cached JDK `NumberFormat.format`: about 0.6 us/op
+- Java generated date-time-core formatting: about 17.4 us/op
+- cached JDK `DateTimeFormatter.format`: about 0.8 us/op
+- Kotlin generated number-core formatting: about 2.4 us/op
+- cached Kotlin/JDK `NumberFormat.format`: about 0.4 us/op
+- Kotlin generated date-time-core formatting: about 14.2 us/op
+- cached Kotlin/JDK `DateTimeFormatter.format`: about 0.9 us/op
+- Go generated number-core formatting: about 0.9 us/op
+- Go generated date-time-core formatting: about 12.7 us/op
+- PHP generated number-core formatting: about 2.8 us/op
+- PHP generated date-time-core formatting: about 88.5 us/op
+
+These are harness smoke numbers only. They exist to catch order-of-magnitude
+regressions in generated resource shape and lookup cost while the real
+number/date-time formatter APIs are still being expanded across native
+runtimes. The Swift date-time-core number is from the debug SwiftPM smoke path
+and is intentionally tracked as a follow-up optimization target rather than a
+release-mode claim.
 
 Java JFR smoke profiles point at ordinary string/parser work after warmup:
 quoted-pattern scanning, name splitting, immutable model list construction, and

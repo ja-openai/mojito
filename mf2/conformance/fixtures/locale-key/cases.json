@@ -4,13 +4,42 @@
     { "source": "zh_hant_tw", "expected": "zh-Hant-TW" },
     { "source": "pt-PT-u-nu-latn", "expected": "pt-PT" },
     { "source": "kok-Latn", "expected": "kok-Latn" },
-    { "source": "en-US-x-private", "expected": "en-US" }
+    { "source": "en-US-x-private", "expected": "en-US" },
+    { "source": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "expected": "" }
   ],
   "lookupChains": [
     { "source": "zh-Hant-HK-u-nu-latn", "expected": ["zh-Hant-HK", "zh-Hant", "zh"] },
     { "source": " FR_ca ", "expected": ["fr-CA", "fr"] },
     { "source": "pt-PT-u-nu-latn", "expected": ["pt-PT", "pt"] },
     { "source": "pt-AO", "expected": ["pt-AO", "pt"] },
-    { "source": "en-US-x-private", "expected": ["en-US", "en"] }
+    { "source": "en-US-x-private", "expected": ["en-US", "en"] },
+    { "source": "en-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "expected": [] }
+  ],
+  "featureLookupChains": [
+    {
+      "source": "pt-MO",
+      "parents": { "pt-MO": "pt-PT" },
+      "expected": ["pt-MO", "pt-PT", "pt"]
+    },
+    {
+      "source": "en-AU-x-private",
+      "parents": { "en-AU": "en-GB", "en-GB": "en-001" },
+      "expected": ["en-AU", "en-GB", "en-001", "en"]
+    },
+    {
+      "source": "zh-Hant-HK-u-nu-latn",
+      "parents": { "zh-Hant-HK": "zh-Hant-MO" },
+      "expected": ["zh-Hant-HK", "zh-Hant-MO", "zh-Hant", "zh"]
+    },
+    {
+      "source": "aa-BB",
+      "parents": { "aa-BB": "aa-CC", "aa-CC": "aa-BB" },
+      "expected": ["aa-BB", "aa-CC", "aa"]
+    },
+    {
+      "source": "aa-BB",
+      "parents": { "aa-BB": "aa-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+      "expected": ["aa-BB", "aa"]
+    }
   ]
 }

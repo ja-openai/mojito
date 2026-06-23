@@ -1,0 +1,48 @@
+{
+  "name": "failed-input-selector-unavailable",
+  "source": ".input {$x :number minimumFractionDigits=-1}\n.match $x\n1 {{one}}\n* {{fallback}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "x",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "x" },
+          "function": {
+            "type": "function",
+            "name": "number",
+            "options": {
+              "minimumFractionDigits": { "type": "literal", "value": "-1" }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "x" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "1" }],
+        "value": ["one"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["fallback"]
+      }
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": { "x": 1 },
+      "expected": "fallback",
+      "expectedErrors": [
+        { "code": "bad-option" },
+        { "code": "bad-selector" },
+        { "code": "bad-selector" },
+        { "code": "bad-selector" }
+      ]
+    }
+  ]
+}

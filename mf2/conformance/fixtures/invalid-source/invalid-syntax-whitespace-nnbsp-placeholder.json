@@ -1,0 +1,7 @@
+{
+  "name": "invalid-syntax-whitespace-nnbsp-placeholder",
+  "source": "{$x\u202f:string}",
+  "expectedDiagnostics": [
+    { "code": "missing-expression-space" }
+  ]
+}

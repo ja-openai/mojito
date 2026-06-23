@@ -1,0 +1,30 @@
+{
+  "name": "percent-maximum-fraction-digits-bad-option",
+  "source": "Value: {1 :percent maximumFractionDigits=10000}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Value: ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "1" },
+        "function": {
+          "type": "function",
+          "name": "percent",
+          "options": {
+            "maximumFractionDigits": { "type": "literal", "value": "10000" }
+          }
+        }
+      }
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "Value: {|1|}",
+      "expectedErrors": [{ "code": "bad-option" }]
+    }
+  ]
+}

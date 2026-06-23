@@ -1,0 +1,44 @@
+{
+  "name": "plural-oversized-exponent-operand-fallback",
+  "source": ".input {$n :number}\n.match $n\none {{one}}\n* {{fallback}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "n",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "n" },
+          "function": { "type": "function", "name": "number" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "n" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "one" }],
+        "value": ["one"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["fallback"]
+      }
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": {
+        "n": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e-256"
+      },
+      "expected": "fallback",
+      "expectedErrors": [
+        { "code": "bad-operand" },
+        { "code": "bad-selector" },
+        { "code": "bad-selector" },
+        { "code": "bad-selector" }
+      ]
+    }
+  ]
+}

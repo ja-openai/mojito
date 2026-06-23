@@ -1,0 +1,16 @@
+{
+  "name": "escaped-pipe-text",
+  "source": "\\\\\\{\\|\\}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": ["\\{|}"]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "\\{|}"
+    }
+  ]
+}

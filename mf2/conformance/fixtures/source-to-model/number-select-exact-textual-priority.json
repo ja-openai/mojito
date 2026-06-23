@@ -1,0 +1,84 @@
+{
+  "name": "number-select-exact-textual-priority",
+  "source": ".input {$n :number select=exact}\n.match $n\n1 {{One}}\n1.0 {{One zero}}\n1e2 {{Hundred exp}}\n100 {{Hundred}}\n* {{Other}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "n",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "n" },
+          "function": {
+            "type": "function",
+            "name": "number",
+            "options": {
+              "select": { "type": "literal", "value": "exact" }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "n" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "1" }],
+        "value": ["One"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "1.0" }],
+        "value": ["One zero"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "1e2" }],
+        "value": ["Hundred exp"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "100" }],
+        "value": ["Hundred"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["Other"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "n": "1" },
+      "expected": "One"
+    },
+    {
+      "locale": "en",
+      "arguments": { "n": "1.0" },
+      "expected": "One zero"
+    },
+    {
+      "locale": "en",
+      "arguments": { "n": "1e2" },
+      "expected": "Hundred"
+    },
+    {
+      "locale": "en",
+      "arguments": { "n": "1E2" },
+      "expected": "Hundred"
+    },
+    {
+      "locale": "en",
+      "arguments": { "n": "1e+2" },
+      "expected": "Hundred"
+    },
+    {
+      "locale": "en",
+      "arguments": { "n": "1e02" },
+      "expected": "Hundred"
+    },
+    {
+      "locale": "en",
+      "arguments": { "n": "100" },
+      "expected": "Hundred"
+    }
+  ]
+}

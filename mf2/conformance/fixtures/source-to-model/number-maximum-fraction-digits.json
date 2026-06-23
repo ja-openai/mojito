@@ -1,0 +1,29 @@
+{
+  "name": "number-maximum-fraction-digits",
+  "source": "Value: {1.234 :number maximumFractionDigits=2}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Value: ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "1.234" },
+        "function": {
+          "type": "function",
+          "name": "number",
+          "options": {
+            "maximumFractionDigits": { "type": "literal", "value": "2" }
+          }
+        }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "Value: 1.23"
+    }
+  ]
+}

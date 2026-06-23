@@ -1,0 +1,53 @@
+{
+  "name": "portable-large-decimal-format",
+  "source": "Values: {9007199254740993 :number}; {999999999999999999999 :number}; {100000000000000000001 :integer}; {9007199254740993 :percent}; {9007199254740993 :number minimumFractionDigits=2}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Values: ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "9007199254740993" },
+        "function": { "type": "function", "name": "number" }
+      },
+      "; ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "999999999999999999999" },
+        "function": { "type": "function", "name": "number" }
+      },
+      "; ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "100000000000000000001" },
+        "function": { "type": "function", "name": "integer" }
+      },
+      "; ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "9007199254740993" },
+        "function": { "type": "function", "name": "percent" }
+      },
+      "; ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "9007199254740993" },
+        "function": {
+          "type": "function",
+          "name": "number",
+          "options": {
+            "minimumFractionDigits": { "type": "literal", "value": "2" }
+          }
+        }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "Values: 9007199254740993; 999999999999999999999; 100000000000000000001; 900719925474099300%; 9007199254740993.00"
+    }
+  ]
+}

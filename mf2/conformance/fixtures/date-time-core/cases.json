@@ -1,0 +1,6465 @@
+{
+  "formatCases": [
+    {
+      "name": "en-US medium date",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium"
+      },
+      "expected": "May 21, 2026"
+    },
+    {
+      "name": "en-US Arabic-Indic numbering extension date",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US-u-nu-arab",
+      "options": {
+        "dateStyle": "medium"
+      },
+      "expected": "May ٢١, ٢٠٢٦"
+    },
+    {
+      "name": "en-US Arabic-Indic numbering extension skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US-u-nu-arab",
+      "options": {
+        "skeleton": "yMMMd"
+      },
+      "expected": "May ٢١, ٢٠٢٦"
+    },
+    {
+      "name": "ar-EG Latin numbering extension date",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG-u-nu-latn",
+      "options": {
+        "dateStyle": "medium"
+      },
+      "expected": "21‏/05‏/2026"
+    },
+    {
+      "name": "en-US gregory calendar alias date",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium",
+        "calendar": "gregory"
+      },
+      "expected": "May 21, 2026"
+    },
+    {
+      "name": "en-US gregory calendar locale extension date",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US-u-ca-gregory",
+      "options": {
+        "dateStyle": "medium"
+      },
+      "expected": "May 21, 2026"
+    },
+    {
+      "name": "en-US gregory calendar locale extension skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US-u-ca-gregory",
+      "options": {
+        "skeleton": "yMMMd"
+      },
+      "expected": "May 21, 2026"
+    },
+    {
+      "name": "en-US explicit calendar overrides locale extension",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US-u-ca-buddhist",
+      "options": {
+        "dateStyle": "medium",
+        "calendar": "gregory"
+      },
+      "expected": "May 21, 2026"
+    },
+    {
+      "name": "en-US short date",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "short"
+      },
+      "expected": "5/21/26"
+    },
+    {
+      "name": "en-US short time",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "timeStyle": "short"
+      },
+      "expected": "2:30 PM"
+    },
+    {
+      "name": "en-US short time explicit h23 style",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "timeStyle": "short",
+        "hourCycle": "h23"
+      },
+      "expected": "14:30"
+    },
+    {
+      "name": "en-US short time locale h23 style",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US-u-hc-h23",
+      "options": {
+        "timeStyle": "short"
+      },
+      "expected": "14:30"
+    },
+    {
+      "name": "en-US long time explicit h23 style",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "timeStyle": "long",
+        "hourCycle": "h23"
+      },
+      "expected": "14:30:15 UTC"
+    },
+    {
+      "name": "en-US medium date short time",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium",
+        "timeStyle": "short"
+      },
+      "expected": "May 21, 2026, 2:30 PM"
+    },
+    {
+      "name": "en-US medium date short time explicit h23 style",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium",
+        "timeStyle": "short",
+        "hourCycle": "h23"
+      },
+      "expected": "May 21, 2026, 14:30"
+    },
+    {
+      "name": "fr-FR long date",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "dateStyle": "long"
+      },
+      "expected": "21 mai 2026"
+    },
+    {
+      "name": "fr-FR short time",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "timeStyle": "short"
+      },
+      "expected": "14:30"
+    },
+    {
+      "name": "fr-FR short time explicit h12 style",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "timeStyle": "short",
+        "hourCycle": "h12"
+      },
+      "expected": "02:30 PM"
+    },
+    {
+      "name": "fr-FR short date short time",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "dateStyle": "short",
+        "timeStyle": "short"
+      },
+      "expected": "21/05/2026 14:30"
+    },
+    {
+      "name": "de-DE full date",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "dateStyle": "full"
+      },
+      "expected": "Donnerstag, 21. Mai 2026"
+    },
+    {
+      "name": "de-DE medium time",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "timeStyle": "medium"
+      },
+      "expected": "14:30:15"
+    },
+    {
+      "name": "de-DE medium date short time",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "dateStyle": "medium",
+        "timeStyle": "short"
+      },
+      "expected": "21.05.2026, 14:30"
+    },
+    {
+      "name": "ja-JP full date",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "dateStyle": "full"
+      },
+      "expected": "2026年5月21日木曜日"
+    },
+    {
+      "name": "ja-JP short date short time",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "dateStyle": "short",
+        "timeStyle": "short"
+      },
+      "expected": "2026/05/21 14:30"
+    },
+    {
+      "name": "ja-JP full fixed offset time explicit h23 style",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "timeStyle": "full",
+        "timeZone": "+02:00",
+        "hourCycle": "h23"
+      },
+      "expected": "16時30分15秒 GMT+02:00"
+    },
+    {
+      "name": "ja-JP full fixed offset midnight explicit h24 style",
+      "kind": "time",
+      "value": "2026-05-20T22:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "timeStyle": "full",
+        "timeZone": "+02:00",
+        "hourCycle": "h24"
+      },
+      "expected": "24時30分15秒 GMT+02:00"
+    },
+    {
+      "name": "ja-JP full fixed offset time locale h23 style",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP-u-hc-h23",
+      "options": {
+        "timeStyle": "full",
+        "timeZone": "+02:00"
+      },
+      "expected": "16:30:15 GMT+02:00"
+    },
+    {
+      "name": "ja-JP full fixed offset datetime locale h23 style",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP-u-hc-h23",
+      "options": {
+        "dateStyle": "full",
+        "timeStyle": "full",
+        "timeZone": "+02:00"
+      },
+      "expected": "2026年5月21日木曜日 16:30:15 GMT+02:00"
+    },
+    {
+      "name": "ja-JP full fixed offset midnight locale h24 style",
+      "kind": "time",
+      "value": "2026-05-20T22:30:15Z",
+      "locale": "ja-JP-u-hc-h24",
+      "options": {
+        "timeStyle": "full",
+        "timeZone": "+02:00"
+      },
+      "expected": "24:30:15 GMT+02:00"
+    },
+    {
+      "name": "ar-EG full date",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "dateStyle": "full"
+      },
+      "expected": "الخميس، ٢١ مايو ٢٠٢٦"
+    },
+    {
+      "name": "ar-EG medium time",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "timeStyle": "medium"
+      },
+      "expected": "٢:٣٠:١٥ م"
+    },
+    {
+      "name": "en-US long UTC time",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "timeStyle": "long"
+      },
+      "expected": "2:30:15 PM UTC"
+    },
+    {
+      "name": "en-US full UTC time",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "timeStyle": "full"
+      },
+      "expected": "2:30:15 PM Coordinated Universal Time"
+    },
+    {
+      "name": "fr-FR full UTC time",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "timeStyle": "full"
+      },
+      "expected": "14:30:15 temps universel coordonné"
+    },
+    {
+      "name": "ar-EG full UTC time",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "timeStyle": "full"
+      },
+      "expected": "٢:٣٠:١٥ م التوقيت العالمي المنسق"
+    },
+    {
+      "name": "ar-EG medium date short time",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "dateStyle": "medium",
+        "timeStyle": "short"
+      },
+      "expected": "٢١‏/٠٥‏/٢٠٢٦، ٢:٣٠ م"
+    },
+    {
+      "name": "en-US unordered date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "MMMdy"
+      },
+      "expected": "May 21, 2026"
+    },
+    {
+      "name": "en-US extended year skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "u"
+      },
+      "expected": "2026"
+    },
+    {
+      "name": "en-US padded extended year skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "uuuuuu"
+      },
+      "expected": "002026"
+    },
+    {
+      "name": "ar-EG localized extended year skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "uuuuuu"
+      },
+      "expected": "٠٠٢٠٢٦"
+    },
+    {
+      "name": "en-US extended year month date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "uMMMd"
+      },
+      "expected": "May 21, 2026"
+    },
+    {
+      "name": "en-US fixed-offset extended year skeleton",
+      "kind": "date",
+      "value": "2025-12-31T23:30:00Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "u",
+        "timeZone": "+01:00"
+      },
+      "expected": "2026"
+    },
+    {
+      "name": "en-US related Gregorian year skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "r"
+      },
+      "expected": "2026"
+    },
+    {
+      "name": "en-US padded related Gregorian year skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "rrrrrr"
+      },
+      "expected": "002026"
+    },
+    {
+      "name": "ar-EG localized related Gregorian year skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "rrrrrr"
+      },
+      "expected": "٠٠٢٠٢٦"
+    },
+    {
+      "name": "en-US related Gregorian year month date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "rMMMd"
+      },
+      "expected": "May 21, 2026"
+    },
+    {
+      "name": "en-US fixed-offset related Gregorian year skeleton",
+      "kind": "date",
+      "value": "2025-12-31T23:30:00Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "r",
+        "timeZone": "+01:00"
+      },
+      "expected": "2026"
+    },
+    {
+      "name": "en-US padded month skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "MM"
+      },
+      "expected": "05"
+    },
+    {
+      "name": "en-US standalone month skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "LLL"
+      },
+      "expected": "May"
+    },
+    {
+      "name": "en-US wide standalone month skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "LLLL"
+      },
+      "expected": "May"
+    },
+    {
+      "name": "en-US narrow standalone month skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "LLLLL"
+      },
+      "expected": "M"
+    },
+    {
+      "name": "ar-EG padded standalone month skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "LL"
+      },
+      "expected": "٠٥"
+    },
+    {
+      "name": "ar-EG narrow standalone month skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "LLLLL"
+      },
+      "expected": "و"
+    },
+    {
+      "name": "de-DE skeleton-only standalone month skeleton",
+      "kind": "date",
+      "value": "2026-03-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "lll"
+      },
+      "expected": "Mär"
+    },
+    {
+      "name": "en-US narrow skeleton-only standalone month skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "lllll"
+      },
+      "expected": "M"
+    },
+    {
+      "name": "ar-EG localized skeleton-only standalone month skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "ll"
+      },
+      "expected": "٠٥"
+    },
+    {
+      "name": "en-US standalone month year skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yLLLL"
+      },
+      "expected": "May 2026"
+    },
+    {
+      "name": "ja-JP standalone month year skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "yLLLL"
+      },
+      "expected": "2026年5月"
+    },
+    {
+      "name": "ar-EG localized standalone month year skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "yLL"
+      },
+      "expected": "٠٥‏/٢٠٢٦"
+    },
+    {
+      "name": "de-DE skeleton-only standalone month year skeleton",
+      "kind": "date",
+      "value": "2026-03-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "ylll"
+      },
+      "expected": "Mär 2026"
+    },
+    {
+      "name": "en-US quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yQQQ"
+      },
+      "expected": "Q2 2026"
+    },
+    {
+      "name": "en-US bare quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "qqq"
+      },
+      "expected": "Q2"
+    },
+    {
+      "name": "en-US wide quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yQQQQ"
+      },
+      "expected": "2nd quarter 2026"
+    },
+    {
+      "name": "en-US standalone quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yqqq"
+      },
+      "expected": "Q2 2026"
+    },
+    {
+      "name": "en-US narrow standalone quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yqqqqq"
+      },
+      "expected": "2 2026"
+    },
+    {
+      "name": "fr-FR quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "yQQQ"
+      },
+      "expected": "T2 2026"
+    },
+    {
+      "name": "fr-FR standalone quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "yqqq"
+      },
+      "expected": "T2 2026"
+    },
+    {
+      "name": "ja-JP wide quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "yQQQQ"
+      },
+      "expected": "2026年第2四半期"
+    },
+    {
+      "name": "ja-JP wide standalone quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "yqqqq"
+      },
+      "expected": "2026年第2四半期"
+    },
+    {
+      "name": "ar-EG quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "yQQQ"
+      },
+      "expected": "الربع الثاني ٢٠٢٦"
+    },
+    {
+      "name": "ar-EG standalone quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "yqqq"
+      },
+      "expected": "الربع الثاني ٢٠٢٦"
+    },
+    {
+      "name": "en-US week-of-year skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yw"
+      },
+      "expected": "week 21 of 2026"
+    },
+    {
+      "name": "fr-FR week-of-year skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "yw"
+      },
+      "expected": "semaine 21 de 2026"
+    },
+    {
+      "name": "ar-EG week-of-year skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "yw"
+      },
+      "expected": "الأسبوع ٢١ من سنة ٢٠٢٦"
+    },
+    {
+      "name": "de-DE week-of-month skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "MMMMW"
+      },
+      "expected": "Woche 3 im Mai"
+    },
+    {
+      "name": "ja-JP week-of-month skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "MMMMW"
+      },
+      "expected": "5月第4週"
+    },
+    {
+      "name": "en-US week-year boundary skeleton",
+      "kind": "date",
+      "value": "2021-01-01T12:00:00Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yw"
+      },
+      "expected": "week 1 of 2021"
+    },
+    {
+      "name": "fr-FR week-year boundary skeleton",
+      "kind": "date",
+      "value": "2021-01-01T12:00:00Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "yw"
+      },
+      "expected": "semaine 53 de 2020"
+    },
+    {
+      "name": "de-DE week-of-month leading partial week skeleton",
+      "kind": "date",
+      "value": "2021-01-01T12:00:00Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "MMMMW"
+      },
+      "expected": "Woche 0 im Januar"
+    },
+    {
+      "name": "en-US standalone weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "E"
+      },
+      "expected": "Thu"
+    },
+    {
+      "name": "en-US wide standalone weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "EEEE"
+      },
+      "expected": "Thursday"
+    },
+    {
+      "name": "de-DE standalone weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "E"
+      },
+      "expected": "Do"
+    },
+    {
+      "name": "de-DE wide standalone weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "EEEE"
+      },
+      "expected": "Donnerstag"
+    },
+    {
+      "name": "de-DE narrow standalone weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "EEEEE"
+      },
+      "expected": "D"
+    },
+    {
+      "name": "de-DE short standalone weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "EEEEEE"
+      },
+      "expected": "Do."
+    },
+    {
+      "name": "de-DE standalone weekday text skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "ccc"
+      },
+      "expected": "Do"
+    },
+    {
+      "name": "de-DE wide standalone weekday text skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "cccc"
+      },
+      "expected": "Donnerstag"
+    },
+    {
+      "name": "de-DE local weekday text skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "eee"
+      },
+      "expected": "Do."
+    },
+    {
+      "name": "de-DE wide local weekday text skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "eeee"
+      },
+      "expected": "Donnerstag"
+    },
+    {
+      "name": "en-US numeric local weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "e"
+      },
+      "expected": "5"
+    },
+    {
+      "name": "en-US padded numeric local weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "ee"
+      },
+      "expected": "05"
+    },
+    {
+      "name": "de-DE numeric local weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "e"
+      },
+      "expected": "4"
+    },
+    {
+      "name": "de-DE padded numeric local weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "ee"
+      },
+      "expected": "04"
+    },
+    {
+      "name": "ar-EG localized numeric local weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "ee"
+      },
+      "expected": "٠٦"
+    },
+    {
+      "name": "en-US numeric standalone local weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "c"
+      },
+      "expected": "5"
+    },
+    {
+      "name": "en-US numeric local weekday date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yMde"
+      },
+      "expected": "5, 5/21/2026"
+    },
+    {
+      "name": "de-DE numeric local weekday date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "yMde"
+      },
+      "expected": "4, 21.5.2026"
+    },
+    {
+      "name": "ja-JP numeric local weekday date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "yMde"
+      },
+      "expected": "2026/5/21(5)"
+    },
+    {
+      "name": "fr-FR weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "E"
+      },
+      "expected": "jeu."
+    },
+    {
+      "name": "fr-FR wide weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "EEEE"
+      },
+      "expected": "jeudi"
+    },
+    {
+      "name": "ja-JP standalone weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "E"
+      },
+      "expected": "木"
+    },
+    {
+      "name": "ja-JP wide standalone weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "EEEE"
+      },
+      "expected": "木曜日"
+    },
+    {
+      "name": "ja-JP wide standalone weekday text skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "cccc"
+      },
+      "expected": "木曜日"
+    },
+    {
+      "name": "ar-EG standalone weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "E"
+      },
+      "expected": "الخميس"
+    },
+    {
+      "name": "ar-EG narrow standalone weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "EEEEE"
+      },
+      "expected": "خ"
+    },
+    {
+      "name": "ar-EG local weekday text skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "eee"
+      },
+      "expected": "الخميس"
+    },
+    {
+      "name": "en-US bare era skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "G"
+      },
+      "expected": "AD"
+    },
+    {
+      "name": "en-US wide bare era skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "GGGG"
+      },
+      "expected": "Anno Domini"
+    },
+    {
+      "name": "en-US narrow bare era skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "GGGGG"
+      },
+      "expected": "A"
+    },
+    {
+      "name": "en-US era year skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "Gy"
+      },
+      "expected": "2026 AD"
+    },
+    {
+      "name": "en-US era date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "GyMMMd"
+      },
+      "expected": "May 21, 2026 AD"
+    },
+    {
+      "name": "fr-FR era date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "GyMMMd"
+      },
+      "expected": "21 mai 2026 ap. J.-C."
+    },
+    {
+      "name": "ja-JP era date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "GyMMMd"
+      },
+      "expected": "西暦2026年5月21日"
+    },
+    {
+      "name": "ar-EG era date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "GyMMMd"
+      },
+      "expected": "٢١ مايو ٢٠٢٦ م"
+    },
+    {
+      "name": "en-US era date-time skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "GyMMMdhm"
+      },
+      "expected": "May 21, 2026 AD, 2:30 PM"
+    },
+    {
+      "name": "de-DE era date-time skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "GyMMMdHm"
+      },
+      "expected": "21. Mai 2026 n. Chr., 14:30"
+    },
+    {
+      "name": "en-US flexible day period skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "Bhm"
+      },
+      "expected": "2:30 in the afternoon"
+    },
+    {
+      "name": "en-US evening flexible day period skeleton",
+      "kind": "time",
+      "value": "2026-05-21T18:30:00Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "Bhm"
+      },
+      "expected": "6:30 in the evening"
+    },
+    {
+      "name": "fr-FR flexible day period skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "Bhm"
+      },
+      "expected": "2:30 après-midi"
+    },
+    {
+      "name": "de-DE flexible day period skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "Bhm"
+      },
+      "expected": "2:30 nachm."
+    },
+    {
+      "name": "ja-JP flexible day period skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "Bhm"
+      },
+      "expected": "昼2:30"
+    },
+    {
+      "name": "ar-EG flexible day period skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "Bhm"
+      },
+      "expected": "٢:٣٠ بعد الظهر"
+    },
+    {
+      "name": "en-US am-pm day period skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "a"
+      },
+      "expected": "PM"
+    },
+    {
+      "name": "en-US exact midnight day period skeleton",
+      "kind": "time",
+      "value": "2026-05-21T00:00:00Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "b"
+      },
+      "expected": "midnight"
+    },
+    {
+      "name": "en-US exact noon day period skeleton",
+      "kind": "time",
+      "value": "2026-05-21T12:00:00Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "b"
+      },
+      "expected": "noon"
+    },
+    {
+      "name": "en-US am-pm day period time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "ahm"
+      },
+      "expected": "2:30 PM"
+    },
+    {
+      "name": "en-US exact midnight day period time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T00:00:00Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "bhm"
+      },
+      "expected": "12:00 midnight"
+    },
+    {
+      "name": "en-US exact noon day period time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T12:00:00Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "bhm"
+      },
+      "expected": "12:00 noon"
+    },
+    {
+      "name": "fr-FR wide exact noon day period time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T12:00:00Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "bbbbhm"
+      },
+      "expected": "12:00 midi"
+    },
+    {
+      "name": "de-DE wide flexible day period time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "BBBBhm"
+      },
+      "expected": "2:30 nachmittags"
+    },
+    {
+      "name": "ja-JP exact midnight day period time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T00:00:00Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "bhm"
+      },
+      "expected": "真夜中12:00"
+    },
+    {
+      "name": "ar-EG localized am-pm day period time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "ahm"
+      },
+      "expected": "٢:٣٠ م"
+    },
+    {
+      "name": "en-US day-of-year skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "DDD"
+      },
+      "expected": "141"
+    },
+    {
+      "name": "ar-EG localized day-of-year skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "DDD"
+      },
+      "expected": "١٤١"
+    },
+    {
+      "name": "en-US modified Julian day skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "g"
+      },
+      "expected": "61181"
+    },
+    {
+      "name": "en-US padded modified Julian day skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "gggggg"
+      },
+      "expected": "061181"
+    },
+    {
+      "name": "ar-EG localized modified Julian day skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "g"
+      },
+      "expected": "٦١١٨١"
+    },
+    {
+      "name": "en-US modified Julian day epoch skeleton",
+      "kind": "date",
+      "value": "1858-11-17T00:00:00Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "g"
+      },
+      "expected": "0"
+    },
+    {
+      "name": "en-US fixed-offset modified Julian day skeleton",
+      "kind": "date",
+      "value": "2025-12-31T23:30:00Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "g",
+        "timeZone": "+01:00"
+      },
+      "expected": "61041"
+    },
+    {
+      "name": "en-US day-of-week-in-month skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "F"
+      },
+      "expected": "3"
+    },
+    {
+      "name": "de-DE padded day-of-week-in-month skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "FF"
+      },
+      "expected": "03"
+    },
+    {
+      "name": "en-US bare minute skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:05:06Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "m"
+      },
+      "expected": "5"
+    },
+    {
+      "name": "en-US padded bare minute skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:05:06Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "mm"
+      },
+      "expected": "05"
+    },
+    {
+      "name": "en-US bare second skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:05:06Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "s"
+      },
+      "expected": "6"
+    },
+    {
+      "name": "ar-EG localized padded bare second skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:05:06Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "ss"
+      },
+      "expected": "٠٦"
+    },
+    {
+      "name": "en-US milliseconds-in-day skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:05:06.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "A"
+      },
+      "expected": "50706789"
+    },
+    {
+      "name": "en-US padded milliseconds-in-day skeleton",
+      "kind": "time",
+      "value": "2026-05-21T00:00:00.123Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "AAAAAA"
+      },
+      "expected": "000123"
+    },
+    {
+      "name": "ar-EG localized milliseconds-in-day skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:05:06.789Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "A"
+      },
+      "expected": "٥٠٧٠٦٧٨٩"
+    },
+    {
+      "name": "en-US fixed-offset milliseconds-in-day skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:05:06.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "A",
+        "timeZone": "+05:30"
+      },
+      "expected": "70506789"
+    },
+    {
+      "name": "en-US fractional second skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "SSS"
+      },
+      "expected": "789"
+    },
+    {
+      "name": "en-US second fractional skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "sS"
+      },
+      "expected": "15.7"
+    },
+    {
+      "name": "en-US minute second fractional skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "msSSS"
+      },
+      "expected": "30:15.789"
+    },
+    {
+      "name": "en-US hour minute second fractional skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "hmsSSS"
+      },
+      "expected": "2:30:15.789 PM"
+    },
+    {
+      "name": "fr-FR hour minute second fractional skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "HmsSSS"
+      },
+      "expected": "14:30:15,789"
+    },
+    {
+      "name": "ar-EG localized fractional second skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "hmsSSS"
+      },
+      "expected": "٢:٣٠:١٥٫٧٨٩ م"
+    },
+    {
+      "name": "ja-JP date-time fractional second skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "yMMMdHmsSSS"
+      },
+      "expected": "2026年5月21日 14:30:15.789"
+    },
+    {
+      "name": "en-US RFC offset timezone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "HmZ"
+      },
+      "expected": "14:30 +0000"
+    },
+    {
+      "name": "en-US localized GMT timezone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "HmZZZZ"
+      },
+      "expected": "14:30 GMT"
+    },
+    {
+      "name": "en-US ISO timezone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "HmX"
+      },
+      "expected": "14:30 Z"
+    },
+    {
+      "name": "en-US lowercase ISO zero timezone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "Hmx",
+        "timeZone": "UTC"
+      },
+      "expected": "14:30 +00"
+    },
+    {
+      "name": "en-US lowercase extended ISO zero timezone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "Hmxxx",
+        "timeZone": "UTC"
+      },
+      "expected": "14:30 +00:00"
+    },
+    {
+      "name": "en-US fixed offset ISO timezone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "HmXXX",
+        "timeZone": "+05:30"
+      },
+      "expected": "20:00 +05:30"
+    },
+    {
+      "name": "en-US lowercase ISO fixed-offset timezone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "Hmxxx",
+        "timeZone": "+05:30"
+      },
+      "expected": "20:00 +05:30"
+    },
+    {
+      "name": "en-US fixed offset short zone-id skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "HmV",
+        "timeZone": "+05:30"
+      },
+      "expected": "20:00 unk"
+    },
+    {
+      "name": "en-US fixed offset long zone-id skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "HmVV",
+        "timeZone": "+05:30"
+      },
+      "expected": "20:00 GMT+05:30"
+    },
+    {
+      "name": "en-US fixed offset exemplar location skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "HmVVV",
+        "timeZone": "+05:30"
+      },
+      "expected": "20:00 Unknown Location"
+    },
+    {
+      "name": "fr-FR fixed offset localized GMT timezone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "HmO",
+        "timeZone": "+05:30"
+      },
+      "expected": "20:00 UTC+5:30"
+    },
+    {
+      "name": "en-US bare fixed offset localized GMT timezone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "O",
+        "timeZone": "+05:30"
+      },
+      "expected": "GMT+5:30"
+    },
+    {
+      "name": "ar-EG localized fixed offset GMT timezone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "HmOOOO",
+        "timeZone": "+05:30"
+      },
+      "expected": "٢٠:٠٠ غرينتش+٠٥:٣٠"
+    },
+    {
+      "name": "ja-JP date-time ISO timezone skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "yMMMdHmXXX",
+        "timeZone": "+05:30"
+      },
+      "expected": "2026年5月21日 20:00 +05:30"
+    },
+    {
+      "name": "en-US location UTC timezone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "HmVVVV",
+        "timeZone": "UTC"
+      },
+      "expected": "14:30 GMT"
+    },
+    {
+      "name": "en-US location fixed-offset timezone skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yMMMdHmVVVV",
+        "timeZone": "+05:30"
+      },
+      "expected": "May 21, 2026, 20:00 GMT+05:30"
+    },
+    {
+      "name": "en-US fixed offset date-time generic zone skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T23:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yMMMdHmv",
+        "timeZone": "+05:30"
+      },
+      "expected": "May 22, 2026, 05:00 GMT+5:30"
+    },
+    {
+      "name": "fr-FR fixed offset date-time localized GMT skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T23:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "yMMMdHmO",
+        "timeZone": "+05:30"
+      },
+      "expected": "22 mai 2026, 05:00 UTC+5:30"
+    },
+    {
+      "name": "ar-EG localized fixed offset date-time GMT skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T23:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "yMMMdhmOOOO",
+        "timeZone": "+05:30"
+      },
+      "expected": "٢٢ مايو ٢٠٢٦، ٥:٠٠ ص غرينتش+٠٥:٣٠"
+    },
+    {
+      "name": "en-US UTC long zone date-time skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yMMMdHmzzzz"
+      },
+      "expected": "May 21, 2026, 14:30 Coordinated Universal Time"
+    },
+    {
+      "name": "de-DE negative fixed offset date-time rollover skeleton",
+      "kind": "datetime",
+      "value": "2026-01-01T02:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "yMMMdHmv",
+        "timeZone": "-08:00"
+      },
+      "expected": "31. Dez. 2025, 18:30 GMT-8"
+    },
+    {
+      "name": "en-US short specific timezone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "Hmz"
+      },
+      "expected": "14:30 UTC"
+    },
+    {
+      "name": "en-US long specific timezone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "Hmzzzz"
+      },
+      "expected": "14:30 Coordinated Universal Time"
+    },
+    {
+      "name": "en-US UTC generic zone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "Hmv"
+      },
+      "expected": "14:30 GMT"
+    },
+    {
+      "name": "fr-FR UTC generic zone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "Hmv"
+      },
+      "expected": "14:30 UTC"
+    },
+    {
+      "name": "ar-EG UTC generic zone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "Hmv"
+      },
+      "expected": "١٤:٣٠ غرينتش"
+    },
+    {
+      "name": "en-US fixed offset date rollover",
+      "kind": "datetime",
+      "value": "2026-05-21T23:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "short",
+        "timeStyle": "short",
+        "timeZone": "+05:30"
+      },
+      "expected": "5/22/26, 5:00 AM"
+    },
+    {
+      "name": "en-US fixed offset long time",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "timeStyle": "long",
+        "timeZone": "+05:30"
+      },
+      "expected": "8:00:15 PM GMT+5:30"
+    },
+    {
+      "name": "en-US negative fixed offset full time",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "timeStyle": "full",
+        "timeZone": "-08:00"
+      },
+      "expected": "6:30:15 AM GMT-08:00"
+    },
+    {
+      "name": "en-US fixed offset generic zone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "Hmv",
+        "timeZone": "+05:30"
+      },
+      "expected": "20:00 GMT+5:30"
+    },
+    {
+      "name": "ar-EG localized fixed offset generic zone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "Hmv",
+        "timeZone": "+05:30"
+      },
+      "expected": "٢٠:٠٠ غرينتش+٥:٣٠"
+    },
+    {
+      "name": "fr-FR GMT-prefixed fixed offset skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "Hmv",
+        "timeZone": "GMT+2"
+      },
+      "expected": "16:30 UTC+2"
+    },
+    {
+      "name": "en-US best-fit wide month skeleton",
+      "kind": "date",
+      "value": "2026-10-03T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yMMMMd"
+      },
+      "expected": "October 3, 2026"
+    },
+    {
+      "name": "de-DE best-fit wide month skeleton",
+      "kind": "date",
+      "value": "2026-10-03T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "yMMMMd"
+      },
+      "expected": "3. Oktober 2026"
+    },
+    {
+      "name": "ja-JP best-fit numeric month skeleton",
+      "kind": "date",
+      "value": "2026-10-03T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "yMMMMd"
+      },
+      "expected": "2026年10月3日"
+    },
+    {
+      "name": "en-US best-fit wide weekday skeleton",
+      "kind": "date",
+      "value": "2026-10-03T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yMMMMEEEEd"
+      },
+      "expected": "Saturday, October 3, 2026"
+    },
+    {
+      "name": "ar-EG best-fit wide weekday skeleton",
+      "kind": "date",
+      "value": "2026-10-03T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "yMMMMEEEEd"
+      },
+      "expected": "السبت، ٣ أكتوبر ٢٠٢٦"
+    },
+    {
+      "name": "en-US appended quarter date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yMdQ"
+      },
+      "expected": "5/21/2026 (quarter: 2)"
+    },
+    {
+      "name": "ar-EG localized appended quarter date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "yMdQ"
+      },
+      "expected": "٢١‏/٥‏/٢٠٢٦ (ربع السنة: ٢)"
+    },
+    {
+      "name": "en-US appended week date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yMMMdww"
+      },
+      "expected": "May 21, 2026 (week: 21)"
+    },
+    {
+      "name": "en-US appended quarter date-time skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yMdQhm"
+      },
+      "expected": "5/21/2026 (quarter: 2), 2:30 PM"
+    },
+    {
+      "name": "fr-FR appended era date-time skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "GyMdHm"
+      },
+      "expected": "21/05/2026 ap. J.-C., 14:30"
+    },
+    {
+      "name": "en-US date-time skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yMMMdhm"
+      },
+      "expected": "May 21, 2026, 2:30 PM"
+    },
+    {
+      "name": "fr-FR locale hour skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "jm"
+      },
+      "expected": "14:30"
+    },
+    {
+      "name": "en-US hour skeleton without day period marker",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "Jmm"
+      },
+      "expected": "2:30"
+    },
+    {
+      "name": "en-US date-time skeleton without day period marker",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yMMMdJmm"
+      },
+      "expected": "May 21, 2026, 2:30"
+    },
+    {
+      "name": "en-US flexible hour skeleton uses first allowed h pattern",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "Cmm"
+      },
+      "expected": "2:30\u202fPM"
+    },
+    {
+      "name": "en-US padded flexible hour skeleton uses first allowed h pattern",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "CCmm"
+      },
+      "expected": "02:30\u202fPM"
+    },
+    {
+      "name": "fr-FR flexible hour day-period skeleton uses 24-hour preference",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "Cmm"
+      },
+      "expected": "14:30"
+    },
+    {
+      "name": "en-US h11 hour-cycle skeleton",
+      "kind": "time",
+      "value": "2026-05-21T00:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "jm",
+        "hourCycle": "h11"
+      },
+      "expected": "0:30 AM"
+    },
+    {
+      "name": "en-US h12 hour-cycle skeleton",
+      "kind": "time",
+      "value": "2026-05-21T00:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "jm",
+        "hourCycle": "h12"
+      },
+      "expected": "12:30 AM"
+    },
+    {
+      "name": "en-US h23 hour-cycle skeleton",
+      "kind": "time",
+      "value": "2026-05-21T00:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "jm",
+        "hourCycle": "h23"
+      },
+      "expected": "00:30"
+    },
+    {
+      "name": "en-US h24 hour-cycle skeleton",
+      "kind": "time",
+      "value": "2026-05-21T00:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "jm",
+        "hourCycle": "h24"
+      },
+      "expected": "24:30"
+    },
+    {
+      "name": "en-US zero-based hour skeleton",
+      "kind": "time",
+      "value": "2026-05-21T00:05:00Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "Kmm"
+      },
+      "expected": "0:05 AM"
+    },
+    {
+      "name": "en-US zero-based noon hour skeleton",
+      "kind": "time",
+      "value": "2026-05-21T12:05:00Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "Kmm"
+      },
+      "expected": "0:05 PM"
+    },
+    {
+      "name": "en-US one-based 24-hour skeleton",
+      "kind": "time",
+      "value": "2026-05-21T00:05:00Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "kmm"
+      },
+      "expected": "24:05"
+    },
+    {
+      "name": "en-US date-time one-based 24-hour skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T00:05:00Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yMMMdkkmm"
+      },
+      "expected": "May 21, 2026, 24:05"
+    },
+    {
+      "name": "fr-FR h12 hour-cycle override skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "jm",
+        "hourCycle": "h12"
+      },
+      "expected": "2:30 PM"
+    },
+    {
+      "name": "en-US locale extension h23 hour-cycle skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US-u-hc-h23",
+      "options": {
+        "skeleton": "jm"
+      },
+      "expected": "14:30"
+    },
+    {
+      "name": "fr-FR locale extension h12 hour-cycle skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR-u-hc-h12",
+      "options": {
+        "skeleton": "jm"
+      },
+      "expected": "2:30 PM"
+    },
+    {
+      "name": "en-US explicit hour-cycle overrides locale extension",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US-u-hc-h23",
+      "options": {
+        "skeleton": "jm",
+        "hourCycle": "h12"
+      },
+      "expected": "2:30 PM"
+    },
+    {
+      "name": "de-DE weekday date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "yMMMdE"
+      },
+      "expected": "Do., 21. Mai 2026"
+    },
+    {
+      "name": "ja-JP date-time skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "yMMMdjm"
+      },
+      "expected": "2026年5月21日 14:30"
+    },
+    {
+      "name": "ar-EG date-time skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "yMMMdhm"
+      },
+      "expected": "٢١ مايو ٢٠٢٦، ٢:٣٠ م"
+    },
+    {
+      "name": "en-US semantic medium date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day;length=medium"
+      },
+      "expected": "May 21, 2026"
+    },
+    {
+      "name": "en-US semantic date field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=date;length=medium"
+      },
+      "expected": "May 21, 2026"
+    },
+    {
+      "name": "en-US semantic dateStyle option alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=date;dateStyle=short"
+      },
+      "expected": "5/21/26"
+    },
+    {
+      "name": "en-US semantic style option alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=date;style=short"
+      },
+      "expected": "5/21/26"
+    },
+    {
+      "name": "fr-FR semantic dateLength option alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=date;dateLength=long"
+      },
+      "expected": "21 mai 2026"
+    },
+    {
+      "name": "en-US semantic inferred dateStyle fields skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:dateStyle=long"
+      },
+      "expected": "May 21, 2026"
+    },
+    {
+      "name": "en-US semantic inferred full dateStyle fields skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:dateStyle=full"
+      },
+      "expected": "Thursday, May 21, 2026"
+    },
+    {
+      "name": "fr-FR semantic inferred full dateStyle fields skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:dateStyle=full"
+      },
+      "expected": "jeudi 21 mai 2026"
+    },
+    {
+      "name": "ja-JP semantic inferred long dateStyle fields skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "semantic:dateStyle=long"
+      },
+      "expected": "2026年5月21日"
+    },
+    {
+      "name": "ja-JP semantic inferred full dateStyle fields skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "semantic:dateStyle=full"
+      },
+      "expected": "2026年5月21日木曜日"
+    },
+    {
+      "name": "en-US semantic Intl-style date option aliases skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=date;year=2Digit;month=short;day=2Digit"
+      },
+      "expected": "May 21, 26"
+    },
+    {
+      "name": "en-US semantic twoDigit field option value alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=date;year=twoDigit;month=short;day=two_digit"
+      },
+      "expected": "May 21, 26"
+    },
+    {
+      "name": "en-US semantic Intl-style weekday option alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=weekday;weekday=long"
+      },
+      "expected": "Thursday"
+    },
+    {
+      "name": "en-US semantic Intl-style era option alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=era;era=long"
+      },
+      "expected": "Anno Domini"
+    },
+    {
+      "name": "fr-FR semantic medium date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day;length=medium"
+      },
+      "expected": "21 mai 2026"
+    },
+    {
+      "name": "fr-FR semantic yearMonthDay field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=yearMonthDay;length=medium"
+      },
+      "expected": "21 mai 2026"
+    },
+    {
+      "name": "de-DE semantic long weekday date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,weekday;length=long"
+      },
+      "expected": "Donnerstag, 21. Mai 2026"
+    },
+    {
+      "name": "de-DE semantic yearMonthDayWeekday field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:fields=yearMonthDayWeekday;length=long"
+      },
+      "expected": "Donnerstag, 21. Mai 2026"
+    },
+    {
+      "name": "de-DE semantic dateWeekday field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:fields=dateWeekday;length=long"
+      },
+      "expected": "Donnerstag, 21. Mai 2026"
+    },
+    {
+      "name": "fr-FR semantic full weekday date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,weekday;length=full"
+      },
+      "expected": "jeudi 21 mai 2026"
+    },
+    {
+      "name": "fr-FR semantic weekdayDate field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=weekdayDate;length=full"
+      },
+      "expected": "jeudi 21 mai 2026"
+    },
+    {
+      "name": "ja-JP semantic medium date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day;length=medium"
+      },
+      "expected": "2026/05/21"
+    },
+    {
+      "name": "ar-EG semantic medium date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day;length=medium"
+      },
+      "expected": "٢١‏/٠٥‏/٢٠٢٦"
+    },
+    {
+      "name": "fr-FR semantic short column date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day;length=short;alignment=column"
+      },
+      "expected": "21/05/2026"
+    },
+    {
+      "name": "de-DE semantic month field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:fields=month;length=long"
+      },
+      "expected": "Mai"
+    },
+    {
+      "name": "ja-JP semantic year month skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "semantic:fields=year,month;length=long"
+      },
+      "expected": "2026/5"
+    },
+    {
+      "name": "ar-EG semantic month day skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "semantic:fields=month,day;length=long"
+      },
+      "expected": "٢١ مايو"
+    },
+    {
+      "name": "en-US semantic long weekday date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,weekday;length=long"
+      },
+      "expected": "Thursday, May 21, 2026"
+    },
+    {
+      "name": "en-US semantic day field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=day;length=medium"
+      },
+      "expected": "21"
+    },
+    {
+      "name": "en-US semantic two digit day style skeleton",
+      "kind": "date",
+      "value": "2026-05-01T04:05:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=day;dayStyle=2Digit"
+      },
+      "expected": "01"
+    },
+    {
+      "name": "en-US semantic numeric day style skeleton",
+      "kind": "date",
+      "value": "2026-05-01T04:05:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=day;length=long;dayStyle=numeric"
+      },
+      "expected": "1"
+    },
+    {
+      "name": "en-US semantic day weekday field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=day,weekday;length=long"
+      },
+      "expected": "21 Thursday"
+    },
+    {
+      "name": "en-US semantic month day field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=month,day;length=long"
+      },
+      "expected": "May 21"
+    },
+    {
+      "name": "en-US semantic monthDay field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=monthDay;length=long"
+      },
+      "expected": "May 21"
+    },
+    {
+      "name": "en-US semantic month day weekday field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=month,day,weekday;length=long"
+      },
+      "expected": "Thursday, May 21"
+    },
+    {
+      "name": "en-US semantic year field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year;length=medium"
+      },
+      "expected": "2026"
+    },
+    {
+      "name": "en-US semantic two digit year style skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year;yearStyle=2Digit"
+      },
+      "expected": "26"
+    },
+    {
+      "name": "en-US semantic numeric year style skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year;length=short;yearStyle=numeric"
+      },
+      "expected": "2026"
+    },
+    {
+      "name": "en-US semantic year month field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month;length=long"
+      },
+      "expected": "May 2026"
+    },
+    {
+      "name": "en-US semantic yearMonth field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=yearMonth;length=long"
+      },
+      "expected": "May 2026"
+    },
+    {
+      "name": "en-US semantic eraYearMonth field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraYearMonth;length=medium"
+      },
+      "expected": "May 2026 AD"
+    },
+    {
+      "name": "en-US semantic short column date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day;length=short;alignment=column"
+      },
+      "expected": "05/21/26"
+    },
+    {
+      "name": "en-US semantic short column month skeleton",
+      "kind": "date",
+      "value": "2026-05-01T04:05:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=month;length=short;alignment=column"
+      },
+      "expected": "05"
+    },
+    {
+      "name": "en-US semantic short column day skeleton",
+      "kind": "date",
+      "value": "2026-05-01T04:05:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=day;length=short;alignment=column"
+      },
+      "expected": "01"
+    },
+    {
+      "name": "en-US semantic full year style skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day;length=short;yearStyle=full"
+      },
+      "expected": "5/21/2026"
+    },
+    {
+      "name": "en-US semantic era year style skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day;length=medium;yearStyle=with-era"
+      },
+      "expected": "May 21, 2026 AD"
+    },
+    {
+      "name": "en-US semantic camel-case era year style skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day;length=medium;yearStyle=WithEra"
+      },
+      "expected": "May 21, 2026 AD"
+    },
+    {
+      "name": "en-US semantic era field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=era;length=medium"
+      },
+      "expected": "AD"
+    },
+    {
+      "name": "en-US semantic long era field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=era;length=long"
+      },
+      "expected": "Anno Domini"
+    },
+    {
+      "name": "en-US semantic abbreviated era style alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=era;length=long;eraStyle=abbreviated"
+      },
+      "expected": "AD"
+    },
+    {
+      "name": "en-US semantic narrow era style skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=era;length=long;eraStyle=narrow"
+      },
+      "expected": "A"
+    },
+    {
+      "name": "en-US semantic era year field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=era,year;length=medium"
+      },
+      "expected": "2026 AD"
+    },
+    {
+      "name": "en-US semantic eraYear field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraYear;length=medium"
+      },
+      "expected": "2026 AD"
+    },
+    {
+      "name": "fr-FR semantic long eraYearMonth field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=eraYearMonth;length=long"
+      },
+      "expected": "mai 2026 après Jésus-Christ"
+    },
+    {
+      "name": "en-US semantic yearOfEra field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=era,yearOfEra;length=medium"
+      },
+      "expected": "2026 AD"
+    },
+    {
+      "name": "en-US semantic explicit era year style skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=era,year,month,day;length=medium;yearStyle=with-era"
+      },
+      "expected": "May 21, 2026 AD"
+    },
+    {
+      "name": "fr-FR semantic era date field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=era,year,month,day;length=medium"
+      },
+      "expected": "21 mai 2026 ap. J.-C."
+    },
+    {
+      "name": "fr-FR semantic eraDate field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=eraDate;length=medium"
+      },
+      "expected": "21 mai 2026 ap. J.-C."
+    },
+    {
+      "name": "fr-FR semantic eraYearMonthDay field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=eraYearMonthDay;length=medium"
+      },
+      "expected": "21 mai 2026 ap. J.-C."
+    },
+    {
+      "name": "en-US semantic eraDateWeekday field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraDateWeekday;length=long"
+      },
+      "expected": "Thursday, May 21, 2026 Anno Domini"
+    },
+    {
+      "name": "en-US semantic eraYearMonthDayWeekday field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraYearMonthDayWeekday;length=long"
+      },
+      "expected": "Thursday, May 21, 2026 Anno Domini"
+    },
+    {
+      "name": "fr-FR semantic weekdayEraDate field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=weekdayEraDate;length=full"
+      },
+      "expected": "jeudi 21 mai 2026 après Jésus-Christ"
+    },
+    {
+      "name": "ja-JP semantic era date field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "semantic:fields=era,year,month,day;length=medium"
+      },
+      "expected": "西暦2026/05/21"
+    },
+    {
+      "name": "ar-EG semantic era date field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "semantic:fields=era,year,month,day;length=medium"
+      },
+      "expected": "٢١-٠٥-٢٠٢٦ م"
+    },
+    {
+      "name": "en-US semantic month skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=month;length=long"
+      },
+      "expected": "May"
+    },
+    {
+      "name": "en-US semantic full month skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=month;length=full"
+      },
+      "expected": "May"
+    },
+    {
+      "name": "en-US semantic numeric month style date skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day;length=medium;monthStyle=numeric"
+      },
+      "expected": "5/21/2026"
+    },
+    {
+      "name": "en-US semantic two digit month style skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=month;monthStyle=2Digit"
+      },
+      "expected": "05"
+    },
+    {
+      "name": "en-US semantic narrow month style skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=month;monthStyle=narrow"
+      },
+      "expected": "M"
+    },
+    {
+      "name": "en-US semantic long month style skeleton",
+      "kind": "date",
+      "value": "2026-09-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=month;monthStyle=long"
+      },
+      "expected": "September"
+    },
+    {
+      "name": "en-US semantic short month style skeleton",
+      "kind": "date",
+      "value": "2026-09-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=month;monthStyle=short"
+      },
+      "expected": "Sep"
+    },
+    {
+      "name": "en-US semantic abbreviated month style alias skeleton",
+      "kind": "date",
+      "value": "2026-09-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=month;monthStyle=abbreviated"
+      },
+      "expected": "Sep"
+    },
+    {
+      "name": "en-US semantic quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=quarter;length=medium"
+      },
+      "expected": "Q2"
+    },
+    {
+      "name": "en-US semantic long quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=quarter;length=long"
+      },
+      "expected": "2nd quarter"
+    },
+    {
+      "name": "en-US semantic short column quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=quarter;length=short;alignment=column"
+      },
+      "expected": "02"
+    },
+    {
+      "name": "en-US semantic two digit quarter style skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=quarter;quarterStyle=2-digit"
+      },
+      "expected": "02"
+    },
+    {
+      "name": "en-US semantic long quarter style skeleton",
+      "kind": "date",
+      "value": "2026-09-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=quarter;quarterStyle=long"
+      },
+      "expected": "3rd quarter"
+    },
+    {
+      "name": "en-US semantic short quarter style skeleton",
+      "kind": "date",
+      "value": "2026-09-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=quarter;quarterStyle=short"
+      },
+      "expected": "Q3"
+    },
+    {
+      "name": "en-US semantic abbreviated quarter style alias skeleton",
+      "kind": "date",
+      "value": "2026-09-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=quarter;quarterStyle=abbreviated"
+      },
+      "expected": "Q3"
+    },
+    {
+      "name": "en-US semantic year quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,quarter;length=medium"
+      },
+      "expected": "Q2 2026"
+    },
+    {
+      "name": "en-US semantic yearQuarter field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=yearQuarter;length=medium"
+      },
+      "expected": "Q2 2026"
+    },
+    {
+      "name": "en-US semantic eraYearQuarter field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraYearQuarter;length=long"
+      },
+      "expected": "2nd quarter 2026 Anno Domini"
+    },
+    {
+      "name": "en-US semantic quarterOfYear field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,quarterOfYear;length=medium"
+      },
+      "expected": "Q2 2026"
+    },
+    {
+      "name": "fr-FR semantic long year quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=year,quarter;length=long"
+      },
+      "expected": "2e trimestre 2026"
+    },
+    {
+      "name": "ja-JP semantic long year quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "semantic:fields=year,quarter;length=long"
+      },
+      "expected": "2026年第2四半期"
+    },
+    {
+      "name": "ar-EG semantic year quarter skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "semantic:fields=year,quarter;length=medium"
+      },
+      "expected": "الربع الثاني ٢٠٢٦"
+    },
+    {
+      "name": "en-US semantic short weekday skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=weekday;length=short"
+      },
+      "expected": "T"
+    },
+    {
+      "name": "en-US semantic short weekday style skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=weekday;weekdayStyle=short"
+      },
+      "expected": "Thu"
+    },
+    {
+      "name": "en-US semantic long weekday style skeleton",
+      "kind": "date",
+      "value": "2026-09-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=weekday;weekdayStyle=long"
+      },
+      "expected": "Monday"
+    },
+    {
+      "name": "en-US semantic narrow weekday style skeleton",
+      "kind": "date",
+      "value": "2026-09-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=weekday;weekdayStyle=narrow"
+      },
+      "expected": "M"
+    },
+    {
+      "name": "en-US semantic abbreviated weekday style alias skeleton",
+      "kind": "date",
+      "value": "2026-09-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=weekday;weekdayStyle=abbreviated"
+      },
+      "expected": "Mon"
+    },
+    {
+      "name": "en-US semantic dayOfWeek field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=dayOfWeek;length=long"
+      },
+      "expected": "Thursday"
+    },
+    {
+      "name": "en-US semantic dayOfMonth monthOfYear field aliases skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,monthOfYear,dayOfMonth;length=medium"
+      },
+      "expected": "May 21, 2026"
+    },
+    {
+      "name": "en-US semantic weekOfYear field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,weekOfYear;length=medium"
+      },
+      "expected": "week 21 of 2026"
+    },
+    {
+      "name": "fr-FR semantic weekOfYear boundary skeleton",
+      "kind": "date",
+      "value": "2021-01-01T12:00:00Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=year,weekOfYear;length=medium"
+      },
+      "expected": "semaine 53 de 2020"
+    },
+    {
+      "name": "fr-FR semantic yearWeek field alias boundary skeleton",
+      "kind": "date",
+      "value": "2021-01-01T12:00:00Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=yearWeek;length=medium"
+      },
+      "expected": "semaine 53 de 2020"
+    },
+    {
+      "name": "fr-FR semantic eraYearWeek field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=eraYearWeek;length=medium"
+      },
+      "expected": "2026 ap. J.-C. (semaine: 21)"
+    },
+    {
+      "name": "en-US semantic week field alias column skeleton",
+      "kind": "date",
+      "value": "2021-01-01T12:00:00Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,week;length=medium;alignment=column"
+      },
+      "expected": "week 01 of 2021"
+    },
+    {
+      "name": "de-DE semantic weekOfMonth field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:fields=month,weekOfMonth;length=long"
+      },
+      "expected": "Woche 3 im Mai"
+    },
+    {
+      "name": "de-DE semantic monthWeek field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:fields=monthWeek;length=long"
+      },
+      "expected": "Woche 3 im Mai"
+    },
+    {
+      "name": "ja-JP semantic weekOfMonth field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "semantic:fields=month,weekOfMonth;length=long"
+      },
+      "expected": "5月第4週"
+    },
+    {
+      "name": "en-US semantic year month weekOfMonth skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month,weekOfMonth;length=long"
+      },
+      "expected": "week 4 of May 2026"
+    },
+    {
+      "name": "en-US semantic yearMonthWeek field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=yearMonthWeek;length=long"
+      },
+      "expected": "week 4 of May 2026"
+    },
+    {
+      "name": "fr-FR semantic eraYearMonthWeek field alias skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=eraYearMonthWeek;length=medium"
+      },
+      "expected": "mai 2026 ap. J.-C. (semaine: 3)"
+    },
+    {
+      "name": "en-US semantic dayOfYear field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=dayOfYear"
+      },
+      "expected": "141"
+    },
+    {
+      "name": "en-US semantic column dayOfYear field skeleton",
+      "kind": "date",
+      "value": "2026-01-05T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=dayOfYear;alignment=column"
+      },
+      "expected": "005"
+    },
+    {
+      "name": "de-DE semantic column dayOfWeekInMonth field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:fields=dayOfWeekInMonth;alignment=column"
+      },
+      "expected": "03"
+    },
+    {
+      "name": "en-US semantic modifiedJulianDay field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=modifiedJulianDay"
+      },
+      "expected": "61181"
+    },
+    {
+      "name": "en-US semantic column modifiedJulianDay field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=modifiedJulianDay;alignment=column"
+      },
+      "expected": "061181"
+    },
+    {
+      "name": "ar-EG semantic localized millisecondsInDay field skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:05:06.789Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "semantic:fields=millisecondsInDay"
+      },
+      "expected": "٥٠٧٠٦٧٨٩"
+    },
+    {
+      "name": "en-US semantic column millisecondsInDay field skeleton",
+      "kind": "time",
+      "value": "2026-05-21T00:00:00.123Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=millisecondsInDay;alignment=column"
+      },
+      "expected": "00000123"
+    },
+    {
+      "name": "en-US semantic dayPeriod field skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=dayPeriod;length=medium"
+      },
+      "expected": "in the afternoon"
+    },
+    {
+      "name": "fr-FR semantic long dayPeriod field skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=dayPeriod;length=long"
+      },
+      "expected": "de l’après-midi"
+    },
+    {
+      "name": "fr-FR semantic full dayPeriod field skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=dayPeriod;length=full"
+      },
+      "expected": "de l’après-midi"
+    },
+    {
+      "name": "fr-FR semantic short dayPeriod field skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=dayPeriod;length=short"
+      },
+      "expected": "ap.m."
+    },
+    {
+      "name": "fr-FR semantic short dayPeriod style skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=dayPeriod;length=long;dayPeriodStyle=short"
+      },
+      "expected": "après-midi"
+    },
+    {
+      "name": "fr-FR semantic long dayPeriod style skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=dayPeriod;length=long;dayPeriodStyle=long"
+      },
+      "expected": "de l’après-midi"
+    },
+    {
+      "name": "fr-FR semantic abbreviated dayPeriod style alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=dayPeriod;length=long;dayPeriodStyle=abbreviated"
+      },
+      "expected": "après-midi"
+    },
+    {
+      "name": "fr-FR semantic narrow dayPeriod style skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=dayPeriod;length=long;dayPeriodStyle=narrow"
+      },
+      "expected": "ap.m."
+    },
+    {
+      "name": "en-US semantic dayPeriod minute time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=dayPeriod,time;timePrecision=minute"
+      },
+      "expected": "2:30 in the afternoon"
+    },
+    {
+      "name": "de-DE semantic long dayPeriod minute time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:fields=dayPeriod,time;timePrecision=minute;length=long"
+      },
+      "expected": "14:30 nachmittags"
+    },
+    {
+      "name": "en-US semantic date dayPeriod skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,dayPeriod;length=medium"
+      },
+      "expected": "May 21, 2026, in the afternoon"
+    },
+    {
+      "name": "en-US semantic date dayPeriod time skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,dayPeriod,time;length=medium;timePrecision=minute"
+      },
+      "expected": "May 21, 2026, 2:30 in the afternoon"
+    },
+    {
+      "name": "en-US semantic hour minute fields skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=hour,minute"
+      },
+      "expected": "2:30 PM"
+    },
+    {
+      "name": "en-US semantic Intl-style time option aliases skeleton",
+      "kind": "time",
+      "value": "2026-05-21T04:05:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=hour,minute;hour=2Digit;minute=2Digit;hourCycle=h12"
+      },
+      "expected": "04:05 AM"
+    },
+    {
+      "name": "en-US semantic two digit hour style fields skeleton",
+      "kind": "time",
+      "value": "2026-05-01T04:05:06Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=hour,minute;hourStyle=2Digit"
+      },
+      "expected": "04:05 AM"
+    },
+    {
+      "name": "en-US semantic twoDigit time field option value alias skeleton",
+      "kind": "time",
+      "value": "2026-05-01T04:05:06Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=hour,minute;hourStyle=twoDigit"
+      },
+      "expected": "04:05 AM"
+    },
+    {
+      "name": "fr-FR semantic hour minute second fields skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=hour,minute,second"
+      },
+      "expected": "14:30:15"
+    },
+    {
+      "name": "fr-FR semantic time component field aliases skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=hourOfDay,minuteOfHour,secondOfMinute"
+      },
+      "expected": "14:30:15"
+    },
+    {
+      "name": "en-US semantic column hour field skeleton",
+      "kind": "time",
+      "value": "2026-05-01T04:05:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=hour;alignment=column"
+      },
+      "expected": "04 AM"
+    },
+    {
+      "name": "en-US semantic numeric hour style overrides column skeleton",
+      "kind": "time",
+      "value": "2026-05-01T04:05:06Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=hour;alignment=column;hourStyle=numeric"
+      },
+      "expected": "4 AM"
+    },
+    {
+      "name": "en-US semantic bare minute field skeleton",
+      "kind": "time",
+      "value": "2026-05-01T04:05:06Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=minute"
+      },
+      "expected": "5"
+    },
+    {
+      "name": "en-US semantic column bare minute field skeleton",
+      "kind": "time",
+      "value": "2026-05-01T04:05:06Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=minute;alignment=column"
+      },
+      "expected": "05"
+    },
+    {
+      "name": "en-US semantic numeric minute style overrides column skeleton",
+      "kind": "time",
+      "value": "2026-05-01T04:05:06Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=minute;alignment=column;minuteStyle=numeric"
+      },
+      "expected": "5"
+    },
+    {
+      "name": "en-US semantic column bare second field skeleton",
+      "kind": "time",
+      "value": "2026-05-01T04:05:06Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=second;alignment=column"
+      },
+      "expected": "06"
+    },
+    {
+      "name": "en-US semantic two digit second style skeleton",
+      "kind": "time",
+      "value": "2026-05-01T04:05:06Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=second;secondStyle=2Digit"
+      },
+      "expected": "06"
+    },
+    {
+      "name": "en-US semantic minute second fields skeleton",
+      "kind": "time",
+      "value": "2026-05-01T04:05:06Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=minute,second"
+      },
+      "expected": "05:06"
+    },
+    {
+      "name": "en-US semantic dayPeriod hour minute fields skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=dayPeriod,hour,minute"
+      },
+      "expected": "2:30 in the afternoon"
+    },
+    {
+      "name": "en-US semantic date hour minute fields skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,hour,minute;length=medium"
+      },
+      "expected": "May 21, 2026, 2:30 PM"
+    },
+    {
+      "name": "en-US semantic hour minute second fractionalSecond fields skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=hour,minute,second,fractionalSecond;fractionalSecond=3"
+      },
+      "expected": "2:30:15.789 PM"
+    },
+    {
+      "name": "en-US semantic fractionalSecondDigits aliases skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=hour,minute,second,fractionalSecondDigits;fractionalSecondDigits=3"
+      },
+      "expected": "2:30:15.789 PM"
+    },
+    {
+      "name": "fr-FR semantic hour minute second fractionalSecond fields skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=hour,minute,second,fractionalSecond;fractionalSecond=3"
+      },
+      "expected": "14:30:15,789"
+    },
+    {
+      "name": "en-US semantic second fractionalSecond fields skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=second,fractionalSecond;fractionalSecond=3"
+      },
+      "expected": "15.789"
+    },
+    {
+      "name": "en-US semantic minute second fractionalSecond fields skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=minute,second,fractionalSecond;fractionalSecond=3"
+      },
+      "expected": "30:15.789"
+    },
+    {
+      "name": "ar-EG semantic localized fractionalSecond fields skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "semantic:fields=hour,minute,second,fractionalSecond;fractionalSecond=3"
+      },
+      "expected": "٢:٣٠:١٥٫٧٨٩ م"
+    },
+    {
+      "name": "ja-JP semantic date hour minute second fractionalSecond fields skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,hour,minute,second,fractionalSecond;fractionalSecond=3"
+      },
+      "expected": "2026/05/21 14:30:15.789"
+    },
+    {
+      "name": "en-US semantic minute time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute"
+      },
+      "expected": "2:30 PM"
+    },
+    {
+      "name": "fr-FR semantic minute time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute"
+      },
+      "expected": "14:30"
+    },
+    {
+      "name": "de-DE semantic column minute time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T04:05:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute;alignment=column"
+      },
+      "expected": "04:05"
+    },
+    {
+      "name": "ja-JP semantic minute time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute"
+      },
+      "expected": "14:30"
+    },
+    {
+      "name": "ar-EG semantic minute time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute"
+      },
+      "expected": "٢:٣٠ م"
+    },
+    {
+      "name": "fr-FR semantic h12 minute time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute;hourCycle=h12"
+      },
+      "expected": "2:30 PM"
+    },
+    {
+      "name": "ja-JP semantic h12 minute time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute;hourCycle=h12"
+      },
+      "expected": "午後2:30"
+    },
+    {
+      "name": "ar-EG semantic h23 minute time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute;hourCycle=h23"
+      },
+      "expected": "١٤:٣٠"
+    },
+    {
+      "name": "en-US semantic h23 minute time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute;hourCycle=h23"
+      },
+      "expected": "14:30"
+    },
+    {
+      "name": "en-US semantic h11 minute time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T00:05:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute;hourCycle=h11"
+      },
+      "expected": "0:05 AM"
+    },
+    {
+      "name": "en-US semantic h24 minute time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T00:05:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute;hourCycle=h24"
+      },
+      "expected": "24:05"
+    },
+    {
+      "name": "fr-FR semantic clock12 minute time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute;hourCycle=clock12"
+      },
+      "expected": "2:30 PM"
+    },
+    {
+      "name": "en-US semantic clock24 minute time skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute;hourCycle=clock24"
+      },
+      "expected": "14:30"
+    },
+    {
+      "name": "en-US semantic column hour time skeleton",
+      "kind": "time",
+      "value": "2026-05-01T04:05:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=hour;alignment=column"
+      },
+      "expected": "04 AM"
+    },
+    {
+      "name": "en-US semantic column minute time skeleton",
+      "kind": "time",
+      "value": "2026-05-01T04:05:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute;alignment=column"
+      },
+      "expected": "04:05 AM"
+    },
+    {
+      "name": "en-US semantic minute optional omitted skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:00:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute-optional"
+      },
+      "expected": "2 PM"
+    },
+    {
+      "name": "en-US semantic camel-case minute optional skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:00:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=MinuteOptional"
+      },
+      "expected": "2 PM"
+    },
+    {
+      "name": "en-US semantic minute optional included skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute-optional"
+      },
+      "expected": "2:30 PM"
+    },
+    {
+      "name": "en-US semantic precision option alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;precision=minute"
+      },
+      "expected": "2:30 PM"
+    },
+    {
+      "name": "en-US semantic timeStyle short option alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timeStyle=short"
+      },
+      "expected": "2:30 PM"
+    },
+    {
+      "name": "en-US semantic timeStyle short locale h23 skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US-u-hc-h23",
+      "options": {
+        "skeleton": "semantic:fields=time;timeStyle=short"
+      },
+      "expected": "14:30"
+    },
+    {
+      "name": "en-US semantic timeStyle medium option alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timeStyle=medium"
+      },
+      "expected": "2:30:15 PM"
+    },
+    {
+      "name": "en-US semantic inferred timeStyle fields skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:timeStyle=short"
+      },
+      "expected": "2:30 PM"
+    },
+    {
+      "name": "en-US semantic timeStyle long option alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,zone;timeStyle=long",
+        "timeZone": "UTC"
+      },
+      "expected": "2:30:15 PM UTC"
+    },
+    {
+      "name": "en-US semantic timeStyle full option alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,zone;timeStyle=full",
+        "timeZone": "UTC"
+      },
+      "expected": "2:30:15 PM Coordinated Universal Time"
+    },
+    {
+      "name": "en-US semantic inferred long timeStyle zone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:timeStyle=long",
+        "timeZone": "UTC"
+      },
+      "expected": "2:30:15 PM UTC"
+    },
+    {
+      "name": "ja-JP semantic inferred full timeStyle zone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "semantic:timeStyle=full",
+        "timeZone": "UTC"
+      },
+      "expected": "14時30分15秒 協定世界時"
+    },
+    {
+      "name": "en-US semantic date timeStyle long option alias skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=date,time,zone;dateStyle=medium;timeStyle=long",
+        "timeZone": "UTC"
+      },
+      "expected": "May 21, 2026, 2:30:15 PM UTC"
+    },
+    {
+      "name": "en-US semantic inferred dateStyle timeStyle skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:dateStyle=medium;timeStyle=short"
+      },
+      "expected": "May 21, 2026, 2:30 PM"
+    },
+    {
+      "name": "en-US semantic inferred dateStyle timeStyle locale h23 skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US-u-hc-h23",
+      "options": {
+        "skeleton": "semantic:dateStyle=medium;timeStyle=short"
+      },
+      "expected": "May 21, 2026, 14:30"
+    },
+    {
+      "name": "en-US semantic inferred dateStyle long timeStyle zone skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:dateStyle=medium;timeStyle=long",
+        "timeZone": "UTC"
+      },
+      "expected": "May 21, 2026, 2:30:15 PM UTC"
+    },
+    {
+      "name": "en-US semantic inferred full dateStyle timeStyle skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:dateStyle=full;timeStyle=short"
+      },
+      "expected": "Thursday, May 21, 2026 at 2:30 PM"
+    },
+    {
+      "name": "en-US semantic inferred full dateStyle full timeStyle zone skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:dateStyle=full;timeStyle=full",
+        "timeZone": "UTC"
+      },
+      "expected": "Thursday, May 21, 2026 at 2:30:15 PM Coordinated Universal Time"
+    },
+    {
+      "name": "fr-FR semantic inferred full dateStyle full timeStyle zone skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:dateStyle=full;timeStyle=full",
+        "timeZone": "UTC"
+      },
+      "expected": "jeudi 21 mai 2026 à 14:30:15 temps universel coordonné"
+    },
+    {
+      "name": "de-DE semantic inferred medium dateStyle long timeStyle fixed offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:dateStyle=medium;timeStyle=long",
+        "timeZone": "-08:00"
+      },
+      "expected": "21.05.2026, 06:30:15 GMT-8"
+    },
+    {
+      "name": "fr-FR semantic inferred medium dateLength timeStyle skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:dateLength=medium;timeStyle=medium"
+      },
+      "expected": "21 mai 2026, 14:30:15"
+    },
+    {
+      "name": "fr-FR semantic inferred short dateStyle timeStyle skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:dateStyle=short;timeStyle=short"
+      },
+      "expected": "21/05/2026 14:30"
+    },
+    {
+      "name": "ja-JP semantic inferred full dateStyle timeStyle skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "semantic:dateStyle=full;timeStyle=short"
+      },
+      "expected": "2026年5月21日木曜日 14:30"
+    },
+    {
+      "name": "fr-FR semantic explicit short style datetime skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=dateTime;style=short;timePrecision=minute"
+      },
+      "expected": "21/05/2026 14:30"
+    },
+    {
+      "name": "en-US semantic zonedDateTime field alias skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=zonedDateTime;dateStyle=medium;timeStyle=long",
+        "timeZone": "UTC"
+      },
+      "expected": "May 21, 2026, 2:30:15 PM UTC"
+    },
+    {
+      "name": "en-US semantic hour12 false option alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute;hour12=false"
+      },
+      "expected": "14:30"
+    },
+    {
+      "name": "fr-FR semantic hour12 true option alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute;hour12=true"
+      },
+      "expected": "2:30 PM"
+    },
+    {
+      "name": "en-US semantic date time skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,time;length=medium;timePrecision=minute"
+      },
+      "expected": "May 21, 2026, 2:30 PM"
+    },
+    {
+      "name": "en-US semantic date alias time skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=date,time;length=medium;timePrecision=minute"
+      },
+      "expected": "May 21, 2026, 2:30 PM"
+    },
+    {
+      "name": "en-US semantic dateTime field alias skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=dateTime;length=medium;timePrecision=minute"
+      },
+      "expected": "May 21, 2026, 2:30 PM"
+    },
+    {
+      "name": "en-US semantic yearMonthDayTime field alias skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=yearMonthDayTime;length=medium;timePrecision=minute"
+      },
+      "expected": "May 21, 2026, 2:30 PM"
+    },
+    {
+      "name": "en-US semantic dateTimeWeekday field alias skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=dateTimeWeekday;length=long;timePrecision=minute"
+      },
+      "expected": "Thursday, May 21, 2026, 2:30 PM"
+    },
+    {
+      "name": "en-US semantic yearMonthDayTimeWeekday field alias skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=yearMonthDayTimeWeekday;length=long;timePrecision=minute"
+      },
+      "expected": "Thursday, May 21, 2026, 2:30 PM"
+    },
+    {
+      "name": "en-US semantic weekdayDateTime field alias skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=weekdayDateTime;length=full;timePrecision=minute"
+      },
+      "expected": "Thursday, May 21, 2026, 2:30 PM"
+    },
+    {
+      "name": "en-US semantic eraDateTime field alias skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraDateTime;length=medium;timePrecision=minute"
+      },
+      "expected": "May 21, 2026 AD, 2:30 PM"
+    },
+    {
+      "name": "en-US semantic eraYearMonthDayTime field alias skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraYearMonthDayTime;length=medium;timePrecision=minute"
+      },
+      "expected": "May 21, 2026 AD, 2:30 PM"
+    },
+    {
+      "name": "en-US semantic eraDateTimeWeekday field alias skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraDateTimeWeekday;length=long;timePrecision=minute"
+      },
+      "expected": "Thursday, May 21, 2026 Anno Domini, 2:30 PM"
+    },
+    {
+      "name": "fr-FR semantic weekdayEraDateTime field alias skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=weekdayEraDateTime;length=full;timePrecision=minute"
+      },
+      "expected": "jeudi 21 mai 2026 après Jésus-Christ, 14:30"
+    },
+    {
+      "name": "fr-FR semantic weekdayEraYearMonthDayTime field alias skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=weekdayEraYearMonthDayTime;length=full;timePrecision=minute"
+      },
+      "expected": "jeudi 21 mai 2026 après Jésus-Christ, 14:30"
+    },
+    {
+      "name": "en-US semantic dateTime option aliases skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=dateTime;dateStyle=short;precision=minute"
+      },
+      "expected": "5/21/26, 2:30 PM"
+    },
+    {
+      "name": "fr-FR semantic date time skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,time;length=medium;timePrecision=minute"
+      },
+      "expected": "21 mai 2026, 14:30"
+    },
+    {
+      "name": "de-DE semantic date time h23 skeleton",
+      "kind": "datetime",
+      "value": "2026-01-01T02:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,time;length=medium;timePrecision=minute;hourCycle=h23"
+      },
+      "expected": "01.01.2026, 02:30"
+    },
+    {
+      "name": "ja-JP semantic date time skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,time;length=medium;timePrecision=minute"
+      },
+      "expected": "2026/05/21 14:30"
+    },
+    {
+      "name": "ar-EG semantic date time skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,time;length=medium;timePrecision=minute"
+      },
+      "expected": "٢١‏/٠٥‏/٢٠٢٦، ٢:٣٠ م"
+    },
+    {
+      "name": "en-US semantic fractional second skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=fractional-second;fractionalSecond=3"
+      },
+      "expected": "2:30:15.789 PM"
+    },
+    {
+      "name": "en-US semantic camel-case fractional second skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=FractionalSecond;fractionalSecond=3"
+      },
+      "expected": "2:30:15.789 PM"
+    },
+    {
+      "name": "en-US semantic time zone field skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,zone;timePrecision=minute;zoneStyle=offset",
+        "timeZone": "UTC"
+      },
+      "expected": "2:30 PM GMT"
+    },
+    {
+      "name": "en-US semantic timeZoneName option alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,zone;timePrecision=minute;timeZoneName=offset",
+        "timeZone": "UTC"
+      },
+      "expected": "2:30 PM GMT"
+    },
+    {
+      "name": "en-US semantic timeZoneName shortOffset value alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,zone;timePrecision=minute;timeZoneName=shortOffset",
+        "timeZone": "UTC"
+      },
+      "expected": "2:30 PM GMT"
+    },
+    {
+      "name": "en-US semantic timeZoneName longOffset value alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,zone;timePrecision=minute;timeZoneName=longOffset",
+        "timeZone": "+05:30"
+      },
+      "expected": "8:00 PM GMT+5:30"
+    },
+    {
+      "name": "en-US semantic timeZoneStyle option alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,zone;timePrecision=minute;timeZoneStyle=offset",
+        "timeZone": "UTC"
+      },
+      "expected": "2:30 PM GMT"
+    },
+    {
+      "name": "en-US semantic zone option alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,zone;timePrecision=minute;zone=offset",
+        "timeZone": "UTC"
+      },
+      "expected": "2:30 PM GMT"
+    },
+    {
+      "name": "en-US semantic timeZone field alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,timeZone;timePrecision=minute;zoneStyle=offset",
+        "timeZone": "UTC"
+      },
+      "expected": "2:30 PM GMT"
+    },
+    {
+      "name": "en-US semantic timeZoneName field alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,timeZoneName;timePrecision=minute;zoneStyle=offset",
+        "timeZone": "UTC"
+      },
+      "expected": "2:30 PM GMT"
+    },
+    {
+      "name": "en-US semantic GMT timezone alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,zone;timePrecision=minute;zoneStyle=offset",
+        "timeZone": "GMT"
+      },
+      "expected": "2:30 PM GMT"
+    },
+    {
+      "name": "en-US semantic auto zone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=zone;zoneStyle=auto",
+        "timeZone": "UTC"
+      },
+      "expected": "GMT"
+    },
+    {
+      "name": "en-US semantic generic fixed-offset zone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=zone;zoneStyle=generic",
+        "timeZone": "+02:00"
+      },
+      "expected": "GMT+02:00"
+    },
+    {
+      "name": "en-US semantic timeZoneName shortGeneric value alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,zone;timePrecision=minute;timeZoneName=shortGeneric",
+        "timeZone": "+02:00"
+      },
+      "expected": "4:30 PM GMT+2"
+    },
+    {
+      "name": "en-US semantic timeZoneName longGeneric value alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,zone;timePrecision=minute;timeZoneName=longGeneric",
+        "timeZone": "+02:00"
+      },
+      "expected": "4:30 PM GMT+2"
+    },
+    {
+      "name": "fr-FR semantic specific UTC zone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=zone;zoneStyle=specific",
+        "timeZone": "UTC"
+      },
+      "expected": "temps universel coordonné"
+    },
+    {
+      "name": "fr-FR semantic timeZoneName long value alias skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=zone;timeZoneName=long",
+        "timeZone": "UTC"
+      },
+      "expected": "temps universel coordonné"
+    },
+    {
+      "name": "ja-JP semantic location UTC zone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "semantic:fields=zone;zoneStyle=location",
+        "timeZone": "UTC"
+      },
+      "expected": "GMT"
+    },
+    {
+      "name": "en-US semantic time generic fixed-offset zone skeleton",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,zone;timePrecision=minute;zoneStyle=generic",
+        "timeZone": "+02:00"
+      },
+      "expected": "4:30 PM GMT+2"
+    },
+    {
+      "name": "en-US semantic date time Etc/GMT minus offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,time,zone;length=medium;timePrecision=minute;zoneStyle=offset;hourCycle=h23",
+        "timeZone": "Etc/GMT-2"
+      },
+      "expected": "May 21, 2026, 16:30 GMT+2"
+    },
+    {
+      "name": "en-US semantic dateTimeZone field alias offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=dateTimeZone;length=medium;timePrecision=minute;zoneStyle=offset;hourCycle=h23",
+        "timeZone": "Etc/GMT-2"
+      },
+      "expected": "May 21, 2026, 16:30 GMT+2"
+    },
+    {
+      "name": "en-US semantic yearMonthDayTimeZone field alias offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=yearMonthDayTimeZone;length=medium;timePrecision=minute;zoneStyle=offset;hourCycle=h23",
+        "timeZone": "Etc/GMT-2"
+      },
+      "expected": "May 21, 2026, 16:30 GMT+2"
+    },
+    {
+      "name": "en-US semantic zonedYearMonthDayTime field alias offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=zonedYearMonthDayTime;length=medium;timePrecision=minute;zoneStyle=offset;hourCycle=h23",
+        "timeZone": "Etc/GMT-2"
+      },
+      "expected": "May 21, 2026, 16:30 GMT+2"
+    },
+    {
+      "name": "en-US semantic date time Etc/GMT plus offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,time,zone;length=medium;timePrecision=minute;zoneStyle=offset;hourCycle=h23",
+        "timeZone": "Etc/GMT+8"
+      },
+      "expected": "May 21, 2026, 06:30 GMT-8"
+    },
+    {
+      "name": "en-US semantic date zone field skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=month,day,zone;length=medium;zoneStyle=offset",
+        "timeZone": "UTC"
+      },
+      "expected": "May 21, GMT"
+    },
+    {
+      "name": "en-US semantic date time offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,time,zone;length=medium;timePrecision=minute;zoneStyle=offset;hourCycle=h23",
+        "timeZone": "+02:00"
+      },
+      "expected": "May 21, 2026, 16:30 GMT+2"
+    },
+    {
+      "name": "en-US semantic eraDateTimeZone field alias offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraDateTimeZone;length=medium;timePrecision=minute;zoneStyle=offset",
+        "hourCycle": "h23",
+        "timeZone": "+02:00"
+      },
+      "expected": "May 21, 2026 AD, 16:30 GMT+2"
+    },
+    {
+      "name": "en-US semantic eraYearMonthDayTimeZone field alias offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraYearMonthDayTimeZone;length=medium;timePrecision=minute;zoneStyle=offset",
+        "hourCycle": "h23",
+        "timeZone": "+02:00"
+      },
+      "expected": "May 21, 2026 AD, 16:30 GMT+2"
+    },
+    {
+      "name": "en-US semantic dateTimeWeekdayZone field alias offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=dateTimeWeekdayZone;length=long;timePrecision=minute;zoneStyle=offset",
+        "hourCycle": "h23",
+        "timeZone": "+02:00"
+      },
+      "expected": "Thursday, May 21, 2026, 16:30 GMT+2"
+    },
+    {
+      "name": "en-US semantic yearMonthDayTimeWeekdayZone field alias offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=yearMonthDayTimeWeekdayZone;length=long;timePrecision=minute;zoneStyle=offset",
+        "hourCycle": "h23",
+        "timeZone": "+02:00"
+      },
+      "expected": "Thursday, May 21, 2026, 16:30 GMT+2"
+    },
+    {
+      "name": "en-US semantic zonedWeekdayDateTime field alias offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=zonedWeekdayDateTime;length=long;timePrecision=minute;zoneStyle=offset",
+        "hourCycle": "h23",
+        "timeZone": "+02:00"
+      },
+      "expected": "Thursday, May 21, 2026, 16:30 GMT+2"
+    },
+    {
+      "name": "en-US semantic eraDateTimeWeekdayZone field alias offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraDateTimeWeekdayZone;length=long;timePrecision=minute;zoneStyle=offset",
+        "hourCycle": "h23",
+        "timeZone": "+02:00"
+      },
+      "expected": "Thursday, May 21, 2026 Anno Domini, 16:30 GMT+2"
+    },
+    {
+      "name": "fr-FR semantic zonedWeekdayEraDateTime field alias offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=zonedWeekdayEraDateTime;length=full;timePrecision=minute;zoneStyle=offset",
+        "hourCycle": "h23",
+        "timeZone": "+02:00"
+      },
+      "expected": "jeudi 21 mai 2026 après Jésus-Christ, 16:30 UTC+2"
+    },
+    {
+      "name": "fr-FR semantic zonedWeekdayEraYearMonthDayTime field alias offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=zonedWeekdayEraYearMonthDayTime;length=full;timePrecision=minute;zoneStyle=offset",
+        "hourCycle": "h23",
+        "timeZone": "+02:00"
+      },
+      "expected": "jeudi 21 mai 2026 après Jésus-Christ, 16:30 UTC+2"
+    },
+    {
+      "name": "fr-FR semantic date time offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,time,zone;length=medium;timePrecision=minute;zoneStyle=offset;hourCycle=h23",
+        "timeZone": "+02:00"
+      },
+      "expected": "21 mai 2026, 16:30 UTC+2"
+    },
+    {
+      "name": "de-DE semantic date time offset skeleton",
+      "kind": "datetime",
+      "value": "2026-01-01T02:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,time,zone;length=medium;timePrecision=minute;zoneStyle=offset;hourCycle=h23",
+        "timeZone": "-08:00"
+      },
+      "expected": "31.12.2025, 18:30 GMT-8"
+    },
+    {
+      "name": "ja-JP semantic date time offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,time,zone;length=medium;timePrecision=minute;zoneStyle=offset;hourCycle=h23",
+        "timeZone": "+05:30"
+      },
+      "expected": "2026/05/21 20:00 GMT+5:30"
+    },
+    {
+      "name": "ar-EG semantic date time offset skeleton",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day,time,zone;length=medium;timePrecision=minute;zoneStyle=offset;hourCycle=h23",
+        "timeZone": "+05:30"
+      },
+      "expected": "٢١‏/٠٥‏/٢٠٢٦، ٢٠:٠٠ غرينتش+٥:٣٠"
+    },
+    {
+      "name": "fr-FR long date short time style join",
+      "kind": "datetime",
+      "value": "2026-07-01T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "dateStyle": "long",
+        "timeStyle": "short",
+        "timeZone": "UTC"
+      },
+      "expected": "1 juillet 2026 à 14:30"
+    },
+    {
+      "name": "de-DE full date medium time style join",
+      "kind": "datetime",
+      "value": "2026-07-01T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "dateStyle": "full",
+        "timeStyle": "medium",
+        "timeZone": "UTC"
+      },
+      "expected": "Mittwoch, 1. Juli 2026 um 14:30:15"
+    },
+    {
+      "name": "ar-EG long date short time style join",
+      "kind": "datetime",
+      "value": "2026-07-01T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "dateStyle": "long",
+        "timeStyle": "short",
+        "timeZone": "UTC"
+      },
+      "expected": "١ يوليو ٢٠٢٦ في ٢:٣٠ م"
+    },
+    {
+      "name": "fr-FR semantic long date short time style join",
+      "kind": "datetime",
+      "value": "2026-07-01T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=date,time;length=long;timeStyle=short",
+        "timeZone": "UTC"
+      },
+      "expected": "1 juillet 2026 à 14:30"
+    },
+    {
+      "name": "de-DE semantic full date medium time style join",
+      "kind": "datetime",
+      "value": "2026-07-01T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:fields=date,time,weekday;length=full;timeStyle=medium",
+        "timeZone": "UTC"
+      },
+      "expected": "Mittwoch, 1. Juli 2026 um 14:30:15"
+    }
+  ],
+  "numericTimestampCases": [
+    {
+      "name": "accepts portable minimum numeric timestamp",
+      "kind": "datetime",
+      "value": -62135596800000,
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium",
+        "timeStyle": "medium",
+        "timeZone": "UTC"
+      },
+      "expected": "Jan 1, 1, 12:00:00 AM"
+    },
+    {
+      "name": "accepts portable maximum numeric timestamp",
+      "kind": "datetime",
+      "value": 253402300799999,
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium",
+        "timeStyle": "medium",
+        "timeZone": "UTC"
+      },
+      "expected": "Dec 31, 9999, 11:59:59 PM"
+    }
+  ],
+  "intlReferenceCases": [
+    {
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium"
+      }
+    },
+    {
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium",
+        "calendar": "gregory"
+      }
+    },
+    {
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US-u-ca-gregory",
+      "options": {
+        "dateStyle": "medium"
+      }
+    },
+    {
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US-u-ca-buddhist",
+      "options": {
+        "dateStyle": "medium",
+        "calendar": "gregory"
+      }
+    },
+    {
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "short"
+      }
+    },
+    {
+      "name": "en-US short time explicit h23 style reference",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "timeStyle": "short",
+        "hourCycle": "h23"
+      }
+    },
+    {
+      "name": "en-US medium date short time explicit h23 style reference",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium",
+        "timeStyle": "short",
+        "hourCycle": "h23"
+      }
+    },
+    {
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US-u-nu-arab",
+      "options": {
+        "dateStyle": "medium"
+      }
+    },
+    {
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG-u-nu-latn",
+      "options": {
+        "dateStyle": "medium"
+      }
+    },
+    {
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "dateStyle": "long"
+      }
+    },
+    {
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "timeStyle": "short"
+      }
+    },
+    {
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "dateStyle": "short",
+        "timeStyle": "short"
+      }
+    },
+    {
+      "name": "fr-FR fixed offset date rollover reference",
+      "kind": "datetime",
+      "value": "2026-05-21T23:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "dateStyle": "short",
+        "timeStyle": "short",
+        "timeZone": "+05:30"
+      }
+    },
+    {
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "dateStyle": "full"
+      }
+    },
+    {
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "timeStyle": "medium"
+      }
+    },
+    {
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "dateStyle": "medium",
+        "timeStyle": "short"
+      }
+    },
+    {
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "dateStyle": "full"
+      }
+    },
+    {
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "dateStyle": "short",
+        "timeStyle": "short"
+      }
+    },
+    {
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "dateStyle": "full"
+      }
+    },
+    {
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "timeStyle": "medium"
+      }
+    },
+    {
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ar-EG",
+      "options": {
+        "dateStyle": "medium",
+        "timeStyle": "short"
+      }
+    }
+  ],
+  "semanticStyleReferenceCases": [
+    {
+      "name": "en-US semantic inferred medium date style reference",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:dateStyle=medium"
+      },
+      "referenceOptions": {
+        "dateStyle": "medium"
+      }
+    },
+    {
+      "name": "de-DE semantic inferred full date style reference",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:dateStyle=full"
+      },
+      "referenceOptions": {
+        "dateStyle": "full"
+      }
+    },
+    {
+      "name": "fr-FR semantic inferred short time style reference",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:timeStyle=short"
+      },
+      "referenceOptions": {
+        "timeStyle": "short"
+      }
+    },
+    {
+      "name": "de-DE semantic inferred medium date short time style reference",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:dateStyle=medium;timeStyle=short"
+      },
+      "referenceOptions": {
+        "dateStyle": "medium",
+        "timeStyle": "short"
+      }
+    },
+    {
+      "name": "de-DE semantic inferred medium time style reference",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:timeStyle=medium"
+      },
+      "referenceOptions": {
+        "timeStyle": "medium"
+      }
+    },
+    {
+      "name": "en-US semantic inferred short date style reference",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:dateStyle=short"
+      },
+      "referenceOptions": {
+        "dateStyle": "short"
+      }
+    },
+    {
+      "name": "en-US semantic inferred full date style reference",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:dateStyle=full"
+      },
+      "referenceOptions": {
+        "dateStyle": "full"
+      }
+    },
+    {
+      "name": "fr-FR semantic inferred long date style reference",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:dateStyle=long"
+      },
+      "referenceOptions": {
+        "dateStyle": "long"
+      }
+    },
+    {
+      "name": "fr-FR semantic inferred medium time style reference",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:timeStyle=medium"
+      },
+      "referenceOptions": {
+        "timeStyle": "medium"
+      }
+    },
+    {
+      "name": "de-DE semantic inferred short time style reference",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:timeStyle=short"
+      },
+      "referenceOptions": {
+        "timeStyle": "short"
+      }
+    },
+    {
+      "name": "ja-JP semantic inferred medium time style reference",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "ja-JP",
+      "options": {
+        "skeleton": "semantic:timeStyle=medium"
+      },
+      "referenceOptions": {
+        "timeStyle": "medium"
+      }
+    },
+    {
+      "name": "fr-FR semantic inferred short date medium time style reference",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:dateStyle=short;timeStyle=medium"
+      },
+      "referenceOptions": {
+        "dateStyle": "short",
+        "timeStyle": "medium"
+      }
+    },
+    {
+      "name": "de-DE semantic inferred short date medium time style reference",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:dateStyle=short;timeStyle=medium"
+      },
+      "referenceOptions": {
+        "dateStyle": "short",
+        "timeStyle": "medium"
+      }
+    },
+    {
+      "name": "fr-FR semantic inferred long date short time style join reference",
+      "kind": "datetime",
+      "value": "2026-07-01T14:30:15Z",
+      "locale": "fr-FR",
+      "options": {
+        "skeleton": "semantic:fields=date,time;length=long;timeStyle=short"
+      },
+      "referenceOptions": {
+        "dateStyle": "long",
+        "timeStyle": "short"
+      }
+    },
+    {
+      "name": "de-DE semantic inferred full date medium time style join reference",
+      "kind": "datetime",
+      "value": "2026-07-01T14:30:15Z",
+      "locale": "de-DE",
+      "options": {
+        "skeleton": "semantic:fields=date,time,weekday;length=full;timeStyle=medium"
+      },
+      "referenceOptions": {
+        "dateStyle": "full",
+        "timeStyle": "medium"
+      }
+    }
+  ],
+  "registryFormatCases": [
+    {
+      "name": "date-time inherited source local date",
+      "source": ".local $d = {|2006-01-02| :datetime dateLength=long timePrecision=second}\n{{{$d :date}}}",
+      "locale": "en-US",
+      "arguments": {},
+      "expected": "Jan 2, 2006"
+    },
+    {
+      "name": "registry timeStyle explicit h23",
+      "source": "{{{|2026-05-21T14:30:15Z| :time timeStyle=short hourCycle=h23 timeZone=UTC}}}",
+      "locale": "en-US",
+      "arguments": {},
+      "expected": "14:30"
+    },
+    {
+      "name": "registry ja-JP full timeStyle explicit h23",
+      "source": "{{{|2026-05-21T14:30:15Z| :time timeStyle=full timeZone=+02:00 hourCycle=h23}}}",
+      "locale": "ja-JP",
+      "arguments": {},
+      "expected": "16時30分15秒 GMT+02:00"
+    },
+    {
+      "name": "registry ja-JP full timeStyle locale h23",
+      "source": "{{{|2026-05-21T14:30:15Z| :time timeStyle=full timeZone=+02:00}}}",
+      "locale": "ja-JP-u-hc-h23",
+      "arguments": {},
+      "expected": "16:30:15 GMT+02:00"
+    }
+  ],
+  "registryErrorCases": [
+    {
+      "name": "rejects registry dateStyle second",
+      "source": "{{{|2026-01-02| :date dateStyle=second}}}",
+      "locale": "en-US",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
+    },
+    {
+      "name": "rejects registry timeStyle second",
+      "source": "{{{|2026-01-02T03:04:05Z| :datetime timeStyle=second timeZone=UTC}}}",
+      "locale": "en-US",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
+    },
+    {
+      "name": "rejects registry shared style second",
+      "source": "{{{|2026-01-02T03:04:05Z| :datetime style=second timeZone=UTC}}}",
+      "locale": "en-US",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
+    },
+    {
+      "name": "rejects registry oversized style option",
+      "source": "{{{|2026-01-02T03:04:05Z| :datetime style=|aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa| timeZone=UTC}}}",
+      "locale": "en-US",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
+    },
+    {
+      "name": "rejects registry oversized dateLength option",
+      "source": "{{{|2026-01-02T03:04:05Z| :datetime dateLength=|aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa| timeStyle=medium timeZone=UTC}}}",
+      "locale": "en-US",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
+    },
+    {
+      "name": "rejects registry oversized timePrecision option",
+      "source": "{{{|2026-01-02T03:04:05Z| :datetime dateStyle=medium timePrecision=|aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa| timeZone=UTC}}}",
+      "locale": "en-US",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
+    },
+    {
+      "name": "rejects registry empty style literal",
+      "source": "{{{|2026-01-02| :date style=||}}}",
+      "locale": "en-US",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
+    },
+    {
+      "name": "rejects registry empty calendar literal",
+      "source": "{{{|2026-01-02| :date calendar=||}}}",
+      "locale": "en-US",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
+    },
+    {
+      "name": "rejects registry empty hourCycle literal",
+      "source": "{{{|2026-01-02T03:04:05Z| :time hourCycle=|| timeZone=UTC}}}",
+      "locale": "en-US",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
+    },
+    {
+      "name": "rejects registry empty timeZone literal",
+      "source": "{{{|2026-01-02T03:04:05Z| :time timeZone=||}}}",
+      "locale": "en-US",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
+    },
+    {
+      "name": "rejects registry empty skeleton literal",
+      "source": "{{{|2026-01-02T03:04:05Z| :datetime skeleton=|| timeZone=UTC}}}",
+      "locale": "en-US",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
+    }
+  ],
+  "errorCases": [
+    {
+      "name": "rejects invalid date",
+      "kind": "datetime",
+      "value": "not-a-date",
+      "locale": "en-US",
+      "options": {},
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "rejects oversized operand text",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000Z",
+      "locale": "en-US",
+      "options": {},
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "rejects dateStyle second",
+      "kind": "date",
+      "value": "2026-01-02",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "second"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects timeStyle second",
+      "kind": "datetime",
+      "value": "2026-01-02T03:04:05Z",
+      "locale": "en-US",
+      "options": {
+        "timeStyle": "second",
+        "timeZone": "UTC"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects shared style second",
+      "kind": "datetime",
+      "value": "2026-01-02T03:04:05Z",
+      "locale": "en-US",
+      "options": {
+        "style": "second",
+        "timeZone": "UTC"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects oversized dateStyle option",
+      "kind": "date",
+      "value": "2026-01-02",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects oversized timeStyle option",
+      "kind": "datetime",
+      "value": "2026-01-02T03:04:05Z",
+      "locale": "en-US",
+      "options": {
+        "timeStyle": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "timeZone": "UTC"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects oversized shared style option",
+      "kind": "datetime",
+      "value": "2026-01-02T03:04:05Z",
+      "locale": "en-US",
+      "options": {
+        "style": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "timeZone": "UTC"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects oversized length option",
+      "kind": "date",
+      "value": "2026-01-02",
+      "locale": "en-US",
+      "options": {
+        "length": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects oversized precision option",
+      "kind": "time",
+      "value": "2026-01-02T03:04:05Z",
+      "locale": "en-US",
+      "options": {
+        "precision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "timeZone": "UTC"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects impossible calendar date",
+      "kind": "date",
+      "value": "2026-02-30",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium"
+      },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "rejects non-leap-year February 29",
+      "kind": "date",
+      "value": "2026-02-29",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium"
+      },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "rejects invalid operand offset minutes",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15+05:99",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium",
+        "timeStyle": "medium"
+      },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "rejects invalid operand offset hours",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15+25:00",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium",
+        "timeStyle": "medium"
+      },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "rejects out-of-range operand offset boundary",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15+18:01",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium",
+        "timeStyle": "medium"
+      },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "rejects huge timestamp",
+      "kind": "datetime",
+      "value": 1e20,
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium"
+      },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "rejects timestamp above portable maximum",
+      "kind": "datetime",
+      "value": 253402300800000,
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium"
+      },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "rejects timestamp below portable minimum",
+      "kind": "datetime",
+      "value": -62135596800001,
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium"
+      },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "rejects oversized skeleton field width",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "dddddddddddddddddddddddddddddddddddddddd"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects oversized skeleton length",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "yMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyMyM"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects oversized locale option",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "options": {
+        "dateStyle": "medium"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects oversized timeZone option",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "timeZone": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects oversized calendar option",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "calendar": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects oversized hourCycle option",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "hourCycle": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects named timezone",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "timeZone": "America/Los_Angeles"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects out-of-range fixed offset timezone",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "timeZone": "+19:00"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects out-of-range Etc/GMT timezone",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "timeZone": "Etc/GMT+15"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects malformed fixed offset timezone",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "timeZone": "+5:3"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects unsupported calendar",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "calendar": "buddhist"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects unsupported locale extension calendar",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US-u-ca-buddhist",
+      "options": {
+        "dateStyle": "medium"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects unsupported locale extension numbering system",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US-u-nu-mymr",
+      "options": {
+        "dateStyle": "medium"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects unknown style",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "timeStyle": "compact"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects invalid hour cycle",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "jm",
+        "hourCycle": "h13"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects invalid locale extension hour cycle",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US-u-hc-h13",
+      "options": {
+        "skeleton": "jm"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects cyclic year skeleton",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "U"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects skeleton punctuation",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "y-M"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton length without inferred fields",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:length=medium"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton invalid field set",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,day;length=medium"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton duplicate canonical field alias",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=day,dayOfMonth"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton duplicate quarter field alias",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=quarter,quarterOfYear"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton duplicate year field alias",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,yearOfEra"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton duplicate time component field alias",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=hour,hourOfDay"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton date alias duplicate field",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=date,dayOfMonth"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton dateWeekday alias duplicate field",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=dateWeekday,weekday"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton eraDate alias duplicate field",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraDate,era"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton eraDateWeekday alias duplicate field",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraDateWeekday,weekday"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton yearMonth alias duplicate field",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=yearMonth,year"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton eraYearMonth alias duplicate field",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraYearMonth,month"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton yearQuarter alias duplicate field",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=yearQuarter,quarterOfYear"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton eraYearQuarter alias duplicate field",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraYearQuarter,quarterOfYear"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton yearWeek alias duplicate field",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=yearWeek,weekOfYear"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton eraYearWeek alias duplicate field",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraYearWeek,weekOfYear"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton monthWeek alias duplicate field",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=monthWeek,weekOfMonth"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton yearMonthWeek alias duplicate field",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=yearMonthWeek,month"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton eraYearMonthWeek alias duplicate field",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraYearMonthWeek,era"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton monthDay alias duplicate field",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=monthDay,day"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton dateTime alias duplicate field",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=dateTime,time;length=medium;timePrecision=minute"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton yearMonthDayTime alias duplicate field",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=yearMonthDayTime,time;length=medium;timePrecision=minute"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton dateTimeWeekday alias duplicate field",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=dateTimeWeekday,weekday;length=medium;timePrecision=minute"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton eraDateTimeWeekday alias duplicate field",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraDateTimeWeekday,weekday;length=medium;timePrecision=minute"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton eraYearMonthDayTime alias duplicate field",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraYearMonthDayTime,era;length=medium;timePrecision=minute"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton zonedDateTime alias duplicate field",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=zonedDateTime,zone;length=medium;timePrecision=minute"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton yearMonthDayTimeZone alias duplicate field",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=yearMonthDayTimeZone,zone;length=medium;timePrecision=minute"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton zonedYearMonthDayTime alias duplicate field",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=zonedYearMonthDayTime,zone;length=medium;timePrecision=minute"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton zonedEraDateTime alias duplicate field",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=zonedEraDateTime,zone;length=medium;timePrecision=minute"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton weekdayDateTimeZone alias duplicate field",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=weekdayDateTimeZone,zone;length=medium;timePrecision=minute"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton eraDateTimeWeekdayZone alias duplicate field",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraDateTimeWeekdayZone,zone;length=medium;timePrecision=minute"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton eraYearMonthDayTimeWeekdayZone alias duplicate field",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=eraYearMonthDayTimeWeekdayZone,weekday;length=medium;timePrecision=minute"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton duplicate dateStyle alias option",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=date;length=medium;dateStyle=short"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton duplicate style alias option",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=date;length=medium;style=short"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton duplicate precision alias option",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute;precision=second"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton duplicate timeZoneName alias option",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,zone;zoneStyle=offset;timeZoneName=generic",
+        "timeZone": "UTC"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton duplicate zone alias option",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=zone;zoneStyle=offset;zone=generic",
+        "timeZone": "UTC"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton duplicate field-style alias option",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year;yearStyle=2-digit;year=2-digit"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton duplicate hour12 alias option",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;hourCycle=h12;hour12=false"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton duplicate timeStyle alias option",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=minute;timeStyle=medium"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton long timeStyle alias option without zone",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timeStyle=long"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton long timeStyle with explicit zoneStyle",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,zone;timeStyle=long;zoneStyle=specific"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton calendar period with time",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,time;length=medium"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton hour second fields",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=hour,second"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton time with explicit hour field",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,hour"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton minute hourCycle without hour",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=minute;hourCycle=h23"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton dayPeriod minute without hour",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=dayPeriod,minute"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton explicit hour with timePrecision",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=hour;timePrecision=minute"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton fractionalSecond field without second",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=fractionalSecond;fractionalSecond=3"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton explicit fractionalSecond without width",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=second,fractionalSecond"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton explicit fractionalSecond over max width",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=second,fractionalSecond;fractionalSecond=10"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton duplicate fractionalSecond option alias",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=second,fractionalSecond;fractionalSecond=3;fractionalSecondDigits=3"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton fractionalSecond option without field",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=hour,minute,second;fractionalSecond=3"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton invalid hour style",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=hour;hourStyle=long"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton minute style without minute",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=hour;minuteStyle=2-digit"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton second style without second",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=minute;secondStyle=2-digit"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton time with explicit fractionalSecond field",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,fractionalSecond;fractionalSecond=3"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton year style without year",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=month,day;yearStyle=full"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton invalid year style",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year;yearStyle=compact"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton invalid era style",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=era;eraStyle=compact"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton era style without era",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year;eraStyle=long"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton invalid month style",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=month;monthStyle=compact"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton month style without month",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year;monthStyle=long"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton invalid day style",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=day;dayStyle=long"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton day style without day",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=month;dayStyle=2-digit"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton time precision without time",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day;timePrecision=minute"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton zone style without zone",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;zoneStyle=offset"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton zone alias without zone",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;zone=offset"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton dayPeriod zone without time",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=dayPeriod,zone;zoneStyle=offset"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton weekOfYear without year",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=weekOfYear"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton weekOfMonth without month",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=weekOfMonth"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton dayOfYear with time",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=dayOfYear,time"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton millisecondsInDay with time",
+      "kind": "time",
+      "value": "2026-05-21T14:05:06.789Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time,millisecondsInDay"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton alignment without date or time",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=zone;alignment=column"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton invalid length",
+      "kind": "date",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=year,month,day;length=wide"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton fractional second without width",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=fractional-second"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton fractional second over max width",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=fractional-second;fractionalSecond=10"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton invalid hour cycle",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;hourCycle=h13"
+      },
+      "expectedError": "bad-option"
+    },
+    {
+      "name": "rejects semantic skeleton fractional second without precision",
+      "kind": "time",
+      "value": "2026-05-21T14:30:15Z",
+      "locale": "en-US",
+      "options": {
+        "skeleton": "semantic:fields=time;timePrecision=second;fractionalSecond=3"
+      },
+      "expectedError": "bad-option"
+    }
+  ]
+}

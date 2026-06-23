@@ -1,0 +1,56 @@
+{
+  "name": "failed-input-option-variable-unavailable",
+  "source": ".input {$d :number minimumFractionDigits=-1}\n.local $y = {1 :number minimumFractionDigits=$d}\n{{{$y}}}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "d",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "d" },
+          "function": {
+            "type": "function",
+            "name": "number",
+            "options": {
+              "minimumFractionDigits": { "type": "literal", "value": "-1" }
+            }
+          }
+        }
+      },
+      {
+        "type": "local",
+        "name": "y",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "1" },
+          "function": {
+            "type": "function",
+            "name": "number",
+            "options": {
+              "minimumFractionDigits": { "type": "variable", "name": "d" }
+            }
+          }
+        }
+      }
+    ],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "y" }
+      }
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": { "d": 2 },
+      "expected": "{$y}",
+      "expectedErrors": [
+        { "code": "bad-option" },
+        { "code": "missing-argument" }
+      ]
+    }
+  ]
+}

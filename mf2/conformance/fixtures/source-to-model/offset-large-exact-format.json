@@ -1,0 +1,41 @@
+{
+  "name": "offset-large-exact-format",
+  "source": "Large: {9007199254740991 :offset add=2}; Huge: {9223372036854775807 :offset add=1}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Large: ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "9007199254740991" },
+        "function": {
+          "type": "function",
+          "name": "offset",
+          "options": {
+            "add": { "type": "literal", "value": "2" }
+          }
+        }
+      },
+      "; Huge: ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "9223372036854775807" },
+        "function": {
+          "type": "function",
+          "name": "offset",
+          "options": {
+            "add": { "type": "literal", "value": "1" }
+          }
+        }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "Large: 9007199254740993; Huge: 9223372036854775808"
+    }
+  ]
+}

@@ -12,6 +12,10 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_PATH = ROOT / "conformance" / "fixtures" / "functions" / "relative-time-duration-v0.json"
 DATA_PATH = ROOT / "cldr" / "generated" / "relative-time" / "all" / "relative_time.json"
 
+MAX_RELATIVE_TIME_QUANTITY = 1_000_000_000
+MAX_LOCALE_LENGTH = 256
+MAX_OPTION_LENGTH = 256
+MAX_OPERAND_LENGTH = 256
 UNIT_SECONDS = {
     "second": 1,
     "minute": 60,
@@ -47,6 +51,7 @@ POLICIES = {
     ],
 }
 OPTION_RE = re.compile(r"\b(style|numeric|policy|unit)=([A-Za-z]+)\b")
+NUMERIC_STRING_RE = re.compile(r"-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?")
 
 
 def main() -> int:
@@ -76,7 +81,7 @@ def validate_case(data: dict[str, Any], defaults: dict[str, str], case: dict[str
         actual = relative(data, case["locale"], options["style"], selected_unit, "0")
         assert_equal(case, "relativeOffset", resolved.get("relativeOffset"), "0")
     elif options["numeric"] == "auto":
-        offset = relative_offset(seconds, quantity)
+        offset = relative_offset(seconds, selected_unit, quantity)
         actual = relative(data, case["locale"], options["style"], selected_unit, offset)
         if actual is None:
             actual = numeric_output(data, case, options, seconds, selected_unit, quantity)
@@ -96,13 +101,21 @@ def validate_error_case(data: dict[str, Any], case: dict[str, Any]) -> None:
     expected_code = case["expectedError"]["code"]
     actual_code = None
     try:
-        numeric(case["arguments"]["delta"])
-        if options["style"] not in {"long", "short", "narrow"}:
+        seconds = numeric(case["arguments"]["delta"])
+        if any(len(options[name]) > MAX_OPTION_LENGTH for name in ("style", "numeric", "policy", "unit")):
+            actual_code = "bad-option"
+        elif options["style"] not in {"long", "short", "narrow"}:
+            actual_code = "bad-option"
+        elif options["numeric"] not in {"always", "auto"}:
             actual_code = "bad-option"
         elif options["policy"] not in POLICIES:
             actual_code = "bad-option"
         elif options["unit"] != "auto" and options["unit"] not in UNIT_SECONDS:
             actual_code = "bad-option"
+        elif len(case["locale"]) > MAX_LOCALE_LENGTH:
+            actual_code = "bad-option"
+        elif quantity_for(seconds, select_unit(seconds, options)) > MAX_RELATIVE_TIME_QUANTITY:
+            actual_code = "bad-operand"
         elif case["locale"] not in data["localeMap"]:
             actual_code = "missing-locale-data"
     except ValueError:
@@ -118,7 +131,7 @@ def numeric_output(
     unit: str,
     quantity: int,
 ) -> str:
-    direction = "past" if seconds < 0 else "future"
+    direction = "past" if is_negative_relative_time(seconds) else "future"
     category = case["resolved"]["pluralCategory"]
     pattern = pattern_for(data, case["locale"], options["style"], unit, direction, category)
     assert_equal(case, "pattern", case["resolved"]["pattern"], pattern)
@@ -154,12 +167,16 @@ def use_relative_zero(options: dict[str, str], seconds: float) -> bool:
     return options["policy"] == "chat" and options["numeric"] == "auto" and abs(seconds) < 45
 
 
-def relative_offset(seconds: float, quantity: int) -> str:
+def relative_offset(seconds: float, unit: str, quantity: int) -> str:
     if seconds == 0:
         return "0"
-    if quantity != 1:
+    if abs(seconds) != quantity * UNIT_SECONDS[unit]:
         return ""
-    return "-1" if seconds < 0 else "1"
+    return f"-{quantity}" if is_negative_relative_time(seconds) else str(quantity)
+
+
+def is_negative_relative_time(seconds: float) -> bool:
+    return math.copysign(1.0, seconds) < 0
 
 
 def pattern_for(
@@ -196,7 +213,12 @@ def numeric(value: Any) -> float:
     if isinstance(value, (int, float)):
         result = float(value)
     elif isinstance(value, str):
-        result = float(value)
+        text = value.strip()
+        if len(text) > MAX_OPERAND_LENGTH:
+            raise ValueError(f"unsupported numeric operand {value!r}")
+        if not NUMERIC_STRING_RE.fullmatch(text):
+            raise ValueError(f"unsupported numeric operand {value!r}")
+        result = float(text)
     else:
         raise ValueError(f"unsupported numeric operand {value!r}")
     if not math.isfinite(result):

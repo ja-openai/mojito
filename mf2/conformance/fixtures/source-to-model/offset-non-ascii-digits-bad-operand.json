@@ -1,0 +1,30 @@
+{
+  "name": "offset-non-ascii-digits-bad-operand",
+  "source": "Value: {$n :offset add=1}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Value: ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "n" },
+        "function": {
+          "type": "function",
+          "name": "offset",
+          "options": {
+            "add": { "type": "literal", "value": "1" }
+          }
+        }
+      }
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": { "n": "١" },
+      "expected": "Value: {$n}",
+      "expectedErrors": [{ "code": "bad-operand" }]
+    }
+  ]
+}
