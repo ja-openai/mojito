@@ -1,6 +1,7 @@
 import Foundation
 
 public enum MF2NumberCore {
+    private static let absentOption = "\0__mojito_mf2_absent__"
     private static let maxLocaleLength = 256
     private static let maxOptionLength = 256
     private static let maxOperandLength = 256
@@ -124,7 +125,7 @@ public enum MF2NumberCore {
             options: Options(
                 locale: call.locale,
                 style: style,
-                currency: call.optionValue("currency"),
+                currency: currencyOption(call, style: style),
                 currencyDisplay: currencyDisplayOption(call.optionValue("currencyDisplay", default: "symbol") ?? "symbol"),
                 useGrouping: booleanOption(call.optionValue("useGrouping", default: "true") ?? "true", name: "useGrouping"),
                 minimumFractionDigits: integerOption(call.optionValue("minimumFractionDigits")),
@@ -132,6 +133,29 @@ public enum MF2NumberCore {
                 signDisplay: signDisplayOption(call.optionValue("signDisplay", default: "auto") ?? "auto")
             )
         )
+    }
+
+    private static func currencyOption(_ call: MF2FunctionCall, style: Style) throws -> String? {
+        if style == .currency {
+            return try inheritedOptionValue(call, "currency")
+        }
+        return try call.optionValue("currency")
+    }
+
+    private static func inheritedOptionValue(_ call: MF2FunctionCall, _ name: String) throws -> String? {
+        let own = try call.optionValue(name, default: absentOption)
+        if own != absentOption {
+            return own
+        }
+        var source = call.inheritedSource
+        while let current = source {
+            let value = try current.optionValue(name, default: absentOption)
+            if value != absentOption {
+                return value
+            }
+            source = current.inheritedSource
+        }
+        return nil
     }
 
     private static func callNumberValue(_ call: MF2FunctionCall, style: Style) -> MF2Value {

@@ -7,6 +7,7 @@ namespace Mojito\MessageFormat2;
 final class NumberCore
 {
     private const DEFAULT_LOCALE = 'en-US';
+    private const ABSENT_OPTION = "\0__mojito_mf2_absent__";
     private const MAX_LOCALE_LENGTH = 256;
     private const MAX_OPTION_LENGTH = 256;
     private const MAX_OPERAND_LENGTH = 256;
@@ -108,7 +109,9 @@ final class NumberCore
         return self::format($value, [
             'locale' => $call['locale'] ?? self::DEFAULT_LOCALE,
             'style' => $style,
-            'currency' => self::callOption($call, 'currency'),
+            'currency' => $style === self::STYLE_CURRENCY
+                ? self::inheritedOption($call, 'currency')
+                : self::callOption($call, 'currency'),
             'currencyDisplay' => self::callOption($call, 'currencyDisplay', self::CURRENCY_DISPLAY_SYMBOL),
             'minimumFractionDigits' => self::callOption($call, 'minimumFractionDigits'),
             'maximumFractionDigits' => self::callOption($call, 'maximumFractionDigits'),
@@ -133,6 +136,32 @@ final class NumberCore
             return $source['value'] ?? null;
         }
         return $call['rawValue'] ?? $call['value'];
+    }
+
+    private static function inheritedOption(array $call, string $name, mixed $fallback = null): mixed
+    {
+        $value = self::callOption($call, $name, self::ABSENT_OPTION);
+        if ($value !== self::ABSENT_OPTION) {
+            return $value;
+        }
+        $source = $call['inheritedSource'] ?? null;
+        while (is_array($source)) {
+            $value = self::sourceOption($source, $name, self::ABSENT_OPTION);
+            if ($value !== self::ABSENT_OPTION) {
+                return $value;
+            }
+            $source = $source['inherited'] ?? null;
+        }
+        return $fallback;
+    }
+
+    private static function sourceOption(array $source, string $name, mixed $fallback): mixed
+    {
+        if (isset($source['optionValue']) && is_callable($source['optionValue'])) {
+            return $source['optionValue']($name, $fallback);
+        }
+        $option = $source['function']['options'][$name] ?? null;
+        return ($option['type'] ?? null) === 'literal' ? ($option['value'] ?? '') : $fallback;
     }
 
     private static function resolveLocaleData(string $locale): array

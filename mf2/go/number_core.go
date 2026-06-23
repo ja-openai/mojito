@@ -17,6 +17,8 @@ const (
 	NumberCoreStyleInteger  = "integer"
 	NumberCoreStylePercent  = "percent"
 	NumberCoreStyleCurrency = "currency"
+
+	numberCoreAbsentOption = "\x00__mojito_mf2_absent__"
 )
 
 const (
@@ -137,9 +139,18 @@ func FormatNumberCoreToParts(value any, options NumberCoreOptions) ([]Part, erro
 }
 
 func formatNumberCoreCall(call FunctionCall, style string) (string, error) {
-	currency, err := call.OptionValue("currency", "")
-	if err != nil {
-		return "", err
+	currency := ""
+	var err error
+	if style == NumberCoreStyleCurrency {
+		currency, err = inheritedNumberCoreOptionValue(call, "currency", "")
+		if err != nil {
+			return "", err
+		}
+	} else {
+		currency, err = call.OptionValue("currency", "")
+		if err != nil {
+			return "", err
+		}
 	}
 	currencyDisplay, err := call.OptionValue("currencyDisplay", NumberCoreCurrencyDisplaySymbol)
 	if err != nil {
@@ -191,6 +202,20 @@ func numberCoreCallValue(call FunctionCall, style string) any {
 		return call.RawValue
 	}
 	return call.Value
+}
+
+func inheritedNumberCoreOptionValue(call FunctionCall, name, fallback string) (string, error) {
+	value, err := call.OptionValue(name, numberCoreAbsentOption)
+	if err != nil || value != numberCoreAbsentOption {
+		return value, err
+	}
+	for source := call.InheritedSource; source != nil; source = source.Inherited {
+		value, err = sourceOptionValue(source, name, numberCoreAbsentOption)
+		if err != nil || value != numberCoreAbsentOption {
+			return value, err
+		}
+	}
+	return fallback, nil
 }
 
 func resolveNumberCoreLocaleData(locale string) cldrNumberLocaleData {

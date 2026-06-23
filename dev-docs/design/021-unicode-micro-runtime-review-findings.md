@@ -347,6 +347,13 @@ branch is under active implementation.
   while avoiding locale-specific digit parsing failures. Shared number-core
   registry fixtures cover Arabic `:integer` to `:number` and French `:number`
   to `:percent` chains.
+- Number-core inherited currency options: explicit `:currency` registry calls
+  now resolve `currency` from the current call or inherited source chain across
+  JavaScript, Python, PHP, Go, Java, Kotlin, Rust, and Swift. This preserves
+  variable-valued currency codes when a local currency expression is reformatted
+  later, while still treating present empty/invalid current options as
+  validation failures. A shared number-core fixture covers
+  `.local $price = {$amount :currency currency=$currency} {{{$price :currency}}}`.
 - JavaScript primitive BigInt rendering: unannotated `bigint` host values now
   route through number-core with the message locale just like finite numeric
   primitives, including the existing unsafe-BigInt `bad-operand` bound.

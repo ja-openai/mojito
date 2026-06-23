@@ -79,7 +79,12 @@ data class Mf2FunctionSource(
     val value: String,
     val function: Map<String, Any?>,
     val inherited: Mf2FunctionSource?,
-)
+    private val optionResolver: (String, String?) -> String? = { name, fallback ->
+        functionOptionLiteral(function, name, fallback)
+    },
+) {
+    fun optionValue(name: String, fallback: String? = null): String? = optionResolver.invoke(name, fallback)
+}
 
 class Mf2FunctionCall(
     val value: String,

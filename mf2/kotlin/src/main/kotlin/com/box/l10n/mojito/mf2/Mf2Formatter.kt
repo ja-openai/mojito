@@ -211,7 +211,15 @@ private class FormatContext(
                 ),
             )
             val sourceValue = inputValue.source?.value ?: rendered
-            locals[name] = ResolvedValue(formatted, Mf2FunctionSource(sourceValue, functionRef, inputValue.source))
+            locals[name] =
+                ResolvedValue(
+                    formatted,
+                    Mf2FunctionSource(
+                        sourceValue,
+                        functionRef,
+                        inputValue.source,
+                    ) { optionName, fallbackValue -> optionValue(functionRef, optionName, fallbackValue) },
+                )
         } catch (error: Mf2Error) {
             if (!fallback) throw error
             errors += fallbackError(error)
@@ -400,7 +408,16 @@ private class FormatContext(
                     inheritedSource = source,
                 ),
             )
-            ExpressionOutput(formatted, false, Mf2FunctionSource(source?.value ?: value, functionRef, source), direction)
+            ExpressionOutput(
+                formatted,
+                false,
+                Mf2FunctionSource(
+                    source?.value ?: value,
+                    functionRef,
+                    source,
+                ) { optionName, fallbackValue -> optionValue(functionRef, optionName, fallbackValue) },
+                direction,
+            )
         } catch (error: Mf2Error) {
             if (!fallback) throw error
             val recoverable = fallbackError(error)

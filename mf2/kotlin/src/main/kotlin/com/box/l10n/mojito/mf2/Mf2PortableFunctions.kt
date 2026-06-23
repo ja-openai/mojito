@@ -173,7 +173,7 @@ internal fun functionOptionLiteral(functionRef: Map<String, Any?>, name: String,
 
 internal fun sourceOptionValue(source: Mf2FunctionSource?, name: String, fallback: String?): String? {
     if (source == null) return fallback
-    return functionOptionLiteral(source.function, name, fallback)
+    return source.optionValue(name, fallback)
 }
 
 internal fun isNumericFunction(functionRef: Map<String, Any?>): Boolean =

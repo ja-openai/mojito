@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 
 public final class Mf2NumberCore {
     private static final String DEFAULT_LOCALE = "en-US";
+    private static final String ABSENT_OPTION = "\u0000__mojito_mf2_absent__";
     private static final int MAX_OPTION_LENGTH = 256;
     private static final int MAX_OPERAND_LENGTH = 256;
     private static final BigDecimal MAX_ABSOLUTE_FORMAT_VALUE = new BigDecimal("1e21");
@@ -100,13 +101,38 @@ public final class Mf2NumberCore {
                 Options.builder()
                         .locale(call.locale())
                         .style(style)
-                        .currency(call.optionValue("currency", null))
+                        .currency(currencyOption(call, style))
                         .currencyDisplay(currencyDisplayOption(call.optionValue("currencyDisplay", "symbol")))
                         .minimumFractionDigits(integerOption(call.optionValue("minimumFractionDigits", null)))
                         .maximumFractionDigits(integerOption(call.optionValue("maximumFractionDigits", null)))
                         .signDisplay(signDisplayOption(call.optionValue("signDisplay", "auto")))
                         .useGrouping(booleanOption(call.optionValue("useGrouping", "true"), "useGrouping"))
                         .build());
+    }
+
+    private static String currencyOption(Mf2FunctionRegistry.FunctionCall call, Style style)
+            throws Mf2Exception {
+        return style == Style.CURRENCY
+                ? inheritedOptionValue(call, "currency", null)
+                : call.optionValue("currency", null);
+    }
+
+    private static String inheritedOptionValue(
+            Mf2FunctionRegistry.FunctionCall call, String name, String fallback)
+            throws Mf2Exception {
+        String value = call.optionValue(name, ABSENT_OPTION);
+        if (!ABSENT_OPTION.equals(value)) {
+            return value;
+        }
+        Mf2FunctionRegistry.FunctionSourceRef source = call.inheritedSource();
+        while (source != null) {
+            value = source.optionValue(name, ABSENT_OPTION);
+            if (!ABSENT_OPTION.equals(value)) {
+                return value;
+            }
+            source = source.inheritedSource();
+        }
+        return fallback;
     }
 
     private static Object callNumberValue(Mf2FunctionRegistry.FunctionCall call, Style style) {

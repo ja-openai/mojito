@@ -461,6 +461,13 @@
       "expected": "Total USD 1,234.56"
     },
     {
+      "name": "inherited variable currency registry",
+      "locale": "en-US",
+      "source": ".local $price = {$amount :currency currency=$currency}\n{{{$price :currency}}}",
+      "arguments": { "amount": 12.3, "currency": "EUR" },
+      "expected": "€12.30"
+    },
+    {
       "name": "currency maximum fraction registry",
       "locale": "en-US",
       "source": "Total {1234.56 :currency currency=USD maximumFractionDigits=0}",
@@ -495,6 +502,13 @@
       "locale": "en-US",
       "source": "{1234.5 :currency currency=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}",
       "arguments": {},
+      "expectedErrors": ["bad-option"]
+    },
+    {
+      "name": "invalid current currency does not inherit registry",
+      "locale": "en-US",
+      "source": ".local $price = {$amount :currency currency=USD}\n{{{$price :currency currency=||}}}",
+      "arguments": { "amount": 12.3 },
       "expectedErrors": ["bad-option"]
     },
     {

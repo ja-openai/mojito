@@ -16,6 +16,7 @@ __all__ = [
 ]
 
 _DEFAULT_LOCALE = "en-US"
+_ABSENT_OPTION = "\x00__mojito_mf2_absent__"
 _MAX_LOCALE_LENGTH = 256
 _MAX_OPTION_LENGTH = 256
 _MAX_OPERAND_LENGTH = 256
@@ -109,13 +110,32 @@ def _format_call_number(call: FunctionCall, style: str) -> str:
         _call_number_value(call, style),
         locale=call.locale,
         style=style,
-        currency=call.option_value("currency"),
+        currency=_currency_option(call, style),
         currencyDisplay=call.option_value("currencyDisplay", "symbol") or "symbol",
         minimumFractionDigits=call.option_value("minimumFractionDigits"),
         maximumFractionDigits=call.option_value("maximumFractionDigits"),
         signDisplay=call.option_value("signDisplay", "auto") or "auto",
         useGrouping=call.option_value("useGrouping", "true"),
     )
+
+
+def _currency_option(call: FunctionCall, style: str) -> str | None:
+    if style != "currency":
+        return call.option_value("currency")
+    return _inherited_option_value(call, "currency")
+
+
+def _inherited_option_value(call: FunctionCall, name: str) -> str | None:
+    own = call.option_value(name, _ABSENT_OPTION)
+    if own != _ABSENT_OPTION:
+        return own
+    source = call.inherited_source
+    while source is not None:
+        value = source.option_value(name, _ABSENT_OPTION)
+        if value != _ABSENT_OPTION:
+            return value
+        source = source.inherited_source
+    return None
 
 
 def _call_number_value(call: FunctionCall, style: str) -> Any:

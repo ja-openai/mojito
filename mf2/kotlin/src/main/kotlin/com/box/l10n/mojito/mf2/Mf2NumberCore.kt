@@ -7,6 +7,7 @@ import java.util.Locale
 
 object Mf2NumberCore {
     private const val DEFAULT_LOCALE = "en-US"
+    private const val ABSENT_OPTION = "\u0000__mojito_mf2_absent__"
     private const val MAX_OPTION_LENGTH = 256
     private const val MAX_OPERAND_LENGTH = 256
     private val maxAbsoluteFormatValue = BigDecimal("1e21")
@@ -71,7 +72,7 @@ object Mf2NumberCore {
             Options(
                 locale = call.locale,
                 style = style,
-                currency = call.optionValue("currency", null),
+                currency = currencyOption(call, style),
                 currencyDisplay = currencyDisplayOption(call.optionValue("currencyDisplay", "symbol") ?: "symbol"),
                 useGrouping = booleanOption(call.optionValue("useGrouping", "true") ?: "true", "useGrouping"),
                 minimumFractionDigits = integerOption(call.optionValue("minimumFractionDigits", null)),
@@ -79,6 +80,21 @@ object Mf2NumberCore {
                 signDisplay = signDisplayOption(call.optionValue("signDisplay", "auto") ?: "auto"),
             ),
         )
+
+    private fun currencyOption(call: Mf2FunctionCall, style: Style): String? =
+        if (style == Style.CURRENCY) inheritedOptionValue(call, "currency", null) else call.optionValue("currency", null)
+
+    private fun inheritedOptionValue(call: Mf2FunctionCall, name: String, fallback: String?): String? {
+        val own = call.optionValue(name, ABSENT_OPTION)
+        if (own != ABSENT_OPTION) return own
+        var source = call.inheritedSource
+        while (source != null) {
+            val value = source.optionValue(name, ABSENT_OPTION)
+            if (value != ABSENT_OPTION) return value
+            source = source.inherited
+        }
+        return fallback
+    }
 
     private fun callNumberValue(call: Mf2FunctionCall, style: Style): Any? {
         val source = call.inheritedSource
