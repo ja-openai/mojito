@@ -26,6 +26,12 @@ branch is under active implementation.
   compare `NewRelativeTimeCoreFormatter(...).Format` and `FormatToParts`
   against the top-level helpers so the prepared formatter API stays covered
   alongside the static direct helpers and registry path.
+- Shared conformance runner Swift execution: the all-language runner now invokes
+  SwiftPM with `swift run --disable-sandbox` for the Swift slices and points
+  SwiftPM cache/config/security state at package-local `.build` paths. This
+  avoids SwiftPM manifest sandbox failures and user-cache write warnings in the
+  managed Codex workspace while still running the same Swift conformance
+  binaries and core checks.
 - Shared conformance runner coverage: `mf2/conformance/check_all_languages.sh`
   now runs the shared number-core, date-time-core, and relative-time-core
   fixture suites for Rust, Swift, Python, Java, Kotlin, and JavaScript instead
