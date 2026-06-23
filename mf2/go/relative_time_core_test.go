@@ -74,6 +74,19 @@ func TestRelativeTimeCoreDirectAPI(t *testing.T) {
 	if formatted != "in 1h" {
 		t.Fatalf("expected in 1h, got %q", formatted)
 	}
+	emptyLocale, err := FormatRelativeTimeCore(3600, data, RelativeTimeCoreOptions{
+		Locale:  "",
+		Style:   RelativeTimeCoreStyleNarrow,
+		Numeric: RelativeTimeCoreNumericAlways,
+		Policy:  RelativeTimeCorePolicyPrecise,
+		Unit:    RelativeTimeCoreUnitAuto,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if emptyLocale != "in 1h" {
+		t.Fatalf("empty locale expected in 1h, got %q", emptyLocale)
+	}
 	negativeZero, err := FormatRelativeTimeCore(math.Copysign(0, -1), data, RelativeTimeCoreOptions{
 		Locale:  "en",
 		Style:   RelativeTimeCoreStyleLong,

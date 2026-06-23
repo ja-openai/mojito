@@ -170,7 +170,7 @@ function localeOption(value) {
   if (locale.length > MAX_LOCALE_LENGTH) {
     throw new RelativeTimeCoreError("bad-option", "locale must not exceed 256 characters.");
   }
-  return locale;
+  return locale === "" ? DEFAULT_LOCALE : locale;
 }
 
 function coerceStringOperand(value) {

@@ -750,6 +750,19 @@ private func runRelativeTimeCoreCheck(arguments: [String]) throws {
     )
     try expectValue("relative-time direct API", direct, "in 1h")
 
+    let emptyLocale = try MF2RelativeTimeCore.format(
+        .number("3600"),
+        data: data,
+        options: MF2RelativeTimeCore.Options(
+            locale: "",
+            style: .narrow,
+            numeric: .always,
+            policy: .precise,
+            unit: .auto
+        )
+    )
+    try expectValue("relative-time direct empty locale", emptyLocale, "in 1h")
+
     let negativeZero = try MF2RelativeTimeCore.format(
         .number("-0"),
         data: data,

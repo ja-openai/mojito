@@ -93,6 +93,20 @@ public final class RelativeTimeCoreTest {
         if (!direct.equals("in 1h")) {
             throw new AssertionError("direct relative-time format expected in 1h, got " + direct);
         }
+        String emptyLocale = Mf2RelativeTimeCore.format(
+                3_600,
+                data,
+                Mf2RelativeTimeCore.Options.builder()
+                        .locale("")
+                        .style(Mf2RelativeTimeCore.Style.NARROW)
+                        .numeric(Mf2RelativeTimeCore.Numeric.ALWAYS)
+                        .policy(Mf2RelativeTimeCore.Policy.PRECISE)
+                        .unit(Mf2RelativeTimeCore.Unit.AUTO)
+                        .build());
+        if (!emptyLocale.equals("in 1h")) {
+            throw new AssertionError(
+                    "direct relative-time empty locale expected in 1h, got " + emptyLocale);
+        }
         String negativeZero = Mf2RelativeTimeCore.format(
                 -0.0d,
                 data,

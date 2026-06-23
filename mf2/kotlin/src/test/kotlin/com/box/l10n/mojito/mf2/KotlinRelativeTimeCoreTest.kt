@@ -101,6 +101,20 @@ object KotlinRelativeTimeCoreTest {
         if (direct != "in 1h") {
             throw AssertionError("direct relative-time format expected in 1h, got $direct")
         }
+        val emptyLocale = Mf2RelativeTimeCore.format(
+            3_600,
+            data,
+            Mf2RelativeTimeCore.Options(
+                locale = "",
+                style = Mf2RelativeTimeCore.Style.NARROW,
+                numeric = Mf2RelativeTimeCore.Numeric.ALWAYS,
+                policy = Mf2RelativeTimeCore.Policy.PRECISE,
+                unit = Mf2RelativeTimeCore.Unit.AUTO,
+            ),
+        )
+        if (emptyLocale != "in 1h") {
+            throw AssertionError("direct relative-time empty locale expected in 1h, got $emptyLocale")
+        }
         val negativeZero = Mf2RelativeTimeCore.format(
             -0.0,
             data,

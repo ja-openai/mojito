@@ -70,6 +70,18 @@ class RelativeTimeCoreTest(unittest.TestCase):
             ),
         )
         self.assertEqual(
+            "in 1h",
+            format_relative_time_core(
+                3_600,
+                locale="",
+                style="narrow",
+                numeric="always",
+                policy="precise",
+                unit="auto",
+                data=self.data,
+            ),
+        )
+        self.assertEqual(
             "0 seconds ago",
             format_relative_time_core(
                 -0.0,

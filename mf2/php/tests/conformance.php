@@ -395,6 +395,13 @@ function assert_relative_time_core_fixtures(): int
         'policy' => 'precise',
         'unit' => 'auto',
     ]));
+    assert_same('relative-time direct empty locale', 'in 1h', RelativeTimeCore::format(3_600, $data, [
+        'locale' => '',
+        'style' => 'narrow',
+        'numeric' => 'always',
+        'policy' => 'precise',
+        'unit' => 'auto',
+    ]));
     assert_same('relative-time direct negative zero', '0 seconds ago', RelativeTimeCore::format(-0.0, $data, [
         'locale' => 'en',
         'style' => 'long',
@@ -427,7 +434,7 @@ function assert_relative_time_core_fixtures(): int
     } catch (Throwable $error) {
         assert_same('huge relative-time quantity error', 'bad-operand', error_code($error));
     }
-    $checked += 5;
+    $checked += 6;
 
     assert_mf2_error('relative-time direct throwing operand', 'bad-operand', static fn(): string => RelativeTimeCore::format(new ThrowingStringValue(), $data));
     assert_mf2_error('relative-time direct throwing locale option', 'bad-option', static fn(): string => RelativeTimeCore::format(1, $data, ['locale' => new ThrowingStringValue()]));

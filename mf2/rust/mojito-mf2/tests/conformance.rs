@@ -807,6 +807,20 @@ fn relative_time_core_fixtures_pass() {
     .expect("direct relative-time formats");
     assert_eq!(direct, "in 1h");
 
+    let empty_locale = format_relative_time_core(
+        3_600,
+        &data,
+        &RelativeTimeCoreOptions {
+            locale: "".to_string(),
+            style: RelativeTimeCoreStyle::Narrow,
+            numeric: RelativeTimeCoreNumeric::Always,
+            policy: RelativeTimeCorePolicy::Precise,
+            unit: RelativeTimeCoreUnit::Auto,
+        },
+    )
+    .expect("direct relative-time empty locale formats");
+    assert_eq!(empty_locale, "in 1h");
+
     let negative_zero = format_relative_time_core(
         -0.0_f64,
         &data,

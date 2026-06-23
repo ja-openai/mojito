@@ -50,6 +50,18 @@ assert.equal(
   "in 1h",
 );
 assert.equal(
+  formatRelativeTimeCore(3_600, {
+    locale: "",
+    style: "narrow",
+    numeric: "always",
+    policy: "precise",
+    unit: "auto",
+    data,
+  }),
+  "in 1h",
+  "empty direct relative-time locale falls back to en",
+);
+assert.equal(
   formatRelativeTimeCore(-0, {
     locale: "en",
     style: "long",

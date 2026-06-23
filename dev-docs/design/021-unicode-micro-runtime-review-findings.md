@@ -197,6 +197,11 @@ branch is under active implementation.
   `missing-locale-data` across JavaScript, Python, PHP, Go, Java, Kotlin, Rust,
   and Swift instead of accepting unusable generated-data shells and failing
   later in locale lookup.
+- Relative-time empty-locale fallback: JavaScript direct relative-time core now
+  normalizes an explicit empty locale to the default `en`, matching Python,
+  PHP, Go, Java, Kotlin, Rust, and Swift. Direct relative-time tests in each
+  runtime cover the fallback without weakening top-level message-format locale
+  validation.
 - Relative-time operand grammar: relative-time-core string operands now use the
   same ASCII decimal grammar across JavaScript, Python, Go, Java, Kotlin, PHP,
   Rust, and Swift before host numeric parsing, rejecting host extensions such as
