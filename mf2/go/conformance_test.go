@@ -262,6 +262,18 @@ func TestNumberCoreFixtures(t *testing.T) {
 		}
 	}
 
+	formattedNumber, err := FormatNumberCore(1234.5, NumberCoreOptions{Locale: "en-US"})
+	if err != nil {
+		t.Fatalf("number-core direct parts format: unexpected error: %v", err)
+	}
+	numberParts, err := FormatNumberCoreToParts(1234.5, NumberCoreOptions{Locale: "en-US"})
+	if err != nil {
+		t.Fatalf("number-core direct parts: unexpected error: %v", err)
+	}
+	if expected := []Part{{"type": "text", "value": formattedNumber}}; !reflect.DeepEqual(numberParts, expected) {
+		t.Fatalf("number-core direct parts: expected %#v, got %#v", expected, numberParts)
+	}
+
 	numberCoreRegistry := NumberCoreFunctionRegistry()
 	currency := ParseToModel("Total: {$amount :currency currency=USD}")
 	if currency.HasDiagnostics {
@@ -371,6 +383,29 @@ func TestDateTimeCoreFixtures(t *testing.T) {
 		}
 		if asMF2Error(err).Code != stringValue(item["expectedError"]) {
 			t.Fatalf("%s: expected error %q, got %q", stringValue(item["name"]), stringValue(item["expectedError"]), asMF2Error(err).Code)
+		}
+	}
+
+	value := "2026-05-21T14:30:15Z"
+	for _, item := range []struct {
+		name   string
+		format func(any, DateTimeCoreOptions) (string, error)
+		parts  func(any, DateTimeCoreOptions) ([]Part, error)
+	}{
+		{"date", FormatDateCore, FormatDateCoreToParts},
+		{"time", FormatTimeCore, FormatTimeCoreToParts},
+		{"datetime", FormatDateTimeCore, FormatDateTimeCoreToParts},
+	} {
+		formatted, err := item.format(value, DateTimeCoreOptions{Locale: "en-US"})
+		if err != nil {
+			t.Fatalf("date-time-core %s direct parts format: unexpected error: %v", item.name, err)
+		}
+		parts, err := item.parts(value, DateTimeCoreOptions{Locale: "en-US"})
+		if err != nil {
+			t.Fatalf("date-time-core %s direct parts: unexpected error: %v", item.name, err)
+		}
+		if expected := []Part{{"type": "text", "value": formatted}}; !reflect.DeepEqual(parts, expected) {
+			t.Fatalf("date-time-core %s direct parts: expected %#v, got %#v", item.name, expected, parts)
 		}
 	}
 

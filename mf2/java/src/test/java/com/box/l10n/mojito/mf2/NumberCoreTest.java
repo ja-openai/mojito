@@ -170,6 +170,13 @@ public final class NumberCoreTest {
             throw new AssertionError("number core default overload expected "
                     + explicitDefault + ", got " + overloaded);
         }
+        List<Mf2FormattedPart> parts = Mf2NumberCore.formatToParts(1234.5);
+        List<Mf2FormattedPart> explicitParts = Mf2NumberCore.formatToParts(1234.5, null);
+        List<Mf2FormattedPart> expectedParts = List.of(new Mf2FormattedPart.Text(explicitDefault));
+        if (!parts.equals(expectedParts) || !explicitParts.equals(expectedParts)) {
+            throw new AssertionError("number core formatToParts expected "
+                    + expectedParts + ", got " + parts + " and " + explicitParts);
+        }
     }
 
     private static Mf2NumberCore.Options options(String locale, Map<String, Object> rawOptions) {

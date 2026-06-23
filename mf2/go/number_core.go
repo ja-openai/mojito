@@ -128,6 +128,14 @@ func FormatNumberCore(value any, options NumberCoreOptions) (string, error) {
 	return applyNumberCoreSign(formatted, scaled.isNegative(), localeData.symbols, signDisplay), nil
 }
 
+func FormatNumberCoreToParts(value any, options NumberCoreOptions) ([]Part, error) {
+	formatted, err := FormatNumberCore(value, options)
+	if err != nil {
+		return nil, err
+	}
+	return []Part{{"type": "text", "value": formatted}}, nil
+}
+
 func formatNumberCoreCall(call FunctionCall, style string) (string, error) {
 	currency, err := call.OptionValue("currency", "")
 	if err != nil {

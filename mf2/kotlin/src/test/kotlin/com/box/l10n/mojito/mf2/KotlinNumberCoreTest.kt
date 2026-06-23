@@ -25,12 +25,22 @@ object KotlinNumberCoreTest {
         val errorCases = checkErrorCases(KotlinJsonSupport.arrayOrEmpty(fixture["errorCases"]))
         val registryCases = checkRegistryIntegration(KotlinJsonSupport.arrayOrEmpty(fixture["registryCases"]))
         val registryErrorCases = checkRegistryErrorCases(KotlinJsonSupport.arrayOrEmpty(fixture["registryErrorCases"]))
+        checkDirectParts()
         println(
             "Kotlin number core test passed $formatCases format cases, " +
                 "$referenceCases JDK reference cases, $errorCases error cases, " +
                 "$registryCases registry cases, and $registryErrorCases registry error cases.",
         )
         return 0
+    }
+
+    private fun checkDirectParts() {
+        val formatted = Mf2NumberCore.format(1234.5)
+        val expected = listOf(mapOf("type" to "text", "value" to formatted))
+        val actual = Mf2NumberCore.formatToParts(1234.5)
+        if (actual != expected) {
+            throw AssertionError("number core formatToParts expected $expected, got $actual")
+        }
     }
 
     private fun checkFormatCases(cases: List<Any?>): Int {

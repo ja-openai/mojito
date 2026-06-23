@@ -3,6 +3,7 @@ package com.box.l10n.mojito.mf2;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -82,6 +83,14 @@ public final class Mf2NumberCore {
                     currencyDisplay(localeData, currency, effectiveOptions.currencyDisplay()));
         }
         return applySign(formatted, scaled.isNegative(), localeData.symbols(), effectiveOptions.signDisplay());
+    }
+
+    public static List<Mf2FormattedPart> formatToParts(Object value) throws Mf2Exception {
+        return formatToParts(value, null);
+    }
+
+    public static List<Mf2FormattedPart> formatToParts(Object value, Options options) throws Mf2Exception {
+        return List.of(new Mf2FormattedPart.Text(format(value, options)));
     }
 
     private static String formatCall(Mf2FunctionRegistry.FunctionCall call, Style style)

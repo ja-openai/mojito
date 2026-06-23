@@ -61,6 +61,10 @@ object Mf2NumberCore {
         }
     }
 
+    @JvmStatic
+    fun formatToParts(value: Any?, options: Options = Options()): List<Mf2Part> =
+        listOf(mapOf("type" to "text", "value" to format(value, options)))
+
     private fun formatCall(call: Mf2FunctionCall, style: Style): String =
         format(
             callNumberValue(call, style),

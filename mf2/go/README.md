@@ -37,11 +37,13 @@ than adding partial behavior to the portable registry.
 The package also exposes experimental generated-data formatters for the CLDR
 micro-runtime probe locale set:
 
-- `FormatNumberCore` and `NumberCoreFunctionRegistry` for localized decimal,
-  integer, percent, and simple currency formatting.
-- `FormatDateCore`, `FormatTimeCore`, `FormatDateTimeCore`, and
-  `DateTimeCoreFunctionRegistry` for Gregorian UTC/fixed-offset date/time
-  formatting with semantic CLDR skeleton lookup and `hourCycle` overrides.
+- `FormatNumberCore`, `FormatNumberCoreToParts`, and
+  `NumberCoreFunctionRegistry` for localized decimal, integer, percent, and
+  simple currency formatting.
+- `FormatDateCore`, `FormatTimeCore`, `FormatDateTimeCore`, their `ToParts`
+  wrappers, and `DateTimeCoreFunctionRegistry` for Gregorian UTC/fixed-offset
+  date/time formatting with semantic CLDR skeleton lookup and `hourCycle`
+  overrides.
 - `FormatRelativeTimeCore`, `FormatRelativeTimeCoreToParts`,
   `NewRelativeTimeCoreFormatter`, and `RelativeTimeCoreFunctionRegistry` for
   experimental CLDR relative-time formatting from explicitly supplied generated

@@ -32,6 +32,7 @@ object KotlinDateTimeCoreTest {
         val registryErrorCases = checkRegistryErrorCases(KotlinJsonSupport.arrayOrEmpty(fixture["registryErrorCases"]))
         checkRegistryIntegration()
         checkOperandBoundary()
+        checkDirectParts()
         println(
             "Kotlin date/time core test passed $formatCases format cases, " +
                 "$numericTimestampCases numeric timestamp cases, " +
@@ -40,6 +41,20 @@ object KotlinDateTimeCoreTest {
                 "$registryErrorCases registry error cases, and registry integration.",
         )
         return 0
+    }
+
+    private fun checkDirectParts() {
+        val value = "2026-05-21T14:30:15Z"
+        assertDirectParts("date", Mf2DateTimeCore.formatDate(value), Mf2DateTimeCore.formatDateToParts(value))
+        assertDirectParts("time", Mf2DateTimeCore.formatTime(value), Mf2DateTimeCore.formatTimeToParts(value))
+        assertDirectParts("datetime", Mf2DateTimeCore.formatDateTime(value), Mf2DateTimeCore.formatDateTimeToParts(value))
+    }
+
+    private fun assertDirectParts(kind: String, formatted: String, actual: List<Mf2Part>) {
+        val expected = listOf(mapOf("type" to "text", "value" to formatted))
+        if (actual != expected) {
+            throw AssertionError("date/time core $kind formatToParts expected $expected, got $actual")
+        }
     }
 
     private fun checkOperandBoundary() {

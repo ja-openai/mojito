@@ -182,6 +182,14 @@ public final class Mf2DateTimeCore {
         return formatPattern(localeData.dateFormats().get(styleKey(effectiveOptions.effectiveDateStyle())), date, localeData);
     }
 
+    public static List<Mf2FormattedPart> formatDateToParts(Object value) throws Mf2Exception {
+        return formatDateToParts(value, null);
+    }
+
+    public static List<Mf2FormattedPart> formatDateToParts(Object value, Options options) throws Mf2Exception {
+        return List.of(new Mf2FormattedPart.Text(formatDate(value, options)));
+    }
+
     public static String formatTime(Object value) throws Mf2Exception {
         return formatTime(value, null);
     }
@@ -208,6 +216,14 @@ public final class Mf2DateTimeCore {
                 localeData,
                 hourCycle,
                 preserveSameFamilyHourCycle);
+    }
+
+    public static List<Mf2FormattedPart> formatTimeToParts(Object value) throws Mf2Exception {
+        return formatTimeToParts(value, null);
+    }
+
+    public static List<Mf2FormattedPart> formatTimeToParts(Object value, Options options) throws Mf2Exception {
+        return List.of(new Mf2FormattedPart.Text(formatTime(value, options)));
     }
 
     public static String formatDateTime(Object value) throws Mf2Exception {
@@ -243,6 +259,15 @@ public final class Mf2DateTimeCore {
         return dateTimeStyleJoinPattern(localeData, styleKey(dateStyle))
                 .replace("{1}", datePart)
                 .replace("{0}", timePart);
+    }
+
+    public static List<Mf2FormattedPart> formatDateTimeToParts(Object value) throws Mf2Exception {
+        return formatDateTimeToParts(value, null);
+    }
+
+    public static List<Mf2FormattedPart> formatDateTimeToParts(Object value, Options options)
+            throws Mf2Exception {
+        return List.of(new Mf2FormattedPart.Text(formatDateTime(value, options)));
     }
 
     private static String formatCallDate(Mf2FunctionRegistry.FunctionCall call) throws Mf2Exception {

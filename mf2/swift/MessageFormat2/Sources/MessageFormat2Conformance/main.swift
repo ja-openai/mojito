@@ -330,6 +330,9 @@ private func runNumberCoreCheck(arguments: [String]) throws {
         options: MF2NumberCore.Options(style: .integer, useGrouping: false)
     )
     try expectValue("number-core negative integer truncation", negativeCoreInteger, "-123")
+    let numberPartsValue = try MF2NumberCore.format(.number("1234.5"), options: MF2NumberCore.Options(locale: "en-US"))
+    let numberParts = try MF2NumberCore.formatToParts(.number("1234.5"), options: MF2NumberCore.Options(locale: "en-US"))
+    try expectParts("number-core direct parts", numberParts, [.text(numberPartsValue)])
 
     try runNumberCoreRegistryIntegration(fixture: fixture)
     print(
@@ -537,6 +540,26 @@ private func runDateTimeCoreCheck(arguments: [String]) throws {
         }
         checkedErrorCases += 1
     }
+
+    let directPartsValue = "2026-05-21T14:30:15Z"
+    let datePartsValue = try MF2DateTimeCore.formatDate(.string(directPartsValue), options: MF2DateTimeCore.Options(locale: "en-US"))
+    try expectParts(
+        "date-time-core date direct parts",
+        try MF2DateTimeCore.formatDateToParts(.string(directPartsValue), options: MF2DateTimeCore.Options(locale: "en-US")),
+        [.text(datePartsValue)]
+    )
+    let timePartsValue = try MF2DateTimeCore.formatTime(.string(directPartsValue), options: MF2DateTimeCore.Options(locale: "en-US"))
+    try expectParts(
+        "date-time-core time direct parts",
+        try MF2DateTimeCore.formatTimeToParts(.string(directPartsValue), options: MF2DateTimeCore.Options(locale: "en-US")),
+        [.text(timePartsValue)]
+    )
+    let dateTimePartsValue = try MF2DateTimeCore.formatDateTime(.string(directPartsValue), options: MF2DateTimeCore.Options(locale: "en-US"))
+    try expectParts(
+        "date-time-core datetime direct parts",
+        try MF2DateTimeCore.formatDateTimeToParts(.string(directPartsValue), options: MF2DateTimeCore.Options(locale: "en-US")),
+        [.text(dateTimePartsValue)]
+    )
 
     let checkedRegistryFormatCases = try runDateTimeCoreRegistryCases(fixture.registryFormatCases ?? [])
     let checkedRegistryErrorCases = try runDateTimeCoreRegistryErrorCases(fixture.registryErrorCases ?? [])

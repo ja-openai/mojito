@@ -444,6 +444,11 @@ branch is under active implementation.
   throwing runtimes use fixed error messages for length failures rather than
   echoing the oversized operand. A shared source-to-model fallback fixture covers
   an oversized exponent operand that would otherwise parse as English `one`.
+- Direct core parts API consistency: number-core and date-time-core now expose
+  direct text-part wrappers in Java, Kotlin, Go, and Swift, matching the existing
+  JavaScript, Python, PHP, and Rust public API surface. Focused runtime checks
+  assert that each wrapper returns a single `text` part equal to the sibling
+  formatted string.
 
 ## Open
 

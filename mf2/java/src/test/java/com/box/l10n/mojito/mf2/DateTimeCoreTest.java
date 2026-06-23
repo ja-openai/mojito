@@ -172,15 +172,37 @@ public final class DateTimeCoreTest {
 
     private static void checkDefaultOverloads() throws Exception {
         String value = "2026-05-21T14:30:15Z";
-        assertSameDefault("date", Mf2DateTimeCore.formatDate(value), Mf2DateTimeCore.formatDate(value, null));
-        assertSameDefault("time", Mf2DateTimeCore.formatTime(value), Mf2DateTimeCore.formatTime(value, null));
-        assertSameDefault("datetime", Mf2DateTimeCore.formatDateTime(value), Mf2DateTimeCore.formatDateTime(value, null));
+        String date = Mf2DateTimeCore.formatDate(value);
+        String time = Mf2DateTimeCore.formatTime(value);
+        String dateTime = Mf2DateTimeCore.formatDateTime(value);
+        assertSameDefault("date", date, Mf2DateTimeCore.formatDate(value, null));
+        assertSameDefault("time", time, Mf2DateTimeCore.formatTime(value, null));
+        assertSameDefault("datetime", dateTime, Mf2DateTimeCore.formatDateTime(value, null));
+        assertSameParts("date", date, Mf2DateTimeCore.formatDateToParts(value), Mf2DateTimeCore.formatDateToParts(value, null));
+        assertSameParts("time", time, Mf2DateTimeCore.formatTimeToParts(value), Mf2DateTimeCore.formatTimeToParts(value, null));
+        assertSameParts(
+                "datetime",
+                dateTime,
+                Mf2DateTimeCore.formatDateTimeToParts(value),
+                Mf2DateTimeCore.formatDateTimeToParts(value, null));
     }
 
     private static void assertSameDefault(String kind, String overloaded, String explicitDefault) {
         if (!overloaded.equals(explicitDefault)) {
             throw new AssertionError("date/time core " + kind + " default overload expected "
                     + explicitDefault + ", got " + overloaded);
+        }
+    }
+
+    private static void assertSameParts(
+            String kind,
+            String formatted,
+            List<Mf2FormattedPart> overloaded,
+            List<Mf2FormattedPart> explicitDefault) {
+        List<Mf2FormattedPart> expected = List.of(new Mf2FormattedPart.Text(formatted));
+        if (!overloaded.equals(expected) || !explicitDefault.equals(expected)) {
+            throw new AssertionError("date/time core " + kind + " formatToParts expected "
+                    + expected + ", got " + overloaded + " and " + explicitDefault);
         }
     }
 

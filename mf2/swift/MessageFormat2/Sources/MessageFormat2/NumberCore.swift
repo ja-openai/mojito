@@ -114,6 +114,10 @@ public enum MF2NumberCore {
         }
     }
 
+    public static func formatToParts(_ value: MF2Value, options: Options = Options()) throws -> [MF2FormattedPart] {
+        [.text(try format(value, options: options))]
+    }
+
     private static func formatCall(_ call: MF2FunctionCall, style: Style) throws -> String {
         try format(
             callNumberValue(call, style: style),

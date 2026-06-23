@@ -75,6 +75,10 @@ object Mf2DateTimeCore {
     }
 
     @JvmStatic
+    fun formatDateToParts(value: Any?, options: Options = Options()): List<Mf2Part> =
+        listOf(mapOf("type" to "text", "value" to formatDate(value, options)))
+
+    @JvmStatic
     fun formatTime(value: Any?, options: Options = Options()): String {
         val locale = LocaleKey.option(options.locale, DEFAULT_LOCALE)
         val localeData = resolveNumberingSystemData(resolveLocaleData(locale), locale)
@@ -85,6 +89,10 @@ object Mf2DateTimeCore {
         options.skeleton?.let { return formatSkeleton(it, date, localeData, hourCycle, preserveSameFamilyHourCycle) }
         return formatTimeStylePattern(localeData.timeFormats.getValue(styleKey(options.effectiveTimeStyle())), date, localeData, hourCycle, preserveSameFamilyHourCycle)
     }
+
+    @JvmStatic
+    fun formatTimeToParts(value: Any?, options: Options = Options()): List<Mf2Part> =
+        listOf(mapOf("type" to "text", "value" to formatTime(value, options)))
 
     @JvmStatic
     fun formatDateTime(value: Any?, options: Options = Options()): String {
@@ -103,6 +111,10 @@ object Mf2DateTimeCore {
             .replace("{1}", datePart)
             .replace("{0}", timePart)
     }
+
+    @JvmStatic
+    fun formatDateTimeToParts(value: Any?, options: Options = Options()): List<Mf2Part> =
+        listOf(mapOf("type" to "text", "value" to formatDateTime(value, options)))
 
     private fun formatCallDate(call: Mf2FunctionCall): String =
         formatDate(

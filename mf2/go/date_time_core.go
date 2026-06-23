@@ -107,6 +107,14 @@ func FormatDateCore(value any, options DateTimeCoreOptions) (string, error) {
 	return formatDateTimeCorePattern(localeData.dateFormats[style], date, localeData)
 }
 
+func FormatDateCoreToParts(value any, options DateTimeCoreOptions) ([]Part, error) {
+	formatted, err := FormatDateCore(value, options)
+	if err != nil {
+		return nil, err
+	}
+	return []Part{{"type": "text", "value": formatted}}, nil
+}
+
 func FormatTimeCore(value any, options DateTimeCoreOptions) (string, error) {
 	locale, err := localeOption(options.Locale, defaultDateTimeCoreLocale)
 	if err != nil {
@@ -141,6 +149,14 @@ func FormatTimeCore(value any, options DateTimeCoreOptions) (string, error) {
 		return "", err
 	}
 	return formatDateTimeCoreTimeStylePattern(localeData.timeFormats[style], date, localeData, hourCycle, preserveSameFamilyHourCycle)
+}
+
+func FormatTimeCoreToParts(value any, options DateTimeCoreOptions) ([]Part, error) {
+	formatted, err := FormatTimeCore(value, options)
+	if err != nil {
+		return nil, err
+	}
+	return []Part{{"type": "text", "value": formatted}}, nil
 }
 
 func FormatDateTimeCore(value any, options DateTimeCoreOptions) (string, error) {
@@ -189,6 +205,14 @@ func FormatDateTimeCore(value any, options DateTimeCoreOptions) (string, error) 
 		return "", err
 	}
 	return strings.NewReplacer("{1}", datePart, "{0}", timePart).Replace(dateTimeCoreStyleJoinPattern(localeData, dateStyle)), nil
+}
+
+func FormatDateTimeCoreToParts(value any, options DateTimeCoreOptions) ([]Part, error) {
+	formatted, err := FormatDateTimeCore(value, options)
+	if err != nil {
+		return nil, err
+	}
+	return []Part{{"type": "text", "value": formatted}}, nil
 }
 
 func formatDateTimeCoreCallDate(call FunctionCall) (string, error) {

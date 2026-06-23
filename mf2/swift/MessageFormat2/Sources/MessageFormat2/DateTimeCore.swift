@@ -111,6 +111,10 @@ public enum MF2DateTimeCore {
         )
     }
 
+    public static func formatDateToParts(_ value: MF2Value, options: Options = Options()) throws -> [MF2FormattedPart] {
+        [.text(try formatDate(value, options: options))]
+    }
+
     public static func formatTime(_ value: MF2Value, options: Options = Options()) throws -> String {
         let locale = try localeOption(options.locale)
         let localeData = try resolveNumberingSystemData(resolveLocaleData(locale), locale: locale)
@@ -130,6 +134,10 @@ public enum MF2DateTimeCore {
             hourCycle: hourCycle,
             preserveSameFamilyHourCycle: preserveSameFamilyHourCycle
         )
+    }
+
+    public static func formatTimeToParts(_ value: MF2Value, options: Options = Options()) throws -> [MF2FormattedPart] {
+        [.text(try formatTime(value, options: options))]
     }
 
     public static func formatDateTime(_ value: MF2Value, options: Options = Options()) throws -> String {
@@ -162,6 +170,10 @@ public enum MF2DateTimeCore {
         return dateTimeStyleJoinPattern(localeData, style: styleKey(dateStyle))
             .replacingOccurrences(of: "{1}", with: datePart)
             .replacingOccurrences(of: "{0}", with: timePart)
+    }
+
+    public static func formatDateTimeToParts(_ value: MF2Value, options: Options = Options()) throws -> [MF2FormattedPart] {
+        [.text(try formatDateTime(value, options: options))]
     }
 
     private static func formatCallDate(_ call: MF2FunctionCall) throws -> String {
