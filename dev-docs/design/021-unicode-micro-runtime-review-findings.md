@@ -199,6 +199,10 @@ branch is under active implementation.
   later in locale lookup. Swift also normalizes duplicate pattern-set ids with
   the same last-entry-wins map preparation used by the other runtimes instead
   of trapping in `Dictionary(uniqueKeysWithValues:)`.
+- Relative-time locale-map shape: JavaScript, Python, and PHP now reject
+  non-string generated-data `localeMap` values as `missing-locale-data` during
+  data preparation, matching typed runtime expectations and avoiding raw Python
+  `TypeError` paths for unhashable set ids.
 - Relative-time empty-locale fallback: JavaScript direct relative-time core now
   normalizes an explicit empty locale to the default `en`, matching Python,
   PHP, Go, Java, Kotlin, Rust, and Swift. Direct relative-time tests in each

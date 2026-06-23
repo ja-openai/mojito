@@ -165,6 +165,12 @@ def _prepare_data(data: Mapping[str, Any]) -> _RelativeTimeData:
     ):
         raise MF2Error("missing-locale-data", "Relative-time core data has an unsupported shape.")
 
+    decoded_locale_map: dict[str, str] = {}
+    for locale, set_id in locale_map.items():
+        if not isinstance(locale, str) or not isinstance(set_id, str):
+            raise MF2Error("missing-locale-data", "Relative-time core data has an unsupported shape.")
+        decoded_locale_map[locale] = set_id
+
     decoded_pattern_sets: dict[str, Mapping[str, Any]] = {}
     for item in pattern_sets:
         if (
@@ -177,7 +183,7 @@ def _prepare_data(data: Mapping[str, Any]) -> _RelativeTimeData:
             decoded_pattern_sets[item["id"]] = item["data"]
     if not decoded_pattern_sets:
         raise MF2Error("missing-locale-data", "Relative-time core data has an unsupported shape.")
-    return _RelativeTimeData(locale_map=locale_map, pattern_sets=decoded_pattern_sets)
+    return _RelativeTimeData(locale_map=decoded_locale_map, pattern_sets=decoded_pattern_sets)
 
 
 def _parse_finite_number(value: Any) -> float:

@@ -448,6 +448,17 @@ function assert_relative_time_core_fixtures(): int
         'localeMap' => ['en' => 'rt'],
         'patternSets' => [],
     ]));
+    assert_mf2_error(
+        'relative-time invalid locale map value',
+        'missing-locale-data',
+        static fn(): FunctionRegistry => RelativeTimeCore::registry([
+            'localeMap' => ['en' => []],
+            'patternSets' => [[
+                'id' => 'rt',
+                'data' => ['short' => ['second' => ['future' => ['other' => 'in {0} sec.']]]],
+            ]],
+        ])
+    );
     assert_mf2_error('relative-time empty pattern set data', 'missing-locale-data', static fn(): string => RelativeTimeCore::format(1, [
         'localeMap' => ['en' => 'rt'],
         'patternSets' => [['id' => 'rt', 'data' => []]],
@@ -456,7 +467,7 @@ function assert_relative_time_core_fixtures(): int
         'localeMap' => ['en' => 'rt'],
         'patternSets' => [['id' => '', 'data' => ['short' => ['second' => ['future' => ['other' => 'in {0} sec.']]]]]],
     ]));
-    $checked += 8;
+    $checked += 9;
 
     $referenceCases = [
         ['locale' => 'en', 'style' => 'long', 'numeric' => 'auto', 'unit' => 'day', 'value' => -1, 'seconds' => -86_400],

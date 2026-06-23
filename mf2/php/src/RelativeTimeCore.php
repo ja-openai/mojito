@@ -64,9 +64,9 @@ final class RelativeTimeCore
 
     public static function create(array $data): self
     {
-        $localeMap = $data['localeMap'] ?? null;
+        $localeMap = self::prepareLocaleMap($data['localeMap'] ?? null);
         $rawPatternSets = $data['patternSets'] ?? null;
-        if (!is_array($localeMap) || $localeMap === [] || !is_array($rawPatternSets) || $rawPatternSets === []) {
+        if ($localeMap === null || !is_array($rawPatternSets) || $rawPatternSets === []) {
             throw new MF2Error('missing-locale-data', 'Relative-time core data has an unsupported shape.');
         }
 
@@ -80,6 +80,19 @@ final class RelativeTimeCore
             throw new MF2Error('missing-locale-data', 'Relative-time core data has an unsupported shape.');
         }
         return new self($localeMap, $patternSets);
+    }
+
+    private static function prepareLocaleMap(mixed $localeMap): ?array
+    {
+        if (!is_array($localeMap) || $localeMap === []) {
+            return null;
+        }
+        foreach ($localeMap as $locale => $setId) {
+            if (!is_string($locale) || !is_string($setId)) {
+                return null;
+            }
+        }
+        return $localeMap;
     }
 
     public static function registry(array $data): FunctionRegistry

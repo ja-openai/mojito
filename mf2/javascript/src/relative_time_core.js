@@ -108,12 +108,8 @@ function preparedData(data) {
   }
   const cached = DATA_CACHE.get(data);
   if (cached != null) return cached;
-  if (
-    data.localeMap == null ||
-    typeof data.localeMap !== "object" ||
-    Object.keys(data.localeMap).length === 0 ||
-    !Array.isArray(data.patternSets)
-  ) {
+  const localeMap = preparedLocaleMap(data.localeMap);
+  if (localeMap == null || !Array.isArray(data.patternSets)) {
     throw new RelativeTimeCoreError("missing-locale-data", "Relative-time core data has an unsupported shape.");
   }
   const patternSets = new Map();
@@ -133,9 +129,20 @@ function preparedData(data) {
   if (patternSets.size === 0) {
     throw new RelativeTimeCoreError("missing-locale-data", "Relative-time core data has an unsupported shape.");
   }
-  const prepared = { localeMap: data.localeMap, patternSets };
+  const prepared = { localeMap, patternSets };
   DATA_CACHE.set(data, prepared);
   return prepared;
+}
+
+function preparedLocaleMap(localeMap) {
+  if (localeMap == null || typeof localeMap !== "object" || Array.isArray(localeMap)) {
+    return null;
+  }
+  const entries = Object.entries(localeMap);
+  if (entries.length === 0 || entries.some(([, setId]) => typeof setId !== "string")) {
+    return null;
+  }
+  return Object.fromEntries(entries);
 }
 
 function parseFiniteNumber(value) {

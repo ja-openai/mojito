@@ -164,6 +164,20 @@ assert.throws(
 assert.throws(
   () =>
     createRelativeTimeCoreFunctionRegistry(FunctionRegistry, {
+      localeMap: { en: [] },
+      patternSets: [
+        {
+          id: "rt",
+          data: { short: { second: { future: { other: "in {0} sec." } } } },
+        },
+      ],
+    }),
+  (error) => error instanceof RelativeTimeCoreError && error.code === "missing-locale-data",
+  "rejects non-string relative-time locale map values during registry creation",
+);
+assert.throws(
+  () =>
+    createRelativeTimeCoreFunctionRegistry(FunctionRegistry, {
       localeMap: { en: "rt" },
       patternSets: [{ id: "rt", data: {} }],
     }),
