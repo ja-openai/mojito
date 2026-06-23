@@ -1,0 +1,40 @@
+{
+  "name": "portable-numeric-oversized-exponent-bad-operand",
+  "source": "Values: {1e1000001 :number}; {1e1000001 :integer}; {1e1000001 :percent}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      "Values: ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "1e1000001" },
+        "function": { "type": "function", "name": "number" }
+      },
+      "; ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "1e1000001" },
+        "function": { "type": "function", "name": "integer" }
+      },
+      "; ",
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "1e1000001" },
+        "function": { "type": "function", "name": "percent" }
+      }
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "Values: {|1e1000001|}; {|1e1000001|}; {|1e1000001|}",
+      "expectedErrors": [
+        { "code": "bad-operand" },
+        { "code": "bad-operand" },
+        { "code": "bad-operand" }
+      ]
+    }
+  ]
+}

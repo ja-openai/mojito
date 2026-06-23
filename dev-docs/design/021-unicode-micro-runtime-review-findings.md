@@ -93,6 +93,10 @@ branch is under active implementation.
   `BigDecimal`/`Decimal` construction, or internal decimal normalization across
   JavaScript, Python, PHP, Go, Java, Kotlin, Rust, and Swift. Shared fallback
   fixtures cover oversized decimal operands for all three portable formatters.
+  Decimal operand exponent parsing is also capped at `1_000_000` before host
+  decimal construction across those runtimes; Java and Kotlin now share the same
+  bounded-exponent path as the decimal-operand runtimes that already used a
+  compact internal representation.
 - Numeric fraction digit bounds: portable numeric formatters and number-core
   direct APIs now cap `minimumFractionDigits`, `maximumFractionDigits`, and
   equivalent platform wrapper fraction options at the supported formatter

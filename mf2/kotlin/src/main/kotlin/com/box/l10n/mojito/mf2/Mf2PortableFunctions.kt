@@ -7,6 +7,7 @@ import java.math.RoundingMode
 internal object Mf2PortableFunctions {
     const val MAX_FRACTION_DIGITS = 100
     private const val MAX_DECIMAL_OPERAND_LENGTH = 256
+    private const val MAX_DECIMAL_EXPONENT = 1_000_000
     private const val MAX_OFFSET_INTEGER_TEXT = "1000000000000000000000"
     private val MAX_OFFSET_INTEGER = BigInteger(MAX_OFFSET_INTEGER_TEXT)
 
@@ -87,7 +88,28 @@ internal object Mf2PortableFunctions {
     }
 
     private fun parseDecimalOperand(value: String): BigDecimal? =
-        if (value.length <= MAX_DECIMAL_OPERAND_LENGTH && decimalRegex.matches(value)) value.toBigDecimalOrNull() else null
+        if (
+            value.length <= MAX_DECIMAL_OPERAND_LENGTH &&
+            decimalRegex.matches(value) &&
+            parseBoundedDecimalExponent(value) != null
+        ) {
+            value.toBigDecimalOrNull()
+        } else {
+            null
+        }
+
+    private fun parseBoundedDecimalExponent(value: String): Int? {
+        val index = maxOf(value.indexOf('e'), value.indexOf('E'))
+        if (index < 0) return 0
+        val exponent = value.substring(index + 1)
+        val negative = exponent.startsWith("-")
+        val unsigned = if (negative || exponent.startsWith("+")) exponent.drop(1) else exponent
+        val digits = unsigned.trimStart('0').ifEmpty { "0" }
+        if (digits.length > 7) return null
+        val parsed = digits.toIntOrNull() ?: return null
+        if (parsed > MAX_DECIMAL_EXPONENT) return null
+        return if (negative) -parsed else parsed
+    }
 
     fun signDisplayAlways(functionRef: Map<String, Any?>): Boolean =
         functionOptionLiteral(functionRef, "signDisplay", null) == "always"

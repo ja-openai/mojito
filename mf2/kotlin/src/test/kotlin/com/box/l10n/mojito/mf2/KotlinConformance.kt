@@ -134,6 +134,7 @@ object KotlinConformance {
         val checkedInvalidSources = checkInvalidSourceFixtures(fixtureDir.parent)
         val checkedErrorCases = checkFormatErrorFixtures(fixtureDir.parent)
         val checkedLocaleKeyCases = checkLocaleKeyFixtures(fixtureDir.parent)
+        checkPortableDecimalOperandBounds()
         checkPublicApiEdgeCases()
         System.out.printf(
             "Kotlin MF2 conformance runner passed %d source models, %d format cases, %d parts cases, " +
@@ -149,6 +150,37 @@ object KotlinConformance {
             checkedLocaleKeyCases,
         )
         return 0
+    }
+
+    private fun checkPortableDecimalOperandBounds() {
+        val boundary = Mf2FunctionCall(
+            value = "1e1000000",
+            rawValue = "1e1000000",
+            function = mapOf("name" to "number"),
+            locale = "en",
+            optionResolver = { _, fallback -> fallback },
+            inheritedSource = null,
+        )
+        Mf2PortableFunctions.parseCallDecimalOperand(boundary, "Number function requires a numeric operand.")
+
+        for (value in listOf("1e1000001", "1e10000000")) {
+            val call = Mf2FunctionCall(
+                value = value,
+                rawValue = value,
+                function = mapOf("name" to "number"),
+                locale = "en",
+                optionResolver = { _, fallback -> fallback },
+                inheritedSource = null,
+            )
+            try {
+                Mf2PortableFunctions.parseCallDecimalOperand(call, "Number function requires a numeric operand.")
+                throw ConformanceFailure("portable decimal operand should reject exponent in $value")
+            } catch (error: Mf2Error) {
+                if (error.code != "bad-operand") {
+                    throw ConformanceFailure("portable decimal operand expected bad-operand for $value, got ${error.code}")
+                }
+            }
+        }
     }
 
     private fun checkInvalidSourceFixtures(fixtureRoot: Path): Int {

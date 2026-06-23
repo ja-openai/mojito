@@ -133,6 +133,7 @@ public final class Conformance {
         int checkedInvalidSources = checkInvalidSourceFixtures(fixtureDir.getParent());
         int checkedErrorCases = checkFormatErrorFixtures(fixtureDir.getParent());
         int checkedLocaleKeyCases = checkLocaleKeyFixtures(fixtureDir.getParent());
+        checkPortableDecimalOperandBounds();
         System.out.printf(
                 "Java MF2 conformance runner passed %d source models, %d format cases, %d parts cases, "
                         + "%d fallback cases, %d fallback parts cases, "
@@ -146,6 +147,18 @@ public final class Conformance {
                 checkedErrorCases,
                 checkedLocaleKeyCases);
         return 0;
+    }
+
+    private static void checkPortableDecimalOperandBounds() {
+        if (Mf2FunctionSupport.parseDecimalOperand("1e1000000") == null) {
+            throw new ConformanceFailure("portable decimal operand should accept exponent 1000000");
+        }
+        if (Mf2FunctionSupport.parseDecimalOperand("1e1000001") != null) {
+            throw new ConformanceFailure("portable decimal operand should reject exponent above 1000000");
+        }
+        if (Mf2FunctionSupport.parseDecimalOperand("1e10000000") != null) {
+            throw new ConformanceFailure("portable decimal operand should reject oversized exponent text");
+        }
     }
 
     private static int checkInvalidSourceFixtures(Path fixtureRoot) throws Exception {

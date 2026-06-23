@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 final class Mf2FunctionSupport {
     static final int MAX_FRACTION_DIGITS = 100;
     static final int MAX_DECIMAL_OPERAND_LENGTH = 256;
+    private static final int MAX_DECIMAL_EXPONENT = 1_000_000;
 
     private Mf2FunctionSupport() {}
 
@@ -64,6 +65,9 @@ final class Mf2FunctionSupport {
             return null;
         }
         if (!isWellFormedDecimalLiteral(value)) {
+            return null;
+        }
+        if (parseBoundedDecimalExponent(value) == null) {
             return null;
         }
         try {
@@ -158,6 +162,34 @@ final class Mf2FunctionSupport {
             }
         }
         return index == value.length();
+    }
+
+    private static Integer parseBoundedDecimalExponent(String value) {
+        int lower = value.indexOf('e');
+        int upper = value.indexOf('E');
+        int exponentIndex = Math.max(lower, upper);
+        if (exponentIndex < 0) {
+            return 0;
+        }
+        String exponent = value.substring(exponentIndex + 1);
+        boolean negative = exponent.startsWith("-");
+        String unsigned = negative || exponent.startsWith("+") ? exponent.substring(1) : exponent;
+        String digits = unsigned.replaceFirst("^0+", "");
+        if (digits.isEmpty()) {
+            return 0;
+        }
+        if (digits.length() > 7) {
+            return null;
+        }
+        try {
+            int parsed = Integer.parseInt(digits);
+            if (parsed > MAX_DECIMAL_EXPONENT) {
+                return null;
+            }
+            return negative ? -parsed : parsed;
+        } catch (NumberFormatException error) {
+            return null;
+        }
     }
 
     private static boolean isDecimalSourceFunction(Mf2Message.FunctionRef function) {
