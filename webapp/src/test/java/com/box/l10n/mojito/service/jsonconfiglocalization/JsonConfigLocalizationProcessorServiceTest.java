@@ -270,7 +270,7 @@ public class JsonConfigLocalizationProcessorServiceTest {
             null,
             null,
             null);
-    TextUnitDTO sourceTextUnit = sourceTextUnit("message.1", "Edited notification", 11L);
+    TextUnitDTO sourceTextUnit = sourceTextUnit("messages.message.1", "Edited notification", 11L);
     sourceTextUnit.setComment("Updated copy");
     when(textUnitSearcher.search(any(TextUnitSearcherParameters.class)))
         .thenReturn(List.of(sourceTextUnit))
@@ -356,9 +356,11 @@ public class JsonConfigLocalizationProcessorServiceTest {
             null,
             null,
             null);
-    TextUnitDTO checkoutSourceTextUnit = sourceTextUnit("checkout.pay", "Pay now", 11L);
+    TextUnitDTO checkoutSourceTextUnit =
+        sourceTextUnit("surface.checkout.messages.checkout.pay", "Pay now", 11L);
     checkoutSourceTextUnit.setComment("Primary checkout button.");
-    TextUnitDTO profileSourceTextUnit = sourceTextUnit("profile.saved", "Profile saved", 12L);
+    TextUnitDTO profileSourceTextUnit =
+        sourceTextUnit("surface.profile.settings.messages.profile.saved", "Profile saved", 12L);
     profileSourceTextUnit.setComment("Toast after profile changes are saved.");
     when(textUnitSearcher.search(any(TextUnitSearcherParameters.class)))
         .thenReturn(List.of(checkoutSourceTextUnit, profileSourceTextUnit))
@@ -1020,7 +1022,8 @@ public class JsonConfigLocalizationProcessorServiceTest {
             JsonConfigLocalizationProcessorService.JsonConfigString::stringId,
             JsonConfigLocalizationProcessorService.JsonConfigString::source,
             JsonConfigLocalizationProcessorService.JsonConfigString::comment)
-        .containsExactly(org.assertj.core.groups.Tuple.tuple("message.1", "", "Draft copy"));
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple("messages.message.1", "", "Draft copy"));
   }
 
   @Test
@@ -1077,9 +1080,62 @@ public class JsonConfigLocalizationProcessorServiceTest {
             JsonConfigLocalizationProcessorService.JsonConfigString::comment)
         .containsExactly(
             org.assertj.core.groups.Tuple.tuple(
-                "checkout.pay", "Pay now", "Primary checkout button."),
+                "surface.checkout.messages.checkout.pay", "Pay now", "Primary checkout button."),
             org.assertj.core.groups.Tuple.tuple(
-                "profile.saved", "Profile saved", "Toast after profile changes are saved."));
+                "surface.profile.settings.messages.profile.saved",
+                "Profile saved",
+                "Toast after profile changes are saved."));
+  }
+
+  @Test
+  public void extractPrefixesDuplicateFormatJsMessageIdsWithMessageMapPath() {
+    JsonConfigLocalizationProcessorService.ExtractionResult result =
+        service.extract(
+            new JsonConfigLocalizationProcessorService.ExtractionInput(
+                "",
+                """
+                {
+                  "checkout": {
+                    "messages": {
+                      "common.save": {
+                        "defaultMessage": "Save order",
+                        "description": "Checkout save action.",
+                        "translations": {}
+                      }
+                    }
+                  },
+                  "profile": {
+                    "messages": {
+                      "common.save": {
+                        "defaultMessage": "Save profile",
+                        "description": "Profile save action.",
+                        "translations": {}
+                      }
+                    }
+                  }
+                }
+                """,
+                new JsonConfigLocalizationProcessorService.SourceConfigProfile(
+                    JsonConfigLocalizationProcessorService.SourceConfigFormat
+                        .FORMATJS_MULTILINGUAL_MAP,
+                    "$..messages",
+                    "id",
+                    "translations",
+                    "en-US",
+                    List.of(),
+                    "defaultMessage",
+                    "description")));
+
+    assertThat(result.strings())
+        .extracting(
+            JsonConfigLocalizationProcessorService.JsonConfigString::stringId,
+            JsonConfigLocalizationProcessorService.JsonConfigString::source,
+            JsonConfigLocalizationProcessorService.JsonConfigString::comment)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple(
+                "checkout.messages.common.save", "Save order", "Checkout save action."),
+            org.assertj.core.groups.Tuple.tuple(
+                "profile.messages.common.save", "Save profile", "Profile save action."));
   }
 
   @Test

@@ -637,10 +637,10 @@ public class JsonConfigLocalizationProcessorService {
           .fields()
           .forEachRemaining(
               entry -> {
-                String stringId = entry.getKey();
-                String stringPath = jsonPath(messageMap.path(), stringId);
+                String messageKey = entry.getKey();
+                String stringId = jsonPath(messageMap.path(), messageKey);
                 if (!(entry.getValue() instanceof ObjectNode messageObject)) {
-                  warnings.add(stringPath + " is not an object; skipped.");
+                  warnings.add(stringId + " is not an object; skipped.");
                   return;
                 }
 
@@ -889,32 +889,27 @@ public class JsonConfigLocalizationProcessorService {
           .fields()
           .forEachRemaining(
               entry -> {
-                String stringId = entry.getKey();
-                String stringPath = jsonPath(messageMap.path(), stringId);
+                String messageKey = entry.getKey();
+                String stringId = jsonPath(messageMap.path(), messageKey);
                 JsonNode messageNode = entry.getValue();
                 if (!(messageNode instanceof ObjectNode messageObject)) {
-                  warnings.add(stringPath + " is not an object; skipped.");
+                  warnings.add(stringId + " is not an object; skipped.");
                   return;
                 }
 
                 JsonNode sourceNode = messageObject.get(profile.sourceField());
                 if (sourceNode == null || !sourceNode.isTextual()) {
-                  warnings.add(stringPath + " is missing " + profile.sourceField() + "; skipped.");
+                  warnings.add(stringId + " is missing " + profile.sourceField() + "; skipped.");
                   return;
                 }
                 if (sourceNode.asText().isBlank()
                     && schemaConstraints.formatJsNonEmptyFields().contains(profile.sourceField())) {
                   warnings.add(
-                      stringPath + " is missing non-empty " + profile.sourceField() + "; skipped.");
+                      stringId + " is missing non-empty " + profile.sourceField() + "; skipped.");
                   return;
                 }
                 if (!seenStringIds.add(stringId)) {
-                  warnings.add(
-                      "Duplicate string id \""
-                          + stringId
-                          + "\" at \""
-                          + stringPath
-                          + "\" skipped.");
+                  warnings.add("Duplicate string id \"" + stringId + "\" skipped.");
                   return;
                 }
 

@@ -638,7 +638,7 @@ describe('jsonConfigLocalization', () => {
 
     expect(
       getStatsigSourceConfigStringIds(JSON.stringify(extraction.sourceConfig), profile),
-    ).toEqual(new Set(['message.1']));
+    ).toEqual(new Set(['messages.message.1']));
     expect(
       buildStatsigSourceConfigExport(profile, extraction.sourceConfig, [], extraction.strings, {})
         .value,
@@ -693,7 +693,7 @@ describe('jsonConfigLocalization', () => {
         sourceString.source,
         sourceString.comment,
       ]),
-    ).toEqual([['message.1', 'Saved notification', 'Shown after save']]);
+    ).toEqual([['messages.message.1', 'Saved notification', 'Shown after save']]);
     expect(
       buildStatsigSourceConfigExport(
         profile,
@@ -782,9 +782,13 @@ describe('jsonConfigLocalization', () => {
         sourceString.comment,
       ]),
     ).toEqual([
-      ['global.cancel', 'Cancel', 'Generic cancel button.'],
-      ['checkout.pay', 'Pay now', 'Primary checkout button.'],
-      ['profile.saved', 'Profile saved', 'Toast after profile changes are saved.'],
+      ['messages.global.cancel', 'Cancel', 'Generic cancel button.'],
+      ['surface.checkout.messages.checkout.pay', 'Pay now', 'Primary checkout button.'],
+      [
+        'surface.profile.settings.messages.profile.saved',
+        'Profile saved',
+        'Toast after profile changes are saved.',
+      ],
     ]);
     expect(
       buildStatsigSourceConfigExport(
@@ -828,6 +832,75 @@ describe('jsonConfigLocalization', () => {
                 },
               },
             },
+          },
+        },
+      },
+    });
+  });
+
+  it('uses message map paths to disambiguate duplicate FormatJS message ids', () => {
+    const profile = {
+      ...DEFAULT_STATSIG_SOURCE_CONFIG_PROFILE,
+      format: 'FORMATJS_MULTILINGUAL_MAP' as const,
+      collectionKey: '$..messages',
+      sourceField: 'defaultMessage',
+      commentField: 'description',
+    };
+    const extraction = extractStatsigSourceConfigStrings(
+      '',
+      JSON.stringify({
+        checkout: {
+          messages: {
+            'common.save': {
+              defaultMessage: 'Save order',
+              description: 'Checkout save action.',
+              translations: {},
+            },
+          },
+        },
+        profile: {
+          messages: {
+            'common.save': {
+              defaultMessage: 'Save profile',
+              description: 'Profile save action.',
+              translations: {},
+            },
+          },
+        },
+      }),
+      0,
+      profile,
+    );
+
+    expect(
+      extraction.strings.map((sourceString) => [
+        sourceString.stringId,
+        sourceString.source,
+        sourceString.comment,
+      ]),
+    ).toEqual([
+      ['checkout.messages.common.save', 'Save order', 'Checkout save action.'],
+      ['profile.messages.common.save', 'Save profile', 'Profile save action.'],
+    ]);
+    expect(
+      buildStatsigSourceConfigExport(profile, extraction.sourceConfig, [], extraction.strings, {})
+        .value,
+    ).toEqual({
+      checkout: {
+        messages: {
+          'common.save': {
+            defaultMessage: 'Save order',
+            description: 'Checkout save action.',
+            translations: {},
+          },
+        },
+      },
+      profile: {
+        messages: {
+          'common.save': {
+            defaultMessage: 'Save profile',
+            description: 'Profile save action.',
+            translations: {},
           },
         },
       },
@@ -1007,8 +1080,8 @@ describe('jsonConfigLocalization', () => {
         },
       },
     });
-    expect(result.itemKey).toBe('message.1');
-    expect(result.stringIds).toEqual(['message.1']);
+    expect(result.itemKey).toBe('messages.message.1');
+    expect(result.stringIds).toEqual(['messages.message.1']);
     expect(result.appended).toBe(true);
   });
 

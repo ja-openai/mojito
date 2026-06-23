@@ -383,20 +383,20 @@ function extractFormatJsMapStrings(
   const seenStringIds = new Set<string>();
 
   getFormatJsMessageMaps(sourceConfig, profile).forEach((messageMapMatch) => {
-    Object.entries(messageMapMatch.value).forEach(([stringId, value]) => {
-      const stringPath = formatJsonPath(messageMapMatch.path, stringId);
+    Object.entries(messageMapMatch.value).forEach(([messageKey, value]) => {
+      const stringId = formatJsStringId(messageMapMatch.path, messageKey);
       if (!isJsonRecord(value)) {
-        warnings.push(`${stringPath} is not an object; skipped.`);
+        warnings.push(`${stringId} is not an object; skipped.`);
         return;
       }
 
       const source = value[sourceField];
       if (typeof source !== 'string') {
-        warnings.push(`${stringPath} is missing ${sourceField}; skipped.`);
+        warnings.push(`${stringId} is missing ${sourceField}; skipped.`);
         return;
       }
       if (seenStringIds.has(stringId)) {
-        warnings.push(`Duplicate string id "${stringId}" at "${stringPath}" skipped.`);
+        warnings.push(`Duplicate string id "${stringId}" skipped.`);
         return;
       }
       seenStringIds.add(stringId);
@@ -448,7 +448,9 @@ export function getStatsigSourceConfigStringIds(
   }
   if (isFormatJsSourceFormat(profile.format)) {
     return new Set(
-      getFormatJsMessageMaps(sourceConfig, profile).flatMap((match) => Object.keys(match.value)),
+      getFormatJsMessageMaps(sourceConfig, profile).flatMap((match) =>
+        Object.keys(match.value).map((messageKey) => formatJsStringId(match.path, messageKey)),
+      ),
     );
   }
   const collection = sourceConfig[profile.collectionKey];
@@ -824,13 +826,13 @@ function buildFormatJsMapConfigExport(
   sourceStrings
     .filter((sourceString) => sourceString.used)
     .forEach((sourceString) => {
-      const messageMapMatch = writableFormatJsMessageMapForString(
+      const messageTarget = writableFormatJsMessageTargetForString(
         messageMapMatches,
         sourceString.stringId,
         profile,
         warnings,
       );
-      const entry = ensureJsonRecord(messageMapMatch.value, sourceString.stringId);
+      const entry = ensureJsonRecord(messageTarget.messageMap.value, messageTarget.messageKey);
       entry[sourceField] = sourceString.source;
       if (sourceString.comment || entry[commentField] != null) {
         entry[commentField] = sourceString.comment;
@@ -861,13 +863,13 @@ function buildFormatJsMultilingualMapConfigExport(
   sourceStrings
     .filter((sourceString) => sourceString.used)
     .forEach((sourceString) => {
-      const messageMapMatch = writableFormatJsMessageMapForString(
+      const messageTarget = writableFormatJsMessageTargetForString(
         messageMapMatches,
         sourceString.stringId,
         profile,
         warnings,
       );
-      const entry = ensureJsonRecord(messageMapMatch.value, sourceString.stringId);
+      const entry = ensureJsonRecord(messageTarget.messageMap.value, messageTarget.messageKey);
       entry[sourceField] = sourceString.source;
       if (sourceString.comment || entry[commentField] != null) {
         entry[commentField] = sourceString.comment;
@@ -1040,12 +1042,13 @@ function appendFormatJsMapEntry(
     [sourceField]: '',
     [commentField]: '',
   };
+  const stringId = formatJsStringId(messageMapMatch.path, itemKey);
 
   return {
     sourceConfigJson: JSON.stringify(sourceConfig, null, 2),
     profile,
-    itemKey,
-    stringIds: [itemKey],
+    itemKey: stringId,
+    stringIds: [stringId],
     appended: true,
     warnings: Array.from(new Set(warnings)),
   };
@@ -1076,12 +1079,13 @@ function appendFormatJsMultilingualMapEntry(
     [commentField]: '',
     [translationsField]: {},
   };
+  const stringId = formatJsStringId(messageMapMatch.path, itemKey);
 
   return {
     sourceConfigJson: JSON.stringify(sourceConfig, null, 2),
     profile,
-    itemKey,
-    stringIds: [itemKey],
+    itemKey: stringId,
+    stringIds: [stringId],
     appended: true,
     warnings: Array.from(new Set(warnings)),
   };
@@ -1477,24 +1481,64 @@ function writableFormatJsMessageMaps(
   return matches;
 }
 
-function writableFormatJsMessageMapForString(
+type FormatJsMessageTarget = {
+  messageMap: JsonRecordPathMatch;
+  messageKey: string;
+};
+
+function writableFormatJsMessageTargetForString(
   messageMapMatches: JsonRecordPathMatch[],
   stringId: string,
   profile: StatsigSourceConfigProfile,
   warnings: string[],
-): JsonRecordPathMatch {
-  const existingMatch = messageMapMatches.find((match) => match.value[stringId] != null);
-  if (existingMatch) {
-    return existingMatch;
+): FormatJsMessageTarget {
+  const normalizedStringId = stringId.trim();
+  const sortedMatches = [...messageMapMatches].sort(
+    (left, right) => right.path.length - left.path.length,
+  );
+
+  for (const match of sortedMatches) {
+    const messageKey = messageKeyFromFormatJsStringId(match.path, normalizedStringId);
+    if (messageKey && match.value[messageKey] != null) {
+      return { messageMap: match, messageKey };
+    }
+  }
+
+  const legacyMatches = messageMapMatches.filter(
+    (match) => match.value[normalizedStringId] != null,
+  );
+  if (legacyMatches.length === 1) {
+    return { messageMap: legacyMatches[0], messageKey: normalizedStringId };
+  }
+
+  for (const match of sortedMatches) {
+    const messageKey = messageKeyFromFormatJsStringId(match.path, normalizedStringId);
+    if (messageKey) {
+      return { messageMap: match, messageKey };
+    }
   }
 
   const fallbackMatch = messageMapMatches[0];
   if (hasJsonPathWildcard(profile.collectionKey)) {
     warnings.push(
-      `String "${stringId}" was not present in any map matched by "${profile.collectionKey}"; added it under "${fallbackMatch.path}".`,
+      `String "${normalizedStringId}" was not present in any map matched by "${profile.collectionKey}"; added it under "${fallbackMatch.path}".`,
     );
   }
-  return fallbackMatch;
+  return { messageMap: fallbackMatch, messageKey: normalizedStringId };
+}
+
+function formatJsStringId(messageMapPath: string, messageKey: string): string {
+  return formatJsonPath(messageMapPath, messageKey);
+}
+
+function messageKeyFromFormatJsStringId(messageMapPath: string, stringId: string): string | null {
+  if (!messageMapPath) {
+    return stringId || null;
+  }
+  const prefix = `${messageMapPath}.`;
+  return stringId.startsWith(prefix) && stringId.length > prefix.length
+    ? stringId.slice(prefix.length)
+    : null;
 }
 
 function detectFormatJsMessageMap(
