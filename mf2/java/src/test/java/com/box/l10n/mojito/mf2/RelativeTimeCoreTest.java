@@ -139,9 +139,17 @@ public final class RelativeTimeCoreTest {
                 "instance format",
                 formatter.format(60),
                 Mf2RelativeTimeCore.format(60, data, null));
+        assertSameDefault(
+                "static format",
+                Mf2RelativeTimeCore.format(60, data),
+                Mf2RelativeTimeCore.format(60, data, null));
         assertSameDefaultParts(
                 "instance formatToParts",
                 formatter.formatToParts(60),
+                Mf2RelativeTimeCore.formatToParts(60, data, null));
+        assertSameDefaultParts(
+                "static formatToParts",
+                Mf2RelativeTimeCore.formatToParts(60, data),
                 Mf2RelativeTimeCore.formatToParts(60, data, null));
 
         try {

@@ -144,10 +144,12 @@ through `Mf2RelativeTimeCore.registry(data)` without adding runtime
 dependencies or bundling all-locale data into the jar. The shared
 `relative-time-duration-v0` fixture checks static outputs, error codes, registry
 integration, direct parts output, and Node `Intl.RelativeTimeFormat` witnesses.
-Direct Java callers can use instance `format(value)` and `formatToParts(value)`
-overloads for default options after `Mf2RelativeTimeCore.create(data)`, or the
-corresponding `(value, options)` overloads with
-`Mf2RelativeTimeCore.Options.builder()`.
+Direct Java callers can use static `format(value, data)` and
+`formatToParts(value, data)` overloads, or instance `format(value)` and
+`formatToParts(value)` overloads after `Mf2RelativeTimeCore.create(data)`, for
+default options. The corresponding overloads with explicit
+`Mf2RelativeTimeCore.Options.builder()` options are available when callers need
+to override locale, style, numeric behavior, policy, or unit.
 
 The runtime is parser-free: production callers can pass compiled message models
 or catalog resources without shipping a source parser. Fixture JSON parsing and

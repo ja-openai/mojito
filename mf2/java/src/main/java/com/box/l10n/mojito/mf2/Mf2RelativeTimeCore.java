@@ -85,9 +85,18 @@ public final class Mf2RelativeTimeCore {
         return create(data).format(value, options);
     }
 
+    public static String format(Object value, Data data) throws Mf2Exception {
+        return format(value, data, null);
+    }
+
     public static List<Mf2FormattedPart> formatToParts(Object value, Data data, Options options)
             throws Mf2Exception {
         return create(data).formatToParts(value, options);
+    }
+
+    public static List<Mf2FormattedPart> formatToParts(Object value, Data data)
+            throws Mf2Exception {
+        return formatToParts(value, data, null);
     }
 
     public String format(Object value) throws Mf2Exception {
