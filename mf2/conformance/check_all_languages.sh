@@ -25,6 +25,8 @@ swift_conformance --number-core
 swift_conformance --date-time-core
 swift_conformance --relative-time-core
 (cd "$ROOT/python" && sh run.sh conformance "$FIXTURES")
+(cd "$ROOT/python" && sh run.sh test)
+(cd "$ROOT/python" && sh run.sh typecheck)
 (cd "$ROOT/python" && sh run.sh number-core)
 (cd "$ROOT/python" && sh run.sh date-time-core)
 (cd "$ROOT/python" && sh run.sh relative-time-core)
@@ -45,6 +47,8 @@ swift_conformance --relative-time-core
   sh run.sh --no-prepare relative-time-core-check
 )
 (cd "$ROOT/javascript" && node tools/conformance.js "$FIXTURES")
+(cd "$ROOT/javascript" && node tests/package-boundary-test.js)
+(cd "$ROOT/javascript" && npm run check:types)
 (cd "$ROOT/javascript" && node tests/number-core-test.js)
 (cd "$ROOT/javascript" && node tests/date-time-core-test.js)
 (cd "$ROOT/javascript" && node tests/relative-time-core-test.js)

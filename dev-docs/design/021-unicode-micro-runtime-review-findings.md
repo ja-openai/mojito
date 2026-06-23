@@ -32,6 +32,11 @@ branch is under active implementation.
   avoids SwiftPM manifest sandbox failures and user-cache write warnings in the
   managed Codex workspace while still running the same Swift conformance
   binaries and core checks.
+- Shared conformance runner package-boundary coverage: the all-language runner
+  now includes the JavaScript public subpath runtime/type checks and the Python
+  unittest/mypy package-boundary checks. The standard cross-runtime command now
+  catches direct core parts export drift instead of leaving those checks as
+  separate per-runtime commands.
 - Shared conformance runner coverage: `mf2/conformance/check_all_languages.sh`
   now runs the shared number-core, date-time-core, and relative-time-core
   fixture suites for Rust, Swift, Python, Java, Kotlin, and JavaScript instead
