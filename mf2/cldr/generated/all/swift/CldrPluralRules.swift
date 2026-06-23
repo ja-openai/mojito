@@ -2,7 +2,9 @@
 import Foundation
 
 private let maxPluralOperandLength = 256
-private let maxSafePluralOperandInteger = 9_000_000_000_000_000_000.0
+private let maxSafePluralOperandInteger = 9_007_199_254_740_991.0
+private let maxSafePluralOperandInt: Int64 = 9_007_199_254_740_991
+private let pluralOperandPattern = #"^[+-]?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$"#
 
 struct NumberOperands {
     let n: Double
@@ -16,6 +18,7 @@ struct NumberOperands {
 
     init?(_ value: String) {
         guard value.count <= maxPluralOperandLength else { return nil }
+        guard value.range(of: pluralOperandPattern, options: .regularExpression) != nil else { return nil }
         guard let parsed = Double(value), parsed.isFinite else { return nil }
         let n = abs(parsed)
         guard n <= maxSafePluralOperandInteger else { return nil }
@@ -27,8 +30,9 @@ struct NumberOperands {
         self.i = Int64(n.rounded(.towardZero))
         self.v = Int64(fraction.count)
         self.w = Int64(fractionTrimmed.count)
-        self.f = Int64(fraction) ?? 0
-        self.t = Int64(fractionTrimmed) ?? 0
+        guard let f = parsePluralInt(fraction), let t = parsePluralInt(fractionTrimmed) else { return nil }
+        self.f = f
+        self.t = t
         self.e = 0
         self.c = 0
     }
@@ -51,6 +55,16 @@ struct NumberOperands {
         if name == "n" { return n }
         return Double(operand(name))
     }
+}
+
+private func parsePluralInt(_ value: String) -> Int64? {
+    if value.isEmpty { return 0 }
+    let digits = String(value.drop(while: { $0 == "0" }))
+    let normalizedDigits = digits.isEmpty ? "0" : digits
+    guard let parsed = Int64(normalizedDigits), parsed <= maxSafePluralOperandInt else {
+        return nil
+    }
+    return parsed
 }
 
 func selectCardinal(locale: String, operands: NumberOperands) -> String {

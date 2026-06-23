@@ -2,6 +2,9 @@
 package com.box.l10n.mojito.mf2
 
 private const val MAX_PLURAL_OPERAND_LENGTH = 256
+private const val MAX_SAFE_PLURAL_INTEGER = 9_007_199_254_740_991.0
+private const val MAX_SAFE_PLURAL_LONG = 9_007_199_254_740_991L
+private val PLURAL_OPERAND_REGEX = Regex("^[+-]?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$")
 
 internal object CldrPluralRules {
     fun selectCardinal(locale: String, operands: NumberOperands): String =
@@ -462,14 +465,15 @@ internal data class NumberOperands(
         fun fromString(value: String): NumberOperands? {
             val raw = value.trim()
             if (raw.length > MAX_PLURAL_OPERAND_LENGTH) return null
+            if (!PLURAL_OPERAND_REGEX.matches(raw)) return null
             val parsed = raw.toDoubleOrNull()?.let { kotlin.math.abs(it) } ?: return null
-            if (!parsed.isFinite()) return null
+            if (!parsed.isFinite() || parsed > MAX_SAFE_PLURAL_INTEGER) return null
             val normalized = raw.trimStart('-', '+').lowercase()
             val base = normalized.substringBefore("e")
             val fraction = base.substringAfter(".", "")
             val trimmedFraction = fraction.trimEnd('0')
-            val f = if (fraction.isEmpty()) 0L else fraction.toLongOrNull() ?: return null
-            val t = if (trimmedFraction.isEmpty()) 0L else trimmedFraction.toLongOrNull() ?: return null
+            val f = parsePluralLong(fraction) ?: return null
+            val t = parsePluralLong(trimmedFraction) ?: return null
             return NumberOperands(
                 n = parsed,
                 i = parsed.toLong(),
@@ -480,6 +484,13 @@ internal data class NumberOperands(
             )
         }
     }
+}
+
+private fun parsePluralLong(value: String): Long? {
+    if (value.isEmpty()) return 0
+    val digits = value.trimStart('0').ifEmpty { "0" }
+    val parsed = digits.toLongOrNull() ?: return null
+    return parsed.takeIf { it <= MAX_SAFE_PLURAL_LONG }
 }
 
 private fun selectCardinalR0(operands: NumberOperands): String {

@@ -1890,6 +1890,8 @@ DATA = {'cardinal': {'locales': {'af': 'r0',
                         'id': 'r24'}]}}
 MAX_PLURAL_OPERAND_LENGTH = 256
 MAX_PLURAL_OPERAND_DIGITS = 1000
+MAX_SAFE_PLURAL_INTEGER = Decimal("9007199254740991")
+MAX_SAFE_PLURAL_INTEGER_INT = 9007199254740991
 
 
 class NumberOperands:
@@ -1905,6 +1907,8 @@ class NumberOperands:
             raise ValueError(f"Unsupported plural operand value: {value!r}")
         if abs(decimal.adjusted()) >= MAX_PLURAL_OPERAND_DIGITS:
             raise ValueError(f"Unsupported plural operand value: {value!r}")
+        if decimal > MAX_SAFE_PLURAL_INTEGER:
+            raise ValueError(f"Unsupported plural operand value: {value!r}")
 
         normalized = raw.lstrip("-+").lower()
         base = normalized.split("e", 1)[0]
@@ -1915,13 +1919,22 @@ class NumberOperands:
         self.i = int(decimal)
         self.v = len(fraction)
         self.w = len(fraction_without_trailing_zero)
-        self.f = int(fraction) if fraction else 0
-        self.t = int(fraction_without_trailing_zero) if fraction_without_trailing_zero else 0
+        self.f = _parse_plural_digits(fraction)
+        self.t = _parse_plural_digits(fraction_without_trailing_zero)
         self.e = 0
         self.c = 0
 
     def operand(self, name: str) -> Decimal | int:
         return getattr(self, name)
+
+
+def _parse_plural_digits(value: str) -> int:
+    if not value:
+        return 0
+    parsed = int(value)
+    if parsed > MAX_SAFE_PLURAL_INTEGER_INT:
+        raise ValueError("Unsupported plural operand value")
+    return parsed
 
 
 def select_cardinal(value: Any, locale: str) -> str:

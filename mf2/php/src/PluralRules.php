@@ -7,6 +7,7 @@ namespace Mojito\MessageFormat2\Internal;
 final class NumberOperands
 {
     private const MAX_OPERAND_LENGTH = 256;
+    private const MAX_SAFE_PLURAL_INTEGER = 9_007_199_254_740_991;
 
     public float $n;
     public int $i;
@@ -20,6 +21,9 @@ final class NumberOperands
     public function __construct(mixed $value)
     {
         if (is_int($value)) {
+            if (abs($value) > self::MAX_SAFE_PLURAL_INTEGER) {
+                throw new \RangeException('Unsupported plural operand value');
+            }
             $this->n = abs($value);
             $this->i = abs($value);
             $this->v = 0;
@@ -39,8 +43,8 @@ final class NumberOperands
         if (!is_finite($n)) {
             throw new \RangeException("Unsupported plural operand value: {$raw}");
         }
-        if (floor($n) > PHP_INT_MAX) {
-            throw new \RangeException("Unsupported plural operand value: {$raw}");
+        if ($n > self::MAX_SAFE_PLURAL_INTEGER) {
+            throw new \RangeException('Unsupported plural operand value');
         }
         $normalized = strtolower(preg_replace('/^[+-]+/', '', $raw) ?? $raw);
         $base = explode('e', $normalized, 2)[0];
@@ -50,8 +54,8 @@ final class NumberOperands
         $this->i = (int) floor($n);
         $this->v = strlen($fraction);
         $this->w = strlen($trimmed);
-        $this->f = $fraction === '' ? 0 : (int) $fraction;
-        $this->t = $trimmed === '' ? 0 : (int) $trimmed;
+        $this->f = self::parsePluralDigits($fraction);
+        $this->t = self::parsePluralDigits($trimmed);
     }
 
     public function operand(string $name): float|int
@@ -67,6 +71,22 @@ final class NumberOperands
             'c' => $this->c,
             default => 0,
         };
+    }
+
+    private static function parsePluralDigits(string $digits): int
+    {
+        if ($digits === '') {
+            return 0;
+        }
+        $normalized = ltrim($digits, '0');
+        if ($normalized === '') {
+            return 0;
+        }
+        $max = (string) self::MAX_SAFE_PLURAL_INTEGER;
+        if (strlen($normalized) > strlen($max) || (strlen($normalized) === strlen($max) && strcmp($normalized, $max) > 0)) {
+            throw new \RangeException('Unsupported plural operand value');
+        }
+        return (int) $normalized;
     }
 }
 

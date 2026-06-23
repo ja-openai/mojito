@@ -3,6 +3,7 @@ package mf2
 
 import (
 	"math"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -512,24 +513,35 @@ func lookupRuleID(locales map[string]string, parents map[string]string, locale s
 
 type numberOperands struct {
 	n float64
-	i int
-	v int
-	w int
-	f int
-	t int
-	e int
-	c int
+	i int64
+	v int64
+	w int64
+	f int64
+	t int64
+	e int64
+	c int64
 }
 
 const maxPluralOperandLength = 256
+const maxSafePluralInteger = 9007199254740991.0
+const maxSafePluralInt = 9007199254740991
+
+var pluralOperandRe = regexp.MustCompile(`^[+-]?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$`)
 
 func newNumberOperands(value any) (numberOperands, bool) {
 	raw := strings.TrimSpace(valueToString(value))
 	if raw == "" || len(raw) > maxPluralOperandLength {
 		return numberOperands{}, false
 	}
+	if !pluralOperandRe.MatchString(raw) {
+		return numberOperands{}, false
+	}
 	parsed, err := strconv.ParseFloat(raw, 64)
 	if err != nil || math.IsInf(parsed, 0) || math.IsNaN(parsed) {
+		return numberOperands{}, false
+	}
+	n := math.Abs(parsed)
+	if n > maxSafePluralInteger {
 		return numberOperands{}, false
 	}
 	normalized := strings.ToLower(strings.TrimLeft(raw, "+-"))
@@ -539,27 +551,39 @@ func newNumberOperands(value any) (numberOperands, bool) {
 		fraction = base[dot+1:]
 	}
 	trimmedFraction := strings.TrimRight(fraction, "0")
+	f, ok := parsePluralDigits(fraction)
+	if !ok {
+		return numberOperands{}, false
+	}
+	t, ok := parsePluralDigits(trimmedFraction)
+	if !ok {
+		return numberOperands{}, false
+	}
 	return numberOperands{
-		n: math.Abs(parsed),
-		i: int(math.Trunc(math.Abs(parsed))),
-		v: len(fraction),
-		w: len(trimmedFraction),
-		f: parsePluralDigits(fraction),
-		t: parsePluralDigits(trimmedFraction),
+		n: n,
+		i: int64(math.Trunc(n)),
+		v: int64(len(fraction)),
+		w: int64(len(trimmedFraction)),
+		f: f,
+		t: t,
 		e: 0,
 		c: 0,
 	}, true
 }
 
-func parsePluralDigits(value string) int {
+func parsePluralDigits(value string) (int64, bool) {
 	if value == "" {
-		return 0
+		return 0, true
 	}
-	parsed, err := strconv.Atoi(value)
-	if err != nil {
-		return 0
+	digits := strings.TrimLeft(value, "0")
+	if digits == "" {
+		digits = "0"
 	}
-	return parsed
+	parsed, err := strconv.ParseInt(digits, 10, 64)
+	if err != nil || parsed > maxSafePluralInt {
+		return 0, false
+	}
+	return parsed, true
 }
 
 func (operands numberOperands) operand(name string) float64 {

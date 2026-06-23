@@ -2,10 +2,12 @@
 import { pluralLookupChain } from "./locale-key.js";
 
 const MAX_PLURAL_OPERAND_LENGTH = 256;
+const MAX_SAFE_PLURAL_INTEGER = Number.MAX_SAFE_INTEGER;
 
 export class NumberOperands {
   constructor(value) {
     if (typeof value === "number" && Number.isFinite(value) && Number.isInteger(value)) {
+      if (!Number.isSafeInteger(value)) throw new RangeError(`Unsupported plural operand value: ${value}`);
       this.n = Math.abs(value);
       this.i = Math.trunc(this.n);
       this.v = 0;
@@ -24,7 +26,7 @@ export class NumberOperands {
       throw new RangeError(`Unsupported plural operand value: ${value}`);
     }
     const n = Math.abs(Number(raw));
-    if (!Number.isFinite(n)) throw new RangeError(`Unsupported plural operand value: ${value}`);
+    if (!Number.isFinite(n) || n > MAX_SAFE_PLURAL_INTEGER) throw new RangeError(`Unsupported plural operand value: ${value}`);
     const normalized = raw.replace(/^[+-]+/, "").toLowerCase();
     const base = normalized.split("e", 1)[0];
     const fraction = base.includes(".") ? base.split(".", 2)[1] : "";
@@ -33,8 +35,8 @@ export class NumberOperands {
     this.i = Math.trunc(n);
     this.v = fraction.length;
     this.w = trimmedFraction.length;
-    this.f = fraction === "" ? 0 : Number(fraction);
-    this.t = trimmedFraction === "" ? 0 : Number(trimmedFraction);
+    this.f = parseSafePluralInteger(fraction);
+    this.t = parseSafePluralInteger(trimmedFraction);
     this.e = 0;
     this.c = 0;
   }
@@ -42,6 +44,14 @@ export class NumberOperands {
   operand(name) {
     return this[name] ?? 0;
   }
+}
+
+function parseSafePluralInteger(text) {
+  if (text === "") return 0;
+  const normalized = text.replace(/^0+/, "") || "0";
+  const value = Number(normalized);
+  if (!Number.isSafeInteger(value)) throw new RangeError("Unsupported plural operand value");
+  return value;
 }
 
 export function selectCardinal(locale, value) {

@@ -2,6 +2,8 @@
 use crate::locale_key::plural_lookup_chain;
 
 const MAX_PLURAL_OPERAND_LENGTH: usize = 256;
+const MAX_SAFE_PLURAL_INTEGER: f64 = 9_007_199_254_740_991.0;
+const MAX_SAFE_PLURAL_I64: i64 = 9_007_199_254_740_991;
 
 
 #[derive(Debug, Clone, Copy)]
@@ -19,8 +21,9 @@ pub struct NumberOperands {
 impl NumberOperands {
     pub fn from_str(value: &str) -> Option<Self> {
         if value.len() > MAX_PLURAL_OPERAND_LENGTH { return None; }
+        if !is_plural_decimal_operand(value) { return None; }
         let n = value.parse::<f64>().ok()?.abs();
-        if !n.is_finite() { return None; }
+        if !n.is_finite() || n > MAX_SAFE_PLURAL_INTEGER { return None; }
         let normalized = value.trim_start_matches(['-', '+']).to_ascii_lowercase();
         let base = normalized.split('e').next().unwrap_or(&normalized);
         let fraction = base.split_once('.').map(|(_, fraction)| fraction).unwrap_or("");
@@ -30,8 +33,8 @@ impl NumberOperands {
             i: n.trunc() as i64,
             v: fraction.len() as i64,
             w: fraction_trimmed.len() as i64,
-            f: if fraction.is_empty() { 0 } else { fraction.parse().ok()? },
-            t: if fraction_trimmed.is_empty() { 0 } else { fraction_trimmed.parse().ok()? },
+            f: parse_plural_i64(fraction)?,
+            t: parse_plural_i64(fraction_trimmed)?,
             e: 0,
             c: 0,
         })
@@ -48,6 +51,47 @@ impl NumberOperands {
     fn operand_f64(&self, name: &str) -> f64 {
         if name == "n" { self.n } else { self.operand_i64(name) as f64 }
     }
+}
+
+fn parse_plural_i64(value: &str) -> Option<i64> {
+    if value.is_empty() { return Some(0); }
+    let digits = value.trim_start_matches('0');
+    let digits = if digits.is_empty() { "0" } else { digits };
+    let parsed = digits.parse::<i64>().ok()?;
+    if parsed > MAX_SAFE_PLURAL_I64 { return None; }
+    Some(parsed)
+}
+
+fn is_plural_decimal_operand(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    let mut index = 0;
+    if bytes.is_empty() { return false; }
+    if matches!(bytes[index], b'+' | b'-') {
+        index += 1;
+        if index == bytes.len() { return false; }
+    }
+    if bytes[index] == b'0' {
+        index += 1;
+        if index < bytes.len() && bytes[index].is_ascii_digit() { return false; }
+    } else if bytes[index].is_ascii_digit() {
+        while index < bytes.len() && bytes[index].is_ascii_digit() { index += 1; }
+    } else {
+        return false;
+    }
+    if index < bytes.len() && bytes[index] == b'.' {
+        index += 1;
+        let start = index;
+        while index < bytes.len() && bytes[index].is_ascii_digit() { index += 1; }
+        if index == start { return false; }
+    }
+    if index < bytes.len() && matches!(bytes[index], b'e' | b'E') {
+        index += 1;
+        if index < bytes.len() && matches!(bytes[index], b'+' | b'-') { index += 1; }
+        let start = index;
+        while index < bytes.len() && bytes[index].is_ascii_digit() { index += 1; }
+        if index == start { return false; }
+    }
+    index == bytes.len()
 }
 
 pub fn select_cardinal(locale: &str, operands: NumberOperands) -> &'static str {

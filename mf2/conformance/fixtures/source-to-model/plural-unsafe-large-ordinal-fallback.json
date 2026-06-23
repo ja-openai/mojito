@@ -1,0 +1,51 @@
+{
+  "name": "plural-unsafe-large-ordinal-fallback",
+  "source": ".input {$rank :number select=ordinal}\n.match $rank\ntwo {{wrong-two}}\nfew {{few}}\n* {{fallback}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "rank",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "rank" },
+          "function": {
+            "type": "function",
+            "name": "number",
+            "options": {
+              "select": { "type": "literal", "value": "ordinal" }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "rank" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "two" }],
+        "value": ["wrong-two"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "few" }],
+        "value": ["few"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["fallback"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "rank": 3 },
+      "expected": "few"
+    },
+    {
+      "locale": "en",
+      "arguments": { "rank": "9007199254740993" },
+      "expected": "fallback"
+    }
+  ]
+}

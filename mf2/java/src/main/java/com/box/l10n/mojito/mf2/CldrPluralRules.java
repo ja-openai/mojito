@@ -3,6 +3,7 @@ package com.box.l10n.mojito.mf2;
 
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 final class CldrPluralRules {
     private CldrPluralRules() {}
@@ -443,6 +444,10 @@ final class CldrPluralRules {
 
     static final class NumberOperands {
         private static final int MAX_OPERAND_LENGTH = 256;
+        private static final double MAX_SAFE_PLURAL_INTEGER = 9_007_199_254_740_991.0;
+        private static final long MAX_SAFE_PLURAL_LONG = 9_007_199_254_740_991L;
+        private static final Pattern PLURAL_OPERAND_PATTERN =
+                Pattern.compile("^[+-]?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$");
 
         private final double n;
         private final long i;
@@ -472,6 +477,9 @@ final class CldrPluralRules {
             if (trimmed.length() > MAX_OPERAND_LENGTH) {
                 return null;
             }
+            if (!PLURAL_OPERAND_PATTERN.matcher(trimmed).matches()) {
+                return null;
+            }
             double parsed;
             try {
                 parsed = Double.parseDouble(trimmed);
@@ -482,6 +490,9 @@ final class CldrPluralRules {
                 return null;
             }
             double n = Math.abs(parsed);
+            if (n > MAX_SAFE_PLURAL_INTEGER) {
+                return null;
+            }
             String normalized = trimmed;
             while (normalized.startsWith("-") || normalized.startsWith("+")) {
                 normalized = normalized.substring(1);
@@ -505,8 +516,13 @@ final class CldrPluralRules {
             if (value.isEmpty()) {
                 return 0L;
             }
+            String digits = value.replaceFirst("^0+", "");
+            if (digits.isEmpty()) {
+                digits = "0";
+            }
             try {
-                return Long.parseLong(value);
+                long parsed = Long.parseLong(digits);
+                return parsed <= MAX_SAFE_PLURAL_LONG ? parsed : null;
             } catch (NumberFormatException error) {
                 return null;
             }
