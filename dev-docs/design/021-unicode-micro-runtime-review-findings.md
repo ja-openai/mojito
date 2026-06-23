@@ -48,6 +48,12 @@ branch is under active implementation.
   filtering the integration tests down to the shared core fixtures. This keeps
   Rust public API recovery, invalid-source, format-error, locale-key, and direct
   core checks in the standard validation path.
+- Top-level MF2 check consolidation: `mf2/check.sh` now delegates to
+  `conformance/check_all_languages.sh` for shared cross-runtime conformance
+  coverage instead of duplicating stale per-runtime commands. The remaining
+  Swift demo invocation and the Swift static build use the same package-local
+  SwiftPM cache/config arguments as the all-language runner, so the top-level
+  check is executable in the managed Codex workspace.
 - Shared conformance runner coverage: `mf2/conformance/check_all_languages.sh`
   now runs the shared number-core, date-time-core, and relative-time-core
   fixture suites for Rust, Swift, Python, Java, Kotlin, and JavaScript instead

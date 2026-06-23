@@ -16,7 +16,15 @@ section "Rust static checks"
 )
 
 section "Swift static checks"
-(cd swift/MessageFormat2 && swift build)
+(
+  cd swift/MessageFormat2
+  swift build \
+    --disable-sandbox \
+    --cache-path .build/cache \
+    --config-path .build/config \
+    --security-path .build/security \
+    --manifest-cache local
+)
 
 section "Python static checks"
 (cd python && python3 -m compileall -q src tests tools examples)
