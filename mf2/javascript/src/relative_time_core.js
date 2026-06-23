@@ -108,7 +108,12 @@ function preparedData(data) {
   }
   const cached = DATA_CACHE.get(data);
   if (cached != null) return cached;
-  if (data.localeMap == null || typeof data.localeMap !== "object" || !Array.isArray(data.patternSets)) {
+  if (
+    data.localeMap == null ||
+    typeof data.localeMap !== "object" ||
+    Object.keys(data.localeMap).length === 0 ||
+    !Array.isArray(data.patternSets)
+  ) {
     throw new RelativeTimeCoreError("missing-locale-data", "Relative-time core data has an unsupported shape.");
   }
   const patternSets = new Map();

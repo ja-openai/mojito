@@ -133,6 +133,22 @@ assert.throws(
   (error) => error instanceof RelativeTimeCoreError && error.code === "missing-locale-data",
   "rejects empty relative-time pattern data during registry creation",
 );
+assert.throws(
+  () =>
+    formatRelativeTimeCore(1, {
+      data: {
+        localeMap: {},
+        patternSets: [
+          {
+            id: "rt",
+            data: { short: { second: { future: { other: "in {0} sec." } } } },
+          },
+        ],
+      },
+    }),
+  (error) => error instanceof RelativeTimeCoreError && error.code === "missing-locale-data",
+  "rejects empty relative-time locale map during direct formatting",
+);
 
 function readJson(path) {
   return JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));

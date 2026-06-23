@@ -399,7 +399,15 @@ function assert_relative_time_core_fixtures(): int
     assert_mf2_error('relative-time direct throwing locale option', 'bad-option', static fn(): string => RelativeTimeCore::format(1, $data, ['locale' => new ThrowingStringValue()]));
     assert_mf2_error('relative-time direct throwing style option', 'bad-option', static fn(): string => RelativeTimeCore::format(1, $data, ['style' => new ThrowingStringValue()]));
     assert_mf2_error('relative-time direct throwing unit option', 'bad-option', static fn(): string => RelativeTimeCore::format(1, $data, ['unit' => new ThrowingStringValue()]));
-    $checked += 4;
+    assert_mf2_error('relative-time empty locale map', 'missing-locale-data', static fn(): string => RelativeTimeCore::format(1, [
+        'localeMap' => [],
+        'patternSets' => [['id' => 'rt', 'data' => ['short' => ['second' => ['future' => ['other' => 'in {0} sec.']]]]]],
+    ]));
+    assert_mf2_error('relative-time empty pattern sets', 'missing-locale-data', static fn(): string => RelativeTimeCore::format(1, [
+        'localeMap' => ['en' => 'rt'],
+        'patternSets' => [],
+    ]));
+    $checked += 6;
 
     $referenceCases = [
         ['locale' => 'en', 'style' => 'long', 'numeric' => 'auto', 'unit' => 'day', 'value' => -1, 'seconds' => -86_400],

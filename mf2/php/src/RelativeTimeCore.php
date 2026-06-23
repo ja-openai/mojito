@@ -66,7 +66,7 @@ final class RelativeTimeCore
     {
         $localeMap = $data['localeMap'] ?? null;
         $rawPatternSets = $data['patternSets'] ?? null;
-        if (!is_array($localeMap) || !is_array($rawPatternSets)) {
+        if (!is_array($localeMap) || $localeMap === [] || !is_array($rawPatternSets) || $rawPatternSets === []) {
             throw new MF2Error('missing-locale-data', 'Relative-time core data has an unsupported shape.');
         }
 
