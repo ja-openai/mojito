@@ -195,7 +195,7 @@ impl RelativeTimeCoreFormatter {
         let pattern_sets: BTreeMap<_, _> = data
             .pattern_sets
             .into_iter()
-            .filter(|pattern_set| !pattern_set.id.is_empty())
+            .filter(|pattern_set| !pattern_set.id.is_empty() && !pattern_set.data.is_empty())
             .map(|pattern_set| (pattern_set.id.clone(), pattern_set))
             .collect();
         if pattern_sets.is_empty() {

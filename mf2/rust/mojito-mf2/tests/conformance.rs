@@ -838,6 +838,28 @@ fn relative_time_core_fixtures_pass() {
     }
 }
 
+#[test]
+fn relative_time_core_rejects_unusable_pattern_sets() {
+    let empty_data: RelativeTimeCoreData = serde_json::from_value(serde_json::json!({
+        "localeMap": { "en": "rt" },
+        "patternSets": [{ "id": "rt", "data": {} }]
+    }))
+    .expect("relative-time data shape");
+    let error = RelativeTimeCoreFormatter::new(empty_data).expect_err("empty pattern data");
+    assert_eq!(error.code, "missing-locale-data");
+
+    let empty_id: RelativeTimeCoreData = serde_json::from_value(serde_json::json!({
+        "localeMap": { "en": "rt" },
+        "patternSets": [{
+            "id": "",
+            "data": { "short": { "second": { "future": { "other": "in {0} sec." } } } }
+        }]
+    }))
+    .expect("relative-time data shape");
+    let error = RelativeTimeCoreFormatter::new(empty_id).expect_err("empty pattern id");
+    assert_eq!(error.code, "missing-locale-data");
+}
+
 fn conformance_dir() -> std::path::PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../conformance/fixtures")

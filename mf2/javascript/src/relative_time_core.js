@@ -118,7 +118,15 @@ function preparedData(data) {
   }
   const patternSets = new Map();
   for (const item of data.patternSets) {
-    if (item != null && typeof item.id === "string" && item.data != null) {
+    if (
+      item != null &&
+      typeof item.id === "string" &&
+      item.id !== "" &&
+      item.data != null &&
+      typeof item.data === "object" &&
+      !Array.isArray(item.data) &&
+      Object.keys(item.data).length > 0
+    ) {
       patternSets.set(item.id, item.data);
     }
   }

@@ -294,7 +294,7 @@ func prepareRelativeTimeCoreData(data RelativeTimeCoreData) (relativeTimeCorePre
 	}
 	patternSets := map[string]map[string]map[string]RelativeTimeCoreUnitData{}
 	for _, item := range data.PatternSets {
-		if item.ID != "" && item.Data != nil {
+		if item.ID != "" && len(item.Data) > 0 {
 			patternSets[item.ID] = item.Data
 		}
 	}

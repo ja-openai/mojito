@@ -407,7 +407,15 @@ function assert_relative_time_core_fixtures(): int
         'localeMap' => ['en' => 'rt'],
         'patternSets' => [],
     ]));
-    $checked += 6;
+    assert_mf2_error('relative-time empty pattern set data', 'missing-locale-data', static fn(): string => RelativeTimeCore::format(1, [
+        'localeMap' => ['en' => 'rt'],
+        'patternSets' => [['id' => 'rt', 'data' => []]],
+    ]));
+    assert_mf2_error('relative-time empty pattern set id', 'missing-locale-data', static fn(): string => RelativeTimeCore::format(1, [
+        'localeMap' => ['en' => 'rt'],
+        'patternSets' => [['id' => '', 'data' => ['short' => ['second' => ['future' => ['other' => 'in {0} sec.']]]]]],
+    ]));
+    $checked += 8;
 
     $referenceCases = [
         ['locale' => 'en', 'style' => 'long', 'numeric' => 'auto', 'unit' => 'day', 'value' => -1, 'seconds' => -86_400],

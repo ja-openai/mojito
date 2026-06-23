@@ -72,7 +72,7 @@ final class RelativeTimeCore
 
         $patternSets = [];
         foreach ($rawPatternSets as $item) {
-            if (is_array($item) && is_string($item['id'] ?? null) && is_array($item['data'] ?? null)) {
+            if (is_array($item) && is_string($item['id'] ?? null) && $item['id'] !== '' && is_array($item['data'] ?? null) && $item['data'] !== []) {
                 $patternSets[$item['id']] = $item['data'];
             }
         }

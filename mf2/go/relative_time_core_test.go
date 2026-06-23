@@ -111,6 +111,29 @@ func TestRelativeTimeCoreDirectAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertJSONEqual(t, "relative-time parts", []Part{{"type": "text", "value": "yesterday"}}, parts)
+
+	_, err = NewRelativeTimeCoreFormatter(RelativeTimeCoreData{
+		LocaleMap: map[string]string{"en": "rt"},
+		PatternSets: []RelativeTimeCorePatternSet{{
+			ID:   "rt",
+			Data: map[string]map[string]RelativeTimeCoreUnitData{},
+		}},
+	})
+	if code, ok := err.(Error); !ok || code.Code != "missing-locale-data" {
+		t.Fatalf("empty relative-time pattern-set data: expected missing-locale-data, got %v", err)
+	}
+	_, err = NewRelativeTimeCoreFormatter(RelativeTimeCoreData{
+		LocaleMap: map[string]string{"en": "rt"},
+		PatternSets: []RelativeTimeCorePatternSet{{
+			ID: "",
+			Data: map[string]map[string]RelativeTimeCoreUnitData{
+				"short": {"second": RelativeTimeCoreUnitData{Future: map[string]string{"other": "in {0} sec."}}},
+			},
+		}},
+	})
+	if code, ok := err.(Error); !ok || code.Code != "missing-locale-data" {
+		t.Fatalf("empty relative-time pattern-set id: expected missing-locale-data, got %v", err)
+	}
 }
 
 func TestRelativeTimeCoreIntlReferences(t *testing.T) {

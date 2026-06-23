@@ -149,6 +149,29 @@ assert.throws(
   (error) => error instanceof RelativeTimeCoreError && error.code === "missing-locale-data",
   "rejects empty relative-time locale map during direct formatting",
 );
+assert.throws(
+  () =>
+    createRelativeTimeCoreFunctionRegistry(FunctionRegistry, {
+      localeMap: { en: "rt" },
+      patternSets: [{ id: "rt", data: {} }],
+    }),
+  (error) => error instanceof RelativeTimeCoreError && error.code === "missing-locale-data",
+  "rejects empty relative-time pattern-set data during registry creation",
+);
+assert.throws(
+  () =>
+    createRelativeTimeCoreFunctionRegistry(FunctionRegistry, {
+      localeMap: { en: "rt" },
+      patternSets: [
+        {
+          id: "",
+          data: { short: { second: { future: { other: "in {0} sec." } } } },
+        },
+      ],
+    }),
+  (error) => error instanceof RelativeTimeCoreError && error.code === "missing-locale-data",
+  "rejects empty relative-time pattern-set ids during registry creation",
+);
 
 function readJson(path) {
   return JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));

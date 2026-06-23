@@ -170,7 +170,9 @@ def _prepare_data(data: Mapping[str, Any]) -> _RelativeTimeData:
         if (
             isinstance(item, Mapping)
             and isinstance(item.get("id"), str)
+            and item["id"] != ""
             and isinstance(item.get("data"), Mapping)
+            and bool(item["data"])
         ):
             decoded_pattern_sets[item["id"]] = item["data"]
     if not decoded_pattern_sets:
