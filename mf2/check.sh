@@ -3,19 +3,6 @@ set -eu
 
 cd "$(dirname "$0")"
 
-swift_run() {
-  (
-    cd swift/MessageFormat2
-    swift run \
-      --disable-sandbox \
-      --cache-path .build/cache \
-      --config-path .build/config \
-      --security-path .build/security \
-      --manifest-cache local \
-      "$@"
-  )
-}
-
 sh static_check.sh
 (cd cldr && sh check_size_gates.sh)
 (cd cldr && sh validate_plural_rules.sh)
@@ -29,7 +16,7 @@ sh conformance/check_all_languages.sh
 (cd rust/mojito-mf2 && cargo run -- unicode-tests)
 (cd rust/mojito-mf2 && cargo run --example translate_demo)
 (cd rust/mojito-mf2 && cargo run --example inline_translate_demo)
-swift_run MessageFormat2TranslateDemo
+(cd swift/MessageFormat2 && sh run.sh run MessageFormat2TranslateDemo)
 (cd python && sh run.sh demo)
 (cd kotlin && sh run.sh demo)
 (cd go && env GOPATH="${GOPATH:-/private/tmp/mojito-mf2-go-gopath}" GOMODCACHE="${GOMODCACHE:-/private/tmp/mojito-mf2-go-modcache}" GOCACHE="${GOCACHE:-/private/tmp/mojito-mf2-go-cache}" GOTOOLCHAIN="${GOTOOLCHAIN:-local}" go run ./cmd/demo)

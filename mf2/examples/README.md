@@ -13,7 +13,7 @@ Run the language demos:
 ```sh
 (cd ../rust/mojito-mf2 && cargo run --example translate_demo)
 (cd ../rust/mojito-mf2 && cargo run --example inline_translate_demo)
-(cd ../swift/MessageFormat2 && swift run MessageFormat2TranslateDemo)
+(cd ../swift/MessageFormat2 && sh run.sh run MessageFormat2TranslateDemo)
 (cd ../python && python3 examples/translate_demo.py)
 (cd ../java && sh run.sh showcase)
 ```

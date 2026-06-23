@@ -132,15 +132,15 @@ at build time.
 Run:
 
 ```sh
-swift run MessageFormat2Conformance
-swift run MessageFormat2Conformance --number-core
-swift run MessageFormat2Conformance --date-time-core ../../conformance/fixtures/date-time-core/cases.json
-swift run MessageFormat2Conformance --relative-time-core ../../conformance/fixtures/functions/relative-time-duration-v0.json
-swift run MessageFormat2TranslateDemo
-swift run MessageFormat2FoundationDemo
-swift run -c release MessageFormat2Conformance --bench ../../conformance/fixtures/source-to-model
-swift run -c release MessageFormat2Conformance --bench-parse ../../conformance/fixtures/source-to-model
-swift run -c release MessageFormat2Conformance --number-core-bench ../../conformance/fixtures/number-core/cases.json
-swift run -c release MessageFormat2Conformance --date-time-core-bench ../../conformance/fixtures/date-time-core/cases.json
-swift run MessageFormat2Conformance --relative-time-core-bench ../../conformance/fixtures/functions/relative-time-duration-v0.json
+sh run.sh run MessageFormat2Conformance
+sh run.sh run MessageFormat2Conformance --number-core
+sh run.sh run MessageFormat2Conformance --date-time-core ../../conformance/fixtures/date-time-core/cases.json
+sh run.sh run MessageFormat2Conformance --relative-time-core ../../conformance/fixtures/functions/relative-time-duration-v0.json
+sh run.sh run MessageFormat2TranslateDemo
+sh run.sh run MessageFormat2FoundationDemo
+sh run.sh run -c release MessageFormat2Conformance --bench ../../conformance/fixtures/source-to-model
+sh run.sh run -c release MessageFormat2Conformance --bench-parse ../../conformance/fixtures/source-to-model
+sh run.sh run -c release MessageFormat2Conformance --number-core-bench ../../conformance/fixtures/number-core/cases.json
+sh run.sh run -c release MessageFormat2Conformance --date-time-core-bench ../../conformance/fixtures/date-time-core/cases.json
+sh run.sh run MessageFormat2Conformance --relative-time-core-bench ../../conformance/fixtures/functions/relative-time-duration-v0.json
 ```

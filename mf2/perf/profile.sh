@@ -32,7 +32,7 @@ case "${MODE}" in
       sh -c "cd rust/mojito-mf2 && cargo run --release -- bench '../../${FIXTURES}' '${ITERATIONS}' '${WARMUP_ITERATIONS}'"
     run_with_time \
       "swift release format" \
-      sh -c "cd swift/MessageFormat2 && swift run -c release MessageFormat2Conformance --bench '../../${FIXTURES}' '${ITERATIONS}' '${WARMUP_ITERATIONS}'"
+      sh -c "cd swift/MessageFormat2 && sh run.sh run -c release MessageFormat2Conformance --bench '../../${FIXTURES}' '${ITERATIONS}' '${WARMUP_ITERATIONS}'"
     run_with_time \
       "python format" \
       sh -c "cd python && sh run.sh bench '../${FIXTURES}' '${ITERATIONS}' '${WARMUP_ITERATIONS}'"
@@ -66,7 +66,7 @@ case "${MODE}" in
       sh -c "cd rust/mojito-mf2 && cargo run --release -- bench-parse '../../${FIXTURES}' '${ITERATIONS}' '${WARMUP_ITERATIONS}'"
     run_with_time \
       "swift release parse" \
-      sh -c "cd swift/MessageFormat2 && swift run -c release MessageFormat2Conformance --bench-parse '../../${FIXTURES}' '${ITERATIONS}' '${WARMUP_ITERATIONS}'"
+      sh -c "cd swift/MessageFormat2 && sh run.sh run -c release MessageFormat2Conformance --bench-parse '../../${FIXTURES}' '${ITERATIONS}' '${WARMUP_ITERATIONS}'"
     run_with_time \
       "python parse" \
       sh -c "cd python && sh run.sh bench-parse '../${FIXTURES}' '${ITERATIONS}' '${WARMUP_ITERATIONS}'"

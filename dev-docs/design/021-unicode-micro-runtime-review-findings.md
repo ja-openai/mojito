@@ -51,9 +51,9 @@ branch is under active implementation.
 - Top-level MF2 check consolidation: `mf2/check.sh` now delegates to
   `conformance/check_all_languages.sh` for shared cross-runtime conformance
   coverage instead of duplicating stale per-runtime commands. The remaining
-  Swift demo invocation and the Swift static build use the same package-local
-  SwiftPM cache/config arguments as the all-language runner, so the top-level
-  check is executable in the managed Codex workspace.
+  Swift demo invocation, Swift static build, and Swift performance scripts use
+  the same package-local SwiftPM cache/config wrapper as the all-language
+  runner, so these entry points are executable in the managed Codex workspace.
 - Official Unicode runner documentation: the conformance README now describes
   the Rust, Java, JavaScript, Go, and PHP official-test scoreboard runners and
   their shared baseline instead of implying that only the Rust runner is wired.

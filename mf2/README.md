@@ -396,7 +396,7 @@ Run the tiny app-facing catalog demos directly:
 ```sh
 (cd rust/mojito-mf2 && cargo run --example translate_demo)
 (cd rust/mojito-mf2 && cargo run --example inline_translate_demo)
-(cd swift/MessageFormat2 && swift run MessageFormat2TranslateDemo)
+(cd swift/MessageFormat2 && sh run.sh run MessageFormat2TranslateDemo)
 (cd python && sh run.sh demo)
 (cd kotlin && sh run.sh demo)
 (cd go && go run ./cmd/demo)
