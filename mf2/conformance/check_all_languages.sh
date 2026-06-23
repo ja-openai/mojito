@@ -14,14 +14,22 @@ FIXTURES="${1:-$ROOT/conformance/fixtures/source-to-model}"
 (cd "$ROOT/python" && sh run.sh number-core)
 (cd "$ROOT/python" && sh run.sh date-time-core)
 (cd "$ROOT/python" && sh run.sh relative-time-core)
-(cd "$ROOT/java" && sh run.sh conformance "$FIXTURES")
-(cd "$ROOT/java" && sh run.sh number-core-check)
-(cd "$ROOT/java" && sh run.sh date-time-core-check)
-(cd "$ROOT/java" && sh run.sh relative-time-core-check)
-(cd "$ROOT/kotlin" && sh run.sh conformance "$FIXTURES")
-(cd "$ROOT/kotlin" && sh run.sh number-core-check)
-(cd "$ROOT/kotlin" && sh run.sh date-time-core-check)
-(cd "$ROOT/kotlin" && sh run.sh relative-time-core-check)
+(
+  cd "$ROOT/java"
+  sh run.sh --prepare-only
+  sh run.sh --no-prepare conformance "$FIXTURES"
+  sh run.sh --no-prepare number-core-check
+  sh run.sh --no-prepare date-time-core-check
+  sh run.sh --no-prepare relative-time-core-check
+)
+(
+  cd "$ROOT/kotlin"
+  sh run.sh --prepare-only
+  sh run.sh --no-prepare conformance "$FIXTURES"
+  sh run.sh --no-prepare number-core-check
+  sh run.sh --no-prepare date-time-core-check
+  sh run.sh --no-prepare relative-time-core-check
+)
 (cd "$ROOT/javascript" && node tools/conformance.js "$FIXTURES")
 (cd "$ROOT/javascript" && node tests/number-core-test.js)
 (cd "$ROOT/javascript" && node tests/date-time-core-test.js)

@@ -11,7 +11,8 @@ branch is under active implementation.
   fixture suites for Rust, Swift, Python, Java, Kotlin, and JavaScript instead
   of only exercising those core fixtures through ad hoc per-runtime commands.
   Go and PHP already run their full fixture-backed test suites from the
-  umbrella script.
+  umbrella script. The Java and Kotlin slices prepare their Maven classpaths
+  once and then reuse them for all core checks.
 - Numeric exact selector precedence: exact numeric variant keys now outrank
   plural-category matches for `:number`, `:integer`, `:percent`, and `:offset`
   selectors across JavaScript, Python, Java, Kotlin, Go, Rust, Swift, and PHP.
