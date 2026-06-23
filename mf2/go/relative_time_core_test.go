@@ -101,6 +101,31 @@ func TestRelativeTimeCoreDirectAPI(t *testing.T) {
 		t.Fatalf("expected après-demain, got %q", afterTomorrow)
 	}
 
+	formatter, err := NewRelativeTimeCoreFormatter(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	instanceFormatted, err := formatter.Format(60, RelativeTimeCoreOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	staticFormatted, err := FormatRelativeTimeCore(60, data, RelativeTimeCoreOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if instanceFormatted != staticFormatted {
+		t.Fatalf("relative-time instance format: expected %q, got %q", staticFormatted, instanceFormatted)
+	}
+	instanceParts, err := formatter.FormatToParts(60, RelativeTimeCoreOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	staticParts, err := FormatRelativeTimeCoreToParts(60, data, RelativeTimeCoreOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertJSONEqual(t, "relative-time instance parts", staticParts, instanceParts)
+
 	parts, err := FormatRelativeTimeCoreToParts(-86400, data, RelativeTimeCoreOptions{
 		Locale:  "en",
 		Style:   RelativeTimeCoreStyleLong,

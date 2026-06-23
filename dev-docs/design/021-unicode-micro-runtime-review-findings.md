@@ -22,6 +22,10 @@ branch is under active implementation.
   text part shape as their direct string helpers, matching the relative-time
   parts coverage that was already present. The PHP and Rust READMEs now call
   out the direct core parts helpers alongside the string helpers.
+- Go relative-time formatter coverage: the direct relative-time core tests now
+  compare `NewRelativeTimeCoreFormatter(...).Format` and `FormatToParts`
+  against the top-level helpers so the prepared formatter API stays covered
+  alongside the static direct helpers and registry path.
 - Shared conformance runner coverage: `mf2/conformance/check_all_languages.sh`
   now runs the shared number-core, date-time-core, and relative-time-core
   fixture suites for Rust, Swift, Python, Java, Kotlin, and JavaScript instead
