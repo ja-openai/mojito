@@ -18,8 +18,10 @@ tools, and shared examples:
 - `php/`: native PHP parser/runtime package using the built-in `intl` extension
   for Unicode NFC selector keys
 - `reference/`: ICU reference comparison harnesses
-- `cldr/`: generated CLDR plural-rule data, experimental number data, and
-  relative-time data generators
+- `cldr/`: generated CLDR plural-rule data, experimental number/date-time data,
+  and relative-time data generators. These generators are the seed of the broader
+  Unicode micro-runtime plan in
+  `../dev-docs/design/020-unicode-micro-runtime-roadmap.md`.
 - `examples/`: shared parser-free catalog demo used by all runtimes
 - `spec/`: project-level drafts for registry functions that are not part of
   the MF2 core grammar
@@ -57,34 +59,56 @@ The implementation work is deliberately kept dry and separable:
   integration
 
 The current implementations mirror those boundaries even before they become
-separate published packages. Rust exposes the parser, model, runtime, and
-diagnostic surface while keeping CLDR plural rules and locale-key helpers as
-crate internals.
+separate published packages. Rust exposes the parser, model, runtime,
+diagnostic surface, and explicit generated-data number/date-time cores while
+keeping CLDR data and locale-key helpers as crate internals.
 Python uses a `pyproject.toml`/`src/mojito_mf2` package layout with source
-parsing, formatting, errors, and a compatibility `model` facade; internal
-`_locale_key`, `_plural`, and `_cldr_plural_rules` modules back runtime behavior
-and conformance tooling but stay outside the stable root API.
+parsing, formatting, errors, a compatibility `model` facade, and explicit
+generated-data `number_core`/`date_time_core` modules; internal `_locale_key`,
+`_plural`, `_cldr_plural_rules`, `_cldr_number_data`, and
+`_cldr_date_time_data` modules back runtime behavior and conformance tooling
+but stay outside the stable root API.
 JavaScript has a publish-shaped ESM package with source parsing, generated CLDR
 plural rules, runtime formatting, parts output, internal locale-key helpers,
-public `.d.ts` exports, a small root API, and tools/tests outside the published
-runtime files. Go has source parsing, generated CLDR plural rules, runtime
-formatting, parts output, internal locale-key helpers, and a real
-`github.com/box/mojito/mf2/go` module path; it
+public `.d.ts` exports, explicit generated-data `number-core` and
+`date-time-core` subpaths, a small root API, and tools/tests outside the
+published runtime files. Go has source parsing, generated CLDR plural rules, runtime
+formatting, parts output, internal locale-key helpers, generated-data
+number/date-time-core helpers, and a real `github.com/box/mojito/mf2/go` module path; it
 uses `golang.org/x/text` for spec-compliant NFC string selection while a
 generated zero-dependency normalizer remains an open packaging decision. PHP has
-source parsing, generated CLDR plural rules, runtime formatting, parts output,
-Composer metadata, and `Mojito\MessageFormat2` autoloading; locale-key and CLDR
-helpers plus parser/runtime implementation functions sit under the `Internal`
-namespace. It relies on PHP `intl` for spec-compliant NFC string selection. Kotlin keeps
-locale-key and plural-rule helpers internal while exposing idiomatic `Mf2*`
-parser, formatter, function registry, model, result, and error types under a
-Maven-managed package boundary. Swift keeps locale-key and plural-rule helpers
-inside the runtime target while exposing Swift-native `MF2*` parser, formatter,
+source parsing, generated CLDR plural rules, generated-data number/date-time
+cores, runtime formatting, parts output, Composer metadata, and
+`Mojito\MessageFormat2` autoloading; locale-key and CLDR helpers plus
+parser/runtime implementation functions sit under the `Internal` namespace. It
+relies on PHP `intl` for spec-compliant NFC string selection. Kotlin keeps
+locale-key, plural-rule, and experimental generated number/date-time-core
+helpers internal while exposing idiomatic `Mf2*` parser, formatter, function
+registry, model, result, and error types under a Maven-managed package boundary. Swift keeps
+locale-key, plural-rule, and experimental generated number-core helpers inside
+the runtime target while exposing Swift-native `MF2*` parser, formatter,
 function registry, model, result, and error types. Java keeps the production artifact under `src/main/java`;
 conformance runners, demos, benchmarks, fixture JSON loading, and demo-only
 functions live under `src/test/java` so they do not ship in the library jar. The locale-key
 helpers are string-only; generated plural rules keep string APIs and do not
-depend on a rich locale object.
+depend on a rich locale object. Java also exposes experimental
+`Mf2NumberCore` and `Mf2DateTimeCore` generated-data formatters that exercise
+native CLDR number/date-time tables without changing the default JDK-backed
+registry.
+
+The date-time cores accept both CLDR pattern-letter skeletons such as `yMMMd`
+and Mojito semantic skeleton strings with a `semantic:` prefix, for example
+`semantic:fields=year,month,day,time;length=medium;timePrecision=minute`.
+The semantic form maps field sets and options (`length`, `alignment`,
+`yearStyle`, `timePrecision`, `fractionalSecond`, `hourCycle`, and `zoneStyle`)
+onto the existing generated CLDR pattern engine, so it adds API coverage without
+new runtime data. Pure `dateStyle`/`timeStyle` semantic aliases use the generated
+CLDR style patterns directly when the requested fields exactly match the style
+shape, preserving locale literals that a skeleton cannot encode. Option values
+accept either hyphenated spellings such as
+`minute-optional` or the camel-case TR35 enum spelling such as
+`MinuteOptional`. Supported field sets cover the TR35-preview date,
+calendar-period, time, zone, and legal composite categories.
 
 Across app-facing package roots, the stable API vocabulary is parse, format
 result, parts result, function registry defaults, recovery callbacks, and
@@ -134,6 +158,9 @@ Current platform adapter status:
 - Python keeps core stdlib-only and exposes an optional `mojito_mf2.babel`
   registry for Babel-backed number, percent, integer, currency, date, time,
   datetime, and relative-time formatting.
+- Python also exposes explicit generated-data `number_core` and
+  `date_time_core` registries for the probe locale set without importing Babel
+  or runtime JSON.
 - Swift exposes an explicit `MF2FunctionRegistry.foundation` registry for
   Foundation-backed number, percent, integer, currency, date, time, and datetime
   formatting. On Apple platforms it also supports relative time via
@@ -150,10 +177,16 @@ Current platform adapter status:
   formatting. ICU4X currency, percent/unit patterns, and relative-time support
   are not stable enough in the currently used crates, so those functions are
   not faked in the adapter.
+- Rust also exposes explicit generated-data `number_core_function_registry()`
+  and `date_time_core_function_registry()` helpers for the probe locale set
+  without enabling the optional ICU4X feature or parsing runtime JSON.
 - PHP has an explicit `IntlFunctions::registry()` adapter for PHP Intl-backed
   number, percent, integer, currency, date, time, and datetime formatting.
   Relative time remains deferred because PHP's current Intl extension does not
   expose `IntlRelativeTimeFormatter` in this environment.
+- PHP also exposes explicit generated-data `NumberCore` and `DateTimeCore`
+  registries for the probe locale set without importing runtime JSON or making
+  PHP Intl the default registry.
 - Go keeps platform formatting deferred. `golang.org/x/text/message` is useful
   for localized numeric printing, but it does not provide the clean date, time,
   currency, and relative-time surface needed for an honest MF2 platform registry.
@@ -297,7 +330,8 @@ The current conformance slice covers:
   Java, Kotlin, JavaScript, Go, and PHP, including shared CLDR category fixtures
   generated from the ICU4J reference harness
 - BCP47-first locale-key canonicalization and structural lookup, including
-  underscore compatibility and extension stripping for plural and catalog lookup
+  underscore compatibility, extension stripping, and recursive feature-specific
+  parent lookup for plural/number/date-time data modules
 - structural model validation for duplicate declarations, select variant key
   arity, duplicate variants, required catch-all fallback variants, and missing
   selector annotations, input declaration variable binding, local declaration
