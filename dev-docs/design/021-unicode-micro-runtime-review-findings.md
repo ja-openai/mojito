@@ -43,6 +43,11 @@ branch is under active implementation.
   JDK registry checks for both Java and Kotlin. That keeps the JVM public
   formatter surfaces and real localized registry wiring in the standard
   cross-runtime validation path.
+- Shared conformance runner Rust coverage: the all-language runner now executes
+  Rust's full default-free test suite after the CLI conformance run instead of
+  filtering the integration tests down to the shared core fixtures. This keeps
+  Rust public API recovery, invalid-source, format-error, locale-key, and direct
+  core checks in the standard validation path.
 - Shared conformance runner coverage: `mf2/conformance/check_all_languages.sh`
   now runs the shared number-core, date-time-core, and relative-time-core
   fixture suites for Rust, Swift, Python, Java, Kotlin, and JavaScript instead

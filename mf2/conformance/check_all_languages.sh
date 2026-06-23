@@ -19,7 +19,7 @@ swift_conformance() {
 }
 
 (cd "$ROOT/rust/mojito-mf2" && cargo run -- conformance "$FIXTURES")
-(cd "$ROOT/rust/mojito-mf2" && cargo test --test conformance core_fixtures_pass)
+(cd "$ROOT/rust/mojito-mf2" && cargo test --no-default-features)
 swift_conformance "$FIXTURES"
 swift_conformance --number-core
 swift_conformance --date-time-core
