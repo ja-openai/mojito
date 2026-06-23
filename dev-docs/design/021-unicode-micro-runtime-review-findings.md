@@ -6,6 +6,12 @@ branch is under active implementation.
 
 ## Fixed
 
+- JavaScript package-boundary coverage: the package boundary runtime and type
+  tests now import the direct number-core, date-time-core, and
+  relative-time-core `ToParts` helpers from their public subpaths, and continue
+  asserting those implementation helpers stay off the root package export. This
+  catches drift where a parts implementation exists but the published subpath
+  surface or declarations stop exposing it.
 - Shared conformance runner coverage: `mf2/conformance/check_all_languages.sh`
   now runs the shared number-core, date-time-core, and relative-time-core
   fixture suites for Rust, Swift, Python, Java, Kotlin, and JavaScript instead

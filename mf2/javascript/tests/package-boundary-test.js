@@ -11,11 +11,19 @@ import {
 import { formatMessage as formatMessageFromFormatter } from "@mojito-mf2/core/formatter";
 import { createIntlFunctionRegistry } from "@mojito-mf2/core/intl";
 import { decodeDateTimeDataResource, decodeNumberDataResource } from "@mojito-mf2/core/cldr-packed";
-import { createDateTimeCoreFunctionRegistry, formatDateTimeCore } from "@mojito-mf2/core/date-time-core";
-import { formatNumberCore } from "@mojito-mf2/core/number-core";
+import {
+  createDateTimeCoreFunctionRegistry,
+  formatDateCore,
+  formatDateCoreToParts,
+  formatDateTimeCore,
+  formatDateTimeCoreToParts,
+  formatTimeCore,
+  formatTimeCoreToParts,
+} from "@mojito-mf2/core/date-time-core";
+import { formatNumberCore, formatNumberCoreToParts } from "@mojito-mf2/core/number-core";
 import { parseToModel as parseToModelFromParser } from "@mojito-mf2/core/parser";
 import { createPortableFunctionRegistry } from "@mojito-mf2/core/portable";
-import { formatRelativeTimeCore } from "@mojito-mf2/core/relative-time-core";
+import { formatRelativeTimeCore, formatRelativeTimeCoreToParts } from "@mojito-mf2/core/relative-time-core";
 
 const parsed = parseToModel("Hello {$name}");
 assert.equal(parsed.diagnostics.length, 0);
@@ -80,9 +88,28 @@ assert.equal(FunctionRegistry.portable().hasFormatter({ name: "number" }), true)
 assert.equal(createPortableFunctionRegistry(FunctionRegistry).hasFormatter({ name: "number" }), true);
 assert.equal(formatNumberCore(1234.5, { locale: "fr-FR" }), "1 234,5");
 assert.equal(formatDateTimeCore("2026-05-21T14:30:15Z", { locale: "fr-FR", dateStyle: "short", timeStyle: "short" }), "21/05/2026 14:30");
+assert.deepEqual(formatNumberCoreToParts(1234.5, { locale: "fr-FR" }), [
+  { type: "text", value: formatNumberCore(1234.5, { locale: "fr-FR" }) },
+]);
+assert.deepEqual(formatDateCoreToParts("2026-05-21T14:30:15Z", { locale: "fr-FR", dateStyle: "short" }), [
+  { type: "text", value: formatDateCore("2026-05-21T14:30:15Z", { locale: "fr-FR", dateStyle: "short" }) },
+]);
+assert.deepEqual(formatTimeCoreToParts("2026-05-21T14:30:15Z", { locale: "fr-FR", timeStyle: "short" }), [
+  { type: "text", value: formatTimeCore("2026-05-21T14:30:15Z", { locale: "fr-FR", timeStyle: "short" }) },
+]);
+assert.deepEqual(
+  formatDateTimeCoreToParts("2026-05-21T14:30:15Z", { locale: "fr-FR", dateStyle: "short", timeStyle: "short" }),
+  [
+    {
+      type: "text",
+      value: formatDateTimeCore("2026-05-21T14:30:15Z", { locale: "fr-FR", dateStyle: "short", timeStyle: "short" }),
+    },
+  ],
+);
 assert.equal(typeof decodeNumberDataResource, "function");
 assert.equal(typeof decodeDateTimeDataResource, "function");
 assert.equal(typeof formatRelativeTimeCore, "function");
+assert.equal(typeof formatRelativeTimeCoreToParts, "function");
 assert.equal(createDateTimeCoreFunctionRegistry(FunctionRegistry).hasFormatter({ name: "datetime" }), true);
 const currency = parseToModel("Total: {$amount :currency currency=USD}");
 const formattedCurrency = formatMessage(currency.model, { amount: 42 });
@@ -118,6 +145,14 @@ assert.equal("selectCardinal" in core, false);
 assert.equal("localeLookupChain" in core, false);
 assert.equal("createIntlFunctionRegistry" in core, false);
 assert.equal("formatNumberCore" in core, false);
+assert.equal("formatNumberCoreToParts" in core, false);
+assert.equal("formatDateCore" in core, false);
+assert.equal("formatDateCoreToParts" in core, false);
+assert.equal("formatTimeCore" in core, false);
+assert.equal("formatTimeCoreToParts" in core, false);
 assert.equal("formatDateTimeCore" in core, false);
+assert.equal("formatDateTimeCoreToParts" in core, false);
+assert.equal("formatRelativeTimeCore" in core, false);
+assert.equal("formatRelativeTimeCoreToParts" in core, false);
 
 console.log("MF2 JavaScript package boundary test passed");

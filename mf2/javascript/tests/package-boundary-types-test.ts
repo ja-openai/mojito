@@ -21,13 +21,22 @@ import {
   type DateTimeDataResource,
   type NumberDataResource,
 } from "@mojito-mf2/core/cldr-packed";
-import { createDateTimeCoreFunctionRegistry, formatDateTimeCore } from "@mojito-mf2/core/date-time-core";
-import { formatNumberCore } from "@mojito-mf2/core/number-core";
+import {
+  createDateTimeCoreFunctionRegistry,
+  formatDateCore,
+  formatDateCoreToParts,
+  formatDateTimeCore,
+  formatDateTimeCoreToParts,
+  formatTimeCore,
+  formatTimeCoreToParts,
+} from "@mojito-mf2/core/date-time-core";
+import { formatNumberCore, formatNumberCoreToParts } from "@mojito-mf2/core/number-core";
 import { parseToModel as parseToModelFromParser } from "@mojito-mf2/core/parser";
 import { createPortableFunctionRegistry } from "@mojito-mf2/core/portable";
 import {
   createRelativeTimeCoreFunctionRegistry,
   formatRelativeTimeCore,
+  formatRelativeTimeCoreToParts,
   type RelativeTimeDataResource,
 } from "@mojito-mf2/core/relative-time-core";
 
@@ -63,13 +72,49 @@ const numberCoreOutput: string = formatNumberCore(1234.5, {
   style: "currency",
   currency: "USD",
 });
+const numberCoreParts: Array<{ type: "text"; value: string }> = formatNumberCoreToParts(1234.5, {
+  locale: "en-US",
+  style: "currency",
+  currency: "USD",
+});
+const dateCoreOutput: string = formatDateCore("2026-05-21T14:30:15Z", {
+  locale: "en-US",
+  dateStyle: "medium",
+  timeZone: "UTC",
+});
+const dateCoreParts: Array<{ type: "text"; value: string }> = formatDateCoreToParts("2026-05-21T14:30:15Z", {
+  locale: "en-US",
+  dateStyle: "medium",
+  timeZone: "UTC",
+});
+const timeCoreOutput: string = formatTimeCore("2026-05-21T14:30:15Z", {
+  locale: "en-US",
+  timeStyle: "short",
+  timeZone: "UTC",
+});
+const timeCoreParts: Array<{ type: "text"; value: string }> = formatTimeCoreToParts("2026-05-21T14:30:15Z", {
+  locale: "en-US",
+  timeStyle: "short",
+  timeZone: "UTC",
+});
 const dateTimeCoreOutput: string = formatDateTimeCore("2026-05-21T14:30:15Z", {
   locale: "en-US",
   dateStyle: "medium",
   timeStyle: "short",
   timeZone: "UTC",
 });
+const dateTimeCoreParts: Array<{ type: "text"; value: string }> = formatDateTimeCoreToParts("2026-05-21T14:30:15Z", {
+  locale: "en-US",
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "UTC",
+});
 const relativeTimeCoreOutput: string = formatRelativeTimeCore(60, {
+  locale: "en",
+  unit: "minute",
+  data: relativeTimeData,
+});
+const relativeTimeCoreParts: Array<{ type: "text"; value: string }> = formatRelativeTimeCoreToParts(60, {
   locale: "en",
   unit: "minute",
   data: relativeTimeData,
@@ -94,8 +139,15 @@ void diagnostics;
 void output;
 void formatterOutput;
 void numberCoreOutput;
+void numberCoreParts;
+void dateCoreOutput;
+void dateCoreParts;
+void timeCoreOutput;
+void timeCoreParts;
 void dateTimeCoreOutput;
+void dateTimeCoreParts;
 void relativeTimeCoreOutput;
+void relativeTimeCoreParts;
 void decodedDateTimeData;
 void decodedNumberData;
 void safeOutput;
