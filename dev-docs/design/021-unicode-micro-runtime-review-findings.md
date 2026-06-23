@@ -190,10 +190,11 @@ branch is under active implementation.
   oversized day field.
 - Date/time fixed-offset `V` skeleton widths: direct date-time-core formatting
   now follows ICU's width-specific fixed-offset labels across JavaScript,
-  Python, PHP, Go, Java, Kotlin, Rust, and Swift: `V` returns `unk`, `VV`
-  returns a padded `GMT+HH:mm` zone ID, and `VVV` returns `Unknown Location`.
+  Python, PHP, Go, Java, Kotlin, Rust, and Swift: nonzero offsets use `unk` for
+  `V`, a padded `GMT+HH:mm` zone ID for `VV`, and `Unknown Location` for `VVV`,
+  while zero offsets compact every `V` width to the locale CLDR GMT-zero label.
   `VVVV` keeps the existing localized GMT fallback. Shared fixtures cover the
-  reviewer `+05:30` repro values.
+  reviewer `+05:30` repro values and the zero fixed-offset `+00:00` boundary.
 - Date/time operand strictness and object boundaries: date-time-core now rejects
   impossible calendar dates, invalid fixed-offset operand values, and arbitrary
   host object coercion as MF2 `bad-operand` instead of relying on host parser

@@ -1809,7 +1809,7 @@ function timeZoneValue(symbol, count, localeData, timeZone) {
   }
   if (symbol === "z") return count >= 4 ? names.utcLong ?? names.utcShort ?? "UTC" : names.utcShort ?? "UTC";
   if (symbol === "O" || symbol === "v") return localizedGmtZero(names);
-  if (symbol === "V") return count >= 4 ? localizedGmtZero(names) : "UTC";
+  if (symbol === "V") return localizedGmtZero(names);
   if (symbol === "Z") {
     if (count <= 3) return "+0000";
     if (count === 5) return "Z";

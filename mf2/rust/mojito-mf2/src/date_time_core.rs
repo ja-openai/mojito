@@ -1045,8 +1045,7 @@ fn time_zone_value(
             .unwrap_or(UTC)
             .to_string(),
         'O' | 'v' => localized_gmt_zero(locale_data),
-        'V' if count >= 4 => localized_gmt_zero(locale_data),
-        'V' => UTC.to_string(),
+        'V' => localized_gmt_zero(locale_data),
         'Z' if count <= 3 => "+0000".to_string(),
         'Z' if count == 5 => "Z".to_string(),
         'Z' => localized_gmt_zero(locale_data),

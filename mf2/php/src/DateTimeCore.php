@@ -2287,7 +2287,7 @@ final class DateTimeCore
                 ? (string) ($names['utcLong'] ?? $names['utcShort'] ?? self::UTC)
                 : (string) ($names['utcShort'] ?? self::UTC),
             'O', 'v' => self::localizedGmtZero($names),
-            'V' => $count >= 4 ? self::localizedGmtZero($names) : self::UTC,
+            'V' => self::localizedGmtZero($names),
             'Z' => $count <= 3 ? '+0000' : ($count === 5 ? 'Z' : self::localizedGmtZero($names)),
             'X' => 'Z',
             'x' => $count === 1 ? '+00' : ($count === 2 || $count === 4 ? '+0000' : '+00:00'),

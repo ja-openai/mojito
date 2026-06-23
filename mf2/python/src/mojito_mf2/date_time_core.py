@@ -2217,7 +2217,7 @@ def _time_zone_value(symbol: str, count: int, value: datetime, locale_data: dict
     if symbol in {"O", "v"}:
         return _localized_gmt_zero(names)
     if symbol == "V":
-        return _localized_gmt_zero(names) if count >= 4 else _UTC
+        return _localized_gmt_zero(names)
     if symbol == "Z":
         if count <= 3:
             return "+0000"

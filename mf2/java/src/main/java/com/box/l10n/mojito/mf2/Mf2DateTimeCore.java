@@ -2683,7 +2683,7 @@ public final class Mf2DateTimeCore {
                             localeData.timeZoneNames().getOrDefault("utcShort", UTC))
                     : localeData.timeZoneNames().getOrDefault("utcShort", UTC);
             case 'O', 'v' -> localizedGmtZero(localeData);
-            case 'V' -> count >= 4 ? localizedGmtZero(localeData) : UTC;
+            case 'V' -> localizedGmtZero(localeData);
             case 'Z' -> {
                 if (count <= 3) {
                     yield "+0000";

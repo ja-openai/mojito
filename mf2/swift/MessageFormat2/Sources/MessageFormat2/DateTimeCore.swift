@@ -2491,7 +2491,7 @@ public enum MF2DateTimeCore {
         case "O", "v":
             return localizedGmtZero(localeData)
         case "V":
-            return count >= 4 ? localizedGmtZero(localeData) : utc
+            return localizedGmtZero(localeData)
         case "Z":
             if count <= 3 {
                 return "+0000"

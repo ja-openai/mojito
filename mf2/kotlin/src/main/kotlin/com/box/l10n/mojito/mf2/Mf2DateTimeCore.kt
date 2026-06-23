@@ -2095,7 +2095,7 @@ object Mf2DateTimeCore {
                     localeData.timeZoneNames["utcShort"] ?: UTC
                 }
             'O', 'v' -> localizedGmtZero(localeData)
-            'V' -> if (count >= 4) localizedGmtZero(localeData) else UTC
+            'V' -> localizedGmtZero(localeData)
             'Z' ->
                 when {
                     count <= 3 -> "+0000"

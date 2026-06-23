@@ -2863,10 +2863,7 @@ func dateTimeCoreTimeZoneValue(symbol rune, count int, value time.Time, localeDa
 	case 'O', 'v':
 		return dateTimeCoreLocalizedGmtZero(localeData)
 	case 'V':
-		if count >= 4 {
-			return dateTimeCoreLocalizedGmtZero(localeData)
-		}
-		return dateTimeCoreUTC
+		return dateTimeCoreLocalizedGmtZero(localeData)
 	case 'Z':
 		if count <= 3 {
 			return "+0000"
