@@ -46,7 +46,11 @@ export type ApiJsonConfigLocalizationInput = {
 };
 
 export type ApiJsonConfigProfile = {
-  format?: 'EMBEDDED_TRANSLATIONS' | 'FLAT_SOURCE_ARRAY' | 'FORMATJS_MAP';
+  format?:
+    | 'EMBEDDED_TRANSLATIONS'
+    | 'FLAT_SOURCE_ARRAY'
+    | 'FORMATJS_MAP'
+    | 'FORMATJS_MULTILINGUAL_MAP';
   collectionKey: string;
   itemIdField: string;
   translationsField: string;

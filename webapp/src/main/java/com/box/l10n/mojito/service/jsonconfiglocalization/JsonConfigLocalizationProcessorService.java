@@ -391,6 +391,18 @@ public class JsonConfigLocalizationProcessorService {
                     (left, right) -> left,
                     LinkedHashMap::new));
 
+    if (profile.format() == SourceConfigFormat.FORMATJS_MULTILINGUAL_MAP) {
+      localizeFormatJsMultilingualConfig(
+          sourceConfig,
+          repository,
+          profile,
+          outputLocaleMapping,
+          sourceTextUnitsByName,
+          targetTextUnitsByKey,
+          warnings);
+      return new ExportResult(prettyJson(sourceConfig), dedupeWarnings(warnings));
+    }
+
     if (profile.format() != SourceConfigFormat.EMBEDDED_TRANSLATIONS) {
       return exportLocaleMap(
           repository,
@@ -610,6 +622,75 @@ public class JsonConfigLocalizationProcessorService {
     }
   }
 
+  private void localizeFormatJsMultilingualConfig(
+      JsonNode sourceConfig,
+      Repository repository,
+      SourceConfigProfile profile,
+      Map<String, String> outputLocaleMapping,
+      Map<String, TextUnitDTO> sourceTextUnitsByName,
+      Map<String, TextUnitDTO> targetTextUnitsByKey,
+      List<String> warnings) {
+    List<String> targetLocaleTags = targetLocaleTags(repository);
+    for (FormatJsMapNode messageMap : formatJsMapNodes(sourceConfig, profile)) {
+      messageMap
+          .node()
+          .fields()
+          .forEachRemaining(
+              entry -> {
+                String stringId = entry.getKey();
+                String stringPath = jsonPath(messageMap.path(), stringId);
+                if (!(entry.getValue() instanceof ObjectNode messageObject)) {
+                  warnings.add(stringPath + " is not an object; skipped.");
+                  return;
+                }
+
+                TextUnitDTO sourceTextUnit = sourceTextUnitsByName.get(stringId);
+                if (sourceTextUnit == null || !sourceTextUnit.isUsed()) {
+                  return;
+                }
+
+                messageObject.put(profile.sourceField(), nullToBlank(sourceTextUnit.getSource()));
+                if (!profile.commentField().isBlank()
+                    && (!nullToBlank(sourceTextUnit.getComment()).isBlank()
+                        || messageObject.has(profile.commentField()))) {
+                  messageObject.put(
+                      profile.commentField(), nullToBlank(sourceTextUnit.getComment()));
+                }
+
+                ObjectNode translations = objectField(messageObject, profile.translationsField());
+                Set<String> outputLocales = new LinkedHashSet<>();
+                for (String targetLocaleTag : targetLocaleTags) {
+                  String outputLocaleTag =
+                      outputLocaleMapping.getOrDefault(targetLocaleTag, targetLocaleTag);
+                  if (!outputLocales.add(outputLocaleTag)) {
+                    warnings.add(
+                        "Skipped duplicate output locale "
+                            + outputLocaleTag
+                            + " mapped from "
+                            + targetLocaleTag
+                            + ".");
+                    continue;
+                  }
+
+                  if (sourceTextUnit.getTmTextUnitId() == null) {
+                    translations.remove(outputLocaleTag);
+                    continue;
+                  }
+
+                  TextUnitDTO targetTextUnit =
+                      targetTextUnitsByKey.get(
+                          targetKey(sourceTextUnit.getTmTextUnitId(), targetLocaleTag));
+                  String target = targetTextUnit != null ? targetTextUnit.getTarget() : null;
+                  if (target != null && !target.isBlank()) {
+                    translations.put(outputLocaleTag, target);
+                  } else {
+                    translations.remove(outputLocaleTag);
+                  }
+                }
+              });
+    }
+  }
+
   private List<TextUnitDTO> searchSourceTextUnits(Repository repository, String assetPath) {
     TextUnitSearcherParameters parameters = new TextUnitSearcherParameters();
     parameters.setRepositoryIds(repository.getId());
@@ -694,7 +775,7 @@ public class JsonConfigLocalizationProcessorService {
       return extractFlatSourceArrayStrings(
           sourceConfig, normalizedProfile, schemaConstraints, warnings);
     }
-    if (normalizedProfile.format() == SourceConfigFormat.FORMATJS_MAP) {
+    if (isFormatJsSourceFormat(normalizedProfile.format())) {
       return extractFormatJsMapStrings(
           sourceConfig, normalizedProfile, schemaConstraints, warnings);
     }
@@ -800,40 +881,52 @@ public class JsonConfigLocalizationProcessorService {
       SourceConfigProfile profile,
       SourceSchemaConstraints schemaConstraints,
       List<String> warnings) {
-    ObjectNode sourceObject = formatJsMapNode(sourceConfig, profile);
-
     List<JsonConfigString> strings = new ArrayList<>();
-    sourceObject
-        .fields()
-        .forEachRemaining(
-            entry -> {
-              String stringId = entry.getKey();
-              JsonNode messageNode = entry.getValue();
-              if (!(messageNode instanceof ObjectNode messageObject)) {
-                warnings.add(stringId + " is not an object; skipped.");
-                return;
-              }
+    Set<String> seenStringIds = new LinkedHashSet<>();
+    for (FormatJsMapNode messageMap : formatJsMapNodes(sourceConfig, profile)) {
+      messageMap
+          .node()
+          .fields()
+          .forEachRemaining(
+              entry -> {
+                String stringId = entry.getKey();
+                String stringPath = jsonPath(messageMap.path(), stringId);
+                JsonNode messageNode = entry.getValue();
+                if (!(messageNode instanceof ObjectNode messageObject)) {
+                  warnings.add(stringPath + " is not an object; skipped.");
+                  return;
+                }
 
-              JsonNode sourceNode = messageObject.get(profile.sourceField());
-              if (sourceNode == null || !sourceNode.isTextual()) {
-                warnings.add(stringId + " is missing " + profile.sourceField() + "; skipped.");
-                return;
-              }
-              if (sourceNode.asText().isBlank()
-                  && schemaConstraints.formatJsNonEmptyFields().contains(profile.sourceField())) {
-                warnings.add(
-                    stringId + " is missing non-empty " + profile.sourceField() + "; skipped.");
-                return;
-              }
+                JsonNode sourceNode = messageObject.get(profile.sourceField());
+                if (sourceNode == null || !sourceNode.isTextual()) {
+                  warnings.add(stringPath + " is missing " + profile.sourceField() + "; skipped.");
+                  return;
+                }
+                if (sourceNode.asText().isBlank()
+                    && schemaConstraints.formatJsNonEmptyFields().contains(profile.sourceField())) {
+                  warnings.add(
+                      stringPath + " is missing non-empty " + profile.sourceField() + "; skipped.");
+                  return;
+                }
+                if (!seenStringIds.add(stringId)) {
+                  warnings.add(
+                      "Duplicate string id \""
+                          + stringId
+                          + "\" at \""
+                          + stringPath
+                          + "\" skipped.");
+                  return;
+                }
 
-              strings.add(
-                  new JsonConfigString(
-                      stringId,
-                      sourceNode.asText(),
-                      optionalTextField(messageObject, profile.commentField()),
-                      true,
-                      false));
-            });
+                strings.add(
+                    new JsonConfigString(
+                        stringId,
+                        sourceNode.asText(),
+                        optionalTextField(messageObject, profile.commentField()),
+                        true,
+                        false));
+              });
+    }
 
     strings.sort(Comparator.comparing(JsonConfigString::stringId));
     return new Extraction(strings, warnings);
@@ -857,7 +950,7 @@ public class JsonConfigLocalizationProcessorService {
       return new SourceSchemaConstraints(
           Set.of(), nonEmptyFlatSourceFields(schema, normalizedProfile), Set.of());
     }
-    if (normalizedProfile.format() == SourceConfigFormat.FORMATJS_MAP) {
+    if (isFormatJsSourceFormat(normalizedProfile.format())) {
       return new SourceSchemaConstraints(
           Set.of(), Set.of(), nonEmptyFormatJsSourceFields(schema, normalizedProfile));
     }
@@ -1176,9 +1269,13 @@ public class JsonConfigLocalizationProcessorService {
 
   private SourceConfigProfile validateCompleteProfile(SourceConfigProfile profile) {
     SourceConfigProfile normalized = normalizeProfile(profile);
-    if (normalized.format() == SourceConfigFormat.FORMATJS_MAP) {
+    if (isFormatJsSourceFormat(normalized.format())) {
       if (normalized.sourceField().isBlank()) {
         throw new IllegalArgumentException("Source field is required.");
+      }
+      if (normalized.format() == SourceConfigFormat.FORMATJS_MULTILINGUAL_MAP
+          && normalized.translationsField().isBlank()) {
+        throw new IllegalArgumentException("Translations field is required.");
       }
       return normalized;
     }
@@ -1217,7 +1314,7 @@ public class JsonConfigLocalizationProcessorService {
   private SourceConfigProfile inferProfileFromSource(
       JsonNode sourceConfig, SourceConfigProfile partialProfile, List<String> warnings) {
     SourceConfigProfile normalizedProfile = normalizeProfile(partialProfile);
-    if (normalizedProfile.format() == SourceConfigFormat.FORMATJS_MAP) {
+    if (isFormatJsSourceFormat(normalizedProfile.format())) {
       return validateCompleteProfile(normalizedProfile);
     }
 
@@ -1320,8 +1417,8 @@ public class JsonConfigLocalizationProcessorService {
 
     for (String sourceField : formatJsSourceFieldCandidates(profile.sourceField())) {
       if (!profile.collectionKey().isBlank()
-          && sourceObject.get(profile.collectionKey()) instanceof ObjectNode nestedMap
-          && objectLooksLikeFormatJsMap(nestedMap, sourceField)) {
+          && objectNodesAtPath(sourceObject, profile.collectionKey()).stream()
+              .anyMatch(match -> objectLooksLikeFormatJsMap(match.node(), sourceField))) {
         return Optional.of(
             new SourceConfigProfile(
                 SourceConfigFormat.FORMATJS_MAP,
@@ -1374,10 +1471,16 @@ public class JsonConfigLocalizationProcessorService {
             message -> message.get(sourceField) != null && message.get(sourceField).isTextual());
   }
 
+  private boolean isFormatJsSourceFormat(SourceConfigFormat format) {
+    return format == SourceConfigFormat.FORMATJS_MAP
+        || format == SourceConfigFormat.FORMATJS_MULTILINGUAL_MAP;
+  }
+
   private SourceConfigProfile profileDefaults(SourceConfigFormat format) {
-    if (format == SourceConfigFormat.FORMATJS_MAP) {
+    if (format == SourceConfigFormat.FORMATJS_MAP
+        || format == SourceConfigFormat.FORMATJS_MULTILINGUAL_MAP) {
       return new SourceConfigProfile(
-          SourceConfigFormat.FORMATJS_MAP,
+          format,
           "",
           DEFAULT_ITEM_ID_FIELD,
           DEFAULT_TRANSLATIONS_FIELD,
@@ -1529,19 +1632,112 @@ public class JsonConfigLocalizationProcessorService {
     return collectionNode instanceof ArrayNode arrayNode ? arrayNode : null;
   }
 
-  private ObjectNode formatJsMapNode(JsonNode sourceConfig, SourceConfigProfile profile) {
+  private List<FormatJsMapNode> formatJsMapNodes(
+      JsonNode sourceConfig, SourceConfigProfile profile) {
     if (!(sourceConfig instanceof ObjectNode sourceObject)) {
       throw new IllegalArgumentException("Config root must be an object for FormatJS message map.");
     }
     if (profile.collectionKey().isBlank()) {
-      return sourceObject;
+      return List.of(new FormatJsMapNode("", sourceObject));
     }
-    JsonNode nestedMap = sourceObject.get(profile.collectionKey());
-    if (nestedMap instanceof ObjectNode nestedMapObject) {
-      return nestedMapObject;
+
+    List<FormatJsMapNode> matches = objectNodesAtPath(sourceObject, profile.collectionKey());
+    if (!matches.isEmpty()) {
+      return matches;
     }
     throw new IllegalArgumentException(
-        "Config must contain a FormatJS message map object at " + profile.collectionKey() + ".");
+        "Config must contain at least one FormatJS message map object at "
+            + profile.collectionKey()
+            + ".");
+  }
+
+  private List<FormatJsMapNode> objectNodesAtPath(ObjectNode sourceObject, String path) {
+    String normalizedPath = nullToBlank(path).trim();
+    if (normalizedPath.isBlank()) {
+      return List.of(new FormatJsMapNode("", sourceObject));
+    }
+
+    if (!hasJsonPathWildcard(normalizedPath)) {
+      JsonNode exactNode = sourceObject.get(normalizedPath);
+      if (exactNode instanceof ObjectNode exactObject) {
+        return List.of(new FormatJsMapNode(normalizedPath, exactObject));
+      }
+    }
+
+    List<FormatJsMapNode> matches = new ArrayList<>();
+    collectObjectNodesAtPath(sourceObject, jsonPathSegments(normalizedPath), 0, "", matches);
+    return matches;
+  }
+
+  private void collectObjectNodesAtPath(
+      JsonNode current,
+      List<String> segments,
+      int segmentIndex,
+      String currentPath,
+      List<FormatJsMapNode> matches) {
+    if (segmentIndex >= segments.size()) {
+      if (current instanceof ObjectNode objectNode) {
+        matches.add(new FormatJsMapNode(currentPath, objectNode));
+      }
+      return;
+    }
+
+    if (!(current instanceof ObjectNode currentObject)) {
+      return;
+    }
+
+    String segment = segments.get(segmentIndex);
+    if ("**".equals(segment)) {
+      collectObjectNodesAtPath(current, segments, segmentIndex + 1, currentPath, matches);
+      currentObject
+          .fields()
+          .forEachRemaining(
+              entry ->
+                  collectObjectNodesAtPath(
+                      entry.getValue(),
+                      segments,
+                      segmentIndex,
+                      jsonPath(currentPath, entry.getKey()),
+                      matches));
+      return;
+    }
+
+    if ("*".equals(segment)) {
+      currentObject
+          .fields()
+          .forEachRemaining(
+              entry ->
+                  collectObjectNodesAtPath(
+                      entry.getValue(),
+                      segments,
+                      segmentIndex + 1,
+                      jsonPath(currentPath, entry.getKey()),
+                      matches));
+      return;
+    }
+
+    collectObjectNodesAtPath(
+        currentObject.get(segment),
+        segments,
+        segmentIndex + 1,
+        jsonPath(currentPath, segment),
+        matches);
+  }
+
+  private boolean hasJsonPathWildcard(String path) {
+    return jsonPathSegments(path).stream()
+        .anyMatch(segment -> "*".equals(segment) || "**".equals(segment));
+  }
+
+  private List<String> jsonPathSegments(String path) {
+    return List.of(path.split("\\.")).stream()
+        .map(String::trim)
+        .filter(segment -> !segment.isBlank())
+        .toList();
+  }
+
+  private String jsonPath(String parentPath, String childKey) {
+    return parentPath == null || parentPath.isBlank() ? childKey : parentPath + "." + childKey;
   }
 
   private List<VirtualAssetTextUnit> toVirtualAssetTextUnits(List<JsonConfigString> strings) {
@@ -1859,6 +2055,8 @@ public class JsonConfigLocalizationProcessorService {
 
   private record SourceCollectionCandidate(String collectionKey, ArrayNode collection) {}
 
+  private record FormatJsMapNode(String path, ObjectNode node) {}
+
   private record Extraction(List<JsonConfigString> strings, List<String> warnings) {}
 
   private record SourceSchemaConstraints(
@@ -1873,7 +2071,8 @@ public class JsonConfigLocalizationProcessorService {
   public enum SourceConfigFormat {
     EMBEDDED_TRANSLATIONS,
     FLAT_SOURCE_ARRAY,
-    FORMATJS_MAP
+    FORMATJS_MAP,
+    FORMATJS_MULTILINGUAL_MAP
   }
 
   public record SourceConfigProfile(

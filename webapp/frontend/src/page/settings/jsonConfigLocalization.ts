@@ -49,7 +49,12 @@ export type OutputLocaleMappingParseResult = {
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 export type JsonRecord = { [key: string]: JsonValue };
-export type JsonConfigSourceFormat = 'EMBEDDED_TRANSLATIONS' | 'FLAT_SOURCE_ARRAY' | 'FORMATJS_MAP';
+type JsonRecordPathMatch = { path: string; value: JsonRecord };
+export type JsonConfigSourceFormat =
+  | 'EMBEDDED_TRANSLATIONS'
+  | 'FLAT_SOURCE_ARRAY'
+  | 'FORMATJS_MAP'
+  | 'FORMATJS_MULTILINGUAL_MAP';
 
 export type StatsigSourceConfigProfile = {
   format?: JsonConfigSourceFormat;
@@ -243,7 +248,7 @@ export function extractStatsigSourceConfigStrings(
   if (profile.format === 'FLAT_SOURCE_ARRAY') {
     return extractFlatSourceArrayStrings(sourceConfig, existingCount, profile, schemaWarnings);
   }
-  if (profile.format === 'FORMATJS_MAP') {
+  if (isFormatJsSourceFormat(profile.format)) {
     return extractFormatJsMapStrings(sourceConfig, existingCount, profile, schemaWarnings);
   }
   const collection = sourceConfig[profile.collectionKey];
@@ -375,30 +380,38 @@ function extractFormatJsMapStrings(
   const strings: JsonConfigLocalizationDraftString[] = [];
   const sourceField = profile.sourceField || 'defaultMessage';
   const commentField = profile.commentField || 'description';
-  const messageMap = getFormatJsMessageMap(sourceConfig, profile);
+  const seenStringIds = new Set<string>();
 
-  Object.entries(messageMap).forEach(([stringId, value]) => {
-    if (!isJsonRecord(value)) {
-      warnings.push(`${stringId} is not an object; skipped.`);
-      return;
-    }
+  getFormatJsMessageMaps(sourceConfig, profile).forEach((messageMapMatch) => {
+    Object.entries(messageMapMatch.value).forEach(([stringId, value]) => {
+      const stringPath = formatJsonPath(messageMapMatch.path, stringId);
+      if (!isJsonRecord(value)) {
+        warnings.push(`${stringPath} is not an object; skipped.`);
+        return;
+      }
 
-    const source = value[sourceField];
-    if (typeof source !== 'string') {
-      warnings.push(`${stringId} is missing ${sourceField}; skipped.`);
-      return;
-    }
+      const source = value[sourceField];
+      if (typeof source !== 'string') {
+        warnings.push(`${stringPath} is missing ${sourceField}; skipped.`);
+        return;
+      }
+      if (seenStringIds.has(stringId)) {
+        warnings.push(`Duplicate string id "${stringId}" at "${stringPath}" skipped.`);
+        return;
+      }
+      seenStringIds.add(stringId);
 
-    const comment = value[commentField];
-    strings.push({
-      clientId: `formatjs-${existingCount + strings.length}-${normalizeSourceStringId(stringId)}`,
-      tmTextUnitId: null,
-      assetId: null,
-      stringId,
-      source,
-      comment: typeof comment === 'string' ? comment : '',
-      used: true,
-      doNotTranslate: false,
+      const comment = value[commentField];
+      strings.push({
+        clientId: `formatjs-${existingCount + strings.length}-${normalizeSourceStringId(stringId)}`,
+        tmTextUnitId: null,
+        assetId: null,
+        stringId,
+        source,
+        comment: typeof comment === 'string' ? comment : '',
+        used: true,
+        doNotTranslate: false,
+      });
     });
   });
 
@@ -433,8 +446,10 @@ export function getStatsigSourceConfigStringIds(
       ),
     );
   }
-  if (profile.format === 'FORMATJS_MAP') {
-    return new Set(Object.keys(getFormatJsMessageMap(sourceConfig, profile)));
+  if (isFormatJsSourceFormat(profile.format)) {
+    return new Set(
+      getFormatJsMessageMaps(sourceConfig, profile).flatMap((match) => Object.keys(match.value)),
+    );
   }
   const collection = sourceConfig[profile.collectionKey];
 
@@ -540,6 +555,16 @@ export function buildStatsigSourceConfigExport(
   );
   if (normalizedProfile.format === 'FLAT_SOURCE_ARRAY') {
     return buildFlatSourceArrayConfigExport(normalizedProfile, sourceConfig, sourceStrings);
+  }
+  if (normalizedProfile.format === 'FORMATJS_MULTILINGUAL_MAP') {
+    return buildFormatJsMultilingualMapConfigExport(
+      normalizedProfile,
+      sourceConfig,
+      targetLocaleTags,
+      sourceStrings,
+      readinessByString,
+      outputLocaleByMojitoLocale,
+    );
   }
   if (normalizedProfile.format === 'FORMATJS_MAP') {
     return buildFormatJsMapConfigExport(normalizedProfile, sourceConfig, sourceStrings);
@@ -793,12 +818,19 @@ function buildFormatJsMapConfigExport(
   const output = cloneJsonRecord(sourceConfig);
   const sourceField = profile.sourceField || 'defaultMessage';
   const commentField = profile.commentField || 'description';
-  const messageMap = ensureFormatJsMessageMap(output, profile);
+  const messageMapMatches = writableFormatJsMessageMaps(output, profile);
+  const warnings: string[] = [];
 
   sourceStrings
     .filter((sourceString) => sourceString.used)
     .forEach((sourceString) => {
-      const entry = ensureJsonRecord(messageMap, sourceString.stringId);
+      const messageMapMatch = writableFormatJsMessageMapForString(
+        messageMapMatches,
+        sourceString.stringId,
+        profile,
+        warnings,
+      );
+      const entry = ensureJsonRecord(messageMapMatch.value, sourceString.stringId);
       entry[sourceField] = sourceString.source;
       if (sourceString.comment || entry[commentField] != null) {
         entry[commentField] = sourceString.comment;
@@ -807,7 +839,62 @@ function buildFormatJsMapConfigExport(
 
   return {
     value: output,
-    warnings: [],
+    warnings: Array.from(new Set(warnings)),
+  };
+}
+
+function buildFormatJsMultilingualMapConfigExport(
+  profile: StatsigSourceConfigProfile,
+  sourceConfig: JsonRecord,
+  targetLocaleTags: string[],
+  sourceStrings: JsonConfigLocalizationDraftString[],
+  readinessByString: Record<string, JsonConfigLocalizationStringReadiness>,
+  outputLocaleByMojitoLocale: OutputLocaleMapping = {},
+): StatsigSourceConfigExportResult {
+  const output = cloneJsonRecord(sourceConfig);
+  const sourceField = profile.sourceField || 'defaultMessage';
+  const commentField = profile.commentField || 'description';
+  const translationsField = profile.translationsField || 'translations';
+  const messageMapMatches = writableFormatJsMessageMaps(output, profile);
+  const warnings: string[] = [];
+
+  sourceStrings
+    .filter((sourceString) => sourceString.used)
+    .forEach((sourceString) => {
+      const messageMapMatch = writableFormatJsMessageMapForString(
+        messageMapMatches,
+        sourceString.stringId,
+        profile,
+        warnings,
+      );
+      const entry = ensureJsonRecord(messageMapMatch.value, sourceString.stringId);
+      entry[sourceField] = sourceString.source;
+      if (sourceString.comment || entry[commentField] != null) {
+        entry[commentField] = sourceString.comment;
+      }
+
+      const translations = ensureJsonRecord(entry, translationsField);
+      const seenOutputLocales = new Set<string>();
+      targetLocaleTags.forEach((mojitoLocaleTag) => {
+        const outputLocaleTag = getMappedLocaleTag(mojitoLocaleTag, outputLocaleByMojitoLocale);
+        if (seenOutputLocales.has(outputLocaleTag)) {
+          warnings.push(`Multiple Mojito locales map to output locale "${outputLocaleTag}".`);
+          return;
+        }
+        seenOutputLocales.add(outputLocaleTag);
+
+        const target = getTranslatedTarget(sourceString, mojitoLocaleTag, readinessByString);
+        if (target) {
+          translations[outputLocaleTag] = target;
+        } else {
+          delete translations[outputLocaleTag];
+        }
+      });
+    });
+
+  return {
+    value: output,
+    warnings: Array.from(new Set(warnings)),
   };
 }
 
@@ -847,6 +934,9 @@ export function appendStatsigSourceConfigEntry(
   );
   if (profile.format === 'FLAT_SOURCE_ARRAY') {
     return appendFlatSourceArrayEntry(sourceConfig, profile, warnings);
+  }
+  if (profile.format === 'FORMATJS_MULTILINGUAL_MAP') {
+    return appendFormatJsMultilingualMapEntry(sourceConfig, profile, warnings);
   }
   if (profile.format === 'FORMATJS_MAP') {
     return appendFormatJsMapEntry(sourceConfig, profile, warnings);
@@ -934,16 +1024,57 @@ function appendFormatJsMapEntry(
 ): StatsigSourceConfigAppendEntryResult {
   const sourceField = profile.sourceField || 'defaultMessage';
   const commentField = profile.commentField || 'description';
-  let index = Object.keys(sourceConfig).length + 1;
+  const messageMapMatch = writableFormatJsMessageMaps(sourceConfig, profile, warnings)[0];
+  const messageMap = messageMapMatch.value;
+  if (hasJsonPathWildcard(profile.collectionKey) && messageMapMatch.path) {
+    warnings.push(`Added entry under "${messageMapMatch.path}".`);
+  }
+  let index = Object.keys(messageMap).length + 1;
   let itemKey = `message.${index}`;
-  while (sourceConfig[itemKey] != null) {
+  while (messageMap[itemKey] != null) {
     index += 1;
     itemKey = `message.${index}`;
   }
 
-  sourceConfig[itemKey] = {
+  messageMap[itemKey] = {
     [sourceField]: '',
     [commentField]: '',
+  };
+
+  return {
+    sourceConfigJson: JSON.stringify(sourceConfig, null, 2),
+    profile,
+    itemKey,
+    stringIds: [itemKey],
+    appended: true,
+    warnings: Array.from(new Set(warnings)),
+  };
+}
+
+function appendFormatJsMultilingualMapEntry(
+  sourceConfig: JsonRecord,
+  profile: StatsigSourceConfigProfile,
+  warnings: string[],
+): StatsigSourceConfigAppendEntryResult {
+  const sourceField = profile.sourceField || 'defaultMessage';
+  const commentField = profile.commentField || 'description';
+  const translationsField = profile.translationsField || 'translations';
+  const messageMapMatch = writableFormatJsMessageMaps(sourceConfig, profile, warnings)[0];
+  const messageMap = messageMapMatch.value;
+  if (hasJsonPathWildcard(profile.collectionKey) && messageMapMatch.path) {
+    warnings.push(`Added entry under "${messageMapMatch.path}".`);
+  }
+  let index = Object.keys(messageMap).length + 1;
+  let itemKey = `message.${index}`;
+  while (messageMap[itemKey] != null) {
+    index += 1;
+    itemKey = `message.${index}`;
+  }
+
+  messageMap[itemKey] = {
+    [sourceField]: '',
+    [commentField]: '',
+    [translationsField]: {},
   };
 
   return {
@@ -1152,9 +1283,12 @@ function normalizeStatsigProfile(profile: StatsigSourceConfigProfile): StatsigSo
     )?.trim(),
   };
 
-  if (format === 'FORMATJS_MAP') {
+  if (format === 'FORMATJS_MAP' || format === 'FORMATJS_MULTILINGUAL_MAP') {
     if (!normalizedProfile.sourceField) {
       throw new Error('Provide a source field.');
+    }
+    if (format === 'FORMATJS_MULTILINGUAL_MAP' && !normalizedProfile.translationsField) {
+      throw new Error('Provide a translations field.');
     }
     return normalizedProfile;
   }
@@ -1187,7 +1321,11 @@ function normalizeStatsigProfile(profile: StatsigSourceConfigProfile): StatsigSo
 }
 
 function normalizeSourceFormat(format: string | undefined): JsonConfigSourceFormat {
-  if (format === 'FLAT_SOURCE_ARRAY' || format === 'FORMATJS_MAP') {
+  if (
+    format === 'FLAT_SOURCE_ARRAY' ||
+    format === 'FORMATJS_MAP' ||
+    format === 'FORMATJS_MULTILINGUAL_MAP'
+  ) {
     return format;
   }
   return 'EMBEDDED_TRANSLATIONS';
@@ -1197,7 +1335,7 @@ function inferStatsigProfileFromSource(
   sourceConfig: JsonRecord,
   profile: StatsigSourceConfigProfile,
 ): StatsigSourceConfigProfile {
-  if (profile.format === 'FORMATJS_MAP') {
+  if (isFormatJsSourceFormat(profile.format)) {
     return {
       ...profile,
       collectionKey: profile.collectionKey.trim(),
@@ -1292,28 +1430,71 @@ function inferStatsigProfileFromSource(
   };
 }
 
-function getFormatJsMessageMap(
+function getFormatJsMessageMaps(
   sourceConfig: JsonRecord,
   profile: StatsigSourceConfigProfile,
-): JsonRecord {
+): JsonRecordPathMatch[] {
   if (!profile.collectionKey.trim()) {
-    return sourceConfig;
+    return [{ path: '', value: sourceConfig }];
   }
-  const nestedValue = sourceConfig[profile.collectionKey];
-  if (isJsonRecord(nestedValue)) {
-    return nestedValue;
+  const matches = getJsonRecordMatchesAtPath(sourceConfig, profile.collectionKey);
+  if (matches.length) {
+    return matches;
   }
-  throw new Error(`Config must contain a FormatJS message map at "${profile.collectionKey}".`);
+  throw new Error(
+    `Config must contain at least one FormatJS message map object at "${profile.collectionKey}".`,
+  );
 }
 
-function ensureFormatJsMessageMap(
+function writableFormatJsMessageMaps(
   sourceConfig: JsonRecord,
   profile: StatsigSourceConfigProfile,
-): JsonRecord {
+  warnings: string[] = [],
+): JsonRecordPathMatch[] {
   if (!profile.collectionKey.trim()) {
-    return sourceConfig;
+    return [{ path: '', value: sourceConfig }];
   }
-  return ensureJsonRecord(sourceConfig, profile.collectionKey);
+  if (!hasJsonPathWildcard(profile.collectionKey)) {
+    return [
+      {
+        path: profile.collectionKey.trim(),
+        value: ensureJsonRecordAtPath(sourceConfig, profile.collectionKey),
+      },
+    ];
+  }
+
+  const matches = getJsonRecordMatchesAtPath(sourceConfig, profile.collectionKey);
+  if (!matches.length) {
+    throw new Error(
+      `Config must contain at least one FormatJS message map object at "${profile.collectionKey}".`,
+    );
+  }
+  if (matches.length > 1) {
+    warnings.push(
+      `Message map key "${profile.collectionKey}" matched ${matches.length} maps; new entries use "${matches[0].path}".`,
+    );
+  }
+  return matches;
+}
+
+function writableFormatJsMessageMapForString(
+  messageMapMatches: JsonRecordPathMatch[],
+  stringId: string,
+  profile: StatsigSourceConfigProfile,
+  warnings: string[],
+): JsonRecordPathMatch {
+  const existingMatch = messageMapMatches.find((match) => match.value[stringId] != null);
+  if (existingMatch) {
+    return existingMatch;
+  }
+
+  const fallbackMatch = messageMapMatches[0];
+  if (hasJsonPathWildcard(profile.collectionKey)) {
+    warnings.push(
+      `String "${stringId}" was not present in any map matched by "${profile.collectionKey}"; added it under "${fallbackMatch.path}".`,
+    );
+  }
+  return fallbackMatch;
 }
 
 function detectFormatJsMessageMap(
@@ -1322,12 +1503,15 @@ function detectFormatJsMessageMap(
 ): { collectionKey: string; sourceField: string } | null {
   const collectionKey = profile.collectionKey.trim();
   for (const sourceField of formatJsSourceFieldCandidates(profile.sourceField)) {
-    if (
-      collectionKey &&
-      isJsonRecord(sourceConfig[collectionKey]) &&
-      recordLooksLikeFormatJsMessageMap(sourceConfig[collectionKey], sourceField)
-    ) {
-      return { collectionKey, sourceField };
+    if (collectionKey) {
+      const nestedMessageMaps = getJsonRecordMatchesAtPath(sourceConfig, collectionKey);
+      if (
+        nestedMessageMaps.some((match) =>
+          recordLooksLikeFormatJsMessageMap(match.value, sourceField),
+        )
+      ) {
+        return { collectionKey, sourceField };
+      }
     }
     if (recordLooksLikeFormatJsMessageMap(sourceConfig, sourceField)) {
       return { collectionKey: '', sourceField };
@@ -1347,6 +1531,12 @@ function recordLooksLikeFormatJsMessageMap(sourceConfig: JsonRecord, sourceField
   return Object.values(sourceConfig).some(
     (value) => isJsonRecord(value) && typeof value[sourceField] === 'string',
   );
+}
+
+function isFormatJsSourceFormat(
+  format: JsonConfigSourceFormat | undefined,
+): format is 'FORMATJS_MAP' | 'FORMATJS_MULTILINGUAL_MAP' {
+  return format === 'FORMATJS_MAP' || format === 'FORMATJS_MULTILINGUAL_MAP';
 }
 
 function collectionLooksEmbeddedTranslatable(
@@ -1748,6 +1938,123 @@ function ensureJsonRecord(parent: JsonRecord, key: string): JsonRecord {
     parent[key] = {};
   }
   return parent[key];
+}
+
+function getJsonRecordMatchesAtPath(parent: JsonRecord, path: string): JsonRecordPathMatch[] {
+  const normalizedPath = path.trim();
+  if (!normalizedPath) {
+    return [{ path: '', value: parent }];
+  }
+
+  if (!hasJsonPathWildcard(normalizedPath)) {
+    const exactValue = parent[normalizedPath];
+    if (isJsonRecord(exactValue)) {
+      return [{ path: normalizedPath, value: exactValue }];
+    }
+  }
+
+  const matches: JsonRecordPathMatch[] = [];
+  collectJsonRecordMatchesAtPath(parent, jsonPathSegments(normalizedPath), 0, '', matches);
+  return matches;
+}
+
+function collectJsonRecordMatchesAtPath(
+  current: JsonValue,
+  segments: string[],
+  segmentIndex: number,
+  currentPath: string,
+  matches: JsonRecordPathMatch[],
+) {
+  if (segmentIndex >= segments.length) {
+    if (isJsonRecord(current)) {
+      matches.push({ path: currentPath, value: current });
+    }
+    return;
+  }
+
+  if (!isJsonRecord(current)) {
+    return;
+  }
+
+  const segment = segments[segmentIndex];
+  if (segment === '**') {
+    collectJsonRecordMatchesAtPath(current, segments, segmentIndex + 1, currentPath, matches);
+    Object.entries(current).forEach(([childKey, childValue]) => {
+      collectJsonRecordMatchesAtPath(
+        childValue,
+        segments,
+        segmentIndex,
+        formatJsonPath(currentPath, childKey),
+        matches,
+      );
+    });
+    return;
+  }
+
+  if (segment === '*') {
+    Object.entries(current).forEach(([childKey, childValue]) => {
+      collectJsonRecordMatchesAtPath(
+        childValue,
+        segments,
+        segmentIndex + 1,
+        formatJsonPath(currentPath, childKey),
+        matches,
+      );
+    });
+    return;
+  }
+
+  collectJsonRecordMatchesAtPath(
+    current[segment],
+    segments,
+    segmentIndex + 1,
+    formatJsonPath(currentPath, segment),
+    matches,
+  );
+}
+
+function ensureJsonRecordAtPath(parent: JsonRecord, path: string): JsonRecord {
+  const normalizedPath = path.trim();
+  if (!normalizedPath) {
+    return parent;
+  }
+
+  const exactValue = parent[normalizedPath];
+  if (isJsonRecord(exactValue)) {
+    return exactValue;
+  }
+
+  const segments = normalizedPath
+    .split('.')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (!segments.length) {
+    return parent;
+  }
+  if (segments.length === 1) {
+    return ensureJsonRecord(parent, segments[0]);
+  }
+
+  let current = parent;
+  segments.forEach((segment) => {
+    current = ensureJsonRecord(current, segment);
+  });
+  return current;
+}
+
+function hasJsonPathWildcard(path: string): boolean {
+  return jsonPathSegments(path).some((segment) => segment === '*' || segment === '**');
+}
+
+function jsonPathSegments(path: string): string[] {
+  return path
+    .split('.')
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function formatJsonPath(parentPath: string, childKey: string): string {
+  return parentPath ? `${parentPath}.${childKey}` : childKey;
 }
 
 function clearTranslatableFields(record: JsonRecord, fields: string[]) {

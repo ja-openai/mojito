@@ -108,7 +108,7 @@ public class JsonConfigPullCommand extends JsonConfigCommandSupport {
   @Parameter(
       names = {"--format"},
       arity = 1,
-      description = "Config shape: embedded, flat, or formatjs")
+      description = "Config shape: embedded, flat, formatjs, or formatjs_multilingual")
   String formatParam;
 
   @Parameter(

@@ -406,6 +406,46 @@ const JSON_CONFIG_SCHEMA_PRESETS: JsonConfigSchemaPreset[] = [
       },
     },
   },
+  {
+    id: 'formatjs-multilingual-map',
+    label: 'Multilingual FormatJS message map',
+    description:
+      'Object keyed by message id under messages, with defaultMessage, optional description, and locale translations.',
+    profile: {
+      format: 'FORMATJS_MULTILINGUAL_MAP',
+      collectionKey: 'messages',
+      itemIdField: 'id',
+      translationsField: 'translations',
+      sourceLocaleTag: 'en-US',
+      translatableFields: [],
+      sourceField: 'defaultMessage',
+      commentField: 'description',
+    },
+    schema: {
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      type: 'object',
+      properties: {
+        messages: {
+          type: 'object',
+          additionalProperties: {
+            type: 'object',
+            properties: {
+              defaultMessage: { type: 'string' },
+              description: { type: 'string' },
+              translations: {
+                type: 'object',
+                additionalProperties: { type: 'string' },
+              },
+            },
+            required: ['defaultMessage'],
+            additionalProperties: true,
+          },
+        },
+      },
+      required: ['messages'],
+      additionalProperties: true,
+    },
+  },
 ];
 
 export function AdminJsonConfigLocalizationPage() {
@@ -1044,20 +1084,27 @@ function JsonConfigLocalizationWorkspace({
     }
   }, [sourceConfigText, statsigProfile]);
   const canExportLocalizedConfig =
-    effectiveStatsigProfile.format === 'EMBEDDED_TRANSLATIONS' &&
-    Boolean(effectiveStatsigProfile.collectionKey.trim()) &&
-    Boolean(effectiveStatsigProfile.translationsField.trim()) &&
-    Boolean(effectiveStatsigProfile.sourceLocaleTag.trim()) &&
-    effectiveStatsigProfile.translatableFields.length > 0;
+    (effectiveStatsigProfile.format === 'EMBEDDED_TRANSLATIONS' &&
+      Boolean(effectiveStatsigProfile.collectionKey.trim()) &&
+      Boolean(effectiveStatsigProfile.translationsField.trim()) &&
+      Boolean(effectiveStatsigProfile.sourceLocaleTag.trim()) &&
+      effectiveStatsigProfile.translatableFields.length > 0) ||
+    (effectiveStatsigProfile.format === 'FORMATJS_MULTILINGUAL_MAP' &&
+      Boolean(effectiveStatsigProfile.sourceField?.trim()) &&
+      Boolean(effectiveStatsigProfile.translationsField.trim()));
+  const localizedConfigExportLabel =
+    effectiveStatsigProfile.format === 'FORMATJS_MULTILINGUAL_MAP'
+      ? 'Multilingual FormatJS config'
+      : 'Embedded multilingual config';
   const exportFormatOptions = useMemo(
     () => [
       { value: 'locale-map' as const, label: 'Locale map' },
       { value: 'locale-files' as const, label: 'Locale files' },
       ...(canExportLocalizedConfig
-        ? [{ value: 'localized-config' as const, label: 'Embedded multilingual config' }]
+        ? [{ value: 'localized-config' as const, label: localizedConfigExportLabel }]
         : []),
     ],
-    [canExportLocalizedConfig],
+    [canExportLocalizedConfig, localizedConfigExportLabel],
   );
 
   const localizedConfigExportQuery = useQuery({
@@ -1497,7 +1544,7 @@ function JsonConfigLocalizationWorkspace({
         return {
           json: localeMapExportJson,
           warnings: [
-            'Embedded multilingual config export requires an embedded translations mapping. Showing locale-map export instead.',
+            'Localized config export requires an embedded translations or multilingual FormatJS mapping. Showing locale-map export instead.',
           ],
         };
       }
@@ -1852,7 +1899,7 @@ function JsonConfigLocalizationWorkspace({
     setDraftStrings(nextDraftStrings);
     setSelectedClientId(extractedStrings[0]?.clientId ?? nextDraftStrings[0]?.clientId ?? null);
     setExportFormat(
-      storedDraft.profile.format === 'EMBEDDED_TRANSLATIONS' ? 'localized-config' : 'locale-map',
+      isLocalizedConfigFormat(storedDraft.profile) ? 'localized-config' : 'locale-map',
     );
 
     return {
@@ -2340,7 +2387,11 @@ function JsonConfigLocalizationWorkspace({
       setSourceConfigText(result.sourceConfigJson);
       setStatsigProfile(result.profile);
       setStatsigWarnings(result.warnings);
-      const focusField = result.profile.translatableFields[0];
+      const focusField =
+        result.profile.format === 'FORMATJS_MAP' ||
+        result.profile.format === 'FORMATJS_MULTILINGUAL_MAP'
+          ? result.profile.sourceField
+          : result.profile.translatableFields[0];
       if (focusField) {
         const needle = `"${focusField}": ""`;
         setPendingConfigFocusTarget({
@@ -2448,7 +2499,7 @@ function JsonConfigLocalizationWorkspace({
     setDraftStrings(nextDraftStrings);
     setSelectedClientId(extractedStrings[0]?.clientId ?? nextDraftStrings[0]?.clientId ?? null);
     setExportFormat(
-      extraction.profile.format === 'EMBEDDED_TRANSLATIONS' ? 'localized-config' : 'locale-map',
+      isLocalizedConfigFormat(extraction.profile) ? 'localized-config' : 'locale-map',
     );
     return { extraction, extractedStrings, nextDraftStrings };
   };
@@ -2729,6 +2780,10 @@ function JsonConfigLocalizationWorkspace({
   const selectedSchemaPreset =
     builtInSchemaOptions.find((preset) => preset.id === selectedSchemaPresetId) ?? null;
   const mappingFormat = statsigProfile.format ?? 'EMBEDDED_TRANSLATIONS';
+  const isFormatJsMapping =
+    mappingFormat === 'FORMATJS_MAP' || mappingFormat === 'FORMATJS_MULTILINGUAL_MAP';
+  const usesTranslationsField =
+    mappingFormat === 'EMBEDDED_TRANSLATIONS' || mappingFormat === 'FORMATJS_MULTILINGUAL_MAP';
   const mappingStatusNotice =
     mappingNotice ??
     (selectedSchemaPreset
@@ -2855,14 +2910,32 @@ function JsonConfigLocalizationWorkspace({
       },
     });
   };
-  const extractionMappingSummary = [
-    statsigProfile.collectionKey,
-    statsigProfile.translationsField,
-    statsigProfile.sourceLocaleTag,
-    statsigProfile.translatableFields.join(', '),
-  ]
-    .filter(Boolean)
-    .join(' / ');
+  const extractionMappingSummary =
+    mappingFormat === 'FORMATJS_MAP'
+      ? [
+          statsigProfile.collectionKey ? `map ${statsigProfile.collectionKey}` : 'root map',
+          statsigProfile.sourceField,
+          statsigProfile.commentField,
+        ]
+          .filter(Boolean)
+          .join(' / ')
+      : mappingFormat === 'FORMATJS_MULTILINGUAL_MAP'
+        ? [
+            statsigProfile.collectionKey ? `map ${statsigProfile.collectionKey}` : 'root map',
+            statsigProfile.sourceField,
+            statsigProfile.commentField,
+            statsigProfile.translationsField,
+          ]
+            .filter(Boolean)
+            .join(' / ')
+        : [
+            statsigProfile.collectionKey,
+            statsigProfile.translationsField,
+            statsigProfile.sourceLocaleTag,
+            statsigProfile.translatableFields.join(', '),
+          ]
+            .filter(Boolean)
+            .join(' / ');
   const activeStatusNotice: StatusNotice | null = saveConfigEditorMutation.isPending
     ? {
         kind: 'info',
@@ -3486,9 +3559,24 @@ function JsonConfigLocalizationWorkspace({
                           <option value="EMBEDDED_TRANSLATIONS">Embedded translations</option>
                           <option value="FLAT_SOURCE_ARRAY">Flat source array</option>
                           <option value="FORMATJS_MAP">FormatJS message map</option>
+                          <option value="FORMATJS_MULTILINGUAL_MAP">
+                            Multilingual FormatJS message map
+                          </option>
                         </select>
                       </label>
-                      {mappingFormat !== 'FORMATJS_MAP' ? (
+                      {isFormatJsMapping ? (
+                        <label className="settings-field">
+                          <span className="settings-field__label">Message map key</span>
+                          <input
+                            className="settings-input"
+                            value={statsigProfile.collectionKey}
+                            placeholder="Blank for root, e.g. messages or surface.**.messages"
+                            onChange={(event) =>
+                              updateStatsigProfile({ collectionKey: event.target.value })
+                            }
+                          />
+                        </label>
+                      ) : (
                         <label className="settings-field">
                           <span className="settings-field__label">Collection key</span>
                           <input
@@ -3499,8 +3587,8 @@ function JsonConfigLocalizationWorkspace({
                             }
                           />
                         </label>
-                      ) : null}
-                      {mappingFormat !== 'FORMATJS_MAP' ? (
+                      )}
+                      {!isFormatJsMapping ? (
                         <label className="settings-field">
                           <span className="settings-field__label">Item id field</span>
                           <input
@@ -3512,7 +3600,7 @@ function JsonConfigLocalizationWorkspace({
                           />
                         </label>
                       ) : null}
-                      {mappingFormat === 'EMBEDDED_TRANSLATIONS' ? (
+                      {usesTranslationsField ? (
                         <label className="settings-field">
                           <span className="settings-field__label">Translations field</span>
                           <input
@@ -4913,6 +5001,10 @@ function formatJsonConfigApiErrorMessage(error: unknown, fallback: string): stri
 }
 
 function formatDetectedMappingMessage(profile: StatsigSourceConfigProfile): string {
+  if (profile.format === 'FORMATJS_MULTILINGUAL_MAP') {
+    return `Detected multilingual FormatJS messages using "${profile.sourceField || 'defaultMessage'}". Save setup to persist it.`;
+  }
+
   if (profile.format === 'FORMATJS_MAP') {
     return `Detected FormatJS messages using "${profile.sourceField || 'defaultMessage'}". Save setup to persist it.`;
   }
@@ -4925,6 +5017,12 @@ function formatDetectedMappingMessage(profile: StatsigSourceConfigProfile): stri
   return fields
     ? `Detected ${profile.collectionKey} with fields ${fields}. Save setup to persist it.`
     : `Detected ${profile.collectionKey}. Add translatable fields, then save setup.`;
+}
+
+function isLocalizedConfigFormat(profile: StatsigSourceConfigProfile): boolean {
+  return (
+    profile.format === 'EMBEDDED_TRANSLATIONS' || profile.format === 'FORMATJS_MULTILINGUAL_MAP'
+  );
 }
 
 function parseTranslatableFields(value: string): string[] {

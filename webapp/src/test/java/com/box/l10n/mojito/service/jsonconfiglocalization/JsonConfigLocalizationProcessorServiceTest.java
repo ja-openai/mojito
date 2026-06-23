@@ -225,6 +225,186 @@ public class JsonConfigLocalizationProcessorServiceTest {
   }
 
   @Test
+  public void exportForRepositorySupportsMultilingualFormatJsMessageMap() throws Exception {
+    Repository repository = repository();
+    when(repositoryRepository.findById(7L)).thenReturn(Optional.of(repository));
+    jsonConfigLocalizationService.setup =
+        new JsonConfigLocalizationService.JsonConfigLocalization(
+            1L,
+            null,
+            null,
+            "notifications",
+            new JsonConfigLocalizationService.RepositoryRef(7L, "notifications", "en", 1),
+            "json-config-localization/strings.json",
+            JsonConfigLocalizationService.PROVIDER_GENERIC_JSON,
+            null,
+            null,
+            null,
+            """
+            {
+              "messages": {
+                "message.1": {
+                  "defaultMessage": "Saved notification",
+                  "description": "Shown after save",
+                  "translations": {
+                    "fr-FR": "Ancienne notification"
+                  }
+                }
+              }
+            }
+            """,
+            """
+            {
+              "format": "FORMATJS_MULTILINGUAL_MAP",
+              "collectionKey": "messages",
+              "itemIdField": "id",
+              "translationsField": "translations",
+              "sourceLocaleTag": "en-US",
+              "translatableFields": [],
+              "sourceField": "defaultMessage",
+              "commentField": "description"
+            }
+            """,
+            "{\"fr\":\"fr-FR\"}",
+            false,
+            null,
+            null,
+            null);
+    TextUnitDTO sourceTextUnit = sourceTextUnit("message.1", "Edited notification", 11L);
+    sourceTextUnit.setComment("Updated copy");
+    when(textUnitSearcher.search(any(TextUnitSearcherParameters.class)))
+        .thenReturn(List.of(sourceTextUnit))
+        .thenReturn(List.of(targetTextUnit(11L, "fr", "Notification modifiee")));
+
+    JsonConfigLocalizationProcessorService.ExportResult result = service.exportForRepository(7L);
+
+    assertThat(objectMapper.readTree(result.json()))
+        .isEqualTo(
+            objectMapper.readTree(
+                """
+                {
+                  "messages": {
+                    "message.1": {
+                      "defaultMessage": "Edited notification",
+                      "description": "Updated copy",
+                      "translations": {
+                        "fr-FR": "Notification modifiee"
+                      }
+                    }
+                  }
+                }
+                """));
+  }
+
+  @Test
+  public void exportForRepositorySupportsWildcardMultilingualFormatJsMessageMaps()
+      throws Exception {
+    Repository repository = repository();
+    when(repositoryRepository.findById(7L)).thenReturn(Optional.of(repository));
+    jsonConfigLocalizationService.setup =
+        new JsonConfigLocalizationService.JsonConfigLocalization(
+            1L,
+            null,
+            null,
+            "notifications",
+            new JsonConfigLocalizationService.RepositoryRef(7L, "notifications", "en", 1),
+            "json-config-localization/strings.json",
+            JsonConfigLocalizationService.PROVIDER_GENERIC_JSON,
+            null,
+            null,
+            null,
+            """
+            {
+              "surface": {
+                "checkout": {
+                  "messages": {
+                    "checkout.pay": {
+                      "defaultMessage": "Pay now",
+                      "description": "Primary checkout button.",
+                      "translations": {}
+                    }
+                  }
+                },
+                "profile": {
+                  "settings": {
+                    "messages": {
+                      "profile.saved": {
+                        "defaultMessage": "Profile saved",
+                        "description": "Toast after profile changes are saved.",
+                        "translations": {}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            """,
+            """
+            {
+              "format": "FORMATJS_MULTILINGUAL_MAP",
+              "collectionKey": "surface.**.messages",
+              "itemIdField": "id",
+              "translationsField": "translations",
+              "sourceLocaleTag": "en-US",
+              "translatableFields": [],
+              "sourceField": "defaultMessage",
+              "commentField": "description"
+            }
+            """,
+            "{\"fr\":\"fr-FR\"}",
+            false,
+            null,
+            null,
+            null);
+    TextUnitDTO checkoutSourceTextUnit = sourceTextUnit("checkout.pay", "Pay now", 11L);
+    checkoutSourceTextUnit.setComment("Primary checkout button.");
+    TextUnitDTO profileSourceTextUnit = sourceTextUnit("profile.saved", "Profile saved", 12L);
+    profileSourceTextUnit.setComment("Toast after profile changes are saved.");
+    when(textUnitSearcher.search(any(TextUnitSearcherParameters.class)))
+        .thenReturn(List.of(checkoutSourceTextUnit, profileSourceTextUnit))
+        .thenReturn(
+            List.of(
+                targetTextUnit(11L, "fr", "Payer maintenant"),
+                targetTextUnit(12L, "fr", "Profil enregistre")));
+
+    JsonConfigLocalizationProcessorService.ExportResult result = service.exportForRepository(7L);
+
+    assertThat(objectMapper.readTree(result.json()))
+        .isEqualTo(
+            objectMapper.readTree(
+                """
+                {
+                  "surface": {
+                    "checkout": {
+                      "messages": {
+                        "checkout.pay": {
+                          "defaultMessage": "Pay now",
+                          "description": "Primary checkout button.",
+                          "translations": {
+                            "fr-FR": "Payer maintenant"
+                          }
+                        }
+                      }
+                    },
+                    "profile": {
+                      "settings": {
+                        "messages": {
+                          "profile.saved": {
+                            "defaultMessage": "Profile saved",
+                            "description": "Toast after profile changes are saved.",
+                            "translations": {
+                              "fr-FR": "Profil enregistre"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                """));
+  }
+
+  @Test
   public void exportForRepositoryKeepsEmptySourceTextInLocaleMap() throws Exception {
     Repository repository = repository();
     when(repositoryRepository.findById(7L)).thenReturn(Optional.of(repository));
@@ -799,6 +979,107 @@ public class JsonConfigLocalizationProcessorServiceTest {
             JsonConfigLocalizationProcessorService.JsonConfigString::comment)
         .containsExactly(org.assertj.core.groups.Tuple.tuple("message.1", "", "Draft copy"));
     assertThat(result.warnings()).noneMatch(warning -> warning.contains("missing non-empty"));
+  }
+
+  @Test
+  public void extractSupportsMultilingualFormatJsMessageMap() {
+    JsonConfigLocalizationProcessorService.ExtractionResult result =
+        service.extract(
+            new JsonConfigLocalizationProcessorService.ExtractionInput(
+                "",
+                """
+                {
+                  "messages": {
+                    "message.1": {
+                      "defaultMessage": "",
+                      "description": "Draft copy",
+                      "translations": {
+                        "fr-FR": "Brouillon"
+                      }
+                    }
+                  }
+                }
+                """,
+                new JsonConfigLocalizationProcessorService.SourceConfigProfile(
+                    JsonConfigLocalizationProcessorService.SourceConfigFormat
+                        .FORMATJS_MULTILINGUAL_MAP,
+                    "messages",
+                    "id",
+                    "translations",
+                    "en-US",
+                    List.of(),
+                    "defaultMessage",
+                    "description")));
+
+    assertThat(result.profile().format())
+        .isEqualTo(
+            JsonConfigLocalizationProcessorService.SourceConfigFormat.FORMATJS_MULTILINGUAL_MAP);
+    assertThat(result.profile().collectionKey()).isEqualTo("messages");
+    assertThat(result.strings())
+        .extracting(
+            JsonConfigLocalizationProcessorService.JsonConfigString::stringId,
+            JsonConfigLocalizationProcessorService.JsonConfigString::source,
+            JsonConfigLocalizationProcessorService.JsonConfigString::comment)
+        .containsExactly(org.assertj.core.groups.Tuple.tuple("message.1", "", "Draft copy"));
+  }
+
+  @Test
+  public void extractSupportsWildcardMultilingualFormatJsMessageMaps() {
+    JsonConfigLocalizationProcessorService.ExtractionResult result =
+        service.extract(
+            new JsonConfigLocalizationProcessorService.ExtractionInput(
+                "",
+                """
+                {
+                  "surface": {
+                    "checkout": {
+                      "messages": {
+                        "checkout.pay": {
+                          "defaultMessage": "Pay now",
+                          "description": "Primary checkout button.",
+                          "translations": {
+                            "fr-FR": "Payer maintenant"
+                          }
+                        }
+                      }
+                    },
+                    "profile": {
+                      "settings": {
+                        "messages": {
+                          "profile.saved": {
+                            "defaultMessage": "Profile saved",
+                            "description": "Toast after profile changes are saved.",
+                            "translations": {
+                              "fr-FR": "Profil enregistre"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                """,
+                new JsonConfigLocalizationProcessorService.SourceConfigProfile(
+                    JsonConfigLocalizationProcessorService.SourceConfigFormat
+                        .FORMATJS_MULTILINGUAL_MAP,
+                    "surface.**.messages",
+                    "id",
+                    "translations",
+                    "en-US",
+                    List.of(),
+                    "defaultMessage",
+                    "description")));
+
+    assertThat(result.strings())
+        .extracting(
+            JsonConfigLocalizationProcessorService.JsonConfigString::stringId,
+            JsonConfigLocalizationProcessorService.JsonConfigString::source,
+            JsonConfigLocalizationProcessorService.JsonConfigString::comment)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple(
+                "checkout.pay", "Pay now", "Primary checkout button."),
+            org.assertj.core.groups.Tuple.tuple(
+                "profile.saved", "Profile saved", "Toast after profile changes are saved."));
   }
 
   @Test
