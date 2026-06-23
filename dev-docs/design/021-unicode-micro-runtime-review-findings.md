@@ -54,6 +54,9 @@ branch is under active implementation.
   Swift demo invocation and the Swift static build use the same package-local
   SwiftPM cache/config arguments as the all-language runner, so the top-level
   check is executable in the managed Codex workspace.
+- Official Unicode runner documentation: the conformance README now describes
+  the Rust, Java, JavaScript, Go, and PHP official-test scoreboard runners and
+  their shared baseline instead of implying that only the Rust runner is wired.
 - Shared conformance runner coverage: `mf2/conformance/check_all_languages.sh`
   now runs the shared number-core, date-time-core, and relative-time-core
   fixture suites for Rust, Swift, Python, Java, Kotlin, and JavaScript instead

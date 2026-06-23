@@ -4,14 +4,14 @@ This directory owns the shared MF2 test corpus for Mojito and the runtime
 libraries.
 
 The official Unicode MessageFormat WG test suite is vendored separately under
-`../third_party/message-format-wg/test`. The Rust parser runner reads the
-upstream test shape directly via `cargo run -- unicode-tests`, currently wiring
-syntax success/error, bidi syntax, data-model error, `:string` function,
-`:number`, `:percent`, `:currency`, date/time/datetime validation, `:offset`,
-`:integer`, `u:` options, fallback, and pattern-selection checks. Its checked-in baseline lives in
-`unicode-official-baseline.json`; update it in the same commit when official
-pass/skip/not-wired counts intentionally change. All currently vendored
-official tests are wired by the Rust runner.
+`../third_party/message-format-wg/test`. The Rust, Java, JavaScript, Go, and PHP
+scoreboard runners read the upstream test shape directly, currently wiring
+syntax success/error, bidi syntax, data-model error, `:string`, `:number`,
+`:percent`, `:currency`, date/time/datetime validation, `:offset`, `:integer`,
+`u:` options, fallback, and pattern-selection checks. Their shared checked-in
+baseline lives in `unicode-official-baseline.json`; update it in the same commit
+when official pass/skip/not-wired counts intentionally change. All currently
+vendored official tests are wired by those scoreboard runners.
 
 ## Contract
 
