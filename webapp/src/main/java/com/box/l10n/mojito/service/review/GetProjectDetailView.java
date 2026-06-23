@@ -50,6 +50,7 @@ public record GetProjectDetailView(
       TmTextUnitVariant baselineTmTextUnitVariant,
       TmTextUnitVariant currentTmTextUnitVariant,
       ReviewProjectTextUnitDecision reviewProjectTextUnitDecision,
+      ReviewProjectTextUnitSuggestion reviewProjectTextUnitSuggestion,
       TerminologyTerm terminologyTerm,
       List<TerminologyTermEvidence> glossaryTermEvidence,
       List<ReviewProjectTextUnitFeedback> terminologyFeedbacks) {}
@@ -136,6 +137,16 @@ public record GetProjectDetailView(
       String notes,
       DecisionState decisionState,
       TmTextUnitVariant decisionTmTextUnitVariant,
+      ZonedDateTime lastModifiedDate,
+      String lastModifiedByUsername) {}
+
+  public record ReviewProjectTextUnitSuggestion(
+      Long id,
+      String target,
+      String source,
+      String notes,
+      String previousTarget,
+      ZonedDateTime createdDate,
       ZonedDateTime lastModifiedDate,
       String lastModifiedByUsername) {}
 

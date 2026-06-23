@@ -1,4 +1,5 @@
 export type ApiLocale = {
+  id?: number | null;
   bcp47Tag: string;
 };
 

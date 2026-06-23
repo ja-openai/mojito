@@ -321,7 +321,9 @@ function buildAssignmentUserOptions(
 
 function getEffectiveVariant(textUnit: ApiReviewProjectTextUnit): TextUnitVariant {
   const current = textUnit.currentTmTextUnitVariant;
-  return current?.id != null ? current : textUnit.baselineTmTextUnitVariant;
+  const variant = current?.id != null ? current : textUnit.baselineTmTextUnitVariant;
+  const stagedTarget = textUnit.reviewProjectTextUnitSuggestion?.target;
+  return stagedTarget != null ? { ...(variant ?? {}), content: stagedTarget } : variant;
 }
 
 function getDecisionState(textUnit: ApiReviewProjectTextUnit): DecisionStateChoice {
@@ -485,29 +487,39 @@ function formatTabCount(count?: number): string | null {
 function getEditKinds(textUnit: ApiReviewProjectTextUnit): EditKind[] {
   const current =
     textUnit.currentTmTextUnitVariant?.id != null ? textUnit.currentTmTextUnitVariant : null;
-  if (!current) {
-    return [];
-  }
-
   const baseline = textUnit.baselineTmTextUnitVariant;
+  const effectiveVariant = current ?? baseline;
+  const stagedTarget = textUnit.reviewProjectTextUnitSuggestion?.target;
   const kinds: EditKind[] = [];
 
-  if (normalizeNullableString(current.content) !== normalizeNullableString(baseline?.content)) {
+  if (
+    stagedTarget != null &&
+    normalizeNullableString(stagedTarget) !== normalizeNullableString(effectiveVariant?.content)
+  ) {
     kinds.push('translation');
   }
 
-  const baselineStatus = getStatusKey(baseline);
-  const currentStatus = getStatusKey(current);
-  if (baselineStatus !== currentStatus) {
-    kinds.push('status');
-  }
+  if (current) {
+    if (
+      normalizeNullableString(current.content) !== normalizeNullableString(baseline?.content) &&
+      !kinds.includes('translation')
+    ) {
+      kinds.push('translation');
+    }
 
-  if (normalizeNullableString(current.comment) !== normalizeNullableString(baseline?.comment)) {
-    kinds.push('comment');
-  }
+    const baselineStatus = getStatusKey(baseline);
+    const currentStatus = getStatusKey(current);
+    if (baselineStatus !== currentStatus) {
+      kinds.push('status');
+    }
 
-  if (kinds.length === 0 && current.id !== baseline?.id) {
-    kinds.push('translation');
+    if (normalizeNullableString(current.comment) !== normalizeNullableString(baseline?.comment)) {
+      kinds.push('comment');
+    }
+
+    if (kinds.length === 0 && current.id !== baseline?.id) {
+      kinds.push('translation');
+    }
   }
 
   return kinds;
@@ -520,6 +532,7 @@ type DecisionSnapshot = {
   decisionNotes: string | null;
   statusChoice: StatusChoice;
   decisionState: DecisionStateChoice;
+  suggestionSourceLabel: string | null;
 };
 
 type TerminologyFeedbackSnapshot = {
@@ -770,10 +783,23 @@ function buildAiWarningContextMessage(warnings: TranslationWarning[]): AiReviewM
   };
 }
 
+function isEditableKeyboardTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  return (
+    target.tagName === 'INPUT' ||
+    target.tagName === 'TEXTAREA' ||
+    target.tagName === 'SELECT' ||
+    target.isContentEditable
+  );
+}
+
 function buildSnapshot(textUnit: ApiReviewProjectTextUnit): DecisionSnapshot {
   const current =
     textUnit.currentTmTextUnitVariant?.id != null ? textUnit.currentTmTextUnitVariant : null;
   const baseVariant = current ?? textUnit.baselineTmTextUnitVariant;
+  const suggestion = textUnit.reviewProjectTextUnitSuggestion;
   const statusChoice = mapVariantToChoice(
     baseVariant?.status ?? null,
     baseVariant?.includedInLocalizedFile ?? null,
@@ -781,12 +807,26 @@ function buildSnapshot(textUnit: ApiReviewProjectTextUnit): DecisionSnapshot {
 
   return {
     expectedCurrentVariantId: current?.id ?? null,
-    target: baseVariant?.content ?? '',
+    target: suggestion?.target ?? baseVariant?.content ?? '',
     comment: baseVariant?.comment ?? null,
     decisionNotes: textUnit.reviewProjectTextUnitDecision?.notes ?? null,
     statusChoice,
     decisionState: getDecisionState(textUnit),
+    suggestionSourceLabel: getSuggestionSourceLabel(suggestion?.source),
   };
+}
+
+function getSuggestionSourceLabel(source?: string | null): string | null {
+  if (!source) {
+    return null;
+  }
+  if (source === 'FIND_REPLACE') {
+    return 'From find/replace';
+  }
+  if (source === 'AI_REVIEW') {
+    return 'From AI review';
+  }
+  return 'Staged suggestion';
 }
 
 function buildSnapshotKey(textUnit: ApiReviewProjectTextUnit, snapshot: DecisionSnapshot): string {
@@ -825,14 +865,19 @@ export function ReviewProjectPageView({
   const user = useUser();
   const canEditRequest = user.role === 'ROLE_ADMIN';
   const defaultShortcutHelpPreference = getDefaultReviewProjectShortcutHelpPreference(user.role);
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const reviewProjectsSessionKey = searchParams.get(REVIEW_PROJECTS_SESSION_QUERY_KEY);
   const locale = project?.locale ?? null;
   const localeTag = locale?.bcp47Tag ?? '';
+  const isProjectTerminology = project != null && isTerminologyReviewProjectType(project.type);
   const textUnits = useMemo<ApiReviewProjectTextUnit[]>(
     () => project?.reviewProjectTextUnits ?? [],
     [project?.reviewProjectTextUnits],
   );
+  const canStartFindReplace =
+    project?.status === 'OPEN' && !isProjectTerminology && textUnits.length > 0;
+  const findReplaceHref = `/review-projects/${projectId}/find-replace`;
 
   const layoutRef = useRef<HTMLDivElement>(null);
   const detailPaneRef = useRef<HTMLDivElement>(null);
@@ -903,6 +948,7 @@ export function ReviewProjectPageView({
         tu.tmTextUnit?.name,
         tu.tmTextUnit?.content,
         tu.tmTextUnit?.comment,
+        getEffectiveVariant(tu)?.content,
         tu.baselineTmTextUnitVariant?.content,
         tu.baselineTmTextUnitVariant?.comment,
         tu.currentTmTextUnitVariant?.content,
@@ -1090,14 +1136,7 @@ export function ReviewProjectPageView({
 
   const handleKeyNav = useCallback(
     (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.tagName === 'SELECT' ||
-          target.isContentEditable)
-      ) {
+      if (isEditableKeyboardTarget(event.target)) {
         return;
       }
 
@@ -1120,6 +1159,25 @@ export function ReviewProjectPageView({
       }
     },
     [attemptSelectTextUnit, filtered, selectedTextUnitId],
+  );
+
+  const handleFindReplaceShortcut = useCallback(
+    (event: KeyboardEvent) => {
+      if (
+        !canStartFindReplace ||
+        !event.shiftKey ||
+        event.altKey ||
+        !(event.metaKey || event.ctrlKey) ||
+        event.key.toLowerCase() !== 'f' ||
+        isEditableKeyboardTarget(event.target)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      void navigate(findReplaceHref);
+    },
+    [canStartFindReplace, findReplaceHref, navigate],
   );
 
   const advanceToNextTextUnit = useCallback(
@@ -1216,6 +1274,11 @@ export function ReviewProjectPageView({
   }, [handleKeyNav]);
 
   useEffect(() => {
+    window.addEventListener('keydown', handleFindReplaceShortcut);
+    return () => window.removeEventListener('keydown', handleFindReplaceShortcut);
+  }, [handleFindReplaceShortcut]);
+
+  useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
       if (event.key && event.key !== REVIEW_PROJECT_SHORTCUT_HELP_KEY) {
         return;
@@ -1294,7 +1357,7 @@ export function ReviewProjectPageView({
   if (!project) {
     return <div>No project data for id {projectId}</div>;
   }
-  const isTerminologyProject = isTerminologyReviewProjectType(project.type);
+  const isTerminologyProject = isProjectTerminology;
   const isTerminologyDeciderProject = project.terminologyPhase === 'PM_RESOLUTION';
   const primaryShortcutLabel = isTerminologyProject
     ? isTerminologyDeciderProject
@@ -1394,6 +1457,30 @@ export function ReviewProjectPageView({
                 },
               ]}
             />
+            {canStartFindReplace ? (
+              <Link
+                className="review-project-page__find-replace-link"
+                to={findReplaceHref}
+                aria-label="Find and replace"
+                title="Find and replace (Ctrl/Cmd+Shift+F)"
+              >
+                <svg
+                  className="review-project-page__find-replace-icon"
+                  viewBox="0 0 20 20"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path
+                    d="M8.25 12.5a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Zm3.15-1.1 3.8 3.8M13.75 4.25H16v2.25m0-2.25-3.25 3.25M5.75 15.75H3.5V13.5m0 2.25 3.25-3.25"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.55"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </Link>
+            ) : null}
           </div>
           <VirtualList
             scrollRef={scrollRef}
@@ -3567,6 +3654,11 @@ function DetailPane({
               <div className="review-project-detail__field review-project-detail__field--translation">
                 <div className="review-project-detail__label-row">
                   <div className="review-project-detail__label">Translation</div>
+                  {snapshot.suggestionSourceLabel ? (
+                    <Pill className="review-project-detail__origin-pill">
+                      {snapshot.suggestionSourceLabel}
+                    </Pill>
+                  ) : null}
                 </div>
                 <TranslationTextEditor
                   assisted={isVisibleTextEditorEnabled}

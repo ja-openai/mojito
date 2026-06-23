@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { type ComponentProps } from 'react';
+import type * as ReactRouterDom from 'react-router-dom';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -50,6 +51,15 @@ vi.mock('../../hooks/useVisibleTextEditorEnabled', () => ({
 type ReviewProjectPageViewProps = ComponentProps<typeof ReviewProjectPageView>;
 
 const noop = vi.fn();
+const navigateMock = vi.hoisted(() => vi.fn());
+
+vi.mock('react-router-dom', async (importActual) => {
+  const actual = await importActual<typeof ReactRouterDom>();
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
 
 beforeAll(() => {
   Object.defineProperty(HTMLElement.prototype, 'scrollTo', {
@@ -67,6 +77,7 @@ beforeEach(() => {
     suggestions: [],
     review: null,
   });
+  navigateMock.mockReset();
   matchGlossaryTermsMock.mockReset();
   matchGlossaryTermsMock.mockResolvedValue({ matchedTerms: [] });
 });
@@ -206,6 +217,31 @@ function renderReviewProjectPageViewNode(
 }
 
 describe('ReviewProjectPageView', () => {
+  it('links open translation projects to find and replace', () => {
+    renderReviewProjectPageView();
+
+    expect(screen.getByRole('link', { name: 'Find and replace' })).toHaveAttribute(
+      'href',
+      '/review-projects/7/find-replace',
+    );
+  });
+
+  it('opens find and replace with the command palette shortcut', () => {
+    renderReviewProjectPageView();
+
+    fireEvent.keyDown(window, { key: 'f', ctrlKey: true, shiftKey: true });
+
+    expect(navigateMock).toHaveBeenCalledWith('/review-projects/7/find-replace');
+  });
+
+  it('does not intercept normal browser find', () => {
+    renderReviewProjectPageView();
+
+    fireEvent.keyDown(window, { key: 'f', ctrlKey: true });
+
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
   it('delays the visible saving indicator for text-unit saves', async () => {
     const { container } = renderReviewProjectPageView({
       mutations: buildMutations({
@@ -245,6 +281,27 @@ describe('ReviewProjectPageView', () => {
       expect(protectedToken).toHaveTextContent('price');
       expect(protectedToken).toHaveClass('visible-text-editor__protected-token--icu-placeholder');
     });
+  });
+
+  it('overlays staged find-replace text', async () => {
+    const stagedTextUnit: ApiReviewProjectTextUnit = {
+      ...textUnit,
+      reviewProjectTextUnitSuggestion: {
+        id: 902,
+        target: 'Pague {price} agora',
+        source: 'FIND_REPLACE',
+        previousTarget: 'Pay {price} now',
+      },
+    };
+    const { container } = renderReviewProjectPageView({
+      project: {
+        ...project,
+        reviewProjectTextUnits: [stagedTextUnit],
+      },
+    });
+
+    expect(await screen.findByText('From find/replace')).toBeInTheDocument();
+    expect(container.textContent).toContain('Pague');
   });
 
   it('waits for glossary matches before starting the automatic AI review', async () => {
