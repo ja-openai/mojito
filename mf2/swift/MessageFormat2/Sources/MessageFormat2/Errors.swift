@@ -16,6 +16,7 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
     case badOperand(String)
     case badOption(String)
     case badSelector(String)
+    case missingLocaleData(String)
 
     public var code: String {
         switch self {
@@ -49,6 +50,8 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
             "bad-option"
         case .badSelector:
             "bad-selector"
+        case .missingLocaleData:
+            "missing-locale-data"
         }
     }
 
@@ -83,6 +86,8 @@ public enum MF2Error: Error, Equatable, CustomStringConvertible {
         case let .badOption(message):
             message
         case let .badSelector(message):
+            message
+        case let .missingLocaleData(message):
             message
         }
     }

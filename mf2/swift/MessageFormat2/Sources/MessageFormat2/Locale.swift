@@ -1,8 +1,13 @@
 import Foundation
 
 enum MF2LocaleKey {
+    private static let maxLocaleKeyLength = 256
+
     static func canonicalKey(_ locale: String) -> String {
-        parts(locale).joined(separator: "-")
+        guard locale.count <= maxLocaleKeyLength else {
+            return ""
+        }
+        return parts(locale).joined(separator: "-")
     }
 
     static func lookupChain(_ locale: String) -> [String] {
@@ -27,18 +32,23 @@ enum MF2LocaleKey {
     }
 
     static func pluralLookupChain(_ locale: String, parents: [String: String]) -> [String] {
+        featureLookupChain(locale, parents: parents)
+    }
+
+    static func featureLookupChain(_ locale: String, parents: [String: String]) -> [String] {
         var chain: [String] = []
-        appendPluralLookupChain(canonicalKey(locale), parents: parents, chain: &chain)
+        appendFeatureLookupChain(canonicalKey(locale), parents: parents, chain: &chain)
         return chain
     }
 
-    private static func appendPluralLookupChain(_ locale: String, parents: [String: String], chain: inout [String]) {
+    private static func appendFeatureLookupChain(_ locale: String, parents: [String: String], chain: inout [String]) {
         var current = locale
         while !current.isEmpty {
+            if current.count > maxLocaleKeyLength { return }
             if chain.contains(current) { return }
             chain.append(current)
             if let parent = parents[current] {
-                appendPluralLookupChain(parent, parents: parents, chain: &chain)
+                appendFeatureLookupChain(parent, parents: parents, chain: &chain)
             }
             current = structuralParent(current) ?? ""
         }

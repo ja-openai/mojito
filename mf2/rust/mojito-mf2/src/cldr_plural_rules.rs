@@ -1,6 +1,8 @@
 // Generated from Unicode CLDR by mf2/cldr/update_generated.sh; do not edit by hand.
 use crate::locale_key::plural_lookup_chain;
 
+const MAX_PLURAL_OPERAND_LENGTH: usize = 256;
+
 
 #[derive(Debug, Clone, Copy)]
 pub struct NumberOperands {
@@ -16,6 +18,7 @@ pub struct NumberOperands {
 
 impl NumberOperands {
     pub fn from_str(value: &str) -> Option<Self> {
+        if value.len() > MAX_PLURAL_OPERAND_LENGTH { return None; }
         let n = value.parse::<f64>().ok()?.abs();
         if !n.is_finite() { return None; }
         let normalized = value.trim_start_matches(['-', '+']).to_ascii_lowercase();

@@ -230,13 +230,17 @@ fn format_relative_time(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
     }
     if numeric == "auto" {
         if let Some(offset) = relative_offset(seconds, quantity) {
-            if let Some(relative) = relative_term(call.locale(), &style, &selected_unit, offset)? {
+            if let Some(relative) = relative_term(call.locale(), &style, &selected_unit, &offset)? {
                 return Ok(relative);
             }
         }
     }
 
-    let direction = if seconds < 0.0 { "past" } else { "future" };
+    let direction = if is_negative_relative_time(seconds) {
+        "past"
+    } else {
+        "future"
+    };
     let category = cardinal_plural_category(call.locale(), &quantity.to_string())?;
     let pattern =
         relative_time_pattern(call.locale(), &style, &selected_unit, direction, &category)?;
@@ -377,14 +381,19 @@ fn use_relative_zero(policy: &str, numeric: &str, seconds: f64) -> bool {
     policy == "chat" && numeric == "auto" && seconds.abs() < 45.0
 }
 
-fn relative_offset(seconds: f64, quantity: i64) -> Option<&'static str> {
-    if seconds == 0.0 {
-        return Some("0");
+fn relative_offset(seconds: f64, quantity: i64) -> Option<String> {
+    if quantity == 0 {
+        return Some("0".to_string());
     }
-    if quantity != 1 {
-        return None;
-    }
-    Some(if seconds < 0.0 { "-1" } else { "1" })
+    Some(if is_negative_relative_time(seconds) {
+        format!("-{quantity}")
+    } else {
+        quantity.to_string()
+    })
+}
+
+fn is_negative_relative_time(seconds: f64) -> bool {
+    seconds.is_sign_negative()
 }
 
 fn relative_term(

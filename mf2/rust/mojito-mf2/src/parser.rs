@@ -214,7 +214,7 @@ impl<'a> Parser<'a> {
                 if let Some(name) = self.parse_variable_name() {
                     selectors.push(VariableRef::new(name));
                 }
-                if matches!(self.peek_char(), Some(ch) if !ch.is_whitespace()) {
+                if matches!(self.peek_char(), Some(ch) if !is_whitespace(ch)) {
                     self.push_diagnostic(
                         "missing-match-space",
                         ".match selectors must be separated from variants by whitespace.",
@@ -423,7 +423,7 @@ impl<'a> Parser<'a> {
         let start = self.index;
         self.advance_char();
         match self.peek_char() {
-            Some('{') | Some('}') | Some('\\') => {
+            Some('{') | Some('}') | Some('|') | Some('\\') => {
                 text.push(self.advance_char().expect("peeked char exists"));
             }
             Some(_) => {
@@ -589,7 +589,7 @@ impl<'a> Parser<'a> {
         if rest.is_empty() {
             return Some(rest);
         }
-        if !rest.chars().next().is_some_and(|ch| ch.is_whitespace()) {
+        if !rest.chars().next().is_some_and(is_whitespace) {
             self.push_diagnostic(
                 "missing-expression-space",
                 "Expression arguments must be separated from functions or attributes by whitespace.",
@@ -778,11 +778,58 @@ impl<'a> Parser<'a> {
             );
             return None;
         }
+        let value = self.parse_option_value(raw_value, start, end)?;
         Some(ParsedOption {
             name,
-            value: parse_literal_or_variable(trim_syntax_whitespace(raw_value)),
+            value,
             next_index,
         })
+    }
+
+    fn parse_option_value(
+        &mut self,
+        raw_value: &str,
+        start: usize,
+        end: usize,
+    ) -> Option<ExpressionArg> {
+        let raw_value = trim_syntax_whitespace(raw_value);
+        if raw_value.starts_with('|') {
+            let Some((literal, rest)) = parse_quoted_literal(raw_value) else {
+                self.push_diagnostic(
+                    "unclosed-quoted-literal",
+                    "Quoted literal is missing closing '|'.",
+                    start,
+                    end,
+                );
+                return None;
+            };
+            if !rest.is_empty() {
+                self.push_diagnostic(
+                    "invalid-function-option",
+                    "Option value must be a single literal or variable.",
+                    start,
+                    end,
+                );
+                return None;
+            }
+            return Some(ExpressionArg::Literal { value: literal });
+        }
+        if let Some(raw_name) = raw_value.strip_prefix('$') {
+            let (name, rest) = split_name(raw_name);
+            if !name.is_empty() && rest.is_empty() {
+                return Some(ExpressionArg::Variable {
+                    name: name.to_string(),
+                });
+            }
+            self.push_diagnostic(
+                variable_name_diagnostic_code(raw_name),
+                "Option variable value must be a valid variable name.",
+                start,
+                end,
+            );
+            return None;
+        }
+        Some(parse_literal_or_variable(raw_value))
     }
 
     fn parse_required_assignment<'b>(
@@ -1165,7 +1212,7 @@ impl<'a> Parser<'a> {
     fn skip_syntax_gap(&mut self) -> bool {
         let mut saw_whitespace = false;
         while let Some(ch) = self.peek_char() {
-            if ch.is_whitespace() {
+            if is_whitespace(ch) {
                 saw_whitespace = true;
                 self.advance_char();
                 continue;
@@ -1275,7 +1322,7 @@ fn parse_quoted_literal(input: &str) -> Option<(String, &str)> {
                     output.push(escaped);
                     index += escaped.len_utf8();
                 } else {
-                    output.push('\\');
+                    return None;
                 }
             }
             _ => output.push(ch),
@@ -1301,7 +1348,7 @@ fn split_unquoted_literal(input: &str) -> Option<(&str, &str)> {
 }
 
 fn is_unquoted_literal_char(ch: char) -> bool {
-    if ch.is_control() || ch.is_whitespace() {
+    if ch.is_control() || is_syntax_whitespace(ch) {
         return false;
     }
     let code = ch as u32;
@@ -1428,6 +1475,7 @@ fn is_name_start(ch: char) -> bool {
         && code <= 0x10FFFD
         && !is_bidi_marker(ch)
         && !ch.is_control()
+        && !is_syntax_whitespace(ch)
         && !ch.is_whitespace()
         && !is_noncharacter(code)
 }
@@ -1455,7 +1503,11 @@ fn is_bidi_marker(ch: char) -> bool {
 }
 
 fn is_syntax_whitespace(ch: char) -> bool {
-    ch.is_whitespace() || is_bidi_marker(ch)
+    is_whitespace(ch) || is_bidi_marker(ch)
+}
+
+fn is_whitespace(ch: char) -> bool {
+    matches!(ch, '\t' | '\n' | '\r' | ' ' | '\u{3000}')
 }
 
 fn trim_syntax_whitespace(input: &str) -> &str {

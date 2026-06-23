@@ -1,5 +1,7 @@
 import Foundation
 
+private let maxFoundationFractionDigits = 100
+
 func makeFoundationFunctionRegistry() -> MF2FunctionRegistry {
     var registry = MF2FunctionRegistry.portable
         .withFunction("number", formatter: formatFoundationNumber)
@@ -235,7 +237,8 @@ private func nonNegativeIntegerOption(_ call: MF2FunctionCall, _ name: String) t
         return nil
     }
     guard value.range(of: #"^\d+$"#, options: .regularExpression) == value.startIndex..<value.endIndex,
-          let parsed = Int(value)
+          let parsed = Int(value),
+          parsed <= maxFoundationFractionDigits
     else {
         throw MF2Error.badOption("\(name) option must be a non-negative integer.")
     }

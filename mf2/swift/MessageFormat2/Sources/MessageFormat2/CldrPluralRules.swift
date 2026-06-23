@@ -1,6 +1,9 @@
 // Generated from Unicode CLDR by mf2/cldr/update_generated.sh; do not edit by hand.
 import Foundation
 
+private let maxPluralOperandLength = 256
+private let maxSafePluralOperandInteger = 9_000_000_000_000_000_000.0
+
 struct NumberOperands {
     let n: Double
     let i: Int64
@@ -12,8 +15,10 @@ struct NumberOperands {
     let c: Int64
 
     init?(_ value: String) {
+        guard value.count <= maxPluralOperandLength else { return nil }
         guard let parsed = Double(value), parsed.isFinite else { return nil }
         let n = abs(parsed)
+        guard n <= maxSafePluralOperandInteger else { return nil }
         let normalized = value.trimmingCharacters(in: CharacterSet(charactersIn: "-+")).lowercased()
         let base = normalized.split(separator: "e", maxSplits: 1).first.map(String.init) ?? normalized
         let fraction = base.split(separator: ".", maxSplits: 1).dropFirst().first.map(String.init) ?? ""
@@ -37,7 +42,7 @@ struct NumberOperands {
         case "t": t
         case "e": e
         case "c": c
-        case "n": Int64(n.rounded(.towardZero))
+        case "n": i
         default: 0
         }
     }

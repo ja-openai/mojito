@@ -238,7 +238,7 @@ private struct MF2FormatContext {
                     failedLocals.insert(MF2NameKey(name))
                 } else {
                     let key = MF2NameKey(name)
-                    values[key] = .string(rendered.value)
+                    values[key] = rendered.rawValue
                     sources[key] = rendered.source
                 }
             case let .local(name, value):
@@ -247,7 +247,7 @@ private struct MF2FormatContext {
                     failedLocals.insert(MF2NameKey(name))
                 } else {
                     let key = MF2NameKey(name)
-                    values[key] = .string(rendered.value)
+                    values[key] = rendered.rawValue
                     sources[key] = rendered.source
                 }
             }
@@ -256,9 +256,9 @@ private struct MF2FormatContext {
 
     mutating func formatToParts(selectors: [MF2VariableRef], variants: [MF2Variant]) throws -> [MF2FormattedPart] {
         let selectorValues = try selectors.map { selector in
-            guard let value = values[MF2NameKey(selector.name)] else {
+            let key = MF2NameKey(selector.name)
+            guard !failedLocals.contains(key), let value = values[key] else {
                 if fallback {
-                    let key = MF2NameKey(selector.name)
                     if !failedLocals.contains(key) {
                         errors.append(.unresolvedVariable(selector.name))
                     }
@@ -338,10 +338,18 @@ private struct MF2FormatContext {
                 } else {
                     output.append(.expression(
                         rendered.value,
-                        attributes: expression.attributes
+                        attributes: expression.attributes,
+                        direction: rendered.direction
                     ))
                 }
             case let .markup(markup):
+                if markup.options["u:dir"] != nil {
+                    let error = MF2Error.badOption("u:dir is not valid on markup.")
+                    guard fallback else {
+                        throw error
+                    }
+                    errors.append(error)
+                }
                 output.append(.markup(
                     kind: markup.kind,
                     name: markup.name,
@@ -363,13 +371,13 @@ private struct MF2FormatContext {
             value = literal
             rawValue = .string(literal)
         case let .variable(name):
-            if let argument = values[MF2NameKey(name)] {
+            let key = MF2NameKey(name)
+            if !failedLocals.contains(key), let argument = values[key] {
                 value = argument.rendered
                 rawValue = argument
-                source = sources[MF2NameKey(name)]
+                source = sources[key]
             } else if fallback {
                 hadError = true
-                let key = MF2NameKey(name)
                 let error = MF2Error.unresolvedVariable(name)
                 if !failedLocals.contains(key) {
                     errors.append(error)
@@ -399,13 +407,34 @@ private struct MF2FormatContext {
 
         switch expression.function?.name {
         case .none:
-            return MF2ExpressionOutput(value: value, hadError: false, source: source)
+            do {
+                return try MF2ExpressionOutput(
+                    value: primitiveValueToString(rawValue, fallback: value),
+                    hadError: false,
+                    source: source,
+                    rawValue: rawValue,
+                    direction: bidiDirectionFromSource(source)
+                )
+            } catch let error as MF2Error {
+                if !fallback {
+                    throw error
+                }
+                let recoverable = fallbackError(error)
+                errors.append(recoverable)
+                let source = fallbackSource(expression)
+                return MF2ExpressionOutput(
+                    value: recoverFormatError(expression: expression, source: source, error: recoverable),
+                    hadError: true,
+                    fallbackSource: source
+                )
+            }
         case .some(_):
             guard let function = expression.function else {
                 return MF2ExpressionOutput(value: value, hadError: false)
             }
-            let optionValues = values
+            let optionValues = values.filter { !failedLocals.contains($0.key) }
             do {
+                let direction = try bidiDirectionForFunction(function, source: source)
                 return try MF2ExpressionOutput(
                     value: functions.format(MF2FunctionCall(
                         value: value,
@@ -435,7 +464,8 @@ private struct MF2FormatContext {
                                 values: optionValues
                             )
                         }
-                    )
+                    ),
+                    direction: direction
                 )
             } catch let error as MF2Error {
                 guard fallback else {
@@ -450,6 +480,15 @@ private struct MF2FormatContext {
                     fallbackSource: source
                 )
             }
+        }
+    }
+
+    func primitiveValueToString(_ rawValue: MF2Value, fallback: String) throws -> String {
+        switch rawValue {
+        case .number:
+            try MF2NumberCore.format(rawValue, options: MF2NumberCore.Options(locale: locale))
+        case .string, .bool, .null:
+            fallback
         }
     }
 
@@ -550,7 +589,13 @@ private struct MF2FormatContext {
         case .catchAll:
             return 0
         case let .literal(value):
-            if (selector.exactMatch && literalKeyMatches(value, selector: selector)) || value == selector.selectionKey {
+            if selector.exactMatch && numericLiteralKeyMatchesSource(value, selector: selector) {
+                return 3
+            }
+            if selector.exactMatch && !isNumericFunction(selector.function) && literalKeyMatches(value, selector: selector) {
+                return 2
+            }
+            if value == selector.selectionKey {
                 return 1
             }
             guard let function = selector.function else {
@@ -692,15 +737,26 @@ private struct MF2SelectorValue {
 
 private struct MF2ExpressionOutput {
     let value: String
+    let rawValue: MF2Value
     let hadError: Bool
     let source: MF2FunctionSource?
     let fallbackSource: String?
+    let direction: String?
 
-    init(value: String, hadError: Bool, source: MF2FunctionSource? = nil, fallbackSource: String? = nil) {
+    init(
+        value: String,
+        hadError: Bool,
+        source: MF2FunctionSource? = nil,
+        fallbackSource: String? = nil,
+        rawValue: MF2Value? = nil,
+        direction: String? = nil
+    ) {
         self.value = value
+        self.rawValue = rawValue ?? .string(value)
         self.hadError = hadError
         self.source = source
         self.fallbackSource = fallbackSource
+        self.direction = direction
     }
 }
 
@@ -725,6 +781,163 @@ private func literalKeyMatches(_ value: String, selector: MF2SelectorValue) -> B
     return normalizeStringKey(value) == normalizedRendered
 }
 
+private func numericLiteralKeyMatchesSource(_ value: String, selector: MF2SelectorValue) -> Bool {
+    guard let sourceKey = preferredNumericSourceKey(selector) else {
+        return false
+    }
+    return value == sourceKey && isDecimalOperand(value)
+}
+
+private func preferredNumericSourceKey(_ selector: MF2SelectorValue) -> String? {
+    guard let functionName = selector.function?.name,
+          functionName == "number" || functionName == "percent",
+          let sourceValue = numericSourceValue(selector.source, functionName: functionName),
+          let operand = parseSourceDecimal(sourceValue)
+    else {
+        return nil
+    }
+    if functionName == "percent" {
+        return renderSourceDecimal(
+            SourceDecimal(
+                negative: operand.negative,
+                digits: operand.digits,
+                scale: operand.scale - 2,
+                hasExponent: operand.hasExponent
+            ),
+            trimFractionZeros: false
+        )
+    }
+    return operand.hasExponent ? renderSourceDecimal(operand, trimFractionZeros: true) : sourceValue
+}
+
+private func numericSourceValue(_ source: MF2FunctionSource?, functionName: String) -> String? {
+    var current = source
+    while let source = current {
+        if source.function.name == functionName {
+            return source.value
+        }
+        current = source.inheritedSource
+    }
+    return nil
+}
+
+private struct SourceDecimal {
+    let negative: Bool
+    let digits: String
+    let scale: Int
+    let hasExponent: Bool
+}
+
+private let maxSourceDecimalExponent = 1_000_000
+private let maxSourceDecimalKeyLength = 4096
+
+private func parseSourceDecimal(_ value: String) -> SourceDecimal? {
+    let negative = value.hasPrefix("-")
+    let unsigned = negative ? String(value.dropFirst()) : value
+    guard !unsigned.isEmpty else {
+        return nil
+    }
+    let significand: String
+    let exponentText: String
+    let hasExponent: Bool
+    if let exponentIndex = unsigned.firstIndex(where: { $0 == "e" || $0 == "E" }) {
+        significand = String(unsigned[..<exponentIndex])
+        exponentText = String(unsigned[unsigned.index(after: exponentIndex)...])
+        guard !exponentText.isEmpty,
+              exponentText.firstIndex(where: { $0 == "e" || $0 == "E" }) == nil
+        else {
+            return nil
+        }
+        hasExponent = true
+    } else {
+        significand = unsigned
+        exponentText = ""
+        hasExponent = false
+    }
+    guard let exponent = parseSourceExponent(exponentText) else {
+        return nil
+    }
+    let parts = significand.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false)
+    guard parts.count >= 1, parts.count <= 2 else {
+        return nil
+    }
+    let integer = String(parts[0])
+    let fraction = parts.count == 2 ? String(parts[1]) : ""
+    guard !integer.isEmpty,
+          !(integer.count > 1 && integer.hasPrefix("0")),
+          integer.utf8.allSatisfy({ $0 >= 48 && $0 <= 57 }),
+          (fraction.isEmpty || fraction.utf8.allSatisfy({ $0 >= 48 && $0 <= 57 })),
+          !(significand.contains(".") && fraction.isEmpty)
+    else {
+        return nil
+    }
+    let trimmedDigits = String((integer + fraction).drop(while: { $0 == "0" }))
+    let digits = trimmedDigits.isEmpty ? "0" : trimmedDigits
+    return SourceDecimal(
+        negative: negative && digits != "0",
+        digits: digits,
+        scale: fraction.count - exponent,
+        hasExponent: hasExponent
+    )
+}
+
+private func parseSourceExponent(_ value: String) -> Int? {
+    if value.isEmpty {
+        return 0
+    }
+    let negative = value.hasPrefix("-")
+    let unsigned = negative || value.hasPrefix("+") ? String(value.dropFirst()) : value
+    guard !unsigned.isEmpty,
+          unsigned.utf8.allSatisfy({ $0 >= 48 && $0 <= 57 })
+    else {
+        return nil
+    }
+    let digits = String(unsigned.drop(while: { $0 == "0" }))
+    let normalizedDigits = digits.isEmpty ? "0" : digits
+    guard normalizedDigits.count <= 7,
+          let parsed = Int(normalizedDigits),
+          parsed <= maxSourceDecimalExponent
+    else {
+        return nil
+    }
+    return negative ? -parsed : parsed
+}
+
+private func renderSourceDecimal(_ operand: SourceDecimal, trimFractionZeros: Bool) -> String? {
+    let extraLength =
+        operand.scale > operand.digits.count
+            ? operand.scale - operand.digits.count
+            : max(-operand.scale, 0)
+    guard operand.digits.count + extraLength + 2 <= maxSourceDecimalKeyLength else {
+        return nil
+    }
+    var text: String
+    if operand.scale <= 0 {
+        text = operand.digits + String(repeating: "0", count: -operand.scale)
+    } else if operand.scale >= operand.digits.count {
+        text = "0." + String(repeating: "0", count: operand.scale - operand.digits.count) + operand.digits
+    } else {
+        let split = operand.digits.index(operand.digits.endIndex, offsetBy: -operand.scale)
+        text = String(operand.digits[..<split]) + "." + String(operand.digits[split...])
+    }
+    if trimFractionZeros && text.contains(".") {
+        while text.hasSuffix("0") {
+            text.removeLast()
+        }
+        if text.hasSuffix(".") {
+            text.removeLast()
+        }
+    }
+    return operand.negative ? "-\(text)" : text
+}
+
+private func isNumericFunction(_ function: MF2Function?) -> Bool {
+    guard let function else {
+        return false
+    }
+    return function.name == "number" || function.name == "integer" || function.name == "percent" || function.name == "offset"
+}
+
 private func normalizeStringKey(_ value: String) -> String {
     value.precomposedStringWithCanonicalMapping
 }
@@ -742,7 +955,7 @@ private func percentPluralOperand(_ value: MF2Value) -> MF2Value {
 
 private func formatPluralNumber(_ value: Double) -> String {
     if value.isFinite, value.rounded(.towardZero) == value {
-        return String(Int64(value))
+        return mf2FormatWholeDoubleNative(value)
     }
     return String(value)
 }
@@ -761,7 +974,7 @@ private func fallbackSource(_ expression: MF2Expression) -> String {
         return expressionArgumentSource(arg)
     }
     if let function = expression.function {
-        return functionSource(function)
+        return functionNameSource(function)
     }
     return ""
 }
@@ -803,6 +1016,10 @@ private func functionSource(_ function: MF2Function) -> String {
         source += " \(key)=\(expressionArgumentSource(value))"
     }
     return source
+}
+
+private func functionNameSource(_ function: MF2Function) -> String {
+    ":\(function.name)"
 }
 
 private func quoteLiteralSource(_ value: String) -> String {
@@ -881,7 +1098,7 @@ private extension MF2Variant {
 public enum MF2FormattedPart: Equatable, Decodable {
     case text(String)
     case fallback(source: String, value: String?)
-    case expression(String, attributes: [String: MF2AttributeValue])
+    case expression(String, attributes: [String: MF2AttributeValue], direction: String?)
     case markup(
         kind: String,
         name: String,
@@ -897,6 +1114,7 @@ public enum MF2FormattedPart: Equatable, Decodable {
         case name
         case options
         case attributes
+        case direction
     }
 
     public init(from decoder: Decoder) throws {
@@ -916,7 +1134,8 @@ public enum MF2FormattedPart: Equatable, Decodable {
                 attributes: try container.decodeIfPresent(
                     [String: MF2AttributeValue].self,
                     forKey: .attributes
-                ) ?? [:]
+                ) ?? [:],
+                direction: try container.decodeIfPresent(String.self, forKey: .direction)
             )
         case "markup":
             self = .markup(
@@ -954,8 +1173,8 @@ private extension Array where Element == MF2FormattedPart {
                 value
             case let .fallback(source, value):
                 value ?? fallbackValue(source)
-            case let .expression(value, _):
-                isolateExpression(value, bidiIsolation: bidiIsolation)
+            case let .expression(value, _, direction):
+                isolateExpression(value, bidiIsolation: bidiIsolation, direction: direction)
             case .markup:
                 ""
             }
@@ -963,11 +1182,66 @@ private extension Array where Element == MF2FormattedPart {
     }
 }
 
-private func isolateExpression(_ value: String, bidiIsolation: MF2BidiIsolation) -> String {
+private func isolateExpression(
+    _ value: String,
+    bidiIsolation: MF2BidiIsolation,
+    direction: String? = nil
+) -> String {
     switch bidiIsolation {
     case .none:
         value
     case .default:
-        "\u{2068}\(value)\u{2069}"
+        "\(bidiMarker(direction))\(value)\u{2069}"
+    }
+}
+
+private func bidiMarker(_ direction: String?) -> String {
+    switch direction {
+    case "ltr":
+        "\u{2066}"
+    case "rtl":
+        "\u{2067}"
+    default:
+        "\u{2068}"
+    }
+}
+
+private func bidiDirectionForFunction(_ function: MF2Function, source: MF2FunctionSource?) throws -> String? {
+    if let value = functionOptionLiteral(function, "u:dir", default: nil) {
+        return try parseBidiDirection(value)
+    }
+    return try bidiDirectionFromSource(source)
+}
+
+private func bidiDirectionFromSource(_ source: MF2FunctionSource?) throws -> String? {
+    guard let source else {
+        return nil
+    }
+    if let value = functionOptionLiteral(source.function, "u:dir", default: nil) {
+        return try parseBidiDirection(value)
+    }
+    return try bidiDirectionFromSource(source.inheritedSource)
+}
+
+private func functionOptionLiteral(
+    _ function: MF2Function,
+    _ name: String,
+    default defaultValue: String?
+) -> String? {
+    guard let option = function.options[name] else {
+        return defaultValue
+    }
+    guard case let .literal(value) = option else {
+        return defaultValue
+    }
+    return value
+}
+
+private func parseBidiDirection(_ value: String) throws -> String {
+    switch value {
+    case "auto", "ltr", "rtl":
+        value
+    default:
+        throw MF2Error.badOption("u:dir option must be auto, ltr, or rtl.")
     }
 }

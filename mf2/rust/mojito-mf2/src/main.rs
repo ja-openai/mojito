@@ -8,9 +8,13 @@ use std::sync::OnceLock;
 use std::time::Instant;
 
 use mojito_mf2::{
-    format_message_to_parts_with_options, format_message_with_options, parse_to_model,
-    ArgumentValue, Arguments, BidiIsolation, Diagnostic, FormatOptions, FormatResult,
-    FormattedPart, FunctionRegistry, MessageModel, PartsResult,
+    format_date_core, format_date_time_core, format_message_to_parts_with_options,
+    format_message_with_options, format_number_core, format_time_core, parse_to_model,
+    ArgumentValue, Arguments, BidiIsolation, DateTimeCoreOptions, Diagnostic, FormatOptions,
+    FormatResult, FormattedPart, FunctionRegistry, MessageModel, NumberCoreCurrencyDisplay,
+    NumberCoreOptions, NumberCoreSignDisplay, NumberCoreStyle, PartsResult, RelativeTimeCoreData,
+    RelativeTimeCoreFormatter, RelativeTimeCoreNumeric, RelativeTimeCoreOptions,
+    RelativeTimeCorePolicy, RelativeTimeCoreStyle, RelativeTimeCoreUnit,
 };
 use serde::{Deserialize, Serialize};
 
@@ -117,6 +121,8 @@ struct LocaleKeyFixture {
     canonical: Vec<LocaleCanonicalCase>,
     #[serde(rename = "lookupChains")]
     lookup_chains: Vec<LocaleLookupChainCase>,
+    #[serde(rename = "featureLookupChains")]
+    feature_lookup_chains: Vec<LocaleFeatureLookupChainCase>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -128,6 +134,13 @@ struct LocaleCanonicalCase {
 #[derive(Debug, Deserialize)]
 struct LocaleLookupChainCase {
     source: String,
+    expected: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct LocaleFeatureLookupChainCase {
+    source: String,
+    parents: BTreeMap<String, String>,
     expected: Vec<String>,
 }
 
@@ -210,6 +223,18 @@ fn main() {
         "bench-parse" => {
             let path = next_required_arg(&mut args);
             bench_parse(&path, args.next(), args.next());
+        }
+        "number-core-bench" => {
+            let path = next_required_arg(&mut args);
+            bench_number_core(&path, args.next(), args.next());
+        }
+        "date-time-core-bench" => {
+            let path = next_required_arg(&mut args);
+            bench_date_time_core(&path, args.next(), args.next());
+        }
+        "relative-time-core-bench" => {
+            let path = next_required_arg(&mut args);
+            bench_relative_time_core(&path, args.next(), args.next());
         }
         "unicode-tests" => {
             let path = args
@@ -680,10 +705,30 @@ fn check_locale_key_fixtures(fixture_root: &Path) -> usize {
         }
         checked_cases += 1;
     }
+    for item in fixture.feature_lookup_chains {
+        let parents: Vec<_> = item
+            .parents
+            .iter()
+            .map(|(child, parent)| (child.as_str(), parent.as_str()))
+            .collect();
+        let actual = feature_lookup_chain(&item.source, &parents);
+        if actual != item.expected {
+            fail(format!(
+                "{}: expected feature lookup chain {:?}, got {:?}",
+                fixture_path.display(),
+                item.expected,
+                actual
+            ));
+        }
+        checked_cases += 1;
+    }
     checked_cases
 }
 
 fn canonical_locale_key(locale: &str) -> String {
+    if locale.chars().count() > 256 {
+        return String::new();
+    }
     locale_parts(locale).join("-")
 }
 
@@ -697,6 +742,36 @@ fn locale_lookup_chain(locale: &str) -> Vec<String> {
         .rev()
         .map(|length| parts[..length].join("-"))
         .collect()
+}
+
+fn feature_lookup_chain(locale: &str, parents: &[(&str, &str)]) -> Vec<String> {
+    let mut chain = Vec::new();
+    append_feature_lookup_chain(&canonical_locale_key(locale), parents, &mut chain);
+    chain
+}
+
+fn append_feature_lookup_chain(locale: &str, parents: &[(&str, &str)], chain: &mut Vec<String>) {
+    let mut current = locale.to_string();
+    while !current.is_empty() {
+        if current.chars().count() > 256 {
+            return;
+        }
+        if chain.iter().any(|candidate| candidate == &current) {
+            return;
+        }
+        chain.push(current.clone());
+        if let Some(parent) = parents
+            .iter()
+            .find(|(child, _)| *child == current)
+            .map(|(_, parent)| *parent)
+        {
+            append_feature_lookup_chain(parent, parents, chain);
+        }
+        current = current
+            .rsplit_once('-')
+            .map(|(parent, _)| parent.to_string())
+            .unwrap_or_default();
+    }
 }
 
 fn locale_parts(locale: &str) -> Vec<String> {
@@ -901,6 +976,309 @@ fn bench(path: &str, iterations_arg: Option<String>, warmup_arg: Option<String>)
     );
 }
 
+fn bench_number_core(path: &str, iterations_arg: Option<String>, warmup_arg: Option<String>) {
+    let iterations = parse_iterations(iterations_arg.as_deref().unwrap_or("100000"), "iteration");
+    let warmup_iterations = parse_iterations(warmup_arg.as_deref().unwrap_or("10000"), "warmup");
+    let fixture: serde_json::Value = read_json_fixture(Path::new(path));
+    let cases: Vec<_> = fixture["formatCases"]
+        .as_array()
+        .unwrap_or(&Vec::new())
+        .iter()
+        .map(|item| {
+            (
+                argument_from_json(&item["value"]),
+                number_core_options_from_fixture(item),
+            )
+        })
+        .collect();
+    if cases.is_empty() {
+        eprintln!("No number-core cases found.");
+        process::exit(2);
+    }
+
+    for index in 0..warmup_iterations {
+        let (value, options) = &cases[index % cases.len()];
+        let output = format_number_core(value.clone(), options).expect("number-core formats");
+        black_box(output);
+    }
+
+    let started = Instant::now();
+    let mut bytes = 0usize;
+    for index in 0..iterations {
+        let (value, options) = &cases[index % cases.len()];
+        let output = format_number_core(value.clone(), options).expect("number-core formats");
+        bytes += black_box(output.len());
+    }
+    let seconds = started.elapsed().as_secs_f64();
+    println!(
+        "rust-number-core-format iterations={iterations} warmup={warmup_iterations} cases={} seconds={seconds:.6} ns_per_op={:.1} ops_per_second={:.0} bytes={bytes}",
+        cases.len(),
+        seconds * 1_000_000_000.0 / iterations as f64,
+        iterations as f64 / seconds
+    );
+}
+
+fn bench_date_time_core(path: &str, iterations_arg: Option<String>, warmup_arg: Option<String>) {
+    let iterations = parse_iterations(iterations_arg.as_deref().unwrap_or("100000"), "iteration");
+    let warmup_iterations = parse_iterations(warmup_arg.as_deref().unwrap_or("10000"), "warmup");
+    let fixture: serde_json::Value = read_json_fixture(Path::new(path));
+    let cases = fixture["formatCases"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    if cases.is_empty() {
+        eprintln!("No date-time-core cases found.");
+        process::exit(2);
+    }
+
+    for index in 0..warmup_iterations {
+        let output = format_date_time_core_fixture_item(&cases[index % cases.len()])
+            .expect("datetime formats");
+        black_box(output);
+    }
+
+    let started = Instant::now();
+    let mut bytes = 0usize;
+    for index in 0..iterations {
+        let output = format_date_time_core_fixture_item(&cases[index % cases.len()])
+            .expect("datetime formats");
+        bytes += black_box(output.len());
+    }
+    let seconds = started.elapsed().as_secs_f64();
+    println!(
+        "rust-date-time-core-format iterations={iterations} warmup={warmup_iterations} cases={} seconds={seconds:.6} ns_per_op={:.1} ops_per_second={:.0} bytes={bytes}",
+        cases.len(),
+        seconds * 1_000_000_000.0 / iterations as f64,
+        iterations as f64 / seconds
+    );
+}
+
+fn bench_relative_time_core(
+    path: &str,
+    iterations_arg: Option<String>,
+    warmup_arg: Option<String>,
+) {
+    let iterations = parse_iterations(iterations_arg.as_deref().unwrap_or("100000"), "iteration");
+    let warmup_iterations = parse_iterations(warmup_arg.as_deref().unwrap_or("10000"), "warmup");
+    let data: RelativeTimeCoreData = read_json_fixture(Path::new(
+        "../../cldr/generated/relative-time/all/relative_time.json",
+    ));
+    let formatter = RelativeTimeCoreFormatter::new(data).expect("relative-time data prepares");
+    let fixture: serde_json::Value = read_json_fixture(Path::new(path));
+    let cases: Vec<_> = fixture["cases"]
+        .as_array()
+        .unwrap_or(&Vec::new())
+        .iter()
+        .map(|item| {
+            (
+                argument_from_json(&item["arguments"]["delta"]),
+                relative_time_core_options_from_fixture_source(
+                    item["locale"].as_str().unwrap_or("en"),
+                    item["source"].as_str().unwrap_or_default(),
+                ),
+            )
+        })
+        .collect();
+    if cases.is_empty() {
+        eprintln!("No relative-time-core cases found.");
+        process::exit(2);
+    }
+
+    for index in 0..warmup_iterations {
+        let (value, options) = &cases[index % cases.len()];
+        let output = formatter
+            .format(value.clone(), options)
+            .expect("relative-time formats");
+        black_box(output);
+    }
+
+    let started = Instant::now();
+    let mut bytes = 0usize;
+    for index in 0..iterations {
+        let (value, options) = &cases[index % cases.len()];
+        let output = formatter
+            .format(value.clone(), options)
+            .expect("relative-time formats");
+        bytes += black_box(output.len());
+    }
+    let seconds = started.elapsed().as_secs_f64();
+    println!(
+        "rust-relative-time-core-format iterations={iterations} warmup={warmup_iterations} cases={} seconds={seconds:.6} ns_per_op={:.1} ops_per_second={:.0} bytes={bytes}",
+        cases.len(),
+        seconds * 1_000_000_000.0 / iterations as f64,
+        iterations as f64 / seconds
+    );
+}
+
+fn number_core_options_from_fixture(item: &serde_json::Value) -> NumberCoreOptions {
+    let raw_options = item["options"].as_object();
+    let mut options = NumberCoreOptions {
+        locale: item["locale"].as_str().unwrap_or("en-US").to_string(),
+        ..NumberCoreOptions::default()
+    };
+    if let Some(style) = raw_options
+        .and_then(|options| options.get("style"))
+        .and_then(serde_json::Value::as_str)
+    {
+        options.style = match style {
+            "number" => NumberCoreStyle::Number,
+            "integer" => NumberCoreStyle::Integer,
+            "percent" => NumberCoreStyle::Percent,
+            "currency" => NumberCoreStyle::Currency,
+            _ => {
+                eprintln!("Unsupported number-core style: {style}");
+                process::exit(2);
+            }
+        };
+    }
+    options.currency = raw_options
+        .and_then(|options| options.get("currency"))
+        .and_then(serde_json::Value::as_str)
+        .map(ToString::to_string);
+    if let Some(display) = raw_options
+        .and_then(|options| options.get("currencyDisplay"))
+        .and_then(serde_json::Value::as_str)
+    {
+        options.currency_display = match display {
+            "symbol" => NumberCoreCurrencyDisplay::Symbol,
+            "narrowSymbol" => NumberCoreCurrencyDisplay::NarrowSymbol,
+            "code" => NumberCoreCurrencyDisplay::Code,
+            _ => {
+                eprintln!("Unsupported currencyDisplay: {display}");
+                process::exit(2);
+            }
+        };
+    }
+    if let Some(sign_display) = raw_options
+        .and_then(|options| options.get("signDisplay"))
+        .and_then(serde_json::Value::as_str)
+    {
+        options.sign_display = match sign_display {
+            "auto" => NumberCoreSignDisplay::Auto,
+            "always" => NumberCoreSignDisplay::Always,
+            "never" => NumberCoreSignDisplay::Never,
+            _ => {
+                eprintln!("Unsupported signDisplay: {sign_display}");
+                process::exit(2);
+            }
+        };
+    }
+    if let Some(use_grouping) = raw_options
+        .and_then(|options| options.get("useGrouping"))
+        .and_then(serde_json::Value::as_bool)
+    {
+        options.use_grouping = use_grouping;
+    }
+    options.minimum_fraction_digits = raw_options
+        .and_then(|options| options.get("minimumFractionDigits"))
+        .and_then(serde_json::Value::as_u64)
+        .map(|value| value as usize);
+    options.maximum_fraction_digits = raw_options
+        .and_then(|options| options.get("maximumFractionDigits"))
+        .and_then(serde_json::Value::as_u64)
+        .map(|value| value as usize);
+    options
+}
+
+fn date_time_core_options_from_fixture(item: &serde_json::Value) -> DateTimeCoreOptions {
+    let raw_options = item["options"].as_object();
+    DateTimeCoreOptions {
+        locale: item["locale"].as_str().unwrap_or("en-US").to_string(),
+        style: raw_string_option(raw_options, "style").unwrap_or_else(|| "medium".to_string()),
+        date_style: raw_string_option(raw_options, "dateStyle"),
+        time_style: raw_string_option(raw_options, "timeStyle"),
+        length: raw_string_option(raw_options, "length"),
+        precision: raw_string_option(raw_options, "precision"),
+        date_length: raw_string_option(raw_options, "dateLength"),
+        time_precision: raw_string_option(raw_options, "timePrecision"),
+        skeleton: raw_string_option(raw_options, "skeleton"),
+        hour_cycle: raw_string_option(raw_options, "hourCycle"),
+        time_zone: raw_string_option(raw_options, "timeZone").unwrap_or_else(|| "UTC".to_string()),
+        calendar: raw_string_option(raw_options, "calendar").unwrap_or_default(),
+    }
+}
+
+fn raw_string_option(
+    raw_options: Option<&serde_json::Map<String, serde_json::Value>>,
+    name: &str,
+) -> Option<String> {
+    raw_options
+        .and_then(|options| options.get(name))
+        .and_then(serde_json::Value::as_str)
+        .map(ToString::to_string)
+}
+
+fn format_date_time_core_fixture_item(item: &serde_json::Value) -> Result<String, Diagnostic> {
+    let options = date_time_core_options_from_fixture(item);
+    let value = item["value"].as_str().unwrap_or_default();
+    match item["kind"].as_str().unwrap_or_default() {
+        "date" => format_date_core(value, &options),
+        "time" => format_time_core(value, &options),
+        "datetime" => format_date_time_core(value, &options),
+        kind => Err(Diagnostic::new(
+            "bad-option",
+            format!("Unsupported date/time core fixture kind: {kind}."),
+            0,
+            0,
+        )),
+    }
+}
+
+fn relative_time_core_options_from_fixture_source(
+    locale: &str,
+    source: &str,
+) -> RelativeTimeCoreOptions {
+    RelativeTimeCoreOptions {
+        locale: locale.to_string(),
+        style: relative_time_core_source_option(source, "style")
+            .as_deref()
+            .map(RelativeTimeCoreStyle::from_name)
+            .transpose()
+            .unwrap_or_else(|error| {
+                eprintln!("Unsupported relative-time style: {error:?}");
+                process::exit(2);
+            })
+            .unwrap_or(RelativeTimeCoreStyle::Short),
+        numeric: relative_time_core_source_option(source, "numeric")
+            .as_deref()
+            .map(RelativeTimeCoreNumeric::from_name)
+            .transpose()
+            .unwrap_or_else(|error| {
+                eprintln!("Unsupported relative-time numeric: {error:?}");
+                process::exit(2);
+            })
+            .unwrap_or(RelativeTimeCoreNumeric::Always),
+        policy: relative_time_core_source_option(source, "policy")
+            .as_deref()
+            .map(RelativeTimeCorePolicy::from_name)
+            .transpose()
+            .unwrap_or_else(|error| {
+                eprintln!("Unsupported relative-time policy: {error:?}");
+                process::exit(2);
+            })
+            .unwrap_or(RelativeTimeCorePolicy::Precise),
+        unit: relative_time_core_source_option(source, "unit")
+            .as_deref()
+            .map(RelativeTimeCoreUnit::from_name)
+            .transpose()
+            .unwrap_or_else(|error| {
+                eprintln!("Unsupported relative-time unit: {error:?}");
+                process::exit(2);
+            })
+            .unwrap_or(RelativeTimeCoreUnit::Auto),
+    }
+}
+
+fn relative_time_core_source_option(source: &str, name: &str) -> Option<String> {
+    let marker = format!("{name}=");
+    let start = source.find(&marker)? + marker.len();
+    let end = source[start..]
+        .find(|ch: char| ch.is_whitespace() || ch == '}')
+        .map(|index| start + index)
+        .unwrap_or(source.len());
+    Some(source[start..end].to_string())
+}
+
 fn parse_iterations(value: &str, label: &str) -> usize {
     value.parse::<usize>().unwrap_or_else(|error| {
         eprintln!("Invalid {label} count: {error}");
@@ -966,7 +1344,7 @@ fn fail(message: impl std::fmt::Display) -> ! {
 
 fn usage_and_exit() -> ! {
     eprintln!(
-        "Usage:\n  mojito-mf2 compile <source-or-fixture.json>\n  mojito-mf2 format-first-case <fixture.json>\n  mojito-mf2 editor-json <request.json>\n  mojito-mf2 plural-json <locale>\n  mojito-mf2 conformance [source-fixture-dir]\n  mojito-mf2 unicode-tests [unicode-test-dir] [baseline-json]\n  mojito-mf2 bench <fixture-dir> [iterations] [warmup-iterations]\n  mojito-mf2 bench-parse <fixture-dir> [iterations] [warmup-iterations]"
+        "Usage:\n  mojito-mf2 compile <source-or-fixture.json>\n  mojito-mf2 format-first-case <fixture.json>\n  mojito-mf2 editor-json <request.json>\n  mojito-mf2 plural-json <locale>\n  mojito-mf2 conformance [source-fixture-dir]\n  mojito-mf2 unicode-tests [unicode-test-dir] [baseline-json]\n  mojito-mf2 bench <fixture-dir> [iterations] [warmup-iterations]\n  mojito-mf2 bench-parse <fixture-dir> [iterations] [warmup-iterations]\n  mojito-mf2 number-core-bench <fixture.json> [iterations] [warmup-iterations]\n  mojito-mf2 date-time-core-bench <fixture.json> [iterations] [warmup-iterations]\n  mojito-mf2 relative-time-core-bench <fixture.json> [iterations] [warmup-iterations]"
     );
     process::exit(2);
 }

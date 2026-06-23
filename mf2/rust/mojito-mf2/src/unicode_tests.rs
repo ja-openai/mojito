@@ -4,9 +4,10 @@ use std::panic::{self, AssertUnwindSafe};
 use std::path::{Path, PathBuf};
 
 use mojito_mf2::{
-    format_message_with_options, parse_to_model, ArgumentValue, Arguments, BidiIsolation,
-    Declaration, Diagnostic, FormatOptions, FormatResult, FunctionCall, FunctionMatch,
-    FunctionRegistry, FunctionSourceRef, MessageModel, ParseResult,
+    date_time_core_function_registry, format_message_with_options, number_core_function_registry,
+    parse_to_model, ArgumentValue, Arguments, BidiIsolation, Declaration, Diagnostic,
+    FormatOptions, FormatResult, FunctionCall, FunctionMatch, FunctionRegistry, FunctionSourceRef,
+    MessageModel, ParseResult,
 };
 use serde::Deserialize;
 
@@ -397,7 +398,8 @@ fn format_with_registry(
 }
 
 fn official_function_registry() -> FunctionRegistry {
-    FunctionRegistry::default()
+    date_time_core_function_registry()
+        .with_registry(&number_core_function_registry())
         .with_function("test:function", official_test_function)
         .with_function("test:select", official_test_select_resolver)
         .with_function("test:format", official_test_format_resolver)

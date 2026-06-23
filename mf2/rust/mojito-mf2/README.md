@@ -21,8 +21,9 @@ The crate mirrors the intended production boundary:
 - `formatter`: parser-free model formatter and selector matching
 - `diagnostic`: stable parser diagnostic type and codes
 
-Generated CLDR plural rules and string-only locale lookup helpers are formatter
-internals, matching the Java package-private helper boundary.
+Generated CLDR plural rules, experimental number/date-time data, and
+string-only locale lookup helpers are formatter internals, matching the Java
+package-private helper boundary.
 
 The formatter module does not depend on parser internals. That keeps the
 embedded formatter path available even if parser, compiler, LSP, and Wasm
@@ -64,6 +65,17 @@ expose long/medium/short lengths. Date/time formatting accepts `dateStyle`,
 `timePrecision`, and shared `style` aliases are retained. Non-UTC `timeZone`
 values return a bad-option diagnostic until the adapter has real time-zone
 support.
+
+For generated-data formatting without ICU4X, use `number_core_function_registry()`
+or `date_time_core_function_registry()`. These experimental registries use
+native Rust tables generated from the shared CLDR probe data instead of runtime
+JSON. Number core covers decimal, integer, percent, and simple currency
+formatting for the probe locale set. Date/time core covers Gregorian
+`dateStyle`/`timeStyle` formatting and semantic CLDR skeleton lookup with
+`timeZone=UTC`. `RelativeTimeCoreFormatter::new(data)` is the explicit CLDR
+adapter for `:relativeTime`; callers decode the generated relative-time JSON
+payload they choose to ship and pass it to the prepared formatter or
+`relative_time_core_function_registry(data)`.
 
 The public formatter surface is intentionally small:
 
@@ -134,6 +146,9 @@ Supported now:
   invalid selector options, and supports exact selection of the formatted value
 - cardinal and ordinal plural category matching for number inputs in every
   generated CLDR plural locale
+- explicit generated-data `number_core`, `date_time_core`, and
+  data-explicit `relative_time_core` helpers, with shared fixtures, Node/Intl
+  reference checks, registry integration, and CLI benchmarks
 - optional ICU4X-backed `:number`, `:integer`, `:date`, `:time`, and
   `:datetime` formatting behind the `icu4x` feature and explicit
   `FunctionRegistry::icu4x()`
@@ -153,6 +168,9 @@ cargo run --example translate_demo
 cargo run --example inline_translate_demo
 cargo run --features icu4x --example icu4x_demo
 cargo run -- conformance ../../conformance/fixtures/source-to-model
+cargo run -- number-core-bench ../../conformance/fixtures/number-core/cases.json
+cargo run -- date-time-core-bench ../../conformance/fixtures/date-time-core/cases.json
+cargo run -- relative-time-core-bench ../../conformance/fixtures/functions/relative-time-duration-v0.json
 cargo run -- unicode-tests
 cargo run -- compile ../../conformance/fixtures/source-to-model/variable-basic.json
 cargo run -- format-first-case ../../conformance/fixtures/source-to-model/match-string.json

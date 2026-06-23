@@ -288,7 +288,7 @@ public enum MF2Value: Equatable, Decodable {
 
     private static func format(double: Double) -> String {
         if double.rounded() == double {
-            String(Int(double))
+            mf2FormatWholeDoublePlain(double)
         } else {
             String(double)
         }

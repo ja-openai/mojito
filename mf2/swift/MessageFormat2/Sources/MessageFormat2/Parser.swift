@@ -448,7 +448,7 @@ private final class MF2SourceParser {
         guard let ch = peek() else {
             return "\\"
         }
-        if ch == "{" || ch == "}" || ch == "\\" {
+        if ch == "{" || ch == "}" || ch == "\\" || ch == "|" {
             index += 1
             return String(ch)
         }
@@ -620,7 +620,7 @@ private final class MF2SourceParser {
     }
 
     private func parseTail(rest: String, start: Int, end: Int) -> JSONObject? {
-        if rest.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if rest.allSatisfy(isSyntaxWhitespace) {
             return ["function": NSNull(), "attributes": NSNull()]
         }
         guard let tokens = splitTailTokens(rest: rest, start: start, end: end) else {
@@ -789,11 +789,54 @@ private final class MF2SourceParser {
             )
             return nil
         }
+        guard let value = parseOptionValue(rawValue: assignment.rawValue, start: start, end: end) else {
+            return nil
+        }
         return (
             keySplit.name,
-            parseLiteralOrVariable(stripSyntaxWhitespace(assignment.rawValue)),
+            value,
             assignment.nextIndex
         )
+    }
+
+    private func parseOptionValue(rawValue: String, start: Int, end: Int) -> JSONObject? {
+        let rawValue = stripSyntaxWhitespace(rawValue)
+        if rawValue.hasPrefix("|") {
+            guard let split = parseQuotedLiteral(rawValue) else {
+                pushDiagnostic(
+                    code: "unclosed-quoted-literal",
+                    message: "Quoted literal is missing closing '|'.",
+                    start: start,
+                    end: end
+                )
+                return nil
+            }
+            if !split.rest.isEmpty {
+                pushDiagnostic(
+                    code: "invalid-function-option",
+                    message: "Option value must be a single literal or variable.",
+                    start: start,
+                    end: end
+                )
+                return nil
+            }
+            return ["type": "literal", "value": split.value]
+        }
+        if rawValue.hasPrefix("$") {
+            let rawName = String(rawValue.dropFirst())
+            let split = splitName(rawName)
+            if !split.name.isEmpty, split.rest.isEmpty {
+                return ["type": "variable", "name": split.name]
+            }
+            pushDiagnostic(
+                code: variableNameDiagnosticCode(rawName),
+                message: "Option variable value must be a valid variable name.",
+                start: start,
+                end: end
+            )
+            return nil
+        }
+        return parseLiteralOrVariable(rawValue)
     }
 
     private func parseRequiredAssignment(
@@ -1338,7 +1381,7 @@ private func parseQuotedLiteral(_ input: String) -> Split? {
                 output.append(escaped)
                 index += 1
             } else {
-                output += "\\"
+                return nil
             }
         } else {
             output.append(ch)
@@ -1541,6 +1584,10 @@ private func isSyntaxWhitespace(_ ch: Character) -> Bool {
 }
 
 private func isWhitespace(_ ch: Character) -> Bool {
+    ch == "\t" || ch == "\n" || ch == "\r" || ch == " " || ch == "\u{3000}"
+}
+
+private func isUnicodeWhitespace(_ ch: Character) -> Bool {
     ch.unicodeScalars.allSatisfy { CharacterSet.whitespacesAndNewlines.contains($0) }
 }
 

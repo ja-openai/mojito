@@ -1,9 +1,13 @@
+const MAX_LOCALE_KEY_LENGTH: usize = 256;
+
 pub(crate) fn canonical_locale_key(locale: &str) -> String {
+    if locale.chars().count() > MAX_LOCALE_KEY_LENGTH {
+        return String::new();
+    }
     locale_parts(locale).join("-")
 }
 
-#[cfg(test)]
-fn locale_lookup_chain(locale: &str) -> Vec<String> {
+pub(crate) fn locale_lookup_chain(locale: &str) -> Vec<String> {
     structural_lookup_chain(&canonical_locale_key(locale))
 }
 
@@ -11,18 +15,21 @@ pub(crate) fn plural_lookup_chain(
     locale: &str,
     parents: &'static [(&'static str, &'static str)],
 ) -> Vec<String> {
+    feature_lookup_chain(locale, parents)
+}
+
+fn feature_lookup_chain(locale: &str, parents: &[(&str, &str)]) -> Vec<String> {
     let mut chain = Vec::new();
-    append_plural_lookup_chain(&canonical_locale_key(locale), parents, &mut chain);
+    append_feature_lookup_chain(&canonical_locale_key(locale), parents, &mut chain);
     chain
 }
 
-fn append_plural_lookup_chain(
-    locale: &str,
-    parents: &'static [(&'static str, &'static str)],
-    chain: &mut Vec<String>,
-) {
+fn append_feature_lookup_chain(locale: &str, parents: &[(&str, &str)], chain: &mut Vec<String>) {
     let mut current = locale.to_string();
     while !current.is_empty() {
+        if current.chars().count() > MAX_LOCALE_KEY_LENGTH {
+            return;
+        }
         if chain.iter().any(|candidate| candidate == &current) {
             return;
         }
@@ -32,13 +39,12 @@ fn append_plural_lookup_chain(
             .find(|(child, _)| *child == current)
             .map(|(_, parent)| *parent)
         {
-            append_plural_lookup_chain(parent, parents, chain);
+            append_feature_lookup_chain(parent, parents, chain);
         }
         current = structural_parent(&current).unwrap_or_default();
     }
 }
 
-#[cfg(test)]
 fn structural_lookup_chain(locale: &str) -> Vec<String> {
     let parts: Vec<_> = locale.split('-').filter(|part| !part.is_empty()).collect();
     (1..=parts.len())
@@ -88,8 +94,9 @@ fn structural_parent(locale: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{canonical_locale_key, locale_lookup_chain};
+    use super::{canonical_locale_key, feature_lookup_chain, locale_lookup_chain};
     use serde::Deserialize;
+    use std::collections::BTreeMap;
     use std::fs;
     use std::path::Path;
 
@@ -98,6 +105,7 @@ mod tests {
     struct LocaleKeyFixture {
         canonical: Vec<LocaleCanonicalCase>,
         lookup_chains: Vec<LocaleLookupChainCase>,
+        feature_lookup_chains: Vec<LocaleFeatureLookupChainCase>,
     }
 
     #[derive(Debug, Deserialize)]
@@ -109,6 +117,13 @@ mod tests {
     #[derive(Debug, Deserialize)]
     struct LocaleLookupChainCase {
         source: String,
+        expected: Vec<String>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct LocaleFeatureLookupChainCase {
+        source: String,
+        parents: BTreeMap<String, String>,
         expected: Vec<String>,
     }
 
@@ -126,6 +141,14 @@ mod tests {
         }
         for item in fixture.lookup_chains {
             assert_eq!(locale_lookup_chain(&item.source), item.expected);
+        }
+        for item in fixture.feature_lookup_chains {
+            let parents: Vec<_> = item
+                .parents
+                .iter()
+                .map(|(child, parent)| (child.as_str(), parent.as_str()))
+                .collect();
+            assert_eq!(feature_lookup_chain(&item.source, &parents), item.expected);
         }
     }
 }

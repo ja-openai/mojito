@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+use std::sync::Arc;
 use std::sync::OnceLock;
 
 use crate::cldr::{
@@ -10,6 +11,7 @@ use crate::model::{
     AttributeValue, Declaration, Expression, ExpressionArg, FunctionRef, Markup, MessageModel,
     PatternPart, VariableRef, Variant, VariantKey,
 };
+use crate::number_core::{format_number_core, NumberCoreOptions};
 use serde::{Deserialize, Serialize};
 use unicode_normalization::UnicodeNormalization;
 
@@ -18,9 +20,12 @@ mod icu4x_functions;
 mod portable_functions;
 
 use portable_functions::{
-    inherited_exact_numeric_source, is_numeric_function, numeric_select_uses_variable,
-    parse_decimal_number,
+    inherited_exact_numeric_source, is_decimal_operand, is_numeric_function,
+    numeric_select_uses_variable, parse_decimal_number,
 };
+
+const MAX_SOURCE_DECIMAL_EXPONENT: i64 = 1_000_000;
+const MAX_SOURCE_DECIMAL_KEY_LENGTH: usize = 4096;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -367,12 +372,13 @@ impl BidiDirection {
     }
 }
 
-pub type FunctionFormatter = for<'a> fn(FunctionCall<'a>) -> Result<String, Diagnostic>;
+pub type FunctionFormatter =
+    dyn for<'a> Fn(FunctionCall<'a>) -> Result<String, Diagnostic> + Send + Sync;
 pub type FunctionSelector = for<'a> fn(FunctionMatch<'a>) -> Result<Option<i32>, Diagnostic>;
 
 #[derive(Clone)]
 pub struct FunctionRegistry {
-    formatters: BTreeMap<String, FunctionFormatter>,
+    formatters: BTreeMap<String, Arc<FunctionFormatter>>,
     selectors: BTreeMap<String, FunctionSelector>,
 }
 
@@ -401,8 +407,11 @@ impl FunctionRegistry {
         }
     }
 
-    pub fn with_function(mut self, name: impl Into<String>, formatter: FunctionFormatter) -> Self {
-        self.formatters.insert(name.into(), formatter);
+    pub fn with_function<F>(mut self, name: impl Into<String>, formatter: F) -> Self
+    where
+        F: for<'a> Fn(FunctionCall<'a>) -> Result<String, Diagnostic> + Send + Sync + 'static,
+    {
+        self.formatters.insert(name.into(), Arc::new(formatter));
         self
     }
 
@@ -411,8 +420,21 @@ impl FunctionRegistry {
         self
     }
 
-    pub fn register_formatter(&mut self, name: impl Into<String>, formatter: FunctionFormatter) {
-        self.formatters.insert(name.into(), formatter);
+    pub fn with_registry(mut self, other: &FunctionRegistry) -> Self {
+        for (name, formatter) in &other.formatters {
+            self.formatters.insert(name.clone(), Arc::clone(formatter));
+        }
+        for (name, selector) in &other.selectors {
+            self.selectors.insert(name.clone(), *selector);
+        }
+        self
+    }
+
+    pub fn register_formatter<F>(&mut self, name: impl Into<String>, formatter: F)
+    where
+        F: for<'a> Fn(FunctionCall<'a>) -> Result<String, Diagnostic> + Send + Sync + 'static,
+    {
+        self.formatters.insert(name.into(), Arc::new(formatter));
     }
 
     pub fn register_selector(&mut self, name: impl Into<String>, selector: FunctionSelector) {
@@ -971,7 +993,7 @@ impl<'a> FormatContext<'a> {
                     } else {
                         self.values.insert(
                             name.clone(),
-                            ResolvedValue::string(rendered.value, rendered.source),
+                            ResolvedValue::new(rendered.raw_value, rendered.source),
                         );
                     }
                 }
@@ -1160,11 +1182,18 @@ impl<'a> FormatContext<'a> {
         match key {
             VariantKey::CatchAll => Ok(Some(0)),
             VariantKey::Literal { value } => {
-                if (selector.exact_match && literal_key_matches(value, selector))
-                    || selector
-                        .selection_key
-                        .as_ref()
-                        .is_some_and(|category| category == value)
+                let numeric_selector = selector.function.as_ref().is_some_and(is_numeric_function);
+                if selector.exact_match && numeric_literal_key_matches_source(value, selector) {
+                    return Ok(Some(3));
+                }
+                if selector.exact_match && !numeric_selector && literal_key_matches(value, selector)
+                {
+                    return Ok(Some(2));
+                }
+                if selector
+                    .selection_key
+                    .as_ref()
+                    .is_some_and(|category| category == value)
                 {
                     return Ok(Some(1));
                 }
@@ -1264,6 +1293,7 @@ impl<'a> FormatContext<'a> {
         if had_error {
             return Ok(ExpressionOutput {
                 value,
+                raw_value: ArgumentValue::String(String::new()),
                 had_error: true,
                 source: None,
                 bidi_direction: None,
@@ -1272,9 +1302,33 @@ impl<'a> FormatContext<'a> {
         }
 
         let Some(function) = expression.function.as_ref() else {
-            let bidi_direction = bidi_direction_from_source(source.as_ref())?;
+            let value = match self.primitive_value_to_string(&raw_value, &value) {
+                Ok(value) => value,
+                Err(error) if self.fallback => {
+                    let recoverable = fallback_error(error);
+                    self.errors.push(recoverable.clone());
+                    let source = fallback_source(expression);
+                    return Ok(ExpressionOutput {
+                        value: self.recover_format_error(expression, &source, &recoverable),
+                        raw_value: raw_value.clone(),
+                        had_error: true,
+                        source: None,
+                        bidi_direction: None,
+                        fallback_source: Some(source),
+                    });
+                }
+                Err(error) => return Err(error),
+            };
+            let bidi_direction = match bidi_direction_from_source(source.as_ref()) {
+                Ok(direction) => direction,
+                Err(error) if self.fallback => {
+                    return Ok(self.recover_bidi_direction_error(expression, error));
+                }
+                Err(error) => return Err(error),
+            };
             return Ok(ExpressionOutput {
                 value,
+                raw_value,
                 had_error,
                 source,
                 bidi_direction,
@@ -1282,7 +1336,13 @@ impl<'a> FormatContext<'a> {
             });
         };
         self.record_function_resolution_errors(function, source.as_ref())?;
-        let bidi_direction = bidi_direction_for_function(function, source.as_ref())?;
+        let bidi_direction = match bidi_direction_for_function(function, source.as_ref()) {
+            Ok(direction) => direction,
+            Err(error) if self.fallback => {
+                return Ok(self.recover_bidi_direction_error(expression, error));
+            }
+            Err(error) => return Err(error),
+        };
 
         let source_value = source
             .as_ref()
@@ -1297,6 +1357,7 @@ impl<'a> FormatContext<'a> {
             source.as_ref(),
         ) {
             Ok(formatted) => Ok(ExpressionOutput {
+                raw_value: ArgumentValue::String(formatted.clone()),
                 value: formatted,
                 had_error: false,
                 source: Some(ResolvedFunctionSource::new(
@@ -1313,6 +1374,7 @@ impl<'a> FormatContext<'a> {
                 let source = fallback_source(expression);
                 Ok(ExpressionOutput {
                     value: self.recover_format_error(expression, &source, &recoverable),
+                    raw_value: ArgumentValue::String(String::new()),
                     had_error: true,
                     source: None,
                     bidi_direction: None,
@@ -1321,6 +1383,23 @@ impl<'a> FormatContext<'a> {
             }
             Err(error) => Err(error),
         }
+    }
+
+    fn primitive_value_to_string(
+        &self,
+        raw_value: &ArgumentValue,
+        fallback_value: &str,
+    ) -> Result<String, Diagnostic> {
+        if matches!(raw_value, ArgumentValue::Number(_)) {
+            return format_number_core(
+                raw_value.clone(),
+                &NumberCoreOptions {
+                    locale: self.locale.clone(),
+                    ..NumberCoreOptions::default()
+                },
+            );
+        }
+        Ok(fallback_value.to_string())
     }
 
     fn recover_missing_argument(
@@ -1370,6 +1449,24 @@ impl<'a> FormatContext<'a> {
                 error,
             },
         )
+    }
+
+    fn recover_bidi_direction_error(
+        &mut self,
+        expression: &Expression,
+        error: Diagnostic,
+    ) -> ExpressionOutput {
+        let recoverable = fallback_error(error);
+        self.errors.push(recoverable.clone());
+        let source = fallback_source(expression);
+        ExpressionOutput {
+            value: self.recover_format_error(expression, &source, &recoverable),
+            raw_value: ArgumentValue::String(String::new()),
+            had_error: true,
+            source: None,
+            bidi_direction: None,
+            fallback_source: Some(source),
+        }
     }
 
     fn record_function_resolution_errors(
@@ -1448,17 +1545,14 @@ struct ResolvedValue {
 }
 
 impl ResolvedValue {
+    fn new(value: ArgumentValue, source: Option<ResolvedFunctionSource>) -> Self {
+        Self { value, source }
+    }
+
     fn from_argument(value: ArgumentValue) -> Self {
         Self {
             value,
             source: None,
-        }
-    }
-
-    fn string(value: String, source: Option<ResolvedFunctionSource>) -> Self {
-        Self {
-            value: ArgumentValue::String(value),
-            source,
         }
     }
 
@@ -1498,6 +1592,7 @@ impl ResolvedFunctionSource {
 #[derive(Debug, Clone)]
 struct ExpressionOutput {
     value: String,
+    raw_value: ArgumentValue,
     had_error: bool,
     source: Option<ResolvedFunctionSource>,
     bidi_direction: Option<BidiDirection>,
@@ -1647,6 +1742,162 @@ fn literal_key_matches(value: &str, selector: &SelectorValue) -> bool {
     }
 }
 
+fn numeric_literal_key_matches_source(value: &str, selector: &SelectorValue) -> bool {
+    preferred_numeric_source_key(selector)
+        .is_some_and(|source_key| value == source_key && is_decimal_operand(value))
+}
+
+fn preferred_numeric_source_key(selector: &SelectorValue) -> Option<String> {
+    let function_name = selector.function.as_ref()?.name.as_str();
+    if function_name != "number" && function_name != "percent" {
+        return None;
+    }
+    let source_value = numeric_source_value(selector.source.as_ref(), function_name)?;
+    let operand = parse_source_decimal(source_value)?;
+    if function_name == "percent" {
+        return render_source_decimal(
+            SourceDecimal {
+                scale: operand.scale - 2,
+                ..operand
+            },
+            false,
+        );
+    }
+    if operand.has_exponent {
+        render_source_decimal(operand, true)
+    } else {
+        Some(source_value.to_string())
+    }
+}
+
+fn numeric_source_value<'a>(
+    source: Option<&'a ResolvedFunctionSource>,
+    function_name: &str,
+) -> Option<&'a str> {
+    let mut current = source;
+    while let Some(source) = current {
+        if source.function.name == function_name {
+            return Some(&source.value);
+        }
+        current = source.inherited.as_deref();
+    }
+    None
+}
+
+struct SourceDecimal {
+    negative: bool,
+    digits: String,
+    scale: i64,
+    has_exponent: bool,
+}
+
+fn parse_source_decimal(value: &str) -> Option<SourceDecimal> {
+    let negative = value.starts_with('-');
+    let unsigned = if negative { &value[1..] } else { value };
+    if unsigned.is_empty() {
+        return None;
+    }
+    let (significand, exponent_text, has_exponent) =
+        if let Some(index) = unsigned.find(|character| character == 'e' || character == 'E') {
+            let exponent_text = &unsigned[index + 1..];
+            if exponent_text.is_empty()
+                || unsigned[index + 1..].contains(|character| character == 'e' || character == 'E')
+            {
+                return None;
+            }
+            (&unsigned[..index], exponent_text, true)
+        } else {
+            (unsigned, "", false)
+        };
+    let exponent = parse_source_exponent(exponent_text)?;
+    let mut parts = significand.split('.');
+    let integer = parts.next()?;
+    let fraction = parts.next().unwrap_or("");
+    if parts.next().is_some()
+        || integer.is_empty()
+        || (integer.len() > 1 && integer.starts_with('0'))
+        || !integer.bytes().all(|byte| byte.is_ascii_digit())
+        || (!fraction.is_empty() && !fraction.bytes().all(|byte| byte.is_ascii_digit()))
+        || (significand.contains('.') && fraction.is_empty())
+    {
+        return None;
+    }
+    let digits = format!("{integer}{fraction}");
+    let digits = digits.trim_start_matches('0');
+    let digits = if digits.is_empty() { "0" } else { digits }.to_string();
+    Some(SourceDecimal {
+        negative: negative && digits != "0",
+        digits,
+        scale: fraction.len() as i64 - exponent,
+        has_exponent,
+    })
+}
+
+fn parse_source_exponent(value: &str) -> Option<i64> {
+    if value.is_empty() {
+        return Some(0);
+    }
+    let negative = value.starts_with('-');
+    let unsigned = if negative || value.starts_with('+') {
+        &value[1..]
+    } else {
+        value
+    };
+    if unsigned.is_empty() || !unsigned.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    let digits = unsigned.trim_start_matches('0');
+    let digits = if digits.is_empty() { "0" } else { digits };
+    if digits.len() > 7 {
+        return None;
+    }
+    let parsed = digits.parse::<i64>().ok()?;
+    if parsed > MAX_SOURCE_DECIMAL_EXPONENT {
+        return None;
+    }
+    Some(if negative { -parsed } else { parsed })
+}
+
+fn render_source_decimal(operand: SourceDecimal, trim_fraction_zeros: bool) -> Option<String> {
+    let digit_len = operand.digits.len() as i64;
+    let extra_length = if operand.scale > digit_len {
+        operand.scale - digit_len
+    } else {
+        (-operand.scale).max(0)
+    };
+    if operand.digits.len() + extra_length as usize + 2 > MAX_SOURCE_DECIMAL_KEY_LENGTH {
+        return None;
+    }
+    let mut text = if operand.scale <= 0 {
+        format!(
+            "{}{}",
+            operand.digits,
+            "0".repeat((-operand.scale) as usize)
+        )
+    } else if operand.scale >= digit_len {
+        format!(
+            "0.{}{}",
+            "0".repeat((operand.scale - digit_len) as usize),
+            operand.digits
+        )
+    } else {
+        let split = operand.digits.len() - operand.scale as usize;
+        format!("{}.{}", &operand.digits[..split], &operand.digits[split..])
+    };
+    if trim_fraction_zeros && text.contains('.') {
+        while text.ends_with('0') {
+            text.pop();
+        }
+        if text.ends_with('.') {
+            text.pop();
+        }
+    }
+    if operand.negative {
+        text.insert(0, '-');
+    }
+    Some(text)
+}
+
 fn normalize_string_key(value: &str) -> String {
     value.nfc().collect()
 }
@@ -1703,7 +1954,7 @@ fn model_error(code: impl Into<String>, message: impl Into<String>) -> Diagnosti
 fn fallback_source(expression: &Expression) -> String {
     match (&expression.arg, &expression.function) {
         (Some(arg), _) => expression_arg_source(arg),
-        (None, Some(function)) => function_source(function),
+        (None, Some(function)) => function_name_source(function),
         (None, None) => String::new(),
     }
 }
@@ -1755,6 +2006,10 @@ fn function_source(function: &FunctionRef) -> String {
         }
     }
     source
+}
+
+fn function_name_source(function: &FunctionRef) -> String {
+    format!(":{}", function.name)
 }
 
 fn quote_literal_source(value: &str) -> String {

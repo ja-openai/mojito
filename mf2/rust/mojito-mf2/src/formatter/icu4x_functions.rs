@@ -12,6 +12,8 @@ use crate::diagnostic::Diagnostic;
 
 use super::{FunctionCall, FunctionRegistry};
 
+const MAX_FRACTION_DIGITS: i16 = 100;
+
 pub(super) fn register(registry: &mut FunctionRegistry) {
     registry.register_formatter("number", format_icu4x_number);
     registry.register_formatter("integer", format_icu4x_integer);
@@ -234,6 +236,11 @@ fn non_negative_i16_option(
             "{option_name} option is outside the supported integer range."
         ))
     })?;
+    if parsed > MAX_FRACTION_DIGITS {
+        return Err(bad_option(format!(
+            "{option_name} option must be a non-negative integer."
+        )));
+    }
     Ok(Some(parsed))
 }
 
