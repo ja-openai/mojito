@@ -1063,6 +1063,13 @@
   gap: var(--space-1);
 }
 
+.json-config-localization-page__config-editor-toolbar-group a.json-code-editor__history-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
 .json-config-localization-page__config-editor-toolbar-group:last-child {
   justify-content: flex-end;
   margin-left: auto;
