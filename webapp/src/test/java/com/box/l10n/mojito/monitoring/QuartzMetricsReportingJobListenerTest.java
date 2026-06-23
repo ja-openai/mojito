@@ -69,19 +69,19 @@ public class QuartzMetricsReportingJobListenerTest {
 
     TestAwait.untilAsserted(
         Duration.ofSeconds(10),
-        () -> assertThat(timerSearchExecution.timers()).isNotEmpty(),
+        () ->
+            assertThat(timerSearchExecution.timer().takeSnapshot().count())
+                .isGreaterThanOrEqualTo(5),
         MeterNotFoundException.class);
-
-    assertThat(timerSearchExecution.timer().takeSnapshot().count()).isGreaterThanOrEqualTo(5);
     assertThat(timerSearchExecution.timer().takeSnapshot().mean())
         .isGreaterThanOrEqualTo(JOB_SLEEP_TIME);
 
     TestAwait.untilAsserted(
         Duration.ofSeconds(10),
-        () -> assertThat(timerSearchWaiting.timers()).isNotEmpty(),
+        () ->
+            assertThat(timerSearchWaiting.timer().takeSnapshot().count()).isGreaterThanOrEqualTo(5),
         MeterNotFoundException.class);
 
-    assertThat(timerSearchWaiting.timer().takeSnapshot().count()).isGreaterThanOrEqualTo(5);
     assertThat(timerSearchWaiting.timer().takeSnapshot().mean()).isGreaterThan(0);
   }
 

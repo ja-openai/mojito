@@ -10,7 +10,6 @@ import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.security.user.Authority;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.entity.security.user.UserLocale;
-import com.box.l10n.mojito.security.AuditorAwareImpl;
 import com.box.l10n.mojito.security.Role;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
@@ -44,8 +43,6 @@ public class UserWS {
   @Autowired UserRepository userRepository;
 
   @Autowired UserService userService;
-
-  @Autowired AuditorAwareImpl auditorAwareImpl;
 
   @Autowired UserProfileMapper userProfileMapper;
 
@@ -90,8 +87,8 @@ public class UserWS {
   @RequestMapping(value = "/api/users/me", method = RequestMethod.GET)
   public ResponseEntity<UserProfile> getCurrentUser() {
     UserProfile userProfile =
-        auditorAwareImpl
-            .getCurrentAuditor()
+        userService
+            .getCurrentUser()
             .map(userProfileMapper::toUserProfile)
             .orElse(new UserProfile());
 

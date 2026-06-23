@@ -38,7 +38,7 @@ public class ApplicationCache extends BaseEntity {
       foreignKey = @ForeignKey(name = "FK__APPLICATION_CACHE__CACHE_TYPE_ID"))
   private ApplicationCacheType applicationCacheType;
 
-  @Column(name = "key_md5", length = 32)
+  @Column(name = "key_md5", length = 32, columnDefinition = "CHAR(32)")
   private String keyMD5;
 
   @Column(name = "value", length = Integer.MAX_VALUE)

@@ -6,7 +6,6 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
-import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -34,8 +33,7 @@ import org.hibernate.envers.RelationTargetAuditMode;
       @UniqueConstraint(
           name = "UK__CMS_CONTENT_TYPE_FIELD__ID_TYPE",
           columnNames = {"id", "content_type_id"})
-    },
-    indexes = {@Index(name = "I__CMS_CONTENT_TYPE_FIELD__TYPE", columnList = "content_type_id")})
+    })
 public class CmsContentTypeField extends CmsAuditableEntity {
 
   public enum FieldType {

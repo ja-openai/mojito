@@ -5,10 +5,11 @@ import { fetchRepositories } from '../api/repositories';
 
 const REPOSITORIES_QUERY_KEY = ['repositories'];
 
-export const useRepositories = () => {
+export const useRepositories = (enabled = true) => {
   return useQuery<ApiRepository[]>({
     queryKey: REPOSITORIES_QUERY_KEY,
     queryFn: fetchRepositories,
+    enabled,
     staleTime: 30_000,
   });
 };

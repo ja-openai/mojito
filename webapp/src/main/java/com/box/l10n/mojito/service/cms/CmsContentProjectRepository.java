@@ -31,19 +31,6 @@ public interface CmsContentProjectRepository extends JpaRepository<CmsContentPro
   @Query("select p from CmsContentProject p where p.id = :id")
   Optional<CmsContentProject> findByIdWithRepositoryAndAsset(@Param("id") Long id);
 
-  @EntityGraph(
-      attributePaths = {
-        "repository",
-        "asset",
-        "asset.lastSuccessfulAssetExtraction",
-        "repository.sourceLocale",
-        "createdByUser",
-        "lastModifiedByUser"
-      })
-  @Query("select p from CmsContentProject p where lower(p.projectKey) = lower(:projectKey)")
-  Optional<CmsContentProject> findByProjectKeyWithRepositoryAndAsset(
-      @Param("projectKey") String projectKey);
-
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @EntityGraph(
       attributePaths = {
@@ -54,7 +41,7 @@ public interface CmsContentProjectRepository extends JpaRepository<CmsContentPro
         "createdByUser",
         "lastModifiedByUser"
       })
-  @Query("select p from CmsContentProject p where lower(p.projectKey) = lower(:projectKey)")
+  @Query("select p from CmsContentProject p where p.projectKey = :projectKey")
   Optional<CmsContentProject> findByProjectKeyWithRepositoryAndAssetForUpdate(
       @Param("projectKey") String projectKey);
 

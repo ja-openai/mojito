@@ -51,9 +51,6 @@ import org.hibernate.envers.RelationTargetAuditMode;
     },
     indexes = {
       @Index(
-          name = "I__CMS_CONTENT_ENTRY_VARIANT__ENTRY_TYPE",
-          columnList = "content_entry_id, content_type_id"),
-      @Index(
           name = "I__CMS_CONTENT_ENTRY_VARIANT__ENTRY_TYPE_PROJECT",
           columnList = "content_entry_id, content_type_id, content_project_id")
     })

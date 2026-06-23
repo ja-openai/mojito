@@ -10,8 +10,10 @@ import org.springframework.stereotype.Component;
 public class CmsContentConfigurationProperties {
 
   public static final long DEFAULT_MAX_PUBLISH_ARTIFACT_BYTES = 1024L * 1024L;
+  public static final long DEFAULT_MAX_AUTHORING_DETAIL_BYTES = DEFAULT_MAX_PUBLISH_ARTIFACT_BYTES;
 
   private long maxPublishArtifactBytes = DEFAULT_MAX_PUBLISH_ARTIFACT_BYTES;
+  private long maxAuthoringDetailBytes = DEFAULT_MAX_AUTHORING_DETAIL_BYTES;
   private String snapshotSigningKeyId;
   private Map<String, String> snapshotSigningKeys = new LinkedHashMap<>();
 
@@ -21,6 +23,14 @@ public class CmsContentConfigurationProperties {
 
   public void setMaxPublishArtifactBytes(long maxPublishArtifactBytes) {
     this.maxPublishArtifactBytes = maxPublishArtifactBytes;
+  }
+
+  public long getMaxAuthoringDetailBytes() {
+    return maxAuthoringDetailBytes;
+  }
+
+  public void setMaxAuthoringDetailBytes(long maxAuthoringDetailBytes) {
+    this.maxAuthoringDetailBytes = maxAuthoringDetailBytes;
   }
 
   public String getSnapshotSigningKeyId() {

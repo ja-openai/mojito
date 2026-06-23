@@ -216,9 +216,6 @@ alter table cms_content_type_field
     add constraint CK__CMS_CONTENT_TYPE_FIELD__ENTITY_VERSION
         check (entity_version >= 0);
 
-create index I__CMS_CONTENT_TYPE_FIELD__TYPE
-    on cms_content_type_field(content_type_id);
-
 create table cms_content_entry (
     id bigint(20) NOT NULL AUTO_INCREMENT,
     created_date datetime DEFAULT NULL,
@@ -320,9 +317,6 @@ alter table cms_content_entry_variant
     add constraint FK__CMS_CONTENT_ENTRY_VARIANT__TYPE
         foreign key (content_type_id) references cms_content_type (id);
 
-create index I__CMS_CONTENT_ENTRY_VARIANT__ENTRY_TYPE
-    on cms_content_entry_variant(content_entry_id, content_type_id);
-
 create index I__CMS_CONTENT_ENTRY_VARIANT__ENTRY_TYPE_PROJECT
     on cms_content_entry_variant(content_entry_id, content_type_id, content_project_id);
 
@@ -420,9 +414,6 @@ alter table cms_content_field_mapping
 alter table cms_content_field_mapping
     add constraint FK__CMS_CONTENT_FIELD_MAPPING__TYPE
         foreign key (content_type_id) references cms_content_type (id);
-
-create index I__CMS_CONTENT_FIELD_MAPPING__VARIANT_TYPE
-    on cms_content_field_mapping(content_entry_variant_id, content_type_id);
 
 create index I__CMS_CONTENT_FIELD_MAPPING__VARIANT_TYPE_PROJECT
     on cms_content_field_mapping(content_entry_variant_id, content_type_id, content_project_id);
@@ -712,7 +703,7 @@ alter table cms_publish_snapshot
 
 alter table cms_publish_snapshot
     add constraint CK__CMS_PUBLISH_SNAPSHOT__ARTIFACT_BYTE_SIZE
-        check (artifact_byte_size >= 0);
+        check (artifact_byte_size > 0);
 
 alter table cms_publish_snapshot
     add constraint CK__CMS_PUBLISH_SNAPSHOT__SNAPSHOT_SIGNING_KEY_ID
@@ -734,6 +725,3 @@ create table cms_publish_snapshot_seal (
 alter table cms_publish_snapshot_seal
     add constraint FK__CMS_PUBLISH_SNAPSHOT_SEAL__SNAPSHOT
         foreign key (publish_snapshot_id) references cms_publish_snapshot (id);
-
-create index I__CMS_PUBLISH_SNAPSHOT__PROJECT_CREATED
-    on cms_publish_snapshot(content_project_id, created_date);

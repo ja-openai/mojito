@@ -4,8 +4,8 @@ import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.rest.security.CsrfTokenController;
 import com.box.l10n.mojito.rest.security.UserProfile;
 import com.box.l10n.mojito.rest.security.UserProfileMapper;
-import com.box.l10n.mojito.security.AuditorAwareImpl;
 import com.box.l10n.mojito.security.Role;
+import com.box.l10n.mojito.service.security.user.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.IllformedLocaleException;
 import java.util.Locale;
@@ -30,9 +30,9 @@ public class FrontendConfigController {
 
   @Autowired ReactStaticAppConfig reactStaticAppConfig;
 
-  @Autowired AuditorAwareImpl auditorAwareImpl;
-
   @Autowired UserProfileMapper userProfileMapper;
+
+  @Autowired UserService userService;
 
   @Value("${server.contextPath:}")
   String contextPath = "";
@@ -53,8 +53,8 @@ public class FrontendConfigController {
   }
 
   UserProfile getUserProfile() {
-    return auditorAwareImpl
-        .getCurrentAuditor()
+    return userService
+        .getCurrentUser()
         .filter(user -> !hasCmsDeliveryRole(user))
         .map(userProfileMapper::toUserProfile)
         .orElse(new UserProfile());

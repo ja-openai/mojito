@@ -30,7 +30,9 @@ import org.springframework.data.annotation.CreatedBy;
 @Entity
 @Table(
     name = "user",
-    indexes = {@Index(name = "I__USERS__USERNAME", columnList = "username", unique = true)})
+    indexes = {
+      @Index(name = User.USERNAME_UNIQUE_INDEX_NAME, columnList = "username", unique = true)
+    })
 @BatchSize(size = 1000)
 @NamedEntityGraph(
     name = "User.legacy",
@@ -50,6 +52,7 @@ import org.springframework.data.annotation.CreatedBy;
 public class User extends AuditableEntity implements Serializable {
 
   public static final int NAME_MAX_LENGTH = 255;
+  public static final String USERNAME_UNIQUE_INDEX_NAME = "I__USERS__USERNAME";
 
   @Basic(optional = false)
   @Column(name = "username")

@@ -38,8 +38,7 @@ public class TMTextUnitCurrentVariantService {
    */
   @Transactional
   public boolean removeCurrentVariant(Long tmTextUnitCurrentVariantId) {
-    TMTextUnitCurrentVariant tmtucv =
-        tmTextUnitCurrentVariantRepository.findById(tmTextUnitCurrentVariantId).orElse(null);
+    TMTextUnitCurrentVariant tmtucv = lockAndReloadCurrentVariant(tmTextUnitCurrentVariantId);
 
     if (tmtucv == null) {
       logger.debug("No current variant, do nothing");
@@ -48,12 +47,6 @@ public class TMTextUnitCurrentVariantService {
       logger.debug(
           "Update tmTextUnitCurrentVariant with id: {} to remove the current variant (\"remove\" current translation)",
           tmtucv.getId());
-      tmTextUnitCurrentVariantMutationLockService.lockTextUnit(tmtucv.getTmTextUnit().getId());
-      tmtucv = tmTextUnitCurrentVariantRepository.findById(tmTextUnitCurrentVariantId).orElse(null);
-      if (tmtucv == null) {
-        logger.debug("Current variant was removed before lock, do nothing");
-        return false;
-      }
       tmtucv.setTmTextUnitVariant(null);
       tmTextUnitCurrentVariantRepository.save(tmtucv);
       return true;
@@ -92,7 +85,7 @@ public class TMTextUnitCurrentVariantService {
       }
 
       TMTextUnitCurrentVariant currentVariant =
-          tmTextUnitCurrentVariantRepository.findById(tmTextUnitCurrentVariantId).orElse(null);
+          lockAndReloadCurrentVariant(tmTextUnitCurrentVariantId);
       if (currentVariant == null || currentVariant.getTmTextUnitVariant() == null) {
         continue;
       }
@@ -113,5 +106,17 @@ public class TMTextUnitCurrentVariantService {
     }
 
     return updatedCount;
+  }
+
+  private TMTextUnitCurrentVariant lockAndReloadCurrentVariant(Long tmTextUnitCurrentVariantId) {
+    TMTextUnitCurrentVariant currentVariant =
+        tmTextUnitCurrentVariantRepository.findById(tmTextUnitCurrentVariantId).orElse(null);
+    if (currentVariant == null) {
+      return null;
+    }
+
+    tmTextUnitCurrentVariantMutationLockService.lockTextUnit(
+        currentVariant.getTmTextUnit().getId());
+    return tmTextUnitCurrentVariantRepository.findById(tmTextUnitCurrentVariantId).orElse(null);
   }
 }

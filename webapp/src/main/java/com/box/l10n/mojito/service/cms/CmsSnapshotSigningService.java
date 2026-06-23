@@ -17,9 +17,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class CmsSnapshotSigningService {
 
-  private static final String SIGNATURE_ALGORITHM = "HmacSHA256";
-  private static final String SNAPSHOT_SIGNATURE_VERSION = "mojito.microCms.snapshot-signature.v1";
-  private static final String ARTIFACT_SIGNATURE_VERSION = "mojito.microCms.artifact-signature.v1";
+  public static final String SIGNATURE_ALGORITHM = "HmacSHA256";
+  public static final String SNAPSHOT_SIGNATURE_VERSION = "mojito.microCms.snapshot-signature.v1";
+  public static final String ARTIFACT_SIGNATURE_VERSION = "mojito.microCms.artifact-signature.v1";
   private static final int MIN_SIGNING_KEY_BYTES = 32;
   private static final Pattern SIGNING_KEY_ID_PATTERN = Pattern.compile("[a-z0-9][a-z0-9_-]*");
 
@@ -34,6 +34,10 @@ public class CmsSnapshotSigningService {
     snapshot.setSnapshotSigningKeyId(signingKeyId);
     snapshot.setSnapshotSignature(computeSnapshotSignature(snapshot, signingKeyId));
     snapshot.setArtifactSignature(computeArtifactSignature(snapshot, signingKeyId));
+  }
+
+  public void validateActiveConfiguration() {
+    requireActiveSigningKeyId();
   }
 
   public void validate(CmsPublishSnapshot snapshot) {
@@ -73,7 +77,8 @@ public class CmsSnapshotSigningService {
   }
 
   private String requireSigningKey(String signingKeyId) {
-    if (!SIGNING_KEY_ID_PATTERN.matcher(signingKeyId).matches()) {
+    if (signingKeyId.length() > CmsPublishSnapshot.SNAPSHOT_SIGNING_KEY_ID_MAX_LENGTH
+        || !SIGNING_KEY_ID_PATTERN.matcher(signingKeyId).matches()) {
       throw new IllegalStateException("CMS snapshot signing key ID is invalid: " + signingKeyId);
     }
     String signingKey = configurationProperties.getSnapshotSigningKeys().get(signingKeyId);

@@ -31,6 +31,7 @@ import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantMutationLockService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -52,25 +53,33 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class CmsContentService {
 
+  private static final Logger logger = LoggerFactory.getLogger(CmsContentService.class);
+
   public static final int DEFAULT_LIMIT = 50;
   public static final int MAX_LIMIT = 200;
 
-  private static final int PUBLISH_SNAPSHOT_HISTORY_LIMIT = 10;
+  private static final int PUBLISH_SNAPSHOT_HISTORY_PAGE_LIMIT = 10;
+  private static final int MAX_PUBLISH_SNAPSHOT_HISTORY_PAGE_LIMIT = 50;
   private static final String SNAPSHOT_ARTIFACT_FORMAT_VERSION = "mojito.microCms.v1";
   private static final String SNAPSHOT_DELIVERY_DESCRIPTOR_FORMAT_VERSION =
       "mojito.microCms.snapshot-delivery-descriptor.v1";
   private static final String PUBLISH_PACKAGE_STATE_FORMAT_VERSION =
       "mojito.microCms.publish-package-state.v1";
+  private static final Instant MAX_SNAPSHOT_ARTIFACT_GENERATED_AT = Instant.MAX;
   private static final Pattern KEY_PATTERN = Pattern.compile("[a-z0-9][a-z0-9_-]*");
   private static final Set<String> DELIVERY_HINTS =
       Set.of("BLOB_CDN", "STATSIG_DYNAMIC_CONFIG", "EXPERIENCE_FRAMEWORK");
@@ -190,7 +199,10 @@ public class CmsContentService {
     this.snapshotSigningService = snapshotSigningService;
     this.configurationProperties = configurationProperties;
     this.strictTreeObjectMapper =
-        objectMapper.copy().enable(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY);
+        objectMapper
+            .copy()
+            .enable(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY)
+            .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
   }
 
   @Transactional(readOnly = true)
@@ -211,6 +223,20 @@ public class CmsContentService {
   }
 
   @Transactional(isolation = Isolation.READ_COMMITTED)
+  public PublishSnapshotHistoryView getProjectPublishSnapshots(
+      Long projectId, Integer beforeSnapshotVersion, Integer limit) {
+    requireAdmin();
+    int normalizedLimit = normalizePublishSnapshotHistoryLimit(limit);
+    int recentArtifactValidationLimit =
+        normalizePublishSnapshotArtifactValidationLimit(normalizedLimit);
+    CmsContentProject project = findProjectForUpdate(projectId);
+    validatePublishSnapshotHistory(project);
+    validateRecentPublishSnapshotArtifacts(project, recentArtifactValidationLimit);
+    return loadPublishSnapshotHistory(
+        project, beforeSnapshotVersion, normalizedLimit, recentArtifactValidationLimit);
+  }
+
+  @Transactional(isolation = Isolation.READ_COMMITTED)
   public ProjectDetail createProject(ProjectCommand command) {
     requireAdmin();
     command =
@@ -218,7 +244,8 @@ public class CmsContentService {
     String key = normalizeKey(command.projectKey(), "Project key");
     ensureProjectKeyAvailable(key, null);
     String name = normalizeName(command.name(), CmsContentProject.NAME_MAX_LENGTH, "Project name");
-    Repository repository = resolveRepository(command.repositoryId());
+    Repository repository =
+        resolveRepository(requireBodySelectorId(command.repositoryId(), "Repository id"));
     Asset asset = resolveProjectAsset(repository, normalizeAssetPath(command.assetPath(), key));
     ensureProjectAssetAvailable(asset, null);
 
@@ -294,15 +321,15 @@ public class CmsContentService {
     CmsContentType contentType = findContentType(contentTypeId);
     requireExpectedVersion(
         contentType.getEntityVersion(), command.expectedVersion(), "Content type");
-    contentType.setName(
+    String name =
         command.hasName()
             ? normalizeName(command.name(), CmsContentType.NAME_MAX_LENGTH, "Content type name")
-            : contentType.getName());
-    contentType.setDescription(
+            : contentType.getName();
+    String description =
         command.hasDescription()
             ? normalizeOptionalText(
                 command.description(), CmsContentType.DESCRIPTION_MAX_LENGTH, "Description")
-            : contentType.getDescription());
+            : contentType.getDescription();
     rejectManualSchemaVersionChange(contentType, command.schemaVersion());
     String metadataSchemaJson =
         command.hasMetadataSchemaJson()
@@ -310,7 +337,10 @@ public class CmsContentService {
             : contentType.getMetadataSchemaJson();
     validateExistingMetadata(contentType, metadataSchemaJson);
     boolean schemaChanged =
-        !Objects.equals(contentType.getMetadataSchemaJson(), metadataSchemaJson);
+        !Objects.equals(contentType.getName(), name)
+            || !Objects.equals(contentType.getMetadataSchemaJson(), metadataSchemaJson);
+    contentType.setName(name);
+    contentType.setDescription(description);
     contentType.setMetadataSchemaJson(metadataSchemaJson);
     if (schemaChanged) {
       bumpContentTypeSchemaVersion(contentType);
@@ -388,7 +418,6 @@ public class CmsContentService {
                 : field.getSortOrder());
     boolean schemaChanged =
         !Objects.equals(field.getName(), name)
-            || !Objects.equals(field.getDescription(), description)
             || !Objects.equals(field.getFieldType(), fieldType)
             || !Objects.equals(field.getLocalizable(), localizable)
             || !Objects.equals(field.getRequired(), required)
@@ -412,7 +441,8 @@ public class CmsContentService {
     requireAdmin();
     command = command == null ? new EntryCommand(null, null, null, null, null, null) : command;
     CmsContentProject project = findProjectForUpdate(projectId);
-    CmsContentType contentType = findContentType(command.contentTypeId());
+    CmsContentType contentType =
+        findContentType(requireBodySelectorId(command.contentTypeId(), "Content type id"));
     if (!Objects.equals(contentType.getProject().getId(), project.getId())) {
       throw new IllegalArgumentException(
           "Content type does not belong to project: " + contentType.getId());
@@ -497,6 +527,7 @@ public class CmsContentService {
     String candidateGroupKey =
         normalizeOptionalKey(command.candidateGroupKey(), "Candidate group key");
     validateCandidateGroupKey(status, candidateGroupKey);
+    validateActiveCandidateGroupInvariant(entry, status, candidateGroupKey, null);
     variant.setCandidateGroupKey(candidateGroupKey);
     ensureControlVariantInvariant(entry, status, null, null);
     setVariantStatus(variant, status);
@@ -528,6 +559,7 @@ public class CmsContentService {
     CmsContentEntryVariant.Status status =
         command.hasStatus() && command.status() != null ? command.status() : variant.getStatus();
     validateCandidateGroupKey(status, candidateGroupKey);
+    validateActiveCandidateGroupInvariant(entry, status, candidateGroupKey, variant.getId());
     variant.setCandidateGroupKey(candidateGroupKey);
     transitionVariantStatus(entry, variant, status);
     variant.setMetadataJson(
@@ -550,7 +582,8 @@ public class CmsContentService {
     command = command == null ? new FieldMappingCommand(null, null, null, null, null) : command;
     lockProjectForVariantUpdate(variantId);
     CmsContentEntryVariant variant = findVariant(variantId);
-    CmsContentTypeField field = findField(command.fieldId());
+    CmsContentTypeField field =
+        findField(requireBodySelectorId(command.fieldId(), "Content type field id"));
     CmsContentEntry entry = variant.getEntry();
     validateProjectRepositoryAvailable(entry.getProject());
     validateProjectVirtualAssetAvailable(entry.getProject());
@@ -633,6 +666,7 @@ public class CmsContentService {
             entry,
             "Entry does not have exactly one active control variant: ",
             "Entry has candidate variants without candidate group keys: ",
+            "Entry has candidate variants with multiple candidate group keys: ",
             "Entry has publishable variants without mapped localizable fields: ",
             "Entry has missing required field mappings: ");
     List<CmsContentFieldMapping> mappings = publishableState.mappings();
@@ -648,6 +682,8 @@ public class CmsContentService {
   public ProjectCompletenessView getProjectCompleteness(Long projectId, List<String> localeTags) {
     requireAdmin();
     CmsContentProject project = findProjectForUpdate(projectId);
+    validatePublishSnapshotHistory(project);
+    validateRecentPublishSnapshotArtifacts(project, PUBLISH_SNAPSHOT_HISTORY_PAGE_LIMIT);
     String authoringSha256 = buildPublishRequestAuthoringSha256(project);
     PublishPreflight preflight = buildPublishPreflight(project, localeTags, false);
     List<EntryCompletenessView> entries =
@@ -687,6 +723,7 @@ public class CmsContentService {
     String publishRequestLocaleTags = String.join(",", requestedLocaleTags);
     CmsContentProject project = findProjectForUpdate(projectId);
     validatePublishSnapshotHistory(project);
+    validateRecentPublishSnapshotArtifacts(project, PUBLISH_SNAPSHOT_HISTORY_PAGE_LIMIT);
     Optional<CmsPublishSnapshot> existingSnapshot =
         snapshotRepository.findByProjectIdAndPublishRequestKey(
             projectId, validatedPublishRequestKey);
@@ -701,7 +738,6 @@ public class CmsContentService {
     String publishRequestAuthoringSha256 = buildPublishRequestAuthoringSha256(project);
     requireMatchingExpectedPublishAuthoringSha256(
         expectedAuthoringSha256, publishRequestAuthoringSha256);
-    requireProjectDeliverable(project);
     User publisher = requireCurrentUser();
 
     PublishPreflight preflight = buildPublishPreflight(project, requestedLocaleTags, true);
@@ -741,25 +777,33 @@ public class CmsContentService {
     snapshot.setArtifactByteSize(artifactByteSize);
     snapshot.setCompletenessJson(completenessJson);
     snapshotSigningService.sign(snapshot);
+    validateSnapshotArtifactIntegrity(snapshot);
     CmsPublishSnapshot saved = snapshotRepository.save(snapshot);
     sealPublishSnapshot(saved);
     advanceLastPublishedSnapshotVersion(projectId, version - 1, version);
+    logPublishedSnapshotAfterCommit(
+        project.getProjectKey(),
+        version,
+        preflight.localeTags(),
+        artifactSha256,
+        artifactByteSize,
+        saved.getCreatedByUsername());
     return toPublishSnapshotView(saved);
   }
 
-  @Transactional(readOnly = true)
+  @Transactional(isolation = Isolation.READ_COMMITTED)
   public SnapshotArtifact getSnapshotArtifact(String projectKey, Integer snapshotVersion) {
     requireSnapshotDeliveryReader();
     String normalizedProjectKey = validateStableProjectKey(projectKey);
     int normalizedSnapshotVersion = requireSnapshotVersion(snapshotVersion);
-    CmsContentProject project = findProjectByKey(normalizedProjectKey);
+    CmsContentProject project = findProjectByKeyForUpdate(normalizedProjectKey);
     validatePublishSnapshotHistory(project);
     CmsPublishSnapshot snapshot =
         snapshotRepository
-            .findByProjectKeyAndSnapshotVersion(normalizedProjectKey, normalizedSnapshotVersion)
+            .findByProjectIdAndSnapshotVersion(project.getId(), normalizedSnapshotVersion)
             .orElseThrow(
                 () ->
-                    new IllegalArgumentException(
+                    new CmsContentNotFoundException(
                         "Publish snapshot not found: "
                             + normalizedProjectKey
                             + " v"
@@ -776,10 +820,10 @@ public class CmsContentService {
     requireProjectDeliverable(project);
     CmsPublishSnapshot snapshot =
         snapshotRepository
-            .findFirstByProjectProjectKeyIgnoreCaseOrderBySnapshotVersionDesc(normalizedProjectKey)
+            .findFirstByProjectIdOrderBySnapshotVersionDesc(project.getId())
             .orElseThrow(
                 () ->
-                    new IllegalArgumentException(
+                    new CmsContentNotFoundException(
                         "Published snapshot not found: " + normalizedProjectKey));
     return toSnapshotDeliveryDescriptor(snapshot);
   }
@@ -864,24 +908,59 @@ public class CmsContentService {
                     toContentTypeView(type, fieldsByTypeId.getOrDefault(type.getId(), List.of())))
             .toList();
 
-    List<PublishSnapshotView> snapshots =
-        snapshotRepository
-            .findByProjectIdOrderBySnapshotVersionDesc(
-                project.getId(), PageRequest.of(0, PUBLISH_SNAPSHOT_HISTORY_LIMIT))
-            .stream()
-            .map(this::toPublishSnapshotView)
-            .toList();
+    validateRecentPublishSnapshotArtifacts(project, PUBLISH_SNAPSHOT_HISTORY_PAGE_LIMIT);
+    PublishSnapshotHistoryView publishSnapshotHistory =
+        loadPublishSnapshotHistory(
+            project,
+            null,
+            PUBLISH_SNAPSHOT_HISTORY_PAGE_LIMIT,
+            PUBLISH_SNAPSHOT_HISTORY_PAGE_LIMIT);
 
-    return new ProjectDetail(
-        toProjectView(project),
-        buildPublishRequestAuthoringSha256(project),
-        typeViews,
-        entryViews,
-        snapshots);
+    ProjectDetail detail =
+        new ProjectDetail(
+            toProjectView(project),
+            buildPublishRequestAuthoringSha256(project),
+            typeViews,
+            entryViews,
+            publishSnapshotHistory.snapshots(),
+            publishSnapshotHistory.hasMore(),
+            publishSnapshotHistory.nextBeforeSnapshotVersion());
+    requireProjectDetailWithinConfiguredByteLimit(detail);
+    return detail;
+  }
+
+  private void validateRecentPublishSnapshotArtifacts(CmsContentProject project, int limit) {
+    snapshotRepository
+        .findByProjectIdOrderBySnapshotVersionDesc(project.getId(), PageRequest.of(0, limit))
+        .forEach(this::validateSnapshotArtifactIntegrity);
+  }
+
+  private PublishSnapshotHistoryView loadPublishSnapshotHistory(
+      CmsContentProject project,
+      Integer beforeSnapshotVersion,
+      int normalizedLimit,
+      int recentArtifactValidationLimit) {
+    List<CmsPublishSnapshotHistoryRow> historyRows =
+        beforeSnapshotVersion == null
+            ? snapshotRepository.findHistoryRowsByProjectIdOrderBySnapshotVersionDesc(
+                project.getId(), PageRequest.of(0, normalizedLimit + 1))
+            : snapshotRepository
+                .findHistoryRowsByProjectIdBeforeSnapshotVersionOrderBySnapshotVersionDesc(
+                    project.getId(),
+                    requireSnapshotHistoryBeforeVersion(
+                        project, beforeSnapshotVersion, recentArtifactValidationLimit),
+                    PageRequest.of(0, normalizedLimit + 1));
+    boolean hasMore = historyRows.size() > normalizedLimit;
+    List<PublishSnapshotView> snapshots =
+        historyRows.stream().limit(normalizedLimit).map(this::toPublishSnapshotView).toList();
+    Integer nextBeforeSnapshotVersion =
+        hasMore && !snapshots.isEmpty() ? snapshots.getLast().snapshotVersion() : null;
+    return new PublishSnapshotHistoryView(snapshots, hasMore, nextBeforeSnapshotVersion);
   }
 
   private PublishPackage buildPublishPackage(
       CmsContentProject project, PublishPreflight preflight) {
+    snapshotSigningService.validateActiveConfiguration();
     Map<String, Object> payload =
         buildArtifactPayload(
             project,
@@ -897,8 +976,29 @@ public class CmsContentService {
     String publishPackageJson = objectMapper.writeValueAsStringUnchecked(publishPackageState);
     long publishPackageByteSize = publishPackageJson.getBytes(StandardCharsets.UTF_8).length;
     requirePublishPackageWithinConfiguredByteLimit(publishPackageByteSize);
+    requirePublishArtifactWithinConfiguredByteLimit(buildMaximumPublishArtifactByteSize(payload));
+    if (preflight.completeness().stream().allMatch(LocaleCompleteness::complete)) {
+      validatePublishPackageArtifact(project, preflight, payload);
+    }
     return new PublishPackage(
         payload, DigestUtils.sha256Hex(publishPackageJson), publishPackageByteSize);
+  }
+
+  private void validatePublishPackageArtifact(
+      CmsContentProject project, PublishPreflight preflight, Map<String, Object> payload) {
+    CmsPublishSnapshot validationSnapshot = new CmsPublishSnapshot();
+    validationSnapshot.setProject(project);
+    validationSnapshot.setPublishedAt(Instant.EPOCH.toString());
+    validationSnapshot.setSnapshotVersion(1);
+    validationSnapshot.setLocaleTags(String.join(",", preflight.localeTags()));
+    validationSnapshot.setCompletenessJson(
+        objectMapper.writeValueAsStringUnchecked(preflight.completeness()));
+    JsonNode artifact =
+        readSnapshotJson(
+            buildArtifact(payload, validationSnapshot.getSnapshotVersion(), Instant.EPOCH),
+            "artifact JSON",
+            validationSnapshot);
+    validateSnapshotArtifactMetadata(validationSnapshot, artifact);
   }
 
   private String buildArtifact(Map<String, Object> payload, int version, Instant publishedAt) {
@@ -908,6 +1008,12 @@ public class CmsContentService {
     artifact.put("generatedAt", publishedAt.toString());
     artifact.putAll(payload);
     return objectMapper.writeValueAsStringUnchecked(artifact);
+  }
+
+  private long buildMaximumPublishArtifactByteSize(Map<String, Object> payload) {
+    return buildArtifact(payload, Integer.MAX_VALUE, MAX_SNAPSHOT_ARTIFACT_GENERATED_AT)
+        .getBytes(StandardCharsets.UTF_8)
+        .length;
   }
 
   private void requirePublishPackageWithinConfiguredByteLimit(long publishPackageByteSize) {
@@ -938,6 +1044,26 @@ public class CmsContentService {
       throw new IllegalStateException("CMS max publish artifact bytes must be positive");
     }
     return maxPublishArtifactBytes;
+  }
+
+  private void requireProjectDetailWithinConfiguredByteLimit(ProjectDetail detail) {
+    long projectDetailByteSize = objectMapper.writeValueAsBytes(detail).length;
+    long maxAuthoringDetailBytes = requireMaxAuthoringDetailBytes();
+    if (projectDetailByteSize > maxAuthoringDetailBytes) {
+      throw new IllegalArgumentException(
+          "Content project authoring detail exceeds configured byte limit: "
+              + projectDetailByteSize
+              + " > "
+              + maxAuthoringDetailBytes);
+    }
+  }
+
+  private long requireMaxAuthoringDetailBytes() {
+    long maxAuthoringDetailBytes = configurationProperties.getMaxAuthoringDetailBytes();
+    if (maxAuthoringDetailBytes <= 0) {
+      throw new IllegalStateException("CMS max authoring detail bytes must be positive");
+    }
+    return maxAuthoringDetailBytes;
   }
 
   private Map<String, Object> buildArtifactPayload(
@@ -1379,6 +1505,7 @@ public class CmsContentService {
       throw invalidSnapshotArtifact(snapshot, "entries");
     }
     Set<String> entryKeys = new LinkedHashSet<>();
+    Set<String> runtimeStringIds = new LinkedHashSet<>();
     for (JsonNode entry : entries) {
       if (!entry.isObject()) {
         throw invalidSnapshotArtifact(snapshot, "entries");
@@ -1401,7 +1528,8 @@ public class CmsContentService {
           requireSnapshotArtifactArray(entry, "variants", snapshot),
           contentTypeSchema,
           localeTags,
-          sourceLocale);
+          sourceLocale,
+          runtimeStringIds);
     }
   }
 
@@ -1410,11 +1538,13 @@ public class CmsContentService {
       JsonNode variants,
       ArtifactContentTypeSchema contentTypeSchema,
       List<String> localeTags,
-      String sourceLocale) {
+      String sourceLocale,
+      Set<String> runtimeStringIds) {
     if (variants.isEmpty()) {
       throw invalidSnapshotArtifact(snapshot, "variants");
     }
     Set<String> variantKeys = new LinkedHashSet<>();
+    Set<String> candidateGroupKeys = new LinkedHashSet<>();
     int controlVariantCount = 0;
     for (JsonNode variant : variants) {
       if (!variant.isObject()) {
@@ -1437,16 +1567,22 @@ public class CmsContentService {
       }
       if ("CONTROL".equals(status)) {
         controlVariantCount++;
+      } else {
+        candidateGroupKeys.add(candidateGroupKey.asText());
       }
       validateSnapshotArtifactFields(
           snapshot,
           requireSnapshotArtifactObject(variant, "fields", snapshot),
           contentTypeSchema,
           localeTags,
-          sourceLocale);
+          sourceLocale,
+          runtimeStringIds);
     }
     if (controlVariantCount != 1) {
       throw invalidSnapshotArtifact(snapshot, "control variants");
+    }
+    if (candidateGroupKeys.size() > 1) {
+      throw invalidSnapshotArtifact(snapshot, "candidate groups");
     }
   }
 
@@ -1455,7 +1591,8 @@ public class CmsContentService {
       JsonNode fields,
       ArtifactContentTypeSchema contentTypeSchema,
       List<String> localeTags,
-      String sourceLocale) {
+      String sourceLocale,
+      Set<String> runtimeStringIds) {
     if (fields.isEmpty()) {
       throw invalidSnapshotArtifact(snapshot, "fields");
     }
@@ -1470,8 +1607,12 @@ public class CmsContentService {
       JsonNode field = fieldEntry.getValue();
       requireSnapshotArtifactFields(
           field, SNAPSHOT_ARTIFACT_RUNTIME_FIELD_FIELDS, snapshot, "fields");
-      if (!hasUsableMojitoStringId(requireSnapshotArtifactText(field, "stringId", snapshot))) {
+      String stringId = requireSnapshotArtifactText(field, "stringId", snapshot);
+      if (!hasUsableMojitoStringId(stringId)) {
         throw invalidSnapshotArtifact(snapshot, "fields");
+      }
+      if (!runtimeStringIds.add(stringId)) {
+        throw invalidSnapshotArtifact(snapshot, "string IDs");
       }
       String source = requireSnapshotArtifactText(field, "source", snapshot);
       JsonNode values = requireSnapshotArtifactObject(field, "values", snapshot);
@@ -1576,7 +1717,11 @@ public class CmsContentService {
   }
 
   private boolean isArtifactKey(String key) {
-    return key != null && KEY_PATTERN.matcher(key).matches();
+    return isBoundedKey(key, CmsContentProject.KEY_MAX_LENGTH);
+  }
+
+  private boolean isBoundedKey(String key, int maxLength) {
+    return key != null && key.length() <= maxLength && KEY_PATTERN.matcher(key).matches();
   }
 
   private boolean isSha256(String value) {
@@ -1658,28 +1803,28 @@ public class CmsContentService {
   }
 
   private List<String> parseSnapshotLocaleTags(CmsPublishSnapshot snapshot) {
-    if (snapshot.getLocaleTags() == null || snapshot.getLocaleTags().isBlank()) {
-      throw new IllegalStateException(
-          "Publish snapshot locale tags are missing: " + snapshot.getId());
+    return parseSnapshotLocaleTags(snapshot.getLocaleTags(), snapshot.getId());
+  }
+
+  private List<String> parseSnapshotLocaleTags(String snapshotLocaleTags, Long snapshotId) {
+    if (snapshotLocaleTags == null || snapshotLocaleTags.isBlank()) {
+      throw new IllegalStateException("Publish snapshot locale tags are missing: " + snapshotId);
     }
     List<String> localeTags =
-        List.of(snapshot.getLocaleTags().split(",")).stream().map(String::trim).toList();
+        List.of(snapshotLocaleTags.split(",")).stream().map(String::trim).toList();
     if (localeTags.stream().anyMatch(String::isBlank)
         || localeTags.stream().anyMatch(localeTag -> !isCanonicalLocaleTag(localeTag))
         || new LinkedHashSet<>(localeTags).size() != localeTags.size()
         || !isCanonicalLocaleTagOrder(localeTags)
-        || !Objects.equals(snapshot.getLocaleTags(), String.join(",", localeTags))) {
-      throw new IllegalStateException(
-          "Publish snapshot locale tags are invalid: " + snapshot.getId());
+        || !Objects.equals(snapshotLocaleTags, String.join(",", localeTags))) {
+      throw new IllegalStateException("Publish snapshot locale tags are invalid: " + snapshotId);
     }
     return localeTags;
   }
 
   private void validateSnapshotPublishRequestMetadata(CmsPublishSnapshot snapshot) {
     String publishRequestKey = snapshot.getPublishRequestKey();
-    if (publishRequestKey == null
-        || publishRequestKey.length() > CmsPublishSnapshot.PUBLISH_REQUEST_KEY_MAX_LENGTH
-        || !isArtifactKey(publishRequestKey)) {
+    if (!isBoundedKey(publishRequestKey, CmsPublishSnapshot.PUBLISH_REQUEST_KEY_MAX_LENGTH)) {
       throw new IllegalStateException(
           "Publish snapshot request key is invalid: " + snapshot.getId());
     }
@@ -1819,8 +1964,7 @@ public class CmsContentService {
 
   private PublishPreflight buildPublishPreflight(
       CmsContentProject project, List<String> requestedLocaleTags, boolean lockTranslationState) {
-    validateProjectRepositoryAvailable(project);
-    validateProjectVirtualAssetAvailable(project);
+    requireProjectDeliverable(project);
     List<CmsContentEntry> publishableEntries = findPublishableEntries(project.getId());
     if (publishableEntries.isEmpty()) {
       throw new IllegalArgumentException("Content project has no ready entries to publish");
@@ -1831,7 +1975,9 @@ public class CmsContentService {
         publishableVariants,
         "Cannot publish ready entries without exactly one active control variant: ");
     validatePublishableVariantCandidateGroups(
-        publishableVariants, "Cannot publish candidate variants without candidate group keys: ");
+        publishableVariants,
+        "Cannot publish candidate variants without candidate group keys: ",
+        "Cannot publish ready candidate variants with multiple candidate group keys: ");
     validateArtifactMetadata(publishableEntries, publishableVariants);
     List<CmsContentFieldMapping> mappings =
         mappingRepository.findMappingsByProjectId(project.getId()).stream()
@@ -1903,12 +2049,13 @@ public class CmsContentService {
     LinkedHashSet<String> lookupLocaleTags = new LinkedHashSet<>(localeTags);
     for (String localeTag : localeTags) {
       RepositoryLocale repositoryLocale = repositoryLocalesByTag.get(localeTag);
+      LinkedHashSet<String> visitedLocaleTags = new LinkedHashSet<>();
+      visitedLocaleTags.add(localeTag);
       while (repositoryLocale != null && repositoryLocale.getParentLocale() != null) {
         repositoryLocale = repositoryLocale.getParentLocale();
-        if (repositoryLocale.getLocale() == null) {
-          break;
-        }
-        lookupLocaleTags.add(repositoryLocale.getLocale().getBcp47Tag());
+        String parentLocaleTag = requireRepositoryLocaleTag(repositoryLocale, localeTag);
+        requireAcyclicRepositoryLocaleInheritance(visitedLocaleTags, parentLocaleTag, localeTag);
+        lookupLocaleTags.add(parentLocaleTag);
       }
     }
     return List.copyOf(lookupLocaleTags);
@@ -1941,17 +2088,40 @@ public class CmsContentService {
     if (repositoryLocale == null || repositoryLocale.isToBeFullyTranslated()) {
       return null;
     }
+    LinkedHashSet<String> visitedLocaleTags = new LinkedHashSet<>();
+    visitedLocaleTags.add(localeTag);
     while (repositoryLocale != null && repositoryLocale.getParentLocale() != null) {
       repositoryLocale = repositoryLocale.getParentLocale();
-      if (repositoryLocale.getParentLocale() == null || repositoryLocale.getLocale() == null) {
+      String parentLocaleTag = requireRepositoryLocaleTag(repositoryLocale, localeTag);
+      requireAcyclicRepositoryLocaleInheritance(visitedLocaleTags, parentLocaleTag, localeTag);
+      if (repositoryLocale.getParentLocale() == null) {
         return null;
       }
-      row = variantsByLocale.get(repositoryLocale.getLocale().getBcp47Tag());
+      row = variantsByLocale.get(parentLocaleTag);
       if (isIncludedCurrentVariant(row)) {
         return row;
       }
     }
     return null;
+  }
+
+  private String requireRepositoryLocaleTag(
+      RepositoryLocale repositoryLocale, String requestedLocaleTag) {
+    if (repositoryLocale.getLocale() == null
+        || repositoryLocale.getLocale().getBcp47Tag() == null
+        || repositoryLocale.getLocale().getBcp47Tag().isBlank()) {
+      throw new IllegalStateException(
+          "CMS repository locale inheritance has missing locale from: " + requestedLocaleTag);
+    }
+    return repositoryLocale.getLocale().getBcp47Tag();
+  }
+
+  private void requireAcyclicRepositoryLocaleInheritance(
+      Set<String> visitedLocaleTags, String parentLocaleTag, String requestedLocaleTag) {
+    if (!visitedLocaleTags.add(parentLocaleTag)) {
+      throw new IllegalStateException(
+          "CMS repository locale inheritance cycle from: " + requestedLocaleTag);
+    }
   }
 
   private boolean isIncludedCurrentVariant(CmsCurrentVariantRow row) {
@@ -2092,7 +2262,7 @@ public class CmsContentService {
             : tmTextUnitRepository
                 .findById(tmTextUnitId)
                 .orElseThrow(
-                    () -> new IllegalArgumentException("Text unit not found: " + tmTextUnitId));
+                    () -> new CmsContentNotFoundException("Text unit not found: " + tmTextUnitId));
     return validateMappedTextUnit(variant, tmTextUnit, sourceContent, sourceComment);
   }
 
@@ -2242,7 +2412,9 @@ public class CmsContentService {
   }
 
   private void validatePublishableVariantCandidateGroups(
-      List<CmsContentEntryVariant> variants, String errorPrefix) {
+      List<CmsContentEntryVariant> variants,
+      String missingGroupErrorPrefix,
+      String multipleGroupsErrorPrefix) {
     List<String> candidatesWithoutGroupKeys =
         variants.stream()
             .filter(
@@ -2253,7 +2425,28 @@ public class CmsContentService {
             .toList();
     if (!candidatesWithoutGroupKeys.isEmpty()) {
       throw new IllegalArgumentException(
-          errorPrefix + String.join(", ", candidatesWithoutGroupKeys));
+          missingGroupErrorPrefix + String.join(", ", candidatesWithoutGroupKeys));
+    }
+    List<String> entriesWithMultipleCandidateGroupKeys =
+        variants.stream()
+            .filter(variant -> CmsContentEntryVariant.Status.CANDIDATE.equals(variant.getStatus()))
+            .collect(
+                Collectors.groupingBy(
+                    variant -> variant.getEntry().getId(), LinkedHashMap::new, Collectors.toList()))
+            .values()
+            .stream()
+            .filter(
+                candidateVariants ->
+                    candidateVariants.stream()
+                            .map(CmsContentEntryVariant::getCandidateGroupKey)
+                            .distinct()
+                            .count()
+                        > 1)
+            .map(candidateVariants -> candidateVariants.getFirst().getEntry().getEntryKey())
+            .toList();
+    if (!entriesWithMultipleCandidateGroupKeys.isEmpty()) {
+      throw new IllegalArgumentException(
+          multipleGroupsErrorPrefix + String.join(", ", entriesWithMultipleCandidateGroupKeys));
     }
   }
 
@@ -2292,6 +2485,7 @@ public class CmsContentService {
         entry,
         "Ready entry does not have exactly one active control variant: ",
         "Ready entry has candidate variants without candidate group keys: ",
+        "Ready entry has candidate variants with multiple candidate group keys: ",
         "Ready entry has publishable variants without mapped localizable fields: ",
         "Ready entry has missing required field mappings: ");
   }
@@ -2299,7 +2493,8 @@ public class CmsContentService {
   private EntryPublishableState validateEntryPublishableStructure(
       CmsContentEntry entry,
       String invalidControlErrorPrefix,
-      String candidateGroupErrorPrefix,
+      String missingCandidateGroupErrorPrefix,
+      String multipleCandidateGroupsErrorPrefix,
       String unmappedVariantErrorPrefix,
       String missingRequiredMappingErrorPrefix) {
     validateProjectRepositoryAvailable(entry.getProject());
@@ -2307,7 +2502,8 @@ public class CmsContentService {
     List<CmsContentEntryVariant> publishableVariants = findPublishableVariants(List.of(entry));
     requireExactlyOneActiveControlVariant(
         List.of(entry), publishableVariants, invalidControlErrorPrefix);
-    validatePublishableVariantCandidateGroups(publishableVariants, candidateGroupErrorPrefix);
+    validatePublishableVariantCandidateGroups(
+        publishableVariants, missingCandidateGroupErrorPrefix, multipleCandidateGroupsErrorPrefix);
     validateArtifactMetadata(List.of(entry), publishableVariants);
     List<CmsContentFieldMapping> mappings =
         mappingRepository.findMappingsByEntryId(entry.getId()).stream()
@@ -2394,6 +2590,24 @@ public class CmsContentService {
               + String.join(", ", mappingsWithoutMojitoStringId));
     }
 
+    List<String> duplicateMojitoStringIds =
+        mappings.stream()
+            .collect(
+                Collectors.groupingBy(
+                    mapping -> mapping.getTmTextUnit().getName(),
+                    LinkedHashMap::new,
+                    Collectors.mapping(this::mappingPath, Collectors.toList())))
+            .entrySet()
+            .stream()
+            .filter(entry -> entry.getValue().size() > 1)
+            .map(entry -> entry.getKey() + " (" + String.join(", ", entry.getValue()) + ")")
+            .toList();
+    if (!duplicateMojitoStringIds.isEmpty()) {
+      throw new IllegalArgumentException(
+          "Publishable mapped text units must have unique Mojito string IDs: "
+              + String.join(", ", duplicateMojitoStringIds));
+    }
+
     List<String> mappingsWithoutSourceContent =
         mappings.stream()
             .filter(mapping -> !hasSourceContent(mapping.getTmTextUnit().getContent()))
@@ -2465,12 +2679,23 @@ public class CmsContentService {
     if (!CmsContentTypeField.FieldType.ICU_MESSAGE.equals(fieldType)) {
       return;
     }
-    mappingRepository
-        .findByFieldId(field.getId())
-        .forEach(
-            mapping ->
-                validateFieldSourceContent(
-                    fieldType, mapping.getTmTextUnit().getContent(), mappingPath(mapping)));
+    List<CmsContentFieldMapping> mappings = mappingRepository.findByFieldId(field.getId());
+    mappings.forEach(
+        mapping ->
+            validateFieldSourceContent(
+                fieldType, mapping.getTmTextUnit().getContent(), mappingPath(mapping)));
+    List<CmsContentFieldMapping> publishableMappings =
+        mappings.stream().filter(this::isPublishableMapping).toList();
+    if (publishableMappings.isEmpty()) {
+      return;
+    }
+    CmsContentProject project = field.getContentType().getProject();
+    List<String> localeTags = resolveLocaleTags(project, List.of());
+    validateIcuMessageIntegrity(
+        project,
+        publishableMappings,
+        localeTags,
+        loadCurrentVariants(project, publishableMappings, localeTags, false));
   }
 
   private void ensureTextUnitAvailableForMapping(
@@ -2553,7 +2778,56 @@ public class CmsContentService {
     return candidateGroupKey != null && !candidateGroupKey.isBlank();
   }
 
+  private void validateActiveCandidateGroupInvariant(
+      CmsContentEntry entry,
+      CmsContentEntryVariant.Status status,
+      String candidateGroupKey,
+      Long currentVariantId) {
+    if (!CmsContentEntryVariant.Status.CANDIDATE.equals(status)) {
+      return;
+    }
+    List<String> existingCandidateGroupKeys =
+        variantRepository.findByEntryIdOrderBySortOrderAscVariantKeyAscIdAsc(entry.getId()).stream()
+            .filter(variant -> !Objects.equals(variant.getId(), currentVariantId))
+            .filter(variant -> CmsContentEntryVariant.Status.CANDIDATE.equals(variant.getStatus()))
+            .map(CmsContentEntryVariant::getCandidateGroupKey)
+            .filter(this::hasCandidateGroupKey)
+            .collect(Collectors.toCollection(LinkedHashSet::new))
+            .stream()
+            .filter(
+                existingCandidateGroupKey ->
+                    !Objects.equals(existingCandidateGroupKey, candidateGroupKey))
+            .sorted()
+            .toList();
+    if (!existingCandidateGroupKeys.isEmpty()) {
+      List<String> activeCandidateGroupKeys = new ArrayList<>(existingCandidateGroupKeys);
+      activeCandidateGroupKeys.add(candidateGroupKey);
+      throw new IllegalArgumentException(
+          "Content entry candidate variants must share a candidate group key: "
+              + entry.getEntryKey()
+              + " has "
+              + activeCandidateGroupKeys.stream().sorted().collect(Collectors.joining(", ")));
+    }
+  }
+
   private void validatePublishableFieldIntegrity(
+      CmsContentProject project,
+      List<CmsContentFieldMapping> mappings,
+      List<String> localeTags,
+      Map<Long, Map<String, CmsCurrentVariantRow>> currentVariants) {
+    validateIcuMessageIntegrity(
+        project,
+        mappings.stream()
+            .filter(
+                mapping ->
+                    CmsContentTypeField.FieldType.ICU_MESSAGE.equals(
+                        mapping.getField().getFieldType()))
+            .toList(),
+        localeTags,
+        currentVariants);
+  }
+
+  private void validateIcuMessageIntegrity(
       CmsContentProject project,
       List<CmsContentFieldMapping> mappings,
       List<String> localeTags,
@@ -2561,9 +2835,6 @@ public class CmsContentService {
     String sourceLocale = project.getRepository().getSourceLocale().getBcp47Tag();
     Map<String, RepositoryLocale> repositoryLocalesByTag = repositoryLocalesByTag(project);
     for (CmsContentFieldMapping mapping : mappings) {
-      if (!CmsContentTypeField.FieldType.ICU_MESSAGE.equals(mapping.getField().getFieldType())) {
-        continue;
-      }
       String sourceContent = mapping.getTmTextUnit().getContent();
       String mappingPath = mappingPath(mapping);
       validateIcuMessage(mappingPath + " source", sourceContent, sourceContent);
@@ -2678,106 +2949,103 @@ public class CmsContentService {
   private CmsContentProject findProject(Long projectId) {
     return projectRepository
         .findByIdWithRepositoryAndAsset(projectId)
-        .orElseThrow(() -> new IllegalArgumentException("Content project not found: " + projectId));
+        .orElseThrow(
+            () -> new CmsContentNotFoundException("Content project not found: " + projectId));
   }
 
   private CmsContentProject findProjectForUpdate(Long projectId) {
     return projectRepository
         .findByIdWithRepositoryAndAssetForUpdate(projectId)
-        .orElseThrow(() -> new IllegalArgumentException("Content project not found: " + projectId));
-  }
-
-  private CmsContentProject findProjectByKey(String projectKey) {
-    return projectRepository
-        .findByProjectKeyWithRepositoryAndAsset(projectKey)
         .orElseThrow(
-            () -> new IllegalArgumentException("Content project not found: " + projectKey));
+            () -> new CmsContentNotFoundException("Content project not found: " + projectId));
   }
 
   private CmsContentProject findProjectByKeyForUpdate(String projectKey) {
     return projectRepository
         .findByProjectKeyWithRepositoryAndAssetForUpdate(projectKey)
         .orElseThrow(
-            () -> new IllegalArgumentException("Content project not found: " + projectKey));
+            () -> new CmsContentNotFoundException("Content project not found: " + projectKey));
   }
 
   private void lockProjectForContentTypeUpdate(Long contentTypeId) {
     projectRepository
         .findByContentTypeIdWithRepositoryAndAssetForUpdate(contentTypeId)
         .orElseThrow(
-            () -> new IllegalArgumentException("Content type not found: " + contentTypeId));
+            () -> new CmsContentNotFoundException("Content type not found: " + contentTypeId));
   }
 
   private void lockProjectForFieldUpdate(Long fieldId) {
     projectRepository
         .findByFieldIdWithRepositoryAndAssetForUpdate(fieldId)
         .orElseThrow(
-            () -> new IllegalArgumentException("Content type field not found: " + fieldId));
+            () -> new CmsContentNotFoundException("Content type field not found: " + fieldId));
   }
 
   private void lockProjectForEntryUpdate(Long entryId) {
     projectRepository
         .findByEntryIdWithRepositoryAndAssetForUpdate(entryId)
-        .orElseThrow(() -> new IllegalArgumentException("Content entry not found: " + entryId));
+        .orElseThrow(() -> new CmsContentNotFoundException("Content entry not found: " + entryId));
   }
 
   private void lockProjectForVariantUpdate(Long variantId) {
     projectRepository
         .findByVariantIdWithRepositoryAndAssetForUpdate(variantId)
         .orElseThrow(
-            () -> new IllegalArgumentException("Content entry variant not found: " + variantId));
+            () -> new CmsContentNotFoundException("Content entry variant not found: " + variantId));
   }
 
   private void lockProjectForFieldMappingUpdate(Long mappingId) {
     projectRepository
         .findByFieldMappingIdWithRepositoryAndAssetForUpdate(mappingId)
-        .orElseThrow(() -> new IllegalArgumentException("Field mapping not found: " + mappingId));
+        .orElseThrow(
+            () -> new CmsContentNotFoundException("Field mapping not found: " + mappingId));
   }
 
   private CmsContentType findContentType(Long contentTypeId) {
     return contentTypeRepository
         .findByIdWithProject(contentTypeId)
         .orElseThrow(
-            () -> new IllegalArgumentException("Content type not found: " + contentTypeId));
+            () -> new CmsContentNotFoundException("Content type not found: " + contentTypeId));
   }
 
   private CmsContentTypeField findField(Long fieldId) {
     return fieldRepository
         .findByIdWithContentType(fieldId)
         .orElseThrow(
-            () -> new IllegalArgumentException("Content type field not found: " + fieldId));
+            () -> new CmsContentNotFoundException("Content type field not found: " + fieldId));
   }
 
   private CmsContentEntry findEntry(Long entryId) {
     return entryRepository
         .findByIdWithProjectAndType(entryId)
-        .orElseThrow(() -> new IllegalArgumentException("Content entry not found: " + entryId));
+        .orElseThrow(() -> new CmsContentNotFoundException("Content entry not found: " + entryId));
   }
 
   private CmsContentEntry findEntryForUpdate(Long entryId) {
     return entryRepository
         .findByIdWithProjectAndTypeForUpdate(entryId)
-        .orElseThrow(() -> new IllegalArgumentException("Content entry not found: " + entryId));
+        .orElseThrow(() -> new CmsContentNotFoundException("Content entry not found: " + entryId));
   }
 
   private CmsContentEntry findEntryForVariantUpdate(Long variantId) {
     return entryRepository
         .findByVariantIdWithProjectAndTypeForUpdate(variantId)
         .orElseThrow(
-            () -> new IllegalArgumentException("Content entry variant not found: " + variantId));
+            () -> new CmsContentNotFoundException("Content entry variant not found: " + variantId));
   }
 
   private CmsContentEntryVariant findVariant(Long variantId) {
     return variantRepository
         .findByIdWithEntry(variantId)
         .orElseThrow(
-            () -> new IllegalArgumentException("Content entry variant not found: " + variantId));
+            () -> new CmsContentNotFoundException("Content entry variant not found: " + variantId));
   }
 
   private CmsContentFieldMapping findFieldMapping(Long mappingId) {
     return mappingRepository
         .findByIdWithVariantFieldAndTextUnit(mappingId)
-        .orElseThrow(() -> new IllegalArgumentException("Field mapping not found: " + mappingId));
+        .orElseThrow(
+            () -> new CmsContentNotFoundException("Field mapping not found: " + mappingId));
   }
 
   private Repository resolveRepository(Long repositoryId) {
@@ -2788,7 +3056,7 @@ public class CmsContentService {
         repositoryRepository.findByIdInAndDeletedFalseAndHiddenFalseOrderByNameAsc(
             List.of(repositoryId));
     if (repositories.isEmpty()) {
-      throw new IllegalArgumentException("Repository not found: " + repositoryId);
+      throw new CmsContentNotFoundException("Repository not found: " + repositoryId);
     }
     return repositories.get(0);
   }
@@ -3182,9 +3450,10 @@ public class CmsContentService {
   private PublishSnapshotView toPublishSnapshotView(CmsPublishSnapshot snapshot) {
     validateSnapshotArtifactIntegrity(snapshot);
     String publisherUsername = requireSnapshotPublisherUsername(snapshot);
-    return new PublishSnapshotView(
+    return toPublishSnapshotView(
         snapshot.getId(),
         snapshot.getProject().getId(),
+        snapshot.getProject().getProjectKey(),
         snapshot.getSnapshotVersion(),
         snapshot.getStatus(),
         parseSnapshotLocaleTags(snapshot),
@@ -3193,10 +3462,57 @@ public class CmsContentService {
         snapshot.getSnapshotSigningKeyId(),
         snapshot.getSnapshotSignature(),
         snapshot.getArtifactSignature(),
-        snapshotArtifactFilename(snapshot),
-        snapshotArtifactExportPath(snapshot),
         publisherUsername,
         snapshot.getPublishedAt());
+  }
+
+  private PublishSnapshotView toPublishSnapshotView(CmsPublishSnapshotHistoryRow snapshot) {
+    validatePublishSnapshotHistoryRow(snapshot);
+    return toPublishSnapshotView(
+        snapshot.id(),
+        snapshot.projectId(),
+        snapshot.projectKey(),
+        snapshot.snapshotVersion(),
+        snapshot.status(),
+        parseSnapshotLocaleTags(snapshot.localeTags(), snapshot.id()),
+        snapshot.artifactSha256(),
+        snapshot.artifactByteSize(),
+        snapshot.snapshotSigningKeyId(),
+        snapshot.snapshotSignature(),
+        snapshot.artifactSignature(),
+        snapshot.createdByUsername(),
+        snapshot.publishedAt());
+  }
+
+  private PublishSnapshotView toPublishSnapshotView(
+      Long snapshotId,
+      Long projectId,
+      String projectKey,
+      Integer snapshotVersion,
+      CmsPublishSnapshot.Status status,
+      List<String> localeTags,
+      String artifactSha256,
+      Long artifactByteSize,
+      String snapshotSigningKeyId,
+      String snapshotSignature,
+      String artifactSignature,
+      String publisherUsername,
+      String publishedAt) {
+    return new PublishSnapshotView(
+        snapshotId,
+        projectId,
+        snapshotVersion,
+        status,
+        localeTags,
+        artifactSha256,
+        artifactByteSize,
+        snapshotSigningKeyId,
+        snapshotSignature,
+        artifactSignature,
+        snapshotArtifactFilename(projectKey, snapshotVersion),
+        snapshotArtifactExportPath(projectKey, snapshotVersion),
+        publisherUsername,
+        publishedAt);
   }
 
   private SnapshotDeliveryDescriptor toSnapshotDeliveryDescriptor(CmsPublishSnapshot snapshot) {
@@ -3210,6 +3526,9 @@ public class CmsContentService {
         snapshotArtifactProjectHint(snapshot, artifact),
         snapshot.getArtifactSha256(),
         snapshot.getArtifactByteSize(),
+        CmsSnapshotSigningService.SIGNATURE_ALGORITHM,
+        CmsSnapshotSigningService.SNAPSHOT_SIGNATURE_VERSION,
+        CmsSnapshotSigningService.ARTIFACT_SIGNATURE_VERSION,
         snapshot.getSnapshotSigningKeyId(),
         snapshot.getSnapshotSignature(),
         snapshot.getArtifactSignature(),
@@ -3244,15 +3563,93 @@ public class CmsContentService {
     return actor.getUsername();
   }
 
+  private void validatePublishSnapshotHistoryRow(CmsPublishSnapshotHistoryRow snapshot) {
+    if (snapshot.id() == null
+        || snapshot.projectId() == null
+        || snapshot.snapshotVersion() == null
+        || snapshot.snapshotVersion() < 1
+        || !CmsPublishSnapshot.Status.PUBLISHED.equals(snapshot.status())
+        || !isSha256(snapshot.artifactSha256())
+        || snapshot.artifactByteSize() == null
+        || snapshot.artifactByteSize() <= 0
+        || snapshot.snapshotSigningKeyId() == null
+        || snapshot.snapshotSigningKeyId().isBlank()
+        || !isBoundedKey(
+            snapshot.snapshotSigningKeyId(), CmsPublishSnapshot.SNAPSHOT_SIGNING_KEY_ID_MAX_LENGTH)
+        || !isSha256(snapshot.snapshotSignature())
+        || !isSha256(snapshot.artifactSignature())
+        || snapshot.createdByUsername() == null
+        || snapshot.createdByUsername().isBlank()
+        || snapshot.publishedAt() == null
+        || snapshot.publishedAt().isBlank()) {
+      throw new IllegalStateException("Publish snapshot history row is invalid: " + snapshot.id());
+    }
+    try {
+      if (!Objects.equals(
+          Instant.parse(snapshot.publishedAt()).toString(), snapshot.publishedAt())) {
+        throw new IllegalStateException(
+            "Publish snapshot history published timestamp is invalid: " + snapshot.id());
+      }
+    } catch (RuntimeException ex) {
+      throw new IllegalStateException(
+          "Publish snapshot history published timestamp is invalid: " + snapshot.id(), ex);
+    }
+    try {
+      validateStableProjectKey(snapshot.projectKey());
+    } catch (IllegalArgumentException ex) {
+      throw new IllegalStateException(
+          "Publish snapshot history project key is invalid: " + snapshot.id(), ex);
+    }
+  }
+
+  private int normalizePublishSnapshotHistoryLimit(Integer limit) {
+    if (limit == null) {
+      return PUBLISH_SNAPSHOT_HISTORY_PAGE_LIMIT;
+    }
+    return Math.max(1, Math.min(MAX_PUBLISH_SNAPSHOT_HISTORY_PAGE_LIMIT, limit));
+  }
+
+  private int normalizePublishSnapshotArtifactValidationLimit(int normalizedHistoryPageLimit) {
+    return Math.max(PUBLISH_SNAPSHOT_HISTORY_PAGE_LIMIT, normalizedHistoryPageLimit);
+  }
+
+  private int requireSnapshotHistoryBeforeVersion(
+      CmsContentProject project, Integer beforeSnapshotVersion, int recentArtifactValidationLimit) {
+    if (beforeSnapshotVersion == null || beforeSnapshotVersion < 2) {
+      throw new IllegalArgumentException("Before snapshot version must be at least 2");
+    }
+    int lastPublishedSnapshotVersion = requireLastPublishedSnapshotVersion(project);
+    int oldestValidatedSnapshotVersion =
+        Math.max(1, lastPublishedSnapshotVersion - recentArtifactValidationLimit + 1);
+    if (beforeSnapshotVersion > oldestValidatedSnapshotVersion) {
+      throw new IllegalArgumentException(
+          "Before snapshot version must not skip recent validated snapshot history: "
+              + beforeSnapshotVersion
+              + " > "
+              + oldestValidatedSnapshotVersion);
+    }
+    return beforeSnapshotVersion;
+  }
+
   private String snapshotArtifactFilename(CmsPublishSnapshot snapshot) {
-    return snapshot.getProject().getProjectKey() + ".v" + snapshot.getSnapshotVersion() + ".json";
+    return snapshotArtifactFilename(
+        snapshot.getProject().getProjectKey(), snapshot.getSnapshotVersion());
+  }
+
+  private String snapshotArtifactFilename(String projectKey, Integer snapshotVersion) {
+    return projectKey + ".v" + snapshotVersion + ".json";
   }
 
   private String snapshotArtifactExportPath(CmsPublishSnapshot snapshot) {
+    return snapshotArtifactExportPath(
+        snapshot.getProject().getProjectKey(), snapshot.getSnapshotVersion());
+  }
+
+  private String snapshotArtifactExportPath(String projectKey, Integer snapshotVersion) {
     return "/api/content-cms/projects/"
-        + snapshot.getProject().getProjectKey()
+        + projectKey
         + "/publish-snapshots/"
-        + snapshot.getSnapshotVersion()
+        + snapshotVersion
         + "/artifact";
   }
 
@@ -3525,6 +3922,13 @@ public class CmsContentService {
     return normalized;
   }
 
+  private Long requireBodySelectorId(Long selectorId, String label) {
+    if (selectorId == null) {
+      throw new IllegalArgumentException(label + " is required");
+    }
+    return selectorId;
+  }
+
   private String validatePublishRequestKey(String publishRequestKey) {
     String normalized = publishRequestKey == null ? "" : publishRequestKey.trim();
     if (normalized.isEmpty()) {
@@ -3793,6 +4197,38 @@ public class CmsContentService {
     return publisher.getUsername();
   }
 
+  private void logPublishedSnapshotAfterCommit(
+      String projectKey,
+      int snapshotVersion,
+      List<String> localeTags,
+      String artifactSha256,
+      long artifactByteSize,
+      String publisherUsername) {
+    List<String> loggedLocaleTags = List.copyOf(localeTags);
+    Runnable logRunnable =
+        () ->
+            logger.info(
+                "Published CMS snapshot: projectKey={}, snapshotVersion={}, localeTags={}, artifactSha256={}, artifactBytes={}, publisher={}",
+                projectKey,
+                snapshotVersion,
+                loggedLocaleTags,
+                artifactSha256,
+                artifactByteSize,
+                publisherUsername);
+    if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+      logRunnable.run();
+      return;
+    }
+
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCommit() {
+            logRunnable.run();
+          }
+        });
+  }
+
   public record SearchProjectsView(List<ProjectSummary> projects, long totalCount) {}
 
   public record ProjectSummary(
@@ -3812,7 +4248,9 @@ public class CmsContentService {
       String authoringSha256,
       List<ContentTypeView> contentTypes,
       List<EntryView> entries,
-      List<PublishSnapshotView> publishSnapshots) {}
+      List<PublishSnapshotView> publishSnapshots,
+      boolean hasMorePublishSnapshots,
+      Integer nextBeforePublishSnapshotVersion) {}
 
   public record ProjectView(
       Long id,
@@ -3939,6 +4377,9 @@ public class CmsContentService {
       String createdByUsername,
       String publishedAt) {}
 
+  public record PublishSnapshotHistoryView(
+      List<PublishSnapshotView> snapshots, boolean hasMore, Integer nextBeforeSnapshotVersion) {}
+
   public record SnapshotDeliveryDescriptor(
       String formatVersion,
       String projectKey,
@@ -3948,6 +4389,9 @@ public class CmsContentService {
       String projectHint,
       String artifactSha256,
       Long artifactByteSize,
+      String signatureAlgorithm,
+      String snapshotSignatureVersion,
+      String artifactSignatureVersion,
       String snapshotSigningKeyId,
       String snapshotSignature,
       String artifactSignature,
@@ -3969,7 +4413,7 @@ public class CmsContentService {
       String name,
       String description,
       Boolean enabled,
-      Long repositoryId,
+      @JsonSetter(value = "repositoryId", nulls = Nulls.FAIL) Long repositoryId,
       String assetPath,
       String deliveryHint) {}
 
@@ -4007,7 +4451,7 @@ public class CmsContentService {
       return namePresent;
     }
 
-    @JsonSetter("name")
+    @JsonSetter(value = "name", nulls = Nulls.FAIL)
     public void setName(String name) {
       this.name = name;
       this.namePresent = true;
@@ -4035,7 +4479,7 @@ public class CmsContentService {
       return enabledPresent;
     }
 
-    @JsonSetter("enabled")
+    @JsonSetter(value = "enabled", nulls = Nulls.FAIL)
     public void setEnabled(Boolean enabled) {
       this.enabled = enabled;
       this.enabledPresent = true;
@@ -4049,7 +4493,7 @@ public class CmsContentService {
       return deliveryHintPresent;
     }
 
-    @JsonSetter("deliveryHint")
+    @JsonSetter(value = "deliveryHint", nulls = Nulls.FAIL)
     public void setDeliveryHint(String deliveryHint) {
       this.deliveryHint = deliveryHint;
       this.deliveryHintPresent = true;
@@ -4059,7 +4503,7 @@ public class CmsContentService {
       return expectedVersion;
     }
 
-    @JsonSetter("expectedVersion")
+    @JsonSetter(value = "expectedVersion", nulls = Nulls.FAIL)
     public void setExpectedVersion(Long expectedVersion) {
       this.expectedVersion = expectedVersion;
     }
@@ -4105,7 +4549,7 @@ public class CmsContentService {
       return namePresent;
     }
 
-    @JsonSetter("name")
+    @JsonSetter(value = "name", nulls = Nulls.FAIL)
     public void setName(String name) {
       this.name = name;
       this.namePresent = true;
@@ -4129,7 +4573,7 @@ public class CmsContentService {
       return schemaVersion;
     }
 
-    @JsonSetter("schemaVersion")
+    @JsonSetter(value = "schemaVersion", nulls = Nulls.FAIL)
     public void setSchemaVersion(Integer schemaVersion) {
       this.schemaVersion = schemaVersion;
     }
@@ -4152,7 +4596,7 @@ public class CmsContentService {
       return expectedVersion;
     }
 
-    @JsonSetter("expectedVersion")
+    @JsonSetter(value = "expectedVersion", nulls = Nulls.FAIL)
     public void setExpectedVersion(Long expectedVersion) {
       this.expectedVersion = expectedVersion;
     }
@@ -4209,7 +4653,7 @@ public class CmsContentService {
       return namePresent;
     }
 
-    @JsonSetter("name")
+    @JsonSetter(value = "name", nulls = Nulls.FAIL)
     public void setName(String name) {
       this.name = name;
       this.namePresent = true;
@@ -4237,7 +4681,7 @@ public class CmsContentService {
       return fieldTypePresent;
     }
 
-    @JsonSetter("fieldType")
+    @JsonSetter(value = "fieldType", nulls = Nulls.FAIL)
     public void setFieldType(CmsContentTypeField.FieldType fieldType) {
       this.fieldType = fieldType;
       this.fieldTypePresent = true;
@@ -4251,7 +4695,7 @@ public class CmsContentService {
       return localizablePresent;
     }
 
-    @JsonSetter("localizable")
+    @JsonSetter(value = "localizable", nulls = Nulls.FAIL)
     public void setLocalizable(Boolean localizable) {
       this.localizable = localizable;
       this.localizablePresent = true;
@@ -4265,7 +4709,7 @@ public class CmsContentService {
       return requiredPresent;
     }
 
-    @JsonSetter("required")
+    @JsonSetter(value = "required", nulls = Nulls.FAIL)
     public void setRequired(Boolean required) {
       this.required = required;
       this.requiredPresent = true;
@@ -4279,7 +4723,7 @@ public class CmsContentService {
       return sortOrderPresent;
     }
 
-    @JsonSetter("sortOrder")
+    @JsonSetter(value = "sortOrder", nulls = Nulls.FAIL)
     public void setSortOrder(Integer sortOrder) {
       this.sortOrder = sortOrder;
       this.sortOrderPresent = true;
@@ -4289,14 +4733,14 @@ public class CmsContentService {
       return expectedVersion;
     }
 
-    @JsonSetter("expectedVersion")
+    @JsonSetter(value = "expectedVersion", nulls = Nulls.FAIL)
     public void setExpectedVersion(Long expectedVersion) {
       this.expectedVersion = expectedVersion;
     }
   }
 
   public record EntryCommand(
-      Long contentTypeId,
+      @JsonSetter(value = "contentTypeId", nulls = Nulls.FAIL) Long contentTypeId,
       String entryKey,
       String name,
       String description,
@@ -4337,7 +4781,7 @@ public class CmsContentService {
       return namePresent;
     }
 
-    @JsonSetter("name")
+    @JsonSetter(value = "name", nulls = Nulls.FAIL)
     public void setName(String name) {
       this.name = name;
       this.namePresent = true;
@@ -4365,7 +4809,7 @@ public class CmsContentService {
       return statusPresent;
     }
 
-    @JsonSetter("status")
+    @JsonSetter(value = "status", nulls = Nulls.FAIL)
     public void setStatus(CmsContentEntry.Status status) {
       this.status = status;
       this.statusPresent = true;
@@ -4389,7 +4833,7 @@ public class CmsContentService {
       return expectedVersion;
     }
 
-    @JsonSetter("expectedVersion")
+    @JsonSetter(value = "expectedVersion", nulls = Nulls.FAIL)
     public void setExpectedVersion(Long expectedVersion) {
       this.expectedVersion = expectedVersion;
     }
@@ -4441,7 +4885,7 @@ public class CmsContentService {
       return namePresent;
     }
 
-    @JsonSetter("name")
+    @JsonSetter(value = "name", nulls = Nulls.FAIL)
     public void setName(String name) {
       this.name = name;
       this.namePresent = true;
@@ -4469,7 +4913,7 @@ public class CmsContentService {
       return statusPresent;
     }
 
-    @JsonSetter("status")
+    @JsonSetter(value = "status", nulls = Nulls.FAIL)
     public void setStatus(CmsContentEntryVariant.Status status) {
       this.status = status;
       this.statusPresent = true;
@@ -4497,7 +4941,7 @@ public class CmsContentService {
       return sortOrderPresent;
     }
 
-    @JsonSetter("sortOrder")
+    @JsonSetter(value = "sortOrder", nulls = Nulls.FAIL)
     public void setSortOrder(Integer sortOrder) {
       this.sortOrder = sortOrder;
       this.sortOrderPresent = true;
@@ -4507,14 +4951,14 @@ public class CmsContentService {
       return expectedVersion;
     }
 
-    @JsonSetter("expectedVersion")
+    @JsonSetter(value = "expectedVersion", nulls = Nulls.FAIL)
     public void setExpectedVersion(Long expectedVersion) {
       this.expectedVersion = expectedVersion;
     }
   }
 
   public record FieldMappingCommand(
-      Long fieldId,
+      @JsonSetter(value = "fieldId", nulls = Nulls.FAIL) Long fieldId,
       Long tmTextUnitId,
       String stringId,
       String sourceContent,
@@ -4530,7 +4974,8 @@ public class CmsContentService {
     }
   }
 
-  public record FieldMappingDeleteCommand(Long expectedVersion) {}
+  public record FieldMappingDeleteCommand(
+      @JsonSetter(value = "expectedVersion", nulls = Nulls.FAIL) Long expectedVersion) {}
 
   public record PublishCommand(
       List<String> localeTags, String expectedAuthoringSha256, String expectedPackageSha256) {}

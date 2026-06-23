@@ -8,11 +8,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.service.cms.CmsContentService;
 import java.lang.reflect.Method;
+import java.util.List;
 import org.junit.Test;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
@@ -120,6 +122,82 @@ public class CmsContentRequestBodyAdviceTest {
   }
 
   @Test
+  public void beforeBodyReadRejectsNullNonNullableCmsCommandFields() throws Exception {
+    assertRejectsNullCommandField(
+        createProjectRequestParameter(),
+        CmsContentService.ProjectCommand.class,
+        "{\"repositoryId\":null}");
+    assertRejectsNullCommandField(
+        updateProjectRequestParameter(),
+        CmsContentService.ProjectUpdateCommand.class,
+        "{\"enabled\":null,\"expectedVersion\":1}");
+    assertRejectsNullCommandField(
+        updateProjectRequestParameter(),
+        CmsContentService.ProjectUpdateCommand.class,
+        "{\"deliveryHint\":null,\"expectedVersion\":1}");
+    assertRejectsNullCommandField(
+        updateContentTypeRequestParameter(),
+        CmsContentService.ContentTypeUpdateCommand.class,
+        "{\"schemaVersion\":null,\"expectedVersion\":1}");
+    assertRejectsNullCommandField(
+        updateContentTypeFieldRequestParameter(),
+        CmsContentService.ContentTypeFieldUpdateCommand.class,
+        "{\"fieldType\":null,\"expectedVersion\":1}");
+    assertRejectsNullCommandField(
+        updateContentTypeFieldRequestParameter(),
+        CmsContentService.ContentTypeFieldUpdateCommand.class,
+        "{\"localizable\":null,\"expectedVersion\":1}");
+    assertRejectsNullCommandField(
+        updateContentTypeFieldRequestParameter(),
+        CmsContentService.ContentTypeFieldUpdateCommand.class,
+        "{\"required\":null,\"expectedVersion\":1}");
+    assertRejectsNullCommandField(
+        updateContentTypeFieldRequestParameter(),
+        CmsContentService.ContentTypeFieldUpdateCommand.class,
+        "{\"sortOrder\":null,\"expectedVersion\":1}");
+    assertRejectsNullCommandField(
+        updateEntryRequestParameter(),
+        CmsContentService.EntryUpdateCommand.class,
+        "{\"status\":null,\"expectedVersion\":1}");
+    assertRejectsNullCommandField(
+        updateVariantRequestParameter(),
+        CmsContentService.VariantUpdateCommand.class,
+        "{\"status\":null,\"expectedVersion\":1}");
+    assertRejectsNullCommandField(
+        updateVariantRequestParameter(),
+        CmsContentService.VariantUpdateCommand.class,
+        "{\"sortOrder\":null,\"expectedVersion\":1}");
+    assertRejectsNullCommandField(
+        updateEntryRequestParameter(),
+        CmsContentService.EntryUpdateCommand.class,
+        "{\"expectedVersion\":null}");
+    assertRejectsNullCommandField(
+        createEntryRequestParameter(),
+        CmsContentService.EntryCommand.class,
+        "{\"contentTypeId\":null}");
+    assertRejectsNullCommandField(
+        upsertFieldMappingRequestParameter(),
+        CmsContentService.FieldMappingCommand.class,
+        "{\"fieldId\":null}");
+    assertRejectsNullCommandField(
+        unmapFieldMappingRequestParameter(),
+        CmsContentService.FieldMappingDeleteCommand.class,
+        "{\"expectedVersion\":null}");
+  }
+
+  @Test
+  public void beforeBodyReadRejectsCoercedCmsCommandScalars() throws Exception {
+    assertRejectsCoercedCommandScalar(
+        updateEntryRequestParameter(),
+        CmsContentService.EntryUpdateCommand.class,
+        "{\"expectedVersion\":\"1\"}");
+    assertRejectsCoercedCommandScalar(
+        updateContentTypeFieldRequestParameter(),
+        CmsContentService.ContentTypeFieldUpdateCommand.class,
+        "{\"sortOrder\":1.5,\"expectedVersion\":1}");
+  }
+
+  @Test
   public void springMvcRejectsDuplicateCmsRequestKeysBeforeControllerBinding() throws Exception {
     CmsContentService cmsContentService = mock(CmsContentService.class);
     MockMvc mockMvc =
@@ -174,6 +252,52 @@ public class CmsContentRequestBodyAdviceTest {
   }
 
   @Test
+  public void springMvcRejectsNullNonNullableCmsCommandFieldBeforeControllerBinding()
+      throws Exception {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    MockMvc mockMvc =
+        MockMvcBuilders.standaloneSetup(new CmsContentWS(cmsContentService))
+            .setControllerAdvice(advice)
+            .build();
+
+    mockMvc
+        .perform(
+            patch("/api/content-cms/entries/12")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":null,\"expectedVersion\":1}"))
+        .andExpect(status().isBadRequest());
+
+    verify(cmsContentService, never()).updateEntry(anyLong(), any());
+
+    mockMvc
+        .perform(
+            post("/api/content-cms/projects")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"repositoryId\":null}"))
+        .andExpect(status().isBadRequest());
+
+    verify(cmsContentService, never()).createProject(any());
+
+    mockMvc
+        .perform(
+            post("/api/content-cms/projects/12/entries")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"contentTypeId\":null}"))
+        .andExpect(status().isBadRequest());
+
+    verify(cmsContentService, never()).createEntry(anyLong(), any());
+
+    mockMvc
+        .perform(
+            post("/api/content-cms/variants/12/field-mappings")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fieldId\":null}"))
+        .andExpect(status().isBadRequest());
+
+    verify(cmsContentService, never()).upsertFieldMapping(anyLong(), any());
+  }
+
+  @Test
   public void beforeBodyReadPreservesValidCmsRequestBodyForBinding() throws Exception {
     String requestJson = "{\"name\":\"Welcome\",\"expectedVersion\":2}";
 
@@ -198,11 +322,61 @@ public class CmsContentRequestBodyAdviceTest {
     return new MethodParameter(method, 1);
   }
 
+  private MethodParameter createProjectRequestParameter() throws Exception {
+    Method method =
+        CmsContentWS.class.getMethod("createProject", CmsContentService.ProjectCommand.class);
+    return new MethodParameter(method, 0);
+  }
+
+  private MethodParameter updateProjectRequestParameter() throws Exception {
+    Method method =
+        CmsContentWS.class.getMethod(
+            "updateProject", Long.class, CmsContentService.ProjectUpdateCommand.class);
+    return new MethodParameter(method, 1);
+  }
+
+  private MethodParameter updateContentTypeRequestParameter() throws Exception {
+    Method method =
+        CmsContentWS.class.getMethod(
+            "updateContentType", Long.class, CmsContentService.ContentTypeUpdateCommand.class);
+    return new MethodParameter(method, 1);
+  }
+
+  private MethodParameter createEntryRequestParameter() throws Exception {
+    Method method =
+        CmsContentWS.class.getMethod(
+            "createEntry", Long.class, CmsContentService.EntryCommand.class);
+    return new MethodParameter(method, 1);
+  }
+
+  private MethodParameter updateContentTypeFieldRequestParameter() throws Exception {
+    Method method =
+        CmsContentWS.class.getMethod(
+            "updateContentTypeField",
+            Long.class,
+            CmsContentService.ContentTypeFieldUpdateCommand.class);
+    return new MethodParameter(method, 1);
+  }
+
+  private MethodParameter updateVariantRequestParameter() throws Exception {
+    Method method =
+        CmsContentWS.class.getMethod(
+            "updateVariant", Long.class, CmsContentService.VariantUpdateCommand.class);
+    return new MethodParameter(method, 1);
+  }
+
   private MethodParameter publishProjectRequestParameter() throws Exception {
     Method method =
         CmsContentWS.class.getMethod(
-            "publishProject", Long.class, String.class, CmsContentService.PublishCommand.class);
+            "publishProject", Long.class, List.class, CmsContentService.PublishCommand.class);
     return new MethodParameter(method, 2);
+  }
+
+  private MethodParameter upsertFieldMappingRequestParameter() throws Exception {
+    Method method =
+        CmsContentWS.class.getMethod(
+            "upsertFieldMapping", Long.class, CmsContentService.FieldMappingCommand.class);
+    return new MethodParameter(method, 1);
   }
 
   private MethodParameter unmapFieldMappingRequestParameter() throws Exception {
@@ -210,5 +384,31 @@ public class CmsContentRequestBodyAdviceTest {
         CmsContentWS.class.getMethod(
             "unmapFieldMapping", Long.class, CmsContentService.FieldMappingDeleteCommand.class);
     return new MethodParameter(method, 1);
+  }
+
+  private void assertRejectsNullCommandField(
+      MethodParameter requestParameter, Class<?> commandType, String requestJson) {
+    assertThatThrownBy(
+            () ->
+                advice.beforeBodyRead(
+                    new MockHttpInputMessage(requestJson.getBytes()),
+                    requestParameter,
+                    commandType,
+                    MappingJackson2HttpMessageConverter.class))
+        .isInstanceOf(HttpMessageNotReadableException.class)
+        .hasMessageContaining("must match the command schema");
+  }
+
+  private void assertRejectsCoercedCommandScalar(
+      MethodParameter requestParameter, Class<?> commandType, String requestJson) {
+    assertThatThrownBy(
+            () ->
+                advice.beforeBodyRead(
+                    new MockHttpInputMessage(requestJson.getBytes()),
+                    requestParameter,
+                    commandType,
+                    MappingJackson2HttpMessageConverter.class))
+        .isInstanceOf(HttpMessageNotReadableException.class)
+        .hasMessageContaining("must match the command schema");
   }
 }

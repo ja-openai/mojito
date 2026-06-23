@@ -13,7 +13,7 @@ import java.time.ZonedDateTime;
 public class MonitoringTextUnitIngestionState implements Serializable {
 
   @Id
-  @Column(name = "id", nullable = false)
+  @Column(name = "id", nullable = false, columnDefinition = "TINYINT")
   Integer id;
 
   @Column(name = "latest_computed_day")

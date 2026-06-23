@@ -1,13 +1,14 @@
 import './app.css';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+import { lazy, type ReactNode, Suspense, useState } from 'react';
 import {
-  BrowserRouter,
+  createBrowserRouter,
   Navigate,
   NavLink,
   Outlet,
   Route,
+  RouterProvider,
   Routes,
   useLocation,
   useParams,
@@ -29,7 +30,6 @@ import { ReviewProjectsPage } from './page/review-projects/ReviewProjectsPage';
 import { ScreenshotsDropzonePage } from './page/screenshots/ScreenshotsDropzonePage';
 import { AdminAiTranslateAutomationPage } from './page/settings/AdminAiTranslateAutomationPage';
 import { AdminAiTranslatePromptsPage } from './page/settings/AdminAiTranslatePromptsPage';
-import { AdminContentCmsPage } from './page/settings/AdminContentCmsPage';
 import { AdminGlossaryDetailPage } from './page/settings/AdminGlossaryDetailPage';
 import { AdminGlossaryWorkflowPage } from './page/settings/AdminGlossaryWorkflowPage';
 import { AdminJsonConfigLocalizationPage } from './page/settings/AdminJsonConfigLocalizationPage';
@@ -56,6 +56,7 @@ import { AdminUserBatchPage } from './page/settings/AdminUserBatchPage';
 import { AdminUserDetailPage } from './page/settings/AdminUserDetailPage';
 import { AdminUserSettingsPage } from './page/settings/AdminUserSettingsPage';
 import { SettingsPage } from './page/settings/SettingsPage';
+import { SettingsSubpageHeader } from './page/settings/SettingsSubpageHeader';
 import { TeamDetailPage } from './page/settings/TeamDetailPage';
 import { StatisticsPage } from './page/statistics/StatisticsPage';
 import { TextUnitDetailPage } from './page/text-unit-detail/TextUnitDetailPage';
@@ -80,6 +81,36 @@ const navItems: NavItem[] = [
 ];
 
 const queryClient = new QueryClient();
+const AdminContentCmsPage = lazy(async () => {
+  const module = await import('./page/settings/AdminContentCmsPage');
+  return { default: module.AdminContentCmsPage };
+});
+
+function ContentCmsRouteLoadingState() {
+  return (
+    <div className="settings-subpage">
+      <SettingsSubpageHeader
+        backTo="/settings/system"
+        backLabel="Back to settings"
+        context="Settings"
+        title="Content CMS"
+      />
+      <div className="settings-page settings-page--wide">
+        <p className="settings-page__hint" role="status" aria-live="polite">
+          Loading Content CMS...
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function LazyAdminContentCmsPage() {
+  return (
+    <Suspense fallback={<ContentCmsRouteLoadingState />}>
+      <AdminContentCmsPage />
+    </Suspense>
+  );
+}
 
 function LegacyGlossariesRedirect() {
   const location = useLocation();
@@ -97,10 +128,6 @@ function LegacyGlossarySettingsRedirect() {
 function LegacyStringAuthoringRedirect() {
   const location = useLocation();
   return <Navigate to={`/string-authoring${location.search}`} replace />;
-}
-
-function isNavPathActive(pathname: string, navPath: string) {
-  return pathname === navPath || pathname.startsWith(`${navPath}/`);
 }
 
 function AppLayout({ showHeader }: { showHeader: boolean }) {
@@ -152,264 +179,251 @@ function AppLayout({ showHeader }: { showHeader: boolean }) {
   );
 }
 
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <Route path="/tools/mf2-editor-prototype" element={<TextAssistPrototypePage />} />
+      <Route
+        element={
+          <RequireUser>
+            <AppLayout showHeader />
+          </RequireUser>
+        }
+      >
+        <Route path="/" element={<Navigate to="/repositories" replace />} />
+        <Route path="/project-requests" element={<Navigate to="/review-projects" replace />} />
+        <Route path="/branches" element={<Navigate to="/repositories" replace />} />
+        <Route path="/screenshots-legacy" element={<Navigate to="/screenshots" replace />} />
+        {navItems.map(({ to, element }) => (
+          <Route key={to} path={to} element={element} />
+        ))}
+        <Route path="/string-authoring" element={<AdminStringAuthoringPage />} />
+        <Route path="/glossaries" element={<GlossariesPage />} />
+        <Route path="/glossaries/:glossaryId/settings" element={<AdminGlossaryDetailPage />} />
+        <Route path="/ai-translate" element={<AiTranslatePage />} />
+        <Route path="/monitoring" element={<MonitoringPage />} />
+        <Route path="/statistics" element={<StatisticsPage />} />
+        <Route path="/review-projects/new" element={<ReviewProjectCreatePage />} />
+        <Route path="/translation-incidents" element={<AdminTranslationIncidentsPage />} />
+        <Route path="/screenshots" element={<ScreenshotsDropzonePage />} />
+        <Route path="/settings" element={<Navigate to="/settings/me" replace />} />
+        <Route path="/settings/me" element={<SettingsPage />} />
+        <Route
+          path="/settings/user-management"
+          element={<Navigate to="/settings/system/users" replace />}
+        />
+        <Route path="/settings/box" element={<Navigate to="/settings/system" replace />} />
+        <Route path="/settings/admin" element={<Navigate to="/settings/system" replace />} />
+        <Route path="/settings/system" element={<AdminSettingsPage />} />
+        <Route path="/settings/teams" element={<AdminTeamsPage />} />
+        <Route
+          path="/settings/team"
+          element={<Navigate to="/settings/system/team-pools" replace />}
+        />
+        <Route path="/tools/char-code" element={<CharCodeHelperPage />} />
+        <Route path="/tools/bidi-helper" element={<BidiHelperPage />} />
+        <Route path="/tools/icu-preview" element={<IcuMessagePreviewPage />} />
+        <Route path="/tools/text-assist" element={<TextAssistPrototypePage />} />
+      </Route>
+      <Route
+        element={
+          <RequireUser>
+            <AppLayout showHeader={false} />
+          </RequireUser>
+        }
+      >
+        <Route path="/glossaries/:glossaryId" element={<GlossaryWorkspacePage />} />
+        <Route
+          path="/glossaries/:glossaryId/terms/:tmTextUnitId"
+          element={<GlossaryWorkspacePage />}
+        />
+        <Route path="/review-projects/:projectId" element={<ReviewProjectPage />} />
+        <Route path="/text-units/:tmTextUnitId" element={<TextUnitDetailPage />} />
+        <Route path="/settings/admin/ai-translate" element={<AdminAiTranslateAutomationPage />} />
+        <Route path="/settings/system/ai-translate" element={<AdminAiTranslateAutomationPage />} />
+        <Route path="/settings/admin/review-features" element={<AdminReviewFeaturesPage />} />
+        <Route path="/settings/system/review-features" element={<AdminReviewFeaturesPage />} />
+        <Route
+          path="/settings/admin/json-config-localization"
+          element={<AdminJsonConfigLocalizationPage />}
+        />
+        <Route
+          path="/settings/admin/json-config-localization/:repositoryId"
+          element={<AdminJsonConfigLocalizationPage />}
+        />
+        <Route
+          path="/settings/system/json-config-localization"
+          element={<AdminJsonConfigLocalizationPage />}
+        />
+        <Route
+          path="/settings/system/json-config-localization/:repositoryId"
+          element={<AdminJsonConfigLocalizationPage />}
+        />
+        <Route path="/settings/admin/string-authoring" element={<LegacyStringAuthoringRedirect />} />
+        <Route path="/settings/system/string-authoring" element={<LegacyStringAuthoringRedirect />} />
+        <Route
+          path="/settings/admin/linguist-time-spent"
+          element={<AdminLinguistTimeSpentPage />}
+        />
+        <Route
+          path="/settings/system/linguist-time-spent"
+          element={<AdminLinguistTimeSpentPage />}
+        />
+        <Route path="/settings/admin/glossaries" element={<LegacyGlossariesRedirect />} />
+        <Route path="/settings/system/glossaries" element={<LegacyGlossariesRedirect />} />
+        <Route
+          path="/settings/admin/glossary-term-index"
+          element={<AdminTermIndexAutomationPage />}
+        />
+        <Route
+          path="/settings/system/glossary-term-index"
+          element={<AdminTermIndexAutomationPage />}
+        />
+        <Route
+          path="/settings/admin/glossary-term-index/workflow"
+          element={<AdminGlossaryWorkflowPage />}
+        />
+        <Route
+          path="/settings/system/glossary-term-index/workflow"
+          element={<AdminGlossaryWorkflowPage />}
+        />
+        <Route
+          path="/settings/admin/glossary-term-index/terms"
+          element={<AdminTermIndexTermsPage />}
+        />
+        <Route
+          path="/settings/system/glossary-term-index/terms"
+          element={<AdminTermIndexTermsPage />}
+        />
+        <Route
+          path="/settings/admin/glossary-term-index/candidates"
+          element={<AdminTermIndexCandidatesPage />}
+        />
+        <Route
+          path="/settings/system/glossary-term-index/candidates"
+          element={<AdminTermIndexCandidatesPage />}
+        />
+        <Route path="/settings/admin/review-automations" element={<AdminReviewAutomationsPage />} />
+        <Route
+          path="/settings/system/review-automations"
+          element={<AdminReviewAutomationsPage />}
+        />
+        <Route
+          path="/settings/admin/review-automation-runs"
+          element={<AdminReviewAutomationRunsPage />}
+        />
+        <Route
+          path="/settings/system/review-automation-runs"
+          element={<AdminReviewAutomationRunsPage />}
+        />
+        <Route
+          path="/settings/admin/ai-translate/prompt-suffixes"
+          element={<Navigate to="/settings/admin/ai-translate/prompts" replace />}
+        />
+        <Route
+          path="/settings/system/ai-translate/prompt-suffixes"
+          element={<Navigate to="/settings/system/ai-translate/prompts" replace />}
+        />
+        <Route
+          path="/settings/admin/ai-translate/prompts"
+          element={<AdminAiTranslatePromptsPage />}
+        />
+        <Route
+          path="/settings/system/ai-translate/prompts"
+          element={<AdminAiTranslatePromptsPage />}
+        />
+        <Route
+          path="/settings/admin/ai-translate/source-prompt-rules"
+          element={<Navigate to="/settings/admin/ai-translate/prompts?tab=source-rules" replace />}
+        />
+        <Route
+          path="/settings/system/ai-translate/source-prompt-rules"
+          element={<Navigate to="/settings/system/ai-translate/prompts?tab=source-rules" replace />}
+        />
+        <Route path="/settings/admin/teams" element={<AdminTeamsPage />} />
+        <Route path="/settings/admin/users" element={<AdminUserSettingsPage />} />
+        <Route path="/settings/system/teams" element={<AdminTeamsPage />} />
+        <Route path="/settings/system/users" element={<AdminUserSettingsPage />} />
+        <Route path="/settings/admin/users/:userId" element={<AdminUserDetailPage />} />
+        <Route path="/settings/admin/users/batch" element={<AdminUserBatchPage />} />
+        <Route path="/settings/admin/teams/:teamId" element={<TeamDetailPage />} />
+        <Route path="/settings/admin/team-pools" element={<AdminTeamPoolsPage />} />
+        <Route path="/settings/system/users/:userId" element={<AdminUserDetailPage />} />
+        <Route path="/settings/system/users/batch" element={<AdminUserBatchPage />} />
+        <Route path="/settings/system/teams/:teamId" element={<TeamDetailPage />} />
+        <Route path="/settings/system/team-pools" element={<AdminTeamPoolsPage />} />
+        <Route
+          path="/settings/admin/review-features/batch"
+          element={<AdminReviewFeatureBatchPage />}
+        />
+        <Route
+          path="/settings/system/review-features/batch"
+          element={<AdminReviewFeatureBatchPage />}
+        />
+        <Route
+          path="/settings/admin/review-features/:featureId"
+          element={<AdminReviewFeatureDetailPage />}
+        />
+        <Route
+          path="/settings/system/review-features/:featureId"
+          element={<AdminReviewFeatureDetailPage />}
+        />
+        <Route
+          path="/settings/admin/glossaries/:glossaryId"
+          element={<LegacyGlossarySettingsRedirect />}
+        />
+        <Route
+          path="/settings/system/glossaries/:glossaryId"
+          element={<LegacyGlossarySettingsRedirect />}
+        />
+        <Route
+          path="/settings/admin/review-automations/batch"
+          element={<AdminReviewAutomationBatchPage />}
+        />
+        <Route
+          path="/settings/system/review-automations/batch"
+          element={<AdminReviewAutomationBatchPage />}
+        />
+        <Route
+          path="/settings/admin/review-automations/:automationId"
+          element={<AdminReviewAutomationDetailPage />}
+        />
+        <Route
+          path="/settings/system/review-automations/:automationId"
+          element={<AdminReviewAutomationDetailPage />}
+        />
+        <Route
+          path="/settings/admin/temporary-bulk-translation-accept"
+          element={<AdminTemporaryBulkTranslationAcceptPage />}
+        />
+        <Route
+          path="/settings/system/temporary-bulk-translation-accept"
+          element={<AdminTemporaryBulkTranslationAcceptPage />}
+        />
+        <Route
+          path="/settings/admin/translation-incidents"
+          element={<AdminTranslationIncidentsPage />}
+        />
+        <Route
+          path="/settings/system/translation-incidents"
+          element={<AdminTranslationIncidentsPage />}
+        />
+        <Route path="/settings/admin/content-cms" element={<LazyAdminContentCmsPage />} />
+        <Route path="/settings/system/content-cms" element={<LazyAdminContentCmsPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/repositories" replace />} />
+    </Routes>
+  );
+}
+
 export function App() {
+  const [router] = useState(() => createBrowserRouter([{ path: '*', element: <AppRoutes /> }]));
+
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/auth/callback" element={<AuthCallbackPage />} />
-          <Route path="/tools/mf2-editor-prototype" element={<TextAssistPrototypePage />} />
-          <Route
-            element={
-              <RequireUser>
-                <AppLayout showHeader />
-              </RequireUser>
-            }
-          >
-            <Route path="/" element={<Navigate to="/repositories" replace />} />
-            <Route path="/project-requests" element={<Navigate to="/review-projects" replace />} />
-            <Route path="/branches" element={<Navigate to="/repositories" replace />} />
-            <Route path="/screenshots-legacy" element={<Navigate to="/screenshots" replace />} />
-            {navItems.map(({ to, element }) => (
-              <Route key={to} path={to} element={element} />
-            ))}
-            <Route path="/string-authoring" element={<AdminStringAuthoringPage />} />
-            <Route path="/glossaries" element={<GlossariesPage />} />
-            <Route path="/glossaries/:glossaryId/settings" element={<AdminGlossaryDetailPage />} />
-            <Route path="/ai-translate" element={<AiTranslatePage />} />
-            <Route path="/monitoring" element={<MonitoringPage />} />
-            <Route path="/statistics" element={<StatisticsPage />} />
-            <Route path="/review-projects/new" element={<ReviewProjectCreatePage />} />
-            <Route path="/translation-incidents" element={<AdminTranslationIncidentsPage />} />
-            <Route path="/screenshots" element={<ScreenshotsDropzonePage />} />
-            <Route path="/settings" element={<Navigate to="/settings/me" replace />} />
-            <Route path="/settings/me" element={<SettingsPage />} />
-            <Route
-              path="/settings/user-management"
-              element={<Navigate to="/settings/system/users" replace />}
-            />
-            <Route path="/settings/box" element={<Navigate to="/settings/system" replace />} />
-            <Route path="/settings/admin" element={<Navigate to="/settings/system" replace />} />
-            <Route path="/settings/system" element={<AdminSettingsPage />} />
-            <Route path="/settings/teams" element={<AdminTeamsPage />} />
-            <Route
-              path="/settings/team"
-              element={<Navigate to="/settings/system/team-pools" replace />}
-            />
-            <Route path="/tools/char-code" element={<CharCodeHelperPage />} />
-            <Route path="/tools/bidi-helper" element={<BidiHelperPage />} />
-            <Route path="/tools/icu-preview" element={<IcuMessagePreviewPage />} />
-            <Route path="/tools/text-assist" element={<TextAssistPrototypePage />} />
-          </Route>
-          <Route
-            element={
-              <RequireUser>
-                <AppLayout showHeader={false} />
-              </RequireUser>
-            }
-          >
-            <Route path="/glossaries/:glossaryId" element={<GlossaryWorkspacePage />} />
-            <Route
-              path="/glossaries/:glossaryId/terms/:tmTextUnitId"
-              element={<GlossaryWorkspacePage />}
-            />
-            <Route path="/review-projects/:projectId" element={<ReviewProjectPage />} />
-            <Route path="/text-units/:tmTextUnitId" element={<TextUnitDetailPage />} />
-            <Route
-              path="/settings/admin/ai-translate"
-              element={<AdminAiTranslateAutomationPage />}
-            />
-            <Route
-              path="/settings/system/ai-translate"
-              element={<AdminAiTranslateAutomationPage />}
-            />
-            <Route path="/settings/admin/review-features" element={<AdminReviewFeaturesPage />} />
-            <Route path="/settings/system/review-features" element={<AdminReviewFeaturesPage />} />
-            <Route
-              path="/settings/admin/json-config-localization"
-              element={<AdminJsonConfigLocalizationPage />}
-            />
-            <Route
-              path="/settings/admin/json-config-localization/:repositoryId"
-              element={<AdminJsonConfigLocalizationPage />}
-            />
-            <Route
-              path="/settings/system/json-config-localization"
-              element={<AdminJsonConfigLocalizationPage />}
-            />
-            <Route
-              path="/settings/system/json-config-localization/:repositoryId"
-              element={<AdminJsonConfigLocalizationPage />}
-            />
-            <Route
-              path="/settings/admin/string-authoring"
-              element={<LegacyStringAuthoringRedirect />}
-            />
-            <Route
-              path="/settings/system/string-authoring"
-              element={<LegacyStringAuthoringRedirect />}
-            />
-            <Route
-              path="/settings/admin/linguist-time-spent"
-              element={<AdminLinguistTimeSpentPage />}
-            />
-            <Route
-              path="/settings/system/linguist-time-spent"
-              element={<AdminLinguistTimeSpentPage />}
-            />
-            <Route path="/settings/admin/glossaries" element={<LegacyGlossariesRedirect />} />
-            <Route path="/settings/system/glossaries" element={<LegacyGlossariesRedirect />} />
-            <Route
-              path="/settings/admin/glossary-term-index"
-              element={<AdminTermIndexAutomationPage />}
-            />
-            <Route
-              path="/settings/system/glossary-term-index"
-              element={<AdminTermIndexAutomationPage />}
-            />
-            <Route
-              path="/settings/admin/glossary-term-index/workflow"
-              element={<AdminGlossaryWorkflowPage />}
-            />
-            <Route
-              path="/settings/system/glossary-term-index/workflow"
-              element={<AdminGlossaryWorkflowPage />}
-            />
-            <Route
-              path="/settings/admin/glossary-term-index/terms"
-              element={<AdminTermIndexTermsPage />}
-            />
-            <Route
-              path="/settings/system/glossary-term-index/terms"
-              element={<AdminTermIndexTermsPage />}
-            />
-            <Route
-              path="/settings/admin/glossary-term-index/candidates"
-              element={<AdminTermIndexCandidatesPage />}
-            />
-            <Route
-              path="/settings/system/glossary-term-index/candidates"
-              element={<AdminTermIndexCandidatesPage />}
-            />
-            <Route
-              path="/settings/admin/review-automations"
-              element={<AdminReviewAutomationsPage />}
-            />
-            <Route
-              path="/settings/system/review-automations"
-              element={<AdminReviewAutomationsPage />}
-            />
-            <Route
-              path="/settings/admin/review-automation-runs"
-              element={<AdminReviewAutomationRunsPage />}
-            />
-            <Route
-              path="/settings/system/review-automation-runs"
-              element={<AdminReviewAutomationRunsPage />}
-            />
-            <Route
-              path="/settings/admin/ai-translate/prompt-suffixes"
-              element={<Navigate to="/settings/admin/ai-translate/prompts" replace />}
-            />
-            <Route
-              path="/settings/system/ai-translate/prompt-suffixes"
-              element={<Navigate to="/settings/system/ai-translate/prompts" replace />}
-            />
-            <Route
-              path="/settings/admin/ai-translate/prompts"
-              element={<AdminAiTranslatePromptsPage />}
-            />
-            <Route
-              path="/settings/system/ai-translate/prompts"
-              element={<AdminAiTranslatePromptsPage />}
-            />
-            <Route
-              path="/settings/admin/ai-translate/source-prompt-rules"
-              element={
-                <Navigate to="/settings/admin/ai-translate/prompts?tab=source-rules" replace />
-              }
-            />
-            <Route
-              path="/settings/system/ai-translate/source-prompt-rules"
-              element={
-                <Navigate to="/settings/system/ai-translate/prompts?tab=source-rules" replace />
-              }
-            />
-            <Route path="/settings/admin/teams" element={<AdminTeamsPage />} />
-            <Route path="/settings/admin/users" element={<AdminUserSettingsPage />} />
-            <Route path="/settings/system/teams" element={<AdminTeamsPage />} />
-            <Route path="/settings/system/users" element={<AdminUserSettingsPage />} />
-            <Route path="/settings/admin/users/:userId" element={<AdminUserDetailPage />} />
-            <Route path="/settings/admin/users/batch" element={<AdminUserBatchPage />} />
-            <Route path="/settings/admin/teams/:teamId" element={<TeamDetailPage />} />
-            <Route path="/settings/admin/team-pools" element={<AdminTeamPoolsPage />} />
-            <Route path="/settings/system/users/:userId" element={<AdminUserDetailPage />} />
-            <Route path="/settings/system/users/batch" element={<AdminUserBatchPage />} />
-            <Route path="/settings/system/teams/:teamId" element={<TeamDetailPage />} />
-            <Route path="/settings/system/team-pools" element={<AdminTeamPoolsPage />} />
-            <Route
-              path="/settings/admin/review-features/batch"
-              element={<AdminReviewFeatureBatchPage />}
-            />
-            <Route
-              path="/settings/system/review-features/batch"
-              element={<AdminReviewFeatureBatchPage />}
-            />
-            <Route
-              path="/settings/admin/review-features/:featureId"
-              element={<AdminReviewFeatureDetailPage />}
-            />
-            <Route
-              path="/settings/system/review-features/:featureId"
-              element={<AdminReviewFeatureDetailPage />}
-            />
-            <Route
-              path="/settings/admin/glossaries/:glossaryId"
-              element={<LegacyGlossarySettingsRedirect />}
-            />
-            <Route
-              path="/settings/system/glossaries/:glossaryId"
-              element={<LegacyGlossarySettingsRedirect />}
-            />
-            <Route
-              path="/settings/admin/review-automations/batch"
-              element={<AdminReviewAutomationBatchPage />}
-            />
-            <Route
-              path="/settings/system/review-automations/batch"
-              element={<AdminReviewAutomationBatchPage />}
-            />
-            <Route
-              path="/settings/admin/review-automations/:automationId"
-              element={<AdminReviewAutomationDetailPage />}
-            />
-            <Route
-              path="/settings/system/review-automations/:automationId"
-              element={<AdminReviewAutomationDetailPage />}
-            />
-            <Route
-              path="/settings/admin/temporary-bulk-translation-accept"
-              element={<AdminTemporaryBulkTranslationAcceptPage />}
-            />
-            <Route
-              path="/settings/system/temporary-bulk-translation-accept"
-              element={<AdminTemporaryBulkTranslationAcceptPage />}
-            />
-            <Route
-              path="/settings/admin/translation-incidents"
-              element={<AdminTranslationIncidentsPage />}
-            />
-            <Route
-              path="/settings/system/translation-incidents"
-              element={<AdminTranslationIncidentsPage />}
-            />
-            <Route path="/settings/admin/content-cms" element={<AdminContentCmsPage />} />
-            <Route path="/settings/system/content-cms" element={<AdminContentCmsPage />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/repositories" replace />} />
-        </Routes>
-      </BrowserRouter>
+      <RouterProvider router={router} />
     </QueryClientProvider>
   );
 }

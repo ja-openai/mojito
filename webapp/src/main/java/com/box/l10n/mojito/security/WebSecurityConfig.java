@@ -238,7 +238,7 @@ public class WebSecurityConfig {
                 .hasAnyRole("CMS_DELIVERY", "ADMIN")
                 .requestMatchers(HttpMethod.HEAD, CMS_SNAPSHOT_DELIVERY_PATHS)
                 .hasAnyRole("CMS_DELIVERY", "ADMIN")
-                .requestMatchers("/api/content-cms/**")
+                .requestMatchers("/api/content-cms", "/api/content-cms/**")
                 .hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/admin/temporary-bulk-translation-accept/**")
                 .hasRole("ADMIN")
@@ -374,7 +374,7 @@ public class WebSecurityConfig {
         exceptionHandling ->
             exceptionHandling.defaultAuthenticationEntryPointFor(
                 new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-                pathPatternRequestMatcherBuilder.matcher("/api/*")));
+                pathPatternRequestMatcherBuilder.matcher("/api/**")));
 
     if (securityConfig.getUnauthRedirectTo() != null) {
       logger.debug(

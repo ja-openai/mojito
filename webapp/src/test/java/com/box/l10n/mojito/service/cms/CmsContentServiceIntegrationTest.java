@@ -16,7 +16,10 @@ import com.box.l10n.mojito.entity.cms.CmsContentProject;
 import com.box.l10n.mojito.entity.cms.CmsContentTypeField;
 import com.box.l10n.mojito.entity.cms.CmsPublishSnapshot;
 import com.box.l10n.mojito.entity.cms.CmsPublishSnapshotSeal;
+import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.json.ObjectMapper;
+import com.box.l10n.mojito.security.Role;
+import com.box.l10n.mojito.security.UserDetailsImpl;
 import com.box.l10n.mojito.service.DBUtils;
 import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.asset.AssetService;
@@ -33,6 +36,7 @@ import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import com.box.l10n.mojito.service.repository.RepositoryService;
 import com.box.l10n.mojito.service.security.user.UserRepository;
+import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantMutationLockService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
@@ -63,6 +67,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.UncategorizedSQLException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.orm.jpa.JpaSystemException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -79,6 +84,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class CmsContentServiceIntegrationTest extends ServiceTestBase {
 
   @Autowired CmsContentService cmsContentService;
+
+  @Autowired CmsContentConfigurationProperties contentCmsConfigurationProperties;
 
   @Autowired RepositoryService repositoryService;
 
@@ -118,6 +125,8 @@ public class CmsContentServiceIntegrationTest extends ServiceTestBase {
   @Autowired CmsSnapshotSigningService snapshotSigningService;
 
   @Autowired UserRepository userRepository;
+
+  @Autowired UserService userService;
 
   @Autowired EntityManager entityManager;
 
@@ -597,6 +606,42 @@ public class CmsContentServiceIntegrationTest extends ServiceTestBase {
   }
 
   @Test
+  public void createContentTypeRollsBackWhenAuthoringDetailExceedsConfiguredByteLimit()
+      throws Exception {
+    Repository repository =
+        repositoryService.createRepository(
+            testIdWatcher.getEntityName("cms_authoring_detail_rollback_repository"));
+    CmsContentService.ProjectDetail detail =
+        cmsContentService.createProject(
+            new CmsContentService.ProjectCommand(
+                "authoring-detail-rollback",
+                "Authoring detail rollback",
+                null,
+                true,
+                repository.getId(),
+                null,
+                "BLOB_CDN"));
+    Long projectId = detail.project().id();
+    long originalMaxAuthoringDetailBytes =
+        contentCmsConfigurationProperties.getMaxAuthoringDetailBytes();
+
+    try {
+      contentCmsConfigurationProperties.setMaxAuthoringDetailBytes(1);
+      assertThatThrownBy(
+              () ->
+                  cmsContentService.createContentType(
+                      projectId,
+                      new CmsContentService.ContentTypeCommand("banner", "Banner", null, 1, null)))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Content project authoring detail exceeds configured byte limit");
+    } finally {
+      contentCmsConfigurationProperties.setMaxAuthoringDetailBytes(originalMaxAuthoringDetailBytes);
+    }
+
+    assertThat(cmsContentService.getProject(projectId).contentTypes()).isEmpty();
+  }
+
+  @Test
   public void publishRejectsMappedTextUnitWithoutMojitoStringIdAfterTextUnitDrift()
       throws Exception {
     Repository repository =
@@ -943,6 +988,84 @@ public class CmsContentServiceIntegrationTest extends ServiceTestBase {
   }
 
   @Test
+  public void translatorContextEditRequiresReapprovalBeforePublish() throws Exception {
+    Repository repository =
+        repositoryService.createRepository(
+            testIdWatcher.getEntityName("cms_context_edit_repository"));
+    repositoryService.addRepositoryLocale(repository, "fr-FR");
+
+    CmsContentService.ProjectDetail detail =
+        cmsContentService.createProject(
+            new CmsContentService.ProjectCommand(
+                "context-edit-banner",
+                "Context edit banner",
+                null,
+                true,
+                repository.getId(),
+                null,
+                "BLOB_CDN"));
+    Long projectId = detail.project().id();
+    detail =
+        cmsContentService.createContentType(
+            projectId, new CmsContentService.ContentTypeCommand("banner", "Banner", null, 1, null));
+    Long contentTypeId = detail.contentTypes().get(0).id();
+    detail =
+        cmsContentService.createContentTypeField(
+            contentTypeId,
+            new CmsContentService.ContentTypeFieldCommand(
+                "body", "Body", null, CmsContentTypeField.FieldType.TEXT, true, true, 0));
+    Long fieldId = detail.contentTypes().get(0).fields().get(0).id();
+    detail =
+        cmsContentService.createEntry(
+            projectId,
+            new CmsContentService.EntryCommand(
+                contentTypeId, "promo", "Promo", null, CmsContentEntry.Status.DRAFT, null));
+    Long variantId = detail.entries().get(0).variants().get(0).id();
+    detail =
+        cmsContentService.upsertFieldMapping(
+            variantId,
+            new CmsContentService.FieldMappingCommand(
+                fieldId, null, "Hello", "Shown in promo body", null));
+    CmsContentService.FieldMappingView initialMapping =
+        detail.entries().get(0).variants().get(0).fieldMappings().get(0);
+    Long initialTmTextUnitId = initialMapping.tmTextUnitId();
+    detail = markEntryReady(detail);
+    Locale french = localeService.findByBcp47Tag("fr-FR");
+    tmService.addCurrentTMTextUnitVariant(
+        initialTmTextUnitId, french.getId(), "Bonjour", APPROVED, true);
+    assertThat(cmsContentService.getProjectCompleteness(projectId, List.of("fr-FR")).complete())
+        .isTrue();
+
+    detail =
+        cmsContentService.upsertFieldMapping(
+            variantId,
+            new CmsContentService.FieldMappingCommand(
+                fieldId,
+                null,
+                null,
+                "Hello",
+                "Shown in promo banner body",
+                initialMapping.entityVersion()));
+    CmsContentService.FieldMappingView updatedMapping =
+        detail.entries().get(0).variants().get(0).fieldMappings().get(0);
+    assertThat(updatedMapping.tmTextUnitId()).isNotEqualTo(initialTmTextUnitId);
+    assertThat(updatedMapping.stringId()).isEqualTo(initialMapping.stringId());
+    assertThat(
+            tmTextUnitCurrentVariantRepository
+                .findByLocale_IdAndTmTextUnit_Id(french.getId(), updatedMapping.tmTextUnitId())
+                .getTmTextUnitVariant()
+                .getStatus())
+        .isEqualTo(TRANSLATION_NEEDED);
+    CmsContentService.ProjectCompletenessView completeness =
+        cmsContentService.getProjectCompleteness(projectId, List.of("fr-FR"));
+    assertThat(completeness.complete()).isFalse();
+    assertThat(completeness.locales().get(1).translationNeededFields()).isEqualTo(1);
+    assertThatThrownBy(() -> publishProject(projectId, publishCommand(projectId, List.of("fr-FR"))))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Cannot publish with incomplete locales: fr-FR");
+  }
+
+  @Test
   public void publishRejectsMalformedApprovedIcuTranslation() throws Exception {
     Repository repository =
         repositoryService.createRepository(testIdWatcher.getEntityName("cms_icu_repository"));
@@ -1107,6 +1230,7 @@ public class CmsContentServiceIntegrationTest extends ServiceTestBase {
                     'CK__CMS_CONTENT_ENTRY_VARIANT__SORT_ORDER',
                     'CK__CMS_CONTENT_FIELD_MAPPING__ENTITY_VERSION',
                     'CK__CMS_CONTENT_PROJECT__ASSET_CMS_MANAGED',
+                    'CK__CMS_CONTENT_PROJECT__ASSET_NOT_DELETED',
                     'CK__CMS_CONTENT_PROJECT__ASSET_VIRTUAL',
                     'CK__CMS_CONTENT_PROJECT__LAST_PUBLISHED_SNAPSHOT_VERSION',
                     'CK__CMS_PUBLISH_SNAPSHOT__SNAPSHOT_VERSION',
@@ -1139,6 +1263,7 @@ public class CmsContentServiceIntegrationTest extends ServiceTestBase {
             "CK__CMS_CONTENT_ENTRY_VARIANT__VARIANT_KEY",
             "CK__CMS_CONTENT_FIELD_MAPPING__ENTITY_VERSION",
             "CK__CMS_CONTENT_PROJECT__ASSET_CMS_MANAGED",
+            "CK__CMS_CONTENT_PROJECT__ASSET_NOT_DELETED",
             "CK__CMS_CONTENT_PROJECT__ASSET_VIRTUAL",
             "CK__CMS_CONTENT_PROJECT__DELIVERY_HINT",
             "CK__CMS_CONTENT_PROJECT__ENTITY_VERSION",
@@ -1239,6 +1364,32 @@ public class CmsContentServiceIntegrationTest extends ServiceTestBase {
             jdbcTemplate.update(
                 "update cms_content_project set delivery_hint = 'CUSTOM' where id = ?", projectId),
         "CK__CMS_CONTENT_PROJECT__DELIVERY_HINT");
+  }
+
+  @Test
+  public void schemaRejectsDeletedProjectAssetMarker() throws Exception {
+    Repository repository =
+        repositoryService.createRepository(
+            testIdWatcher.getEntityName("cms_deleted_asset_marker_repository"));
+    Long projectId =
+        cmsContentService
+            .createProject(
+                new CmsContentService.ProjectCommand(
+                    "deleted-asset-marker-project",
+                    "Deleted asset marker project",
+                    null,
+                    true,
+                    repository.getId(),
+                    null,
+                    null))
+            .project()
+            .id();
+
+    assertSchemaConstraintViolation(
+        () ->
+            jdbcTemplate.update(
+                "update cms_content_project set asset_deleted = true where id = ?", projectId),
+        "CK__CMS_CONTENT_PROJECT__ASSET_NOT_DELETED");
   }
 
   @Test
@@ -1448,6 +1599,54 @@ public class CmsContentServiceIntegrationTest extends ServiceTestBase {
   }
 
   @Test
+  public void schemaRejectsDeletingProjectWithPublishedSnapshot() throws Exception {
+    CmsPublishSnapshot snapshot = savePublishSnapshot("published-snapshot-project-delete");
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "delete from cms_content_project where id = ?", snapshot.getProject().getId()))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("FK__CMS_PUBLISH_SNAPSHOT__PROJECT");
+  }
+
+  @Test
+  public void deletedSnapshotPublisherKeepsPublishTimeUsernameInHistory() throws Exception {
+    String publisherUsername = testIdWatcher.getEntityName("snapshot_publisher");
+    User publisher =
+        userService.createUserWithRole(publisherUsername, "SnapshotPublisher1234", Role.ROLE_ADMIN);
+    Long publisherId = publisher.getId();
+    UserDetailsImpl publisherPrincipal = new UserDetailsImpl(publisher);
+    Authentication publisherAuthentication =
+        new UsernamePasswordAuthenticationToken(
+            publisherPrincipal,
+            publisherPrincipal.getPassword(),
+            publisherPrincipal.getAuthorities());
+    Authentication adminAuthentication = SecurityContextHolder.getContext().getAuthentication();
+    CmsPublishSnapshot snapshot =
+        withAuthentication(
+            publisherAuthentication, () -> publishReadySnapshot("deleted-snapshot-publisher"));
+
+    withAuthentication(
+        adminAuthentication,
+        () -> {
+          userService.deleteUser(publisher);
+          return null;
+        });
+    entityManager.clear();
+
+    User deletedPublisher = userRepository.findById(publisherId).orElseThrow();
+    assertThat(deletedPublisher.getEnabled()).isFalse();
+    assertThat(deletedPublisher.getUsername()).startsWith("deleted__");
+    CmsContentService.ProjectDetail detail =
+        withAuthentication(
+            adminAuthentication, () -> cmsContentService.getProject(snapshot.getProject().getId()));
+    assertThat(detail.publishSnapshots())
+        .extracting(CmsContentService.PublishSnapshotView::createdByUsername)
+        .containsExactly(publisherUsername);
+  }
+
+  @Test
   public void repositoryRejectsDeletingPublishedSnapshot() throws Exception {
     CmsPublishSnapshot snapshot = savePublishSnapshot("jpa-delete-snapshot");
 
@@ -1559,13 +1758,13 @@ public class CmsContentServiceIntegrationTest extends ServiceTestBase {
   }
 
   @Test
-  public void schemaRejectsNegativePublishedSnapshotArtifactByteSize() throws Exception {
+  public void schemaRejectsZeroPublishedSnapshotArtifactByteSize() throws Exception {
     CmsPublishSnapshot snapshot = savePublishSnapshot("artifact-byte-size-schema");
 
     assertSchemaConstraintViolation(
         () ->
             jdbcTemplate.update(
-                "update cms_publish_snapshot set artifact_byte_size = -1 where id = ?",
+                "update cms_publish_snapshot set artifact_byte_size = 0 where id = ?",
                 snapshot.getId()),
         "CK__CMS_PUBLISH_SNAPSHOT__ARTIFACT_BYTE_SIZE");
   }
@@ -1873,6 +2072,35 @@ public class CmsContentServiceIntegrationTest extends ServiceTestBase {
   }
 
   @Test
+  public void publishSnapshotHistoryPagesRetainedMetadataAfterRecentArtifactValidation()
+      throws Exception {
+    CmsPublishSnapshot firstSnapshot = publishReadySnapshot("snapshot-history-page");
+    Long projectId = firstSnapshot.getProject().getId();
+    for (int snapshotVersion = 2; snapshotVersion <= 11; snapshotVersion++) {
+      publishProject(
+          projectId,
+          publishCommand(projectId, List.of()),
+          "snapshot-history-page-" + snapshotVersion);
+    }
+
+    CmsContentService.PublishSnapshotHistoryView firstPage =
+        cmsContentService.getProjectPublishSnapshots(projectId, null, null);
+    CmsContentService.PublishSnapshotHistoryView secondPage =
+        cmsContentService.getProjectPublishSnapshots(projectId, 2, null);
+
+    assertThat(firstPage.snapshots())
+        .extracting(CmsContentService.PublishSnapshotView::snapshotVersion)
+        .containsExactly(11, 10, 9, 8, 7, 6, 5, 4, 3, 2);
+    assertThat(firstPage.hasMore()).isTrue();
+    assertThat(firstPage.nextBeforeSnapshotVersion()).isEqualTo(2);
+    assertThat(secondPage.snapshots())
+        .extracting(CmsContentService.PublishSnapshotView::snapshotVersion)
+        .containsExactly(1);
+    assertThat(secondPage.hasMore()).isFalse();
+    assertThat(secondPage.nextBeforeSnapshotVersion()).isNull();
+  }
+
+  @Test
   public void publishSnapshotIdLookupFetchesAdminHistoryDependencies() throws Exception {
     CmsPublishSnapshot snapshot = savePublishSnapshot("snapshot-id");
     entityManager.clear();
@@ -1886,12 +2114,12 @@ public class CmsContentServiceIntegrationTest extends ServiceTestBase {
   @Test
   public void versionedPublishSnapshotLookupFetchesArtifactDependencies() throws Exception {
     CmsPublishSnapshot snapshot = savePublishSnapshot("snapshot-versioned");
-    String projectKey = snapshot.getProject().getProjectKey();
     entityManager.clear();
 
     CmsPublishSnapshot reloaded =
         snapshotRepository
-            .findByProjectKeyAndSnapshotVersion(projectKey, snapshot.getSnapshotVersion())
+            .findByProjectIdAndSnapshotVersion(
+                snapshot.getProject().getId(), snapshot.getSnapshotVersion())
             .orElseThrow();
 
     assertThat(Hibernate.isInitialized(reloaded.getProject())).isTrue();
@@ -1901,21 +2129,14 @@ public class CmsContentServiceIntegrationTest extends ServiceTestBase {
   @Test
   public void latestPublishSnapshotLookupFetchesArtifactDependencies() throws Exception {
     CmsPublishSnapshot snapshot = savePublishSnapshot("snapshot-latest");
-    String projectKey = snapshot.getProject().getProjectKey();
     entityManager.clear();
 
     CmsPublishSnapshot reloaded =
         snapshotRepository
-            .findFirstByProjectProjectKeyIgnoreCaseOrderBySnapshotVersionDesc(projectKey)
+            .findFirstByProjectIdOrderBySnapshotVersionDesc(snapshot.getProject().getId())
             .orElseThrow();
 
     assertThat(Hibernate.isInitialized(reloaded.getProject())).isTrue();
-    assertThat(Hibernate.isInitialized(reloaded.getProject().getRepository())).isTrue();
-    assertThat(Hibernate.isInitialized(reloaded.getProject().getAsset())).isTrue();
-    assertThat(
-            Hibernate.isInitialized(
-                reloaded.getProject().getAsset().getLastSuccessfulAssetExtraction()))
-        .isTrue();
     assertThat(Hibernate.isInitialized(reloaded.getCreatedByUser())).isTrue();
   }
 

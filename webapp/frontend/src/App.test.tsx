@@ -21,6 +21,10 @@ vi.mock('./hooks/useCurrentUser', () => ({
   }),
 }));
 
+vi.mock('./page/settings/AdminContentCmsPage', () => ({
+  AdminContentCmsPage: () => <div>Content CMS route</div>,
+}));
+
 vi.mock('./page/settings/AdminStringAuthoringPage', () => ({
   AdminStringAuthoringPage: () => <div>String authoring page</div>,
 }));
@@ -75,5 +79,13 @@ describe('App', () => {
     render(<App />);
 
     expect(screen.queryByRole('link', { name: 'String Authoring' })).not.toBeInTheDocument();
+  });
+
+  it('loads the content CMS admin route', async () => {
+    window.history.pushState({}, '', '/settings/system/content-cms');
+
+    render(<App />);
+
+    expect(await screen.findByText('Content CMS route')).toBeInTheDocument();
   });
 });

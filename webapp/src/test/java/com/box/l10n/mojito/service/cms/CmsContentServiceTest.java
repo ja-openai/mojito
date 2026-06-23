@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -41,6 +42,7 @@ import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantMutationLockService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -53,13 +55,17 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.InOrder;
+import org.springframework.boot.test.system.OutputCaptureRule;
 import org.springframework.data.domain.PageRequest;
 
 public class CmsContentServiceTest {
 
   private static final String VALID_PACKAGE_SHA256 = "b".repeat(64);
+
+  @Rule public OutputCaptureRule outputCapture = new OutputCaptureRule();
 
   private final CmsContentProjectRepository projectRepository =
       mock(CmsContentProjectRepository.class);
@@ -134,7 +140,7 @@ public class CmsContentServiceTest {
     CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
     when(userService.isCurrentUserAdmin()).thenReturn(false);
     when(userService.isCurrentUserCmsDelivery()).thenReturn(true);
-    when(snapshotRepository.findByProjectKeyAndSnapshotVersion("growth-email", 2))
+    when(snapshotRepository.findByProjectIdAndSnapshotVersion(fixture.project.getId(), 2))
         .thenReturn(Optional.of(snapshot));
 
     CmsContentService.SnapshotArtifact artifact = service.getSnapshotArtifact("growth-email", 2);
@@ -283,6 +289,116 @@ public class CmsContentServiceTest {
   }
 
   @Test
+  public void publishProjectLogsBoundedOperationalMetadataOnly() {
+    CmsFixture fixture = setupFixture();
+    when(snapshotRepository.findCurrentVariantRows(any(), any()))
+        .thenReturn(
+            List.of(
+                new CmsCurrentVariantRow(
+                    fixture.tmTextUnit.getId(),
+                    "fr-FR",
+                    "Bonjour",
+                    TMTextUnitVariant.Status.APPROVED,
+                    true)));
+
+    CmsContentService.PublishSnapshotView view =
+        publishProject(
+            fixture.project.getId(),
+            validatedPublishCommand(fixture, List.of("fr-FR")),
+            "secret-publish-request-key");
+
+    assertThat(outputCapture.toString())
+        .contains(
+            "Published CMS snapshot: projectKey=growth-email, snapshotVersion=1, localeTags=[en, fr-FR], artifactSha256="
+                + view.artifactSha256())
+        .contains("artifactBytes=" + view.artifactByteSize())
+        .contains("publisher=admin")
+        .doesNotContain("secret-publish-request-key")
+        .doesNotContain(view.snapshotSignature())
+        .doesNotContain(view.artifactSignature())
+        .doesNotContain("test-content-cms-snapshot-signing-key-0001")
+        .doesNotContain("\"source\":\"Hello\"")
+        .doesNotContain("Bonjour");
+  }
+
+  @Test
+  public void publishProjectRejectsSnapshotWatermarkAdvanceConflict() {
+    CmsFixture fixture = setupFixture();
+    when(snapshotRepository.findCurrentVariantRows(any(), any()))
+        .thenReturn(
+            List.of(
+                new CmsCurrentVariantRow(
+                    fixture.tmTextUnit.getId(),
+                    "fr-FR",
+                    "Bonjour",
+                    TMTextUnitVariant.Status.APPROVED,
+                    true)));
+    doReturn(0)
+        .when(projectRepository)
+        .advanceLastPublishedSnapshotVersion(fixture.project.getId(), 0, 1);
+
+    assertThatThrownBy(
+            () ->
+                publishProject(
+                    fixture.project.getId(), validatedPublishCommand(fixture, List.of("fr-FR"))))
+        .isInstanceOf(CmsContentConflictException.class)
+        .hasMessageContaining("publish snapshot history changed; retry publish");
+    verify(snapshotRepository).save(any(CmsPublishSnapshot.class));
+    verify(snapshotSealRepository).save(any(CmsPublishSnapshotSeal.class));
+  }
+
+  @Test
+  public void getProjectCompletenessRejectsIncompleteSnapshotHistoryBeforeReturningPackage() {
+    CmsFixture fixture = setupFixture();
+    fixture.project.setLastPublishedSnapshotVersion(1);
+
+    assertThatThrownBy(
+            () -> service.getProjectCompleteness(fixture.project.getId(), List.of("fr-FR")))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining(
+            "CMS publish snapshot history is incomplete for content project: growth-email");
+
+    verify(snapshotRepository, never()).findCurrentVariantRows(any(), any());
+  }
+
+  @Test
+  public void getProjectCompletenessRejectsInvalidRecentSnapshotBeforeReturningPackage() {
+    CmsFixture fixture = setupFixture();
+    CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
+    snapshot.setArtifactSignature("bad");
+    when(snapshotRepository.findByProjectIdOrderBySnapshotVersionDesc(
+            fixture.project.getId(), PageRequest.of(0, 10)))
+        .thenReturn(List.of(snapshot));
+
+    assertThatThrownBy(
+            () -> service.getProjectCompleteness(fixture.project.getId(), List.of("fr-FR")))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish artifact signature is invalid: 99");
+
+    verify(snapshotRepository, never()).findCurrentVariantRows(any(), any());
+  }
+
+  @Test
+  public void publishProjectRejectsInvalidRecentSnapshotBeforeCreatingSnapshot() {
+    CmsFixture fixture = setupFixture();
+    CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
+    snapshot.setArtifactSignature("bad");
+    when(snapshotRepository.findByProjectIdOrderBySnapshotVersionDesc(
+            fixture.project.getId(), PageRequest.of(0, 10)))
+        .thenReturn(List.of(snapshot));
+
+    assertThatThrownBy(
+            () ->
+                publishProject(fixture.project.getId(), publishCommand(fixture, List.of("fr-FR"))))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish artifact signature is invalid: 99");
+
+    verify(snapshotRepository, never()).findCurrentVariantRows(any(), any());
+    verify(snapshotRepository, never()).save(any(CmsPublishSnapshot.class));
+    verify(snapshotSealRepository, never()).save(any(CmsPublishSnapshotSeal.class));
+  }
+
+  @Test
   public void publishProjectReturnsStoredSnapshotForMatchingPublishRequestKey() {
     CmsFixture fixture = setupFixture();
     CmsPublishSnapshot snapshot =
@@ -303,6 +419,31 @@ public class CmsContentServiceTest {
     assertThat(view.localeTags()).containsExactly("en", "fr-FR");
     verify(snapshotRepository).findMaxSnapshotVersionByProjectId(fixture.project.getId());
     verify(snapshotRepository).countByProjectId(fixture.project.getId());
+    verify(snapshotRepository, never()).findCurrentVariantRows(any(), any());
+    verify(snapshotRepository, never()).save(any(CmsPublishSnapshot.class));
+  }
+
+  @Test
+  public void
+      publishProjectReturnsStoredSnapshotForMatchingPublishRequestKeyAfterProjectDisabled() {
+    CmsFixture fixture = setupFixture();
+    CmsPublishSnapshot snapshot =
+        validPublishSnapshot(fixture.project, "growth-email", List.of("en", "fr-FR"));
+    snapshot.setPublishRequestKey("publish-fr");
+    snapshot.setPublishRequestLocaleTags("fr-FR");
+    snapshot.setPublishRequestAuthoringSha256(publishRequestAuthoringSha256(fixture));
+    resignSnapshot(snapshot);
+    fixture.project.setEnabled(false);
+    when(snapshotRepository.findByProjectIdAndPublishRequestKey(
+            fixture.project.getId(), "publish-fr"))
+        .thenReturn(Optional.of(snapshot));
+
+    CmsContentService.PublishSnapshotView view =
+        publishProject(
+            fixture.project.getId(), publishCommand(fixture, List.of("fr-FR")), "publish-fr");
+
+    assertThat(view.snapshotVersion()).isEqualTo(snapshot.getSnapshotVersion());
+    assertThat(view.localeTags()).containsExactly("en", "fr-FR");
     verify(snapshotRepository, never()).findCurrentVariantRows(any(), any());
     verify(snapshotRepository, never()).save(any(CmsPublishSnapshot.class));
   }
@@ -396,6 +537,31 @@ public class CmsContentServiceTest {
                     "publish-fr"))
         .isInstanceOf(CmsContentConflictException.class)
         .hasMessageContaining("already used for another authoring revision");
+    verify(snapshotRepository, never()).findCurrentVariantRows(any(), any());
+  }
+
+  @Test
+  public void publishProjectRejectsReusedPublishRequestKeyForAnotherValidatedPackage() {
+    CmsFixture fixture = setupFixture();
+    CmsPublishSnapshot snapshot =
+        validPublishSnapshot(fixture.project, "growth-email", List.of("en", "fr-FR"));
+    snapshot.setPublishRequestKey("publish-fr");
+    snapshot.setPublishRequestLocaleTags("fr-FR");
+    snapshot.setPublishRequestAuthoringSha256(publishRequestAuthoringSha256(fixture));
+    resignSnapshot(snapshot);
+    when(snapshotRepository.findByProjectIdAndPublishRequestKey(
+            fixture.project.getId(), "publish-fr"))
+        .thenReturn(Optional.of(snapshot));
+
+    assertThatThrownBy(
+            () ->
+                publishProject(
+                    fixture.project.getId(),
+                    new CmsContentService.PublishCommand(
+                        List.of("fr-FR"), publishRequestAuthoringSha256(fixture), "c".repeat(64)),
+                    "publish-fr"))
+        .isInstanceOf(CmsContentConflictException.class)
+        .hasMessageContaining("already used for another validated package");
     verify(snapshotRepository, never()).findCurrentVariantRows(any(), any());
   }
 
@@ -680,6 +846,43 @@ public class CmsContentServiceTest {
   }
 
   @Test
+  public void getProjectCompletenessCanonicalizesExplicitLocaleSelectionOrderForPackageIdentity() {
+    CmsFixture fixture = setupFixture();
+    Locale germanLocale = locale(3L, "de-DE");
+    fixture
+        .project
+        .getRepository()
+        .getRepositoryLocales()
+        .add(new RepositoryLocale(fixture.project.getRepository(), germanLocale, true, null));
+    when(snapshotRepository.findCurrentVariantRows(any(), any()))
+        .thenReturn(
+            List.of(
+                new CmsCurrentVariantRow(
+                    fixture.tmTextUnit.getId(),
+                    "fr-FR",
+                    "Bonjour",
+                    TMTextUnitVariant.Status.APPROVED,
+                    true),
+                new CmsCurrentVariantRow(
+                    fixture.tmTextUnit.getId(),
+                    "de-DE",
+                    "Hallo",
+                    TMTextUnitVariant.Status.APPROVED,
+                    true)));
+
+    CmsContentService.ProjectCompletenessView first =
+        service.getProjectCompleteness(fixture.project.getId(), List.of("fr-FR", "de-DE"));
+    CmsContentService.ProjectCompletenessView second =
+        service.getProjectCompleteness(fixture.project.getId(), List.of("de-DE", "fr-FR"));
+
+    assertThat(first.localeTags()).containsExactly("en", "de-DE", "fr-FR");
+    assertThat(second.localeTags()).isEqualTo(first.localeTags());
+    assertThat(second.authoringSha256()).isEqualTo(first.authoringSha256());
+    assertThat(second.publishPackageSha256()).isEqualTo(first.publishPackageSha256());
+    assertThat(second.publishPackageByteSize()).isEqualTo(first.publishPackageByteSize());
+  }
+
+  @Test
   public void publishProjectRejectsBlankExplicitLocaleSelection() {
     CmsFixture fixture = setupFixture();
 
@@ -734,6 +937,29 @@ public class CmsContentServiceTest {
                 publishProject(fixture.project.getId(), publishCommand(fixture, List.of("fr-CA"))))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Cannot publish with incomplete locales: fr-CA");
+  }
+
+  @Test
+  public void publishProjectRejectsRepositoryLocaleInheritanceCycle() {
+    CmsFixture fixture = setupFixture();
+    Locale inheritedLocale = locale(3L, "fr-CA");
+    RepositoryLocale frenchRepositoryLocale =
+        fixture.project.getRepository().getRepositoryLocales().stream()
+            .filter(repositoryLocale -> "fr-FR".equals(repositoryLocale.getLocale().getBcp47Tag()))
+            .findFirst()
+            .orElseThrow();
+    RepositoryLocale inheritedRepositoryLocale =
+        new RepositoryLocale(
+            fixture.project.getRepository(), inheritedLocale, false, frenchRepositoryLocale);
+    fixture.project.getRepository().getRepositoryLocales().add(inheritedRepositoryLocale);
+    frenchRepositoryLocale.setParentLocale(inheritedRepositoryLocale);
+
+    assertThatThrownBy(
+            () ->
+                publishProject(fixture.project.getId(), publishCommand(fixture, List.of("fr-CA"))))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("CMS repository locale inheritance cycle from: fr-CA");
+    verify(snapshotRepository, never()).findCurrentVariantRows(any(), any());
   }
 
   @Test
@@ -872,10 +1098,27 @@ public class CmsContentServiceTest {
   }
 
   @Test
+  public void getSnapshotArtifactRejectsStoredSnapshotInvalidDeliveryEnvelope() throws Exception {
+    CmsFixture fixture = setupFixture();
+    ObjectNode artifact =
+        (ObjectNode)
+            objectMapper.readTree(
+                validArtifactJson(fixture.project.getProjectKey(), List.of("en")));
+    ((ObjectNode) artifact.path("delivery")).put("runtimeDependency", "mojito");
+    CmsPublishSnapshot snapshot =
+        publishSnapshot(fixture.project, objectMapper.writeValueAsStringUnchecked(artifact));
+    stubSnapshotArtifactLookup(snapshot);
+
+    assertThatThrownBy(() -> getSnapshotArtifact(snapshot))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot artifact has invalid delivery: 99");
+  }
+
+  @Test
   public void getSnapshotArtifactLoadsVersionAddressableSnapshotByCanonicalProjectKey() {
     CmsFixture fixture = setupFixture();
     CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
-    when(snapshotRepository.findByProjectKeyAndSnapshotVersion("growth-email", 2))
+    when(snapshotRepository.findByProjectIdAndSnapshotVersion(fixture.project.getId(), 2))
         .thenReturn(Optional.of(snapshot));
 
     CmsContentService.SnapshotArtifact artifact = service.getSnapshotArtifact("growth-email", 2);
@@ -884,7 +1127,8 @@ public class CmsContentServiceTest {
     assertThat(artifact.snapshotSigningKeyId()).isEqualTo("test-v1");
     assertThat(artifact.snapshotSignature()).isEqualTo(snapshot.getSnapshotSignature());
     assertThat(artifact.artifactSignature()).isEqualTo(snapshot.getArtifactSignature());
-    verify(snapshotRepository).findByProjectKeyAndSnapshotVersion("growth-email", 2);
+    verify(projectRepository).findByProjectKeyWithRepositoryAndAssetForUpdate("growth-email");
+    verify(snapshotRepository).findByProjectIdAndSnapshotVersion(fixture.project.getId(), 2);
   }
 
   @Test
@@ -892,13 +1136,13 @@ public class CmsContentServiceTest {
     CmsFixture fixture = setupFixture();
     fixture.project.setEnabled(false);
     CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
-    when(snapshotRepository.findByProjectKeyAndSnapshotVersion("growth-email", 2))
+    when(snapshotRepository.findByProjectIdAndSnapshotVersion(fixture.project.getId(), 2))
         .thenReturn(Optional.of(snapshot));
 
     CmsContentService.SnapshotArtifact artifact = service.getSnapshotArtifact("growth-email", 2);
 
     assertThat(artifact.filename()).isEqualTo("growth-email.v2.json");
-    verify(snapshotRepository).findByProjectKeyAndSnapshotVersion("growth-email", 2);
+    verify(snapshotRepository).findByProjectIdAndSnapshotVersion(fixture.project.getId(), 2);
   }
 
   @Test
@@ -909,15 +1153,14 @@ public class CmsContentServiceTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining(
             "Stable project key must use lowercase letters, numbers, underscores, or hyphens");
-    verify(projectRepository, never()).findByProjectKeyWithRepositoryAndAsset(any());
+    verify(projectRepository, never()).findByProjectKeyWithRepositoryAndAssetForUpdate(any());
   }
 
   @Test
   public void getLatestPublishedSnapshotDescriptorLoadsVerifiedSnapshotByCanonicalProjectKey() {
     CmsFixture fixture = setupFixture();
     CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
-    when(snapshotRepository.findFirstByProjectProjectKeyIgnoreCaseOrderBySnapshotVersionDesc(
-            "growth-email"))
+    when(snapshotRepository.findFirstByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId()))
         .thenReturn(Optional.of(snapshot));
 
     CmsContentService.SnapshotDeliveryDescriptor latest =
@@ -927,16 +1170,59 @@ public class CmsContentServiceTest {
     assertThat(latest.projectKey()).isEqualTo("growth-email");
     assertThat(latest.snapshotVersion()).isEqualTo(2);
     assertThat(latest.projectHint()).isEqualTo("BLOB_CDN");
+    assertThat(latest.artifactSha256()).isEqualTo(snapshot.getArtifactSha256());
+    assertThat(latest.artifactByteSize()).isEqualTo(snapshot.getArtifactByteSize());
+    assertThat(latest.signatureAlgorithm())
+        .isEqualTo(CmsSnapshotSigningService.SIGNATURE_ALGORITHM);
+    assertThat(latest.snapshotSignatureVersion())
+        .isEqualTo(CmsSnapshotSigningService.SNAPSHOT_SIGNATURE_VERSION);
+    assertThat(latest.artifactSignatureVersion())
+        .isEqualTo(CmsSnapshotSigningService.ARTIFACT_SIGNATURE_VERSION);
     assertThat(latest.snapshotSigningKeyId()).isEqualTo("test-v1");
     assertThat(latest.snapshotSignature()).isEqualTo(snapshot.getSnapshotSignature());
     assertThat(latest.artifactSignature()).isEqualTo(snapshot.getArtifactSignature());
+    assertThat(latest.artifactFilename()).isEqualTo("growth-email.v2.json");
     assertThat(latest.artifactExportPath())
         .isEqualTo("/api/content-cms/projects/growth-email/publish-snapshots/2/artifact");
     assertThat(latest.publishedAt()).isEqualTo("2026-01-01T00:00:00Z");
     verify(projectRepository).findByProjectKeyWithRepositoryAndAssetForUpdate("growth-email");
-    verify(projectRepository, never()).findByProjectKeyWithRepositoryAndAsset("growth-email");
     verify(snapshotRepository)
-        .findFirstByProjectProjectKeyIgnoreCaseOrderBySnapshotVersionDesc("growth-email");
+        .findFirstByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId());
+  }
+
+  @Test
+  public void getLatestPublishedSnapshotDescriptorRejectsStoredSnapshotInvalidDeliveryEnvelope()
+      throws Exception {
+    CmsFixture fixture = setupFixture();
+    ObjectNode artifact =
+        (ObjectNode)
+            objectMapper.readTree(
+                validArtifactJson(fixture.project.getProjectKey(), List.of("en")));
+    ((ObjectNode) artifact.path("delivery")).put("runtimeDependency", "mojito");
+    CmsPublishSnapshot snapshot =
+        publishSnapshot(fixture.project, objectMapper.writeValueAsStringUnchecked(artifact));
+    when(snapshotRepository.findFirstByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId()))
+        .thenReturn(Optional.of(snapshot));
+
+    assertThatThrownBy(() -> service.getLatestPublishedSnapshotDescriptor("growth-email"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot artifact has invalid delivery: 99");
+  }
+
+  @Test
+  public void
+      getLatestPublishedSnapshotDescriptorRejectsStoredSnapshotCompletenessMetadataMismatch() {
+    CmsFixture fixture = setupFixture();
+    CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
+    snapshot.setCompletenessJson(
+        "[{\"localeTag\":\"en\",\"totalFields\":2,\"approvedFields\":2,\"missingFields\":0,\"reviewNeededFields\":0,\"translationNeededFields\":0,\"complete\":true}]");
+    resignSnapshot(snapshot);
+    when(snapshotRepository.findFirstByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId()))
+        .thenReturn(Optional.of(snapshot));
+
+    assertThatThrownBy(() -> service.getLatestPublishedSnapshotDescriptor("growth-email"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot completeness mismatch: 99");
   }
 
   @Test
@@ -957,8 +1243,7 @@ public class CmsContentServiceTest {
     when(snapshotRepository.findMaxSnapshotVersionByProjectId(fixture.project.getId()))
         .thenReturn(1);
     when(snapshotRepository.countByProjectId(fixture.project.getId())).thenReturn(1L);
-    when(snapshotRepository.findFirstByProjectProjectKeyIgnoreCaseOrderBySnapshotVersionDesc(
-            "growth-email"))
+    when(snapshotRepository.findFirstByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId()))
         .thenReturn(Optional.of(snapshot));
 
     assertThatThrownBy(() -> service.getLatestPublishedSnapshotDescriptor("growth-email"))
@@ -966,14 +1251,13 @@ public class CmsContentServiceTest {
         .hasMessageContaining(
             "CMS publish snapshot history is incomplete for content project: growth-email");
     verify(snapshotRepository, never())
-        .findFirstByProjectProjectKeyIgnoreCaseOrderBySnapshotVersionDesc("growth-email");
+        .findFirstByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId());
   }
 
   @Test
   public void getLatestPublishedSnapshotDescriptorRejectsProjectWithoutSnapshots() {
-    setupFixture();
-    when(snapshotRepository.findFirstByProjectProjectKeyIgnoreCaseOrderBySnapshotVersionDesc(
-            "growth-email"))
+    CmsFixture fixture = setupFixture();
+    when(snapshotRepository.findFirstByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId()))
         .thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.getLatestPublishedSnapshotDescriptor("growth-email"))
@@ -986,8 +1270,7 @@ public class CmsContentServiceTest {
     CmsFixture fixture = setupFixture();
     fixture.project.setEnabled(false);
     CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
-    when(snapshotRepository.findFirstByProjectProjectKeyIgnoreCaseOrderBySnapshotVersionDesc(
-            "growth-email"))
+    when(snapshotRepository.findFirstByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId()))
         .thenReturn(Optional.of(snapshot));
 
     assertThatThrownBy(() -> service.getLatestPublishedSnapshotDescriptor("growth-email"))
@@ -1000,8 +1283,7 @@ public class CmsContentServiceTest {
     CmsFixture fixture = setupFixture();
     fixture.project.getRepository().setDeleted(true);
     CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
-    when(snapshotRepository.findFirstByProjectProjectKeyIgnoreCaseOrderBySnapshotVersionDesc(
-            "growth-email"))
+    when(snapshotRepository.findFirstByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId()))
         .thenReturn(Optional.of(snapshot));
 
     assertThatThrownBy(() -> service.getLatestPublishedSnapshotDescriptor("growth-email"))
@@ -1010,12 +1292,24 @@ public class CmsContentServiceTest {
   }
 
   @Test
+  public void getLatestPublishedSnapshotDescriptorRejectsHiddenBackingRepository() {
+    CmsFixture fixture = setupFixture();
+    fixture.project.getRepository().setHidden(true);
+    CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
+    when(snapshotRepository.findFirstByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId()))
+        .thenReturn(Optional.of(snapshot));
+
+    assertThatThrownBy(() -> service.getLatestPublishedSnapshotDescriptor("growth-email"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Content project repository is hidden: growth-email");
+  }
+
+  @Test
   public void getLatestPublishedSnapshotDescriptorRejectsDeletedVirtualAsset() {
     CmsFixture fixture = setupFixture();
     fixture.project.getAsset().setDeleted(true);
     CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
-    when(snapshotRepository.findFirstByProjectProjectKeyIgnoreCaseOrderBySnapshotVersionDesc(
-            "growth-email"))
+    when(snapshotRepository.findFirstByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId()))
         .thenReturn(Optional.of(snapshot));
 
     assertThatThrownBy(() -> service.getLatestPublishedSnapshotDescriptor("growth-email"))
@@ -1028,8 +1322,7 @@ public class CmsContentServiceTest {
     CmsFixture fixture = setupFixture();
     fixture.project.getAsset().setCmsManaged(false);
     CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
-    when(snapshotRepository.findFirstByProjectProjectKeyIgnoreCaseOrderBySnapshotVersionDesc(
-            "growth-email"))
+    when(snapshotRepository.findFirstByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId()))
         .thenReturn(Optional.of(snapshot));
 
     assertThatThrownBy(() -> service.getLatestPublishedSnapshotDescriptor("growth-email"))
@@ -1042,8 +1335,7 @@ public class CmsContentServiceTest {
     CmsFixture fixture = setupFixture();
     CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
     fixture.project.setDeliveryHint("STATSIG_DYNAMIC_CONFIG");
-    when(snapshotRepository.findFirstByProjectProjectKeyIgnoreCaseOrderBySnapshotVersionDesc(
-            "growth-email"))
+    when(snapshotRepository.findFirstByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId()))
         .thenReturn(Optional.of(snapshot));
 
     CmsContentService.SnapshotDeliveryDescriptor latest =
@@ -1057,7 +1349,7 @@ public class CmsContentServiceTest {
     CmsFixture fixture = setupFixture();
     fixture.project.setEnabled(false);
     CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
-    when(snapshotRepository.findByProjectKeyAndSnapshotVersion("growth-email", 2))
+    when(snapshotRepository.findByProjectIdAndSnapshotVersion(fixture.project.getId(), 2))
         .thenReturn(Optional.of(snapshot));
 
     CmsContentService.SnapshotArtifact artifact = service.getSnapshotArtifact("growth-email", 2);
@@ -1070,7 +1362,20 @@ public class CmsContentServiceTest {
     CmsFixture fixture = setupFixture();
     fixture.project.getRepository().setDeleted(true);
     CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
-    when(snapshotRepository.findByProjectKeyAndSnapshotVersion("growth-email", 2))
+    when(snapshotRepository.findByProjectIdAndSnapshotVersion(fixture.project.getId(), 2))
+        .thenReturn(Optional.of(snapshot));
+
+    CmsContentService.SnapshotArtifact artifact = service.getSnapshotArtifact("growth-email", 2);
+
+    assertThat(artifact.filename()).isEqualTo("growth-email.v2.json");
+  }
+
+  @Test
+  public void getSnapshotArtifactStillExportsExactVersionForHiddenProject() {
+    CmsFixture fixture = setupFixture();
+    fixture.project.getRepository().setHidden(true);
+    CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
+    when(snapshotRepository.findByProjectIdAndSnapshotVersion(fixture.project.getId(), 2))
         .thenReturn(Optional.of(snapshot));
 
     CmsContentService.SnapshotArtifact artifact = service.getSnapshotArtifact("growth-email", 2);
@@ -1139,6 +1444,18 @@ public class CmsContentServiceTest {
     String artifactJson =
         validArtifactJson(fixture.project.getProjectKey(), List.of("en"))
             .replace("\"snapshotVersion\":2", "\"snapshotVersion\":2,\"snapshotVersion\":2");
+    CmsPublishSnapshot snapshot = publishSnapshot(fixture.project, artifactJson);
+    stubSnapshotArtifactLookup(snapshot);
+
+    assertThatThrownBy(() -> getSnapshotArtifact(snapshot))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot artifact JSON is invalid: 99");
+  }
+
+  @Test
+  public void getSnapshotArtifactRejectsStoredArtifactTrailingJsonDocument() {
+    CmsFixture fixture = setupFixture();
+    String artifactJson = validArtifactJson(fixture.project.getProjectKey(), List.of("en")) + " {}";
     CmsPublishSnapshot snapshot = publishSnapshot(fixture.project, artifactJson);
     stubSnapshotArtifactLookup(snapshot);
 
@@ -1364,6 +1681,42 @@ public class CmsContentServiceTest {
   }
 
   @Test
+  public void getSnapshotArtifactRejectsStoredSnapshotArtifactInvalidProjectKey() {
+    CmsFixture fixture = setupFixture();
+    CmsPublishSnapshot snapshot =
+        validPublishSnapshot(fixture.project, "Growth Email", List.of("en"));
+    stubSnapshotArtifactLookup(snapshot);
+
+    assertThatThrownBy(() -> getSnapshotArtifact(snapshot))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot artifact has invalid key: 99");
+  }
+
+  @Test
+  public void getSnapshotArtifactRejectsStoredSnapshotWithOverlongRuntimeFieldKey()
+      throws Exception {
+    CmsFixture fixture = setupFixture();
+    ObjectNode artifact =
+        (ObjectNode)
+            objectMapper.readTree(
+                validArtifactJson(fixture.project.getProjectKey(), List.of("en")));
+    String overlongFieldKey = "a".repeat(CmsContentProject.KEY_MAX_LENGTH + 1);
+    ((ObjectNode) artifact.path("contentTypes").get(0).path("fields").get(0))
+        .put("key", overlongFieldKey);
+    ObjectNode runtimeFields =
+        (ObjectNode) artifact.path("entries").get(0).path("variants").get(0).path("fields");
+    JsonNode runtimeField = runtimeFields.remove("header");
+    runtimeFields.set(overlongFieldKey, runtimeField);
+    CmsPublishSnapshot snapshot =
+        publishSnapshot(fixture.project, objectMapper.writeValueAsStringUnchecked(artifact));
+    stubSnapshotArtifactLookup(snapshot);
+
+    assertThatThrownBy(() -> getSnapshotArtifact(snapshot))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot artifact has invalid key: 99");
+  }
+
+  @Test
   public void getSnapshotArtifactRejectsStoredSnapshotWithoutRuntimeEntries() throws Exception {
     CmsFixture fixture = setupFixture();
     ObjectNode artifact =
@@ -1378,6 +1731,53 @@ public class CmsContentServiceTest {
     assertThatThrownBy(() -> getSnapshotArtifact(snapshot))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("Publish snapshot artifact has invalid entries: 99");
+  }
+
+  @Test
+  public void getSnapshotArtifactRejectsStoredSnapshotWithUndeclaredRuntimeField()
+      throws Exception {
+    CmsFixture fixture = setupFixture();
+    ObjectNode artifact =
+        (ObjectNode)
+            objectMapper.readTree(
+                validArtifactJson(fixture.project.getProjectKey(), List.of("en")));
+    ObjectNode runtimeFields =
+        (ObjectNode) artifact.path("entries").get(0).path("variants").get(0).path("fields");
+    runtimeFields.set("extra", runtimeFields.path("header"));
+    CmsPublishSnapshot snapshot =
+        publishSnapshot(fixture.project, objectMapper.writeValueAsStringUnchecked(artifact));
+    stubSnapshotArtifactLookup(snapshot);
+
+    assertThatThrownBy(() -> getSnapshotArtifact(snapshot))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot artifact has invalid fields: 99");
+  }
+
+  @Test
+  public void getSnapshotArtifactRejectsStoredSnapshotWithUnpublishedRuntimeFieldLocaleValue()
+      throws Exception {
+    CmsFixture fixture = setupFixture();
+    ObjectNode artifact =
+        (ObjectNode)
+            objectMapper.readTree(
+                validArtifactJson(fixture.project.getProjectKey(), List.of("en")));
+    ((ObjectNode)
+            artifact
+                .path("entries")
+                .get(0)
+                .path("variants")
+                .get(0)
+                .path("fields")
+                .path("header")
+                .path("values"))
+        .put("fr-FR", "Bonjour");
+    CmsPublishSnapshot snapshot =
+        publishSnapshot(fixture.project, objectMapper.writeValueAsStringUnchecked(artifact));
+    stubSnapshotArtifactLookup(snapshot);
+
+    assertThatThrownBy(() -> getSnapshotArtifact(snapshot))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot artifact has invalid field values: 99");
   }
 
   @Test
@@ -1447,6 +1847,45 @@ public class CmsContentServiceTest {
   }
 
   @Test
+  public void getSnapshotArtifactRejectsStoredSnapshotWithMultipleCandidateGroupKeys()
+      throws Exception {
+    CmsFixture fixture = setupFixture();
+    ObjectNode artifact =
+        (ObjectNode)
+            objectMapper.readTree(
+                validArtifactJson(fixture.project.getProjectKey(), List.of("en")));
+    ObjectNode controlVariant =
+        (ObjectNode) artifact.path("entries").get(0).path("variants").get(0);
+    ObjectNode candidateVariant = controlVariant.deepCopy();
+    candidateVariant.put("key", "candidate-a");
+    candidateVariant.put("name", "Candidate A");
+    candidateVariant.put("status", "CANDIDATE");
+    candidateVariant.put("candidateGroupKey", "candidate-a");
+    ((ObjectNode) candidateVariant.path("fields").path("header"))
+        .put(
+            "stringId",
+            "cms.%s.welcome.candidate-a.header".formatted(fixture.project.getProjectKey()));
+    ObjectNode otherCandidate = candidateVariant.deepCopy();
+    otherCandidate.put("key", "candidate-b");
+    otherCandidate.put("name", "Candidate B");
+    otherCandidate.put("candidateGroupKey", "candidate-b");
+    ((ObjectNode) otherCandidate.path("fields").path("header"))
+        .put(
+            "stringId",
+            "cms.%s.welcome.candidate-b.header".formatted(fixture.project.getProjectKey()));
+    ((ArrayNode) artifact.path("entries").get(0).path("variants"))
+        .add(candidateVariant)
+        .add(otherCandidate);
+    CmsPublishSnapshot snapshot =
+        publishSnapshot(fixture.project, objectMapper.writeValueAsStringUnchecked(artifact));
+    stubSnapshotArtifactLookup(snapshot);
+
+    assertThatThrownBy(() -> getSnapshotArtifact(snapshot))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot artifact has invalid candidate groups: 99");
+  }
+
+  @Test
   public void getSnapshotArtifactRejectsStoredSnapshotWithInvalidRuntimeStringId()
       throws Exception {
     CmsFixture fixture = setupFixture();
@@ -1464,6 +1903,27 @@ public class CmsContentServiceTest {
     assertThatThrownBy(() -> getSnapshotArtifact(snapshot))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("Publish snapshot artifact has invalid fields: 99");
+  }
+
+  @Test
+  public void getSnapshotArtifactRejectsStoredSnapshotWithDuplicateRuntimeStringIds()
+      throws Exception {
+    CmsFixture fixture = setupFixture();
+    ObjectNode artifact =
+        (ObjectNode)
+            objectMapper.readTree(
+                validArtifactJsonWithOptionalField(fixture.project.getProjectKey(), List.of("en")));
+    ObjectNode runtimeFields =
+        (ObjectNode) artifact.path("entries").get(0).path("variants").get(0).path("fields");
+    ((ObjectNode) runtimeFields.path("subheader"))
+        .put("stringId", runtimeFields.path("header").path("stringId").asText());
+    CmsPublishSnapshot snapshot =
+        publishSnapshot(fixture.project, objectMapper.writeValueAsStringUnchecked(artifact));
+    stubSnapshotArtifactLookup(snapshot);
+
+    assertThatThrownBy(() -> getSnapshotArtifact(snapshot))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot artifact has invalid string IDs: 99");
   }
 
   @Test
@@ -1511,6 +1971,20 @@ public class CmsContentServiceTest {
   }
 
   @Test
+  public void getSnapshotArtifactRejectsStoredSnapshotCompletenessMetadataMismatch() {
+    CmsFixture fixture = setupFixture();
+    CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
+    snapshot.setCompletenessJson(
+        "[{\"localeTag\":\"en\",\"totalFields\":2,\"approvedFields\":2,\"missingFields\":0,\"reviewNeededFields\":0,\"translationNeededFields\":0,\"complete\":true}]");
+    resignSnapshot(snapshot);
+    stubSnapshotArtifactLookup(snapshot);
+
+    assertThatThrownBy(() -> getSnapshotArtifact(snapshot))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot completeness mismatch: 99");
+  }
+
+  @Test
   public void getSnapshotArtifactRejectsStoredSnapshotWithoutPublisher() {
     CmsFixture fixture = setupFixture();
     CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
@@ -1520,6 +1994,30 @@ public class CmsContentServiceTest {
     assertThatThrownBy(() -> getSnapshotArtifact(snapshot))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("Publish snapshot publisher is missing: 99");
+  }
+
+  @Test
+  public void getSnapshotArtifactRejectsStoredSnapshotWithInvalidRequestKey() {
+    CmsFixture fixture = setupFixture();
+    CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
+    snapshot.setPublishRequestKey("bad.key");
+    stubSnapshotArtifactLookup(snapshot);
+
+    assertThatThrownBy(() -> getSnapshotArtifact(snapshot))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot request key is invalid: 99");
+  }
+
+  @Test
+  public void getSnapshotArtifactRejectsStoredSnapshotWithInvalidRequestLocaleTags() {
+    CmsFixture fixture = setupFixture();
+    CmsPublishSnapshot snapshot = validPublishSnapshot(fixture.project);
+    snapshot.setPublishRequestLocaleTags("fr-FR,en");
+    stubSnapshotArtifactLookup(snapshot);
+
+    assertThatThrownBy(() -> getSnapshotArtifact(snapshot))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot request locale tags are invalid: 99");
   }
 
   @Test
@@ -1587,6 +2085,49 @@ public class CmsContentServiceTest {
   }
 
   @Test
+  public void publishProjectRejectsInvalidArtifactBeforeSavingSnapshot() {
+    CmsFixture fixture = setupFixture();
+    fixture.project.setName(" ");
+    when(snapshotRepository.findCurrentVariantRows(any(), any()))
+        .thenReturn(
+            List.of(
+                new CmsCurrentVariantRow(
+                    fixture.tmTextUnit.getId(),
+                    "fr-FR",
+                    "Bonjour",
+                    TMTextUnitVariant.Status.APPROVED,
+                    true)));
+
+    assertThatThrownBy(
+            () ->
+                publishProject(fixture.project.getId(), publishCommand(fixture, List.of("fr-FR"))))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot artifact name is missing: null");
+    verify(snapshotRepository, never()).save(any(CmsPublishSnapshot.class));
+    verify(snapshotSealRepository, never()).save(any(CmsPublishSnapshotSeal.class));
+  }
+
+  @Test
+  public void getProjectCompletenessRejectsInvalidArtifactBeforeReturningPackage() {
+    CmsFixture fixture = setupFixture();
+    fixture.project.setName(" ");
+    when(snapshotRepository.findCurrentVariantRows(any(), any()))
+        .thenReturn(
+            List.of(
+                new CmsCurrentVariantRow(
+                    fixture.tmTextUnit.getId(),
+                    "fr-FR",
+                    "Bonjour",
+                    TMTextUnitVariant.Status.APPROVED,
+                    true)));
+
+    assertThatThrownBy(
+            () -> service.getProjectCompleteness(fixture.project.getId(), List.of("fr-FR")))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot artifact name is missing: null");
+  }
+
+  @Test
   public void publishProjectTreatsDeletedCurrentTranslationAsIncompleteRequestedLocale() {
     CmsFixture fixture = setupFixture();
     when(snapshotRepository.findCurrentVariantRows(any(), any()))
@@ -1597,6 +2138,129 @@ public class CmsContentServiceTest {
     assertThatThrownBy(
             () ->
                 publishProject(fixture.project.getId(), publishCommand(fixture, List.of("fr-FR"))))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Cannot publish with incomplete locales: fr-FR");
+  }
+
+  @Test
+  public void publishProjectRejectsReviewNeededRequestedLocale() {
+    CmsFixture fixture = setupFixture();
+    when(snapshotRepository.findCurrentVariantRows(any(), any()))
+        .thenReturn(
+            List.of(
+                new CmsCurrentVariantRow(
+                    fixture.tmTextUnit.getId(),
+                    "fr-FR",
+                    "Bonjour",
+                    TMTextUnitVariant.Status.REVIEW_NEEDED,
+                    true)));
+
+    CmsContentService.ProjectCompletenessView completeness =
+        service.getProjectCompleteness(fixture.project.getId(), List.of("fr-FR"));
+
+    assertThat(completeness.complete()).isFalse();
+    assertThat(completeness.locales().get(1).reviewNeededFields()).isEqualTo(1);
+    assertThatThrownBy(
+            () ->
+                publishProject(fixture.project.getId(), publishCommand(fixture, List.of("fr-FR"))))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Cannot publish with incomplete locales: fr-FR");
+  }
+
+  @Test
+  public void publishProjectRejectsApprovedButExcludedRequestedLocale() {
+    CmsFixture fixture = setupFixture();
+    when(snapshotRepository.findCurrentVariantRows(any(), any()))
+        .thenReturn(
+            List.of(
+                new CmsCurrentVariantRow(
+                    fixture.tmTextUnit.getId(),
+                    "fr-FR",
+                    "Bonjour",
+                    TMTextUnitVariant.Status.APPROVED,
+                    false)));
+
+    CmsContentService.ProjectCompletenessView completeness =
+        service.getProjectCompleteness(fixture.project.getId(), List.of("fr-FR"));
+
+    assertThat(completeness.complete()).isFalse();
+    assertThat(completeness.locales().get(1).approvedFields()).isZero();
+    assertThat(completeness.locales().get(1).missingFields()).isEqualTo(1);
+    assertThatThrownBy(
+            () ->
+                publishProject(fixture.project.getId(), publishCommand(fixture, List.of("fr-FR"))))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Cannot publish with incomplete locales: fr-FR");
+  }
+
+  @Test
+  public void publishProjectRejectsReviewNeededOptionalMappedFieldRequestedLocale() {
+    CmsFixture fixture = setupFixture();
+    CmsContentTypeField subheaderField = new CmsContentTypeField();
+    subheaderField.setId(51L);
+    subheaderField.setContentType(fixture.contentType);
+    subheaderField.setFieldKey("subheader");
+    subheaderField.setName("Subheader");
+    subheaderField.setFieldType(CmsContentTypeField.FieldType.TEXT);
+    subheaderField.setLocalizable(true);
+    subheaderField.setRequired(false);
+    subheaderField.setSortOrder(1);
+    auditCmsEntity(subheaderField);
+
+    TMTextUnit subheaderTextUnit = new TMTextUnit();
+    subheaderTextUnit.setId(81L);
+    subheaderTextUnit.setAsset(fixture.project.getAsset());
+    subheaderTextUnit.setName("cms.growth-email.welcome.default.subheader");
+    subheaderTextUnit.setContent("Subheader");
+    subheaderTextUnit.setComment("Shown below welcome email header");
+
+    CmsContentFieldMapping subheaderMapping = new CmsContentFieldMapping();
+    subheaderMapping.setId(91L);
+    subheaderMapping.setVariant(fixture.variant);
+    subheaderMapping.setField(subheaderField);
+    subheaderMapping.setContentType(fixture.contentType);
+    subheaderMapping.setTmTextUnit(subheaderTextUnit);
+    auditCmsEntity(subheaderMapping);
+
+    when(fieldRepository.findByContentTypeIdOrderBySortOrderAscFieldKeyAscIdAsc(
+            fixture.contentType.getId()))
+        .thenReturn(List.of(fixture.field, subheaderField));
+    when(fieldRepository.findByContentTypeIdInOrderBySortOrderAscFieldKeyAscIdAsc(
+            List.of(fixture.contentType.getId())))
+        .thenReturn(List.of(fixture.field, subheaderField));
+    when(mappingRepository.findMappingsByProjectId(fixture.project.getId()))
+        .thenReturn(List.of(fixture.mapping, subheaderMapping));
+    when(snapshotRepository.findCurrentVariantRows(any(), any()))
+        .thenReturn(
+            List.of(
+                new CmsCurrentVariantRow(
+                    fixture.tmTextUnit.getId(),
+                    "fr-FR",
+                    "Bonjour",
+                    TMTextUnitVariant.Status.APPROVED,
+                    true),
+                new CmsCurrentVariantRow(
+                    subheaderTextUnit.getId(),
+                    "fr-FR",
+                    "Sous-titre",
+                    TMTextUnitVariant.Status.REVIEW_NEEDED,
+                    true)));
+
+    CmsContentService.ProjectCompletenessView completeness =
+        service.getProjectCompleteness(fixture.project.getId(), List.of("fr-FR"));
+
+    assertThat(completeness.complete()).isFalse();
+    assertThat(completeness.locales().get(1).totalFields()).isEqualTo(2);
+    assertThat(completeness.locales().get(1).approvedFields()).isEqualTo(1);
+    assertThat(completeness.locales().get(1).reviewNeededFields()).isEqualTo(1);
+    assertThatThrownBy(
+            () ->
+                publishProject(
+                    fixture.project.getId(),
+                    new CmsContentService.PublishCommand(
+                        List.of("fr-FR"),
+                        completeness.authoringSha256(),
+                        completeness.publishPackageSha256())))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Cannot publish with incomplete locales: fr-FR");
   }
@@ -1781,6 +2445,17 @@ public class CmsContentServiceTest {
   }
 
   @Test
+  public void getProjectCompletenessRejectsDisabledProject() {
+    CmsFixture fixture = setupFixture();
+    fixture.project.setEnabled(false);
+
+    assertThatThrownBy(
+            () -> service.getProjectCompleteness(fixture.project.getId(), List.of("fr-FR")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Content project is disabled: growth-email");
+  }
+
+  @Test
   public void publishProjectRejectsDeletedBackingRepository() {
     CmsFixture fixture = setupFixture();
     fixture.project.getRepository().setDeleted(true);
@@ -1935,6 +2610,70 @@ public class CmsContentServiceTest {
   }
 
   @Test
+  public void publishProjectRejectsReadyEntryWithMultipleActiveCandidateGroups() {
+    CmsFixture fixture = setupFixture();
+    CmsContentEntryVariant candidateVariant = new CmsContentEntryVariant();
+    candidateVariant.setId(71L);
+    candidateVariant.setEntry(fixture.entry);
+    candidateVariant.setContentType(fixture.contentType);
+    candidateVariant.setVariantKey("candidate");
+    candidateVariant.setName("Candidate");
+    candidateVariant.setCandidateGroupKey("welcome-header");
+    candidateVariant.setStatus(CmsContentEntryVariant.Status.CANDIDATE);
+    candidateVariant.setSortOrder(1);
+    CmsContentEntryVariant otherCandidate = new CmsContentEntryVariant();
+    otherCandidate.setId(72L);
+    otherCandidate.setEntry(fixture.entry);
+    otherCandidate.setContentType(fixture.contentType);
+    otherCandidate.setVariantKey("candidate-b");
+    otherCandidate.setName("Candidate B");
+    otherCandidate.setCandidateGroupKey("welcome-subheader");
+    otherCandidate.setStatus(CmsContentEntryVariant.Status.CANDIDATE);
+    otherCandidate.setSortOrder(2);
+    when(variantRepository.findByEntryIdInOrderBySortOrderAscVariantKeyAscIdAsc(
+            List.of(fixture.entry.getId())))
+        .thenReturn(List.of(fixture.variant, candidateVariant, otherCandidate));
+
+    assertThatThrownBy(
+            () ->
+                publishProject(fixture.project.getId(), publishCommand(fixture, List.of("fr-FR"))))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(
+            "Cannot publish ready candidate variants with multiple candidate group keys: welcome");
+  }
+
+  @Test
+  public void getEntryCompletenessRejectsMultipleActiveCandidateGroups() {
+    CmsFixture fixture = setupFixture();
+    CmsContentEntryVariant candidateVariant = new CmsContentEntryVariant();
+    candidateVariant.setId(71L);
+    candidateVariant.setEntry(fixture.entry);
+    candidateVariant.setContentType(fixture.contentType);
+    candidateVariant.setVariantKey("candidate");
+    candidateVariant.setName("Candidate");
+    candidateVariant.setCandidateGroupKey("welcome-header");
+    candidateVariant.setStatus(CmsContentEntryVariant.Status.CANDIDATE);
+    candidateVariant.setSortOrder(1);
+    CmsContentEntryVariant otherCandidate = new CmsContentEntryVariant();
+    otherCandidate.setId(72L);
+    otherCandidate.setEntry(fixture.entry);
+    otherCandidate.setContentType(fixture.contentType);
+    otherCandidate.setVariantKey("candidate-b");
+    otherCandidate.setName("Candidate B");
+    otherCandidate.setCandidateGroupKey("welcome-subheader");
+    otherCandidate.setStatus(CmsContentEntryVariant.Status.CANDIDATE);
+    otherCandidate.setSortOrder(2);
+    when(variantRepository.findByEntryIdInOrderBySortOrderAscVariantKeyAscIdAsc(
+            List.of(fixture.entry.getId())))
+        .thenReturn(List.of(fixture.variant, candidateVariant, otherCandidate));
+
+    assertThatThrownBy(() -> service.getEntryCompleteness(fixture.entry.getId(), List.of("fr-FR")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(
+            "Entry has candidate variants with multiple candidate group keys: welcome");
+  }
+
+  @Test
   public void getEntryCompletenessIgnoresArchivedVariants() {
     CmsFixture fixture = setupFixture();
     CmsContentEntryVariant archivedVariant = new CmsContentEntryVariant();
@@ -2013,6 +2752,49 @@ public class CmsContentServiceTest {
     verify(projectRepository, never()).findByIdWithRepositoryAndAsset(fixture.project.getId());
     assertThat(completeness.authoringSha256()).isEqualTo(publishRequestAuthoringSha256(fixture));
     assertThat(completeness.publishPackageSha256()).hasSize(64);
+  }
+
+  @Test
+  public void getProjectCompletenessRejectsDuplicatePublishableStringIds() {
+    CmsFixture fixture = setupFixture();
+    CmsContentTypeField subheaderField = new CmsContentTypeField();
+    subheaderField.setId(51L);
+    subheaderField.setContentType(fixture.contentType);
+    subheaderField.setFieldKey("subheader");
+    subheaderField.setName("Subheader");
+    subheaderField.setFieldType(CmsContentTypeField.FieldType.TEXT);
+    subheaderField.setLocalizable(true);
+    subheaderField.setRequired(false);
+    subheaderField.setSortOrder(1);
+    auditCmsEntity(subheaderField);
+
+    TMTextUnit duplicateStringIdTextUnit = new TMTextUnit();
+    duplicateStringIdTextUnit.setId(81L);
+    duplicateStringIdTextUnit.setAsset(fixture.project.getAsset());
+    duplicateStringIdTextUnit.setName(fixture.tmTextUnit.getName());
+    duplicateStringIdTextUnit.setContent("Subheader");
+    duplicateStringIdTextUnit.setComment("Shown below welcome email header");
+
+    CmsContentFieldMapping subheaderMapping = new CmsContentFieldMapping();
+    subheaderMapping.setId(91L);
+    subheaderMapping.setVariant(fixture.variant);
+    subheaderMapping.setField(subheaderField);
+    subheaderMapping.setContentType(fixture.contentType);
+    subheaderMapping.setTmTextUnit(duplicateStringIdTextUnit);
+    auditCmsEntity(subheaderMapping);
+
+    when(fieldRepository.findByContentTypeIdInOrderBySortOrderAscFieldKeyAscIdAsc(
+            List.of(fixture.contentType.getId())))
+        .thenReturn(List.of(fixture.field, subheaderField));
+    when(mappingRepository.findMappingsByProjectId(fixture.project.getId()))
+        .thenReturn(List.of(fixture.mapping, subheaderMapping));
+
+    assertThatThrownBy(() -> service.getProjectCompleteness(fixture.project.getId(), List.of("en")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Publishable mapped text units must have unique Mojito string IDs")
+        .hasMessageContaining(
+            "cms.growth-email.welcome.default.header"
+                + " (welcome.default.header, welcome.default.subheader)");
   }
 
   @Test
@@ -2262,6 +3044,30 @@ public class CmsContentServiceTest {
   }
 
   @Test
+  public void createProjectRejectsUnavailableRepositoryBeforeCreatingAsset() throws Exception {
+    CmsFixture fixture = setupFixture();
+    when(repositoryRepository.findByIdInAndDeletedFalseAndHiddenFalseOrderByNameAsc(
+            List.of(fixture.project.getRepository().getId())))
+        .thenReturn(List.of());
+
+    assertThatThrownBy(
+            () ->
+                service.createProject(
+                    new CmsContentService.ProjectCommand(
+                        "new-project",
+                        "New project",
+                        null,
+                        true,
+                        fixture.project.getRepository().getId(),
+                        null,
+                        "BLOB_CDN")))
+        .isInstanceOf(CmsContentNotFoundException.class)
+        .hasMessageContaining("Repository not found: " + fixture.project.getRepository().getId());
+    verify(virtualAssetService, never()).createOrUpdateVirtualAsset(any());
+    verify(projectRepository, never()).saveAndFlush(any(CmsContentProject.class));
+  }
+
+  @Test
   public void createProjectRejectsVirtualAssetAlreadyAssignedToAnotherProject() {
     CmsFixture fixture = setupFixture();
     CmsContentProject existingProject = new CmsContentProject();
@@ -2400,6 +3206,52 @@ public class CmsContentServiceTest {
   }
 
   @Test
+  public void createEntryRejectsMissingContentTypeSelectorBeforeResourceLookup() {
+    CmsFixture fixture = setupFixture();
+
+    assertThatThrownBy(
+            () ->
+                service.createEntry(
+                    fixture.project.getId(),
+                    new CmsContentService.EntryCommand(
+                        null,
+                        "missing-type",
+                        "Missing type",
+                        null,
+                        CmsContentEntry.Status.DRAFT,
+                        null)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Content type id is required");
+    verify(contentTypeRepository, never()).findByIdWithProject(any());
+  }
+
+  @Test
+  public void createEntryRejectsContentTypeFromAnotherProjectBeforeSaving() {
+    CmsFixture fixture = setupFixture();
+    CmsContentProject otherProject = new CmsContentProject();
+    otherProject.setId(99L);
+    otherProject.setProjectKey("other-project");
+    when(projectRepository.findByIdWithRepositoryAndAssetForUpdate(otherProject.getId()))
+        .thenReturn(Optional.of(otherProject));
+
+    assertThatThrownBy(
+            () ->
+                service.createEntry(
+                    otherProject.getId(),
+                    new CmsContentService.EntryCommand(
+                        fixture.contentType.getId(),
+                        "cross-project",
+                        "Cross project",
+                        null,
+                        CmsContentEntry.Status.DRAFT,
+                        null)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(
+            "Content type does not belong to project: " + fixture.contentType.getId());
+    verify(entryRepository, never()).saveAndFlush(any(CmsContentEntry.class));
+  }
+
+  @Test
   public void createEntryRejectsDuplicateMetadataObjectKeys() {
     CmsFixture fixture = setupFixture();
 
@@ -2414,6 +3266,26 @@ public class CmsContentServiceTest {
                         null,
                         CmsContentEntry.Status.DRAFT,
                         "{\"owner\":\"growth\",\"owner\":\"lifecycle\"}")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Entry metadata must be valid JSON");
+    verify(entryRepository, never()).saveAndFlush(any(CmsContentEntry.class));
+  }
+
+  @Test
+  public void createEntryRejectsTrailingMetadataJsonDocument() {
+    CmsFixture fixture = setupFixture();
+
+    assertThatThrownBy(
+            () ->
+                service.createEntry(
+                    fixture.project.getId(),
+                    new CmsContentService.EntryCommand(
+                        fixture.contentType.getId(),
+                        "trailing-metadata",
+                        "Trailing metadata",
+                        null,
+                        CmsContentEntry.Status.DRAFT,
+                        "{\"owner\":\"growth\"} {}")))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Entry metadata must be valid JSON");
     verify(entryRepository, never()).saveAndFlush(any(CmsContentEntry.class));
@@ -2559,6 +3431,23 @@ public class CmsContentServiceTest {
             null,
             fixture.contentType.getSchemaVersion(),
             "{\"type\":\"object\",\"properties\":{\"surface\":{\"type\":\"string\"}}}",
+            fixture.contentType.getEntityVersion()));
+
+    assertThat(fixture.contentType.getSchemaVersion()).isEqualTo(2);
+    verify(contentTypeRepository).saveAndFlush(fixture.contentType);
+  }
+
+  @Test
+  public void updateContentTypeBumpsSchemaVersionWhenArtifactNameChanges() {
+    CmsFixture fixture = setupFixture();
+
+    service.updateContentType(
+        fixture.contentType.getId(),
+        new CmsContentService.ContentTypeUpdateCommand(
+            "Updated email",
+            null,
+            fixture.contentType.getSchemaVersion(),
+            null,
             fixture.contentType.getEntityVersion()));
 
     assertThat(fixture.contentType.getSchemaVersion()).isEqualTo(2);
@@ -2751,6 +3640,27 @@ public class CmsContentServiceTest {
   }
 
   @Test
+  public void updateContentTypeFieldDoesNotBumpSchemaVersionWhenDescriptionChanges() {
+    CmsFixture fixture = setupFixture();
+
+    service.updateContentTypeField(
+        fixture.field.getId(),
+        new CmsContentService.ContentTypeFieldUpdateCommand(
+            "Header",
+            "Authoring note",
+            CmsContentTypeField.FieldType.TEXT,
+            true,
+            true,
+            0,
+            fixture.field.getEntityVersion()));
+
+    assertThat(fixture.field.getDescription()).isEqualTo("Authoring note");
+    assertThat(fixture.contentType.getSchemaVersion()).isEqualTo(1);
+    verify(fieldRepository).saveAndFlush(fixture.field);
+    verify(contentTypeRepository, never()).saveAndFlush(fixture.contentType);
+  }
+
+  @Test
   public void updateContentTypeFieldRejectsIcuTypeWhenExistingMappingSourceIsInvalid() {
     CmsFixture fixture = setupFixture();
     fixture.tmTextUnit.setContent("{count, plural, one {# item}");
@@ -2772,6 +3682,40 @@ public class CmsContentServiceTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining(
             "ICU message integrity check failed for welcome.default.header source");
+    verify(fieldRepository, never()).saveAndFlush(fixture.field);
+  }
+
+  @Test
+  public void updateContentTypeFieldRejectsIcuTypeWhenReadyMappingTargetIsInvalid() {
+    CmsFixture fixture = setupFixture();
+    fixture.tmTextUnit.setContent("{count, plural, one {# item} other {# items}}");
+    when(mappingRepository.findByFieldId(fixture.field.getId()))
+        .thenReturn(List.of(fixture.mapping));
+    when(snapshotRepository.findCurrentVariantRows(any(), any()))
+        .thenReturn(
+            List.of(
+                new CmsCurrentVariantRow(
+                    fixture.tmTextUnit.getId(),
+                    "fr-FR",
+                    "{count, plural, one {# article}",
+                    TMTextUnitVariant.Status.APPROVED,
+                    true)));
+
+    assertThatThrownBy(
+            () ->
+                service.updateContentTypeField(
+                    fixture.field.getId(),
+                    new CmsContentService.ContentTypeFieldUpdateCommand(
+                        "Header",
+                        null,
+                        CmsContentTypeField.FieldType.ICU_MESSAGE,
+                        true,
+                        true,
+                        0,
+                        fixture.field.getEntityVersion())))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(
+            "ICU message integrity check failed for welcome.default.header fr-FR");
     verify(fieldRepository, never()).saveAndFlush(fixture.field);
   }
 
@@ -2835,6 +3779,40 @@ public class CmsContentServiceTest {
                         1)))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Candidate variants require a candidate group key");
+    verify(variantRepository, never()).saveAndFlush(any(CmsContentEntryVariant.class));
+  }
+
+  @Test
+  public void createVariantRejectsCandidateInDifferentActiveCandidateGroup() {
+    CmsFixture fixture = setupFixture();
+    CmsContentEntryVariant existingCandidate = new CmsContentEntryVariant();
+    existingCandidate.setId(71L);
+    existingCandidate.setEntry(fixture.entry);
+    existingCandidate.setContentType(fixture.contentType);
+    existingCandidate.setVariantKey("candidate");
+    existingCandidate.setName("Candidate");
+    existingCandidate.setCandidateGroupKey("welcome-header");
+    existingCandidate.setStatus(CmsContentEntryVariant.Status.CANDIDATE);
+    existingCandidate.setSortOrder(1);
+    when(variantRepository.findByEntryIdOrderBySortOrderAscVariantKeyAscIdAsc(
+            fixture.entry.getId()))
+        .thenReturn(List.of(fixture.variant, existingCandidate));
+
+    assertThatThrownBy(
+            () ->
+                service.createVariant(
+                    fixture.entry.getId(),
+                    new CmsContentService.VariantCommand(
+                        "candidate-b",
+                        "Candidate B",
+                        "welcome-subheader",
+                        CmsContentEntryVariant.Status.CANDIDATE,
+                        null,
+                        2)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(
+            "Content entry candidate variants must share a candidate group key: "
+                + "welcome has welcome-header, welcome-subheader");
     verify(variantRepository, never()).saveAndFlush(any(CmsContentEntryVariant.class));
   }
 
@@ -2951,6 +3929,55 @@ public class CmsContentServiceTest {
   }
 
   @Test
+  public void updateVariantRejectsCandidateInDifferentActiveCandidateGroup() {
+    CmsFixture fixture = setupFixture();
+    CmsContentEntryVariant candidateVariant = new CmsContentEntryVariant();
+    candidateVariant.setId(71L);
+    candidateVariant.setEntry(fixture.entry);
+    candidateVariant.setContentType(fixture.contentType);
+    candidateVariant.setVariantKey("candidate");
+    candidateVariant.setName("Candidate");
+    candidateVariant.setCandidateGroupKey("welcome-header");
+    candidateVariant.setStatus(CmsContentEntryVariant.Status.CANDIDATE);
+    candidateVariant.setSortOrder(1);
+    CmsContentEntryVariant otherCandidate = new CmsContentEntryVariant();
+    otherCandidate.setId(72L);
+    otherCandidate.setEntry(fixture.entry);
+    otherCandidate.setContentType(fixture.contentType);
+    otherCandidate.setVariantKey("candidate-b");
+    otherCandidate.setName("Candidate B");
+    otherCandidate.setCandidateGroupKey("welcome-header");
+    otherCandidate.setStatus(CmsContentEntryVariant.Status.CANDIDATE);
+    otherCandidate.setSortOrder(2);
+    when(projectRepository.findByVariantIdWithRepositoryAndAssetForUpdate(candidateVariant.getId()))
+        .thenReturn(Optional.of(fixture.project));
+    when(entryRepository.findByVariantIdWithProjectAndTypeForUpdate(candidateVariant.getId()))
+        .thenReturn(Optional.of(fixture.entry));
+    when(variantRepository.findByIdWithEntry(candidateVariant.getId()))
+        .thenReturn(Optional.of(candidateVariant));
+    when(variantRepository.findByEntryIdOrderBySortOrderAscVariantKeyAscIdAsc(
+            fixture.entry.getId()))
+        .thenReturn(List.of(fixture.variant, candidateVariant, otherCandidate));
+
+    assertThatThrownBy(
+            () ->
+                service.updateVariant(
+                    candidateVariant.getId(),
+                    new CmsContentService.VariantUpdateCommand(
+                        "Candidate",
+                        "welcome-subheader",
+                        CmsContentEntryVariant.Status.CANDIDATE,
+                        null,
+                        1,
+                        candidateVariant.getEntityVersion())))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(
+            "Content entry candidate variants must share a candidate group key: "
+                + "welcome has welcome-header, welcome-subheader");
+    verify(variantRepository, never()).saveAndFlush(candidateVariant);
+  }
+
+  @Test
   public void updateVariantRejectsNegativeSortOrder() {
     CmsFixture fixture = setupFixture();
 
@@ -3019,6 +4046,56 @@ public class CmsContentServiceTest {
             fixture.field.getId(), null, "Hello", "Translator note", null));
 
     verify(virtualTextUnitBatchUpdaterService).updateCmsTextUnits(any(), any(), eq(false));
+  }
+
+  @Test
+  public void upsertFieldMappingRejectsMissingFieldSelectorBeforeResourceLookup() {
+    CmsFixture fixture = setupFixture();
+
+    assertThatThrownBy(
+            () ->
+                service.upsertFieldMapping(
+                    fixture.variant.getId(),
+                    new CmsContentService.FieldMappingCommand(
+                        null, null, "Hello", "Translator note", null)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Content type field id is required");
+    verify(fieldRepository, never()).findByIdWithContentType(any());
+  }
+
+  @Test
+  public void upsertFieldMappingRejectsFieldFromAnotherContentTypeBeforeSaving() {
+    CmsFixture fixture = setupFixture();
+    CmsContentType otherContentType = new CmsContentType();
+    otherContentType.setId(41L);
+    otherContentType.setProject(fixture.project);
+    otherContentType.setTypeKey("banner");
+    otherContentType.setName("Banner");
+    otherContentType.setSchemaVersion(1);
+    auditCmsEntity(otherContentType);
+    CmsContentTypeField otherField = new CmsContentTypeField();
+    otherField.setId(51L);
+    otherField.setContentType(otherContentType);
+    otherField.setFieldKey("body");
+    otherField.setName("Body");
+    otherField.setFieldType(CmsContentTypeField.FieldType.TEXT);
+    otherField.setLocalizable(true);
+    otherField.setRequired(true);
+    otherField.setSortOrder(0);
+    auditCmsEntity(otherField);
+    when(fieldRepository.findByIdWithContentType(otherField.getId()))
+        .thenReturn(Optional.of(otherField));
+
+    assertThatThrownBy(
+            () ->
+                service.upsertFieldMapping(
+                    fixture.variant.getId(),
+                    new CmsContentService.FieldMappingCommand(
+                        otherField.getId(), null, "Hello", "Shown in banner body", null)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(
+            "Field does not belong to the entry content type: " + otherField.getId());
+    verify(mappingRepository, never()).saveAndFlush(any(CmsContentFieldMapping.class));
   }
 
   @Test
@@ -3210,6 +4287,70 @@ public class CmsContentServiceTest {
   }
 
   @Test
+  public void upsertFieldMappingMapsExactTmTextUnitIdWhenStringIdIsAmbiguous() {
+    CmsFixture fixture = setupFixture();
+    TMTextUnit pluralTextUnit = new TMTextUnit();
+    pluralTextUnit.setId(81L);
+    pluralTextUnit.setAsset(fixture.project.getAsset());
+    pluralTextUnit.setName(fixture.tmTextUnit.getName());
+    pluralTextUnit.setContent("Hello many");
+    pluralTextUnit.setComment(fixture.tmTextUnit.getComment());
+    when(tmTextUnitRepository.findById(fixture.tmTextUnit.getId()))
+        .thenReturn(Optional.of(fixture.tmTextUnit));
+    when(assetTextUnitToTMTextUnitRepository.findTmTextUnitsByAssetExtractionIdAndAssetTextUnitName(
+            fixture.project.getAsset().getLastSuccessfulAssetExtraction().getId(),
+            fixture.tmTextUnit.getName()))
+        .thenReturn(List.of(fixture.tmTextUnit, pluralTextUnit));
+    when(assetTextUnitToTMTextUnitRepository.findIdByAssetExtractionIdAndTmTextUnitId(
+            fixture.project.getAsset().getLastSuccessfulAssetExtraction().getId(),
+            fixture.tmTextUnit.getId()))
+        .thenReturn(Optional.of(1L));
+    when(assetTextUnitToTMTextUnitRepository.findDoNotTranslateIdByAssetExtractionIdAndTmTextUnitId(
+            fixture.project.getAsset().getLastSuccessfulAssetExtraction().getId(),
+            fixture.tmTextUnit.getId()))
+        .thenReturn(Optional.empty());
+    when(mappingRepository.saveAndFlush(any(CmsContentFieldMapping.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    service.upsertFieldMapping(
+        fixture.variant.getId(),
+        new CmsContentService.FieldMappingCommand(
+            fixture.field.getId(),
+            fixture.tmTextUnit.getId(),
+            null,
+            "Hello",
+            fixture.tmTextUnit.getComment(),
+            null));
+
+    verify(assetTextUnitToTMTextUnitRepository, never())
+        .findTmTextUnitsByAssetExtractionIdAndAssetTextUnitName(
+            fixture.project.getAsset().getLastSuccessfulAssetExtraction().getId(),
+            fixture.tmTextUnit.getName());
+    verify(mappingRepository)
+        .saveAndFlush(argThat(mapping -> fixture.tmTextUnit.equals(mapping.getTmTextUnit())));
+  }
+
+  @Test
+  public void getProjectCompletenessFencesExactTmBindingWithSameRuntimePackage() {
+    CmsFixture fixture = setupFixture();
+    CmsContentService.ProjectCompletenessView before =
+        service.getProjectCompleteness(fixture.project.getId(), List.of("en"));
+    TMTextUnit remappedTextUnit = new TMTextUnit();
+    remappedTextUnit.setId(81L);
+    remappedTextUnit.setAsset(fixture.project.getAsset());
+    remappedTextUnit.setName(fixture.tmTextUnit.getName());
+    remappedTextUnit.setContent(fixture.tmTextUnit.getContent());
+    remappedTextUnit.setComment(fixture.tmTextUnit.getComment());
+    fixture.mapping.setTmTextUnit(remappedTextUnit);
+
+    CmsContentService.ProjectCompletenessView after =
+        service.getProjectCompleteness(fixture.project.getId(), List.of("en"));
+
+    assertThat(after.publishPackageSha256()).isEqualTo(before.publishPackageSha256());
+    assertThat(after.authoringSha256()).isNotEqualTo(before.authoringSha256());
+  }
+
+  @Test
   public void upsertFieldMappingRejectsAmbiguousExistingTextUnitSelectors() {
     CmsFixture fixture = setupFixture();
 
@@ -3265,6 +4406,30 @@ public class CmsContentServiceTest {
                         fixture.field.getId(), fixture.tmTextUnit.getId(), "Hello", null, null)))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Mapped text unit must be active");
+  }
+
+  @Test
+  public void upsertFieldMappingRejectsMappedTextUnitFromAnotherCmsAsset() {
+    CmsFixture fixture = setupFixture();
+    Asset otherAsset = new Asset();
+    otherAsset.setId(61L);
+    fixture.tmTextUnit.setAsset(otherAsset);
+    when(tmTextUnitRepository.findById(fixture.tmTextUnit.getId()))
+        .thenReturn(Optional.of(fixture.tmTextUnit));
+
+    assertThatThrownBy(
+            () ->
+                service.upsertFieldMapping(
+                    fixture.variant.getId(),
+                    new CmsContentService.FieldMappingCommand(
+                        fixture.field.getId(), fixture.tmTextUnit.getId(), "Hello", null, null)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Mapped text unit must belong to the content project asset");
+    verify(assetTextUnitToTMTextUnitRepository, never())
+        .findIdByAssetExtractionIdAndTmTextUnitId(
+            fixture.project.getAsset().getLastSuccessfulAssetExtraction().getId(),
+            fixture.tmTextUnit.getId());
+    verify(mappingRepository, never()).saveAndFlush(any(CmsContentFieldMapping.class));
   }
 
   @Test
@@ -3499,6 +4664,221 @@ public class CmsContentServiceTest {
   }
 
   @Test
+  public void getProjectRejectsAuthoringDetailAboveConfiguredByteLimit() {
+    CmsFixture fixture = setupFixture();
+    configurationProperties.setMaxAuthoringDetailBytes(1);
+
+    assertThatThrownBy(() -> service.getProject(fixture.project.getId()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("authoring detail exceeds configured byte limit");
+  }
+
+  @Test
+  public void getProjectRejectsNonPositiveConfiguredAuthoringDetailByteLimit() {
+    CmsFixture fixture = setupFixture();
+    configurationProperties.setMaxAuthoringDetailBytes(0);
+
+    assertThatThrownBy(() -> service.getProject(fixture.project.getId()))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("CMS max authoring detail bytes must be positive");
+  }
+
+  @Test
+  public void getProjectExposesServerCursorForRetainedSnapshotHistory() {
+    CmsFixture fixture = setupFixture();
+    stubSnapshotHistory(fixture.project, 11);
+    when(snapshotRepository.findHistoryRowsByProjectIdOrderBySnapshotVersionDesc(
+            fixture.project.getId(), PageRequest.of(0, 11)))
+        .thenReturn(
+            java.util.stream.IntStream.iterate(11, version -> version >= 1, version -> version - 1)
+                .mapToObj(version -> publishSnapshotHistoryRow(fixture.project, version))
+                .toList());
+
+    CmsContentService.ProjectDetail detail = service.getProject(fixture.project.getId());
+
+    assertThat(detail.publishSnapshots())
+        .extracting(CmsContentService.PublishSnapshotView::snapshotVersion)
+        .containsExactly(11, 10, 9, 8, 7, 6, 5, 4, 3, 2);
+    assertThat(detail.hasMorePublishSnapshots()).isTrue();
+    assertThat(detail.nextBeforePublishSnapshotVersion()).isEqualTo(2);
+  }
+
+  @Test
+  public void getProjectPublishSnapshotsPagesRetainedMetadataWithoutLoadingOlderArtifacts() {
+    CmsFixture fixture = setupFixture();
+    stubSnapshotHistory(fixture.project, 11);
+    when(snapshotRepository.findHistoryRowsByProjectIdOrderBySnapshotVersionDesc(
+            fixture.project.getId(), PageRequest.of(0, 11)))
+        .thenReturn(
+            java.util.stream.IntStream.iterate(11, version -> version >= 1, version -> version - 1)
+                .mapToObj(version -> publishSnapshotHistoryRow(fixture.project, version))
+                .toList());
+    when(snapshotRepository
+            .findHistoryRowsByProjectIdBeforeSnapshotVersionOrderBySnapshotVersionDesc(
+                fixture.project.getId(), 2, PageRequest.of(0, 11)))
+        .thenReturn(List.of(publishSnapshotHistoryRow(fixture.project, 1)));
+
+    CmsContentService.PublishSnapshotHistoryView firstPage =
+        service.getProjectPublishSnapshots(fixture.project.getId(), null, null);
+    CmsContentService.PublishSnapshotHistoryView secondPage =
+        service.getProjectPublishSnapshots(fixture.project.getId(), 2, null);
+
+    assertThat(firstPage.snapshots())
+        .extracting(CmsContentService.PublishSnapshotView::snapshotVersion)
+        .containsExactly(11, 10, 9, 8, 7, 6, 5, 4, 3, 2);
+    assertThat(firstPage.hasMore()).isTrue();
+    assertThat(firstPage.nextBeforeSnapshotVersion()).isEqualTo(2);
+    assertThat(secondPage.snapshots())
+        .extracting(CmsContentService.PublishSnapshotView::snapshotVersion)
+        .containsExactly(1);
+    assertThat(secondPage.hasMore()).isFalse();
+    assertThat(secondPage.nextBeforeSnapshotVersion()).isNull();
+    verify(snapshotRepository, times(2))
+        .findByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId(), PageRequest.of(0, 10));
+  }
+
+  @Test
+  public void getProjectPublishSnapshotsValidatesRecentArtifactsBeforeLoadingOlderMetadata() {
+    CmsFixture fixture = setupFixture();
+    CmsPublishSnapshot recentSnapshot = validPublishSnapshot(fixture.project);
+    stubSnapshotHistory(fixture.project, 11);
+    when(snapshotRepository.findByProjectIdOrderBySnapshotVersionDesc(
+            fixture.project.getId(), PageRequest.of(0, 10)))
+        .thenReturn(List.of(recentSnapshot));
+    when(snapshotRepository
+            .findHistoryRowsByProjectIdBeforeSnapshotVersionOrderBySnapshotVersionDesc(
+                fixture.project.getId(), 2, PageRequest.of(0, 11)))
+        .thenReturn(List.of(publishSnapshotHistoryRow(fixture.project, 1)));
+
+    CmsContentService.PublishSnapshotHistoryView olderPage =
+        service.getProjectPublishSnapshots(fixture.project.getId(), 2, null);
+
+    assertThat(olderPage.snapshots())
+        .extracting(CmsContentService.PublishSnapshotView::snapshotVersion)
+        .containsExactly(1);
+    verify(snapshotRepository)
+        .findByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId(), PageRequest.of(0, 10));
+  }
+
+  @Test
+  public void getProjectPublishSnapshotsDoesNotLetSmallPageShrinkRecentValidationWindow() {
+    CmsFixture fixture = setupFixture();
+    CmsPublishSnapshot recentSnapshot = validPublishSnapshot(fixture.project);
+    stubSnapshotHistory(fixture.project, 20);
+    when(snapshotRepository.findByProjectIdOrderBySnapshotVersionDesc(
+            fixture.project.getId(), PageRequest.of(0, 10)))
+        .thenReturn(List.of(recentSnapshot));
+
+    assertThatThrownBy(() -> service.getProjectPublishSnapshots(fixture.project.getId(), 15, 1))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(
+            "Before snapshot version must not skip recent validated snapshot history: 15 > 11");
+
+    verify(snapshotRepository)
+        .findByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId(), PageRequest.of(0, 10));
+    verify(snapshotRepository, never())
+        .findHistoryRowsByProjectIdBeforeSnapshotVersionOrderBySnapshotVersionDesc(
+            any(), any(), any());
+  }
+
+  @Test
+  public void getProjectPublishSnapshotsRejectsHistoryCursorSkippingValidatedRecentPage() {
+    CmsFixture fixture = setupFixture();
+    stubSnapshotHistory(fixture.project, 20);
+
+    assertThatThrownBy(() -> service.getProjectPublishSnapshots(fixture.project.getId(), 15, null))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(
+            "Before snapshot version must not skip recent validated snapshot history: 15 > 11");
+
+    verify(snapshotRepository, never())
+        .findHistoryRowsByProjectIdBeforeSnapshotVersionOrderBySnapshotVersionDesc(
+            any(), any(), any());
+  }
+
+  @Test
+  public void getProjectPublishSnapshotsValidatesRequestedRecentHistoryPageLimit() {
+    CmsFixture fixture = setupFixture();
+    stubSnapshotHistory(fixture.project, 0);
+    when(snapshotRepository.findByProjectIdOrderBySnapshotVersionDesc(
+            fixture.project.getId(), PageRequest.of(0, 50)))
+        .thenReturn(List.of());
+    when(snapshotRepository.findHistoryRowsByProjectIdOrderBySnapshotVersionDesc(
+            fixture.project.getId(), PageRequest.of(0, 51)))
+        .thenReturn(List.of());
+
+    service.getProjectPublishSnapshots(fixture.project.getId(), null, 50);
+
+    verify(snapshotRepository)
+        .findByProjectIdOrderBySnapshotVersionDesc(fixture.project.getId(), PageRequest.of(0, 50));
+  }
+
+  @Test
+  public void getProjectPublishSnapshotsRejectsOverlongStoredSigningKeyId() {
+    CmsFixture fixture = setupFixture();
+    stubSnapshotHistory(fixture.project, 1);
+    String overlongKeyId = "a".repeat(CmsPublishSnapshot.SNAPSHOT_SIGNING_KEY_ID_MAX_LENGTH + 1);
+    CmsPublishSnapshotHistoryRow invalidHistoryRow =
+        new CmsPublishSnapshotHistoryRow(
+            101L,
+            fixture.project.getId(),
+            fixture.project.getProjectKey(),
+            1,
+            CmsPublishSnapshot.Status.PUBLISHED,
+            "en",
+            "a".repeat(64),
+            512L,
+            overlongKeyId,
+            "f".repeat(64),
+            "e".repeat(64),
+            "admin",
+            "2026-01-01T00:00:00Z");
+    when(snapshotRepository.findByProjectIdOrderBySnapshotVersionDesc(
+            fixture.project.getId(), PageRequest.of(0, 10)))
+        .thenReturn(List.of());
+    when(snapshotRepository.findHistoryRowsByProjectIdOrderBySnapshotVersionDesc(
+            fixture.project.getId(), PageRequest.of(0, 11)))
+        .thenReturn(List.of(invalidHistoryRow));
+
+    assertThatThrownBy(
+            () -> service.getProjectPublishSnapshots(fixture.project.getId(), null, null))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot history row is invalid: 101");
+  }
+
+  @Test
+  public void getProjectPublishSnapshotsRejectsZeroStoredArtifactByteSize() {
+    CmsFixture fixture = setupFixture();
+    stubSnapshotHistory(fixture.project, 11);
+    CmsPublishSnapshotHistoryRow invalidHistoryRow =
+        new CmsPublishSnapshotHistoryRow(
+            101L,
+            fixture.project.getId(),
+            fixture.project.getProjectKey(),
+            1,
+            CmsPublishSnapshot.Status.PUBLISHED,
+            "en",
+            "a".repeat(64),
+            0L,
+            "test-v1",
+            "f".repeat(64),
+            "e".repeat(64),
+            "admin",
+            "2026-01-01T00:00:00Z");
+    when(snapshotRepository.findByProjectIdOrderBySnapshotVersionDesc(
+            fixture.project.getId(), PageRequest.of(0, 10)))
+        .thenReturn(List.of());
+    when(snapshotRepository
+            .findHistoryRowsByProjectIdBeforeSnapshotVersionOrderBySnapshotVersionDesc(
+                fixture.project.getId(), 2, PageRequest.of(0, 11)))
+        .thenReturn(List.of(invalidHistoryRow));
+
+    assertThatThrownBy(() -> service.getProjectPublishSnapshots(fixture.project.getId(), 2, null))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot history row is invalid: 101");
+  }
+
+  @Test
   public void getProjectCompletenessRejectsPublishPackageAboveConfiguredArtifactByteLimit() {
     CmsFixture fixture = setupFixture();
     configurationProperties.setMaxPublishArtifactBytes(1);
@@ -3519,6 +4899,28 @@ public class CmsContentServiceTest {
   }
 
   @Test
+  public void getProjectCompletenessRequiresFinalArtifactEnvelopeHeadroom() {
+    CmsFixture fixture = setupFixture();
+    when(snapshotRepository.findCurrentVariantRows(any(), any()))
+        .thenReturn(
+            List.of(
+                new CmsCurrentVariantRow(
+                    fixture.tmTextUnit.getId(),
+                    "fr-FR",
+                    "Bonjour",
+                    TMTextUnitVariant.Status.APPROVED,
+                    true)));
+    CmsContentService.ProjectCompletenessView completeness =
+        service.getProjectCompleteness(fixture.project.getId(), List.of("fr-FR"));
+    configurationProperties.setMaxPublishArtifactBytes(completeness.publishPackageByteSize());
+
+    assertThatThrownBy(
+            () -> service.getProjectCompleteness(fixture.project.getId(), List.of("fr-FR")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("publish artifact exceeds configured artifact byte limit");
+  }
+
+  @Test
   public void getProjectCompletenessRejectsNonPositiveConfiguredArtifactByteLimit() {
     CmsFixture fixture = setupFixture();
     configurationProperties.setMaxPublishArtifactBytes(0);
@@ -3536,6 +4938,26 @@ public class CmsContentServiceTest {
             () -> service.getProjectCompleteness(fixture.project.getId(), List.of("fr-FR")))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("CMS max publish artifact bytes must be positive");
+  }
+
+  @Test
+  public void getProjectCompletenessRejectsMissingSnapshotSigningConfiguration() {
+    CmsFixture fixture = setupFixture();
+    configurationProperties.setSnapshotSigningKeyId(null);
+    when(snapshotRepository.findCurrentVariantRows(any(), any()))
+        .thenReturn(
+            List.of(
+                new CmsCurrentVariantRow(
+                    fixture.tmTextUnit.getId(),
+                    "fr-FR",
+                    "Bonjour",
+                    TMTextUnitVariant.Status.APPROVED,
+                    true)));
+
+    assertThatThrownBy(
+            () -> service.getProjectCompleteness(fixture.project.getId(), List.of("fr-FR")))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("CMS snapshot active signing key ID is missing");
   }
 
   private CmsFixture setupFixture() {
@@ -3633,8 +5055,6 @@ public class CmsContentServiceTest {
 
     when(projectRepository.findByIdWithRepositoryAndAsset(project.getId()))
         .thenReturn(Optional.of(project));
-    when(projectRepository.findByProjectKeyWithRepositoryAndAsset(project.getProjectKey()))
-        .thenReturn(Optional.of(project));
     when(projectRepository.findByProjectKeyWithRepositoryAndAssetForUpdate(project.getProjectKey()))
         .thenReturn(Optional.of(project));
     when(projectRepository.findByIdWithRepositoryAndAssetForUpdate(project.getId()))
@@ -3693,6 +5113,9 @@ public class CmsContentServiceTest {
         .thenReturn(List.of(variant));
     when(snapshotRepository.findByProjectIdOrderBySnapshotVersionDesc(
             project.getId(), PageRequest.of(0, 10)))
+        .thenReturn(List.of());
+    when(snapshotRepository.findHistoryRowsByProjectIdOrderBySnapshotVersionDesc(
+            project.getId(), PageRequest.of(0, 11)))
         .thenReturn(List.of());
     when(snapshotRepository.findByProjectIdAndPublishRequestKey(eq(project.getId()), any()))
         .thenReturn(Optional.empty());
@@ -3771,14 +5194,32 @@ public class CmsContentServiceTest {
     return snapshot;
   }
 
+  private CmsPublishSnapshotHistoryRow publishSnapshotHistoryRow(
+      CmsContentProject project, int snapshotVersion) {
+    return new CmsPublishSnapshotHistoryRow(
+        100L + snapshotVersion,
+        project.getId(),
+        project.getProjectKey(),
+        snapshotVersion,
+        CmsPublishSnapshot.Status.PUBLISHED,
+        "en",
+        "a".repeat(64),
+        512L,
+        "test-v1",
+        "f".repeat(64),
+        "e".repeat(64),
+        "admin",
+        "2026-01-01T00:00:00Z");
+  }
+
   private CmsContentService.SnapshotArtifact getSnapshotArtifact(CmsPublishSnapshot snapshot) {
     return service.getSnapshotArtifact(
         snapshot.getProject().getProjectKey(), snapshot.getSnapshotVersion());
   }
 
   private void stubSnapshotArtifactLookup(CmsPublishSnapshot snapshot) {
-    when(snapshotRepository.findByProjectKeyAndSnapshotVersion(
-            snapshot.getProject().getProjectKey(), snapshot.getSnapshotVersion()))
+    when(snapshotRepository.findByProjectIdAndSnapshotVersion(
+            snapshot.getProject().getId(), snapshot.getSnapshotVersion()))
         .thenReturn(Optional.of(snapshot));
   }
 

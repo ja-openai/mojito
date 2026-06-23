@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { fetchCmsProjectCompleteness, publishCmsProject } from './content-cms';
+import {
+  fetchCmsProjectCompleteness,
+  fetchCmsPublishSnapshots,
+  publishCmsProject,
+} from './content-cms';
 
 describe('content CMS API', () => {
   afterEach(() => {
@@ -67,6 +71,25 @@ describe('content CMS API', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/content-cms/projects/12/completeness?locales=fr-FR%2C+ja-JP',
+      expect.objectContaining({
+        headers: { Accept: 'application/json' },
+      }),
+    );
+  });
+
+  it('requests older publish snapshot metadata with a version cursor', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ snapshots: [], hasMore: false }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await fetchCmsPublishSnapshots(12, { beforeVersion: 4, limit: 10 });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/content-cms/projects/12/publish-snapshots?beforeVersion=4&limit=10',
       expect.objectContaining({
         headers: { Accept: 'application/json' },
       }),

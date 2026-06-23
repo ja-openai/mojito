@@ -25,32 +25,70 @@ public interface CmsPublishSnapshotRepository extends JpaRepository<CmsPublishSn
   List<CmsPublishSnapshot> findByProjectIdOrderBySnapshotVersionDesc(
       Long projectId, Pageable pageable);
 
+  @Query(
+      """
+      select new com.box.l10n.mojito.service.cms.CmsPublishSnapshotHistoryRow(
+        s.id,
+        p.id,
+        p.projectKey,
+        s.snapshotVersion,
+        s.status,
+        s.localeTags,
+        s.artifactSha256,
+        s.artifactByteSize,
+        s.snapshotSigningKeyId,
+        s.snapshotSignature,
+        s.artifactSignature,
+        s.createdByUsername,
+        s.publishedAt
+      )
+      from CmsPublishSnapshot s
+      join s.project p
+      where p.id = :projectId
+      order by s.snapshotVersion desc
+      """)
+  List<CmsPublishSnapshotHistoryRow> findHistoryRowsByProjectIdOrderBySnapshotVersionDesc(
+      @Param("projectId") Long projectId, Pageable pageable);
+
+  @Query(
+      """
+      select new com.box.l10n.mojito.service.cms.CmsPublishSnapshotHistoryRow(
+        s.id,
+        p.id,
+        p.projectKey,
+        s.snapshotVersion,
+        s.status,
+        s.localeTags,
+        s.artifactSha256,
+        s.artifactByteSize,
+        s.snapshotSigningKeyId,
+        s.snapshotSignature,
+        s.artifactSignature,
+        s.createdByUsername,
+        s.publishedAt
+      )
+      from CmsPublishSnapshot s
+      join s.project p
+      where p.id = :projectId
+        and s.snapshotVersion < :beforeSnapshotVersion
+      order by s.snapshotVersion desc
+      """)
+  List<CmsPublishSnapshotHistoryRow>
+      findHistoryRowsByProjectIdBeforeSnapshotVersionOrderBySnapshotVersionDesc(
+          @Param("projectId") Long projectId,
+          @Param("beforeSnapshotVersion") Integer beforeSnapshotVersion,
+          Pageable pageable);
+
   @EntityGraph(attributePaths = {"project", "createdByUser"})
   Optional<CmsPublishSnapshot> findByProjectIdAndPublishRequestKey(
       Long projectId, String publishRequestKey);
 
-  @Query(
-      """
-      select s
-      from CmsPublishSnapshot s
-      join fetch s.project p
-      join fetch s.createdByUser createdByUser
-      where lower(p.projectKey) = lower(:projectKey)
-        and s.snapshotVersion = :snapshotVersion
-      """)
-  Optional<CmsPublishSnapshot> findByProjectKeyAndSnapshotVersion(
-      @Param("projectKey") String projectKey, @Param("snapshotVersion") Integer snapshotVersion);
+  @EntityGraph(attributePaths = {"project", "createdByUser"})
+  Optional<CmsPublishSnapshot> findByProjectIdAndSnapshotVersion(
+      Long projectId, Integer snapshotVersion);
 
-  @EntityGraph(
-      attributePaths = {
-        "project",
-        "project.repository",
-        "project.asset",
-        "project.asset.lastSuccessfulAssetExtraction",
-        "createdByUser"
-      })
-  Optional<CmsPublishSnapshot> findFirstByProjectProjectKeyIgnoreCaseOrderBySnapshotVersionDesc(
-      String projectKey);
+  @EntityGraph(attributePaths = {"project", "createdByUser"})
+  Optional<CmsPublishSnapshot> findFirstByProjectIdOrderBySnapshotVersionDesc(Long projectId);
 
   @Query(
       "select coalesce(max(s.snapshotVersion), 0) from CmsPublishSnapshot s where s.project.id = :projectId")

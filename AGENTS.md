@@ -39,7 +39,7 @@ Environment
 
 Common Commands
 - Full Java formatting: `mvn spotless:apply`
-- Backend/package compile with frontend profile: `mvn -pl webapp -Pfrontend test-compile -DskipTests`
+- Backend/package compile with frontend profile: `mvn -pl webapp -am -Pfrontend test-compile -DskipTests`
 - Frontend setup:
   - `source webapp/use_local_npm.sh`
   - `npm --prefix webapp/frontend install`

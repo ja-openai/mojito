@@ -17,6 +17,11 @@ describe('content CMS publish intents', () => {
     expect(buildCmsPublishLocaleTagsKey(['fr-FR'])).toBe('fr-FR');
   });
 
+  it('canonicalizes explicit locale token order in retry identity', () => {
+    expect(buildCmsPublishLocaleTagsKey(['fr-FR', 'de-DE'])).toBe('de-DE,fr-FR');
+    expect(buildCmsPublishLocaleTagsKey(['de-DE', 'fr-FR'])).toBe('de-DE,fr-FR');
+  });
+
   it('uses the server authoring and validated package shas for retry identity', () => {
     expect(
       buildCmsPublishStateKey(
@@ -26,6 +31,8 @@ describe('content CMS publish intents', () => {
           contentTypes: [],
           entries: [],
           publishSnapshots: [],
+          hasMorePublishSnapshots: false,
+          nextBeforePublishSnapshotVersion: null,
         },
         'b'.repeat(64),
       ),

@@ -128,11 +128,19 @@ export type ApiCmsProjectDetail = {
   contentTypes: ApiCmsContentType[];
   entries: ApiCmsEntry[];
   publishSnapshots: ApiCmsPublishSnapshot[];
+  hasMorePublishSnapshots: boolean;
+  nextBeforePublishSnapshotVersion?: number | null;
 };
 
 export type ApiCmsProjectsResponse = {
   projects: ApiCmsProjectSummary[];
   totalCount: number;
+};
+
+export type ApiCmsPublishSnapshotHistory = {
+  snapshots: ApiCmsPublishSnapshot[];
+  hasMore: boolean;
+  nextBeforeSnapshotVersion?: number | null;
 };
 
 export type ApiCmsLocaleCompleteness = {
@@ -260,6 +268,32 @@ export async function fetchCmsProject(projectId: number): Promise<ApiCmsProjectD
   return (await response.json()) as ApiCmsProjectDetail;
 }
 
+export async function fetchCmsPublishSnapshots(
+  projectId: number,
+  options?: { beforeVersion?: number | null; limit?: number },
+): Promise<ApiCmsPublishSnapshotHistory> {
+  const params = new URLSearchParams();
+  if (typeof options?.beforeVersion === 'number') {
+    params.set('beforeVersion', String(options.beforeVersion));
+  }
+  if (typeof options?.limit === 'number') {
+    params.set('limit', String(options.limit));
+  }
+  const response = await fetch(
+    `/api/content-cms/projects/${projectId}/publish-snapshots${params.size ? `?${params}` : ''}`,
+    {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    },
+  );
+
+  if (!response.ok) {
+    await throwCmsError(response, 'Failed to load CMS publish snapshots');
+  }
+
+  return (await response.json()) as ApiCmsPublishSnapshotHistory;
+}
+
 export async function createCmsProject(payload: {
   projectKey: string;
   name: string;
@@ -289,7 +323,7 @@ export async function updateCmsProject(
     name: string;
     description?: string | null;
     enabled: boolean;
-    deliveryHint?: string | null;
+    deliveryHint?: string;
     expectedVersion: number;
   },
 ): Promise<ApiCmsProjectDetail> {
@@ -387,7 +421,7 @@ export async function updateCmsContentTypeField(
     fieldType: ApiCmsFieldType;
     localizable: boolean;
     required: boolean;
-    sortOrder?: number | null;
+    sortOrder?: number;
     expectedVersion: number;
   },
 ): Promise<ApiCmsProjectDetail> {
@@ -486,7 +520,7 @@ export async function updateCmsVariant(
     candidateGroupKey?: string | null;
     status: ApiCmsVariantStatus;
     metadataJson?: string | null;
-    sortOrder?: number | null;
+    sortOrder?: number;
     expectedVersion: number;
   },
 ): Promise<ApiCmsProjectDetail> {

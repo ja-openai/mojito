@@ -29,57 +29,97 @@ import {
   type VariantDraft,
 } from './content-cms-admin-types';
 
+const deliveryHintOptions = [
+  { value: 'BLOB_CDN', label: 'Blob/CDN' },
+  { value: 'STATSIG_DYNAMIC_CONFIG', label: 'Statsig dynamic config' },
+  { value: 'EXPERIENCE_FRAMEWORK', label: 'Experience framework' },
+] as const;
+
 export function ProjectList({
   projects,
+  totalCount,
   selectedProjectId,
+  hasSearchQuery,
+  disabled,
   isLoading,
   isError,
+  onRetry,
   onSelect,
 }: {
   projects: ApiCmsProjectSummary[];
+  totalCount: number;
   selectedProjectId: number | null;
+  hasSearchQuery: boolean;
+  disabled: boolean;
   isLoading: boolean;
   isError: boolean;
+  onRetry: () => void;
   onSelect: (projectId: number) => void;
 }) {
   if (isLoading) {
     return <p className="settings-page__hint">Loading projects.</p>;
   }
   if (isError) {
-    return <p className="settings-hint is-error">Failed to load projects.</p>;
+    return (
+      <div className="content-cms-admin-page__query-state">
+        <p className="settings-hint is-error">Failed to load projects.</p>
+        <button type="button" className="settings-button" onClick={onRetry}>
+          Try again
+        </button>
+      </div>
+    );
   }
   if (projects.length === 0) {
-    return <p className="settings-page__hint">No content projects yet.</p>;
+    return (
+      <p className="settings-page__hint">
+        {hasSearchQuery ? 'No matching content projects.' : 'No content projects yet.'}
+      </p>
+    );
   }
 
   return (
-    <div className="content-cms-admin-page__project-list">
-      {projects.map((project) => (
-        <button
-          key={project.id}
-          type="button"
-          className={`content-cms-admin-page__project-row${
-            selectedProjectId === project.id ? ' is-active' : ''
-          }`}
-          onClick={() => onSelect(project.id)}
-        >
-          <span className="content-cms-admin-page__project-row-name">{project.name}</span>
-          <span>{project.projectKey}</span>
-          <span>{project.repository.name}</span>
-        </button>
-      ))}
-    </div>
+    <>
+      {totalCount > projects.length ? (
+        <p className="settings-page__hint">
+          Showing {projects.length} of {totalCount} projects. Refine search to find more.
+        </p>
+      ) : null}
+      <div className="content-cms-admin-page__project-list">
+        {projects.map((project) => (
+          <button
+            key={project.id}
+            type="button"
+            className={`content-cms-admin-page__project-row${
+              selectedProjectId === project.id ? ' is-active' : ''
+            }`}
+            aria-current={selectedProjectId === project.id ? 'true' : undefined}
+            disabled={disabled}
+            onClick={() => onSelect(project.id)}
+          >
+            <span className="content-cms-admin-page__project-row-name">{project.name}</span>
+            <span>{project.projectKey}</span>
+            <span>{project.repository.name}</span>
+          </button>
+        ))}
+      </div>
+    </>
   );
 }
 
 export function ProjectCreateForm({
   repositories,
+  repositoriesLoading,
+  repositoriesError,
+  onRetryRepositories,
   draft,
   disabled,
   onChange,
   onSubmit,
 }: {
   repositories: ApiRepository[];
+  repositoriesLoading: boolean;
+  repositoriesError: boolean;
+  onRetryRepositories: () => void;
   draft: ProjectDraft;
   disabled: boolean;
   onChange: (draft: ProjectDraft) => void;
@@ -98,6 +138,7 @@ export function ProjectCreateForm({
           onChange={(event) => onChange({ ...draft, projectKey: event.target.value })}
           placeholder="growth-email"
           disabled={disabled}
+          required
         />
       </label>
       <label className="settings-field">
@@ -108,6 +149,7 @@ export function ProjectCreateForm({
           onChange={(event) => onChange({ ...draft, name: event.target.value })}
           placeholder="Growth email copy"
           disabled={disabled}
+          required
         />
       </label>
       <label className="settings-field">
@@ -117,6 +159,7 @@ export function ProjectCreateForm({
           value={draft.repositoryId}
           onChange={(event) => onChange({ ...draft, repositoryId: event.target.value })}
           disabled={disabled}
+          required
         >
           <option value="">Select repository</option>
           {repositories.map((repository) => (
@@ -126,6 +169,18 @@ export function ProjectCreateForm({
           ))}
         </select>
       </label>
+      {repositoriesLoading ? (
+        <p className="settings-page__hint">Loading repositories.</p>
+      ) : repositoriesError ? (
+        <div className="content-cms-admin-page__query-state">
+          <p className="settings-hint is-error">Failed to load repositories.</p>
+          <button type="button" className="settings-button" onClick={onRetryRepositories}>
+            Try again
+          </button>
+        </div>
+      ) : repositories.length === 0 ? (
+        <p className="settings-page__hint">No visible repositories available.</p>
+      ) : null}
       <label className="settings-field">
         <span className="settings-field__label">Asset path</span>
         <input
@@ -144,9 +199,11 @@ export function ProjectCreateForm({
           onChange={(event) => onChange({ ...draft, deliveryHint: event.target.value })}
           disabled={disabled}
         >
-          <option value="BLOB_CDN">Blob/CDN</option>
-          <option value="STATSIG_DYNAMIC_CONFIG">Statsig dynamic config</option>
-          <option value="EXPERIENCE_FRAMEWORK">Experience framework</option>
+          {deliveryHintOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
       </label>
       <label className="settings-field">
@@ -193,7 +250,7 @@ export function ProjectOverview({ detail }: { detail: ApiCmsProjectDetail }) {
         />
         <Definition label="Virtual asset" value={`${project.asset.path} (#${project.asset.id})`} />
         <Definition label="Source locale" value={project.sourceLocale} />
-        <Definition label="Delivery hint" value={project.deliveryHint} />
+        <Definition label="Delivery hint" value={formatDeliveryHint(project.deliveryHint)} />
         <Definition label="Enabled" value={formatBool(project.enabled)} />
         <Definition label="Created by" value={project.audit.createdByUsername} />
         <Definition label="Updated by" value={project.audit.lastModifiedByUsername} />
@@ -211,6 +268,10 @@ function Definition({ label, value }: { label: string; value: string }) {
       <strong>{value}</strong>
     </div>
   );
+}
+
+function formatDeliveryHint(deliveryHint: string) {
+  return deliveryHintOptions.find((option) => option.value === deliveryHint)?.label ?? deliveryHint;
 }
 
 export function ProjectEditForm({
@@ -234,6 +295,7 @@ export function ProjectEditForm({
           value={draft.name}
           onChange={(event) => onChange({ ...draft, name: event.target.value })}
           disabled={disabled}
+          required
         />
       </label>
       <label className="settings-field">
@@ -244,9 +306,11 @@ export function ProjectEditForm({
           onChange={(event) => onChange({ ...draft, deliveryHint: event.target.value })}
           disabled={disabled}
         >
-          <option value="BLOB_CDN">Blob/CDN</option>
-          <option value="STATSIG_DYNAMIC_CONFIG">Statsig dynamic config</option>
-          <option value="EXPERIENCE_FRAMEWORK">Experience framework</option>
+          {deliveryHintOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
       </label>
       <label className="settings-field content-cms-admin-page__field-span">
@@ -301,6 +365,7 @@ export function ContentTypeEditForm({
           value={selectedContentTypeId}
           onChange={(event) => onContentTypeChange(event.target.value)}
           disabled={disabled}
+          required
         >
           <option value="">Select type</option>
           {contentTypes.map((contentType) => (
@@ -321,6 +386,7 @@ export function ContentTypeEditForm({
           value={draft.name}
           onChange={(event) => onChange({ ...draft, name: event.target.value })}
           disabled={disabled}
+          required
         />
       </label>
       <label className="settings-field">
@@ -379,6 +445,7 @@ export function FieldEditForm({
           value={selectedFieldId}
           onChange={(event) => onFieldChange(event.target.value)}
           disabled={disabled || contentType == null}
+          required
         >
           <option value="">Select field</option>
           {contentType?.fields.map((field) => (
@@ -399,6 +466,7 @@ export function FieldEditForm({
           value={draft.name}
           onChange={(event) => onChange({ ...draft, name: event.target.value })}
           disabled={disabled}
+          required
         />
       </label>
       <label className="settings-field">
@@ -424,6 +492,7 @@ export function FieldEditForm({
           value={draft.sortOrder}
           onChange={(event) => onChange({ ...draft, sortOrder: event.target.value })}
           disabled={disabled}
+          required
         />
       </label>
       <label className="settings-field content-cms-admin-page__field-span">
@@ -480,6 +549,7 @@ export function EntryEditForm({
           value={selectedEntryId}
           onChange={(event) => onEntryChange(event.target.value)}
           disabled={disabled}
+          required
         >
           <option value="">Select entry</option>
           {entries.map((entry) => (
@@ -500,6 +570,7 @@ export function EntryEditForm({
           value={draft.name}
           onChange={(event) => onChange({ ...draft, name: event.target.value })}
           disabled={disabled}
+          required
         />
       </label>
       <label className="settings-field">
@@ -569,6 +640,7 @@ export function VariantEditForm({
           value={selectedVariantId}
           onChange={(event) => onVariantChange(event.target.value)}
           disabled={disabled || entry == null}
+          required
         >
           <option value="">Select variant</option>
           {entry?.variants.map((variant) => (
@@ -589,6 +661,7 @@ export function VariantEditForm({
           value={draft.name}
           onChange={(event) => onChange({ ...draft, name: event.target.value })}
           disabled={disabled}
+          required
         />
       </label>
       <label className="settings-field">
@@ -627,6 +700,7 @@ export function VariantEditForm({
           value={draft.sortOrder}
           onChange={(event) => onChange({ ...draft, sortOrder: event.target.value })}
           disabled={disabled}
+          required
         />
       </label>
       <label className="settings-field content-cms-admin-page__field-span">
@@ -667,6 +741,7 @@ export function ContentTypeForm({
           onChange={(event) => onChange({ ...draft, typeKey: event.target.value })}
           placeholder="email"
           disabled={disabled}
+          required
         />
       </label>
       <label className="settings-field">
@@ -677,6 +752,7 @@ export function ContentTypeForm({
           onChange={(event) => onChange({ ...draft, name: event.target.value })}
           placeholder="Email"
           disabled={disabled}
+          required
         />
       </label>
       <label className="settings-field">
@@ -728,6 +804,7 @@ export function FieldForm({
           value={draft.contentTypeId}
           onChange={(event) => onChange({ ...draft, contentTypeId: event.target.value })}
           disabled={disabled}
+          required
         >
           <option value="">Select type</option>
           {contentTypes.map((contentType) => (
@@ -745,6 +822,7 @@ export function FieldForm({
           onChange={(event) => onChange({ ...draft, fieldKey: event.target.value })}
           placeholder="header"
           disabled={disabled}
+          required
         />
       </label>
       <label className="settings-field">
@@ -755,6 +833,7 @@ export function FieldForm({
           onChange={(event) => onChange({ ...draft, name: event.target.value })}
           placeholder="Header"
           disabled={disabled}
+          required
         />
       </label>
       <label className="settings-field">
@@ -832,6 +911,7 @@ export function EntryForm({
           value={draft.contentTypeId}
           onChange={(event) => onChange({ ...draft, contentTypeId: event.target.value })}
           disabled={disabled}
+          required
         >
           <option value="">Select type</option>
           {contentTypes.map((contentType) => (
@@ -849,6 +929,7 @@ export function EntryForm({
           onChange={(event) => onChange({ ...draft, entryKey: event.target.value })}
           placeholder="welcome-email"
           disabled={disabled}
+          required
         />
       </label>
       <label className="settings-field">
@@ -859,6 +940,7 @@ export function EntryForm({
           onChange={(event) => onChange({ ...draft, name: event.target.value })}
           placeholder="Welcome email"
           disabled={disabled}
+          required
         />
       </label>
       <label className="settings-field">
@@ -924,6 +1006,7 @@ export function VariantForm({
           value={draft.entryId}
           onChange={(event) => onChange({ ...draft, entryId: event.target.value })}
           disabled={disabled}
+          required
         >
           <option value="">Select entry</option>
           {entries.map((entry) => (
@@ -941,6 +1024,7 @@ export function VariantForm({
           onChange={(event) => onChange({ ...draft, variantKey: event.target.value })}
           placeholder="subject-test-a"
           disabled={disabled}
+          required
         />
       </label>
       <label className="settings-field">
@@ -951,6 +1035,7 @@ export function VariantForm({
           onChange={(event) => onChange({ ...draft, name: event.target.value })}
           placeholder="Subject test A"
           disabled={disabled}
+          required
         />
       </label>
       <label className="settings-field">
@@ -1048,6 +1133,7 @@ export function MappingForm({
             onChange({ ...draft, entryId: event.target.value, variantId: '', fieldId: '' })
           }
           disabled={disabled}
+          required
         >
           <option value="">Select entry</option>
           {entries.map((entry) => (
@@ -1064,6 +1150,7 @@ export function MappingForm({
           value={draft.variantId}
           onChange={(event) => onChange({ ...draft, variantId: event.target.value })}
           disabled={disabled || !selectedEntry}
+          required
         >
           <option value="">Select variant</option>
           {selectedEntry?.variants.map((variant) => (
@@ -1080,6 +1167,7 @@ export function MappingForm({
           value={draft.fieldId}
           onChange={(event) => onChange({ ...draft, fieldId: event.target.value })}
           disabled={disabled || !selectedVariant}
+          required
         >
           <option value="">Select field</option>
           {fields.map((field) => (
@@ -1147,6 +1235,7 @@ export function MappingForm({
           onChange={(event) => onChange({ ...draft, sourceContent: event.target.value })}
           placeholder="Required for generated CMS strings"
           disabled={disabled || draft.mappingSource !== 'GENERATED'}
+          required={draft.mappingSource === 'GENERATED'}
         />
       </label>
       <label className="settings-field content-cms-admin-page__field-span">
@@ -1157,6 +1246,7 @@ export function MappingForm({
           onChange={(event) => onChange({ ...draft, sourceComment: event.target.value })}
           placeholder="Where this copy appears and any constraints"
           disabled={disabled || draft.mappingSource !== 'GENERATED'}
+          required={draft.mappingSource === 'GENERATED'}
         />
       </label>
       <div className="content-cms-admin-page__actions">
@@ -1178,20 +1268,26 @@ export function MappingForm({
 
 export function PublishForm({
   snapshots,
+  hasMoreSnapshots,
+  isLoadingOlderSnapshots,
   completenessResult,
   publishLocales,
   disabled,
   onPublishLocalesChange,
   onCompletenessSubmit,
   onPublish,
+  onLoadOlderSnapshots,
 }: {
   snapshots: ApiCmsProjectDetail['publishSnapshots'];
+  hasMoreSnapshots: boolean;
+  isLoadingOlderSnapshots: boolean;
   completenessResult: ApiCmsProjectCompleteness | null;
   publishLocales: string;
   disabled: boolean;
   onPublishLocalesChange: (value: string) => void;
   onCompletenessSubmit: (event: FormEvent) => void;
   onPublish: () => void;
+  onLoadOlderSnapshots: () => void;
 }) {
   return (
     <div className="content-cms-admin-page__form content-cms-admin-page__form--wide">
@@ -1274,6 +1370,16 @@ export function PublishForm({
           </tbody>
         </table>
       </div>
+      {hasMoreSnapshots ? (
+        <button
+          type="button"
+          className="settings-button"
+          disabled={disabled || isLoadingOlderSnapshots}
+          onClick={onLoadOlderSnapshots}
+        >
+          {isLoadingOlderSnapshots ? 'Loading older snapshots...' : 'Load older snapshots'}
+        </button>
+      ) : null}
     </div>
   );
 }

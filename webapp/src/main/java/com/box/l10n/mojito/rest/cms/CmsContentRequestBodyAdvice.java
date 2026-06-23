@@ -4,6 +4,7 @@ import com.box.l10n.mojito.json.ObjectMapper;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.MapperFeature;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -28,7 +29,9 @@ public class CmsContentRequestBodyAdvice extends RequestBodyAdviceAdapter {
             .copy()
             .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION.mappedFeature())
             .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-            .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
+            .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+            .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
+            .disable(MapperFeature.ALLOW_COERCION_OF_SCALARS);
   }
 
   @Override

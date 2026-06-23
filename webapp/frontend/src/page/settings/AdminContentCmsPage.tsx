@@ -2,8 +2,14 @@ import './settings-page.css';
 import './admin-content-cms-page.css';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { type FormEvent, useEffect, useRef, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  type BlockerFunction,
+  Navigate,
+  useBeforeUnload,
+  useBlocker,
+  useNavigate,
+} from 'react-router-dom';
 
 import {
   type ApiCmsContentType,
@@ -12,7 +18,9 @@ import {
   type ApiCmsFieldType,
   type ApiCmsProjectCompleteness,
   type ApiCmsProjectDetail,
+  type ApiCmsProjectsResponse,
   type ApiCmsProjectSummary,
+  type ApiCmsPublishSnapshot,
   type ApiCmsVariantStatus,
   createCmsContentType,
   createCmsContentTypeField,
@@ -23,6 +31,7 @@ import {
   fetchCmsProject,
   fetchCmsProjectCompleteness,
   fetchCmsProjects,
+  fetchCmsPublishSnapshots,
   isCmsConflictError,
   publishCmsProject,
   unmapCmsFieldMapping,
@@ -93,16 +102,160 @@ type StatusNotice = {
   message: string;
 };
 
+type CmsDraftKey =
+  | 'projectEdit'
+  | 'contentTypeEdit'
+  | 'fieldEdit'
+  | 'entryEdit'
+  | 'variantEdit'
+  | 'mapping';
+
+type CmsDraftSyncState = {
+  dirty: boolean;
+  expectedVersion: number | null;
+};
+
+type CmsDraftSyncStateByKey = Record<CmsDraftKey, CmsDraftSyncState>;
+
 const CMS_QUERY_KEY = ['content-cms'] as const;
 const EMPTY_PROJECTS: ApiCmsProjectSummary[] = [];
 const EMPTY_CONTENT_TYPES: ApiCmsContentType[] = [];
 const EMPTY_ENTRIES: ApiCmsEntry[] = [];
+const CMS_PROJECT_SEARCH_LIMIT = 100;
+const CMS_SNAPSHOT_HISTORY_PAGE_LIMIT = 10;
+const CMS_DRAFT_KEYS: CmsDraftKey[] = [
+  'projectEdit',
+  'contentTypeEdit',
+  'fieldEdit',
+  'entryEdit',
+  'variantEdit',
+  'mapping',
+];
+
+function createCmsDraftSyncState(): CmsDraftSyncStateByKey {
+  return {
+    projectEdit: { dirty: false, expectedVersion: null },
+    contentTypeEdit: { dirty: false, expectedVersion: null },
+    fieldEdit: { dirty: false, expectedVersion: null },
+    entryEdit: { dirty: false, expectedVersion: null },
+    variantEdit: { dirty: false, expectedVersion: null },
+    mapping: { dirty: false, expectedVersion: null },
+  };
+}
+
+function resetCmsDraftSyncState(state: CmsDraftSyncStateByKey, ...draftKeys: CmsDraftKey[]) {
+  (draftKeys.length === 0 ? CMS_DRAFT_KEYS : draftKeys).forEach((draftKey) => {
+    state[draftKey] = { dirty: false, expectedVersion: null };
+  });
+}
+
+function hydrateCmsDraftSyncState(
+  state: CmsDraftSyncStateByKey,
+  draftKey: CmsDraftKey,
+  expectedVersion: number | null,
+) {
+  state[draftKey] = { dirty: false, expectedVersion };
+}
+
+function markCmsDraftDirty(state: CmsDraftSyncStateByKey, draftKey: CmsDraftKey) {
+  state[draftKey].dirty = true;
+}
+
+function clearCmsDraftDirty(state: CmsDraftSyncStateByKey, draftKey: CmsDraftKey) {
+  state[draftKey].dirty = false;
+}
+
+function cmsDraftExpectedVersion(
+  state: CmsDraftSyncStateByKey,
+  draftKey: CmsDraftKey,
+  fallbackVersion: number,
+) {
+  return state[draftKey].expectedVersion ?? fallbackVersion;
+}
+
+function hasDirtyCmsDrafts(
+  state: CmsDraftSyncStateByKey,
+  draftKeys: readonly CmsDraftKey[] = CMS_DRAFT_KEYS,
+) {
+  return draftKeys.some((draftKey) => state[draftKey].dirty);
+}
+
+function hasCmsFormDraftChanges<T extends Record<string, unknown>>(draft: T, initialDraft: T) {
+  return Object.keys(initialDraft).some((key) => draft[key] !== initialDraft[key]);
+}
+
+function projectMatchesSearch(project: ApiCmsProjectSummary, search: string) {
+  const normalizedSearch = search.trim().toLowerCase();
+  return (
+    normalizedSearch.length === 0 ||
+    project.name.toLowerCase().includes(normalizedSearch) ||
+    project.projectKey.toLowerCase().includes(normalizedSearch)
+  );
+}
+
+function sortProjectSummaries(projects: ApiCmsProjectSummary[]) {
+  return [...projects].sort((left, right) => {
+    const nameComparison = left.name.toLowerCase().localeCompare(right.name.toLowerCase());
+    return nameComparison === 0 ? left.id - right.id : nameComparison;
+  });
+}
+
+function updateCachedProjectSearch(
+  current: ApiCmsProjectsResponse | undefined,
+  search: string,
+  previousProject: ApiCmsProjectSummary | null,
+  nextProject: ApiCmsProjectSummary,
+) {
+  if (current == null) {
+    return current;
+  }
+
+  const previousMatches = previousProject != null && projectMatchesSearch(previousProject, search);
+  const nextMatches = projectMatchesSearch(nextProject, search);
+  const visibleProjects = current.projects.filter((project) => project.id !== nextProject.id);
+  const wasVisible = visibleProjects.length !== current.projects.length;
+  let totalCountDelta = 0;
+  if (previousProject == null) {
+    totalCountDelta = nextMatches ? 1 : 0;
+  } else if (previousMatches !== nextMatches) {
+    totalCountDelta = nextMatches ? 1 : -1;
+  }
+  if (nextMatches) {
+    visibleProjects.push(nextProject);
+  }
+
+  if (!wasVisible && totalCountDelta === 0 && visibleProjects.length === current.projects.length) {
+    return current;
+  }
+
+  return {
+    ...current,
+    projects: sortProjectSummaries(visibleProjects).slice(0, CMS_PROJECT_SEARCH_LIMIT),
+    totalCount: Math.max(0, current.totalCount + totalCountDelta),
+  };
+}
+
+function upsertPublishSnapshot(
+  snapshots: ApiCmsPublishSnapshot[],
+  snapshot: ApiCmsPublishSnapshot,
+) {
+  return [
+    snapshot,
+    ...snapshots.filter((currentSnapshot) => currentSnapshot.id !== snapshot.id),
+  ].sort((left, right) => right.snapshotVersion - left.snapshotVersion);
+}
 
 export function AdminContentCmsPage() {
   const user = useUser();
   const isAdmin = user.role === 'ROLE_ADMIN';
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { data: repositories } = useRepositories();
+  const {
+    data: repositories,
+    isLoading: repositoriesLoading,
+    isError: repositoriesError,
+    refetch: refetchRepositories,
+  } = useRepositories(isAdmin);
 
   const [projectSearch, setProjectSearch] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
@@ -129,31 +282,40 @@ export function AdminContentCmsPage() {
     null,
   );
   const [publishLocales, setPublishLocales] = useState('');
+  const [publishSnapshots, setPublishSnapshots] = useState<ApiCmsPublishSnapshot[]>([]);
+  const [hasMorePublishSnapshots, setHasMorePublishSnapshots] = useState(false);
+  const [nextBeforePublishSnapshotVersion, setNextBeforePublishSnapshotVersion] = useState<
+    number | null
+  >(null);
+  const selectedProjectIdRef = useRef<number | null>(null);
   const publishIntentRef = useRef<CmsPublishIntent | null>(null);
+  const draftSyncRef = useRef(createCmsDraftSyncState());
 
   const projectsQuery = useQuery({
     queryKey: [...CMS_QUERY_KEY, 'projects', projectSearch],
-    queryFn: () => fetchCmsProjects({ search: projectSearch, enabled: null, limit: 100 }),
+    queryFn: () =>
+      fetchCmsProjects({ search: projectSearch, enabled: null, limit: CMS_PROJECT_SEARCH_LIMIT }),
     enabled: isAdmin,
     staleTime: 30_000,
   });
 
   const projects = projectsQuery.data?.projects ?? EMPTY_PROJECTS;
+  const visibleRepositories = repositories ?? [];
+  const canCreateProject =
+    !repositoriesLoading && !repositoriesError && visibleRepositories.length > 0;
 
   useEffect(() => {
-    if (projects.length === 0) {
-      setSelectedProjectId(null);
-      return;
-    }
-    if (
-      selectedProjectId == null ||
-      !projects.some((project) => project.id === selectedProjectId)
-    ) {
+    if (selectedProjectId == null && projects.length > 0) {
       setSelectedProjectId(projects[0].id);
     }
   }, [projects, selectedProjectId]);
 
   useEffect(() => {
+    selectedProjectIdRef.current = selectedProjectId;
+  }, [selectedProjectId]);
+
+  useEffect(() => {
+    resetCmsDraftSyncState(draftSyncRef.current);
     setContentTypeDraft(initialContentTypeDraft);
     setFieldDraft(initialFieldDraft);
     setEntryDraft(initialEntryDraft);
@@ -174,7 +336,6 @@ export function AdminContentCmsPage() {
   const projectDetail = projectQuery.data ?? null;
   const contentTypes = projectDetail?.contentTypes ?? EMPTY_CONTENT_TYPES;
   const entries = projectDetail?.entries ?? EMPTY_ENTRIES;
-  const publishSnapshots = projectDetail?.publishSnapshots ?? [];
   const selectedMappingEntry = findEntry(entries, mappingDraft.entryId);
   const selectedMappingVariant = findVariant(selectedMappingEntry, mappingDraft.variantId);
   const selectedMappingContentType = selectedMappingEntry
@@ -208,6 +369,10 @@ export function AdminContentCmsPage() {
 
   useEffect(() => {
     if (projectDetail == null) {
+      setPublishSnapshots([]);
+      setHasMorePublishSnapshots(false);
+      setNextBeforePublishSnapshotVersion(null);
+      resetCmsDraftSyncState(draftSyncRef.current);
       setProjectEditDraft(initialProjectEditDraft);
       setContentTypeEditId('');
       setFieldEditId('');
@@ -215,98 +380,148 @@ export function AdminContentCmsPage() {
       setVariantEditId('');
       return;
     }
-    setProjectEditDraft({
-      name: projectDetail.project.name,
-      description: projectDetail.project.description ?? '',
-      deliveryHint: projectDetail.project.deliveryHint,
-      enabled: projectDetail.project.enabled,
+    setPublishSnapshots(projectDetail.publishSnapshots);
+    setHasMorePublishSnapshots(projectDetail.hasMorePublishSnapshots);
+    setNextBeforePublishSnapshotVersion(projectDetail.nextBeforePublishSnapshotVersion ?? null);
+    if (!draftSyncRef.current.projectEdit.dirty) {
+      hydrateCmsDraftSyncState(
+        draftSyncRef.current,
+        'projectEdit',
+        projectDetail.project.entityVersion,
+      );
+      setProjectEditDraft({
+        name: projectDetail.project.name,
+        description: projectDetail.project.description ?? '',
+        deliveryHint: projectDetail.project.deliveryHint,
+        enabled: projectDetail.project.enabled,
+      });
+    }
+    setContentTypeEditId((current) => {
+      if (contentTypes.some((contentType) => String(contentType.id) === current)) {
+        return current;
+      }
+      resetCmsDraftSyncState(draftSyncRef.current, 'contentTypeEdit', 'fieldEdit');
+      return contentTypes[0]?.id.toString() ?? '';
     });
-    setContentTypeEditId((current) =>
-      contentTypes.some((contentType) => String(contentType.id) === current)
-        ? current
-        : (contentTypes[0]?.id.toString() ?? ''),
-    );
-    setEntryEditId((current) =>
-      entries.some((entry) => String(entry.id) === current)
-        ? current
-        : (entries[0]?.id.toString() ?? ''),
-    );
+    setEntryEditId((current) => {
+      if (entries.some((entry) => String(entry.id) === current)) {
+        return current;
+      }
+      resetCmsDraftSyncState(draftSyncRef.current, 'entryEdit', 'variantEdit');
+      return entries[0]?.id.toString() ?? '';
+    });
   }, [contentTypes, entries, projectDetail]);
 
   useEffect(() => {
     if (selectedEditContentType == null) {
+      resetCmsDraftSyncState(draftSyncRef.current, 'contentTypeEdit', 'fieldEdit');
       setContentTypeEditDraft(initialContentTypeDraft);
       setFieldEditId('');
       return;
     }
-    setContentTypeEditDraft({
-      typeKey: selectedEditContentType.typeKey,
-      name: selectedEditContentType.name,
-      description: selectedEditContentType.description ?? '',
-      schemaVersion: String(selectedEditContentType.schemaVersion),
-      metadataSchemaJson: selectedEditContentType.metadataSchemaJson ?? '',
+    if (!draftSyncRef.current.contentTypeEdit.dirty) {
+      hydrateCmsDraftSyncState(
+        draftSyncRef.current,
+        'contentTypeEdit',
+        selectedEditContentType.entityVersion,
+      );
+      setContentTypeEditDraft({
+        typeKey: selectedEditContentType.typeKey,
+        name: selectedEditContentType.name,
+        description: selectedEditContentType.description ?? '',
+        schemaVersion: String(selectedEditContentType.schemaVersion),
+        metadataSchemaJson: selectedEditContentType.metadataSchemaJson ?? '',
+      });
+    }
+    setFieldEditId((current) => {
+      if (selectedEditContentType.fields.some((field) => String(field.id) === current)) {
+        return current;
+      }
+      resetCmsDraftSyncState(draftSyncRef.current, 'fieldEdit');
+      return selectedEditContentType.fields[0]?.id.toString() ?? '';
     });
-    setFieldEditId((current) =>
-      selectedEditContentType.fields.some((field) => String(field.id) === current)
-        ? current
-        : (selectedEditContentType.fields[0]?.id.toString() ?? ''),
-    );
   }, [selectedEditContentType]);
 
   useEffect(() => {
     if (selectedEditField == null) {
+      resetCmsDraftSyncState(draftSyncRef.current, 'fieldEdit');
       setFieldEditDraft(initialFieldDraft);
       return;
     }
-    setFieldEditDraft({
-      contentTypeId: String(selectedEditField.contentTypeId),
-      fieldKey: selectedEditField.fieldKey,
-      name: selectedEditField.name,
-      description: selectedEditField.description ?? '',
-      fieldType: selectedEditField.fieldType,
-      required: selectedEditField.required,
-      sortOrder: String(selectedEditField.sortOrder),
-    });
+    if (!draftSyncRef.current.fieldEdit.dirty) {
+      hydrateCmsDraftSyncState(draftSyncRef.current, 'fieldEdit', selectedEditField.entityVersion);
+      setFieldEditDraft({
+        contentTypeId: String(selectedEditField.contentTypeId),
+        fieldKey: selectedEditField.fieldKey,
+        name: selectedEditField.name,
+        description: selectedEditField.description ?? '',
+        fieldType: selectedEditField.fieldType,
+        required: selectedEditField.required,
+        sortOrder: String(selectedEditField.sortOrder),
+      });
+    }
   }, [selectedEditField]);
 
   useEffect(() => {
     if (selectedEditEntry == null) {
+      resetCmsDraftSyncState(draftSyncRef.current, 'entryEdit', 'variantEdit');
       setEntryEditDraft(initialEntryDraft);
       setVariantEditId('');
       return;
     }
-    setEntryEditDraft({
-      contentTypeId: String(selectedEditEntry.contentTypeId),
-      entryKey: selectedEditEntry.entryKey,
-      name: selectedEditEntry.name,
-      description: selectedEditEntry.description ?? '',
-      status: selectedEditEntry.status,
-      metadataJson: selectedEditEntry.metadataJson ?? '',
+    if (!draftSyncRef.current.entryEdit.dirty) {
+      hydrateCmsDraftSyncState(draftSyncRef.current, 'entryEdit', selectedEditEntry.entityVersion);
+      setEntryEditDraft({
+        contentTypeId: String(selectedEditEntry.contentTypeId),
+        entryKey: selectedEditEntry.entryKey,
+        name: selectedEditEntry.name,
+        description: selectedEditEntry.description ?? '',
+        status: selectedEditEntry.status,
+        metadataJson: selectedEditEntry.metadataJson ?? '',
+      });
+    }
+    setVariantEditId((current) => {
+      if (selectedEditEntry.variants.some((variant) => String(variant.id) === current)) {
+        return current;
+      }
+      resetCmsDraftSyncState(draftSyncRef.current, 'variantEdit');
+      return selectedEditEntry.variants[0]?.id.toString() ?? '';
     });
-    setVariantEditId((current) =>
-      selectedEditEntry.variants.some((variant) => String(variant.id) === current)
-        ? current
-        : (selectedEditEntry.variants[0]?.id.toString() ?? ''),
-    );
   }, [selectedEditEntry]);
 
   useEffect(() => {
     if (selectedEditVariant == null) {
+      resetCmsDraftSyncState(draftSyncRef.current, 'variantEdit');
       setVariantEditDraft(initialVariantDraft);
       return;
     }
-    setVariantEditDraft({
-      entryId: String(selectedEditVariant.entryId),
-      variantKey: selectedEditVariant.variantKey,
-      name: selectedEditVariant.name,
-      candidateGroupKey: selectedEditVariant.candidateGroupKey ?? '',
-      status: selectedEditVariant.status,
-      metadataJson: selectedEditVariant.metadataJson ?? '',
-      sortOrder: String(selectedEditVariant.sortOrder),
-    });
+    if (!draftSyncRef.current.variantEdit.dirty) {
+      hydrateCmsDraftSyncState(
+        draftSyncRef.current,
+        'variantEdit',
+        selectedEditVariant.entityVersion,
+      );
+      setVariantEditDraft({
+        entryId: String(selectedEditVariant.entryId),
+        variantKey: selectedEditVariant.variantKey,
+        name: selectedEditVariant.name,
+        candidateGroupKey: selectedEditVariant.candidateGroupKey ?? '',
+        status: selectedEditVariant.status,
+        metadataJson: selectedEditVariant.metadataJson ?? '',
+        sortOrder: String(selectedEditVariant.sortOrder),
+      });
+    }
   }, [selectedEditVariant]);
 
   useEffect(() => {
+    if (draftSyncRef.current.mapping.dirty) {
+      return;
+    }
+    hydrateCmsDraftSyncState(
+      draftSyncRef.current,
+      'mapping',
+      selectedMapping?.entityVersion ?? null,
+    );
     setMappingDraft((current) => ({
       ...current,
       mappingSource: selectedMappingSource,
@@ -329,6 +544,8 @@ export function AdminContentCmsPage() {
     void queryClient.invalidateQueries({ queryKey: CMS_QUERY_KEY });
   };
 
+  const isSelectedProject = (projectId: number) => selectedProjectIdRef.current === projectId;
+
   const clearStaleDerivedState = (projectId: number | null) => {
     setCompletenessResult(null);
     if (projectId != null) {
@@ -337,11 +554,43 @@ export function AdminContentCmsPage() {
     publishIntentRef.current = null;
   };
 
+  useEffect(() => {
+    if (
+      projectDetail == null ||
+      completenessResult == null ||
+      completenessResult.authoringSha256 === projectDetail.authoringSha256
+    ) {
+      return;
+    }
+    setCompletenessResult(null);
+    clearCmsPublishIntentsForProject(projectDetail.project.id);
+    publishIntentRef.current = null;
+    setNotice({
+      kind: 'error',
+      message: 'Content changed since it was validated. Validate package again.',
+    });
+  }, [completenessResult, projectDetail]);
+
   const handleDetailSuccess = (
     detail: ApiCmsProjectDetail,
     message: string,
     afterSuccess?: () => void,
   ) => {
+    const previousProject =
+      projectDetail?.project.id === detail.project.id ? projectDetail.project : null;
+    queryClient.setQueryData<ApiCmsProjectDetail>(
+      [...CMS_QUERY_KEY, 'project', detail.project.id],
+      detail,
+    );
+    queryClient
+      .getQueryCache()
+      .findAll({ queryKey: [...CMS_QUERY_KEY, 'projects'] })
+      .forEach((query) => {
+        const cachedSearch = typeof query.queryKey[2] === 'string' ? query.queryKey[2] : '';
+        queryClient.setQueryData<ApiCmsProjectsResponse>(query.queryKey, (current) =>
+          updateCachedProjectSearch(current, cachedSearch, previousProject, detail.project),
+        );
+      });
     setSelectedProjectId(detail.project.id);
     setNotice({ kind: 'success', message });
     clearStaleDerivedState(detail.project.id);
@@ -349,8 +598,15 @@ export function AdminContentCmsPage() {
     invalidateCmsQueries();
   };
 
-  const handleMutationError = (error: Error, fallbackMessage: string) => {
+  const handleMutationError = (
+    error: Error,
+    fallbackMessage: string,
+    conflictingDraftKey?: CmsDraftKey,
+  ) => {
     if (isCmsConflictError(error)) {
+      if (conflictingDraftKey != null) {
+        resetCmsDraftSyncState(draftSyncRef.current, conflictingDraftKey);
+      }
       clearStaleDerivedState(selectedProjectId);
       invalidateCmsQueries();
       setNotice({
@@ -408,15 +664,16 @@ export function AdminContentCmsPage() {
         name: string;
         description?: string | null;
         enabled: boolean;
-        deliveryHint?: string | null;
+        deliveryHint?: string;
         expectedVersion: number;
       };
     }) => updateCmsProject(projectId, payload),
     onSuccess: (detail) => {
+      clearCmsDraftDirty(draftSyncRef.current, 'projectEdit');
       handleDetailSuccess(detail, `Updated content project ${detail.project.name}.`);
     },
     onError: (error: Error) => {
-      handleMutationError(error, 'Failed to update content project.');
+      handleMutationError(error, 'Failed to update content project.', 'projectEdit');
     },
   });
 
@@ -434,10 +691,11 @@ export function AdminContentCmsPage() {
       };
     }) => updateCmsContentType(contentTypeId, payload),
     onSuccess: (detail) => {
+      clearCmsDraftDirty(draftSyncRef.current, 'contentTypeEdit');
       handleDetailSuccess(detail, `Updated content type in ${detail.project.name}.`);
     },
     onError: (error: Error) => {
-      handleMutationError(error, 'Failed to update content type.');
+      handleMutationError(error, 'Failed to update content type.', 'contentTypeEdit');
     },
   });
 
@@ -453,15 +711,16 @@ export function AdminContentCmsPage() {
         fieldType: ApiCmsFieldType;
         localizable: boolean;
         required: boolean;
-        sortOrder?: number | null;
+        sortOrder?: number;
         expectedVersion: number;
       };
     }) => updateCmsContentTypeField(fieldId, payload),
     onSuccess: (detail) => {
+      clearCmsDraftDirty(draftSyncRef.current, 'fieldEdit');
       handleDetailSuccess(detail, `Updated field in ${detail.project.name}.`);
     },
     onError: (error: Error) => {
-      handleMutationError(error, 'Failed to update field.');
+      handleMutationError(error, 'Failed to update field.', 'fieldEdit');
     },
   });
 
@@ -480,10 +739,11 @@ export function AdminContentCmsPage() {
       };
     }) => updateCmsEntry(entryId, payload),
     onSuccess: (detail) => {
+      clearCmsDraftDirty(draftSyncRef.current, 'entryEdit');
       handleDetailSuccess(detail, `Updated entry in ${detail.project.name}.`);
     },
     onError: (error: Error) => {
-      handleMutationError(error, 'Failed to update entry.');
+      handleMutationError(error, 'Failed to update entry.', 'entryEdit');
     },
   });
 
@@ -498,15 +758,16 @@ export function AdminContentCmsPage() {
         candidateGroupKey?: string | null;
         status: ApiCmsVariantStatus;
         metadataJson?: string | null;
-        sortOrder?: number | null;
+        sortOrder?: number;
         expectedVersion: number;
       };
     }) => updateCmsVariant(variantId, payload),
     onSuccess: (detail) => {
+      clearCmsDraftDirty(draftSyncRef.current, 'variantEdit');
       handleDetailSuccess(detail, `Updated variant in ${detail.project.name}.`);
     },
     onError: (error: Error) => {
-      handleMutationError(error, 'Failed to update variant.');
+      handleMutationError(error, 'Failed to update variant.', 'variantEdit');
     },
   });
 
@@ -611,6 +872,7 @@ export function AdminContentCmsPage() {
       };
     }) => upsertCmsFieldMapping(variantId, payload),
     onSuccess: (detail) => {
+      clearCmsDraftDirty(draftSyncRef.current, 'mapping');
       handleDetailSuccess(detail, `Mapped field in ${detail.project.name}.`, () => {
         setMappingDraft((current) => ({
           ...initialMappingDraft,
@@ -620,7 +882,7 @@ export function AdminContentCmsPage() {
       });
     },
     onError: (error: Error) => {
-      handleMutationError(error, 'Failed to map field.');
+      handleMutationError(error, 'Failed to map field.', 'mapping');
     },
   });
 
@@ -628,10 +890,11 @@ export function AdminContentCmsPage() {
     mutationFn: ({ mappingId, expectedVersion }: { mappingId: number; expectedVersion: number }) =>
       unmapCmsFieldMapping(mappingId, expectedVersion),
     onSuccess: (detail) => {
+      clearCmsDraftDirty(draftSyncRef.current, 'mapping');
       handleDetailSuccess(detail, `Unmapped field in ${detail.project.name}.`);
     },
     onError: (error: Error) => {
-      handleMutationError(error, 'Failed to unmap field.');
+      handleMutationError(error, 'Failed to unmap field.', 'mapping');
     },
   });
 
@@ -641,7 +904,10 @@ export function AdminContentCmsPage() {
     onMutate: () => {
       setCompletenessResult(null);
     },
-    onSuccess: (response) => {
+    onSuccess: (response, variables) => {
+      if (!isSelectedProject(variables.projectId)) {
+        return;
+      }
       if (projectDetail != null && response.authoringSha256 !== projectDetail.authoringSha256) {
         clearStaleDerivedState(response.projectId);
         invalidateCmsQueries();
@@ -658,7 +924,10 @@ export function AdminContentCmsPage() {
         message: `Validated publish package for ${response.projectKey}.`,
       });
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables) => {
+      if (!isSelectedProject(variables.projectId)) {
+        return;
+      }
       setNotice({ kind: 'error', message: error.message || 'Completeness validation failed.' });
     },
   });
@@ -685,7 +954,13 @@ export function AdminContentCmsPage() {
         publishRequestKey,
       ),
     onSuccess: (snapshot, variables) => {
+      if (!isSelectedProject(variables.projectId)) {
+        clearCmsPublishIntentsForProject(variables.projectId);
+        invalidateCmsQueries();
+        return;
+      }
       clearStaleDerivedState(variables.projectId);
+      setPublishSnapshots((current) => upsertPublishSnapshot(current, snapshot));
       setNotice({
         kind: 'success',
         message: `Published snapshot v${snapshot.snapshotVersion}.`,
@@ -693,6 +968,9 @@ export function AdminContentCmsPage() {
       invalidateCmsQueries();
     },
     onError: (error: Error, variables) => {
+      if (!isSelectedProject(variables.projectId)) {
+        return;
+      }
       if (isCmsConflictError(error)) {
         clearStaleDerivedState(variables.projectId);
         invalidateCmsQueries();
@@ -707,9 +985,33 @@ export function AdminContentCmsPage() {
     },
   });
 
-  if (!isAdmin) {
-    return <Navigate to="/repositories" replace />;
-  }
+  const loadOlderSnapshotsMutation = useMutation({
+    mutationFn: ({ projectId, beforeVersion }: { projectId: number; beforeVersion: number }) =>
+      fetchCmsPublishSnapshots(projectId, {
+        beforeVersion,
+        limit: CMS_SNAPSHOT_HISTORY_PAGE_LIMIT,
+      }),
+    onSuccess: (history, variables) => {
+      if (selectedProjectIdRef.current !== variables.projectId) {
+        return;
+      }
+      setPublishSnapshots((current) => {
+        const currentSnapshotIds = new Set(current.map((snapshot) => snapshot.id));
+        return [
+          ...current,
+          ...history.snapshots.filter((snapshot) => !currentSnapshotIds.has(snapshot.id)),
+        ];
+      });
+      setHasMorePublishSnapshots(history.hasMore);
+      setNextBeforePublishSnapshotVersion(history.nextBeforeSnapshotVersion ?? null);
+    },
+    onError: (error: Error, variables) => {
+      if (selectedProjectIdRef.current !== variables.projectId) {
+        return;
+      }
+      setNotice({ kind: 'error', message: error.message || 'Failed to load older snapshots.' });
+    },
+  });
 
   const selectedProject = projectDetail?.project ?? null;
   const isSaving =
@@ -728,8 +1030,87 @@ export function AdminContentCmsPage() {
     completenessMutation.isPending ||
     publishMutation.isPending;
 
+  const hasProjectScopedDraftChanges =
+    hasCmsFormDraftChanges(contentTypeDraft, initialContentTypeDraft) ||
+    hasCmsFormDraftChanges(fieldDraft, initialFieldDraft) ||
+    hasCmsFormDraftChanges(entryDraft, initialEntryDraft) ||
+    hasCmsFormDraftChanges(variantDraft, initialVariantDraft) ||
+    publishLocales.trim().length > 0 ||
+    hasDirtyCmsDrafts(draftSyncRef.current);
+  const hasUnsavedCmsDraftChanges =
+    hasCmsFormDraftChanges(projectDraft, initialProjectDraft) || hasProjectScopedDraftChanges;
+  const hasCmsExitRisk = isSaving || hasUnsavedCmsDraftChanges;
+
+  const confirmDiscardProjectScopedDrafts = (action: string) => {
+    if (!hasProjectScopedDraftChanges) {
+      return true;
+    }
+    return window.confirm(
+      `${action} Unsaved CMS drafts for ${
+        selectedProject?.projectKey ?? 'the current project'
+      } will be discarded.`,
+    );
+  };
+
+  const confirmDiscardCmsExit = useCallback(
+    (action: string) => {
+      if (!hasCmsExitRisk) {
+        return true;
+      }
+      const exitRiskMessage = isSaving
+        ? hasUnsavedCmsDraftChanges
+          ? 'CMS work is still saving and unsaved CMS drafts will be discarded.'
+          : 'CMS work is still saving.'
+        : 'Unsaved CMS drafts will be discarded.';
+      return window.confirm(`${action} ${exitRiskMessage}`);
+    },
+    [hasCmsExitRisk, hasUnsavedCmsDraftChanges, isSaving],
+  );
+  const shouldBlockCmsExit = useCallback<BlockerFunction>(
+    ({ currentLocation, nextLocation }) =>
+      hasCmsExitRisk &&
+      (currentLocation.pathname !== nextLocation.pathname ||
+        currentLocation.search !== nextLocation.search ||
+        currentLocation.hash !== nextLocation.hash),
+    [hasCmsExitRisk],
+  );
+  const cmsExitBlocker = useBlocker(shouldBlockCmsExit);
+
+  const confirmDiscardDirtyCmsDrafts = (action: string, draftKeys: readonly CmsDraftKey[]) => {
+    if (!hasDirtyCmsDrafts(draftSyncRef.current, draftKeys)) {
+      return true;
+    }
+    return window.confirm(
+      `${action} Unsaved CMS drafts for ${
+        selectedProject?.projectKey ?? 'the current project'
+      } will be discarded.`,
+    );
+  };
+
   const handleCreateProject = (event: FormEvent) => {
     event.preventDefault();
+    if (repositoriesLoading) {
+      setNotice({ kind: 'error', message: 'Repositories are still loading.' });
+      return;
+    }
+    if (repositoriesError) {
+      setNotice({ kind: 'error', message: 'Failed to load repositories.' });
+      return;
+    }
+    if (visibleRepositories.length === 0) {
+      setNotice({ kind: 'error', message: 'No visible repositories are available.' });
+      return;
+    }
+    const nextProjectName = projectDraft.name.trim() || projectDraft.projectKey.trim();
+    if (
+      !confirmDiscardProjectScopedDrafts(
+        nextProjectName.length === 0
+          ? 'Create and open this content project?'
+          : `Create ${nextProjectName} and open it?`,
+      )
+    ) {
+      return;
+    }
     try {
       createProjectMutation.mutate({
         projectKey: projectDraft.projectKey,
@@ -743,6 +1124,111 @@ export function AdminContentCmsPage() {
     } catch (error) {
       setNotice({ kind: 'error', message: (error as Error).message });
     }
+  };
+
+  const handleRetryRepositories = () => {
+    setNotice(null);
+    void refetchRepositories();
+  };
+
+  const handleRetryProjects = () => {
+    setNotice(null);
+    void projectsQuery.refetch();
+  };
+
+  const handleRetrySelectedProject = () => {
+    setNotice(null);
+    void projectQuery.refetch();
+  };
+
+  const handleSelectProject = (projectId: number) => {
+    if (projectId === selectedProjectId) {
+      return;
+    }
+    const nextProject = projects.find((project) => project.id === projectId);
+    if (
+      !confirmDiscardProjectScopedDrafts(
+        nextProject == null ? 'Switch content projects?' : `Switch to ${nextProject.name}?`,
+      )
+    ) {
+      return;
+    }
+    setSelectedProjectId(projectId);
+    setCompletenessResult(null);
+    setNotice(null);
+  };
+
+  const handleBackToSettings = () => {
+    void navigate('/settings/system');
+  };
+
+  useBeforeUnload((event) => {
+    if (!hasCmsExitRisk) {
+      return;
+    }
+    event.preventDefault();
+    event.returnValue = '';
+  });
+
+  useEffect(() => {
+    if (cmsExitBlocker.state !== 'blocked') {
+      return;
+    }
+    if (confirmDiscardCmsExit('Leave Content CMS?')) {
+      cmsExitBlocker.proceed();
+      return;
+    }
+    cmsExitBlocker.reset();
+  }, [cmsExitBlocker, confirmDiscardCmsExit]);
+
+  if (!isAdmin) {
+    return <Navigate to="/repositories" replace />;
+  }
+
+  const handleContentTypeEditSelectionChange = (contentTypeId: string) => {
+    if (contentTypeId === contentTypeEditId) {
+      return;
+    }
+    if (
+      !confirmDiscardDirtyCmsDrafts('Switch edit content types?', ['contentTypeEdit', 'fieldEdit'])
+    ) {
+      return;
+    }
+    resetCmsDraftSyncState(draftSyncRef.current, 'contentTypeEdit', 'fieldEdit');
+    setContentTypeEditId(contentTypeId);
+  };
+
+  const handleFieldEditSelectionChange = (fieldId: string) => {
+    if (fieldId === fieldEditId) {
+      return;
+    }
+    if (!confirmDiscardDirtyCmsDrafts('Switch edit fields?', ['fieldEdit'])) {
+      return;
+    }
+    resetCmsDraftSyncState(draftSyncRef.current, 'fieldEdit');
+    setFieldEditId(fieldId);
+  };
+
+  const handleEntryEditSelectionChange = (entryId: string) => {
+    if (entryId === entryEditId) {
+      return;
+    }
+    if (!confirmDiscardDirtyCmsDrafts('Switch edit entries?', ['entryEdit', 'variantEdit'])) {
+      return;
+    }
+    resetCmsDraftSyncState(draftSyncRef.current, 'entryEdit', 'variantEdit');
+    setEntryEditId(entryId);
+  };
+
+  const handleVariantEditSelectionChange = (variantId: string) => {
+    if (variantId === variantEditId) {
+      return;
+    }
+    if (!confirmDiscardDirtyCmsDrafts('Switch edit variants?', ['variantEdit'])) {
+      return;
+    }
+    resetCmsDraftSyncState(draftSyncRef.current, 'variantEdit');
+    setVariantEditId(variantId);
   };
 
   const handleCreateContentType = (event: FormEvent) => {
@@ -783,8 +1269,12 @@ export function AdminContentCmsPage() {
         name: projectEditDraft.name,
         description: normalizeText(projectEditDraft.description),
         enabled: projectEditDraft.enabled,
-        deliveryHint: normalizeText(projectEditDraft.deliveryHint),
-        expectedVersion: selectedProject.entityVersion,
+        deliveryHint: projectEditDraft.deliveryHint,
+        expectedVersion: cmsDraftExpectedVersion(
+          draftSyncRef.current,
+          'projectEdit',
+          selectedProject.entityVersion,
+        ),
       },
     });
   };
@@ -801,7 +1291,11 @@ export function AdminContentCmsPage() {
           name: contentTypeEditDraft.name,
           description: normalizeText(contentTypeEditDraft.description),
           metadataSchemaJson: normalizeText(contentTypeEditDraft.metadataSchemaJson),
-          expectedVersion: selectedEditContentType.entityVersion,
+          expectedVersion: cmsDraftExpectedVersion(
+            draftSyncRef.current,
+            'contentTypeEdit',
+            selectedEditContentType.entityVersion,
+          ),
         },
       });
     } catch (error) {
@@ -823,8 +1317,12 @@ export function AdminContentCmsPage() {
           fieldType: fieldEditDraft.fieldType,
           localizable: true,
           required: fieldEditDraft.required,
-          sortOrder: parseOptionalNumber(fieldEditDraft.sortOrder),
-          expectedVersion: selectedEditField.entityVersion,
+          sortOrder: parseRequiredNumber(fieldEditDraft.sortOrder, 'Field sort order'),
+          expectedVersion: cmsDraftExpectedVersion(
+            draftSyncRef.current,
+            'fieldEdit',
+            selectedEditField.entityVersion,
+          ),
         },
       });
     } catch (error) {
@@ -854,7 +1352,11 @@ export function AdminContentCmsPage() {
           description: normalizeText(entryEditDraft.description),
           status: entryEditDraft.status,
           metadataJson: normalizeText(entryEditDraft.metadataJson),
-          expectedVersion: selectedEditEntry.entityVersion,
+          expectedVersion: cmsDraftExpectedVersion(
+            draftSyncRef.current,
+            'entryEdit',
+            selectedEditEntry.entityVersion,
+          ),
         },
       });
     } catch (error) {
@@ -893,8 +1395,12 @@ export function AdminContentCmsPage() {
           candidateGroupKey: normalizeText(variantEditDraft.candidateGroupKey),
           status: variantEditDraft.status,
           metadataJson: normalizeText(variantEditDraft.metadataJson),
-          sortOrder: parseOptionalNumber(variantEditDraft.sortOrder),
-          expectedVersion: selectedEditVariant.entityVersion,
+          sortOrder: parseRequiredNumber(variantEditDraft.sortOrder, 'Variant sort order'),
+          expectedVersion: cmsDraftExpectedVersion(
+            draftSyncRef.current,
+            'variantEdit',
+            selectedEditVariant.entityVersion,
+          ),
         },
       });
     } catch (error) {
@@ -1016,7 +1522,7 @@ export function AdminContentCmsPage() {
           stringId,
           sourceContent,
           sourceComment,
-          expectedVersion: selectedMapping?.entityVersion ?? null,
+          expectedVersion: draftSyncRef.current.mapping.expectedVersion,
         },
       });
     } catch (error) {
@@ -1050,7 +1556,11 @@ export function AdminContentCmsPage() {
     }
     unmapMappingMutation.mutate({
       mappingId: selectedMapping.id,
-      expectedVersion: selectedMapping.entityVersion,
+      expectedVersion: cmsDraftExpectedVersion(
+        draftSyncRef.current,
+        'mapping',
+        selectedMapping.entityVersion,
+      ),
     });
   };
 
@@ -1127,11 +1637,39 @@ export function AdminContentCmsPage() {
     }
   };
 
+  const handleLoadOlderSnapshots = () => {
+    if (selectedProjectId == null || nextBeforePublishSnapshotVersion == null) {
+      setNotice({ kind: 'error', message: 'No older snapshot page is available.' });
+      return;
+    }
+    loadOlderSnapshotsMutation.mutate({
+      projectId: selectedProjectId,
+      beforeVersion: nextBeforePublishSnapshotVersion,
+    });
+  };
+
+  const handleMappingDraftChange = (nextDraft: MappingDraft) => {
+    const selectionChanged =
+      nextDraft.entryId !== mappingDraft.entryId ||
+      nextDraft.variantId !== mappingDraft.variantId ||
+      nextDraft.fieldId !== mappingDraft.fieldId;
+    if (selectionChanged) {
+      if (!confirmDiscardDirtyCmsDrafts('Change mapping target?', ['mapping'])) {
+        return;
+      }
+      resetCmsDraftSyncState(draftSyncRef.current, 'mapping');
+    } else {
+      markCmsDraftDirty(draftSyncRef.current, 'mapping');
+    }
+    setMappingDraft(nextDraft);
+  };
+
   return (
     <div className="settings-subpage">
       <SettingsSubpageHeader
         backTo="/settings/system"
         backLabel="Back to settings"
+        onBack={hasCmsExitRisk ? handleBackToSettings : undefined}
         context="Settings"
         title="Content CMS"
         centerContent={selectedProject ? selectedProject.projectKey : 'No project selected'}
@@ -1143,6 +1681,8 @@ export function AdminContentCmsPage() {
             className={`content-cms-admin-page__notice${
               notice.kind === 'error' ? ' is-error' : ''
             }`}
+            role={notice.kind === 'error' ? 'alert' : 'status'}
+            aria-live={notice.kind === 'error' ? 'assertive' : 'polite'}
           >
             {notice.message}
           </div>
@@ -1157,30 +1697,34 @@ export function AdminContentCmsPage() {
               value={projectSearch}
               onChange={setProjectSearch}
               placeholder="Search projects"
+              disabled={isSaving}
               className="content-cms-admin-page__search"
             />
             <ProjectList
               projects={projects}
+              totalCount={projectsQuery.data?.totalCount ?? projects.length}
               selectedProjectId={selectedProjectId}
+              hasSearchQuery={projectSearch.trim().length > 0}
+              disabled={isSaving}
               isLoading={projectsQuery.isLoading}
               isError={projectsQuery.isError}
-              onSelect={(projectId) => {
-                setSelectedProjectId(projectId);
-                setCompletenessResult(null);
-                setNotice(null);
-              }}
+              onRetry={handleRetryProjects}
+              onSelect={handleSelectProject}
             />
 
             <ProjectCreateForm
-              repositories={repositories ?? []}
+              repositories={visibleRepositories}
+              repositoriesLoading={repositoriesLoading}
+              repositoriesError={repositoriesError}
+              onRetryRepositories={handleRetryRepositories}
               draft={projectDraft}
-              disabled={isSaving}
+              disabled={isSaving || !canCreateProject}
               onChange={setProjectDraft}
               onSubmit={handleCreateProject}
             />
           </section>
 
-          <main className="content-cms-admin-page__main">
+          <main className="content-cms-admin-page__main" aria-busy={isSaving}>
             {projectQuery.isLoading ? (
               <section className="settings-card">
                 <p className="settings-page__hint">Loading selected project.</p>
@@ -1188,6 +1732,15 @@ export function AdminContentCmsPage() {
             ) : projectQuery.isError ? (
               <section className="settings-card">
                 <p className="settings-hint is-error">Failed to load selected project.</p>
+                <div className="content-cms-admin-page__actions">
+                  <button
+                    type="button"
+                    className="settings-button"
+                    onClick={handleRetrySelectedProject}
+                  >
+                    Try again
+                  </button>
+                </div>
               </section>
             ) : projectDetail ? (
               <>
@@ -1234,12 +1787,14 @@ export function AdminContentCmsPage() {
                       fields={selectedMappingFields}
                       draft={mappingDraft}
                       disabled={isSaving}
-                      onChange={setMappingDraft}
+                      onChange={handleMappingDraftChange}
                       onSubmit={handleUpsertMapping}
                       onUnmap={handleUnmapMapping}
                     />
                     <PublishForm
                       snapshots={publishSnapshots}
+                      hasMoreSnapshots={hasMorePublishSnapshots}
+                      isLoadingOlderSnapshots={loadOlderSnapshotsMutation.isPending}
                       completenessResult={completenessResult}
                       publishLocales={publishLocales}
                       disabled={isSaving}
@@ -1249,6 +1804,7 @@ export function AdminContentCmsPage() {
                       }}
                       onCompletenessSubmit={handleCompleteness}
                       onPublish={handlePublish}
+                      onLoadOlderSnapshots={handleLoadOlderSnapshots}
                     />
                   </div>
                 </section>
@@ -1265,7 +1821,10 @@ export function AdminContentCmsPage() {
                     <ProjectEditForm
                       draft={projectEditDraft}
                       disabled={isSaving}
-                      onChange={setProjectEditDraft}
+                      onChange={(draft) => {
+                        markCmsDraftDirty(draftSyncRef.current, 'projectEdit');
+                        setProjectEditDraft(draft);
+                      }}
                       onSubmit={handleUpdateProject}
                     />
                     <ContentTypeEditForm
@@ -1273,8 +1832,11 @@ export function AdminContentCmsPage() {
                       selectedContentTypeId={contentTypeEditId}
                       draft={contentTypeEditDraft}
                       disabled={isSaving}
-                      onContentTypeChange={setContentTypeEditId}
-                      onChange={setContentTypeEditDraft}
+                      onContentTypeChange={handleContentTypeEditSelectionChange}
+                      onChange={(draft) => {
+                        markCmsDraftDirty(draftSyncRef.current, 'contentTypeEdit');
+                        setContentTypeEditDraft(draft);
+                      }}
                       onSubmit={handleUpdateContentType}
                     />
                     <FieldEditForm
@@ -1282,8 +1844,11 @@ export function AdminContentCmsPage() {
                       selectedFieldId={fieldEditId}
                       draft={fieldEditDraft}
                       disabled={isSaving}
-                      onFieldChange={setFieldEditId}
-                      onChange={setFieldEditDraft}
+                      onFieldChange={handleFieldEditSelectionChange}
+                      onChange={(draft) => {
+                        markCmsDraftDirty(draftSyncRef.current, 'fieldEdit');
+                        setFieldEditDraft(draft);
+                      }}
                       onSubmit={handleUpdateField}
                     />
                     <EntryEditForm
@@ -1291,8 +1856,11 @@ export function AdminContentCmsPage() {
                       selectedEntryId={entryEditId}
                       draft={entryEditDraft}
                       disabled={isSaving}
-                      onEntryChange={setEntryEditId}
-                      onChange={setEntryEditDraft}
+                      onEntryChange={handleEntryEditSelectionChange}
+                      onChange={(draft) => {
+                        markCmsDraftDirty(draftSyncRef.current, 'entryEdit');
+                        setEntryEditDraft(draft);
+                      }}
                       onSubmit={handleUpdateEntry}
                     />
                     <VariantEditForm
@@ -1300,8 +1868,11 @@ export function AdminContentCmsPage() {
                       selectedVariantId={variantEditId}
                       draft={variantEditDraft}
                       disabled={isSaving}
-                      onVariantChange={setVariantEditId}
-                      onChange={setVariantEditDraft}
+                      onVariantChange={handleVariantEditSelectionChange}
+                      onChange={(draft) => {
+                        markCmsDraftDirty(draftSyncRef.current, 'variantEdit');
+                        setVariantEditDraft(draft);
+                      }}
                       onSubmit={handleUpdateVariant}
                     />
                   </div>

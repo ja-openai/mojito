@@ -59,6 +59,33 @@ public class CmsSnapshotSigningServiceTest {
   }
 
   @Test
+  public void rejectsSnapshotWhenStoredPublisherUsernameChanges() {
+    CmsSnapshotSigningService signingService = signingService(configurationProperties(), "test-v1");
+    CmsPublishSnapshot snapshot = snapshot();
+    signingService.sign(snapshot);
+    snapshot.setCreatedByUsername("other-admin");
+
+    assertThatThrownBy(() -> signingService.validate(snapshot))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot signature mismatch: 99");
+  }
+
+  @Test
+  public void rejectsSnapshotWhenStoredPublisherUserIdChanges() {
+    CmsSnapshotSigningService signingService = signingService(configurationProperties(), "test-v1");
+    CmsPublishSnapshot snapshot = snapshot();
+    signingService.sign(snapshot);
+    User replacedPublisher = new User();
+    replacedPublisher.setId(101L);
+    replacedPublisher.setUsername("admin");
+    snapshot.setCreatedByUser(replacedPublisher);
+
+    assertThatThrownBy(() -> signingService.validate(snapshot))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish snapshot signature mismatch: 99");
+  }
+
+  @Test
   public void rejectsSnapshotWhenSignedPublishedTimestampChanges() {
     CmsSnapshotSigningService signingService = signingService(configurationProperties(), "test-v1");
     CmsPublishSnapshot snapshot = snapshot();
@@ -119,6 +146,18 @@ public class CmsSnapshotSigningServiceTest {
   }
 
   @Test
+  public void rejectsSnapshotWhenStoredArtifactSignatureMismatches() {
+    CmsSnapshotSigningService signingService = signingService(configurationProperties(), "test-v1");
+    CmsPublishSnapshot snapshot = snapshot();
+    signingService.sign(snapshot);
+    snapshot.setArtifactSignature("0".repeat(64));
+
+    assertThatThrownBy(() -> signingService.validate(snapshot))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Publish artifact signature mismatch: 99");
+  }
+
+  @Test
   public void rejectsPublishSigningWithoutConfiguredActiveKey() {
     CmsContentConfigurationProperties configurationProperties = configurationProperties();
     configurationProperties.setSnapshotSigningKeyId(null);
@@ -128,6 +167,59 @@ public class CmsSnapshotSigningServiceTest {
     assertThatThrownBy(() -> signingService.sign(snapshot()))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("CMS snapshot active signing key ID is missing");
+  }
+
+  @Test
+  public void rejectsPublishSigningWithOverlongConfiguredActiveKeyId() {
+    String overlongKeyId = "a".repeat(CmsPublishSnapshot.SNAPSHOT_SIGNING_KEY_ID_MAX_LENGTH + 1);
+    CmsContentConfigurationProperties configurationProperties = configurationProperties();
+    configurationProperties.setSnapshotSigningKeyId(overlongKeyId);
+    configurationProperties.setSnapshotSigningKeys(
+        new LinkedHashMap<>(Map.of(overlongKeyId, "test-content-cms-snapshot-signing-key-0001")));
+    CmsSnapshotSigningService signingService =
+        new CmsSnapshotSigningService(configurationProperties);
+
+    assertThatThrownBy(() -> signingService.sign(snapshot()))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("CMS snapshot signing key ID is invalid");
+  }
+
+  @Test
+  public void rejectsPublishSigningWithInvalidConfiguredActiveKeyId() {
+    CmsContentConfigurationProperties configurationProperties = configurationProperties();
+    configurationProperties.setSnapshotSigningKeyId("Test.V1");
+    configurationProperties.setSnapshotSigningKeys(
+        new LinkedHashMap<>(Map.of("Test.V1", "test-content-cms-snapshot-signing-key-0001")));
+    CmsSnapshotSigningService signingService =
+        new CmsSnapshotSigningService(configurationProperties);
+
+    assertThatThrownBy(() -> signingService.sign(snapshot()))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("CMS snapshot signing key ID is invalid");
+  }
+
+  @Test
+  public void rejectsPublishSigningWhenConfiguredActiveKeyIsNotRetained() {
+    CmsContentConfigurationProperties configurationProperties = configurationProperties();
+    configurationProperties.setSnapshotSigningKeyId("test-v3");
+    CmsSnapshotSigningService signingService =
+        new CmsSnapshotSigningService(configurationProperties);
+
+    assertThatThrownBy(() -> signingService.sign(snapshot()))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("CMS snapshot signing key is missing: test-v3");
+  }
+
+  @Test
+  public void rejectsPublishSigningWithShortConfiguredActiveKeySecret() {
+    CmsContentConfigurationProperties configurationProperties = configurationProperties();
+    configurationProperties.setSnapshotSigningKeys(
+        new LinkedHashMap<>(Map.of("test-v1", "too-short")));
+    CmsSnapshotSigningService signingService = signingService(configurationProperties, "test-v1");
+
+    assertThatThrownBy(() -> signingService.sign(snapshot()))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("CMS snapshot signing key is too short: test-v1");
   }
 
   private CmsSnapshotSigningService signingService(

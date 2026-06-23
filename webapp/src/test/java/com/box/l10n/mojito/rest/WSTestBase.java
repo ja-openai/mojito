@@ -8,6 +8,7 @@ import com.box.l10n.mojito.rest.client.exception.LocaleNotFoundException;
 import com.box.l10n.mojito.rest.entity.RepositoryLocale;
 import com.box.l10n.mojito.rest.resttemplate.AuthenticatedRestTemplate;
 import com.box.l10n.mojito.rest.resttemplate.ResttemplateConfig;
+import com.box.l10n.mojito.test.AspectJTestContextResetTestExecutionListener;
 import com.box.l10n.mojito.xml.XmlParsingConfiguration;
 import jakarta.annotation.PostConstruct;
 import java.util.HashSet;
@@ -21,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.junit4.SpringRunner;
 
 /**
@@ -33,6 +35,9 @@ import org.springframework.test.context.junit4.SpringRunner;
 @SpringBootTest(
     classes = Application.class,
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestExecutionListeners(
+    listeners = AspectJTestContextResetTestExecutionListener.class,
+    mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
 @WithDefaultTestUser
 public class WSTestBase {
 

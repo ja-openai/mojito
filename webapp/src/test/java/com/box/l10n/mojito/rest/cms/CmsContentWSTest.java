@@ -18,7 +18,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.box.l10n.mojito.service.cms.CmsContentConflictException;
+import com.box.l10n.mojito.service.cms.CmsContentNotFoundException;
 import com.box.l10n.mojito.service.cms.CmsContentService;
+import com.box.l10n.mojito.service.cms.CmsSnapshotSigningService;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.junit.Test;
@@ -27,6 +29,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.server.ResponseStatusException;
@@ -66,6 +69,33 @@ public class CmsContentWSTest {
         .isInstanceOfSatisfying(
             ResponseStatusException.class,
             exception -> assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+  }
+
+  @Test
+  public void getProjectReturnsNotFoundForTypedMissingCmsResource() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    when(cmsContentService.getProject(12L))
+        .thenThrow(new CmsContentNotFoundException("Content project not found: 12"));
+
+    assertThatThrownBy(() -> cmsContentWS.getProject(12L))
+        .isInstanceOfSatisfying(
+            ResponseStatusException.class,
+            exception -> assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
+  }
+
+  @Test
+  public void getProjectDoesNotInferNotFoundFromValidationMessageText() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    when(cmsContentService.getProject(12L))
+        .thenThrow(
+            new IllegalArgumentException("Metadata schema path not found in configured schema"));
+
+    assertThatThrownBy(() -> cmsContentWS.getProject(12L))
+        .isInstanceOfSatisfying(
+            ResponseStatusException.class,
+            exception -> assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
   }
 
   @Test
@@ -109,11 +139,12 @@ public class CmsContentWSTest {
     when(cmsContentService.publishProject(12L, command, "publish-request")).thenReturn(snapshot);
 
     ResponseEntity<CmsContentService.PublishSnapshotView> response =
-        cmsContentWS.publishProject(12L, "publish-request", command);
+        cmsContentWS.publishProject(12L, List.of("publish-request"), command);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     assertThat(response.getHeaders().getLocation())
         .hasToString("/api/content-cms/projects/growth-email/publish-snapshots/2/artifact");
+    assertThat(response.getHeaders().getCacheControl()).isEqualTo("no-store");
     assertThat(response.getBody()).isEqualTo(snapshot);
     verify(cmsContentService).publishProject(12L, command, "publish-request");
   }
@@ -128,6 +159,27 @@ public class CmsContentWSTest {
             post("/api/content-cms/projects/12/publish-snapshots")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
+        .andExpect(status().isBadRequest());
+
+    verify(cmsContentService, never()).publishProject(anyLong(), any(), any());
+  }
+
+  @Test
+  public void publishProjectRejectsDuplicatePublishRequestKeyBeforeServiceCall() throws Exception {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new CmsContentWS(cmsContentService)).build();
+
+    mockMvc
+        .perform(
+            post("/api/content-cms/projects/12/publish-snapshots")
+                .header(CmsContentWS.PUBLISH_REQUEST_KEY_HEADER, "publish-request", "other-request")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"expectedAuthoringSha256\":\""
+                        + AUTHORING_SHA256
+                        + "\",\"expectedPackageSha256\":\""
+                        + PACKAGE_SHA256
+                        + "\"}"))
         .andExpect(status().isBadRequest());
 
     verify(cmsContentService, never()).publishProject(anyLong(), any(), any());
@@ -181,17 +233,25 @@ public class CmsContentWSTest {
                 "growth-email.v2.json"));
 
     ResponseEntity<byte[]> response =
-        cmsContentWS.getVersionedSnapshotArtifact("growth-email", 2, null);
+        cmsContentWS.getVersionedSnapshotArtifact(
+            "growth-email", "2", artifactRequest("growth-email", "2"), null);
 
     assertThat(response.getHeaders().getFirst(HttpHeaders.CACHE_CONTROL))
         .isEqualTo("private, max-age=31536000, immutable");
+    assertThat(response.getHeaders().getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
     assertThat(response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION))
         .isEqualTo("attachment; filename=\"growth-email.v2.json\"");
     assertThat(response.getHeaders().getFirst(HttpHeaders.ETAG)).isEqualTo("\"sha256-abc123\"");
     assertThat(response.getHeaders().getFirst(CmsContentWS.SNAPSHOT_SIGNING_KEY_ID_HEADER))
         .isEqualTo("test-v1");
+    assertThat(response.getHeaders().getFirst(CmsContentWS.SIGNATURE_ALGORITHM_HEADER))
+        .isEqualTo(CmsSnapshotSigningService.SIGNATURE_ALGORITHM);
+    assertThat(response.getHeaders().getFirst(CmsContentWS.SNAPSHOT_SIGNATURE_VERSION_HEADER))
+        .isEqualTo(CmsSnapshotSigningService.SNAPSHOT_SIGNATURE_VERSION);
     assertThat(response.getHeaders().getFirst(CmsContentWS.SNAPSHOT_SIGNATURE_HEADER))
         .isEqualTo(SNAPSHOT_SIGNATURE);
+    assertThat(response.getHeaders().getFirst(CmsContentWS.ARTIFACT_SIGNATURE_VERSION_HEADER))
+        .isEqualTo(CmsSnapshotSigningService.ARTIFACT_SIGNATURE_VERSION);
     assertThat(response.getHeaders().getFirst(CmsContentWS.ARTIFACT_SIGNATURE_HEADER))
         .isEqualTo(ARTIFACT_SIGNATURE);
     assertThat(response.getHeaders().getContentType())
@@ -217,7 +277,10 @@ public class CmsContentWSTest {
 
     ResponseEntity<byte[]> response =
         cmsContentWS.getVersionedSnapshotArtifact(
-            "growth-email", 2, "W/\"sha256-stale\", \"sha256-abc123\"");
+            "growth-email",
+            "2",
+            artifactRequest("growth-email", "2"),
+            "W/\"sha256-stale\", \"sha256-abc123\"");
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_MODIFIED);
     assertThat(response.getHeaders().getFirst(HttpHeaders.CACHE_CONTROL))
@@ -227,6 +290,108 @@ public class CmsContentWSTest {
         .isEqualTo(SNAPSHOT_SIGNATURE);
     assertThat(response.getHeaders().getContentLength()).isEqualTo(-1L);
     assertThat(response.getBody()).isNull();
+  }
+
+  @Test
+  public void getVersionedSnapshotArtifactReturnsNotModifiedForWildcardIfNoneMatch() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    when(cmsContentService.getSnapshotArtifact("growth-email", 2))
+        .thenReturn(
+            new CmsContentService.SnapshotArtifact(
+                "{\"project\":\"growth\"}",
+                "abc123",
+                20L,
+                "test-v1",
+                SNAPSHOT_SIGNATURE,
+                ARTIFACT_SIGNATURE,
+                "growth-email.v2.json"));
+
+    ResponseEntity<byte[]> response =
+        cmsContentWS.getVersionedSnapshotArtifact(
+            "growth-email", "2", artifactRequest("growth-email", "2"), "*");
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_MODIFIED);
+    assertThat(response.getHeaders().getFirst(HttpHeaders.ETAG)).isEqualTo("\"sha256-abc123\"");
+    assertThat(response.getBody()).isNull();
+  }
+
+  @Test
+  public void getVersionedSnapshotArtifactIgnoresMalformedWeakWildcardIfNoneMatch() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    String artifactJson = "{\"project\":\"growth\"}";
+    byte[] artifactBytes = artifactJson.getBytes(StandardCharsets.UTF_8);
+    when(cmsContentService.getSnapshotArtifact("growth-email", 2))
+        .thenReturn(
+            new CmsContentService.SnapshotArtifact(
+                artifactJson,
+                "abc123",
+                (long) artifactBytes.length,
+                "test-v1",
+                SNAPSHOT_SIGNATURE,
+                ARTIFACT_SIGNATURE,
+                "growth-email.v2.json"));
+
+    ResponseEntity<byte[]> response =
+        cmsContentWS.getVersionedSnapshotArtifact(
+            "growth-email", "2", artifactRequest("growth-email", "2"), "W/*");
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getHeaders().getFirst(HttpHeaders.ETAG)).isEqualTo("\"sha256-abc123\"");
+    assertThat(response.getBody()).containsExactly(artifactBytes);
+  }
+
+  @Test
+  public void getVersionedSnapshotArtifactIgnoresMalformedWildcardListIfNoneMatch() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    String artifactJson = "{\"project\":\"growth\"}";
+    byte[] artifactBytes = artifactJson.getBytes(StandardCharsets.UTF_8);
+    when(cmsContentService.getSnapshotArtifact("growth-email", 2))
+        .thenReturn(
+            new CmsContentService.SnapshotArtifact(
+                artifactJson,
+                "abc123",
+                (long) artifactBytes.length,
+                "test-v1",
+                SNAPSHOT_SIGNATURE,
+                ARTIFACT_SIGNATURE,
+                "growth-email.v2.json"));
+
+    ResponseEntity<byte[]> response =
+        cmsContentWS.getVersionedSnapshotArtifact(
+            "growth-email", "2", artifactRequest("growth-email", "2"), "*, \"sha256-abc123\"");
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getHeaders().getFirst(HttpHeaders.ETAG)).isEqualTo("\"sha256-abc123\"");
+    assertThat(response.getBody()).containsExactly(artifactBytes);
+  }
+
+  @Test
+  public void getVersionedSnapshotArtifactIgnoresMalformedEntityTagListIfNoneMatch() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    String artifactJson = "{\"project\":\"growth\"}";
+    byte[] artifactBytes = artifactJson.getBytes(StandardCharsets.UTF_8);
+    when(cmsContentService.getSnapshotArtifact("growth-email", 2))
+        .thenReturn(
+            new CmsContentService.SnapshotArtifact(
+                artifactJson,
+                "abc123",
+                (long) artifactBytes.length,
+                "test-v1",
+                SNAPSHOT_SIGNATURE,
+                ARTIFACT_SIGNATURE,
+                "growth-email.v2.json"));
+
+    ResponseEntity<byte[]> response =
+        cmsContentWS.getVersionedSnapshotArtifact(
+            "growth-email", "2", artifactRequest("growth-email", "2"), "bogus, \"sha256-abc123\"");
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getHeaders().getFirst(HttpHeaders.ETAG)).isEqualTo("\"sha256-abc123\"");
+    assertThat(response.getBody()).containsExactly(artifactBytes);
   }
 
   @Test
@@ -251,10 +416,52 @@ public class CmsContentWSTest {
         .andExpect(status().isOk())
         .andExpect(
             header().string(HttpHeaders.CACHE_CONTROL, "private, max-age=31536000, immutable"))
+        .andExpect(header().string("X-Content-Type-Options", "nosniff"))
         .andExpect(header().string(HttpHeaders.ETAG, "\"sha256-abc123\""))
         .andExpect(header().longValue(HttpHeaders.CONTENT_LENGTH, artifactBytes.length))
+        .andExpect(
+            header()
+                .string(
+                    CmsContentWS.SIGNATURE_ALGORITHM_HEADER,
+                    CmsSnapshotSigningService.SIGNATURE_ALGORITHM))
+        .andExpect(
+            header()
+                .string(
+                    CmsContentWS.SNAPSHOT_SIGNATURE_VERSION_HEADER,
+                    CmsSnapshotSigningService.SNAPSHOT_SIGNATURE_VERSION))
         .andExpect(header().string(CmsContentWS.SNAPSHOT_SIGNATURE_HEADER, SNAPSHOT_SIGNATURE))
+        .andExpect(
+            header()
+                .string(
+                    CmsContentWS.ARTIFACT_SIGNATURE_VERSION_HEADER,
+                    CmsSnapshotSigningService.ARTIFACT_SIGNATURE_VERSION))
         .andExpect(header().string(CmsContentWS.ARTIFACT_SIGNATURE_HEADER, ARTIFACT_SIGNATURE));
+  }
+
+  @Test
+  public void getVersionedSnapshotArtifactHeadDoesNotMaterializeResponseBody() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    String artifactJson = "{\"project\":\"grówth\"}";
+    byte[] artifactBytes = artifactJson.getBytes(StandardCharsets.UTF_8);
+    when(cmsContentService.getSnapshotArtifact("growth-email", 2))
+        .thenReturn(
+            new CmsContentService.SnapshotArtifact(
+                artifactJson,
+                "abc123",
+                (long) artifactBytes.length,
+                "test-v1",
+                SNAPSHOT_SIGNATURE,
+                ARTIFACT_SIGNATURE,
+                "growth-email.v2.json"));
+
+    ResponseEntity<byte[]> response =
+        cmsContentWS.headVersionedSnapshotArtifact(
+            "growth-email", "2", artifactRequest("growth-email", "2"), null);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getHeaders().getContentLength()).isEqualTo((long) artifactBytes.length);
+    assertThat(response.getBody()).isNull();
   }
 
   @Test
@@ -296,6 +503,44 @@ public class CmsContentWSTest {
   }
 
   @Test
+  public void getVersionedSnapshotArtifactRejectsNonCanonicalSnapshotVersionLocator()
+      throws Exception {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new CmsContentWS(cmsContentService)).build();
+
+    mockMvc
+        .perform(get("/api/content-cms/projects/growth-email/publish-snapshots/02/artifact"))
+        .andExpect(status().isBadRequest());
+
+    verify(cmsContentService, never()).getSnapshotArtifact(any(), any());
+  }
+
+  @Test
+  public void getVersionedSnapshotArtifactRejectsPercentEncodedSnapshotVersionLocator()
+      throws Exception {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new CmsContentWS(cmsContentService)).build();
+
+    mockMvc
+        .perform(get("/api/content-cms/projects/growth-email/publish-snapshots/%32/artifact"))
+        .andExpect(status().isBadRequest());
+
+    verify(cmsContentService, never()).getSnapshotArtifact(any(), any());
+  }
+
+  @Test
+  public void getVersionedSnapshotArtifactRejectsQueryStringAlias() throws Exception {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new CmsContentWS(cmsContentService)).build();
+
+    mockMvc
+        .perform(get("/api/content-cms/projects/growth-email/publish-snapshots/2/artifact?x=1"))
+        .andExpect(status().isBadRequest());
+
+    verify(cmsContentService, never()).getSnapshotArtifact(any(), any());
+  }
+
+  @Test
   public void getVersionedSnapshotArtifactUsesCanonicalProjectVersionLookup() {
     CmsContentService cmsContentService = mock(CmsContentService.class);
     CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
@@ -313,7 +558,8 @@ public class CmsContentWSTest {
                 "growth-email.v2.json"));
 
     ResponseEntity<byte[]> response =
-        cmsContentWS.getVersionedSnapshotArtifact("growth-email", 2, null);
+        cmsContentWS.getVersionedSnapshotArtifact(
+            "growth-email", "2", artifactRequest("growth-email", "2"), null);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getHeaders().getFirst(HttpHeaders.ETAG)).isEqualTo("\"sha256-abc123\"");
@@ -329,7 +575,8 @@ public class CmsContentWSTest {
         .thenReturn(descriptor);
 
     ResponseEntity<CmsContentService.SnapshotDeliveryDescriptor> response =
-        cmsContentWS.getLatestPublishedSnapshot("growth-email", null);
+        cmsContentWS.getLatestPublishedSnapshot(
+            "growth-email", latestSnapshotRequest("growth-email"), null);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getHeaders().getCacheControl()).isEqualTo("no-store");
@@ -337,6 +584,30 @@ public class CmsContentWSTest {
         .isEqualTo("\"snapshot-signature-" + SNAPSHOT_SIGNATURE + "\"");
     assertThat(response.getBody()).isEqualTo(descriptor);
     verify(cmsContentService).getLatestPublishedSnapshotDescriptor("growth-email");
+  }
+
+  @Test
+  public void getLatestPublishedSnapshotRejectsPercentEncodedProjectKeyLocator() throws Exception {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new CmsContentWS(cmsContentService)).build();
+
+    mockMvc
+        .perform(get("/api/content-cms/projects/%67rowth-email/publish-snapshots/latest"))
+        .andExpect(status().isBadRequest());
+
+    verify(cmsContentService, never()).getLatestPublishedSnapshotDescriptor(any());
+  }
+
+  @Test
+  public void getLatestPublishedSnapshotRejectsQueryStringAlias() throws Exception {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new CmsContentWS(cmsContentService)).build();
+
+    mockMvc
+        .perform(get("/api/content-cms/projects/growth-email/publish-snapshots/latest?x=1"))
+        .andExpect(status().isBadRequest());
+
+    verify(cmsContentService, never()).getLatestPublishedSnapshotDescriptor(any());
   }
 
   @Test
@@ -350,6 +621,7 @@ public class CmsContentWSTest {
     ResponseEntity<CmsContentService.SnapshotDeliveryDescriptor> response =
         cmsContentWS.getLatestPublishedSnapshot(
             "growth-email",
+            latestSnapshotRequest("growth-email"),
             "W/\"snapshot-signature-stale\", \"snapshot-signature-" + SNAPSHOT_SIGNATURE + "\"");
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_MODIFIED);
@@ -358,6 +630,152 @@ public class CmsContentWSTest {
         .isEqualTo("\"snapshot-signature-" + SNAPSHOT_SIGNATURE + "\"");
     assertThat(response.getBody()).isNull();
     verify(cmsContentService).getLatestPublishedSnapshotDescriptor("growth-email");
+  }
+
+  @Test
+  public void getLatestPublishedSnapshotReturnsNotModifiedForWildcardIfNoneMatch() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    CmsContentService.SnapshotDeliveryDescriptor descriptor = snapshotDeliveryDescriptor();
+    when(cmsContentService.getLatestPublishedSnapshotDescriptor("growth-email"))
+        .thenReturn(descriptor);
+
+    ResponseEntity<CmsContentService.SnapshotDeliveryDescriptor> response =
+        cmsContentWS.getLatestPublishedSnapshot(
+            "growth-email", latestSnapshotRequest("growth-email"), "*");
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_MODIFIED);
+    assertThat(response.getHeaders().getETag())
+        .isEqualTo("\"snapshot-signature-" + SNAPSHOT_SIGNATURE + "\"");
+    assertThat(response.getBody()).isNull();
+    verify(cmsContentService).getLatestPublishedSnapshotDescriptor("growth-email");
+  }
+
+  @Test
+  public void getLatestPublishedSnapshotIgnoresMalformedWeakWildcardIfNoneMatch() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    CmsContentService.SnapshotDeliveryDescriptor descriptor = snapshotDeliveryDescriptor();
+    when(cmsContentService.getLatestPublishedSnapshotDescriptor("growth-email"))
+        .thenReturn(descriptor);
+
+    ResponseEntity<CmsContentService.SnapshotDeliveryDescriptor> response =
+        cmsContentWS.getLatestPublishedSnapshot(
+            "growth-email", latestSnapshotRequest("growth-email"), "W/*");
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getHeaders().getETag())
+        .isEqualTo("\"snapshot-signature-" + SNAPSHOT_SIGNATURE + "\"");
+    assertThat(response.getBody()).isEqualTo(descriptor);
+    verify(cmsContentService).getLatestPublishedSnapshotDescriptor("growth-email");
+  }
+
+  @Test
+  public void getLatestPublishedSnapshotIgnoresMalformedWildcardListIfNoneMatch() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    CmsContentService.SnapshotDeliveryDescriptor descriptor = snapshotDeliveryDescriptor();
+    when(cmsContentService.getLatestPublishedSnapshotDescriptor("growth-email"))
+        .thenReturn(descriptor);
+
+    ResponseEntity<CmsContentService.SnapshotDeliveryDescriptor> response =
+        cmsContentWS.getLatestPublishedSnapshot(
+            "growth-email",
+            latestSnapshotRequest("growth-email"),
+            "*, \"snapshot-signature-" + SNAPSHOT_SIGNATURE + "\"");
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getHeaders().getETag())
+        .isEqualTo("\"snapshot-signature-" + SNAPSHOT_SIGNATURE + "\"");
+    assertThat(response.getBody()).isEqualTo(descriptor);
+    verify(cmsContentService).getLatestPublishedSnapshotDescriptor("growth-email");
+  }
+
+  @Test
+  public void getLatestPublishedSnapshotIgnoresMalformedEntityTagListIfNoneMatch() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    CmsContentService.SnapshotDeliveryDescriptor descriptor = snapshotDeliveryDescriptor();
+    when(cmsContentService.getLatestPublishedSnapshotDescriptor("growth-email"))
+        .thenReturn(descriptor);
+
+    ResponseEntity<CmsContentService.SnapshotDeliveryDescriptor> response =
+        cmsContentWS.getLatestPublishedSnapshot(
+            "growth-email",
+            latestSnapshotRequest("growth-email"),
+            "bogus, \"snapshot-signature-" + SNAPSHOT_SIGNATURE + "\"");
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getHeaders().getETag())
+        .isEqualTo("\"snapshot-signature-" + SNAPSHOT_SIGNATURE + "\"");
+    assertThat(response.getBody()).isEqualTo(descriptor);
+    verify(cmsContentService).getLatestPublishedSnapshotDescriptor("growth-email");
+  }
+
+  @Test
+  public void getLatestPublishedSnapshotIgnoresMalformedWeakEtagWhitespaceIfNoneMatch() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    CmsContentService.SnapshotDeliveryDescriptor descriptor = snapshotDeliveryDescriptor();
+    when(cmsContentService.getLatestPublishedSnapshotDescriptor("growth-email"))
+        .thenReturn(descriptor);
+
+    ResponseEntity<CmsContentService.SnapshotDeliveryDescriptor> response =
+        cmsContentWS.getLatestPublishedSnapshot(
+            "growth-email",
+            latestSnapshotRequest("growth-email"),
+            "W/ \"snapshot-signature-" + SNAPSHOT_SIGNATURE + "\"");
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getHeaders().getETag())
+        .isEqualTo("\"snapshot-signature-" + SNAPSHOT_SIGNATURE + "\"");
+    assertThat(response.getBody()).isEqualTo(descriptor);
+    verify(cmsContentService).getLatestPublishedSnapshotDescriptor("growth-email");
+  }
+
+  @Test
+  public void cmsErrorResponsesUseNoStoreCacheControl() throws Exception {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    when(cmsContentService.getLatestPublishedSnapshotDescriptor("growth-email"))
+        .thenThrow(new CmsContentNotFoundException("Published snapshot not found: growth-email"));
+    MockMvc mockMvc =
+        MockMvcBuilders.standaloneSetup(new CmsContentWS(cmsContentService))
+            .addFilters(new CmsContentCacheControlFilter())
+            .build();
+
+    mockMvc
+        .perform(get("/api/content-cms/projects/growth-email/publish-snapshots/latest"))
+        .andExpect(status().isNotFound())
+        .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"));
+  }
+
+  @Test
+  public void cmsNamespaceMissUsesNoStoreCacheControl() throws Exception {
+    MockMvc mockMvc =
+        MockMvcBuilders.standaloneSetup(new CmsContentWS(mock(CmsContentService.class)))
+            .addFilters(new CmsContentCacheControlFilter())
+            .build();
+
+    mockMvc
+        .perform(get("/api/content-cms"))
+        .andExpect(status().isNotFound())
+        .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"));
+  }
+
+  @Test
+  public void exactArtifactResponseOverridesDefaultCmsNoStoreCacheControl() throws Exception {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    when(cmsContentService.getSnapshotArtifact("growth-email", 2)).thenReturn(snapshotArtifact());
+    MockMvc mockMvc =
+        MockMvcBuilders.standaloneSetup(new CmsContentWS(cmsContentService))
+            .addFilters(new CmsContentCacheControlFilter())
+            .build();
+
+    mockMvc
+        .perform(get("/api/content-cms/projects/growth-email/publish-snapshots/2/artifact"))
+        .andExpect(status().isOk())
+        .andExpect(
+            header().string(HttpHeaders.CACHE_CONTROL, "private, max-age=31536000, immutable"));
   }
 
   @Test
@@ -374,6 +792,25 @@ public class CmsContentWSTest {
         .andExpect(
             header().string(HttpHeaders.ETAG, "\"snapshot-signature-" + SNAPSHOT_SIGNATURE + "\""));
 
+    verify(cmsContentService).getLatestPublishedSnapshotDescriptor("growth-email");
+  }
+
+  @Test
+  public void getLatestPublishedSnapshotHeadDoesNotExposeResponseBody() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    when(cmsContentService.getLatestPublishedSnapshotDescriptor("growth-email"))
+        .thenReturn(snapshotDeliveryDescriptor());
+
+    ResponseEntity<CmsContentService.SnapshotDeliveryDescriptor> response =
+        cmsContentWS.headLatestPublishedSnapshot(
+            "growth-email", latestSnapshotRequest("growth-email"), null);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getHeaders().getCacheControl()).isEqualTo("no-store");
+    assertThat(response.getHeaders().getETag())
+        .isEqualTo("\"snapshot-signature-" + SNAPSHOT_SIGNATURE + "\"");
+    assertThat(response.getBody()).isNull();
     verify(cmsContentService).getLatestPublishedSnapshotDescriptor("growth-email");
   }
 
@@ -410,7 +847,8 @@ public class CmsContentWSTest {
         .thenReturn(descriptor);
 
     ResponseEntity<CmsContentService.SnapshotDeliveryDescriptor> response =
-        cmsContentWS.getLatestPublishedSnapshot("growth-email", "\"sha256-abc123\"");
+        cmsContentWS.getLatestPublishedSnapshot(
+            "growth-email", latestSnapshotRequest("growth-email"), "\"sha256-abc123\"");
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getHeaders().getETag())
@@ -432,13 +870,29 @@ public class CmsContentWSTest {
         .andExpect(
             jsonPath("$.formatVersion").value("mojito.microCms.snapshot-delivery-descriptor.v1"))
         .andExpect(jsonPath("$.projectHint").value("BLOB_CDN"))
+        .andExpect(jsonPath("$.artifactSha256").value("abc123"))
+        .andExpect(jsonPath("$.artifactByteSize").value(20))
+        .andExpect(
+            jsonPath("$.signatureAlgorithm").value(CmsSnapshotSigningService.SIGNATURE_ALGORITHM))
+        .andExpect(
+            jsonPath("$.snapshotSignatureVersion")
+                .value(CmsSnapshotSigningService.SNAPSHOT_SIGNATURE_VERSION))
+        .andExpect(
+            jsonPath("$.artifactSignatureVersion")
+                .value(CmsSnapshotSigningService.ARTIFACT_SIGNATURE_VERSION))
         .andExpect(jsonPath("$.snapshotSigningKeyId").value("test-v1"))
         .andExpect(jsonPath("$.snapshotSignature").value(SNAPSHOT_SIGNATURE))
         .andExpect(jsonPath("$.artifactSignature").value(ARTIFACT_SIGNATURE))
+        .andExpect(jsonPath("$.artifactFilename").value("growth-email.v2.json"))
+        .andExpect(
+            jsonPath("$.artifactExportPath")
+                .value("/api/content-cms/projects/growth-email/publish-snapshots/2/artifact"))
         .andExpect(jsonPath("$.publishedAt").value("2026-01-01T00:00:00Z"))
         .andExpect(jsonPath("$.id").doesNotExist())
         .andExpect(jsonPath("$.projectId").doesNotExist())
-        .andExpect(jsonPath("$.createdByUsername").doesNotExist());
+        .andExpect(jsonPath("$.createdByUsername").doesNotExist())
+        .andExpect(jsonPath("$.snapshotSigningKeys").doesNotExist())
+        .andExpect(jsonPath("$.snapshotSigningKey").doesNotExist());
 
     verify(cmsContentService).getLatestPublishedSnapshotDescriptor("growth-email");
   }
@@ -457,6 +911,41 @@ public class CmsContentWSTest {
   }
 
   @Test
+  public void getProjectPublishSnapshotsReturnsMetadataHistoryPage() throws Exception {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    when(cmsContentService.getProjectPublishSnapshots(12L, 4, 10))
+        .thenReturn(
+            new CmsContentService.PublishSnapshotHistoryView(
+                List.of(publishSnapshotView()), true, 2));
+    MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new CmsContentWS(cmsContentService)).build();
+
+    mockMvc
+        .perform(get("/api/content-cms/projects/12/publish-snapshots?beforeVersion=4&limit=10"))
+        .andExpect(status().isOk())
+        .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+        .andExpect(jsonPath("$.snapshots[0].snapshotVersion").value(2))
+        .andExpect(jsonPath("$.hasMore").value(true))
+        .andExpect(jsonPath("$.nextBeforeSnapshotVersion").value(2));
+  }
+
+  @Test
+  public void getProjectReturnsFirstPublishSnapshotHistoryCursor() throws Exception {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    when(cmsContentService.getProject(12L))
+        .thenReturn(
+            new CmsContentService.ProjectDetail(
+                null, AUTHORING_SHA256, List.of(), List.of(), List.of(), true, 2));
+    MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new CmsContentWS(cmsContentService)).build();
+
+    mockMvc
+        .perform(get("/api/content-cms/projects/12"))
+        .andExpect(status().isOk())
+        .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+        .andExpect(jsonPath("$.hasMorePublishSnapshots").value(true))
+        .andExpect(jsonPath("$.nextBeforePublishSnapshotVersion").value(2));
+  }
+
+  @Test
   public void mutableAdminReadsUseNoStoreCacheControl() {
     CmsContentService cmsContentService = mock(CmsContentService.class);
     CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
@@ -464,7 +953,7 @@ public class CmsContentWSTest {
         new CmsContentService.SearchProjectsView(List.of(), 0);
     CmsContentService.ProjectDetail project =
         new CmsContentService.ProjectDetail(
-            null, AUTHORING_SHA256, List.of(), List.of(), List.of());
+            null, AUTHORING_SHA256, List.of(), List.of(), List.of(), false, null);
     CmsContentService.EntryCompletenessView completeness =
         new CmsContentService.EntryCompletenessView(12L, "welcome", List.of());
     CmsContentService.ProjectCompletenessView projectCompleteness = projectCompletenessView();
@@ -479,6 +968,40 @@ public class CmsContentWSTest {
     assertNoStore(cmsContentWS.getProject(12L), project);
     assertNoStore(cmsContentWS.getEntryCompleteness(12L, "fr-FR, ja-JP"), completeness);
     assertNoStore(cmsContentWS.getProjectCompleteness(12L, "fr-FR, ja-JP"), projectCompleteness);
+  }
+
+  @Test
+  public void mutableAdminWritesUseNoStoreCacheControl() {
+    CmsContentService cmsContentService = mock(CmsContentService.class);
+    CmsContentWS cmsContentWS = new CmsContentWS(cmsContentService);
+    CmsContentService.ProjectDetail project =
+        new CmsContentService.ProjectDetail(
+            null, AUTHORING_SHA256, List.of(), List.of(), List.of(), false, null);
+    when(cmsContentService.createProject(null)).thenReturn(project);
+    when(cmsContentService.updateProject(12L, null)).thenReturn(project);
+    when(cmsContentService.createContentType(12L, null)).thenReturn(project);
+    when(cmsContentService.updateContentType(12L, null)).thenReturn(project);
+    when(cmsContentService.createContentTypeField(12L, null)).thenReturn(project);
+    when(cmsContentService.updateContentTypeField(12L, null)).thenReturn(project);
+    when(cmsContentService.createEntry(12L, null)).thenReturn(project);
+    when(cmsContentService.updateEntry(12L, null)).thenReturn(project);
+    when(cmsContentService.createVariant(12L, null)).thenReturn(project);
+    when(cmsContentService.updateVariant(12L, null)).thenReturn(project);
+    when(cmsContentService.upsertFieldMapping(12L, null)).thenReturn(project);
+    when(cmsContentService.unmapFieldMapping(12L, null)).thenReturn(project);
+
+    assertNoStore(cmsContentWS.createProject(null), HttpStatus.CREATED, project);
+    assertNoStore(cmsContentWS.updateProject(12L, null), project);
+    assertNoStore(cmsContentWS.createContentType(12L, null), HttpStatus.CREATED, project);
+    assertNoStore(cmsContentWS.updateContentType(12L, null), project);
+    assertNoStore(cmsContentWS.createContentTypeField(12L, null), HttpStatus.CREATED, project);
+    assertNoStore(cmsContentWS.updateContentTypeField(12L, null), project);
+    assertNoStore(cmsContentWS.createEntry(12L, null), HttpStatus.CREATED, project);
+    assertNoStore(cmsContentWS.updateEntry(12L, null), project);
+    assertNoStore(cmsContentWS.createVariant(12L, null), HttpStatus.CREATED, project);
+    assertNoStore(cmsContentWS.updateVariant(12L, null), project);
+    assertNoStore(cmsContentWS.upsertFieldMapping(12L, null), project);
+    assertNoStore(cmsContentWS.unmapFieldMapping(12L, null), project);
   }
 
   @Test
@@ -523,9 +1046,25 @@ public class CmsContentWSTest {
   }
 
   private <T> void assertNoStore(ResponseEntity<T> response, T body) {
-    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertNoStore(response, HttpStatus.OK, body);
+  }
+
+  private <T> void assertNoStore(ResponseEntity<T> response, HttpStatus status, T body) {
+    assertThat(response.getStatusCode()).isEqualTo(status);
     assertThat(response.getHeaders().getCacheControl()).isEqualTo("no-store");
     assertThat(response.getBody()).isEqualTo(body);
+  }
+
+  private CmsContentService.SnapshotArtifact snapshotArtifact() {
+    String artifactJson = "{\"project\":\"growth\"}";
+    return new CmsContentService.SnapshotArtifact(
+        artifactJson,
+        "abc123",
+        (long) artifactJson.getBytes(StandardCharsets.UTF_8).length,
+        "test-v1",
+        SNAPSHOT_SIGNATURE,
+        ARTIFACT_SIGNATURE,
+        "growth-email.v2.json");
   }
 
   private CmsContentService.SnapshotDeliveryDescriptor snapshotDeliveryDescriptor() {
@@ -538,6 +1077,9 @@ public class CmsContentWSTest {
         "BLOB_CDN",
         "abc123",
         20L,
+        CmsSnapshotSigningService.SIGNATURE_ALGORITHM,
+        CmsSnapshotSigningService.SNAPSHOT_SIGNATURE_VERSION,
+        CmsSnapshotSigningService.ARTIFACT_SIGNATURE_VERSION,
         "test-v1",
         SNAPSHOT_SIGNATURE,
         ARTIFACT_SIGNATURE,
@@ -575,5 +1117,24 @@ public class CmsContentWSTest {
         "/api/content-cms/projects/growth-email/publish-snapshots/2/artifact",
         "admin",
         "2026-01-01T00:00:00Z");
+  }
+
+  private MockHttpServletRequest latestSnapshotRequest(String projectKey) {
+    return request("/api/content-cms/projects/" + projectKey + "/publish-snapshots/latest");
+  }
+
+  private MockHttpServletRequest artifactRequest(String projectKey, String snapshotVersion) {
+    return request(
+        "/api/content-cms/projects/"
+            + projectKey
+            + "/publish-snapshots/"
+            + snapshotVersion
+            + "/artifact");
+  }
+
+  private MockHttpServletRequest request(String requestUri) {
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    request.setRequestURI(requestUri);
+    return request;
   }
 }

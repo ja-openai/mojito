@@ -4,7 +4,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
-import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -28,8 +27,7 @@ import org.hibernate.envers.RelationTargetAuditMode;
       @UniqueConstraint(
           name = "UK__CMS_CONTENT_TYPE__ID_PROJECT",
           columnNames = {"id", "content_project_id"})
-    },
-    indexes = {@Index(name = "I__CMS_CONTENT_TYPE__PROJECT", columnList = "content_project_id")})
+    })
 public class CmsContentType extends CmsAuditableEntity {
 
   public static final int KEY_MAX_LENGTH = 128;

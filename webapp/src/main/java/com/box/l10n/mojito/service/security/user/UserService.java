@@ -539,12 +539,28 @@ public class UserService {
     User user = userRepository.findByUsername(username);
 
     if (user == null) {
-      user = createBasicUser(username, givenName, surname, commonName, partiallyCreated);
-      user.setEnabled(enabled);
-      user = userRepository.save(user);
+      try {
+        user = createBasicUser(username, givenName, surname, commonName, partiallyCreated);
+        user.setEnabled(enabled);
+        user = userRepository.save(user);
+      } catch (DataIntegrityViolationException ex) {
+        if (!isUsernameConflict(ex)) {
+          throw ex;
+        }
+        logger.info("Concurrent user creation won for username {}, reloading user", username);
+        user = userRepository.findByUsername(username);
+        if (user == null) {
+          throw ex;
+        }
+      }
     }
 
     return user;
+  }
+
+  private boolean isUsernameConflict(DataIntegrityViolationException ex) {
+    return StringUtils.contains(
+        ex.getMostSpecificCause().getMessage(), User.USERNAME_UNIQUE_INDEX_NAME);
   }
 
   public User getOrCreateOrUpdateBasicUser(

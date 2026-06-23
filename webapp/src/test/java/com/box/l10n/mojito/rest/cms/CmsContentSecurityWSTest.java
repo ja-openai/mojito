@@ -13,7 +13,10 @@ import java.util.UUID;
 import org.junit.After;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.client.HttpClientErrorException;
 
 public class CmsContentSecurityWSTest extends WSTestBase {
@@ -55,7 +58,9 @@ public class CmsContentSecurityWSTest extends WSTestBase {
     nonAdminRestTemplate.setCookieStoreAndUpdateRequestFactory(
         authenticatedRestTemplate.getRestTemplate().getCookieStore());
 
+    assertCmsRouteForbidden(nonAdminRestTemplate, "/api/content-cms");
     assertCmsRouteForbidden(nonAdminRestTemplate, "/api/content-cms/projects");
+    assertCmsRouteForbidden(nonAdminRestTemplate, "/api/content-cms/projects/1/publish-snapshots");
     assertCmsRouteForbidden(
         nonAdminRestTemplate, "/api/content-cms/projects/growth-email/publish-snapshots/latest");
     assertCmsRouteForbidden(
@@ -70,6 +75,11 @@ public class CmsContentSecurityWSTest extends WSTestBase {
 
   @Test
   public void cmsDeliveryCanOnlyReachSnapshotDeliveryRoutes() throws Exception {
+    String missingProjectKey = "cms-delivery-" + UUID.randomUUID();
+    String latestSnapshotPath =
+        "/api/content-cms/projects/" + missingProjectKey + "/publish-snapshots/latest";
+    String artifactPath =
+        "/api/content-cms/projects/" + missingProjectKey + "/publish-snapshots/1/artifact";
     cmsDeliveryUsername = "cms_delivery_" + UUID.randomUUID();
     String cmsDeliveryPassword = "test";
     userClient.createUser(
@@ -80,26 +90,38 @@ public class CmsContentSecurityWSTest extends WSTestBase {
         "CMS",
         "CMS Mojito");
     CookieStoreRestTemplate cmsDeliveryRestTemplate =
-        authenticatedRestTemplate(
-            cmsDeliveryUsername,
-            cmsDeliveryPassword,
-            "/api/content-cms/projects/growth-email/publish-snapshots/latest");
+        authenticatedRestTemplate(cmsDeliveryUsername, cmsDeliveryPassword, latestSnapshotPath);
 
+    assertCmsRouteForbidden(cmsDeliveryRestTemplate, "/api/content-cms");
     assertCmsRouteForbidden(cmsDeliveryRestTemplate, "/api/content-cms/projects");
+    assertCmsRouteForbidden(
+        cmsDeliveryRestTemplate, "/api/content-cms/projects/1/publish-snapshots");
     assertCmsRouteForbidden(cmsDeliveryRestTemplate, "/api/users/session");
     assertCmsRouteForbidden(cmsDeliveryRestTemplate, "/api/users/me");
     assertCmsRouteForbidden(cmsDeliveryRestTemplate, "/api/textunits/search");
+    assertCmsRouteForbidden(cmsDeliveryRestTemplate, "/api/mcp");
+    assertCmsPostRouteForbidden(cmsDeliveryRestTemplate, "/api/mcp");
     assertCmsRouteAllowedPastSecurity(cmsDeliveryRestTemplate, "/api/csrf-token");
-    assertCmsRouteAllowedPastSecurity(
-        cmsDeliveryRestTemplate, "/api/content-cms/projects/growth-email/publish-snapshots/latest");
-    assertCmsRouteAllowedPastSecurity(
-        cmsDeliveryRestTemplate,
-        "/api/content-cms/projects/growth-email/publish-snapshots/1/artifact");
-    assertCmsHeadRouteAllowedPastSecurity(
-        cmsDeliveryRestTemplate, "/api/content-cms/projects/growth-email/publish-snapshots/latest");
-    assertCmsHeadRouteAllowedPastSecurity(
-        cmsDeliveryRestTemplate,
-        "/api/content-cms/projects/growth-email/publish-snapshots/1/artifact");
+    assertCmsRouteAllowedPastSecurity(cmsDeliveryRestTemplate, latestSnapshotPath);
+    assertCmsRouteAllowedPastSecurity(cmsDeliveryRestTemplate, artifactPath);
+    assertCmsHeadRouteAllowedPastSecurity(cmsDeliveryRestTemplate, latestSnapshotPath);
+    assertCmsHeadRouteAllowedPastSecurity(cmsDeliveryRestTemplate, artifactPath);
+    assertCmsPostRouteForbidden(cmsDeliveryRestTemplate, latestSnapshotPath);
+    assertCmsPostRouteForbidden(cmsDeliveryRestTemplate, artifactPath);
+  }
+
+  @Test
+  public void unauthenticatedCmsDeliveryRoutesReturnApiUnauthorized() {
+    String latestSnapshotPath =
+        "/api/content-cms/projects/cms-delivery-missing/publish-snapshots/latest";
+    String artifactPath =
+        "/api/content-cms/projects/cms-delivery-missing/publish-snapshots/1/artifact";
+    CookieStoreRestTemplate unauthenticatedRestTemplate = new CookieStoreRestTemplate();
+
+    assertCmsRouteUnauthorized(unauthenticatedRestTemplate, latestSnapshotPath);
+    assertCmsHeadRouteUnauthorized(unauthenticatedRestTemplate, latestSnapshotPath);
+    assertCmsRouteUnauthorized(unauthenticatedRestTemplate, artifactPath);
+    assertCmsHeadRouteUnauthorized(unauthenticatedRestTemplate, artifactPath);
   }
 
   private void assertCmsRouteForbidden(
@@ -110,7 +132,46 @@ public class CmsContentSecurityWSTest extends WSTestBase {
                     authenticatedRestTemplate.getURIForResource(resourcePath), String.class))
         .isInstanceOfSatisfying(
             HttpClientErrorException.Forbidden.class,
-            exception -> assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
+            exception -> {
+              assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+              assertCmsNoStoreIfCmsRoute(resourcePath, exception.getResponseHeaders());
+            });
+  }
+
+  private void assertCmsRouteUnauthorized(
+      CookieStoreRestTemplate unauthenticatedRestTemplate, String resourcePath) {
+    assertThatThrownBy(
+            () ->
+                unauthenticatedRestTemplate.getForEntity(
+                    authenticatedRestTemplate.getURIForResource(resourcePath), String.class))
+        .isInstanceOfSatisfying(
+            HttpClientErrorException.Unauthorized.class,
+            exception -> {
+              assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+              assertCmsNoStoreIfCmsRoute(resourcePath, exception.getResponseHeaders());
+            });
+  }
+
+  private void assertCmsPostRouteForbidden(
+      CookieStoreRestTemplate cmsDeliveryRestTemplate, String resourcePath) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.add(
+        FormLoginAuthenticationCsrfTokenInterceptor.CSRF_HEADER_NAME,
+        cmsDeliveryRestTemplate.getForObject(
+            authenticatedRestTemplate.getURIForResource("/api/csrf-token"), String.class));
+    assertThatThrownBy(
+            () ->
+                cmsDeliveryRestTemplate.postForEntity(
+                    authenticatedRestTemplate.getURIForResource(resourcePath),
+                    new HttpEntity<>("{}", headers),
+                    String.class))
+        .isInstanceOfSatisfying(
+            HttpClientErrorException.Forbidden.class,
+            exception -> {
+              assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+              assertCmsNoStoreIfCmsRoute(resourcePath, exception.getResponseHeaders());
+            });
   }
 
   private void assertCmsRouteAllowedPastSecurity(
@@ -120,6 +181,7 @@ public class CmsContentSecurityWSTest extends WSTestBase {
           authenticatedRestTemplate.getURIForResource(resourcePath), String.class);
     } catch (HttpClientErrorException exception) {
       assertThat(exception.getStatusCode()).isNotEqualTo(HttpStatus.FORBIDDEN);
+      assertCmsNoStoreIfCmsRoute(resourcePath, exception.getResponseHeaders());
     }
   }
 
@@ -131,7 +193,24 @@ public class CmsContentSecurityWSTest extends WSTestBase {
                     authenticatedRestTemplate.getURIForResource(resourcePath)))
         .isInstanceOfSatisfying(
             HttpClientErrorException.Forbidden.class,
-            exception -> assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
+            exception -> {
+              assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+              assertCmsNoStoreIfCmsRoute(resourcePath, exception.getResponseHeaders());
+            });
+  }
+
+  private void assertCmsHeadRouteUnauthorized(
+      CookieStoreRestTemplate unauthenticatedRestTemplate, String resourcePath) {
+    assertThatThrownBy(
+            () ->
+                unauthenticatedRestTemplate.headForHeaders(
+                    authenticatedRestTemplate.getURIForResource(resourcePath)))
+        .isInstanceOfSatisfying(
+            HttpClientErrorException.Unauthorized.class,
+            exception -> {
+              assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+              assertCmsNoStoreIfCmsRoute(resourcePath, exception.getResponseHeaders());
+            });
   }
 
   private void assertCmsHeadRouteAllowedPastSecurity(
@@ -141,12 +220,20 @@ public class CmsContentSecurityWSTest extends WSTestBase {
           authenticatedRestTemplate.getURIForResource(resourcePath));
     } catch (HttpClientErrorException exception) {
       assertThat(exception.getStatusCode()).isNotEqualTo(HttpStatus.FORBIDDEN);
+      assertCmsNoStoreIfCmsRoute(resourcePath, exception.getResponseHeaders());
     }
   }
 
   private CookieStoreRestTemplate authenticatedRestTemplate(String username, String password)
       throws Exception {
     return authenticatedRestTemplate(username, password, "/api/users/session");
+  }
+
+  private void assertCmsNoStoreIfCmsRoute(String resourcePath, HttpHeaders headers) {
+    if (resourcePath.equals("/api/content-cms") || resourcePath.startsWith("/api/content-cms/")) {
+      assertThat(headers).isNotNull();
+      assertThat(headers.getCacheControl()).isEqualTo("no-store");
+    }
   }
 
   private CookieStoreRestTemplate authenticatedRestTemplate(

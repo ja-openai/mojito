@@ -9,7 +9,6 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
-import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PreRemove;
@@ -24,7 +23,7 @@ import org.springframework.data.annotation.CreatedBy;
 @Check(name = "CK__CMS_PUBLISH_SNAPSHOT__STATUS", constraints = "status = 'PUBLISHED'")
 @Check(
     name = "CK__CMS_PUBLISH_SNAPSHOT__ARTIFACT_BYTE_SIZE",
-    constraints = "artifact_byte_size >= 0")
+    constraints = "artifact_byte_size > 0")
 @Table(
     name = "cms_publish_snapshot",
     uniqueConstraints = {
@@ -34,11 +33,6 @@ import org.springframework.data.annotation.CreatedBy;
       @UniqueConstraint(
           name = "UK__CMS_PUBLISH_SNAPSHOT__PROJECT_REQUEST_KEY",
           columnNames = {"content_project_id", "publish_request_key"})
-    },
-    indexes = {
-      @Index(
-          name = "I__CMS_PUBLISH_SNAPSHOT__PROJECT_CREATED",
-          columnList = "content_project_id, created_date")
     })
 public class CmsPublishSnapshot extends AuditableEntity {
 
@@ -47,6 +41,7 @@ public class CmsPublishSnapshot extends AuditableEntity {
   }
 
   public static final int PUBLISH_REQUEST_KEY_MAX_LENGTH = 128;
+  public static final int SNAPSHOT_SIGNING_KEY_ID_MAX_LENGTH = 128;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(
@@ -99,7 +94,10 @@ public class CmsPublishSnapshot extends AuditableEntity {
   @Column(name = "artifact_byte_size", nullable = false)
   private Long artifactByteSize;
 
-  @Column(name = "snapshot_signing_key_id", nullable = false, length = 128)
+  @Column(
+      name = "snapshot_signing_key_id",
+      nullable = false,
+      length = SNAPSHOT_SIGNING_KEY_ID_MAX_LENGTH)
   private String snapshotSigningKeyId;
 
   @Column(name = "snapshot_signature", nullable = false, length = 64)
