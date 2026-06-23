@@ -342,7 +342,7 @@ public class JsonConfigLocalizationProcessorServiceTest {
             """
             {
               "format": "FORMATJS_MULTILINGUAL_MAP",
-              "collectionKey": "surface.**.messages",
+              "collectionKey": "$..messages",
               "itemIdField": "id",
               "translationsField": "translations",
               "sourceLocaleTag": "en-US",
@@ -1062,7 +1062,7 @@ public class JsonConfigLocalizationProcessorServiceTest {
                 new JsonConfigLocalizationProcessorService.SourceConfigProfile(
                     JsonConfigLocalizationProcessorService.SourceConfigFormat
                         .FORMATJS_MULTILINGUAL_MAP,
-                    "surface.**.messages",
+                    "$..messages",
                     "id",
                     "translations",
                     "en-US",

@@ -410,10 +410,10 @@ const JSON_CONFIG_SCHEMA_PRESETS: JsonConfigSchemaPreset[] = [
     id: 'formatjs-multilingual-map',
     label: 'Multilingual FormatJS message map',
     description:
-      'Object keyed by message id under messages, with defaultMessage, optional description, and locale translations.',
+      'Finds message maps named messages anywhere in the config, with defaultMessage, optional description, and locale translations.',
     profile: {
       format: 'FORMATJS_MULTILINGUAL_MAP',
-      collectionKey: 'messages',
+      collectionKey: '$..messages',
       itemIdField: 'id',
       translationsField: 'translations',
       sourceLocaleTag: 'en-US',
@@ -442,7 +442,6 @@ const JSON_CONFIG_SCHEMA_PRESETS: JsonConfigSchemaPreset[] = [
           },
         },
       },
-      required: ['messages'],
       additionalProperties: true,
     },
   },
@@ -3570,11 +3569,16 @@ function JsonConfigLocalizationWorkspace({
                           <input
                             className="settings-input"
                             value={statsigProfile.collectionKey}
-                            placeholder="Blank for root, e.g. messages or surface.**.messages"
+                            placeholder="Blank for root, e.g. $..messages or $.surface..messages"
                             onChange={(event) =>
                               updateStatsigProfile({ collectionKey: event.target.value })
                             }
                           />
+                          <span className="json-config-localization-page__muted">
+                            Supports this JSONPath subset: <code>$..messages</code> for recursive
+                            object search, <code>$.surface..messages</code> to scope it, and{' '}
+                            <code>*</code> for one object level. Arrays are not traversed.
+                          </span>
                         </label>
                       ) : (
                         <label className="settings-field">

@@ -716,17 +716,24 @@ describe('jsonConfigLocalization', () => {
     });
   });
 
-  it('builds multilingual FormatJS message maps under wildcard message paths', () => {
+  it('builds multilingual FormatJS message maps under JSONPath-style message selectors', () => {
     const profile = {
       ...DEFAULT_STATSIG_SOURCE_CONFIG_PROFILE,
       format: 'FORMATJS_MULTILINGUAL_MAP' as const,
-      collectionKey: 'surface.**.messages',
+      collectionKey: '$..messages',
       sourceField: 'defaultMessage',
       commentField: 'description',
     };
     const extraction = extractStatsigSourceConfigStrings(
       '',
       JSON.stringify({
+        messages: {
+          'global.cancel': {
+            defaultMessage: 'Cancel',
+            description: 'Generic cancel button.',
+            translations: {},
+          },
+        },
         surface: {
           checkout: {
             messages: {
@@ -761,8 +768,9 @@ describe('jsonConfigLocalization', () => {
     const readiness = buildJsonConfigLocalizationReadiness(
       sourceStrings,
       [
-        buildTargetRow(1, 'fr', 'Payer maintenant', 'APPROVED'),
-        buildTargetRow(2, 'fr', 'Profil enregistre', 'APPROVED'),
+        buildTargetRow(1, 'fr', 'Annuler', 'APPROVED'),
+        buildTargetRow(2, 'fr', 'Payer maintenant', 'APPROVED'),
+        buildTargetRow(3, 'fr', 'Profil enregistre', 'APPROVED'),
       ],
       ['fr'],
     );
@@ -774,6 +782,7 @@ describe('jsonConfigLocalization', () => {
         sourceString.comment,
       ]),
     ).toEqual([
+      ['global.cancel', 'Cancel', 'Generic cancel button.'],
       ['checkout.pay', 'Pay now', 'Primary checkout button.'],
       ['profile.saved', 'Profile saved', 'Toast after profile changes are saved.'],
     ]);
@@ -787,6 +796,15 @@ describe('jsonConfigLocalization', () => {
         { fr: 'fr-FR' },
       ).value,
     ).toEqual({
+      messages: {
+        'global.cancel': {
+          defaultMessage: 'Cancel',
+          description: 'Generic cancel button.',
+          translations: {
+            'fr-FR': 'Annuler',
+          },
+        },
+      },
       surface: {
         checkout: {
           messages: {

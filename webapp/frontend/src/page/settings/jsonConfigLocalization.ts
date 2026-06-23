@@ -1941,20 +1941,20 @@ function ensureJsonRecord(parent: JsonRecord, key: string): JsonRecord {
 }
 
 function getJsonRecordMatchesAtPath(parent: JsonRecord, path: string): JsonRecordPathMatch[] {
-  const normalizedPath = path.trim();
-  if (!normalizedPath) {
+  const normalizedSelector = normalizeMessageMapSelector(path);
+  if (!normalizedSelector) {
     return [{ path: '', value: parent }];
   }
 
-  if (!hasJsonPathWildcard(normalizedPath)) {
-    const exactValue = parent[normalizedPath];
+  if (!hasJsonPathWildcard(normalizedSelector) && !isJsonPathSelector(path)) {
+    const exactValue = parent[normalizedSelector];
     if (isJsonRecord(exactValue)) {
-      return [{ path: normalizedPath, value: exactValue }];
+      return [{ path: normalizedSelector, value: exactValue }];
     }
   }
 
   const matches: JsonRecordPathMatch[] = [];
-  collectJsonRecordMatchesAtPath(parent, jsonPathSegments(normalizedPath), 0, '', matches);
+  collectJsonRecordMatchesAtPath(parent, jsonPathSegments(normalizedSelector), 0, '', matches);
   return matches;
 }
 
@@ -2014,20 +2014,17 @@ function collectJsonRecordMatchesAtPath(
 }
 
 function ensureJsonRecordAtPath(parent: JsonRecord, path: string): JsonRecord {
-  const normalizedPath = path.trim();
-  if (!normalizedPath) {
+  const normalizedSelector = normalizeMessageMapSelector(path);
+  if (!normalizedSelector) {
     return parent;
   }
 
-  const exactValue = parent[normalizedPath];
+  const exactValue = !isJsonPathSelector(path) ? parent[normalizedSelector] : undefined;
   if (isJsonRecord(exactValue)) {
     return exactValue;
   }
 
-  const segments = normalizedPath
-    .split('.')
-    .map((part) => part.trim())
-    .filter(Boolean);
+  const segments = jsonPathSegments(normalizedSelector);
   if (!segments.length) {
     return parent;
   }
@@ -2046,8 +2043,29 @@ function hasJsonPathWildcard(path: string): boolean {
   return jsonPathSegments(path).some((segment) => segment === '*' || segment === '**');
 }
 
+function normalizeMessageMapSelector(path: string): string {
+  const normalizedPath = path.trim();
+  if (!normalizedPath) {
+    return '';
+  }
+  if (normalizedPath === '$') {
+    return '';
+  }
+  if (normalizedPath.startsWith('$..')) {
+    return `**.${normalizedPath.slice(3)}`;
+  }
+  if (normalizedPath.startsWith('$.')) {
+    return normalizedPath.slice(2).split('..').join('.**.');
+  }
+  return normalizedPath.split('/').join('.');
+}
+
+function isJsonPathSelector(path: string): boolean {
+  return path.trim().startsWith('$');
+}
+
 function jsonPathSegments(path: string): string[] {
-  return path
+  return normalizeMessageMapSelector(path)
     .split('.')
     .map((part) => part.trim())
     .filter(Boolean);

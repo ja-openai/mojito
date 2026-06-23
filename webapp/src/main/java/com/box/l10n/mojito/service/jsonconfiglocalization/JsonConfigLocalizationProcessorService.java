@@ -1652,20 +1652,20 @@ public class JsonConfigLocalizationProcessorService {
   }
 
   private List<FormatJsMapNode> objectNodesAtPath(ObjectNode sourceObject, String path) {
-    String normalizedPath = nullToBlank(path).trim();
-    if (normalizedPath.isBlank()) {
+    String normalizedSelector = normalizeMessageMapSelector(path);
+    if (normalizedSelector.isBlank()) {
       return List.of(new FormatJsMapNode("", sourceObject));
     }
 
-    if (!hasJsonPathWildcard(normalizedPath)) {
-      JsonNode exactNode = sourceObject.get(normalizedPath);
+    if (!hasJsonPathWildcard(normalizedSelector) && !isJsonPathSelector(path)) {
+      JsonNode exactNode = sourceObject.get(normalizedSelector);
       if (exactNode instanceof ObjectNode exactObject) {
-        return List.of(new FormatJsMapNode(normalizedPath, exactObject));
+        return List.of(new FormatJsMapNode(normalizedSelector, exactObject));
       }
     }
 
     List<FormatJsMapNode> matches = new ArrayList<>();
-    collectObjectNodesAtPath(sourceObject, jsonPathSegments(normalizedPath), 0, "", matches);
+    collectObjectNodesAtPath(sourceObject, jsonPathSegments(normalizedSelector), 0, "", matches);
     return matches;
   }
 
@@ -1729,8 +1729,26 @@ public class JsonConfigLocalizationProcessorService {
         .anyMatch(segment -> "*".equals(segment) || "**".equals(segment));
   }
 
+  private String normalizeMessageMapSelector(String path) {
+    String normalizedPath = nullToBlank(path).trim();
+    if (normalizedPath.isBlank() || "$".equals(normalizedPath)) {
+      return "";
+    }
+    if (normalizedPath.startsWith("$..")) {
+      return "**." + normalizedPath.substring(3);
+    }
+    if (normalizedPath.startsWith("$.")) {
+      return normalizedPath.substring(2).replace("..", ".**.");
+    }
+    return normalizedPath.replace("/", ".");
+  }
+
+  private boolean isJsonPathSelector(String path) {
+    return nullToBlank(path).trim().startsWith("$");
+  }
+
   private List<String> jsonPathSegments(String path) {
-    return List.of(path.split("\\.")).stream()
+    return List.of(normalizeMessageMapSelector(path).split("\\.")).stream()
         .map(String::trim)
         .filter(segment -> !segment.isBlank())
         .toList();
