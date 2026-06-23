@@ -116,6 +116,23 @@ assert.throws(
   (error) => error instanceof RelativeTimeCoreError && error.code === "bad-option",
   "wraps non-coercible direct relative-time locale options",
 );
+assert.throws(
+  () =>
+    formatRelativeTimeCore(1, {
+      data: { localeMap: { en: "missing" }, patternSets: [] },
+    }),
+  (error) => error instanceof RelativeTimeCoreError && error.code === "missing-locale-data",
+  "rejects empty relative-time pattern data during direct formatting",
+);
+assert.throws(
+  () =>
+    createRelativeTimeCoreFunctionRegistry(FunctionRegistry, {
+      localeMap: { en: "missing" },
+      patternSets: [],
+    }),
+  (error) => error instanceof RelativeTimeCoreError && error.code === "missing-locale-data",
+  "rejects empty relative-time pattern data during registry creation",
+);
 
 function readJson(path) {
   return JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));

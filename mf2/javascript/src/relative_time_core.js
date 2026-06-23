@@ -89,6 +89,7 @@ export function formatRelativeTimeCoreToParts(value, options = {}) {
 }
 
 export function createRelativeTimeCoreFunctionRegistry(FunctionRegistry, data) {
+  preparedData(data);
   return FunctionRegistry.portable().withFunction("relativeTime", (call) =>
     formatRelativeTimeCore(call.rawValue ?? call.value, {
       locale: call.locale,
@@ -115,6 +116,9 @@ function preparedData(data) {
     if (item != null && typeof item.id === "string" && item.data != null) {
       patternSets.set(item.id, item.data);
     }
+  }
+  if (patternSets.size === 0) {
+    throw new RelativeTimeCoreError("missing-locale-data", "Relative-time core data has an unsupported shape.");
   }
   const prepared = { localeMap: data.localeMap, patternSets };
   DATA_CACHE.set(data, prepared);
