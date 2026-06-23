@@ -3,10 +3,18 @@ package mf2
 import (
 	"fmt"
 	"math"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"golang.org/x/text/unicode/norm"
+)
+
+var sourceDecimalPattern = regexp.MustCompile(`^(-?)(0|[1-9]\d*)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$`)
+
+const (
+	maxSourceDecimalExponent  = 1000000
+	maxSourceDecimalKeyLength = 4096
 )
 
 type Options struct {
@@ -197,6 +205,7 @@ func (r resolvedValue) rendered() string {
 
 type expressionOutput struct {
 	value          string
+	rawValue       any
 	hadError       bool
 	source         *FunctionSource
 	direction      string
@@ -245,7 +254,7 @@ func (c *formatContext) applyDeclarations(declarations []any) error {
 				c.failedLocals[name] = true
 				delete(c.locals, name)
 			} else {
-				c.locals[name] = resolvedValue{rawValue: output.value, source: output.source}
+				c.locals[name] = resolvedValue{rawValue: output.rawValue, source: output.source}
 			}
 		}
 	}
@@ -489,14 +498,38 @@ func (c *formatContext) formatExpressionOutput(expression map[string]any) (expre
 	}
 	functionRef, hasFunction := objectField(expression, "function")
 	if !hasFunction {
-		return expressionOutput{value: value, source: source, direction: bidiDirectionFromSource(source)}, nil
+		displayValue, err := primitiveValueToString(rawValue, value, c.locale)
+		if err != nil {
+			if !c.fallback {
+				return expressionOutput{}, err
+			}
+			recoverable := fallbackError(err)
+			c.errors = append(c.errors, recoverable)
+			source := fallbackSource(expression)
+			return expressionOutput{
+				value:          c.recoverFormatError(expression, source, recoverable),
+				hadError:       true,
+				fallbackSource: source,
+			}, nil
+		}
+		return expressionOutput{value: displayValue, rawValue: rawValue, source: source, direction: bidiDirectionFromSource(source)}, nil
 	}
 	if err := c.recordFunctionResolutionErrors(functionRef, source); err != nil {
 		return expressionOutput{}, err
 	}
 	direction, err := bidiDirectionForFunction(functionRef, source)
 	if err != nil {
-		return expressionOutput{}, err
+		if !c.fallback {
+			return expressionOutput{}, err
+		}
+		recoverable := fallbackError(err)
+		c.errors = append(c.errors, recoverable)
+		source := fallbackSource(expression)
+		return expressionOutput{
+			value:          c.recoverFormatError(expression, source, recoverable),
+			hadError:       true,
+			fallbackSource: source,
+		}, nil
 	}
 	formatted, err := c.functions.Format(FunctionCall{
 		Value:    value,
@@ -527,6 +560,7 @@ func (c *formatContext) formatExpressionOutput(expression map[string]any) (expre
 	}
 	return expressionOutput{
 		value:     formatted,
+		rawValue:  formatted,
 		source:    c.functionSource(sourceValue, functionRef, source),
 		direction: direction,
 	}, nil
@@ -660,7 +694,13 @@ func (c *formatContext) keyMatchRank(key map[string]any, selector selectorValue)
 		return 0, true, nil
 	}
 	value := stringField(key, "value")
-	if (selector.exactMatch && literalKeyMatches(value, selector)) || (selector.selectionKey != "" && value == selector.selectionKey) {
+	if selector.exactMatch && numericLiteralKeyMatchesSource(value, selector) {
+		return 3, true, nil
+	}
+	if selector.exactMatch && (selector.function == nil || !isNumericFunction(selector.function)) && literalKeyMatches(value, selector) {
+		return 2, true, nil
+	}
+	if selector.selectionKey != "" && value == selector.selectionKey {
 		return 1, true, nil
 	}
 	if selector.function == nil {
@@ -940,6 +980,130 @@ func literalKeyMatches(value string, selector selectorValue) bool {
 	return normalizeStringKey(value) == selector.normalizedRendered
 }
 
+func numericLiteralKeyMatchesSource(value string, selector selectorValue) bool {
+	sourceKey, ok := preferredNumericSourceKey(selector)
+	if !ok || value != sourceKey {
+		return false
+	}
+	_, ok = parseDecimalOperand(value)
+	return ok
+}
+
+func preferredNumericSourceKey(selector selectorValue) (string, bool) {
+	functionName := stringField(selector.function, "name")
+	if functionName != "number" && functionName != "percent" {
+		return "", false
+	}
+	sourceValue, ok := numericSourceValue(selector.source, functionName)
+	if !ok {
+		return "", false
+	}
+	operand, ok := parsePreferredSourceDecimal(sourceValue)
+	if !ok {
+		return "", false
+	}
+	if functionName == "percent" {
+		operand.scale -= 2
+		return renderPreferredSourceDecimal(operand, false)
+	}
+	if operand.hasExponent {
+		return renderPreferredSourceDecimal(operand, true)
+	}
+	return sourceValue, true
+}
+
+func numericSourceValue(source *FunctionSource, functionName string) (string, bool) {
+	for current := source; current != nil; current = current.Inherited {
+		if stringField(current.Function, "name") == functionName {
+			return current.Value, true
+		}
+	}
+	return "", false
+}
+
+type preferredSourceDecimal struct {
+	negative    bool
+	digits      string
+	scale       int
+	hasExponent bool
+}
+
+func parsePreferredSourceDecimal(value string) (preferredSourceDecimal, bool) {
+	match := sourceDecimalPattern.FindStringSubmatch(value)
+	if match == nil {
+		return preferredSourceDecimal{}, false
+	}
+	exponent, ok := parsePreferredSourceExponent(match[4])
+	if !ok {
+		return preferredSourceDecimal{}, false
+	}
+	digits := strings.TrimLeft(match[2]+match[3], "0")
+	if digits == "" {
+		digits = "0"
+	}
+	return preferredSourceDecimal{
+		negative:    match[1] == "-" && digits != "0",
+		digits:      digits,
+		scale:       len(match[3]) - exponent,
+		hasExponent: match[4] != "",
+	}, true
+}
+
+func parsePreferredSourceExponent(value string) (int, bool) {
+	if value == "" {
+		return 0, true
+	}
+	negative := strings.HasPrefix(value, "-")
+	unsigned := value
+	if negative || strings.HasPrefix(value, "+") {
+		unsigned = value[1:]
+	}
+	digits := strings.TrimLeft(unsigned, "0")
+	if digits == "" {
+		digits = "0"
+	}
+	if len(digits) > 7 {
+		return 0, false
+	}
+	parsed, err := strconv.Atoi(digits)
+	if err != nil || parsed > maxSourceDecimalExponent {
+		return 0, false
+	}
+	if negative {
+		return -parsed, true
+	}
+	return parsed, true
+}
+
+func renderPreferredSourceDecimal(operand preferredSourceDecimal, trimFractionZeros bool) (string, bool) {
+	extraLength := 0
+	if operand.scale > len(operand.digits) {
+		extraLength = operand.scale - len(operand.digits)
+	} else if operand.scale < 0 {
+		extraLength = -operand.scale
+	}
+	if len(operand.digits)+extraLength+2 > maxSourceDecimalKeyLength {
+		return "", false
+	}
+	var text string
+	switch {
+	case operand.scale <= 0:
+		text = operand.digits + strings.Repeat("0", -operand.scale)
+	case operand.scale >= len(operand.digits):
+		text = "0." + strings.Repeat("0", operand.scale-len(operand.digits)) + operand.digits
+	default:
+		split := len(operand.digits) - operand.scale
+		text = operand.digits[:split] + "." + operand.digits[split:]
+	}
+	if trimFractionZeros && strings.Contains(text, ".") {
+		text = strings.TrimRight(strings.TrimRight(text, "0"), ".")
+	}
+	if operand.negative {
+		text = "-" + text
+	}
+	return text, true
+}
+
 func normalizeStringKey(value string) string {
 	return norm.NFC.String(value)
 }
@@ -961,7 +1125,7 @@ func fallbackSource(expression map[string]any) string {
 		return expressionArgSource(arg)
 	}
 	if functionRef, ok := objectField(expression, "function"); ok {
-		return functionSource(functionRef)
+		return functionNameSource(functionRef)
 	}
 	return ""
 }
@@ -1003,6 +1167,10 @@ func functionSource(functionRef map[string]any) string {
 		source += " " + name + "=" + expressionArgSource(asObject(value))
 	}
 	return source
+}
+
+func functionNameSource(functionRef map[string]any) string {
+	return ":" + stringField(functionRef, "name")
 }
 
 func quoteLiteralSource(value string) string {
@@ -1111,6 +1279,15 @@ func valueToString(value any) string {
 		return valueToString(float64(typed))
 	default:
 		return fmt.Sprint(typed)
+	}
+}
+
+func primitiveValueToString(value any, fallback string, locale string) (string, error) {
+	switch value.(type) {
+	case int, int64, float64, float32:
+		return FormatNumberCore(value, NumberCoreOptions{Locale: locale})
+	default:
+		return fallback, nil
 	}
 }
 

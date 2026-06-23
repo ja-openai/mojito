@@ -1,7 +1,22 @@
 package com.box.l10n.mojito.mf2
 
 internal object LocaleKey {
-    fun canonicalKey(locale: String?): String = parts(locale).joinToString("-")
+    private const val MAX_LOCALE_OPTION_LENGTH = 256
+
+    fun option(locale: String?, fallback: String): String {
+        val value = locale.takeUnless { it.isNullOrEmpty() } ?: fallback
+        if (value.length > MAX_LOCALE_OPTION_LENGTH) {
+            throw Mf2Error.badOption("locale must not exceed 256 characters.")
+        }
+        return value
+    }
+
+    fun canonicalKey(locale: String?): String {
+        if (locale != null && locale.length > MAX_LOCALE_OPTION_LENGTH) {
+            return ""
+        }
+        return parts(locale).joinToString("-")
+    }
 
     fun lookupChain(locale: String?): List<String> {
         val parts = canonicalKey(locale).split("-").filter { it.isNotEmpty() }
@@ -9,13 +24,24 @@ internal object LocaleKey {
     }
 
     fun pluralLookupChain(locale: String?, parents: Map<String, String> = emptyMap()): List<String> {
+        return featureLookupChain(locale, parents)
+    }
+
+    fun featureLookupChain(locale: String?, parents: Map<String, String> = emptyMap()): List<String> {
         val output = mutableListOf<String>()
-        for (candidate in lookupChain(locale)) {
-            if (candidate !in output) output += candidate
-            val parent = parents[candidate]
-            if (parent != null && parent !in output) output += parent
-        }
+        appendFeatureLookupChain(canonicalKey(locale), parents, output)
         return output
+    }
+
+    private fun appendFeatureLookupChain(locale: String, parents: Map<String, String>, output: MutableList<String>) {
+        var current = locale
+        while (current.isNotEmpty()) {
+            if (current.length > MAX_LOCALE_OPTION_LENGTH) return
+            if (current in output) return
+            output += current
+            parents[current]?.let { appendFeatureLookupChain(it, parents, output) }
+            current = structuralParent(current)
+        }
     }
 
     fun <T> lookup(values: Map<String, T>, locale: String?, fallback: String = "en"): T? {
@@ -45,5 +71,10 @@ internal object LocaleKey {
             output += part
         }
         return output
+    }
+
+    private fun structuralParent(locale: String): String {
+        val index = locale.lastIndexOf('-')
+        return if (index < 0) "" else locale.substring(0, index)
     }
 }

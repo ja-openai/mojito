@@ -25,6 +25,7 @@ import java.util.Locale;
 import java.util.OptionalInt;
 
 public final class Mf2Icu4jFunctions {
+    private static final int MAX_FRACTION_DIGITS = 100;
     private static final LocalDate EPOCH_DATE = LocalDate.of(1970, 1, 1);
 
     private Mf2Icu4jFunctions() {}
@@ -334,7 +335,7 @@ public final class Mf2Icu4jFunctions {
     private static int parseNonNegativeInteger(String value, String message) throws Mf2Exception {
         try {
             int parsed = Integer.parseInt(value);
-            if (parsed >= 0) {
+            if (parsed >= 0 && parsed <= MAX_FRACTION_DIGITS) {
                 return parsed;
             }
         } catch (NumberFormatException error) {

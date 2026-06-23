@@ -442,6 +442,8 @@ final class CldrPluralRules {
     }
 
     static final class NumberOperands {
+        private static final int MAX_OPERAND_LENGTH = 256;
+
         private final double n;
         private final long i;
         private final long v;
@@ -467,6 +469,9 @@ final class CldrPluralRules {
                 return null;
             }
             String trimmed = raw.trim();
+            if (trimmed.length() > MAX_OPERAND_LENGTH) {
+                return null;
+            }
             double parsed;
             try {
                 parsed = Double.parseDouble(trimmed);

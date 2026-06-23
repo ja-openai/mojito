@@ -67,6 +67,7 @@ object KotlinIcu4jRegistryDemo {
             if (!quiet) println("$locale -> ${result.value}")
         }
         assertUnsupportedUnitFallsBack()
+        assertOversizedFractionDigitsFallsBack()
         if (!quiet) println("Kotlin ICU4J registry demo passed")
     }
 
@@ -141,6 +142,17 @@ object KotlinIcu4jRegistryDemo {
         )
         if (!result.hasErrors || result.value != "{${'$'}value}") {
             error("unsupported relativeTime unit should recover with visible fallback")
+        }
+    }
+
+    private fun assertOversizedFractionDigitsFallsBack() {
+        val result: Mf2FormatResult = Mf2Formatter.formatMessage(
+            model = parse("{${'$'}value :number minimumFractionDigits=10000}"),
+            arguments = mapOf("value" to 1),
+            functions = Mf2Icu4jFunctions.registry(),
+        )
+        if (!result.hasErrors || result.value != "{${'$'}value}" || result.errors.first().code != "bad-option") {
+            error("oversized fraction digits should recover with bad-option")
         }
     }
 }

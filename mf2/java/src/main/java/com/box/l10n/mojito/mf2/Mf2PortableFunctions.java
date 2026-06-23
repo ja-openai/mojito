@@ -1,8 +1,14 @@
 package com.box.l10n.mojito.mf2;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.RoundingMode;
 import java.util.Map;
 
 final class Mf2PortableFunctions {
+    private static final String MAX_OFFSET_INTEGER_TEXT = "1000000000000000000000";
+    private static final BigInteger MAX_OFFSET_INTEGER = new BigInteger("1000000000000000000000");
+
     private Mf2PortableFunctions() {}
 
     static void registerFormatters(Map<String, Mf2FunctionRegistry.Formatter> formatters) {
@@ -22,9 +28,9 @@ final class Mf2PortableFunctions {
         if (invalidNumericSelector(match.function(), match.inheritedSource())) {
             throw Mf2FunctionSupport.badSelector("Number selector cannot match this operand.");
         }
-        double value = parseMatchDecimal(match, "Number selector requires a numeric operand.");
-        Double key = Mf2FunctionSupport.parseDecimalNumber(match.key());
-        return key != null && Double.compare(value, key) == 0 ? 1 : null;
+        BigDecimal value = parseMatchDecimalOperand(match, "Number selector requires a numeric operand.");
+        BigDecimal key = Mf2FunctionSupport.parseDecimalOperand(match.key());
+        return key != null && value.compareTo(key) == 0 ? 2 : null;
     }
 
     private static Integer selectPercent(Mf2FunctionRegistry.FunctionMatch match)
@@ -32,9 +38,10 @@ final class Mf2PortableFunctions {
         if (invalidNumericSelector(match.function(), match.inheritedSource())) {
             throw Mf2FunctionSupport.badSelector("Percent selector cannot match this operand.");
         }
-        double value = parseMatchDecimal(match, "Percent selector requires a numeric operand.") * 100.0;
-        Double key = Mf2FunctionSupport.parseDecimalNumber(match.key());
-        return key != null && Double.compare(value, key) == 0 ? 1 : null;
+        BigDecimal value = parseMatchDecimalOperand(match, "Percent selector requires a numeric operand.")
+                .multiply(BigDecimal.valueOf(100));
+        BigDecimal key = Mf2FunctionSupport.parseDecimalOperand(match.key());
+        return key != null && value.compareTo(key) == 0 ? 2 : null;
     }
 
     private static Integer selectInteger(Mf2FunctionRegistry.FunctionMatch match)
@@ -42,30 +49,34 @@ final class Mf2PortableFunctions {
         if (invalidNumericSelector(match.function(), match.inheritedSource())) {
             throw Mf2FunctionSupport.badSelector("Integer selector cannot match this operand.");
         }
-        double value = parseMatchDecimal(match, "Integer selector requires a numeric operand.");
-        Long key = parseInteger(match.key());
-        return key != null && (long) value == key ? 1 : null;
+        BigDecimal value = parseMatchDecimalOperand(match, "Integer selector requires a numeric operand.")
+                .setScale(0, RoundingMode.DOWN);
+        BigDecimal key = parseIntegerOperand(match.key());
+        return key != null && value.compareTo(key) == 0 ? 2 : null;
     }
 
     private static String formatOffset(Mf2FunctionRegistry.FunctionCall call)
             throws Mf2Exception {
-        long value = parseRequiredInteger(call.value(), "Offset function requires a numeric operand.");
-        long result = value + offsetDelta(call);
-        return formatIntegerNumber(result, inheritedSignDisplayAlways(call.inheritedSource()));
+        BigInteger value = parseRequiredOffsetInteger(call.value(), "Offset function requires a numeric operand.");
+        BigInteger result = value.add(offsetDelta(call));
+        if (!offsetIntegerInRange(result)) {
+            throw Mf2Exception.badOperand("Offset result is outside the supported integer range.");
+        }
+        return formatOffsetInteger(result, inheritedSignDisplayAlways(call.inheritedSource()));
     }
 
     private static Integer selectOffset(Mf2FunctionRegistry.FunctionMatch match)
             throws Mf2Exception {
-        long value = parseRequiredInteger(match.value(), "Offset selector requires a numeric operand.");
-        Long key = parseInteger(match.key());
-        return key != null && value == key ? 1 : null;
+        BigInteger value = parseRequiredOffsetInteger(match.value(), "Offset selector requires a numeric operand.");
+        BigInteger key = parseOffsetInteger(match.key());
+        return key != null && value.compareTo(key) == 0 ? 2 : null;
     }
 
-    private static double parseMatchDecimal(Mf2FunctionRegistry.FunctionMatch match, String message)
+    private static BigDecimal parseMatchDecimalOperand(Mf2FunctionRegistry.FunctionMatch match, String message)
             throws Mf2Exception {
-        Double parsed = Mf2FunctionSupport.parseDecimalNumber(match.value());
+        BigDecimal parsed = Mf2FunctionSupport.parseSourceDecimalOperand(match.inheritedSource());
         if (parsed == null) {
-            parsed = Mf2FunctionSupport.parseSourceDecimal(match.inheritedSource());
+            parsed = Mf2FunctionSupport.parseDecimalOperand(match.value());
         }
         if (parsed == null) {
             throw Mf2FunctionSupport.badSelector(message);
@@ -120,7 +131,7 @@ final class Mf2PortableFunctions {
         return option instanceof Mf2Message.LiteralArgument literal ? literal.value() : fallback;
     }
 
-    private static long offsetDelta(Mf2FunctionRegistry.FunctionCall call)
+    private static BigInteger offsetDelta(Mf2FunctionRegistry.FunctionCall call)
             throws Mf2Exception {
         String add = call.optionValue("add", null);
         String subtract = call.optionValue("subtract", null);
@@ -128,31 +139,59 @@ final class Mf2PortableFunctions {
             throw Mf2FunctionSupport.badOption("Offset function requires exactly one of add or subtract.");
         }
         if (add != null) {
-            Long value = parseInteger(add);
+            BigInteger value = parseOffsetInteger(add);
             if (value == null) {
                 throw Mf2FunctionSupport.badOption("Offset add option must be an integer.");
             }
             return value;
         }
-        Long value = parseInteger(subtract);
+        BigInteger value = parseOffsetInteger(subtract);
         if (value == null) {
             throw Mf2FunctionSupport.badOption("Offset subtract option must be an integer.");
         }
-        return -value;
+        return value.negate();
     }
 
-    private static long parseRequiredInteger(String value, String message)
+    private static BigInteger parseRequiredOffsetInteger(String value, String message)
             throws Mf2Exception {
-        try {
-            return Long.parseLong(value);
-        } catch (NumberFormatException error) {
+        BigInteger parsed = parseOffsetInteger(value);
+        if (parsed == null) {
             throw Mf2Exception.badOperand(message);
+        }
+        return parsed;
+    }
+
+    private static BigInteger parseOffsetInteger(String value) {
+        if (!value.matches("^[+-]?\\d+$")) {
+            return null;
+        }
+        boolean negative = value.startsWith("-");
+        String digits = negative || value.startsWith("+") ? value.substring(1) : value;
+        digits = digits.replaceFirst("^0+", "");
+        if (digits.isEmpty()) {
+            return BigInteger.ZERO;
+        }
+        if (digits.length() > MAX_OFFSET_INTEGER_TEXT.length()
+                || digits.length() == MAX_OFFSET_INTEGER_TEXT.length()
+                        && digits.compareTo(MAX_OFFSET_INTEGER_TEXT) >= 0) {
+            return null;
+        }
+        try {
+            return new BigInteger(negative ? "-" + digits : digits);
+        } catch (NumberFormatException error) {
+            return null;
         }
     }
 
-    private static Long parseInteger(String value) {
+    private static BigDecimal parseIntegerOperand(String value) {
+        if (value.length() > Mf2FunctionSupport.MAX_DECIMAL_OPERAND_LENGTH) {
+            return null;
+        }
+        if (!value.matches("^[+-]?\\d+$")) {
+            return null;
+        }
         try {
-            return Long.parseLong(value);
+            return new BigDecimal(value);
         } catch (NumberFormatException error) {
             return null;
         }
@@ -160,5 +199,13 @@ final class Mf2PortableFunctions {
 
     static String formatIntegerNumber(long value, boolean signDisplayAlways) {
         return signDisplayAlways && value >= 0 ? "+" + value : Long.toString(value);
+    }
+
+    private static String formatOffsetInteger(BigInteger value, boolean signDisplayAlways) {
+        return signDisplayAlways && value.signum() >= 0 ? "+" + value : value.toString();
+    }
+
+    private static boolean offsetIntegerInRange(BigInteger value) {
+        return value.abs().compareTo(MAX_OFFSET_INTEGER) < 0;
     }
 }

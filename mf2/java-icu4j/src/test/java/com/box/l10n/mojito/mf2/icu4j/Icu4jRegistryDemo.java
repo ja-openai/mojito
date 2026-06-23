@@ -79,6 +79,7 @@ public final class Icu4jRegistryDemo {
         }
 
         assertUnsupportedUnitFallsBack();
+        assertOversizedFractionDigitsFallsBack();
 
         if (!quiet) {
             System.out.println("Java ICU4J registry demo passed");
@@ -164,6 +165,21 @@ public final class Icu4jRegistryDemo {
         if (!result.hasErrors() || !result.value().equals("{$value}")) {
             throw new AssertionError(
                     "unsupported relativeTime unit should recover with visible fallback");
+        }
+    }
+
+    private static void assertOversizedFractionDigitsFallsBack() throws Mf2Exception {
+        Mf2Message message = parse("{$value :number minimumFractionDigits=10000}");
+        Mf2FormatResult result = message.format(
+                Map.of("value", 1),
+                Mf2FormatOptions.builder()
+                        .functions(Mf2Icu4jFunctions.registry())
+                        .build());
+        if (!result.hasErrors()
+                || !result.value().equals("{$value}")
+                || !result.errors().get(0).code().equals("bad-option")) {
+            throw new AssertionError(
+                    "oversized fraction digits should recover with bad-option");
         }
     }
 }

@@ -3,6 +3,11 @@ package com.box.l10n.mojito.mf2
 import java.text.Normalizer
 import kotlin.math.truncate
 
+private val DECIMAL_LITERAL_PATTERN = Regex("-?(0|[1-9]\\d*)(\\.\\d+)?([eE][+-]?\\d+)?")
+private val SOURCE_DECIMAL_PATTERN = Regex("(-?)(0|[1-9]\\d*)(?:\\.(\\d+))?(?:[eE]([+-]?\\d+))?")
+private const val MAX_SOURCE_DECIMAL_EXPONENT = 1_000_000
+private const val MAX_SOURCE_DECIMAL_KEY_LENGTH = 4096
+
 class Mf2FunctionRegistry internal constructor(
     private val formatters: Map<String, Mf2FunctionFormatter>,
     private val selectors: Map<String, Mf2Selector>,
@@ -173,7 +178,7 @@ private class FormatContext(
                         failedLocals += name
                         locals.remove(name)
                     } else {
-                        locals[name] = ResolvedValue(output.value, output.source)
+                        locals[name] = ResolvedValue(output.rawValue, output.source)
                     }
                 }
             }
@@ -358,15 +363,33 @@ private class FormatContext(
             }
             else -> throw Mf2Error("unsupported-expression-arg", "Unsupported expression arg: ${arg?.get("type")}")
         }
-        val functionRef = expression["function"] as? Map<String, Any?> ?: return ExpressionOutput(
-            value,
-            false,
-            source,
-            bidiDirectionFromSource(source),
-        )
+        val functionRef = expression["function"] as? Map<String, Any?>
+        if (functionRef == null) {
+            return try {
+                ExpressionOutput(
+                    primitiveValueToString(rawValue, value),
+                    false,
+                    source,
+                    bidiDirectionFromSource(source),
+                    rawValue = rawValue,
+                )
+            } catch (error: Mf2Error) {
+                if (!fallback) throw error
+                val recoverable = fallbackError(error)
+                errors += recoverable
+                val source = fallbackSource(expression)
+                ExpressionOutput(
+                    recoverFormatError(expression, source, recoverable),
+                    true,
+                    null,
+                    null,
+                    source,
+                )
+            }
+        }
         recordFunctionResolutionErrors(functionRef, source)
-        val direction = bidiDirectionForFunction(functionRef, source)
         return try {
+            val direction = bidiDirectionForFunction(functionRef, source)
             val formatted = functions.format(
                 Mf2FunctionCall(
                     value = value,
@@ -392,6 +415,13 @@ private class FormatContext(
             )
         }
     }
+
+    private fun primitiveValueToString(rawValue: Any?, fallbackValue: String): String =
+        if (rawValue is Number) {
+            Mf2NumberCore.format(rawValue, Mf2NumberCore.Options(locale = locale))
+        } else {
+            fallbackValue
+        }
 
     private fun recoverMissingArgument(
         expression: Map<String, Any?>,
@@ -494,7 +524,9 @@ private class FormatContext(
     private fun keyMatchRank(key: Map<String, Any?>, selector: SelectorValue): Int? {
         if (key["type"] == "*") return 0
         val keyValue = stringValue(key["value"])
-        if ((selector.exactMatch && literalKeyMatches(keyValue, selector)) || keyValue == selector.selectionKey) return 1
+        if (selector.exactMatch && numericLiteralKeyMatchesSource(keyValue, selector)) return 3
+        if (selector.exactMatch && (selector.function == null || !isNumericFunction(selector.function)) && literalKeyMatches(keyValue, selector)) return 2
+        if (keyValue == selector.selectionKey) return 1
         val functionRef = selector.function ?: return null
         return try {
             functions.select(
@@ -654,6 +686,84 @@ private fun literalKeyMatches(value: String, selector: SelectorValue): Boolean =
         normalizeStringKey(value) == selector.normalizedRendered
     }
 
+private fun numericLiteralKeyMatchesSource(value: String, selector: SelectorValue): Boolean {
+    val sourceKey = preferredNumericSourceKey(selector) ?: return false
+    return value == sourceKey && DECIMAL_LITERAL_PATTERN.matches(value)
+}
+
+private fun preferredNumericSourceKey(selector: SelectorValue): String? {
+    val functionName = stringValue(selector.function?.get("name"))
+    if (functionName != "number" && functionName != "percent") return null
+    val sourceValue = numericSourceValue(selector.source, functionName) ?: return null
+    val operand = parseSourceDecimal(sourceValue) ?: return null
+    if (functionName == "percent") {
+        return renderSourceDecimal(operand.copy(scale = operand.scale - 2), trimFractionZeros = false)
+    }
+    return if (operand.hasExponent) renderSourceDecimal(operand, trimFractionZeros = true) else sourceValue
+}
+
+private fun numericSourceValue(source: FunctionSource?, functionName: String): String? {
+    var current = source
+    while (current != null) {
+        if (current.function["name"] == functionName) return current.value
+        current = current.inherited
+    }
+    return null
+}
+
+private data class SourceDecimal(
+    val negative: Boolean,
+    val digits: String,
+    val scale: Int,
+    val hasExponent: Boolean,
+)
+
+private fun parseSourceDecimal(value: String): SourceDecimal? {
+    val match = SOURCE_DECIMAL_PATTERN.matchEntire(value) ?: return null
+    val exponent = parseSourceExponent(match.groupValues.getOrElse(4) { "" }) ?: return null
+    val fraction = match.groupValues.getOrElse(3) { "" }
+    var digits = "${match.groupValues[2]}$fraction".replace(Regex("^0+"), "")
+    if (digits.isEmpty()) digits = "0"
+    return SourceDecimal(
+        negative = match.groupValues[1] == "-" && digits != "0",
+        digits = digits,
+        scale = fraction.length - exponent,
+        hasExponent = match.groupValues.getOrElse(4) { "" }.isNotEmpty(),
+    )
+}
+
+private fun parseSourceExponent(value: String): Int? {
+    if (value.isEmpty()) return 0
+    val negative = value.startsWith("-")
+    val unsigned = if (negative || value.startsWith("+")) value.drop(1) else value
+    val digits = unsigned.replace(Regex("^0+"), "").ifEmpty { "0" }
+    if (digits.length > 7) return null
+    val parsed = digits.toIntOrNull() ?: return null
+    if (parsed > MAX_SOURCE_DECIMAL_EXPONENT) return null
+    return if (negative) -parsed else parsed
+}
+
+private fun renderSourceDecimal(operand: SourceDecimal, trimFractionZeros: Boolean): String? {
+    val extraLength =
+        if (operand.scale > operand.digits.length) {
+            operand.scale - operand.digits.length
+        } else {
+            maxOf(-operand.scale, 0)
+        }
+    if (operand.digits.length + extraLength + 2 > MAX_SOURCE_DECIMAL_KEY_LENGTH) return null
+    var text =
+        when {
+            operand.scale <= 0 -> operand.digits + "0".repeat(-operand.scale)
+            operand.scale >= operand.digits.length -> "0." + "0".repeat(operand.scale - operand.digits.length) + operand.digits
+            else -> {
+                val split = operand.digits.length - operand.scale
+                operand.digits.substring(0, split) + "." + operand.digits.substring(split)
+            }
+        }
+    if (trimFractionZeros && text.contains(".")) text = text.replace(Regex("\\.?0+$"), "")
+    return if (operand.negative) "-$text" else text
+}
+
 private fun selectionKey(locale: String, annotation: SelectorAnnotation?, resolvedValue: ResolvedValue): String? {
     if (annotation == null || !annotation.isNumeric || annotation.numberSelect == "exact") return null
     var operand = valueToString(resolvedValue.rawValue)
@@ -688,7 +798,7 @@ private fun fallbackSource(expression: Map<String, Any?>): String {
     val arg = expression["arg"] as? Map<String, Any?>
     if (arg != null) return expressionArgSource(arg)
     val functionRef = expression["function"] as? Map<String, Any?>
-    return if (functionRef != null) functionSource(functionRef) else ""
+    return if (functionRef != null) functionNameSource(functionRef) else ""
 }
 
 private fun fallbackValue(source: String): String = "{$source}"
@@ -717,6 +827,8 @@ private fun functionSource(functionRef: Map<String, Any?>): String {
     }
     return source.toString()
 }
+
+private fun functionNameSource(functionRef: Map<String, Any?>): String = ":${stringValue(functionRef["name"])}"
 
 private fun quoteLiteralSource(value: String): String =
     buildString {
@@ -781,6 +893,7 @@ private data class ExpressionOutput(
     val source: FunctionSource?,
     val direction: String?,
     val fallbackSource: String? = null,
+    val rawValue: Any? = value,
 )
 
 private data class SelectorValue(

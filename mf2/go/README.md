@@ -31,8 +31,29 @@ visible MF2 fallback output and collected diagnostics.
 Go platform formatting is intentionally deferred. `golang.org/x/text/message`
 is useful for localized numeric printing, but it does not yet provide the clean
 date, time, currency, and relative-time formatter surface needed for an honest
-MF2 platform registry. Keep future locale-data or ICU adapters explicit rather
+MF2 platform registry. Keep future platform or ICU adapters explicit rather
 than adding partial behavior to the portable registry.
+
+The package also exposes experimental generated-data formatters for the CLDR
+micro-runtime probe locale set:
+
+- `FormatNumberCore` and `NumberCoreFunctionRegistry` for localized decimal,
+  integer, percent, and simple currency formatting.
+- `FormatDateCore`, `FormatTimeCore`, `FormatDateTimeCore`, and
+  `DateTimeCoreFunctionRegistry` for Gregorian UTC/fixed-offset date/time
+  formatting with semantic CLDR skeleton lookup and `hourCycle` overrides.
+- `FormatRelativeTimeCore`, `FormatRelativeTimeCoreToParts`,
+  `NewRelativeTimeCoreFormatter`, and `RelativeTimeCoreFunctionRegistry` for
+  experimental CLDR relative-time formatting from explicitly supplied generated
+  data.
+
+Number/date-time modules use generated Go source maps (`cldr_number_data.go`
+and `cldr_date_time_data.go`), not runtime JSON. Relative-time intentionally
+does not hide the all-locale CLDR payload inside the package; callers decode
+the generated relative-time data they choose to ship and pass it to the direct
+API or registry. Shared fixtures compare static outputs, semantic skeleton
+outputs, Node/Intl reference witnesses, error cases, registry integration, and
+benchmark coverage.
 
 Run:
 
@@ -41,4 +62,5 @@ go test ./...
 go run ./cmd/demo
 go test -run '^$' -bench BenchmarkFormatSharedFixtures -benchtime 100000x -count=1
 go test -run '^$' -bench BenchmarkParseSharedFixtures -benchtime 100000x -count=1
+go test -run '^$' -bench 'Benchmark(NumberCore|DateTimeCore|RelativeTimeCore)Fixtures' -benchtime 100000x -count=1
 ```

@@ -2,7 +2,20 @@ package mf2
 
 import "strings"
 
+const maxLocaleOptionLength = 256
+
+func localeOption(locale, fallback string) (string, error) {
+	value := defaultString(locale, fallback)
+	if len([]rune(value)) > maxLocaleOptionLength {
+		return "", badOption("locale must not exceed 256 characters.")
+	}
+	return value, nil
+}
+
 func canonicalLocaleKey(locale string) string {
+	if len([]rune(locale)) > maxLocaleOptionLength {
+		return ""
+	}
 	rawParts := strings.FieldsFunc(strings.TrimSpace(locale), func(r rune) bool {
 		return r == '-' || r == '_'
 	})
@@ -22,7 +35,7 @@ func canonicalLocaleKey(locale string) string {
 func localeLookupChain(locale string) []string {
 	key := canonicalLocaleKey(locale)
 	if key == "" {
-		return nil
+		return []string{}
 	}
 	parts := strings.Split(key, "-")
 	chain := make([]string, 0, len(parts))
@@ -33,21 +46,30 @@ func localeLookupChain(locale string) []string {
 }
 
 func pluralLookupChain(locale string, parents map[string]string) []string {
-	chain := localeLookupChain(locale)
-	output := make([]string, 0, len(chain)+1)
-	seen := map[string]bool{}
-	for _, candidate := range chain {
-		if candidate == "" || seen[candidate] {
-			continue
-		}
-		output = append(output, candidate)
-		seen[candidate] = true
-		if parent := parents[candidate]; parent != "" && !seen[parent] {
-			output = append(output, parent)
-			seen[parent] = true
-		}
-	}
+	return featureLookupChain(locale, parents)
+}
+
+func featureLookupChain(locale string, parents map[string]string) []string {
+	output := []string{}
+	appendFeatureLookupChain(canonicalLocaleKey(locale), parents, &output)
 	return output
+}
+
+func appendFeatureLookupChain(locale string, parents map[string]string, output *[]string) {
+	current := locale
+	for current != "" {
+		if len([]rune(current)) > maxLocaleOptionLength {
+			return
+		}
+		if containsString(*output, current) {
+			return
+		}
+		*output = append(*output, current)
+		if parent := parents[current]; parent != "" {
+			appendFeatureLookupChain(parent, parents, output)
+		}
+		current = structuralParent(current)
+	}
 }
 
 func canonicalSubtag(index int, part string) string {
@@ -62,6 +84,22 @@ func canonicalSubtag(index int, part string) string {
 		return strings.ToUpper(part)
 	}
 	return strings.ToLower(part)
+}
+
+func structuralParent(locale string) string {
+	if index := strings.LastIndex(locale, "-"); index >= 0 {
+		return locale[:index]
+	}
+	return ""
+}
+
+func containsString(values []string, needle string) bool {
+	for _, value := range values {
+		if value == needle {
+			return true
+		}
+	}
+	return false
 }
 
 func allLetters(value string) bool {

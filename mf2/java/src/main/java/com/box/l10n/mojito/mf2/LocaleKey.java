@@ -7,9 +7,22 @@ import java.util.Locale;
 import java.util.Map;
 
 final class LocaleKey {
+    private static final int MAX_LOCALE_OPTION_LENGTH = 256;
+
     private LocaleKey() {}
 
+    static String option(String locale, String fallback) throws Mf2Exception {
+        String value = locale == null || locale.isEmpty() ? fallback : locale;
+        if (value.length() > MAX_LOCALE_OPTION_LENGTH) {
+            throw Mf2FunctionSupport.badOption("locale must not exceed 256 characters.");
+        }
+        return value;
+    }
+
     static String canonicalKey(String locale) {
+        if (locale != null && locale.length() > MAX_LOCALE_OPTION_LENGTH) {
+            return "";
+        }
         return String.join("-", parts(locale));
     }
 
@@ -18,22 +31,29 @@ final class LocaleKey {
     }
 
     static List<String> pluralLookupChain(String locale, Map<String, String> parents) {
+        return featureLookupChain(locale, parents);
+    }
+
+    static List<String> featureLookupChain(String locale, Map<String, String> parents) {
         List<String> chain = new ArrayList<>();
-        appendPluralLookupChain(canonicalKey(locale), parents, chain);
+        appendFeatureLookupChain(canonicalKey(locale), parents, chain);
         return chain;
     }
 
-    private static void appendPluralLookupChain(
+    private static void appendFeatureLookupChain(
             String locale, Map<String, String> parents, List<String> chain) {
         String current = locale;
         while (!current.isEmpty()) {
+            if (current.length() > MAX_LOCALE_OPTION_LENGTH) {
+                return;
+            }
             if (chain.contains(current)) {
                 return;
             }
             chain.add(current);
             String parent = parents.get(current);
             if (parent != null) {
-                appendPluralLookupChain(parent, parents, chain);
+                appendFeatureLookupChain(parent, parents, chain);
             }
             current = structuralParent(current);
         }

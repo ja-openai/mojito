@@ -48,6 +48,24 @@ case "$command" in
   jdk-check)
     java -cp "$tool_classpath" com.box.l10n.mojito.mf2.JdkRegistryDemo --quiet
     ;;
+  number-core-check)
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.NumberCoreTest "${2:-../conformance/fixtures/number-core/cases.json}"
+    ;;
+  number-core-bench)
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.NumberCoreBenchmark "${2:-../conformance/fixtures/number-core/cases.json}" "${3:-100000}" "${4:-10000}"
+    ;;
+  date-time-core-check)
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.DateTimeCoreTest "${2:-../conformance/fixtures/date-time-core/cases.json}"
+    ;;
+  date-time-core-bench)
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.DateTimeCoreBenchmark "${2:-../conformance/fixtures/date-time-core/cases.json}" "${3:-100000}" "${4:-10000}"
+    ;;
+  relative-time-core-check)
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.RelativeTimeCoreTest "${2:-../conformance/fixtures/functions/relative-time-duration-v0.json}"
+    ;;
+  relative-time-core-bench)
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.RelativeTimeCoreBenchmark "${2:-../conformance/fixtures/functions/relative-time-duration-v0.json}" "${3:-100000}" "${4:-10000}"
+    ;;
   datetime-demo)
     java -cp "$tool_classpath" com.box.l10n.mojito.mf2.DateTimeBoundaryDemo
     ;;

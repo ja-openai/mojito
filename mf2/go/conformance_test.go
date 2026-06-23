@@ -3,9 +3,11 @@ package mf2
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 )
 
@@ -176,8 +178,261 @@ func TestLocaleKeyFixtures(t *testing.T) {
 		assertJSONEqual(t, "lookup chain", item["expected"], localeLookupChain(stringValue(item["source"])))
 		checked++
 	}
+	for _, raw := range arrayValue(fixture["featureLookupChains"]) {
+		item := asObject(raw)
+		parents := map[string]string{}
+		for key, value := range asObject(item["parents"]) {
+			parents[key] = stringValue(value)
+		}
+		assertJSONEqual(t, "feature lookup chain", item["expected"], featureLookupChain(stringValue(item["source"]), parents))
+		checked++
+	}
 	if checked == 0 {
 		t.Fatal("locale-key fixture did not contain any cases")
+	}
+}
+
+func TestNumberCoreFixtures(t *testing.T) {
+	fixture := readFixture(t, "../conformance/fixtures/number-core/cases.json")
+	for _, raw := range arrayValue(fixture["formatCases"]) {
+		item := asObject(raw)
+		actual, err := FormatNumberCore(
+			item["value"],
+			numberCoreOptionsFromFixture(stringValue(item["locale"]), item["options"]),
+		)
+		if err != nil {
+			t.Fatalf("%s: unexpected error: %v", stringValue(item["name"]), err)
+		}
+		if actual != stringValue(item["expected"]) {
+			t.Fatalf("%s: expected %q, got %q", stringValue(item["name"]), stringValue(item["expected"]), actual)
+		}
+	}
+
+	referenceCases := arrayValue(fixture["intlReferenceCases"])
+	references := nodeIntlNumberOutputs(t, referenceCases)
+	for index, raw := range referenceCases {
+		item := asObject(raw)
+		actual, err := FormatNumberCore(
+			item["value"],
+			numberCoreOptionsFromFixture(stringValue(item["locale"]), item["options"]),
+		)
+		if err != nil {
+			t.Fatalf("Intl number reference %d: unexpected error: %v", index, err)
+		}
+		if actual != references[index] {
+			t.Fatalf("Intl number reference %d: expected %q, got %q", index, references[index], actual)
+		}
+	}
+
+	for _, raw := range arrayValue(fixture["errorCases"]) {
+		item := asObject(raw)
+		_, err := FormatNumberCore(
+			item["value"],
+			numberCoreOptionsFromFixture(stringValue(item["locale"]), item["options"]),
+		)
+		if err == nil {
+			t.Fatalf("%s: expected error", stringValue(item["name"]))
+		}
+		if asMF2Error(err).Code != stringValue(item["expectedError"]) {
+			t.Fatalf("%s: expected error %q, got %q", stringValue(item["name"]), stringValue(item["expectedError"]), asMF2Error(err).Code)
+		}
+	}
+
+	useGrouping := false
+	for _, item := range []struct {
+		name     string
+		value    any
+		expected string
+	}{
+		{"direct int64 over safe integer", int64(9007199254740993), "9007199254740993"},
+		{"direct string over safe integer", "9007199254740993", "9007199254740993"},
+		{"direct max int64", int64(9223372036854775807), "9223372036854775807"},
+		{"direct max int64 string", "9223372036854775807", "9223372036854775807"},
+		{"direct max uint64", uint64(18446744073709551615), "18446744073709551615"},
+	} {
+		actual, err := FormatNumberCore(item.value, NumberCoreOptions{
+			Locale:      "en-US",
+			UseGrouping: &useGrouping,
+		})
+		if err != nil {
+			t.Fatalf("%s: unexpected error: %v", item.name, err)
+		}
+		if actual != item.expected {
+			t.Fatalf("%s: expected %q, got %q", item.name, item.expected, actual)
+		}
+	}
+
+	numberCoreRegistry := NumberCoreFunctionRegistry()
+	currency := ParseToModel("Total: {$amount :currency currency=USD}")
+	if currency.HasDiagnostics {
+		t.Fatalf("number-core registry parse diagnostics: %v", currency.Diagnostics)
+	}
+	currencyResult := FormatMessage(currency.Model, map[string]any{"amount": 1234.5}, Options{
+		Locale:    "en-US",
+		Functions: numberCoreRegistry,
+	})
+	if currencyResult.Value != "Total: $1,234.50" || currencyResult.HasErrors() {
+		t.Fatalf("number-core registry currency: got %q errors=%v", currencyResult.Value, currencyResult.Errors)
+	}
+	selector := ParseToModel(".input {$count :number}\n.match $count\none {{one}}\n* {{other}}")
+	if selector.HasDiagnostics {
+		t.Fatalf("number-core selector parse diagnostics: %v", selector.Diagnostics)
+	}
+	selectorResult := FormatMessage(selector.Model, map[string]any{"count": 1}, Options{
+		Locale:    "en",
+		Functions: numberCoreRegistry,
+	})
+	if selectorResult.Value != "one" || selectorResult.HasErrors() {
+		t.Fatalf("number-core registry selector: got %q errors=%v", selectorResult.Value, selectorResult.Errors)
+	}
+
+	for _, raw := range arrayValue(fixture["registryCases"]) {
+		item := asObject(raw)
+		parsed := ParseToModel(stringValue(item["source"]))
+		if parsed.HasDiagnostics {
+			t.Fatalf("%s: parse diagnostics: %v", stringValue(item["name"]), parsed.Diagnostics)
+		}
+		result := FormatMessage(parsed.Model, asObject(item["arguments"]), Options{
+			Locale:    stringValue(item["locale"]),
+			Functions: numberCoreRegistry,
+		})
+		if result.Value != stringValue(item["expected"]) || result.HasErrors() {
+			t.Fatalf("%s: expected %q, got %q errors=%v", stringValue(item["name"]), stringValue(item["expected"]), result.Value, result.Errors)
+		}
+	}
+	for _, raw := range arrayValue(fixture["registryErrorCases"]) {
+		item := asObject(raw)
+		parsed := ParseToModel(stringValue(item["source"]))
+		if parsed.HasDiagnostics {
+			t.Fatalf("%s: parse diagnostics: %v", stringValue(item["name"]), parsed.Diagnostics)
+		}
+		result := FormatMessage(parsed.Model, asObject(item["arguments"]), Options{
+			Locale:    stringValue(item["locale"]),
+			Functions: numberCoreRegistry,
+		})
+		assertErrorCodesExact(t, stringValue(item["name"]), result.Errors, stringArray(item["expectedErrors"]))
+	}
+}
+
+func TestDateTimeCoreFixtures(t *testing.T) {
+	fixture := readFixture(t, "../conformance/fixtures/date-time-core/cases.json")
+	for _, raw := range arrayValue(fixture["formatCases"]) {
+		item := asObject(raw)
+		actual, err := formatDateTimeCoreFixtureItem(item)
+		if err != nil {
+			t.Fatalf("%s: unexpected error: %v", stringValue(item["name"]), err)
+		}
+		if actual != stringValue(item["expected"]) {
+			t.Fatalf("%s: expected %q, got %q", stringValue(item["name"]), stringValue(item["expected"]), actual)
+		}
+	}
+	for _, raw := range arrayValue(fixture["numericTimestampCases"]) {
+		item := asObject(raw)
+		actual, err := formatDateTimeCoreFixtureItem(item)
+		if err != nil {
+			t.Fatalf("%s: unexpected error: %v", stringValue(item["name"]), err)
+		}
+		if actual != stringValue(item["expected"]) {
+			t.Fatalf("%s: expected %q, got %q", stringValue(item["name"]), stringValue(item["expected"]), actual)
+		}
+	}
+
+	referenceCases := arrayValue(fixture["intlReferenceCases"])
+	references := nodeIntlDateTimeOutputs(t, referenceCases)
+	for index, raw := range referenceCases {
+		item := asObject(raw)
+		actual, err := formatDateTimeCoreFixtureItem(item)
+		if err != nil {
+			t.Fatalf("Intl date/time reference %d: unexpected error: %v", index, err)
+		}
+		if actual != references[index] {
+			t.Fatalf("Intl date/time reference %d: expected %q, got %q", index, references[index], actual)
+		}
+	}
+
+	semanticReferenceCases := arrayValue(fixture["semanticStyleReferenceCases"])
+	semanticReferences := nodeIntlDateTimeOutputs(t, dateTimeCoreReferenceItems(semanticReferenceCases))
+	for index, raw := range semanticReferenceCases {
+		item := asObject(raw)
+		actual, err := formatDateTimeCoreFixtureItem(item)
+		if err != nil {
+			t.Fatalf("semantic style reference %d: unexpected error: %v", index, err)
+		}
+		if actual != semanticReferences[index] {
+			t.Fatalf("%s: expected %q, got %q", stringValue(item["name"]), semanticReferences[index], actual)
+		}
+	}
+
+	for _, raw := range arrayValue(fixture["errorCases"]) {
+		item := asObject(raw)
+		_, err := formatDateTimeCoreFixtureItem(item)
+		if err == nil {
+			t.Fatalf("%s: expected error", stringValue(item["name"]))
+		}
+		if asMF2Error(err).Code != stringValue(item["expectedError"]) {
+			t.Fatalf("%s: expected error %q, got %q", stringValue(item["name"]), stringValue(item["expectedError"]), asMF2Error(err).Code)
+		}
+	}
+
+	registry := DateTimeCoreFunctionRegistry()
+	for _, raw := range arrayValue(fixture["registryFormatCases"]) {
+		item := asObject(raw)
+		parsed := ParseToModel(stringValue(item["source"]))
+		if parsed.HasDiagnostics {
+			t.Fatalf("%s: date-time-core registry parse diagnostics: %v", stringValue(item["name"]), parsed.Diagnostics)
+		}
+		result := FormatMessage(parsed.Model, mapValue(item["arguments"]), Options{
+			Locale:    stringValue(item["locale"]),
+			Functions: registry,
+		})
+		if result.Value != stringValue(item["expected"]) || result.HasErrors() {
+			t.Fatalf("%s: expected %q, got %q errors=%v", stringValue(item["name"]), stringValue(item["expected"]), result.Value, result.Errors)
+		}
+	}
+	for _, raw := range arrayValue(fixture["registryErrorCases"]) {
+		item := asObject(raw)
+		parsed := ParseToModel(stringValue(item["source"]))
+		if parsed.HasDiagnostics {
+			t.Fatalf("%s: date-time-core registry error parse diagnostics: %v", stringValue(item["name"]), parsed.Diagnostics)
+		}
+		result := FormatMessage(parsed.Model, mapValue(item["arguments"]), Options{
+			Locale:    stringValue(item["locale"]),
+			Functions: registry,
+		})
+		assertErrorCodesExact(t, stringValue(item["name"]), result.Errors, stringArray(item["expectedErrors"]))
+	}
+	dateMessage := ParseToModel("At {$instant :datetime dateStyle=full timeStyle=medium timeZone=UTC}")
+	if dateMessage.HasDiagnostics {
+		t.Fatalf("date-time-core registry parse diagnostics: %v", dateMessage.Diagnostics)
+	}
+	dateResult := FormatMessage(dateMessage.Model, map[string]any{"instant": "2026-05-21T14:30:15Z"}, Options{
+		Locale:    "de-DE",
+		Functions: registry,
+	})
+	if dateResult.Value != "At Donnerstag, 21. Mai 2026 um 14:30:15" || dateResult.HasErrors() {
+		t.Fatalf("date-time-core registry datetime: got %q errors=%v", dateResult.Value, dateResult.Errors)
+	}
+	stringMessage := ParseToModel("Hello {$name :string}")
+	if stringMessage.HasDiagnostics {
+		t.Fatalf("date-time-core string parse diagnostics: %v", stringMessage.Diagnostics)
+	}
+	stringResult := FormatMessage(stringMessage.Model, map[string]any{"name": "Mojito"}, Options{Functions: registry})
+	if stringResult.Value != "Hello Mojito" || stringResult.HasErrors() {
+		t.Fatalf("date-time-core registry string: got %q errors=%v", stringResult.Value, stringResult.Errors)
+	}
+	for _, optionName := range []string{"style", "dateStyle", "timeStyle", "timeZone", "calendar", "skeleton", "hourCycle"} {
+		message := ParseToModel("At {$instant :datetime " + optionName + "=$missing}")
+		if message.HasDiagnostics {
+			t.Fatalf("date-time-core missing %s option parse diagnostics: %v", optionName, message.Diagnostics)
+		}
+		result := FormatMessage(message.Model, map[string]any{"instant": "2026-05-21T14:30:15Z"}, Options{
+			Locale:    "en-US",
+			Functions: registry,
+		})
+		if result.Value != "At {$instant}" {
+			t.Fatalf("date-time-core missing %s option: expected fallback, got %q", optionName, result.Value)
+		}
+		assertErrorCodesExact(t, "date-time-core missing "+optionName+" option", result.Errors, []string{"missing-argument"})
 	}
 }
 
@@ -190,6 +445,135 @@ func assertErrorCodesExact(t *testing.T, label string, actualErrors []Error, exp
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("%s: expected %v, got %v", label, expected, actual)
 	}
+}
+
+func numberCoreOptionsFromFixture(locale string, raw any) NumberCoreOptions {
+	options := asObject(raw)
+	result := NumberCoreOptions{
+		Locale:          locale,
+		Style:           stringValue(options["style"]),
+		Currency:        stringValue(options["currency"]),
+		CurrencyDisplay: stringValue(options["currencyDisplay"]),
+		SignDisplay:     stringValue(options["signDisplay"]),
+	}
+	if value, ok := options["useGrouping"].(bool); ok {
+		result.UseGrouping = &value
+	}
+	result.MinimumFractionDigits = intPointerFromFixture(options["minimumFractionDigits"])
+	result.MaximumFractionDigits = intPointerFromFixture(options["maximumFractionDigits"])
+	return result
+}
+
+func dateTimeCoreOptionsFromFixture(locale string, raw any) DateTimeCoreOptions {
+	options := asObject(raw)
+	return DateTimeCoreOptions{
+		Locale:        locale,
+		Style:         stringValue(options["style"]),
+		DateStyle:     stringValue(options["dateStyle"]),
+		TimeStyle:     stringValue(options["timeStyle"]),
+		Length:        stringValue(options["length"]),
+		Precision:     stringValue(options["precision"]),
+		DateLength:    stringValue(options["dateLength"]),
+		TimePrecision: stringValue(options["timePrecision"]),
+		Skeleton:      stringValue(options["skeleton"]),
+		HourCycle:     stringValue(options["hourCycle"]),
+		TimeZone:      stringValue(options["timeZone"]),
+		Calendar:      stringValue(options["calendar"]),
+	}
+}
+
+func formatDateTimeCoreFixtureItem(item map[string]any) (string, error) {
+	options := dateTimeCoreOptionsFromFixture(stringValue(item["locale"]), item["options"])
+	switch stringValue(item["kind"]) {
+	case "date":
+		return FormatDateCore(item["value"], options)
+	case "time":
+		return FormatTimeCore(item["value"], options)
+	case "datetime":
+		return FormatDateTimeCore(item["value"], options)
+	default:
+		return "", mf2Error("bad-option", "Unsupported date/time core fixture kind.")
+	}
+}
+
+func dateTimeCoreReferenceItems(cases []any) []any {
+	references := make([]any, 0, len(cases))
+	for _, raw := range cases {
+		item := asObject(raw)
+		reference := map[string]any{
+			"kind":    item["kind"],
+			"locale":  item["locale"],
+			"value":   item["value"],
+			"options": item["referenceOptions"],
+		}
+		references = append(references, reference)
+	}
+	return references
+}
+
+func intPointerFromFixture(value any) *int {
+	if value == nil {
+		return nil
+	}
+	switch typed := value.(type) {
+	case float64:
+		integer := int(typed)
+		return &integer
+	case int:
+		integer := typed
+		return &integer
+	default:
+		return nil
+	}
+}
+
+func nodeIntlNumberOutputs(t *testing.T, cases []any) []string {
+	t.Helper()
+	script := `
+const fs = require("fs");
+const cases = JSON.parse(fs.readFileSync(0, "utf8"));
+function intlOptions(options) {
+  if (options.style === "number") return {};
+  if (options.style === "percent") return { style: "percent" };
+  if (options.style === "currency") return { style: "currency", currency: options.currency };
+  throw new Error("Unsupported Intl reference style: " + options.style);
+}
+process.stdout.write(JSON.stringify(cases.map((item) =>
+  new Intl.NumberFormat(item.locale, intlOptions(item.options || {})).format(item.value)
+)));
+`
+	return nodeJSONOutputs(t, cases, script)
+}
+
+func nodeIntlDateTimeOutputs(t *testing.T, cases []any) []string {
+	t.Helper()
+	script := `
+const fs = require("fs");
+const cases = JSON.parse(fs.readFileSync(0, "utf8"));
+process.stdout.write(JSON.stringify(cases.map((item) =>
+  new Intl.DateTimeFormat(item.locale, { timeZone: "UTC", ...(item.options || {}) }).format(new Date(item.value))
+)));
+`
+	return nodeJSONOutputs(t, cases, script)
+}
+
+func nodeJSONOutputs(t *testing.T, cases []any, script string) []string {
+	t.Helper()
+	payload, err := json.Marshal(cases)
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := exec.Command("node", "-e", script)
+	command.Stdin = strings.NewReader(string(payload))
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("node Intl reference failed: %v\n%s", err, output)
+	}
+	var values []string
+	if err := json.Unmarshal(output, &values); err != nil {
+		t.Fatalf("node Intl reference returned invalid JSON: %v\n%s", err, output)
+	}
+	return values
 }
 
 func fixturePaths(t *testing.T, root string) []string {
@@ -267,6 +651,14 @@ func expectedCodes(raw any) []string {
 		codes = append(codes, code)
 	}
 	return codes
+}
+
+func stringArray(raw any) []string {
+	var values []string
+	for _, item := range arrayValue(raw) {
+		values = append(values, stringValue(item))
+	}
+	return values
 }
 
 func containsAll(actual []string, expected []string) bool {

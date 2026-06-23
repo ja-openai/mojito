@@ -1,6 +1,11 @@
 package com.box.l10n.mojito.mf2;
 
+import java.math.BigDecimal;
+
 final class Mf2FunctionSupport {
+    static final int MAX_FRACTION_DIGITS = 100;
+    static final int MAX_DECIMAL_OPERAND_LENGTH = 256;
+
     private Mf2FunctionSupport() {}
 
     static double parseCallDecimal(Mf2FunctionRegistry.FunctionCall call, String message)
@@ -8,6 +13,19 @@ final class Mf2FunctionSupport {
         Double parsed = parseDecimalNumber(call.value());
         if (parsed == null) {
             parsed = parseSourceDecimal(call.inheritedSource());
+        }
+        if (parsed == null) {
+            throw Mf2Exception.badOperand(message);
+        }
+        return parsed;
+    }
+
+    static BigDecimal parseCallDecimalOperand(
+            Mf2FunctionRegistry.FunctionCall call, String message)
+            throws Mf2Exception {
+        BigDecimal parsed = parseDecimalOperand(call.value());
+        if (parsed == null) {
+            parsed = parseSourceDecimalOperand(call.inheritedSource());
         }
         if (parsed == null) {
             throw Mf2Exception.badOperand(message);
@@ -27,6 +45,9 @@ final class Mf2FunctionSupport {
     }
 
     static Double parseDecimalNumber(String value) {
+        if (value.length() > MAX_DECIMAL_OPERAND_LENGTH) {
+            return null;
+        }
         if (!isWellFormedDecimalLiteral(value)) {
             return null;
         }
@@ -38,13 +59,42 @@ final class Mf2FunctionSupport {
         }
     }
 
+    static BigDecimal parseDecimalOperand(String value) {
+        if (value.length() > MAX_DECIMAL_OPERAND_LENGTH) {
+            return null;
+        }
+        if (!isWellFormedDecimalLiteral(value)) {
+            return null;
+        }
+        try {
+            return new BigDecimal(value);
+        } catch (NumberFormatException error) {
+            return null;
+        }
+    }
+
+    static BigDecimal parseSourceDecimalOperand(Mf2FunctionRegistry.FunctionSourceRef source)
+            throws Mf2Exception {
+        if (source == null) {
+            return null;
+        }
+        if (isDecimalSourceFunction(source.function())) {
+            return parseDecimalOperand(source.value());
+        }
+        return parseSourceDecimalOperand(source.inheritedSource());
+    }
+
     static int parseNonNegativeOption(String value, String message)
             throws Mf2Exception {
         if (value.isEmpty() || !value.chars().allMatch(Character::isDigit)) {
             throw badOption(message);
         }
         try {
-            return Integer.parseInt(value);
+            int parsed = Integer.parseInt(value);
+            if (parsed > MAX_FRACTION_DIGITS) {
+                throw badOption(message);
+            }
+            return parsed;
         } catch (NumberFormatException error) {
             throw badOption(message);
         }

@@ -2,9 +2,9 @@ package com.box.l10n.mojito.mf2
 
 import java.math.BigDecimal
 import java.math.RoundingMode
-import kotlin.math.truncate
-
 internal object Mf2UnlocalizedNumericFunctions {
+    private const val MAX_DECIMAL_OUTPUT_CHARS = 1000
+
     fun registerFormatters(formatters: MutableMap<String, Mf2FunctionFormatter>) {
         formatters["number"] = ::formatNumber
         formatters["percent"] = ::formatPercent
@@ -12,57 +12,74 @@ internal object Mf2UnlocalizedNumericFunctions {
     }
 
     private fun formatNumber(call: Mf2FunctionCall): String {
-        val value = Mf2PortableFunctions.parseCallDecimal(call, "Number function requires a numeric operand.")
-        return formatDecimalNumber(value, Mf2PortableFunctions.signDisplayAlways(call.function), minimumFractionDigits(call))
+        val message = "Number function requires a numeric operand."
+        val value = Mf2PortableFunctions.parseCallDecimalOperand(call, message)
+        val minimumFractionDigits = minimumFractionDigits(call)
+        val maximumFractionDigits = maximumFractionDigits(call)
+        validateFractionDigits(minimumFractionDigits, maximumFractionDigits)
+        val rounded = roundDecimalWithMaximumFractionDigits(value, maximumFractionDigits)
+        ensureDecimalOutputBounded(rounded, minimumFractionDigits, message)
+        return formatDecimalNumber(rounded, Mf2PortableFunctions.signDisplayAlways(call.function), minimumFractionDigits)
     }
 
     private fun formatPercent(call: Mf2FunctionCall): String {
-        val value = Mf2PortableFunctions.parseCallDecimal(call, "Percent function requires a numeric operand.")
-        val formatted = formatPercentNumber(
-            value,
-            Mf2PortableFunctions.signDisplayAlways(call.function),
-            minimumFractionDigits(call),
-            maximumFractionDigits(call),
-        )
-        return formatted
-    }
-
-    private fun formatInteger(call: Mf2FunctionCall): String {
-        val value = Mf2PortableFunctions.parseCallDecimal(call, "Integer function requires a numeric operand.")
-        return Mf2PortableFunctions.formatIntegerNumber(
-            truncate(value).toLong(),
-            Mf2PortableFunctions.signDisplayAlways(call.function),
-        )
-    }
-
-    private fun formatDecimalNumber(value: Double, signAlways: Boolean, minimumFractionDigits: Int): String {
-        var formatted = value.toString()
-        if (formatted.endsWith(".0")) formatted = formatted.dropLast(2)
-        if (signAlways && value >= 0.0) formatted = "+$formatted"
-        return appendMinimumFractionDigits(formatted, minimumFractionDigits)
-    }
-
-    private fun formatPercentNumber(
-        value: Double,
-        signAlways: Boolean,
-        minimumFractionDigits: Int,
-        maximumFractionDigits: Int?,
-    ): String {
-        var formatted = formatDecimalWithMaximumFractionDigits(value * 100.0, maximumFractionDigits)
-        if (signAlways && value >= 0.0) formatted = "+$formatted"
+        val message = "Percent function requires a numeric operand."
+        val value = Mf2PortableFunctions.parseCallDecimalOperand(call, message)
+        val minimumFractionDigits = minimumFractionDigits(call)
+        val maximumFractionDigits = maximumFractionDigits(call)
+        validateFractionDigits(minimumFractionDigits, maximumFractionDigits)
+        val percentValue = roundDecimalWithMaximumFractionDigits(value.movePointRight(2), maximumFractionDigits)
+        ensureDecimalOutputBounded(percentValue, minimumFractionDigits, message)
+        var formatted = formatDecimalNumber(percentValue, false, 0)
+        if (Mf2PortableFunctions.signDisplayAlways(call.function) && value.signum() >= 0) formatted = "+$formatted"
         return appendMinimumFractionDigits(formatted, minimumFractionDigits) + "%"
     }
 
-    private fun formatDecimalWithMaximumFractionDigits(value: Double, digits: Int?): String {
-        if (digits == null) return formatDecimalNumber(value, false, 0)
-        var formatted = formatFixedFractionDigits(value, digits)
-        while (formatted.contains(".") && formatted.endsWith("0")) formatted = formatted.dropLast(1)
-        if (formatted.endsWith(".")) formatted = formatted.dropLast(1)
-        return formatted
+    private fun formatInteger(call: Mf2FunctionCall): String {
+        val message = "Integer function requires a numeric operand."
+        val integer = Mf2PortableFunctions.parseCallDecimalOperand(call, message).setScale(0, RoundingMode.DOWN)
+        ensureDecimalOutputBounded(integer, 0, message)
+        return formatDecimalNumber(integer, Mf2PortableFunctions.signDisplayAlways(call.function), 0)
+    }
+
+    private fun formatDecimalNumber(value: Double, signAlways: Boolean, minimumFractionDigits: Int): String {
+        return formatDecimalNumber(BigDecimal.valueOf(value), signAlways, minimumFractionDigits)
+    }
+
+    private fun formatDecimalNumber(value: BigDecimal, signAlways: Boolean, minimumFractionDigits: Int): String {
+        val normalized = normalizeDecimal(value)
+        var formatted = normalized.toPlainString()
+        if (signAlways && normalized.signum() >= 0) formatted = "+$formatted"
+        return appendMinimumFractionDigits(formatted, minimumFractionDigits)
+    }
+
+    private fun roundDecimalWithMaximumFractionDigits(value: BigDecimal, maximumFractionDigits: Int?): BigDecimal {
+        if (maximumFractionDigits == null) return value
+        return value.setScale(maximumFractionDigits, RoundingMode.HALF_UP)
     }
 
     private fun formatFixedFractionDigits(value: Double, fractionDigits: Int): String =
         BigDecimal.valueOf(value).setScale(fractionDigits, RoundingMode.HALF_UP).toPlainString()
+
+    private fun normalizeDecimal(value: BigDecimal): BigDecimal =
+        if (value.signum() == 0) BigDecimal.ZERO else value.stripTrailingZeros()
+
+    private fun ensureDecimalOutputBounded(value: BigDecimal, minimumFractionDigits: Int, message: String) {
+        if (estimatedDecimalOutputChars(value, minimumFractionDigits) > MAX_DECIMAL_OUTPUT_CHARS) {
+            throw Mf2Error.badOperand(message)
+        }
+    }
+
+    private fun estimatedDecimalOutputChars(value: BigDecimal, minimumFractionDigits: Int): Int {
+        val normalized = normalizeDecimal(value)
+        val sign = if (normalized.signum() < 0) 1 else 0
+        val precision = normalized.precision()
+        val scale = normalized.scale()
+        if (scale <= 0) return sign + precision - scale
+        val integerDigits = maxOf(precision - scale, 1)
+        val fractionDigits = maxOf(scale, minimumFractionDigits)
+        return sign + integerDigits + if (fractionDigits > 0) 1 + fractionDigits else 0
+    }
 
     private fun appendMinimumFractionDigits(formatted: String, minimumFractionDigits: Int): String {
         if (minimumFractionDigits == 0) return formatted
@@ -82,4 +99,10 @@ internal object Mf2UnlocalizedNumericFunctions {
     private fun maximumFractionDigits(call: Mf2FunctionCall): Int? =
         call.optionValue("maximumFractionDigits", null)
             ?.let { Mf2PortableFunctions.parseNonNegativeOption(it, "maximumFractionDigits option must be a non-negative integer.") }
+
+    private fun validateFractionDigits(minimumFractionDigits: Int, maximumFractionDigits: Int?) {
+        if (maximumFractionDigits != null && minimumFractionDigits > maximumFractionDigits) {
+            throw Mf2Error.badOption("maximumFractionDigits must be greater than or equal to minimumFractionDigits.")
+        }
+    }
 }

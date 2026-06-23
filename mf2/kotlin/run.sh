@@ -53,6 +53,24 @@ case "$command" in
   jdk-check)
     java -cp "$tool_classpath" com.box.l10n.mojito.mf2.KotlinJdkRegistryDemo --quiet
     ;;
+  number-core-check)
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.KotlinNumberCoreTest "${2:-../conformance/fixtures/number-core/cases.json}"
+    ;;
+  number-core-bench)
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.KotlinNumberCoreBenchmark "${2:-../conformance/fixtures/number-core/cases.json}" "${3:-100000}" "${4:-10000}"
+    ;;
+  date-time-core-check)
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.KotlinDateTimeCoreTest "${2:-../conformance/fixtures/date-time-core/cases.json}"
+    ;;
+  date-time-core-bench)
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.KotlinDateTimeCoreBenchmark "${2:-../conformance/fixtures/date-time-core/cases.json}" "${3:-100000}" "${4:-10000}"
+    ;;
+  relative-time-core-check)
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.KotlinRelativeTimeCoreTest "${2:-../conformance/fixtures/functions/relative-time-duration-v0.json}"
+    ;;
+  relative-time-core-bench)
+    java -cp "$tool_classpath" com.box.l10n.mojito.mf2.KotlinRelativeTimeCoreBenchmark "${2:-../conformance/fixtures/functions/relative-time-duration-v0.json}" "${3:-100000}" "${4:-10000}"
+    ;;
   *)
     echo "unknown command: $command" >&2
     exit 2

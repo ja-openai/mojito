@@ -161,7 +161,7 @@ public final class Mf2Parser {
                 if (name != null) {
                     selectors.add(new Mf2Message.VariableRef(name));
                 }
-                if (!isDone() && !Character.isWhitespace(peekChar())) {
+                if (!isDone() && !isWhitespace(peekChar())) {
                     pushDiagnostic(
                             "missing-match-space",
                             ".match selectors must be separated from variants by whitespace.",
@@ -375,7 +375,7 @@ public final class Mf2Parser {
             return;
         }
         char ch = peekChar();
-        if (ch == '{' || ch == '}' || ch == '\\') {
+        if (ch == '{' || ch == '}' || ch == '|' || ch == '\\') {
             text.append(advanceChar());
         } else {
             text.append('\\');
@@ -531,7 +531,7 @@ public final class Mf2Parser {
         if (rest.isEmpty()) {
             return rest;
         }
-        if (!Character.isWhitespace(rest.codePointAt(0))) {
+        if (!isWhitespace(rest.codePointAt(0))) {
             pushDiagnostic(
                     "missing-expression-space",
                     "Expression arguments must be separated from functions or attributes by whitespace.",
@@ -701,10 +701,51 @@ public final class Mf2Parser {
                     end);
             return null;
         }
+        Mf2Message.ExpressionArgument value = parseOptionValue(assignment.rawValue(), start, end);
+        if (value == null) {
+            return null;
+        }
         return new OptionParseResult(
                 keySplit.name(),
-                parseLiteralOrVariable(stripSyntaxWhitespace(assignment.rawValue())),
+                value,
                 assignment.nextIndex());
+    }
+
+    private Mf2Message.ExpressionArgument parseOptionValue(String rawValue, int start, int end) {
+        rawValue = stripSyntaxWhitespace(rawValue);
+        if (rawValue.startsWith("|")) {
+            LiteralSplit split = parseQuotedLiteral(rawValue);
+            if (split == null) {
+                pushDiagnostic(
+                        "unclosed-quoted-literal",
+                        "Quoted literal is missing closing '|'.",
+                        start,
+                        end);
+                return null;
+            }
+            if (!split.rest().isEmpty()) {
+                pushDiagnostic(
+                        "invalid-function-option",
+                        "Option value must be a single literal or variable.",
+                        start,
+                        end);
+                return null;
+            }
+            return new Mf2Message.LiteralArgument(split.value());
+        }
+        if (rawValue.startsWith("$")) {
+            NameSplit split = splitName(rawValue.substring(1));
+            if (!split.name().isEmpty() && split.rest().isEmpty()) {
+                return new Mf2Message.VariableArgument(split.name());
+            }
+            pushDiagnostic(
+                    variableNameDiagnosticCode(rawValue.substring(1)),
+                    "Option variable value must be a valid variable name.",
+                    start,
+                    end);
+            return null;
+        }
+        return parseLiteralOrVariable(rawValue);
     }
 
     private Assignment parseRequiredAssignment(List<String> tokens, int index, int start, int end) {
@@ -1034,7 +1075,7 @@ public final class Mf2Parser {
         boolean sawWhitespace = false;
         while (!isDone()) {
             int codePoint = source.codePointAt(index);
-            if (Character.isWhitespace(codePoint)) {
+            if (isWhitespace(codePoint)) {
                 sawWhitespace = true;
                 index += Character.charCount(codePoint);
                 continue;
@@ -1124,7 +1165,7 @@ public final class Mf2Parser {
                         output.appendCodePoint(escaped);
                         index += Character.charCount(escaped);
                     } else {
-                        output.append('\\');
+                        return null;
                     }
                 }
                 default -> output.appendCodePoint(codePoint);
@@ -1318,7 +1359,11 @@ public final class Mf2Parser {
     }
 
     private static boolean isSyntaxWhitespace(int codePoint) {
-        return Character.isWhitespace(codePoint) || isBidiMarker(codePoint);
+        return isWhitespace(codePoint) || isBidiMarker(codePoint);
+    }
+
+    private static boolean isWhitespace(int codePoint) {
+        return codePoint == '\t' || codePoint == '\n' || codePoint == '\r' || codePoint == ' ' || codePoint == 0x3000;
     }
 
     private static boolean isNoncharacter(int codePoint) {

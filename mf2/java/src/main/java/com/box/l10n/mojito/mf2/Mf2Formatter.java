@@ -8,8 +8,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class Mf2Formatter {
+    private static final Pattern SOURCE_DECIMAL_PATTERN =
+            Pattern.compile("^(-?)(0|[1-9]\\d*)(?:\\.(\\d+))?(?:[eE]([+-]?\\d+))?$");
+    private static final int MAX_SOURCE_DECIMAL_EXPONENT = 1_000_000;
+    private static final int MAX_SOURCE_DECIMAL_KEY_LENGTH = 4096;
+
     private Mf2Formatter() {}
 
     public static Mf2FormatResult formatMessage(
@@ -207,7 +214,7 @@ public final class Mf2Formatter {
                         if (output.hadError()) {
                             addFailedLocal(local.name());
                         } else {
-                            putLocal(local.name(), ResolvedValue.string(output.value(), output.source()));
+                            putLocal(local.name(), new ResolvedValue(output.rawValue(), output.source()));
                         }
                     }
                 }
@@ -397,11 +404,31 @@ public final class Mf2Formatter {
 
             Mf2Message.FunctionRef function = expression.function();
             if (function == null) {
-                return new ExpressionOutput(value, false, source, bidiDirectionFromSource(source));
+                try {
+                    return new ExpressionOutput(
+                            primitiveValueToString(rawValue, value),
+                            rawValue,
+                            false,
+                            source,
+                            bidiDirectionFromSource(source));
+                } catch (Mf2Exception error) {
+                    if (!fallback) {
+                        throw error;
+                    }
+                    Mf2Exception recoverable = fallbackError(error);
+                    errors.add(recoverable);
+                    String fallbackSource = fallbackSource(expression);
+                    return new ExpressionOutput(
+                            recoverFormatError(expression, fallbackSource, recoverable),
+                            true,
+                            null,
+                            null,
+                            fallbackSource);
+                }
             }
             recordFunctionResolutionErrors(function, source);
-            BidiDirection direction = bidiDirectionForFunction(function, source);
             try {
+                BidiDirection direction = bidiDirectionForFunction(function, source);
                 String sourceValue = source == null ? value : source.value();
                 return new ExpressionOutput(
                         functions.format(new Mf2FunctionRegistry.FunctionCall(
@@ -428,6 +455,15 @@ public final class Mf2Formatter {
                         null,
                         fallbackSource);
             }
+        }
+
+        private String primitiveValueToString(Object rawValue, String fallbackValue)
+                throws Mf2Exception {
+            if (rawValue instanceof Number) {
+                return Mf2NumberCore.format(
+                        rawValue, Mf2NumberCore.options().locale(locale).build());
+            }
+            return fallbackValue;
         }
 
         private String recoverMissingArgument(
@@ -575,8 +611,16 @@ public final class Mf2Formatter {
             return switch (key) {
                 case Mf2Message.CatchAllVariantKey ignored -> 0;
                 case Mf2Message.LiteralVariantKey literal -> {
-                    if ((selector.exactMatch() && literalKeyMatches(literal.value(), selector))
-                            || literal.value().equals(selector.selectionKey())) {
+                    if (selector.exactMatch()
+                            && numericLiteralKeyMatchesSource(literal.value(), selector)) {
+                        yield 3;
+                    }
+                    if (selector.exactMatch()
+                            && (selector.function() == null || !isNumericFunction(selector.function()))
+                            && literalKeyMatches(literal.value(), selector)) {
+                        yield 2;
+                    }
+                    if (literal.value().equals(selector.selectionKey())) {
                         yield 1;
                     }
                     if (selector.function() == null) {
@@ -671,13 +715,32 @@ public final class Mf2Formatter {
 
     private record ExpressionOutput(
             String value,
+            Object rawValue,
             boolean hadError,
             ResolvedFunctionSource source,
             BidiDirection direction,
             String fallbackSource) {
         ExpressionOutput(
+                String value,
+                Object rawValue,
+                boolean hadError,
+                ResolvedFunctionSource source,
+                BidiDirection direction) {
+            this(value, rawValue, hadError, source, direction, null);
+        }
+
+        ExpressionOutput(
                 String value, boolean hadError, ResolvedFunctionSource source, BidiDirection direction) {
-            this(value, hadError, source, direction, null);
+            this(value, value, hadError, source, direction, null);
+        }
+
+        ExpressionOutput(
+                String value,
+                boolean hadError,
+                ResolvedFunctionSource source,
+                BidiDirection direction,
+                String fallbackSource) {
+            this(value, value, hadError, source, direction, fallbackSource);
         }
 
         String directionName() {
@@ -748,6 +811,116 @@ public final class Mf2Formatter {
                 : normalizeStringKey(value).equals(selector.normalizedRendered());
     }
 
+    private static boolean numericLiteralKeyMatchesSource(String value, SelectorValue selector) {
+        String sourceKey = preferredNumericSourceKey(selector);
+        return sourceKey != null
+                && value.equals(sourceKey)
+                && Mf2FunctionSupport.parseDecimalOperand(value) != null;
+    }
+
+    private static String preferredNumericSourceKey(SelectorValue selector) {
+        if (selector.function() == null) {
+            return null;
+        }
+        String functionName = selector.function().name();
+        if (!functionName.equals("number") && !functionName.equals("percent")) {
+            return null;
+        }
+        String sourceValue = numericSourceValue(selector.source(), functionName);
+        SourceDecimal operand = parseSourceDecimal(sourceValue);
+        if (operand == null) {
+            return null;
+        }
+        if (functionName.equals("percent")) {
+            return renderSourceDecimal(
+                    new SourceDecimal(
+                            operand.negative(),
+                            operand.digits(),
+                            operand.scale() - 2,
+                            operand.hasExponent()),
+                    false);
+        }
+        return operand.hasExponent() ? renderSourceDecimal(operand, true) : sourceValue;
+    }
+
+    private static String numericSourceValue(ResolvedFunctionSource source, String functionName) {
+        for (ResolvedFunctionSource current = source; current != null; current = current.inherited()) {
+            if (current.function().name().equals(functionName)) {
+                return current.value();
+            }
+        }
+        return null;
+    }
+
+    private record SourceDecimal(boolean negative, String digits, int scale, boolean hasExponent) {}
+
+    private static SourceDecimal parseSourceDecimal(String value) {
+        if (value == null) {
+            return null;
+        }
+        Matcher matcher = SOURCE_DECIMAL_PATTERN.matcher(value);
+        if (!matcher.matches()) {
+            return null;
+        }
+        Integer exponent = parseSourceExponent(matcher.group(4) == null ? "" : matcher.group(4));
+        if (exponent == null) {
+            return null;
+        }
+        String fraction = matcher.group(3) == null ? "" : matcher.group(3);
+        String digits = (matcher.group(2) + fraction).replaceFirst("^0+", "");
+        if (digits.isEmpty()) {
+            digits = "0";
+        }
+        return new SourceDecimal(
+                matcher.group(1).equals("-") && !digits.equals("0"),
+                digits,
+                fraction.length() - exponent,
+                matcher.group(4) != null);
+    }
+
+    private static Integer parseSourceExponent(String value) {
+        if (value.isEmpty()) {
+            return 0;
+        }
+        boolean negative = value.startsWith("-");
+        String unsigned = negative || value.startsWith("+") ? value.substring(1) : value;
+        String digits = unsigned.replaceFirst("^0+", "");
+        if (digits.isEmpty()) {
+            digits = "0";
+        }
+        if (digits.length() > 7) {
+            return null;
+        }
+        int parsed = Integer.parseInt(digits);
+        if (parsed > MAX_SOURCE_DECIMAL_EXPONENT) {
+            return null;
+        }
+        return negative ? -parsed : parsed;
+    }
+
+    private static String renderSourceDecimal(SourceDecimal operand, boolean trimFractionZeros) {
+        int extraLength =
+                operand.scale() > operand.digits().length()
+                        ? operand.scale() - operand.digits().length()
+                        : Math.max(-operand.scale(), 0);
+        if (operand.digits().length() + extraLength + 2 > MAX_SOURCE_DECIMAL_KEY_LENGTH) {
+            return null;
+        }
+        String text;
+        if (operand.scale() <= 0) {
+            text = operand.digits() + "0".repeat(-operand.scale());
+        } else if (operand.scale() >= operand.digits().length()) {
+            text = "0." + "0".repeat(operand.scale() - operand.digits().length()) + operand.digits();
+        } else {
+            int split = operand.digits().length() - operand.scale();
+            text = operand.digits().substring(0, split) + "." + operand.digits().substring(split);
+        }
+        if (trimFractionZeros && text.contains(".")) {
+            text = text.replaceFirst("\\.?0+$", "");
+        }
+        return operand.negative() ? "-" + text : text;
+    }
+
     private static String normalizeStringKey(String value) {
         return Normalizer.normalize(value, Normalizer.Form.NFC);
     }
@@ -764,7 +937,7 @@ public final class Mf2Formatter {
             return expressionArgumentSource(expression.arg());
         }
         if (expression.function() != null) {
-            return functionSource(expression.function());
+            return functionNameSource(expression.function());
         }
         return "";
     }
@@ -800,6 +973,10 @@ public final class Mf2Formatter {
                     .append(expressionArgumentSource(option.getValue()));
         }
         return source.toString();
+    }
+
+    private static String functionNameSource(Mf2Message.FunctionRef function) {
+        return ":" + function.name();
     }
 
     private static String quoteLiteralSource(String value) {

@@ -5,6 +5,8 @@ import java.math.RoundingMode;
 import java.util.Map;
 
 final class Mf2UnlocalizedNumericFunctions {
+    private static final int MAX_DECIMAL_OUTPUT_CHARS = 1000;
+
     private Mf2UnlocalizedNumericFunctions() {}
 
     static void registerFormatters(Map<String, Mf2FunctionRegistry.Formatter> formatters) {
@@ -15,68 +17,93 @@ final class Mf2UnlocalizedNumericFunctions {
 
     private static String formatNumber(Mf2FunctionRegistry.FunctionCall call)
             throws Mf2Exception {
-        double value = Mf2FunctionSupport.parseCallDecimal(call, "Number function requires a numeric operand.");
-        return formatDecimalNumber(value, Mf2PortableFunctions.signDisplayAlways(call.function()), minimumFractionDigits(call));
+        String message = "Number function requires a numeric operand.";
+        BigDecimal value = Mf2FunctionSupport.parseCallDecimalOperand(call, message);
+        int minimumFractionDigits = minimumFractionDigits(call);
+        Integer maximumFractionDigits = maximumFractionDigits(call);
+        validateFractionDigits(minimumFractionDigits, maximumFractionDigits);
+        BigDecimal rounded = roundDecimalWithMaximumFractionDigits(value, maximumFractionDigits);
+        ensureDecimalOutputBounded(rounded, minimumFractionDigits, message);
+        return formatDecimalNumber(
+                rounded, Mf2PortableFunctions.signDisplayAlways(call.function()), minimumFractionDigits);
     }
 
     private static String formatPercent(Mf2FunctionRegistry.FunctionCall call)
             throws Mf2Exception {
-        double value = Mf2FunctionSupport.parseCallDecimal(call, "Percent function requires a numeric operand.");
-        return formatPercentNumber(
-                value,
-                Mf2PortableFunctions.signDisplayAlways(call.function()),
-                minimumFractionDigits(call),
-                maximumFractionDigits(call));
-    }
-
-    private static String formatInteger(Mf2FunctionRegistry.FunctionCall call)
-            throws Mf2Exception {
-        double value = Mf2FunctionSupport.parseCallDecimal(call, "Integer function requires a numeric operand.");
-        return Mf2PortableFunctions.formatIntegerNumber(
-                (long) value, Mf2PortableFunctions.signDisplayAlways(call.function()));
-    }
-
-    static String formatDecimalNumber(double value, boolean signDisplayAlways, int minimumFractionDigits) {
-        String formatted = Double.toString(value);
-        if (formatted.endsWith(".0")) {
-            formatted = formatted.substring(0, formatted.length() - 2);
-        }
-        if (signDisplayAlways && value >= 0.0) {
-            formatted = "+" + formatted;
-        }
-        return appendMinimumFractionDigits(formatted, minimumFractionDigits);
-    }
-
-    private static String formatPercentNumber(
-            double value,
-            boolean signDisplayAlways,
-            int minimumFractionDigits,
-            Integer maximumFractionDigits) {
-        String formatted = formatDecimalWithMaximumFractionDigits(value * 100.0, maximumFractionDigits);
-        if (signDisplayAlways && value >= 0.0) {
+        String message = "Percent function requires a numeric operand.";
+        BigDecimal value = Mf2FunctionSupport.parseCallDecimalOperand(call, message);
+        int minimumFractionDigits = minimumFractionDigits(call);
+        Integer maximumFractionDigits = maximumFractionDigits(call);
+        validateFractionDigits(minimumFractionDigits, maximumFractionDigits);
+        BigDecimal percentValue = roundDecimalWithMaximumFractionDigits(
+                value.movePointRight(2), maximumFractionDigits);
+        ensureDecimalOutputBounded(percentValue, minimumFractionDigits, message);
+        String formatted = formatDecimalNumber(percentValue, false, 0);
+        if (Mf2PortableFunctions.signDisplayAlways(call.function()) && value.signum() >= 0) {
             formatted = "+" + formatted;
         }
         return appendMinimumFractionDigits(formatted, minimumFractionDigits) + "%";
     }
 
-    private static String formatDecimalWithMaximumFractionDigits(double value, Integer digits) {
-        if (digits == null) {
-            return formatDecimalNumber(value, false, 0);
+    private static String formatInteger(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        String message = "Integer function requires a numeric operand.";
+        BigDecimal integer = Mf2FunctionSupport.parseCallDecimalOperand(call, message)
+                .setScale(0, RoundingMode.DOWN);
+        ensureDecimalOutputBounded(integer, 0, message);
+        return formatDecimalNumber(integer, Mf2PortableFunctions.signDisplayAlways(call.function()), 0);
+    }
+
+    static String formatDecimalNumber(double value, boolean signDisplayAlways, int minimumFractionDigits) {
+        return formatDecimalNumber(BigDecimal.valueOf(value), signDisplayAlways, minimumFractionDigits);
+    }
+
+    static String formatDecimalNumber(
+            BigDecimal value, boolean signDisplayAlways, int minimumFractionDigits) {
+        BigDecimal normalized = normalizeDecimal(value);
+        String formatted = normalized.toPlainString();
+        if (signDisplayAlways && normalized.signum() >= 0) {
+            formatted = "+" + formatted;
         }
-        String formatted = formatFixedFractionDigits(value, digits);
-        while (formatted.contains(".") && formatted.endsWith("0")) {
-            formatted = formatted.substring(0, formatted.length() - 1);
+        return appendMinimumFractionDigits(formatted, minimumFractionDigits);
+    }
+
+    private static BigDecimal roundDecimalWithMaximumFractionDigits(
+            BigDecimal value, Integer maximumFractionDigits) {
+        if (maximumFractionDigits == null) {
+            return value;
         }
-        if (formatted.endsWith(".")) {
-            formatted = formatted.substring(0, formatted.length() - 1);
-        }
-        return formatted;
+        return value.setScale(maximumFractionDigits, RoundingMode.HALF_UP);
     }
 
     static String formatFixedFractionDigits(double value, int fractionDigits) {
         return BigDecimal.valueOf(value)
                 .setScale(fractionDigits, RoundingMode.HALF_UP)
                 .toPlainString();
+    }
+
+    private static BigDecimal normalizeDecimal(BigDecimal value) {
+        return value.signum() == 0 ? BigDecimal.ZERO : value.stripTrailingZeros();
+    }
+
+    private static void ensureDecimalOutputBounded(
+            BigDecimal value, int minimumFractionDigits, String message) throws Mf2Exception {
+        if (estimatedDecimalOutputChars(value, minimumFractionDigits) > MAX_DECIMAL_OUTPUT_CHARS) {
+            throw Mf2Exception.badOperand(message);
+        }
+    }
+
+    private static int estimatedDecimalOutputChars(BigDecimal value, int minimumFractionDigits) {
+        BigDecimal normalized = normalizeDecimal(value);
+        int sign = normalized.signum() < 0 ? 1 : 0;
+        int precision = normalized.precision();
+        int scale = normalized.scale();
+        if (scale <= 0) {
+            return sign + precision - scale;
+        }
+        int integerDigits = Math.max(precision - scale, 1);
+        int fractionDigits = Math.max(scale, minimumFractionDigits);
+        return sign + integerDigits + (fractionDigits > 0 ? 1 + fractionDigits : 0);
     }
 
     private static String appendMinimumFractionDigits(String formatted, int minimumFractionDigits) {
@@ -113,5 +140,13 @@ final class Mf2UnlocalizedNumericFunctions {
         }
         return Mf2FunctionSupport.parseNonNegativeOption(
                 value, "maximumFractionDigits option must be a non-negative integer.");
+    }
+
+    private static void validateFractionDigits(
+            int minimumFractionDigits, Integer maximumFractionDigits) throws Mf2Exception {
+        if (maximumFractionDigits != null && minimumFractionDigits > maximumFractionDigits) {
+            throw Mf2FunctionSupport.badOption(
+                    "maximumFractionDigits must be greater than or equal to minimumFractionDigits.");
+        }
     }
 }

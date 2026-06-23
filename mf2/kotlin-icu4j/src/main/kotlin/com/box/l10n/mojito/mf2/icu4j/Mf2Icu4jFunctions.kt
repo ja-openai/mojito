@@ -26,6 +26,7 @@ import java.util.Date
 import java.util.Locale
 
 object Mf2Icu4jFunctions {
+    private const val MAX_FRACTION_DIGITS = 100
     private val epochDate: LocalDate = LocalDate.of(1970, 1, 1)
 
     @JvmStatic
@@ -362,7 +363,8 @@ object Mf2Icu4jFunctions {
     }
 
     private fun parseNonNegativeInteger(value: String, message: String): Int =
-        value.toIntOrNull()?.takeIf { it >= 0 } ?: throw Mf2Error.badOption(message)
+        value.toIntOrNull()?.takeIf { it in 0..MAX_FRACTION_DIGITS }
+            ?: throw Mf2Error.badOption(message)
 
     private fun currencyCode(call: Mf2FunctionCall): String? =
         call.optionValue("currency", null) ?: inheritedCurrencyCode(call.inheritedSource)

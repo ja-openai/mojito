@@ -231,6 +231,16 @@ object KotlinConformance {
             }
             checkedCases++
         }
+        for (rawCase in KotlinJsonSupport.arrayOrEmpty(fixture["featureLookupChains"])) {
+            val item = KotlinJsonSupport.obj(rawCase)
+            val parents = KotlinJsonSupport.objOrEmpty(item["parents"]).mapValues { KotlinJsonSupport.string(it.value) }
+            val actual = LocaleKey.featureLookupChain(KotlinJsonSupport.string(item["source"]), parents)
+            val expected = KotlinJsonSupport.arrayOrEmpty(item["expected"]).map(KotlinJsonSupport::string)
+            if (actual != expected) {
+                throw ConformanceFailure("${fixturePath.fileName}: expected feature lookup chain $expected, got $actual")
+            }
+            checkedCases++
+        }
         return checkedCases
     }
 

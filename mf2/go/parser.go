@@ -321,7 +321,7 @@ func (p *parser) parseEscape() string {
 		return ""
 	}
 	r := p.peekRune()
-	if r == '{' || r == '}' || r == '\\' {
+	if r == '{' || r == '}' || r == '|' || r == '\\' {
 		return p.advanceRune()
 	}
 	return "\\"
@@ -599,7 +599,36 @@ func (p *parser) parseOptionTokens(tokens []string, index, start, end int) (stri
 		p.pushDiagnostic("invalid-function-option", "Option key must be a valid identifier.", start, end)
 		return "", nil, index, false
 	}
-	return keySplit.name, parseLiteralOrVariable(stripSyntaxWhitespace(assignment.rawValue)), assignment.nextIndex, true
+	value, ok := p.parseOptionValue(assignment.rawValue, start, end)
+	if !ok {
+		return "", nil, index, false
+	}
+	return keySplit.name, value, assignment.nextIndex, true
+}
+
+func (p *parser) parseOptionValue(rawValue string, start, end int) (any, bool) {
+	rawValue = stripSyntaxWhitespace(rawValue)
+	if strings.HasPrefix(rawValue, "|") {
+		split, ok := parseQuotedLiteral(rawValue)
+		if !ok {
+			p.pushDiagnostic("unclosed-quoted-literal", "Quoted literal is missing closing '|'.", start, end)
+			return nil, false
+		}
+		if split.rest != "" {
+			p.pushDiagnostic("invalid-function-option", "Option value must be a single literal or variable.", start, end)
+			return nil, false
+		}
+		return map[string]any{"type": "literal", "value": split.value}, true
+	}
+	if strings.HasPrefix(rawValue, "$") {
+		split := splitName(rawValue[1:])
+		if split.name != "" && split.rest == "" {
+			return map[string]any{"type": "variable", "name": split.name}, true
+		}
+		p.pushDiagnostic(variableNameDiagnosticCode(rawValue[1:], 0), "Option variable value must be a valid variable name.", start, end)
+		return nil, false
+	}
+	return parseLiteralOrVariable(rawValue), true
 }
 
 type assignmentParts struct {
@@ -971,7 +1000,7 @@ func parseQuotedLiteral(input string) (literalSplit, bool) {
 				output.WriteRune(escaped)
 				index += escapedSize
 			} else {
-				output.WriteRune('\\')
+				return literalSplit{}, false
 			}
 		} else {
 			output.WriteRune(r)
@@ -1087,7 +1116,7 @@ func isNameStart(r rune) bool {
 	if r <= 0x7f {
 		return isASCIINameStart(r)
 	}
-	return r >= 0xa1 && r <= 0x10fffd && !isBidiMarker(r) && !isControl(r) && !isSurrogate(r) && !isSyntaxWhitespace(r) && !isNoncharacter(r)
+	return r >= 0xa1 && r <= 0x10fffd && !isBidiMarker(r) && !isControl(r) && !isSurrogate(r) && !isSyntaxWhitespace(r) && !unicode.IsSpace(r) && !isNoncharacter(r)
 }
 
 func isNameChar(r rune) bool {
@@ -1107,7 +1136,7 @@ func isSyntaxWhitespace(r rune) bool {
 }
 
 func isWhitespace(r rune) bool {
-	return unicode.IsSpace(r)
+	return r == '\t' || r == '\n' || r == '\r' || r == ' ' || r == '\u3000'
 }
 
 func isControl(r rune) bool {

@@ -272,7 +272,7 @@ private class Parser(
             return ""
         }
         val cp = peekCodePoint()
-        return if (cp == code("{") || cp == code("}") || cp == code("\\")) advanceCodePoint() else "\\"
+        return if (cp == code("{") || cp == code("}") || cp == code("|") || cp == code("\\")) advanceCodePoint() else "\\"
     }
 
     private fun parseBracedPatternPart(): Map<String, Any?>? {
@@ -372,7 +372,7 @@ private class Parser(
         }
         if (rest.isEmpty()) return expression
         val tail = parseTail(rest, start, end) ?: return null
-        return expressionModel(asMap(expression["arg"]), tail.function, tail.attributes)
+        return expressionModel(expression["arg"] as? Map<String, Any?>, tail.function, tail.attributes)
     }
 
     private fun restAfterOperand(rest: String, start: Int, end: Int): String? {
@@ -482,7 +482,31 @@ private class Parser(
             pushDiagnostic("invalid-function-option", "Option key must be a valid identifier.", start, end)
             return null
         }
-        return NamedParse(split.name, parseLiteralOrVariable(stripSyntaxWhitespace(assignment.rawValue)), assignment.nextIndex)
+        val value = parseOptionValue(assignment.rawValue, start, end) ?: return null
+        return NamedParse(split.name, value, assignment.nextIndex)
+    }
+
+    private fun parseOptionValue(rawValueInput: String, start: Int, end: Int): Map<String, Any?>? {
+        val rawValue = stripSyntaxWhitespace(rawValueInput)
+        if (rawValue.startsWith("|")) {
+            val split = parseQuotedLiteral(rawValue)
+            if (split == null) {
+                pushDiagnostic("unclosed-quoted-literal", "Quoted literal is missing closing '|'.", start, end)
+                return null
+            }
+            if (split.rest.isNotEmpty()) {
+                pushDiagnostic("invalid-function-option", "Option value must be a single literal or variable.", start, end)
+                return null
+            }
+            return linkedMapOf("type" to "literal", "value" to split.value)
+        }
+        if (rawValue.startsWith("$")) {
+            val split = splitName(rawValue.drop(1))
+            if (split.name.isNotEmpty() && split.rest.isEmpty()) return linkedMapOf("type" to "variable", "name" to split.name)
+            pushDiagnostic(variableNameDiagnosticCode(rawValue.drop(1)), "Option variable value must be a valid variable name.", start, end)
+            return null
+        }
+        return parseLiteralOrVariable(rawValue)
     }
 
     private fun parseRequiredAssignment(tokens: List<String>, index: Int, start: Int, end: Int): Assignment? {
@@ -795,7 +819,7 @@ private fun parseQuotedLiteral(input: String): QuotedSplit? {
                 output.appendCodePoint(escaped)
                 index += Character.charCount(escaped)
             } else {
-                output.append("\\")
+                return null
             }
         } else {
             output.appendCodePoint(cp)
@@ -889,7 +913,7 @@ private fun isNameStart(cp: Int): Boolean =
     if (cp <= 0x7f) {
         isAsciiNameStart(cp)
     } else {
-        cp in 0x00a1..0x10fffd && !isBidiMarker(cp) && !isControl(cp) && !isSurrogate(cp) && !isSyntaxWhitespace(cp) && !isNoncharacter(cp)
+        cp in 0x00a1..0x10fffd && !isBidiMarker(cp) && !isControl(cp) && !isSurrogate(cp) && !isSyntaxWhitespace(cp) && !isUnicodeWhitespace(cp) && !isNoncharacter(cp)
     }
 
 private fun isNameChar(cp: Int): Boolean =
@@ -911,7 +935,8 @@ private fun isMark(cp: Int): Boolean = when (Character.getType(cp)) {
 
 private fun isBidiMarker(cp: Int): Boolean = cp in bidiMarkers
 private fun isSyntaxWhitespace(cp: Int): Boolean = isWhitespace(cp) || isBidiMarker(cp)
-private fun isWhitespace(cp: Int): Boolean = cp >= 0 && Character.isWhitespace(cp)
+private fun isWhitespace(cp: Int): Boolean = cp == code("\t") || cp == code("\n") || cp == code("\r") || cp == code(" ") || cp == 0x3000
+private fun isUnicodeWhitespace(cp: Int): Boolean = cp >= 0 && (Character.isWhitespace(cp) || Character.isSpaceChar(cp))
 private fun isControl(cp: Int): Boolean = cp in 0..0x1f || cp in 0x7f..0x9f
 private fun isSurrogate(cp: Int): Boolean = cp in 0xd800..0xdfff
 private fun isNoncharacter(cp: Int): Boolean = cp in 0xfdd0..0xfdef || cp and 0xfffe == 0xfffe

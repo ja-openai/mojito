@@ -173,7 +173,7 @@ final class SampleCatalogFunctions {
             }
         }
 
-        String direction = seconds < 0 ? "past" : "future";
+        String direction = isNegativeRelativeTime(seconds) ? "past" : "future";
         String category = PluralRules.selectCardinalPluralCategory(call.locale(), quantity);
         String pattern = relativeTimePattern(call.locale(), style, selectedUnit, direction, category);
         return pattern.replace("{0}", Long.toString(quantity));
@@ -250,13 +250,14 @@ final class SampleCatalogFunctions {
     }
 
     private static String relativeOffset(double seconds, long quantity) {
-        if (seconds == 0) {
+        if (quantity == 0) {
             return "0";
         }
-        if (quantity != 1) {
-            return null;
-        }
-        return seconds < 0 ? "-1" : "1";
+        return isNegativeRelativeTime(seconds) ? "-" + quantity : Long.toString(quantity);
+    }
+
+    private static boolean isNegativeRelativeTime(double seconds) {
+        return seconds < 0 || Double.doubleToRawLongBits(seconds) == Double.doubleToRawLongBits(-0.0d);
     }
 
     private static String relativeTerm(String locale, String style, String unit, String offset)

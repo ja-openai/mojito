@@ -239,6 +239,19 @@ public final class Conformance {
             }
             checkedCases++;
         }
+        for (Object rawCase : arrayOrEmpty(fixture.get("featureLookupChains"))) {
+            Map<String, Object> item = object(rawCase);
+            List<String> actual = LocaleKey.featureLookupChain(
+                    string(item.get("source")), stringMapOrEmpty(item.get("parents")));
+            List<String> expected = arrayOrEmpty(item.get("expected")).stream()
+                    .map(Conformance::string)
+                    .toList();
+            if (!actual.equals(expected)) {
+                throw new ConformanceFailure(String.format(
+                        "%s: expected feature lookup chain %s, got %s", fixturePath.getFileName(), expected, actual));
+            }
+            checkedCases++;
+        }
         return checkedCases;
     }
 
@@ -267,6 +280,11 @@ public final class Conformance {
 
     private static String string(Object value) {
         return (String) value;
+    }
+
+    private static Map<String, String> stringMapOrEmpty(Object value) {
+        return objectOrEmpty(value).entrySet().stream()
+                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, entry -> string(entry.getValue())));
     }
 
     private static String stringOrDefault(Object value, String fallback) {
