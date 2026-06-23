@@ -750,6 +750,44 @@ private func runRelativeTimeCoreCheck(arguments: [String]) throws {
     )
     try expectValue("relative-time direct API", direct, "in 1h")
 
+    let duplicatePatternSetData = MF2RelativeTimeCore.Data(
+        localeMap: ["en": "dup"],
+        patternSets: [
+            MF2RelativeTimeCore.PatternSet(
+                id: "dup",
+                data: [
+                    "narrow": [
+                        "hour": MF2RelativeTimeCore.UnitData(
+                            future: ["one": "bad {0}h", "other": "bad {0}h"]
+                        )
+                    ]
+                ]
+            ),
+            MF2RelativeTimeCore.PatternSet(
+                id: "dup",
+                data: [
+                    "narrow": [
+                        "hour": MF2RelativeTimeCore.UnitData(
+                            future: ["one": "in {0}h", "other": "in {0}h"]
+                        )
+                    ]
+                ]
+            ),
+        ]
+    )
+    let duplicatePatternSetFormatter = try MF2RelativeTimeCore.Formatter(data: duplicatePatternSetData)
+    let duplicatePatternSetOutput = try duplicatePatternSetFormatter.format(
+        .number("3600"),
+        options: MF2RelativeTimeCore.Options(
+            locale: "en",
+            style: .narrow,
+            numeric: .always,
+            policy: .precise,
+            unit: .auto
+        )
+    )
+    try expectValue("relative-time duplicate pattern set id", duplicatePatternSetOutput, "in 1h")
+
     let emptyLocale = try MF2RelativeTimeCore.format(
         .number("3600"),
         data: data,

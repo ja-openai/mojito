@@ -270,11 +270,11 @@ public enum MF2RelativeTimeCore {
                 throw MF2Error.missingLocaleData("Relative-time core data has an unsupported shape.")
             }
             localeMap = data.localeMap
-            patternSets = Dictionary(
-                uniqueKeysWithValues: data.patternSets
-                    .filter { !$0.id.isEmpty && !$0.data.isEmpty }
-                    .map { ($0.id, $0) }
-            )
+            var nextPatternSets: [String: PatternSet] = [:]
+            for patternSet in data.patternSets where !patternSet.id.isEmpty && !patternSet.data.isEmpty {
+                nextPatternSets[patternSet.id] = patternSet
+            }
+            patternSets = nextPatternSets
             if patternSets.isEmpty {
                 throw MF2Error.missingLocaleData("Relative-time core data has an unsupported shape.")
             }

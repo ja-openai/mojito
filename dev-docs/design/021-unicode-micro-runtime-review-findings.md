@@ -196,7 +196,9 @@ branch is under active implementation.
   pattern-set entries with empty ids or empty data maps as MF2
   `missing-locale-data` across JavaScript, Python, PHP, Go, Java, Kotlin, Rust,
   and Swift instead of accepting unusable generated-data shells and failing
-  later in locale lookup.
+  later in locale lookup. Swift also normalizes duplicate pattern-set ids with
+  the same last-entry-wins map preparation used by the other runtimes instead
+  of trapping in `Dictionary(uniqueKeysWithValues:)`.
 - Relative-time empty-locale fallback: JavaScript direct relative-time core now
   normalizes an explicit empty locale to the default `en`, matching Python,
   PHP, Go, Java, Kotlin, Rust, and Swift. Direct relative-time tests in each
