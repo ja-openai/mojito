@@ -424,24 +424,6 @@ const JSON_CONFIG_SCHEMA_PRESETS: JsonConfigSchemaPreset[] = [
     schema: {
       $schema: 'https://json-schema.org/draft/2020-12/schema',
       type: 'object',
-      properties: {
-        messages: {
-          type: 'object',
-          additionalProperties: {
-            type: 'object',
-            properties: {
-              defaultMessage: { type: 'string' },
-              description: { type: 'string' },
-              translations: {
-                type: 'object',
-                additionalProperties: { type: 'string' },
-              },
-            },
-            required: ['defaultMessage'],
-            additionalProperties: true,
-          },
-        },
-      },
       additionalProperties: true,
     },
   },
