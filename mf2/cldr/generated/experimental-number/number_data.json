@@ -65,14 +65,19 @@
         }
       },
       "decimalPattern": "#,##0.###",
+      "minimumGroupingDigits": 1,
       "numberingSystem": "arab",
+      "numberingSystemDigits": "\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669",
       "numbersSourceLocale": "ar-EG",
+      "percentPattern": "#,##0%",
       "requestedLocale": "ar-EG",
       "symbols": {
         "approximatelySign": "~",
         "decimal": "\u066b",
         "group": "\u066c",
         "minusSign": "\u061c-",
+        "perMille": "\u0609",
+        "percentSign": "\u066a\u061c",
         "plusSign": "\u061c+"
       }
     },
@@ -114,14 +119,19 @@
         }
       },
       "decimalPattern": "#,##0.###",
+      "minimumGroupingDigits": 1,
       "numberingSystem": "latn",
+      "numberingSystemDigits": "0123456789",
       "numbersSourceLocale": "de",
+      "percentPattern": "#,##0\u00a0%",
       "requestedLocale": "de-DE",
       "symbols": {
         "approximatelySign": "\u2248",
         "decimal": ",",
         "group": ".",
         "minusSign": "-",
+        "perMille": "\u2030",
+        "percentSign": "%",
         "plusSign": "+"
       }
     },
@@ -163,14 +173,19 @@
         }
       },
       "decimalPattern": "#,##0.###",
+      "minimumGroupingDigits": 1,
       "numberingSystem": "latn",
+      "numberingSystemDigits": "0123456789",
       "numbersSourceLocale": "en",
+      "percentPattern": "#,##0%",
       "requestedLocale": "en-US",
       "symbols": {
         "approximatelySign": "~",
         "decimal": ".",
         "group": ",",
         "minusSign": "-",
+        "perMille": "\u2030",
+        "percentSign": "%",
         "plusSign": "+"
       }
     },
@@ -212,14 +227,19 @@
         }
       },
       "decimalPattern": "#,##0.###",
+      "minimumGroupingDigits": 1,
       "numberingSystem": "latn",
+      "numberingSystemDigits": "0123456789",
       "numbersSourceLocale": "fr",
+      "percentPattern": "#,##0\u00a0%",
       "requestedLocale": "fr-FR",
       "symbols": {
         "approximatelySign": "\u2243",
         "decimal": ",",
         "group": "\u202f",
         "minusSign": "-",
+        "perMille": "\u2030",
+        "percentSign": "%",
         "plusSign": "+"
       }
     },
@@ -261,14 +281,19 @@
         }
       },
       "decimalPattern": "#,##0.###",
+      "minimumGroupingDigits": 1,
       "numberingSystem": "latn",
+      "numberingSystemDigits": "0123456789",
       "numbersSourceLocale": "ja",
+      "percentPattern": "#,##0%",
       "requestedLocale": "ja-JP",
       "symbols": {
         "approximatelySign": "\u7d04",
         "decimal": ".",
         "group": ",",
         "minusSign": "-",
+        "perMille": "\u2030",
+        "percentSign": "%",
         "plusSign": "+"
       }
     }

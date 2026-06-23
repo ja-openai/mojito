@@ -1888,16 +1888,22 @@ DATA = {'cardinal': {'locales': {'af': 'r0',
                                                         'ranges': [[13, 13]]}]]},
                                        {'category': 'other', 'condition': None}],
                         'id': 'r24'}]}}
+MAX_PLURAL_OPERAND_LENGTH = 256
+MAX_PLURAL_OPERAND_DIGITS = 1000
 
 
 class NumberOperands:
     def __init__(self, value: Any):
         raw = str(value).strip()
+        if len(raw) > MAX_PLURAL_OPERAND_LENGTH:
+            raise ValueError("Unsupported plural operand value")
         try:
             decimal = Decimal(raw).copy_abs()
         except InvalidOperation as exc:
             raise ValueError(f"Unsupported plural operand value: {value!r}") from exc
         if not decimal.is_finite():
+            raise ValueError(f"Unsupported plural operand value: {value!r}")
+        if abs(decimal.adjusted()) >= MAX_PLURAL_OPERAND_DIGITS:
             raise ValueError(f"Unsupported plural operand value: {value!r}")
 
         normalized = raw.lstrip("-+").lower()

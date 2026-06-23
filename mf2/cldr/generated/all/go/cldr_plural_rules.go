@@ -521,9 +521,11 @@ type numberOperands struct {
 	c int
 }
 
+const maxPluralOperandLength = 256
+
 func newNumberOperands(value any) (numberOperands, bool) {
 	raw := strings.TrimSpace(valueToString(value))
-	if raw == "" {
+	if raw == "" || len(raw) > maxPluralOperandLength {
 		return numberOperands{}, false
 	}
 	parsed, err := strconv.ParseFloat(raw, 64)

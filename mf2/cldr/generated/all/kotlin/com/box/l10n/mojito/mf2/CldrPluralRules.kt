@@ -1,6 +1,8 @@
 // Generated from Unicode CLDR by mf2/cldr/update_generated.sh; do not edit by hand.
 package com.box.l10n.mojito.mf2
 
+private const val MAX_PLURAL_OPERAND_LENGTH = 256
+
 internal object CldrPluralRules {
     fun selectCardinal(locale: String, operands: NumberOperands): String =
         when (lookupRuleId(CARDINAL_LOCALES, CARDINAL_PARENTS, locale)) {
@@ -459,6 +461,7 @@ internal data class NumberOperands(
     companion object {
         fun fromString(value: String): NumberOperands? {
             val raw = value.trim()
+            if (raw.length > MAX_PLURAL_OPERAND_LENGTH) return null
             val parsed = raw.toDoubleOrNull()?.let { kotlin.math.abs(it) } ?: return null
             if (!parsed.isFinite()) return null
             val normalized = raw.trimStart('-', '+').lowercase()

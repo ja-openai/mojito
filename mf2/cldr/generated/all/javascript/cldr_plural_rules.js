@@ -1,6 +1,8 @@
 // Generated from Unicode CLDR by mf2/cldr/update_generated.sh; do not edit by hand.
 import { pluralLookupChain } from "./locale-key.js";
 
+const MAX_PLURAL_OPERAND_LENGTH = 256;
+
 export class NumberOperands {
   constructor(value) {
     if (typeof value === "number" && Number.isFinite(value) && Number.isInteger(value)) {
@@ -15,6 +17,9 @@ export class NumberOperands {
       return;
     }
     const raw = String(value).trim();
+    if (raw.length > MAX_PLURAL_OPERAND_LENGTH) {
+      throw new RangeError("Unsupported plural operand value");
+    }
     if (!/^[+-]?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(raw)) {
       throw new RangeError(`Unsupported plural operand value: ${value}`);
     }

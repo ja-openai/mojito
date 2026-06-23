@@ -13,8 +13,11 @@ REQUIRED_LOCALE_FIELDS = (
     "numbersSourceLocale",
     "currenciesSourceLocale",
     "numberingSystem",
+    "numberingSystemDigits",
+    "minimumGroupingDigits",
     "symbols",
     "decimalPattern",
+    "percentPattern",
     "currencyPattern",
     "currencies",
 )
@@ -75,9 +78,12 @@ def validate_locale_data(
     for symbol in REQUIRED_SYMBOLS:
         if not isinstance(symbols.get(symbol), str) or not symbols[symbol]:
             raise ValueError(f"{locale} missing symbol {symbol}")
+    if "percentSign" not in symbols or not isinstance(symbols["percentSign"], str):
+        raise ValueError(f"{locale} missing percentSign")
 
     for field in (
         "decimalPattern",
+        "percentPattern",
         "currencyPattern",
         "numberingSystem",
         "numbersSourceLocale",
@@ -85,6 +91,11 @@ def validate_locale_data(
     ):
         if not isinstance(locale_data[field], str) or not locale_data[field]:
             raise ValueError(f"{locale} has invalid {field}")
+    if not isinstance(locale_data["minimumGroupingDigits"], int):
+        raise ValueError(f"{locale} has invalid minimumGroupingDigits")
+    digits = locale_data["numberingSystemDigits"]
+    if digits is not None and (not isinstance(digits, str) or len(digits) != 10):
+        raise ValueError(f"{locale} has invalid numberingSystemDigits")
 
     currency_symbols = require_dict(locale_data, "currencies")
     for currency in currencies:

@@ -462,16 +462,22 @@ except ImportError:
     from _locale_key import plural_lookup_chain
 
 DATA = {payload}
+MAX_PLURAL_OPERAND_LENGTH = 256
+MAX_PLURAL_OPERAND_DIGITS = 1000
 
 
 class NumberOperands:
     def __init__(self, value: Any):
         raw = str(value).strip()
+        if len(raw) > MAX_PLURAL_OPERAND_LENGTH:
+            raise ValueError("Unsupported plural operand value")
         try:
             decimal = Decimal(raw).copy_abs()
         except InvalidOperation as exc:
             raise ValueError(f"Unsupported plural operand value: {{value!r}}") from exc
         if not decimal.is_finite():
+            raise ValueError(f"Unsupported plural operand value: {{value!r}}")
+        if abs(decimal.adjusted()) >= MAX_PLURAL_OPERAND_DIGITS:
             raise ValueError(f"Unsupported plural operand value: {{value!r}}")
 
         normalized = raw.lstrip("-+").lower()
@@ -556,6 +562,8 @@ def write_rust(path: Path, data: dict[str, Any]) -> None:
         f"// {GENERATED_NOTICE}",
         "use crate::locale_key::plural_lookup_chain;",
         "",
+        "const MAX_PLURAL_OPERAND_LENGTH: usize = 256;",
+        "",
         "",
         "#[derive(Debug, Clone, Copy)]",
         "pub struct NumberOperands {",
@@ -571,6 +579,7 @@ def write_rust(path: Path, data: dict[str, Any]) -> None:
         "",
         "impl NumberOperands {",
         "    pub fn from_str(value: &str) -> Option<Self> {",
+        "        if value.len() > MAX_PLURAL_OPERAND_LENGTH { return None; }",
         "        let n = value.parse::<f64>().ok()?.abs();",
         "        if !n.is_finite() { return None; }",
         "        let normalized = value.trim_start_matches(['-', '+']).to_ascii_lowercase();",
@@ -711,6 +720,9 @@ def write_swift(path: Path, data: dict[str, Any]) -> None:
         f"// {GENERATED_NOTICE}",
         "import Foundation",
         "",
+        "private let maxPluralOperandLength = 256",
+        "private let maxSafePluralOperandInteger = 9_000_000_000_000_000_000.0",
+        "",
         "struct NumberOperands {",
         "    let n: Double",
         "    let i: Int64",
@@ -722,8 +734,10 @@ def write_swift(path: Path, data: dict[str, Any]) -> None:
         "    let c: Int64",
         "",
         "    init?(_ value: String) {",
+        "        guard value.count <= maxPluralOperandLength else { return nil }",
         "        guard let parsed = Double(value), parsed.isFinite else { return nil }",
         "        let n = abs(parsed)",
+        "        guard n <= maxSafePluralOperandInteger else { return nil }",
         "        let normalized = value.trimmingCharacters(in: CharacterSet(charactersIn: \"-+\")).lowercased()",
         "        let base = normalized.split(separator: \"e\", maxSplits: 1).first.map(String.init) ?? normalized",
         "        let fraction = base.split(separator: \".\", maxSplits: 1).dropFirst().first.map(String.init) ?? \"\"",
@@ -747,7 +761,7 @@ def write_swift(path: Path, data: dict[str, Any]) -> None:
         "        case \"t\": t",
         "        case \"e\": e",
         "        case \"c\": c",
-        "        case \"n\": Int64(n.rounded(.towardZero))",
+        "        case \"n\": i",
         "        default: 0",
         "        }",
         "    }",
@@ -857,6 +871,8 @@ def write_kotlin(path: Path, data: dict[str, Any], kotlin_package: str) -> None:
         f"// {GENERATED_NOTICE}",
         f"package {kotlin_package}",
         "",
+        "private const val MAX_PLURAL_OPERAND_LENGTH = 256",
+        "",
         "internal object CldrPluralRules {",
         "    fun selectCardinal(locale: String, operands: NumberOperands): String =",
         "        when (lookupRuleId(CARDINAL_LOCALES, CARDINAL_PARENTS, locale)) {",
@@ -927,6 +943,7 @@ def write_kotlin(path: Path, data: dict[str, Any], kotlin_package: str) -> None:
             "    companion object {",
             "        fun fromString(value: String): NumberOperands? {",
             "            val raw = value.trim()",
+            "            if (raw.length > MAX_PLURAL_OPERAND_LENGTH) return null",
             "            val parsed = raw.toDoubleOrNull()?.let { kotlin.math.abs(it) } ?: return null",
             "            if (!parsed.isFinite()) return null",
             '            val normalized = raw.trimStart(\'-\', \'+\').lowercase()',
@@ -1079,6 +1096,8 @@ def write_java(path: Path, data: dict[str, Any], java_package: str) -> None:
             "    }",
             "",
             "    static final class NumberOperands {",
+            "        private static final int MAX_OPERAND_LENGTH = 256;",
+            "",
             "        private final double n;",
             "        private final long i;",
             "        private final long v;",
@@ -1104,6 +1123,9 @@ def write_java(path: Path, data: dict[str, Any], java_package: str) -> None:
             "                return null;",
             "            }",
             "            String trimmed = raw.trim();",
+            "            if (trimmed.length() > MAX_OPERAND_LENGTH) {",
+            "                return null;",
+            "            }",
             "            double parsed;",
             "            try {",
             "                parsed = Double.parseDouble(trimmed);",
@@ -1186,6 +1208,8 @@ def write_javascript(path: Path, data: dict[str, Any]) -> None:
         f"// {GENERATED_NOTICE}",
         "import { pluralLookupChain } from \"./locale-key.js\";",
         "",
+        "const MAX_PLURAL_OPERAND_LENGTH = 256;",
+        "",
         "export class NumberOperands {",
         "  constructor(value) {",
         "    if (typeof value === \"number\" && Number.isFinite(value) && Number.isInteger(value)) {",
@@ -1200,6 +1224,9 @@ def write_javascript(path: Path, data: dict[str, Any]) -> None:
         "      return;",
         "    }",
         "    const raw = String(value).trim();",
+        "    if (raw.length > MAX_PLURAL_OPERAND_LENGTH) {",
+        "      throw new RangeError(\"Unsupported plural operand value\");",
+        "    }",
         "    if (!/^[+-]?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$/.test(raw)) {",
         "      throw new RangeError(`Unsupported plural operand value: ${value}`);",
         "    }",
@@ -1528,9 +1555,11 @@ def write_go(path: Path, data: dict[str, Any], go_package: str) -> None:
             "    c int",
             "}",
             "",
+            "const maxPluralOperandLength = 256",
+            "",
             "func newNumberOperands(value any) (numberOperands, bool) {",
             "    raw := strings.TrimSpace(valueToString(value))",
-            "    if raw == \"\" { return numberOperands{}, false }",
+            "    if raw == \"\" || len(raw) > maxPluralOperandLength { return numberOperands{}, false }",
             "    parsed, err := strconv.ParseFloat(raw, 64)",
             "    if err != nil || math.IsInf(parsed, 0) || math.IsNaN(parsed) { return numberOperands{}, false }",
             "    normalized := strings.ToLower(strings.TrimLeft(raw, \"+-\"))",
