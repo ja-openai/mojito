@@ -153,9 +153,16 @@ def _format_relative_time_prepared(
 
 
 def _prepare_data(data: Mapping[str, Any]) -> _RelativeTimeData:
+    if not isinstance(data, Mapping):
+        raise MF2Error("missing-locale-data", "Relative-time core data has an unsupported shape.")
     locale_map = data.get("localeMap")
     pattern_sets = data.get("patternSets")
-    if not isinstance(locale_map, Mapping) or not isinstance(pattern_sets, list):
+    if (
+        not isinstance(locale_map, Mapping)
+        or not locale_map
+        or not isinstance(pattern_sets, list)
+        or not pattern_sets
+    ):
         raise MF2Error("missing-locale-data", "Relative-time core data has an unsupported shape.")
 
     decoded_pattern_sets: dict[str, Mapping[str, Any]] = {}
@@ -166,6 +173,8 @@ def _prepare_data(data: Mapping[str, Any]) -> _RelativeTimeData:
             and isinstance(item.get("data"), Mapping)
         ):
             decoded_pattern_sets[item["id"]] = item["data"]
+    if not decoded_pattern_sets:
+        raise MF2Error("missing-locale-data", "Relative-time core data has an unsupported shape.")
     return _RelativeTimeData(locale_map=locale_map, pattern_sets=decoded_pattern_sets)
 
 

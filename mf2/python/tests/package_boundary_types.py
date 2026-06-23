@@ -54,7 +54,22 @@ registry = FunctionRegistry.portable().with_function("app:upper", upper)
 function: MF2FunctionAnnotation = {"type": "function", "name": "string"}
 assert registry.has_formatter(function)
 
-relative_time_data: dict[str, object] = {"localeMap": {}, "patternSets": []}
+relative_time_data: dict[str, object] = {
+    "localeMap": {"en": "rt"},
+    "patternSets": [
+        {
+            "id": "rt",
+            "data": {
+                "short": {
+                    "minute": {
+                        "future": {"other": "in {0} min."},
+                        "past": {"other": "{0} min. ago"},
+                    }
+                }
+            },
+        }
+    ],
+}
 relative_time_registry = relative_time_core_function_registry(relative_time_data)
 assert_type(relative_time_registry, FunctionRegistry)
 relative_time_output = format_relative_time_core(

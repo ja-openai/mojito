@@ -133,6 +133,11 @@ branch is under active implementation.
   fixed-width integer clamps, and implementation-defined casts for huge finite
   operands such as `1e30`. The shared relative-time fixture covers the reviewer
   repro and direct API tests cover the same bound.
+- Relative-time data validation: data-explicit relative-time constructors and
+  registry helpers now reject empty `localeMap` or `patternSets` resources as
+  MF2 `missing-locale-data` across JavaScript, Python, PHP, Go, Java, Kotlin,
+  Rust, and Swift instead of accepting unusable generated-data shells and
+  failing later in locale lookup.
 - Relative-time operand grammar: relative-time-core string operands now use the
   same ASCII decimal grammar across JavaScript, Python, Go, Java, Kotlin, PHP,
   Rust, and Swift before host numeric parsing, rejecting host extensions such as

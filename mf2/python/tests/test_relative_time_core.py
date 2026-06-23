@@ -107,6 +107,33 @@ class RelativeTimeCoreTest(unittest.TestCase):
         self.assertTrue(
             relative_time_core_function_registry(self.data).has_formatter({"name": "relativeTime"})
         )
+        with self.assertRaises(MF2Error) as empty_locale_map:
+            format_relative_time_core(
+                1,
+                data={
+                    "localeMap": {},
+                    "patternSets": [
+                        {
+                            "id": "rt",
+                            "data": {
+                                "short": {
+                                    "second": {"future": {"other": "in {0} sec."}}
+                                }
+                            },
+                        }
+                    ],
+                },
+            )
+        self.assertEqual("missing-locale-data", empty_locale_map.exception.code)
+        with self.assertRaises(MF2Error) as empty_pattern_sets:
+            format_relative_time_core(
+                1,
+                data={"localeMap": {"en": "rt"}, "patternSets": []},
+            )
+        self.assertEqual("missing-locale-data", empty_pattern_sets.exception.code)
+        with self.assertRaises(MF2Error) as empty_registry:
+            relative_time_core_function_registry({"localeMap": {"en": "rt"}, "patternSets": []})
+        self.assertEqual("missing-locale-data", empty_registry.exception.code)
         with self.assertRaises(MF2Error) as error:
             format_relative_time_core(
                 "1e30",
