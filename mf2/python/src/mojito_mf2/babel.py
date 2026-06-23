@@ -202,7 +202,14 @@ def _parse_source_decimal(source: object | None) -> Decimal | None:
 
 
 def _is_decimal_source_function(function: dict[str, Any]) -> bool:
-    return function.get("name") in {"number", "integer", "percent", "offset", "currency"}
+    return function.get("name") in {
+        "number",
+        "integer",
+        "percent",
+        "offset",
+        "currency",
+        "relativeTime",
+    }
 
 
 def _inherited_option_value(call: FunctionCall, name: str) -> str | None:

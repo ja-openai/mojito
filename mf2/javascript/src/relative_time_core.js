@@ -1,4 +1,5 @@
 import { selectCardinal } from "./cldr_plural_rules.js";
+import { isDecimalSourceFunction } from "./function_support.js";
 import { localeLookupChain } from "./locale-key.js";
 
 const DEFAULT_LOCALE = "en";
@@ -90,16 +91,32 @@ export function formatRelativeTimeCoreToParts(value, options = {}) {
 
 export function createRelativeTimeCoreFunctionRegistry(FunctionRegistry, data) {
   preparedData(data);
-  return FunctionRegistry.portable().withFunction("relativeTime", (call) =>
-    formatRelativeTimeCore(call.rawValue ?? call.value, {
+  return FunctionRegistry.portable().withFunction("relativeTime", (call) => {
+    const options = {
       locale: call.locale,
       style: call.optionValue("style", "short"),
       numeric: call.optionValue("numeric", "always"),
       policy: call.optionValue("policy", "precise"),
       unit: call.optionValue("unit", "auto"),
       data,
-    }),
-  );
+    };
+    try {
+      return formatRelativeTimeCore(call.rawValue ?? call.value, options);
+    } catch (error) {
+      const sourceValue = relativeTimeSourceValue(call.inheritedSource);
+      if (!(error instanceof RelativeTimeCoreError) || error.code !== "bad-operand" || sourceValue == null) {
+        throw error;
+      }
+      return formatRelativeTimeCore(sourceValue, options);
+    }
+  });
+}
+
+function relativeTimeSourceValue(source) {
+  for (let current = source; current != null; current = current.inherited) {
+    if (isDecimalSourceFunction(current.function)) return current.value;
+  }
+  return null;
 }
 
 function preparedData(data) {

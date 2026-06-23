@@ -193,5 +193,7 @@ private fun invalidNumericSelector(functionRef: Map<String, Any?>, source: Mf2Fu
     return numericSelectUsesVariable(functionRef) || (select != "exact" && inheritedExactNumericSource(source))
 }
 
-private fun isDecimalSourceFunction(functionRef: Map<String, Any?>): Boolean =
-    isNumericFunction(functionRef) || functionRef["name"] == "currency"
+internal fun isDecimalSourceFunction(functionRef: Map<String, Any?>): Boolean =
+    isNumericFunction(functionRef) ||
+        functionRef["name"] == "currency" ||
+        functionRef["name"] == "relativeTime"

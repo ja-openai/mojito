@@ -561,7 +561,7 @@ private func isNumericFunction(_ function: MF2Function) -> Bool {
 }
 
 private func isDecimalSourceFunction(_ function: MF2Function) -> Bool {
-    isNumericFunction(function) || function.name == "currency"
+    isNumericFunction(function) || function.name == "currency" || function.name == "relativeTime"
 }
 
 private func functionOptionLiteral(_ function: MF2Function, name: String) -> String? {

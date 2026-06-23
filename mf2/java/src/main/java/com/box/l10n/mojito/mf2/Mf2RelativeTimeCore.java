@@ -147,15 +147,34 @@ public final class Mf2RelativeTimeCore {
     }
 
     private String formatCall(Mf2FunctionRegistry.FunctionCall call) throws Mf2Exception {
-        return format(
-                call.rawValue() != null ? call.rawValue() : call.value(),
-                Options.builder()
-                        .locale(call.locale())
-                        .style(Style.fromName(call.optionValue("style", "short")))
-                        .numeric(Numeric.fromName(call.optionValue("numeric", "always")))
-                        .policy(Policy.fromName(call.optionValue("policy", "precise")))
-                        .unit(Unit.fromName(call.optionValue("unit", "auto")))
-                        .build());
+        Options options = Options.builder()
+                .locale(call.locale())
+                .style(Style.fromName(call.optionValue("style", "short")))
+                .numeric(Numeric.fromName(call.optionValue("numeric", "always")))
+                .policy(Policy.fromName(call.optionValue("policy", "precise")))
+                .unit(Unit.fromName(call.optionValue("unit", "auto")))
+                .build();
+        Object value = call.rawValue() != null ? call.rawValue() : call.value();
+        try {
+            return format(value, options);
+        } catch (Mf2Exception error) {
+            String sourceValue = relativeTimeSourceValue(call.inheritedSource());
+            if (!"bad-operand".equals(error.code()) || sourceValue == null) {
+                throw error;
+            }
+            return format(sourceValue, options);
+        }
+    }
+
+    private static String relativeTimeSourceValue(Mf2FunctionRegistry.FunctionSourceRef source) {
+        for (Mf2FunctionRegistry.FunctionSourceRef current = source;
+                current != null;
+                current = current.inheritedSource()) {
+            if (Mf2FunctionSupport.isDecimalSourceFunction(current.function())) {
+                return current.value();
+            }
+        }
+        return null;
     }
 
     private String relativeTerm(String locale, Style style, Unit unit, String offset)

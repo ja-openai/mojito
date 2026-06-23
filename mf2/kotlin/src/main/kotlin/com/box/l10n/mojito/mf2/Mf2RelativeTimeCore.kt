@@ -118,17 +118,31 @@ object Mf2RelativeTimeCore {
             options: Options = Options(),
         ): List<Mf2Part> = listOf(mapOf("type" to "text", "value" to format(value, options)))
 
-        private fun formatCall(call: Mf2FunctionCall): String =
-            format(
-                call.rawValue ?: call.value,
-                Options(
-                    locale = call.locale,
-                    style = Style.fromName(call.optionValue("style", "short") ?: "short"),
-                    numeric = Numeric.fromName(call.optionValue("numeric", "always") ?: "always"),
-                    policy = Policy.fromName(call.optionValue("policy", "precise") ?: "precise"),
-                    unit = Unit.fromName(call.optionValue("unit", "auto") ?: "auto"),
-                ),
+        private fun formatCall(call: Mf2FunctionCall): String {
+            val options = Options(
+                locale = call.locale,
+                style = Style.fromName(call.optionValue("style", "short") ?: "short"),
+                numeric = Numeric.fromName(call.optionValue("numeric", "always") ?: "always"),
+                policy = Policy.fromName(call.optionValue("policy", "precise") ?: "precise"),
+                unit = Unit.fromName(call.optionValue("unit", "auto") ?: "auto"),
             )
+            return try {
+                format(call.rawValue ?: call.value, options)
+            } catch (error: Mf2Error) {
+                if (error.code != "bad-operand") throw error
+                val sourceValue = relativeTimeSourceValue(call.inheritedSource) ?: throw error
+                format(sourceValue, options)
+            }
+        }
+
+        private fun relativeTimeSourceValue(source: Mf2FunctionSource?): String? {
+            var current = source
+            while (current != null) {
+                if (isDecimalSourceFunction(current.function)) return current.value
+                current = current.inherited
+            }
+            return null
+        }
 
         private fun relativeTerm(
             locale: String,

@@ -324,16 +324,41 @@ public enum MF2RelativeTimeCore {
         }
 
         private func formatCall(_ call: MF2FunctionCall) throws -> String {
-            try format(
-                call.rawValue,
-                options: Options(
-                    locale: call.locale,
-                    style: Style.fromName(try call.optionValue("style", default: "short") ?? "short"),
-                    numeric: Numeric.fromName(try call.optionValue("numeric", default: "always") ?? "always"),
-                    policy: Policy.fromName(try call.optionValue("policy", default: "precise") ?? "precise"),
-                    unit: Unit.fromName(try call.optionValue("unit", default: "auto") ?? "auto")
-                )
+            let options = try Options(
+                locale: call.locale,
+                style: Style.fromName(try call.optionValue("style", default: "short") ?? "short"),
+                numeric: Numeric.fromName(try call.optionValue("numeric", default: "always") ?? "always"),
+                policy: Policy.fromName(try call.optionValue("policy", default: "precise") ?? "precise"),
+                unit: Unit.fromName(try call.optionValue("unit", default: "auto") ?? "auto")
             )
+            do {
+                return try format(call.rawValue, options: options)
+            } catch let error as MF2Error {
+                guard error.code == "bad-operand", let sourceValue = relativeTimeSourceValue(call.inheritedSource) else {
+                    throw error
+                }
+                return try format(.string(sourceValue), options: options)
+            }
+        }
+
+        private func relativeTimeSourceValue(_ source: MF2FunctionSource?) -> String? {
+            var current = source
+            while let source = current {
+                if isRelativeTimeNumericSourceFunction(source.function.name) {
+                    return source.value
+                }
+                current = source.inheritedSource
+            }
+            return nil
+        }
+
+        private func isRelativeTimeNumericSourceFunction(_ name: String) -> Bool {
+            switch name {
+            case "number", "integer", "percent", "offset", "currency", "relativeTime":
+                return true
+            default:
+                return false
+            }
         }
 
         private func relativeTerm(

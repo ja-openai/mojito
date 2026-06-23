@@ -192,7 +192,9 @@ final class Mf2FunctionSupport {
         }
     }
 
-    private static boolean isDecimalSourceFunction(Mf2Message.FunctionRef function) {
-        return isNumericFunction(function) || function.name().equals("currency");
+    static boolean isDecimalSourceFunction(Mf2Message.FunctionRef function) {
+        return isNumericFunction(function)
+                || function.name().equals("currency")
+                || function.name().equals("relativeTime");
     }
 }

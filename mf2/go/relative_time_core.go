@@ -215,14 +215,33 @@ func (formatter RelativeTimeCoreFormatter) FunctionRegistry() FunctionRegistry {
 		if err != nil {
 			return "", err
 		}
-		return formatter.Format(value, RelativeTimeCoreOptions{
+		options := RelativeTimeCoreOptions{
 			Locale:  call.Locale,
 			Style:   style,
 			Numeric: numeric,
 			Policy:  policy,
 			Unit:    unit,
-		})
+		}
+		formatted, err := formatter.Format(value, options)
+		if err == nil {
+			return formatted, nil
+		}
+		code, ok := err.(Error)
+		sourceValue, hasSourceValue := relativeTimeCoreSourceValue(call.InheritedSource)
+		if !ok || code.Code != "bad-operand" || !hasSourceValue {
+			return "", err
+		}
+		return formatter.Format(sourceValue, options)
 	})
+}
+
+func relativeTimeCoreSourceValue(source *FunctionSource) (string, bool) {
+	for current := source; current != nil; current = current.Inherited {
+		if isDecimalSourceFunction(current.Function) {
+			return current.Value, true
+		}
+	}
+	return "", false
 }
 
 func formatRelativeTimeCorePrepared(value any, data relativeTimeCorePreparedData, options RelativeTimeCoreOptions) (string, error) {

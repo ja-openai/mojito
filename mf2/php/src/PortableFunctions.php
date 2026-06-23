@@ -56,7 +56,7 @@ function is_numeric_function(?array $functionRef): bool
 
 function is_decimal_source_function(?array $functionRef): bool
 {
-    return is_numeric_function($functionRef) || ($functionRef['name'] ?? '') === 'currency';
+    return is_numeric_function($functionRef) || in_array($functionRef['name'] ?? '', ['currency', 'relativeTime'], true);
 }
 
 function numeric_select_uses_variable(?array $functionRef): bool

@@ -5,7 +5,9 @@ use serde::Deserialize;
 
 use crate::cldr_plural_rules::{select_cardinal, NumberOperands};
 use crate::diagnostic::Diagnostic;
-use crate::formatter::{ArgumentValue, FormattedPart, FunctionCall, FunctionRegistry};
+use crate::formatter::{
+    ArgumentValue, FormattedPart, FunctionCall, FunctionRegistry, FunctionSourceRef,
+};
 use crate::locale_key::locale_lookup_chain;
 
 const DEFAULT_LOCALE: &str = "en";
@@ -284,7 +286,18 @@ impl RelativeTimeCoreFormatter {
         if let Some(value) = call.option_value("unit")? {
             options.unit = RelativeTimeCoreUnit::from_name(&value)?;
         }
-        self.format(call.raw_value().clone(), &options)
+        match self.format(call.raw_value().clone(), &options) {
+            Ok(formatted) => Ok(formatted),
+            Err(error) => {
+                let Some(source_value) = relative_time_source_value(call.inherited_source()) else {
+                    return Err(error);
+                };
+                if error.code != "bad-operand" {
+                    return Err(error);
+                }
+                self.format(source_value, &options)
+            }
+        }
     }
 
     fn relative_term(
@@ -440,6 +453,24 @@ fn parse_finite_number(value: &ArgumentValue) -> Result<f64, Diagnostic> {
             "Relative-time core requires a finite numeric value.",
         ))
     }
+}
+
+fn relative_time_source_value(source: Option<FunctionSourceRef<'_>>) -> Option<&str> {
+    let mut current = source;
+    while let Some(source) = current {
+        if is_relative_time_numeric_source_function(source.function().name.as_str()) {
+            return Some(source.value());
+        }
+        current = source.inherited_source();
+    }
+    None
+}
+
+fn is_relative_time_numeric_source_function(name: &str) -> bool {
+    matches!(
+        name,
+        "number" | "integer" | "percent" | "offset" | "currency" | "relativeTime"
+    )
 }
 
 fn is_decimal_number(text: &str) -> bool {

@@ -103,7 +103,7 @@ private func formatFoundationDateTime(_ call: MF2FunctionCall) throws -> String 
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
     private func formatFoundationRelativeTime(_ call: MF2FunctionCall) throws -> String {
-        let value = try parseFoundationInteger(call.value, error: .badOperand("Relative time function requires an integer operand."))
+        let value = try parseFoundationIntegerValue(call.value, source: call.inheritedSource)
         let unit = try optionOneOf(
             call,
             "unit",
@@ -119,6 +119,36 @@ private func formatFoundationDateTime(_ call: MF2FunctionCall) throws -> String 
         formatter.unitsStyle = try relativeUnitsStyle(try call.optionValue("style", default: "long") ?? "long")
         formatter.dateTimeStyle = try relativeDateTimeStyle(try call.optionValue("numeric", default: "always") ?? "always")
         return formatter.localizedString(from: try dateComponents(value: value, unit: unit))
+    }
+
+    private func parseFoundationIntegerValue(_ value: String, source: MF2FunctionSource?) throws -> Int {
+        if let parsed = try? parseFoundationInteger(
+            value,
+            error: .badOperand("Relative time function requires an integer operand.")
+        ) {
+            return parsed
+        }
+        var current = source
+        while let source = current {
+            if isRelativeTimeNumericSourceFunction(source.function.name),
+               let parsed = try? parseFoundationInteger(
+                   source.value,
+                   error: .badOperand("Relative time function requires an integer operand.")
+               ) {
+                return parsed
+            }
+            current = source.inheritedSource
+        }
+        throw MF2Error.badOperand("Relative time function requires an integer operand.")
+    }
+
+    private func isRelativeTimeNumericSourceFunction(_ name: String) -> Bool {
+        switch name {
+        case "number", "integer", "percent", "offset", "currency", "relativeTime":
+            return true
+        default:
+            return false
+        }
     }
 
     private func relativeUnitsStyle(_ value: String) throws -> RelativeDateTimeFormatter.UnitsStyle {

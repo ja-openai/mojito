@@ -635,7 +635,7 @@ pub(super) fn is_numeric_function(function: &FunctionRef) -> bool {
 }
 
 fn is_decimal_source_function(function: &FunctionRef) -> bool {
-    is_numeric_function(function) || function.name == "currency"
+    is_numeric_function(function) || function.name == "currency" || function.name == "relativeTime"
 }
 
 fn function_option_literal<'a>(function: &'a FunctionRef, name: &str) -> Option<&'a str> {

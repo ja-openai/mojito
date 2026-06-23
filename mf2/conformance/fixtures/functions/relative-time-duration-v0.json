@@ -56,6 +56,21 @@
       }
     },
     {
+      "label": "chained-relative-time-local-reuses-numeric-source",
+      "source": ".local $when = {$delta :relativeTime style=narrow numeric=always policy=precise} {{{$when :relativeTime style=long numeric=always policy=precise unit=minute}}}",
+      "locale": "en",
+      "arguments": { "delta": -90 },
+      "expected": "2 minutes ago",
+      "resolved": {
+        "seconds": -90,
+        "unit": "minute",
+        "quantity": 2,
+        "direction": "past",
+        "pluralCategory": "other",
+        "pattern": "{0} minutes ago"
+      }
+    },
+    {
       "label": "trimmed-decimal-string-seconds",
       "source": "{$delta :relativeTime style=short numeric=always policy=precise}",
       "locale": "en",

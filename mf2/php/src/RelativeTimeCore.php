@@ -159,13 +159,32 @@ final class RelativeTimeCore
 
     private function formatCall(array $call): string
     {
-        return $this->formatValue($call['rawValue'] ?? $call['value'], [
+        $options = [
             'locale' => $call['locale'] ?? self::DEFAULT_LOCALE,
             'style' => self::callOption($call, 'style', self::STYLE_SHORT),
             'numeric' => self::callOption($call, 'numeric', self::NUMERIC_ALWAYS),
             'policy' => self::callOption($call, 'policy', self::POLICY_PRECISE),
             'unit' => self::callOption($call, 'unit', self::UNIT_AUTO),
-        ]);
+        ];
+        try {
+            return $this->formatValue($call['rawValue'] ?? $call['value'], $options);
+        } catch (MF2Error $error) {
+            $sourceValue = self::relativeTimeSourceValue($call['inheritedSource'] ?? null);
+            if ($error->mf2Code !== 'bad-operand' || $sourceValue === null) {
+                throw $error;
+            }
+            return $this->formatValue($sourceValue, $options);
+        }
+    }
+
+    private static function relativeTimeSourceValue(?array $source): ?string
+    {
+        for ($current = $source; $current !== null; $current = $current['inherited'] ?? null) {
+            if (Internal\is_decimal_source_function($current['function'] ?? null)) {
+                return (string) $current['value'];
+            }
+        }
+        return null;
     }
 
     private static function parseFiniteNumber(mixed $value): float

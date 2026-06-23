@@ -103,15 +103,38 @@ def relative_time_core_function_registry(data: Mapping[str, Any]) -> FunctionReg
 
 
 def _format_call_relative_time(call: FunctionCall, data: _RelativeTimeData) -> str:
-    return _format_relative_time_prepared(
-        call.raw_value if call.raw_value is not None else call.value,
-        data=data,
-        locale=call.locale,
-        style=call.option_value("style", "short") or "short",
-        numeric=call.option_value("numeric", "always") or "always",
-        policy=call.option_value("policy", "precise") or "precise",
-        unit=call.option_value("unit", "auto") or "auto",
-    )
+    value = call.raw_value if call.raw_value is not None else call.value
+    options = {
+        "data": data,
+        "locale": call.locale,
+        "style": call.option_value("style", "short") or "short",
+        "numeric": call.option_value("numeric", "always") or "always",
+        "policy": call.option_value("policy", "precise") or "precise",
+        "unit": call.option_value("unit", "auto") or "auto",
+    }
+    try:
+        return _format_relative_time_prepared(value, **options)
+    except MF2Error as error:
+        source_value = _relative_time_source_value(call.inherited_source)
+        if error.code != "bad-operand" or source_value is None:
+            raise
+        return _format_relative_time_prepared(source_value, **options)
+
+
+def _relative_time_source_value(source: object | None) -> str | None:
+    while source is not None:
+        function = getattr(source, "function")
+        if function.get("name") in {
+            "number",
+            "integer",
+            "percent",
+            "offset",
+            "currency",
+            "relativeTime",
+        }:
+            return getattr(source, "value")
+        source = getattr(source, "inherited_source")
+    return None
 
 
 def _format_relative_time_prepared(

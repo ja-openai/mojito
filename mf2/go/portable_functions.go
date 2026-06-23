@@ -78,7 +78,8 @@ func invalidNumericSelector(functionRef map[string]any, source *FunctionSource) 
 }
 
 func isDecimalSourceFunction(functionRef map[string]any) bool {
-	return isNumericFunction(functionRef) || stringField(functionRef, "name") == "currency"
+	name := stringField(functionRef, "name")
+	return isNumericFunction(functionRef) || name == "currency" || name == "relativeTime"
 }
 
 func formatUnlocalizedNumber(call FunctionCall) (string, error) {

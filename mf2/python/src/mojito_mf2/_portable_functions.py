@@ -319,7 +319,10 @@ def _is_numeric_function(function_ref: dict[str, object]) -> bool:
 
 
 def _is_decimal_source_function(function_ref: dict[str, object]) -> bool:
-    return _is_numeric_function(function_ref) or function_ref.get("name") == "currency"
+    return _is_numeric_function(function_ref) or function_ref.get("name") in {
+        "currency",
+        "relativeTime",
+    }
 
 
 def _numeric_select_uses_variable(function_ref: dict[str, object]) -> bool:

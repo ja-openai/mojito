@@ -24,7 +24,8 @@ export function inheritedExactNumericSource(source) {
 }
 
 export function isDecimalSourceFunction(functionRef) {
-  return isNumericFunction(functionRef) || functionRef?.name === "currency";
+  const name = functionRef?.name;
+  return isNumericFunction(functionRef) || name === "currency" || name === "relativeTime";
 }
 
 const DECIMAL_PATTERN = /^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$/;
