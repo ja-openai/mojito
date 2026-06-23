@@ -519,6 +519,11 @@ branch is under active implementation.
   throwing runtimes use fixed error messages for length failures rather than
   echoing the oversized operand. A shared source-to-model fallback fixture covers
   an oversized exponent operand that would otherwise parse as English `one`.
+- Go/Kotlin invalid plural `other` matching: Go generated plural helpers and
+  Kotlin's plural wrapper now return no category for invalid or unsafe operands
+  instead of `other`, matching the other runtimes and preventing an invalid
+  ordinal operand from selecting a literal `other` variant. A shared
+  source-to-model fixture covers the unsafe-integer `select=ordinal` repro.
 - Direct core parts API consistency: number-core and date-time-core now expose
   direct text-part wrappers in Java, Kotlin, Go, and Swift, matching the existing
   JavaScript, Python, PHP, and Rust public API surface. Focused runtime checks

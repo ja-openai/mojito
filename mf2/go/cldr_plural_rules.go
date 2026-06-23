@@ -11,7 +11,7 @@ import (
 func selectCardinal(locale string, value any) string {
 	operands, ok := newNumberOperands(value)
 	if !ok {
-		return "other"
+		return ""
 	}
 	switch lookupRuleID(cardinalLocales, cardinalParents, locale) {
 	case "r0":
@@ -102,7 +102,7 @@ func selectCardinal(locale string, value any) string {
 func selectOrdinal(locale string, value any) string {
 	operands, ok := newNumberOperands(value)
 	if !ok {
-		return "other"
+		return ""
 	}
 	switch lookupRuleID(ordinalLocales, ordinalParents, locale) {
 	case "r0":

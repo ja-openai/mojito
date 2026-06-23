@@ -108,7 +108,7 @@ object Mf2RelativeTimeCore {
 
             val direction = if (isNegativeRelativeTime(seconds)) "past" else "future"
             val unitData = unitData(locale, options.style, unit)
-            val category = PluralRules.selectCardinal(locale, quantity.toString())
+            val category = PluralRules.selectCardinal(locale, quantity.toString()) ?: "other"
             val pattern = relativeTimePattern(unitData, locale, options.style, unit, direction, category)
             return pattern.replace("{0}", quantity.toString())
         }

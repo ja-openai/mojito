@@ -1,0 +1,42 @@
+{
+  "name": "plural-invalid-ordinal-other-no-match",
+  "source": ".input {$rank :number select=ordinal}\n.match $rank\nother {{wrong-other}}\n* {{fallback}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "rank",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "rank" },
+          "function": {
+            "type": "function",
+            "name": "number",
+            "options": {
+              "select": { "type": "literal", "value": "ordinal" }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "rank" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "other" }],
+        "value": ["wrong-other"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["fallback"]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "rank": "9007199254740993" },
+      "expected": "fallback"
+    }
+  ]
+}

@@ -1617,7 +1617,7 @@ def write_go(path: Path, data: dict[str, Any], go_package: str) -> None:
         "",
         "func selectCardinal(locale string, value any) string {",
         "    operands, ok := newNumberOperands(value)",
-        '    if !ok { return "other" }',
+        '    if !ok { return "" }',
         "    switch lookupRuleID(cardinalLocales, cardinalParents, locale) {",
     ]
     for rule in data.get("cardinal", {}).get("rules", []):
@@ -1630,7 +1630,7 @@ def write_go(path: Path, data: dict[str, Any], go_package: str) -> None:
             "",
             "func selectOrdinal(locale string, value any) string {",
             "    operands, ok := newNumberOperands(value)",
-            '    if !ok { return "other" }',
+            '    if !ok { return "" }',
             "    switch lookupRuleID(ordinalLocales, ordinalParents, locale) {",
         ]
     )
