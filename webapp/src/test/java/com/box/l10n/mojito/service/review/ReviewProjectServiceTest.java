@@ -984,8 +984,8 @@ public class ReviewProjectServiceTest {
 
   private SearchReviewProjectsCriteria searchReviewProjectsCriteria() {
     return new SearchReviewProjectsCriteria(
-        List.of(), List.of(), List.of(), List.of(), null, null, null, null, null, 10, null, null,
-        null);
+        List.of(), List.of(), List.of(), List.of(), null, null, null, null, null, null, 10,
+        null, null, null);
   }
 
   @Test

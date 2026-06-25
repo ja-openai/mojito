@@ -18,6 +18,7 @@ import org.junit.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionTemplate;
 
 public class PushRunServiceTransactionTest {
 
@@ -83,6 +84,7 @@ public class PushRunServiceTransactionTest {
     return new PushRunService(
         mock(EntityManager.class),
         mock(JdbcTemplate.class),
+        mock(TransactionTemplate.class),
         mock(CommitToPushRunRepository.class),
         mock(PushRunRepository.class),
         mock(PushRunAssetRepository.class),

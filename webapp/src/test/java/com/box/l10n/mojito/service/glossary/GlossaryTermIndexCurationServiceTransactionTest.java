@@ -136,7 +136,8 @@ public class GlossaryTermIndexCurationServiceTransactionTest {
           ObjectMapper.withNoFailOnUnknownProperties(),
           Mockito.mock(QuartzPollableTaskScheduler.class),
           Mockito.mock(PollableTaskService.class),
-          transactionManager);
+          transactionManager,
+          Mockito.mock(TermIndexJobObservability.class));
     }
 
     @Override
