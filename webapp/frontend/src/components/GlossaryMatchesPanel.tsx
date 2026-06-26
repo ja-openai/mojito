@@ -1,9 +1,10 @@
 import './glossary-matches-panel.css';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { ApiMatchedGlossaryTerm } from '../api/glossaries';
+import { getGlossaryMatchRanges, prepareGlossaryMatches } from '../utils/glossary-matches';
 import { getGlossaryTermScreenshotEvidence } from '../utils/glossaryTermEvidence';
 import { resolveAttachmentUrl } from '../utils/request-attachments';
 import { Modal } from './Modal';
@@ -38,6 +39,7 @@ export function GlossaryMatchesPanel({
   showHeader = true,
 }: Props) {
   const [selectedMatch, setSelectedMatch] = useState<ApiMatchedGlossaryTerm | null>(null);
+  const displayMatches = useMemo(() => prepareGlossaryMatches(matches), [matches]);
   const selectedMatchKey = selectedMatch ? getGlossaryMatchKey(selectedMatch) : null;
 
   useEffect(() => {
@@ -45,9 +47,11 @@ export function GlossaryMatchesPanel({
       return;
     }
 
-    const updatedMatch = matches.find((match) => getGlossaryMatchKey(match) === selectedMatchKey);
+    const updatedMatch = displayMatches.find(
+      (match) => getGlossaryMatchKey(match) === selectedMatchKey,
+    );
     setSelectedMatch(updatedMatch ?? null);
-  }, [matches, selectedMatchKey]);
+  }, [displayMatches, selectedMatchKey]);
 
   const normalizeForContains = (value: string, caseSensitive: boolean) =>
     caseSensitive ? value : value.toLocaleLowerCase();
@@ -136,11 +140,11 @@ export function GlossaryMatchesPanel({
             <span className="spinner spinner--md" aria-hidden />
             <span>Loading glossary…</span>
           </div>
-        ) : matches.length === 0 ? (
+        ) : displayMatches.length === 0 ? (
           <div className="glossary-match-panel__state">{emptyMessage}</div>
         ) : (
           <div className="glossary-match-panel__list">
-            {matches.map((match) => {
+            {displayMatches.map((match) => {
               const requiredTarget = getRequiredTarget(match);
               const requiredTargetClassName = match.doNotTranslate
                 ? 'glossary-match-panel__pair-value glossary-match-panel__pair-value--muted'
@@ -201,6 +205,11 @@ function GlossaryMatchDetailsModal({
   const termDescription = match?.definition?.trim() || null;
   const sourceNote = match?.comment?.trim() || null;
   const shouldShowSourceNote = sourceNote && sourceNote !== termDescription;
+  const matchRanges = match ? getGlossaryMatchRanges(match) : [];
+  const rangeSummary = matchRanges
+    .map((range) => `${range.matchedText} [${range.startIndex}-${range.endIndex}]`)
+    .join(', ');
+  const matchTypeSummary = [...new Set(matchRanges.map((range) => range.matchType))].join(', ');
   const termDetailRows = match
     ? [
         { label: 'Glossary name', value: match.glossaryName },
@@ -216,8 +225,8 @@ function GlossaryMatchDetailsModal({
     : [];
   const matchDetailRows = match
     ? [
-        { label: 'Matched source text', value: match.matchedText },
-        { label: 'Match type', value: match.matchType },
+        { label: 'Matched source ranges', value: rangeSummary },
+        { label: 'Match type', value: matchTypeSummary },
         { label: 'Evidence summary', value: evidenceSummary },
       ].filter((row) => row.value && row.value.trim())
     : [];

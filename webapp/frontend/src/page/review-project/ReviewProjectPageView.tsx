@@ -103,7 +103,7 @@ import {
 import {
   buildGlossaryContextMessage,
   filterSelfGlossaryMatches,
-  sortGlossaryMatches,
+  prepareGlossaryMatches,
 } from '../../utils/glossary-matches';
 import { getGlossaryTermScreenshotKeys } from '../../utils/glossaryTermEvidence';
 import {
@@ -1940,7 +1940,7 @@ function DetailPane({
         excludeTmTextUnitId: workbenchTextUnitId,
       });
 
-      return sortGlossaryMatches(
+      return prepareGlossaryMatches(
         filterSelfGlossaryMatches(response.matchedTerms, workbenchTextUnitId),
       );
     },

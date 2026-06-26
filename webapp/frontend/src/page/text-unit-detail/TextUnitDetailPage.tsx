@@ -37,7 +37,7 @@ import { buildAiTranslateAttemptTimelineData } from '../../utils/aiTranslateHist
 import {
   buildGlossaryContextMessage,
   filterSelfGlossaryMatches,
-  sortGlossaryMatches,
+  prepareGlossaryMatches,
 } from '../../utils/glossary-matches';
 import {
   findGlossaryTargetForTextUnit,
@@ -276,7 +276,7 @@ export function TextUnitDetailPage() {
         excludeTmTextUnitId: activeTextUnit.tmTextUnitId,
       });
 
-      return sortGlossaryMatches(
+      return prepareGlossaryMatches(
         filterSelfGlossaryMatches(response.matchedTerms, activeTextUnit.tmTextUnitId),
       );
     },

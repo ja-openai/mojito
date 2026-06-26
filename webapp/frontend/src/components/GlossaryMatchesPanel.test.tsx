@@ -84,7 +84,8 @@ describe('GlossaryMatchesPanel', () => {
     expect(within(dialog).getByText('Glossary name')).toBeInTheDocument();
     expect(within(dialog).getByText('Product UI')).toBeInTheDocument();
     expect(within(dialog).getByText('Term description')).toBeInTheDocument();
-    expect(within(dialog).getByText('Matched source text')).toBeInTheDocument();
+    expect(within(dialog).getByText('Matched source ranges')).toBeInTheDocument();
+    expect(within(dialog).getByText('View [0-4]')).toBeInTheDocument();
     expect(within(dialog).getByText('Match type')).toBeInTheDocument();
     expect(within(dialog).getByText('Action label in mobile settings.')).toBeInTheDocument();
     expect(within(dialog).getByText('A command that opens a detail screen.')).toBeInTheDocument();
@@ -270,5 +271,50 @@ describe('GlossaryMatchesPanel', () => {
     expect(within(dialog).getByText('Term description')).toBeInTheDocument();
     expect(within(dialog).getByText('Shared product meaning.')).toBeInTheDocument();
     expect(within(dialog).queryByText('Source note')).not.toBeInTheDocument();
+  });
+
+  it('shows every matched range for a grouped glossary term', () => {
+    renderPanel({
+      ranges: [
+        { matchType: 'EXACT', startIndex: 0, endIndex: 4, matchedText: 'View' },
+        { matchType: 'CASE_INSENSITIVE', startIndex: 12, endIndex: 16, matchedText: 'view' },
+      ],
+    });
+
+    const card = screen.getByText('View').closest('article');
+    expect(card).not.toBeNull();
+    fireEvent.click(within(card!).getByRole('button', { name: 'Details for View' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Glossary term details for View' });
+    expect(within(dialog).getByText('View [0-4], view [12-16]')).toBeInTheDocument();
+    expect(within(dialog).getByText('EXACT, CASE_INSENSITIVE')).toBeInTheDocument();
+  });
+
+  it('groups repeated raw matches by glossary term id', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <GlossaryMatchesPanel
+          matches={[
+            match,
+            {
+              ...match,
+              startIndex: 12,
+              endIndex: 16,
+              matchedText: 'view',
+              matchType: 'CASE_INSENSITIVE',
+            },
+          ]}
+          isLoading={false}
+          currentTarget="View translation"
+          showHeader={false}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(container.querySelectorAll('article')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Details for View' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Glossary term details for View' });
+    expect(within(dialog).getByText('View [0-4], view [12-16]')).toBeInTheDocument();
   });
 });

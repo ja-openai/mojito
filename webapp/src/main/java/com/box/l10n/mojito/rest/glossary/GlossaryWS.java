@@ -19,6 +19,7 @@ import io.micrometer.core.instrument.Tags;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -464,6 +465,9 @@ public class GlossaryWS {
   public record DecideGlossaryTranslationProposalRequest(String status, String reviewerNote) {}
 
   public record MatchGlossaryTermsResponse(List<MatchedGlossaryTermResponse> matchedTerms) {
+    public record MatchedGlossaryTermRangeResponse(
+        String matchType, int startIndex, int endIndex, String matchedText) {}
+
     public record MatchedGlossaryTermResponse(
         Long glossaryId,
         String glossaryName,
@@ -484,6 +488,7 @@ public class GlossaryWS {
         int startIndex,
         int endIndex,
         String matchedText,
+        List<MatchedGlossaryTermRangeResponse> ranges,
         List<GlossaryTermEvidenceResponse> evidence) {}
   }
 
@@ -572,19 +577,17 @@ public class GlossaryWS {
     String result = "success";
     int matchCount = -1;
     try {
+      List<GlossaryService.MatchedGlossaryTerm> rawMatchedTerms =
+          glossaryService.findMatchesForRepositoryAndLocale(
+              request != null ? request.repositoryId() : null,
+              request != null ? request.repositoryName() : null,
+              request != null ? request.glossaryName() : null,
+              request != null ? request.localeTag() : null,
+              request != null ? request.sourceText() : null,
+              request != null ? request.excludeTmTextUnitId() : null);
       List<MatchGlossaryTermsResponse.MatchedGlossaryTermResponse> matchedTerms =
-          glossaryService
-              .findMatchesForRepositoryAndLocale(
-                  request != null ? request.repositoryId() : null,
-                  request != null ? request.repositoryName() : null,
-                  request != null ? request.glossaryName() : null,
-                  request != null ? request.localeTag() : null,
-                  request != null ? request.sourceText() : null,
-                  request != null ? request.excludeTmTextUnitId() : null)
-              .stream()
-              .map(this::toMatchedTermResponse)
-              .toList();
-      matchCount = matchedTerms.size();
+          toMatchedTermResponses(rawMatchedTerms);
+      matchCount = rawMatchedTerms.size();
       return new MatchGlossaryTermsResponse(matchedTerms);
     } catch (IllegalArgumentException ex) {
       result = "bad_request";
@@ -1548,9 +1551,31 @@ public class GlossaryWS {
         proposal.reviewerNote());
   }
 
+  private List<MatchGlossaryTermsResponse.MatchedGlossaryTermResponse> toMatchedTermResponses(
+      List<GlossaryService.MatchedGlossaryTerm> matchedTerms) {
+    Map<Long, List<GlossaryService.MatchedGlossaryTerm>> matchesByTermId = new LinkedHashMap<>();
+    for (GlossaryService.MatchedGlossaryTerm matchedTerm : matchedTerms) {
+      matchesByTermId
+          .computeIfAbsent(matchedTerm.glossaryTerm().tmTextUnitId(), ignored -> new ArrayList<>())
+          .add(matchedTerm);
+    }
+    return matchesByTermId.values().stream().map(this::toMatchedTermResponse).toList();
+  }
+
   private MatchGlossaryTermsResponse.MatchedGlossaryTermResponse toMatchedTermResponse(
-      GlossaryService.MatchedGlossaryTerm matchedTerm) {
-    GlossaryService.GlossaryTerm glossaryTerm = matchedTerm.glossaryTerm();
+      List<GlossaryService.MatchedGlossaryTerm> matchedTerms) {
+    GlossaryService.MatchedGlossaryTerm firstMatch = matchedTerms.get(0);
+    GlossaryService.GlossaryTerm glossaryTerm = firstMatch.glossaryTerm();
+    List<MatchGlossaryTermsResponse.MatchedGlossaryTermRangeResponse> ranges =
+        matchedTerms.stream()
+            .map(
+                matchedTerm ->
+                    new MatchGlossaryTermsResponse.MatchedGlossaryTermRangeResponse(
+                        matchedTerm.matchType().name(),
+                        matchedTerm.startIndex(),
+                        matchedTerm.endIndex(),
+                        matchedTerm.matchedText()))
+            .toList();
     return new MatchGlossaryTermsResponse.MatchedGlossaryTermResponse(
         glossaryTerm.glossaryId(),
         glossaryTerm.glossaryName(),
@@ -1567,10 +1592,11 @@ public class GlossaryWS {
         glossaryTerm.targetComment(),
         glossaryTerm.doNotTranslate(),
         glossaryTerm.caseSensitive(),
-        matchedTerm.matchType().name(),
-        matchedTerm.startIndex(),
-        matchedTerm.endIndex(),
-        matchedTerm.matchedText(),
+        firstMatch.matchType().name(),
+        firstMatch.startIndex(),
+        firstMatch.endIndex(),
+        firstMatch.matchedText(),
+        ranges,
         glossaryTerm.evidence().stream()
             .map(
                 evidence ->

@@ -74,6 +74,35 @@ public class GlossaryWSTest {
   }
 
   @Test
+  public void matchGlossaryTermsGroupsRangesByTermId() {
+    GlossaryService.GlossaryTerm glossaryTerm = glossaryTerm(34L, "GPT");
+    when(glossaryService.findMatchesForRepositoryAndLocale(
+            12L, null, null, "fr-FR", "GPT GPT", null))
+        .thenReturn(
+            List.of(
+                new GlossaryService.MatchedGlossaryTerm(
+                    glossaryTerm, GlossaryService.MatchType.EXACT, 0, 3, "GPT"),
+                new GlossaryService.MatchedGlossaryTerm(
+                    glossaryTerm, GlossaryService.MatchType.EXACT, 4, 7, "GPT")));
+
+    GlossaryWS.MatchGlossaryTermsResponse response =
+        glossaryWS.matchGlossaryTerms(
+            new GlossaryWS.MatchGlossaryTermsRequest(12L, null, null, "fr-FR", "GPT GPT", null));
+
+    assertEquals(1, response.matchedTerms().size());
+    GlossaryWS.MatchGlossaryTermsResponse.MatchedGlossaryTermResponse matchedTerm =
+        response.matchedTerms().get(0);
+    assertEquals(Long.valueOf(34L), matchedTerm.tmTextUnitId());
+    assertEquals(0, matchedTerm.startIndex());
+    assertEquals(3, matchedTerm.endIndex());
+    assertEquals(2, matchedTerm.ranges().size());
+    assertEquals(0, matchedTerm.ranges().get(0).startIndex());
+    assertEquals(3, matchedTerm.ranges().get(0).endIndex());
+    assertEquals(4, matchedTerm.ranges().get(1).startIndex());
+    assertEquals(7, matchedTerm.ranges().get(1).endIndex());
+  }
+
+  @Test
   public void matchGlossaryTermsRecordsBadRequestMetric() {
     when(glossaryService.findMatchesForRepositoryAndLocale(null, null, null, null, null, null))
         .thenThrow(new IllegalArgumentException("Locale tag is required"));
@@ -110,5 +139,26 @@ public class GlossaryWSTest {
         .tag("scope", scope)
         .timer()
         .count();
+  }
+
+  private GlossaryService.GlossaryTerm glossaryTerm(long tmTextUnitId, String source) {
+    return new GlossaryService.GlossaryTerm(
+        tmTextUnitId,
+        5L,
+        "Product",
+        source.toLowerCase(),
+        source,
+        null,
+        null,
+        null,
+        null,
+        null,
+        "APPROVED",
+        null,
+        null,
+        null,
+        false,
+        false,
+        List.of());
   }
 }
