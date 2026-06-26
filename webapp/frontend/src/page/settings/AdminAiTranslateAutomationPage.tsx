@@ -37,6 +37,7 @@ const RECENT_RUN_LIMIT_PRESETS = [20, 50, 100];
 const DEFAULT_RECENT_RUN_LIMIT = 20;
 const CUSTOM_RECENT_RUN_LIMIT_INITIAL_VALUE = 50;
 const RUN_LINEAGE_LIMIT = 500;
+type AutomationRepositoryMode = 'INCLUDED' | 'EXCLUDED';
 
 export function AdminAiTranslateAutomationPage() {
   const user = useUser();
@@ -45,7 +46,12 @@ export function AdminAiTranslateAutomationPage() {
   const { data: repositories } = useRepositories();
   const repositorySelectionOptions = useRepositorySelectionOptions(repositories ?? []);
   const [automationEnabledDraft, setAutomationEnabledDraft] = useState(false);
+  const [automationRepositoryModeDraft, setAutomationRepositoryModeDraft] =
+    useState<AutomationRepositoryMode>('EXCLUDED');
   const [automationRepositoryIdsDraft, setAutomationRepositoryIdsDraft] = useState<number[]>([]);
+  const [automationExcludedRepositoryIdsDraft, setAutomationExcludedRepositoryIdsDraft] = useState<
+    number[]
+  >([]);
   const [automationSourceTextMaxDraft, setAutomationSourceTextMaxDraft] = useState('100');
   const [automationCronExpressionDraft, setAutomationCronExpressionDraft] = useState('');
   const [runHistoryRepositoryIds, setRunHistoryRepositoryIds] = useState<number[]>([]);
@@ -88,8 +94,15 @@ export function AdminAiTranslateAutomationPage() {
     onSuccess: async (nextConfig) => {
       queryClient.setQueryData(['ai-translate-automation-config'], nextConfig);
       await queryClient.invalidateQueries({ queryKey: ['ai-translate-automation-config'] });
+      const nextRepositoryMode = getAutomationRepositoryMode(nextConfig);
       setAutomationEnabledDraft(nextConfig.enabled);
-      setAutomationRepositoryIdsDraft(nextConfig.repositoryIds);
+      setAutomationRepositoryModeDraft(nextRepositoryMode);
+      setAutomationRepositoryIdsDraft(
+        nextRepositoryMode === 'INCLUDED' ? nextConfig.repositoryIds : [],
+      );
+      setAutomationExcludedRepositoryIdsDraft(
+        nextRepositoryMode === 'EXCLUDED' ? nextConfig.excludedRepositoryIds : [],
+      );
       setAutomationSourceTextMaxDraft(String(nextConfig.sourceTextMaxCountPerLocale));
       setAutomationCronExpressionDraft(nextConfig.cronExpression ?? '');
       await queryClient.invalidateQueries({ queryKey: ['ai-translate-automation-runs'] });
@@ -110,8 +123,13 @@ export function AdminAiTranslateAutomationPage() {
     if (!config) {
       return;
     }
+    const nextRepositoryMode = getAutomationRepositoryMode(config);
     setAutomationEnabledDraft(config.enabled);
-    setAutomationRepositoryIdsDraft(config.repositoryIds);
+    setAutomationRepositoryModeDraft(nextRepositoryMode);
+    setAutomationRepositoryIdsDraft(nextRepositoryMode === 'INCLUDED' ? config.repositoryIds : []);
+    setAutomationExcludedRepositoryIdsDraft(
+      nextRepositoryMode === 'EXCLUDED' ? config.excludedRepositoryIds : [],
+    );
     setAutomationSourceTextMaxDraft(String(config.sourceTextMaxCountPerLocale));
     setAutomationCronExpressionDraft(config.cronExpression ?? '');
   }, [automationConfigQuery.data]);
@@ -158,19 +176,27 @@ export function AdminAiTranslateAutomationPage() {
     ) {
       return true;
     }
-    if (automationRepositoryIdsDraft.length !== saved.repositoryIds.length) {
+    const savedRepositoryMode = getAutomationRepositoryMode(saved);
+    const repositoryIdsToSave =
+      automationRepositoryModeDraft === 'INCLUDED' ? automationRepositoryIdsDraft : [];
+    const excludedRepositoryIdsToSave =
+      automationRepositoryModeDraft === 'EXCLUDED' ? automationExcludedRepositoryIdsDraft : [];
+    if (automationRepositoryModeDraft !== savedRepositoryMode) {
+      return true;
+    }
+    if (!haveSameSortedIds(repositoryIdsToSave, saved.repositoryIds)) {
       return true;
     }
     if (automationCronExpressionDraft !== (saved.cronExpression ?? '')) {
       return true;
     }
-    return automationRepositoryIdsDraft.some(
-      (value, index) => value !== saved.repositoryIds[index],
-    );
+    return !haveSameSortedIds(excludedRepositoryIdsToSave, saved.excludedRepositoryIds);
   }, [
     automationConfigQuery.data,
     automationEnabledDraft,
+    automationRepositoryModeDraft,
     automationRepositoryIdsDraft,
+    automationExcludedRepositoryIdsDraft,
     automationCronExpressionDraft,
     automationSourceTextMax.valid,
     automationSourceTextMax.value,
@@ -188,13 +214,25 @@ export function AdminAiTranslateAutomationPage() {
     return <Navigate to="/repositories" replace />;
   }
 
+  const handleAutomationRepositoryModeChange = (mode: AutomationRepositoryMode) => {
+    setAutomationRepositoryModeDraft(mode);
+    if (mode === 'INCLUDED') {
+      setAutomationExcludedRepositoryIdsDraft([]);
+    } else {
+      setAutomationRepositoryIdsDraft([]);
+    }
+  };
+
   const handleSaveAutomationConfig = () => {
     if (!automationSourceTextMax.valid) {
       return;
     }
     saveAutomationMutation.mutate({
       enabled: automationEnabledDraft,
-      repositoryIds: automationRepositoryIdsDraft,
+      repositoryIds:
+        automationRepositoryModeDraft === 'INCLUDED' ? automationRepositoryIdsDraft : [],
+      excludedRepositoryIds:
+        automationRepositoryModeDraft === 'EXCLUDED' ? automationExcludedRepositoryIdsDraft : [],
       sourceTextMaxCountPerLocale: automationSourceTextMax.value as number,
       cronExpression: automationCronExpressionDraft.trim() || null,
     });
@@ -211,8 +249,8 @@ export function AdminAiTranslateAutomationPage() {
       <div className="settings-page settings-page--wide">
         <section className="settings-card">
           <p className="settings-note">
-            Manual runs use the saved repository list and per-locale limit immediately. Optional
-            cron scheduling is configured below and only targets strings already marked for
+            Manual runs use one repository scope mode and apply the per-locale limit immediately.
+            Optional cron scheduling is configured below and only targets strings already marked for
             translation, importing them as review-needed.
           </p>
           {automationConfigQuery.error ? (
@@ -268,21 +306,68 @@ export function AdminAiTranslateAutomationPage() {
           </div>
           <div className="settings-field">
             <div className="settings-field__header">
-              <div className="settings-field__label">Repositories</div>
+              <div className="settings-field__label">Repository scope</div>
             </div>
+            <div className="settings-radio-group">
+              <label className="settings-radio-option">
+                <input
+                  type="radio"
+                  name="ai-translate-automation-repository-mode"
+                  value="EXCLUDED"
+                  checked={automationRepositoryModeDraft === 'EXCLUDED'}
+                  onChange={() => handleAutomationRepositoryModeChange('EXCLUDED')}
+                  disabled={automationConfigQuery.isLoading || saveAutomationMutation.isPending}
+                />
+                <span className="settings-radio-option__body">
+                  <span className="settings-radio-option__label">
+                    All eligible repositories except exclusions
+                  </span>
+                  <span className="settings-hint">
+                    Run every deleted/hidden-safe repository unless it is excluded below.
+                  </span>
+                </span>
+              </label>
+              <label className="settings-radio-option">
+                <input
+                  type="radio"
+                  name="ai-translate-automation-repository-mode"
+                  value="INCLUDED"
+                  checked={automationRepositoryModeDraft === 'INCLUDED'}
+                  onChange={() => handleAutomationRepositoryModeChange('INCLUDED')}
+                  disabled={automationConfigQuery.isLoading || saveAutomationMutation.isPending}
+                />
+                <span className="settings-radio-option__body">
+                  <span className="settings-radio-option__label">Only selected repositories</span>
+                  <span className="settings-hint">
+                    Run only repositories selected in the include list below.
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+          {automationRepositoryModeDraft === 'INCLUDED' ? (
             <RepositoryMultiSelect
-              label="Repositories"
+              label="Included repositories"
               options={repositorySelectionOptions}
               selectedIds={automationRepositoryIdsDraft}
               onChange={(next) => setAutomationRepositoryIdsDraft([...next].sort((a, b) => a - b))}
               className="settings-repository-select"
-              buttonAriaLabel="Select repositories for automatic AI translate"
+              buttonAriaLabel="Choose repositories for automatic AI translate"
               disabled={automationConfigQuery.isLoading || saveAutomationMutation.isPending}
             />
-            <p className="settings-hint">
-              Leave the list empty to keep automation configured but idle.
-            </p>
-          </div>
+          ) : (
+            <RepositoryMultiSelect
+              label="Excluded repositories"
+              options={repositorySelectionOptions}
+              selectedIds={automationExcludedRepositoryIdsDraft}
+              onChange={(next) =>
+                setAutomationExcludedRepositoryIdsDraft([...next].sort((a, b) => a - b))
+              }
+              className="settings-repository-select"
+              buttonAriaLabel="Exclude repositories from automatic AI translate"
+              disabled={automationConfigQuery.isLoading || saveAutomationMutation.isPending}
+            />
+          )}
           <div className="settings-field">
             <div className="settings-field__header">
               <div className="settings-field__label">Per-locale batch size</div>
@@ -643,6 +728,19 @@ function formatDateTime(value: string | null) {
 
 function formatStatus(value: string) {
   return value.toLowerCase().split('_').join(' ');
+}
+
+function getAutomationRepositoryMode(
+  config: ApiAiTranslateAutomationConfig,
+): AutomationRepositoryMode {
+  return config.repositoryIds.length > 0 ? 'INCLUDED' : 'EXCLUDED';
+}
+
+function haveSameSortedIds(left: number[], right: number[]) {
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((value, index) => value === right[index]);
 }
 
 function getTextUnitLink(attempt: ApiAiTranslateLineageAttempt) {

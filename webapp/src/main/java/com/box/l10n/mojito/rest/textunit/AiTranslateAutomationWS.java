@@ -48,6 +48,7 @@ public class AiTranslateAutomationWS {
     return new AutomationConfigResponse(
         config.enabled(),
         config.repositoryIds(),
+        config.excludedRepositoryIds(),
         config.sourceTextMaxCountPerLocale(),
         config.cronExpression());
   }
@@ -61,12 +62,14 @@ public class AiTranslateAutomationWS {
             new AiTranslateAutomationConfigService.Config(
                 request.enabled(),
                 request.repositoryIds(),
+                request.excludedRepositoryIds(),
                 request.sourceTextMaxCountPerLocale(),
                 request.cronExpression()));
     aiTranslateAutomationCronSchedulerService.syncConfig(updated);
     return new AutomationConfigResponse(
         updated.enabled(),
         updated.repositoryIds(),
+        updated.excludedRepositoryIds(),
         updated.sourceTextMaxCountPerLocale(),
         updated.cronExpression());
   }
@@ -161,12 +164,14 @@ public class AiTranslateAutomationWS {
   public record AutomationConfigRequest(
       boolean enabled,
       List<Long> repositoryIds,
+      List<Long> excludedRepositoryIds,
       int sourceTextMaxCountPerLocale,
       String cronExpression) {}
 
   public record AutomationConfigResponse(
       boolean enabled,
       List<Long> repositoryIds,
+      List<Long> excludedRepositoryIds,
       int sourceTextMaxCountPerLocale,
       String cronExpression) {}
 

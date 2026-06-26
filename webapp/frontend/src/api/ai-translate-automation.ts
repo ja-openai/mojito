@@ -1,6 +1,15 @@
 export type ApiAiTranslateAutomationConfig = {
   enabled: boolean;
   repositoryIds: number[];
+  excludedRepositoryIds: number[];
+  sourceTextMaxCountPerLocale: number;
+  cronExpression: string | null;
+};
+
+export type ApiAiTranslateAutomationConfigUpdate = {
+  enabled: boolean;
+  repositoryIds: number[];
+  excludedRepositoryIds: number[];
   sourceTextMaxCountPerLocale: number;
   cronExpression: string | null;
 };
@@ -80,7 +89,7 @@ export const fetchAiTranslateAutomationConfig =
   };
 
 export const updateAiTranslateAutomationConfig = async (
-  payload: ApiAiTranslateAutomationConfig,
+  payload: ApiAiTranslateAutomationConfigUpdate,
 ): Promise<ApiAiTranslateAutomationConfig> => {
   const response = await fetch('/api/ai-translate/automation', {
     method: 'PUT',

@@ -26,18 +26,24 @@ public class AiTranslateAutomationConfigService {
   public record Config(
       boolean enabled,
       List<Long> repositoryIds,
+      List<Long> excludedRepositoryIds,
       int sourceTextMaxCountPerLocale,
       String cronExpression) {}
 
   public Config getConfig() {
     AiTranslateAutomationConfigEntity entity = repository.findFirstByOrderByIdAsc();
     if (entity == null) {
-      return new Config(false, List.of(), DEFAULT_SOURCE_TEXT_MAX_COUNT_PER_LOCALE, null);
+      return new Config(
+          false, List.of(), List.of(), DEFAULT_SOURCE_TEXT_MAX_COUNT_PER_LOCALE, null);
     }
 
+    List<Long> repositoryIds = decodeRepositoryIds(entity.getRepositoryIdsJson());
     return new Config(
         entity.isEnabled(),
-        decodeRepositoryIds(entity.getRepositoryIdsJson()),
+        repositoryIds,
+        repositoryIds.isEmpty()
+            ? decodeRepositoryIds(entity.getExcludedRepositoryIdsJson())
+            : List.of(),
         normalizeSourceTextMaxCountPerLocale(entity.getSourceTextMaxCountPerLocale()),
         sanitizeStoredCronExpression(entity.getCronExpression()));
   }
@@ -50,8 +56,14 @@ public class AiTranslateAutomationConfigService {
     }
 
     List<Long> normalizedRepositoryIds = normalizeRepositoryIds(config.repositoryIds());
+    List<Long> normalizedExcludedRepositoryIds =
+        normalizedRepositoryIds.isEmpty()
+            ? normalizeRepositoryIds(config.excludedRepositoryIds())
+            : List.of();
     entity.setEnabled(config.enabled());
     entity.setRepositoryIdsJson(objectMapper.writeValueAsStringUnchecked(normalizedRepositoryIds));
+    entity.setExcludedRepositoryIdsJson(
+        objectMapper.writeValueAsStringUnchecked(normalizedExcludedRepositoryIds));
     entity.setSourceTextMaxCountPerLocale(
         normalizeSourceTextMaxCountPerLocale(config.sourceTextMaxCountPerLocale()));
     entity.setCronExpression(normalizeCronExpression(config.cronExpression()));
@@ -60,6 +72,7 @@ public class AiTranslateAutomationConfigService {
     return new Config(
         entity.isEnabled(),
         normalizedRepositoryIds,
+        normalizedExcludedRepositoryIds,
         entity.getSourceTextMaxCountPerLocale(),
         entity.getCronExpression());
   }

@@ -7,7 +7,8 @@ import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -52,10 +53,11 @@ public class AiTranslateAutomationSchedulerService {
     try {
       var config = aiTranslateAutomationConfigService.getConfig();
       logger.info(
-          "AI translate automation run started: source={}, enabled={}, repositoryCount={}, sourceTextMaxCountPerLocale={}",
+          "AI translate automation run started: source={}, enabled={}, repositoryCount={}, excludedRepositoryCount={}, sourceTextMaxCountPerLocale={}",
           triggerSource,
           config.enabled(),
           config.repositoryIds().size(),
+          config.excludedRepositoryIds().size(),
           config.sourceTextMaxCountPerLocale());
       if (requireEnabled && !config.enabled()) {
         logger.info(
@@ -64,30 +66,44 @@ public class AiTranslateAutomationSchedulerService {
         return new RunResult(0);
       }
 
-      if (config.repositoryIds().isEmpty()) {
+      List<Repository> eligibleRepositories =
+          repositoryRepository.findByDeletedFalseAndHiddenFalseOrderByNameAsc();
+      if (eligibleRepositories.isEmpty()) {
         logger.info(
-            "AI translate automation run skipped: source={}, reason=no_repositories",
+            "AI translate automation run skipped: source={}, reason=no_eligible_repositories",
             triggerSource);
         incrementCounter("runs", Tags.of("result", "skipped_empty"));
         return new RunResult(0);
       }
 
       int scheduledRepositoryCount = 0;
-      List<Long> repositoryIds = config.repositoryIds();
-      for (Long repositoryId : repositoryIds) {
-        Optional<Repository> repositoryOptional =
-            repositoryRepository.findNoGraphById(repositoryId);
-        if (repositoryOptional.isEmpty()
-            || Boolean.TRUE.equals(repositoryOptional.get().getDeleted())) {
+      Set<Long> includedRepositoryIds = config.repositoryIds().stream().collect(Collectors.toSet());
+      Set<Long> excludedRepositoryIds =
+          includedRepositoryIds.isEmpty()
+              ? config.excludedRepositoryIds().stream().collect(Collectors.toSet())
+              : Set.of();
+      for (Repository repository : eligibleRepositories) {
+        if (!includedRepositoryIds.isEmpty()
+            && !includedRepositoryIds.contains(repository.getId())) {
           logger.info(
-              "AI translate automation repository skipped: source={}, repositoryId={}, reason=missing_or_deleted",
+              "AI translate automation repository skipped: source={}, repositoryId={}, repositoryName={}, reason=not_included",
               triggerSource,
-              repositoryId);
-          incrementCounter("repositories", Tags.of("result", "missing"));
+              repository.getId(),
+              repository.getName());
+          incrementCounter("repositories", Tags.of("result", "not_included"));
           continue;
         }
 
-        Repository repository = repositoryOptional.get();
+        if (excludedRepositoryIds.contains(repository.getId())) {
+          logger.info(
+              "AI translate automation repository skipped: source={}, repositoryId={}, repositoryName={}, reason=excluded",
+              triggerSource,
+              repository.getId(),
+              repository.getName());
+          incrementCounter("repositories", Tags.of("result", "excluded"));
+          continue;
+        }
+
         String uniqueId = UNIQUE_ID_PREFIX + repository.getId();
         AiTranslateInput aiTranslateInput =
             new AiTranslateInput(

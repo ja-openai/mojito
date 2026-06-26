@@ -46,7 +46,7 @@ public class AiTranslateAutomationCronSchedulerServiceTest {
   public void syncConfigSchedulesConfiguredDynamicTrigger() throws Exception {
     AiTranslateAutomationConfigService.Config config =
         new AiTranslateAutomationConfigService.Config(
-            true, java.util.List.of(1L), 100, "0 0 0 * * ?");
+            true, java.util.List.of(1L), java.util.List.of(), 100, "0 0 0 * * ?");
     when(quartzSchedulerManager.getScheduler(DEFAULT_SCHEDULER_NAME)).thenReturn(scheduler);
     when(scheduler.checkExists(aiTranslateAutomationCronJobDetail.getKey())).thenReturn(false);
     when(scheduler.checkExists(any(org.quartz.TriggerKey.class))).thenReturn(false);
