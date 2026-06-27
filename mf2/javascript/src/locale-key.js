@@ -12,7 +12,7 @@ export function canonicalLocaleKey(locale) {
   for (let index = 0; index < parts.length; index += 1) {
     const part = parts[index];
     const lower = part.toLowerCase();
-    if (lower === "u" || lower === "x") break;
+    if (part.length === 1) break;
     if (index === 0) {
       output.push(lower);
     } else if (part.length === 4 && /^[a-zA-Z]+$/.test(part)) {
@@ -20,7 +20,7 @@ export function canonicalLocaleKey(locale) {
     } else if ((part.length === 2 && /^[a-zA-Z]+$/.test(part)) || (part.length === 3 && /^\d+$/.test(part))) {
       output.push(part.toUpperCase());
     } else {
-      output.push(part);
+      output.push(lower);
     }
   }
   return output.join("-");

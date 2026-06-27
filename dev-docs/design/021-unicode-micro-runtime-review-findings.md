@@ -48,6 +48,11 @@ branch is under active implementation.
   locale-key fixtures cover non-ASCII two- and four-character subtags plus the
   Kotlin two-character alphanumeric case that was incorrectly uppercased as a
   region.
+- Locale-key singleton extension handling: JavaScript and PHP now stop
+  canonical locale keys at any singleton extension subtag, not only `u` and
+  `x`, and lowercase generic fallback subtags like the other runtimes. Shared
+  locale-key fixtures cover `a`/`t` extension singletons and mixed-case generic
+  subtags.
 - PHP/Rust direct-parts coverage: existing conformance tests now assert that
   direct number-core and date-time-core parts helpers return the same single
   text part shape as their direct string helpers, matching the relative-time

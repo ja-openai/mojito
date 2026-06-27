@@ -16,7 +16,7 @@ function canonical_locale_key(?string $locale): string
     $output = [];
     foreach ($parts as $index => $part) {
         $lower = strtolower($part);
-        if ($lower === 'u' || $lower === 'x') {
+        if (strlen($part) === 1) {
             break;
         }
         if ($index === 0) {
@@ -26,7 +26,7 @@ function canonical_locale_key(?string $locale): string
         } elseif ((strlen($part) === 2 && preg_match('/^[a-zA-Z]+$/', $part) === 1) || (strlen($part) === 3 && preg_match('/^\d+$/', $part) === 1)) {
             $output[] = strtoupper($part);
         } else {
-            $output[] = $part;
+            $output[] = $lower;
         }
     }
     return implode('-', $output);
