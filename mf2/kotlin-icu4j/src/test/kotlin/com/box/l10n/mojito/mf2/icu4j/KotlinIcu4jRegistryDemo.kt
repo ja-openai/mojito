@@ -181,7 +181,7 @@ object KotlinIcu4jRegistryDemo {
 
     private fun assertOversizedFractionDigitsFallsBack() {
         val result: Mf2FormatResult = Mf2Formatter.formatMessage(
-            model = parse("{${'$'}value :number minimumFractionDigits=10000}"),
+            model = parse("{${'$'}value :number minimumFractionDigits=${"1".repeat(257)}}"),
             arguments = mapOf("value" to 1),
             functions = Mf2Icu4jFunctions.registry(),
         )

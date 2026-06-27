@@ -28,6 +28,7 @@ __all__ = ["babel_function_registry"]
 _MAX_FRACTION_DIGITS = 100
 _MAX_DATE_OPERAND_LENGTH = 256
 _MAX_DECIMAL_OPERAND_LENGTH = 256
+_MAX_NUMERIC_OPTION_LENGTH = 256
 _MAX_TIME_ZONE_OPTION_LENGTH = 256
 _MAX_DECIMAL_EXPONENT = 1_000_000
 _ABSENT_OPTION = "\x00__mojito_mf2_absent__"
@@ -252,6 +253,8 @@ def _non_negative_integer_option(call: FunctionCall, name: str) -> int | None:
     value = call.option_value(name)
     if value is None:
         return None
+    if len(value) > _MAX_NUMERIC_OPTION_LENGTH:
+        raise MF2Error("bad-option", f"{name} option must be a non-negative integer.")
     if not value or not all("0" <= ch <= "9" for ch in value):
         raise MF2Error("bad-option", f"{name} option must be a non-negative integer.")
     if len(value) > len(str(_MAX_FRACTION_DIGITS)):

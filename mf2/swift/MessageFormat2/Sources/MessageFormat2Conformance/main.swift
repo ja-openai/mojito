@@ -1104,6 +1104,12 @@ private func runPublicApiEdgeChecks() throws {
         value: "03:04:05"
     )
     try expectFoundationBadOption(
+        "public-api foundation rejects oversized fraction option",
+        source: "{$value :number maximumFractionDigits=\(String(repeating: "1", count: 257))}",
+        locale: "en-US",
+        value: "1"
+    )
+    try expectFoundationBadOption(
         "public-api foundation rejects malformed locale",
         source: "{$value :number}",
         locale: "bad locale ???",

@@ -198,7 +198,7 @@ public final class Icu4jRegistryDemo {
     }
 
     private static void assertOversizedFractionDigitsFallsBack() throws Mf2Exception {
-        Mf2Message message = parse("{$value :number minimumFractionDigits=10000}");
+        Mf2Message message = parse("{$value :number minimumFractionDigits=" + "1".repeat(257) + "}");
         Mf2FormatResult result = message.format(
                 Map.of("value", 1),
                 Mf2FormatOptions.builder()

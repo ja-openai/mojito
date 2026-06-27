@@ -29,6 +29,7 @@ object Mf2Icu4jFunctions {
     private const val MAX_DATE_OPERAND_LENGTH = 256
     private const val MAX_FRACTION_DIGITS = 100
     private const val MAX_LOCALE_LENGTH = 256
+    private const val MAX_NUMERIC_OPTION_LENGTH = 256
     private const val MAX_TIME_ZONE_OPTION_LENGTH = 256
     private val epochDate: LocalDate = LocalDate.of(1970, 1, 1)
     private val isoDateTimeOperand =
@@ -433,7 +434,10 @@ object Mf2Icu4jFunctions {
     }
 
     private fun parseNonNegativeInteger(value: String, message: String): Int =
-        value.toIntOrNull()?.takeIf { it in 0..MAX_FRACTION_DIGITS }
+        value
+            .takeIf { it.length <= MAX_NUMERIC_OPTION_LENGTH }
+            ?.toIntOrNull()
+            ?.takeIf { it in 0..MAX_FRACTION_DIGITS }
             ?: throw Mf2Error.badOption(message)
 
     private fun currencyCode(call: Mf2FunctionCall): String? =

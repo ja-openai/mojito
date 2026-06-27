@@ -193,7 +193,7 @@ class BabelIntegrationTest(unittest.TestCase):
             "1e1000",
         )
 
-        oversized_digits = parse_to_model("{$amount :number minimumFractionDigits=10000}")
+        oversized_digits = parse_to_model("{$amount :number minimumFractionDigits=" + ("1" * 257) + "}")
         oversized_result = format_message(
             oversized_digits.model,
             {"amount": 1},

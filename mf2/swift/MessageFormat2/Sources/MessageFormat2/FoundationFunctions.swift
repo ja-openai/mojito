@@ -3,6 +3,7 @@ import Foundation
 private let maxFoundationFractionDigits = 100
 private let maxFoundationDateOperandLength = 256
 private let maxFoundationLocaleLength = 256
+private let maxFoundationNumericOptionLength = 256
 private let maxFoundationTimeZoneOptionLength = 256
 private let foundationISO8601DatePattern = #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})$"#
 private let foundationDateTimeSecondPattern = #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$"#
@@ -274,6 +275,9 @@ private func applyFractionOptions(_ call: MF2FunctionCall, formatter: NumberForm
 private func nonNegativeIntegerOption(_ call: MF2FunctionCall, _ name: String) throws -> Int? {
     guard let value = try call.optionValue(name) else {
         return nil
+    }
+    guard value.utf8.count <= maxFoundationNumericOptionLength else {
+        throw MF2Error.badOption("\(name) option must be a non-negative integer.")
     }
     guard value.range(of: #"^[0-9]+$"#, options: .regularExpression) == value.startIndex..<value.endIndex,
           let parsed = Int(value),
