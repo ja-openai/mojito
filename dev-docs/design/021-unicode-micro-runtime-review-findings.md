@@ -501,11 +501,12 @@ branch is under active implementation.
   `2026-05-21T14:30:15+01:02:03` recover as MF2 `bad-operand` like the other
   runtimes. JDK and ICU4J registry demos cover both Java and Kotlin.
 - Host-adapter timeZone option bounds: the JavaScript Intl, Python Babel, PHP
-  Intl, Swift Foundation, Java/Kotlin JDK, and Java/Kotlin ICU4J adapters now
-  reject `timeZone` option strings longer than 256 characters before calling
-  host timezone parsers. That keeps invalid options in MF2 `bad-option`
-  recovery and avoids delegating oversized attacker-controlled strings to ICU,
-  Babel, Foundation, PHP Intl, and JVM timezone implementations.
+  Intl, Swift Foundation, Rust ICU4X, Java/Kotlin JDK, and Java/Kotlin ICU4J
+  adapters now reject `timeZone` option strings longer than 256 characters
+  before host timezone parsing or adapter-specific timezone validation. That
+  keeps invalid options in MF2 `bad-option` recovery and avoids delegating
+  oversized attacker-controlled strings to ICU, Babel, Foundation, PHP Intl,
+  ICU4X, and JVM timezone implementations.
 - PHP Intl numeric operand grammar: the explicit PHP Intl registry now reuses
   the shared portable decimal parser instead of `is_numeric()`, rejecting host
   numeric extensions such as leading plus signs, whitespace, leading-dot,

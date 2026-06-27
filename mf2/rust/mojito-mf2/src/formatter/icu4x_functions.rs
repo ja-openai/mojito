@@ -13,6 +13,7 @@ use crate::diagnostic::Diagnostic;
 use super::{FunctionCall, FunctionRegistry};
 
 const MAX_FRACTION_DIGITS: i16 = 100;
+const MAX_TIME_ZONE_OPTION_LENGTH: usize = 256;
 
 pub(super) fn register(registry: &mut FunctionRegistry) {
     registry.register_formatter("number", format_icu4x_number);
@@ -252,7 +253,15 @@ fn parse_locale(locale: &str) -> Result<Locale, Diagnostic> {
 }
 
 fn validate_utc_time_zone(call: &FunctionCall<'_>) -> Result<(), Diagnostic> {
-    match call.option_value("timeZone")?.as_deref() {
+    let time_zone = call.option_value("timeZone")?;
+    if let Some(value) = time_zone.as_deref() {
+        if value.len() > MAX_TIME_ZONE_OPTION_LENGTH {
+            return Err(bad_option(
+                "timeZone option must not exceed 256 characters.",
+            ));
+        }
+    }
+    match time_zone.as_deref() {
         None | Some("UTC") | Some("Etc/UTC") => Ok(()),
         Some(_) => Err(bad_option(
             "Rust ICU4X date/time formatting currently supports only UTC timeZone.",

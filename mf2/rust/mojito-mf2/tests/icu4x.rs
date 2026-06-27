@@ -79,6 +79,22 @@ fn icu4x_registry_is_explicit_and_does_not_fake_unsupported_functions() {
     assert_eq!(relative_time.errors[0].code, "unknown-function");
 }
 
+#[test]
+fn icu4x_registry_rejects_oversized_time_zone_options() {
+    let registry = FunctionRegistry::icu4x();
+    let source = "{$value :datetime dateStyle=medium timeStyle=medium timeZone=".to_string()
+        + &"A".repeat(257)
+        + "}";
+    let result = format_result_with(
+        &source,
+        "en",
+        Arguments::new().with("value", "2020-01-02T03:04:05Z"),
+        &registry,
+    );
+    assert!(result.has_errors());
+    assert_eq!(result.errors[0].code, "bad-option");
+}
+
 fn format_with(
     source: &str,
     locale: &str,
