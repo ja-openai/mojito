@@ -684,25 +684,26 @@ fn parse_datetime(value: &str) -> Result<DateTimeValue, Diagnostic> {
             "Date/time core requires a valid host date/time value or ISO date string.",
         ));
     }
-    let text = text.strip_suffix('Z').unwrap_or(text);
-    if text.contains('+') {
-        return Err(bad_operand(
-            "Date/time core requires a valid host date/time value or ISO date string.",
-        ));
-    }
+    let (text, source_offset_minutes) = split_datetime_source_offset(text)?;
     if let Some((date, time)) = text.split_once('T') {
         let (year, month, day) = parse_date_parts(date)?;
         let (hour, minute, second, millisecond) = parse_time_parts(time)?;
-        return Ok(DateTimeValue {
-            year,
-            month,
-            day,
-            hour,
-            minute,
-            second,
-            millisecond,
-            offset_minutes: 0,
-        });
+        return Ok(normalize_source_offset(
+            DateTimeValue {
+                year,
+                month,
+                day,
+                hour,
+                minute,
+                second,
+                millisecond,
+                offset_minutes: 0,
+            },
+            source_offset_minutes,
+        ));
+    }
+    if source_offset_minutes != 0 {
+        return Err(invalid_date_time_operand());
     }
     if text.contains(':') {
         let (hour, minute, second, millisecond) = parse_time_parts(text)?;
@@ -728,6 +729,39 @@ fn parse_datetime(value: &str) -> Result<DateTimeValue, Diagnostic> {
         millisecond: 0,
         offset_minutes: 0,
     })
+}
+
+fn split_datetime_source_offset(value: &str) -> Result<(&str, i32), Diagnostic> {
+    if let Some(stripped) = value.strip_suffix('Z') {
+        return Ok((stripped, 0));
+    }
+    let Some(time_index) = value.find('T') else {
+        return Ok((value, 0));
+    };
+    let time = &value[time_index + 1..];
+    let Some(relative_sign_index) = time.rfind(['+', '-']) else {
+        return Ok((value, 0));
+    };
+    let sign_index = time_index + 1 + relative_sign_index;
+    let (date_time, offset) = value.split_at(sign_index);
+    if offset.len() != 6 || offset.as_bytes().get(3) != Some(&b':') {
+        return Err(invalid_date_time_operand());
+    }
+    let Some(offset_minutes) = parse_offset_minutes(offset) else {
+        return Err(invalid_date_time_operand());
+    };
+    Ok((date_time, offset_minutes))
+}
+
+fn normalize_source_offset(value: DateTimeValue, source_offset_minutes: i32) -> DateTimeValue {
+    if source_offset_minutes == 0 {
+        value
+    } else {
+        DateTimeValue {
+            offset_minutes: 0,
+            ..apply_time_zone(value, -source_offset_minutes)
+        }
+    }
 }
 
 fn parse_date_parts(value: &str) -> Result<(i32, u8, u8), Diagnostic> {
