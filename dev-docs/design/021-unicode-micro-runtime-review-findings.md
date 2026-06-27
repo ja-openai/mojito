@@ -497,6 +497,10 @@ branch is under active implementation.
   option text longer than 256 characters before integer regex matching or
   numeric coercion. This keeps attacker-controlled fraction digit option
   literals in the same bounded `bad-option` recovery path as numeric operands.
+- JavaScript Intl enum option bounds: the optional JavaScript Intl adapter now
+  rejects oversized enum-style option values before validating or passing them
+  to Intl constructors. Package-boundary checks cover `signDisplay`,
+  relative-time `unit`/`style`, and date-time style options.
 - Cross-runtime fraction option text bounds: portable numeric helpers across
   Java, Kotlin, JavaScript, Python, PHP, Go, Swift, and Rust plus the JavaScript
   Intl, Python Babel, PHP Intl, Swift Foundation, JVM JDK/ICU4J, Kotlin

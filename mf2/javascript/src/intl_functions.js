@@ -6,6 +6,7 @@ import { formatOffset } from "./offset_function.js";
 const MAX_FRACTION_DIGITS = 100;
 const MAX_DATE_OPERAND_LENGTH = 256;
 const MAX_LOCALE_LENGTH = 256;
+const MAX_OPTION_LENGTH = 256;
 const MAX_TIME_ZONE_OPTION_LENGTH = 256;
 const MIN_TIMESTAMP_MS = -62_135_596_800_000;
 const MAX_TIMESTAMP_MS = 253_402_300_799_999;
@@ -69,6 +70,7 @@ function formatIntlDateTime(call) {
 function formatIntlRelativeTime(call) {
   const value = parseCallNumber(call, "Relative time function requires a numeric operand.");
   const unit = call.optionValue("unit", null);
+  if (unit != null && unit.length > MAX_OPTION_LENGTH) throw MF2Error.badOption("unit option must not exceed 256 characters.");
   if (!["second", "minute", "hour", "day", "week", "month", "quarter", "year"].includes(unit)) {
     throw MF2Error.badOption("Relative time function requires unit second, minute, hour, day, week, month, quarter, or year.");
   }
@@ -284,6 +286,7 @@ function dateTimeStyle(call, optionName, legacyOptionName, fallback) {
 function optionOneOf(call, optionName, allowed, fallback) {
   const value = call.optionValue(optionName, fallback ?? null);
   if (value == null) return undefined;
+  if (value.length > MAX_OPTION_LENGTH) throw MF2Error.badOption(`${optionName} option must not exceed 256 characters.`);
   if (!allowed.includes(value)) throw MF2Error.badOption(`${optionName} option must be one of ${allowed.join(", ")}.`);
   return value;
 }

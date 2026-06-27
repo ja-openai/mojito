@@ -143,6 +143,13 @@ const oversizedIntlFractionResult = formatMessageFromFormatter(
   { locale: "en-US", functions: intlRegistry, bidiIsolation: "none" },
 );
 assert.deepEqual(oversizedIntlFractionResult.errors.map((error) => error.code), ["bad-option"]);
+const oversizedIntlSignDisplay = parseToModelFromParser(`Rounded {$amount :number signDisplay=${"a".repeat(257)}}`);
+const oversizedIntlSignDisplayResult = formatMessageFromFormatter(
+  oversizedIntlSignDisplay.model,
+  { amount: 12.3 },
+  { locale: "en-US", functions: intlRegistry, bidiIsolation: "none" },
+);
+assert.deepEqual(oversizedIntlSignDisplayResult.errors.map((error) => error.code), ["bad-option"]);
 const relative = parseToModelFromParser("Due {$delta :relativeTime unit=day}");
 for (const locale of ["en", "fr", "ja", "ar"]) {
   assert.equal(
@@ -150,6 +157,20 @@ for (const locale of ["en", "fr", "ja", "ar"]) {
     `Due ${new Intl.RelativeTimeFormat(locale, { numeric: "always", style: "long" }).format(-1, "day")}`,
   );
 }
+const oversizedIntlRelativeUnit = parseToModelFromParser(`Due {$delta :relativeTime unit=${"a".repeat(257)}}`);
+const oversizedIntlRelativeUnitResult = formatMessageFromFormatter(
+  oversizedIntlRelativeUnit.model,
+  { delta: -1 },
+  { locale: "en-US", functions: intlRegistry, bidiIsolation: "none" },
+);
+assert.deepEqual(oversizedIntlRelativeUnitResult.errors.map((error) => error.code), ["bad-option"]);
+const oversizedIntlRelativeStyle = parseToModelFromParser(`Due {$delta :relativeTime unit=day style=${"a".repeat(257)}}`);
+const oversizedIntlRelativeStyleResult = formatMessageFromFormatter(
+  oversizedIntlRelativeStyle.model,
+  { delta: -1 },
+  { locale: "en-US", functions: intlRegistry, bidiIsolation: "none" },
+);
+assert.deepEqual(oversizedIntlRelativeStyleResult.errors.map((error) => error.code), ["bad-option"]);
 const oversizedIntlLocaleResult = formatMessageFromFormatter(
   relative.model,
   { delta: -1 },
@@ -210,6 +231,11 @@ assertIntlDateBadOperand(
 assertIntlDateBadOption(
   "Intl adapter rejects oversized timeZone options",
   `At {$instant :datetime dateStyle=medium timeStyle=medium timeZone=${"A".repeat(257)}}`,
+  "2020-01-02T03:04:05Z",
+);
+assertIntlDateBadOption(
+  "Intl adapter rejects oversized dateStyle options",
+  `At {$instant :datetime dateStyle=${"a".repeat(257)} timeStyle=medium timeZone=UTC}`,
   "2020-01-02T03:04:05Z",
 );
 const intlTimeOnly = parseToModelFromParser("At {$instant :time timeStyle=medium timeZone=UTC}");
