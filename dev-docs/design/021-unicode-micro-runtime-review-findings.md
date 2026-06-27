@@ -446,6 +446,12 @@ branch is under active implementation.
   Python keeps existing `datetime` local-source compatibility and rejects
   offsets beyond `+18:00`/`-18:00`. Adapter integration tests cover the compact
   repros.
+- Python Babel numeric operand grammar: the explicit Babel registry now
+  prefilters number, currency, and relative-time operands with the shared
+  bounded ASCII decimal grammar before `Decimal`, rejecting Unicode digit
+  lookalikes and underscore groupings that Python accepts. Babel formatter
+  decimal overflows now recover as MF2 `bad-operand` instead of leaking raw
+  `InvalidOperation` or `OverflowError` exceptions.
 - JVM host-adapter currency option errors: Java and Kotlin JDK `:currency`
   formatters now classify missing or invalid `currency` options as `bad-option`
   instead of `bad-operand`, matching JavaScript Intl, Python Babel, PHP Intl,

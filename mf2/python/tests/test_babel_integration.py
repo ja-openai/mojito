@@ -141,6 +141,42 @@ class BabelIntegrationTest(unittest.TestCase):
             "03:04:05+18:01",
         )
 
+        def assert_numeric_bad_operand(label: str, source: str, value: str) -> None:
+            result = format_message(
+                parse_to_model(source).model,
+                {"amount": value},
+                locale="en",
+                functions=functions,
+                bidi_isolation="none",
+            )
+            self.assertEqual(["bad-operand"], [error.code for error in result.errors], label)
+
+        assert_numeric_bad_operand(
+            "Babel adapter rejects Arabic-Indic numeric operands",
+            "{$amount :number}",
+            "\u0661\u0662.\u0663",
+        )
+        assert_numeric_bad_operand(
+            "Babel adapter rejects underscore numeric operands",
+            "{$amount :number}",
+            "1_000",
+        )
+        assert_numeric_bad_operand(
+            "Babel adapter reports oversized number exponents as bad operand",
+            "{$amount :number}",
+            "1e1000",
+        )
+        assert_numeric_bad_operand(
+            "Babel adapter reports oversized currency exponents as bad operand",
+            "{$amount :currency currency=USD}",
+            "1e1000",
+        )
+        assert_numeric_bad_operand(
+            "Babel adapter reports oversized relative time exponents as bad operand",
+            "{$amount :relativeTime unit=day}",
+            "1e1000",
+        )
+
         oversized_digits = parse_to_model("{$amount :number minimumFractionDigits=10000}")
         oversized_result = format_message(
             oversized_digits.model,

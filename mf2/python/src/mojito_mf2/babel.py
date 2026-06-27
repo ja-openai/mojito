@@ -25,7 +25,10 @@ from .functions import FunctionCall, FunctionRegistry
 __all__ = ["babel_function_registry"]
 
 _MAX_FRACTION_DIGITS = 100
+_MAX_DECIMAL_OPERAND_LENGTH = 256
+_MAX_DECIMAL_EXPONENT = 1_000_000
 _ABSENT_OPTION = "\x00__mojito_mf2_absent__"
+_DECIMAL_RE = re.compile(r"^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$")
 _ISO_DATE_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 _ISO_TIME_RE = re.compile(
     r"^[0-9]{2}:[0-9]{2}(?::[0-9]{2}(?:\.[0-9]{1,9})?)?(Z|[+-][0-9]{2}:[0-9]{2})?$"
@@ -50,45 +53,61 @@ def babel_function_registry() -> FunctionRegistry:
 
 
 def _format_number(call: FunctionCall) -> str:
-    value = _parse_call_decimal(call, "Number function requires a numeric operand.")
-    return _apply_sign_display(
-        format_decimal(
+    message = "Number function requires a numeric operand."
+    value = _parse_call_decimal(call, message)
+    try:
+        rendered = format_decimal(
             value,
             format=_decimal_pattern(call),
             locale=call.locale,
             decimal_quantization=_maximum_fraction_digits(call) is not None,
-        ),
+        )
+    except InvalidOperation as error:
+        raise MF2Error("bad-operand", message) from error
+    return _apply_sign_display(
+        rendered,
         value,
         call,
     )
 
 
 def _format_percent(call: FunctionCall) -> str:
-    value = _parse_call_decimal(call, "Percent function requires a numeric operand.")
-    return _apply_sign_display(
-        format_percent(
+    message = "Percent function requires a numeric operand."
+    value = _parse_call_decimal(call, message)
+    try:
+        rendered = format_percent(
             value,
             format=_decimal_pattern(call, suffix="%"),
             locale=call.locale,
             decimal_quantization=_maximum_fraction_digits(call) is not None,
-        ),
+        )
+    except InvalidOperation as error:
+        raise MF2Error("bad-operand", message) from error
+    return _apply_sign_display(
+        rendered,
         value,
         call,
     )
 
 
 def _format_integer(call: FunctionCall) -> str:
-    value = _parse_call_decimal(call, "Integer function requires a numeric operand.")
+    message = "Integer function requires a numeric operand."
+    value = _parse_call_decimal(call, message)
     integer = value.to_integral_value(rounding=ROUND_DOWN)
+    try:
+        rendered = format_decimal(integer, format="#,##0", locale=call.locale)
+    except InvalidOperation as error:
+        raise MF2Error("bad-operand", message) from error
     return _apply_sign_display(
-        format_decimal(integer, format="#,##0", locale=call.locale),
+        rendered,
         integer,
         call,
     )
 
 
 def _format_currency(call: FunctionCall) -> str:
-    value = _parse_call_decimal(call, "Currency function requires a numeric operand.")
+    message = "Currency function requires a numeric operand."
+    value = _parse_call_decimal(call, message)
     currency = _inherited_option_value(call, "currency")
     if (
         currency is None
@@ -99,6 +118,8 @@ def _format_currency(call: FunctionCall) -> str:
         raise MF2Error("bad-option", "Currency function requires a three-letter currency option.")
     try:
         return format_currency(value, currency.upper(), locale=call.locale)
+    except InvalidOperation as error:
+        raise MF2Error("bad-operand", message) from error
     except Exception as error:
         raise MF2Error("bad-option", str(error)) from error
 
@@ -133,7 +154,8 @@ def _format_datetime(call: FunctionCall) -> str:
 
 
 def _format_relative_time(call: FunctionCall) -> str:
-    value = _parse_call_decimal(call, "Relative time function requires a numeric operand.")
+    message = "Relative time function requires a numeric operand."
+    value = _parse_call_decimal(call, message)
     unit = _option_one_of(
         call,
         "unit",
@@ -142,8 +164,12 @@ def _format_relative_time(call: FunctionCall) -> str:
     )
     style = _option_one_of(call, "style", {"long", "short", "narrow"}, "long")
     _option_one_of(call, "numeric", {"always", "auto"}, "always")
+    try:
+        delta = _timedelta(value, unit)
+    except (OverflowError, ValueError) as error:
+        raise MF2Error("bad-operand", message) from error
     return format_timedelta(
-        _timedelta(value, unit),
+        delta,
         granularity=unit,
         add_direction=True,
         format=style,
@@ -235,10 +261,36 @@ def _inherited_option_value(call: FunctionCall, name: str) -> str | None:
 
 def _parse_decimal_or_none(value: Any) -> Decimal | None:
     try:
-        parsed = Decimal(str(value))
+        text = str(value)
+    except Exception:
+        return None
+    if len(text) > _MAX_DECIMAL_OPERAND_LENGTH:
+        return None
+    if _DECIMAL_RE.fullmatch(text) is None or _parse_bounded_decimal_exponent(text) is None:
+        return None
+    try:
+        parsed = Decimal(text)
     except InvalidOperation:
         return None
     return parsed if parsed.is_finite() else None
+
+
+def _parse_bounded_decimal_exponent(value: str) -> int | None:
+    exponent_start = max(value.find("e"), value.find("E"))
+    if exponent_start < 0:
+        return 0
+    exponent_text = value[exponent_start + 1 :]
+    negative = exponent_text.startswith("-")
+    digits = exponent_text[1:] if exponent_text.startswith(("+", "-")) else exponent_text
+    digits = digits.lstrip("0")
+    if not digits:
+        return 0
+    if len(digits) > 7:
+        return None
+    parsed = int(digits)
+    if parsed > _MAX_DECIMAL_EXPONENT:
+        return None
+    return -parsed if negative else parsed
 
 
 def _parse_call_date(call: FunctionCall, message: str) -> date:
