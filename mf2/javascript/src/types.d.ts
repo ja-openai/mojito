@@ -102,6 +102,7 @@ export type MF2ExpressionPart = {
 export type MF2FallbackPart = {
   type: "fallback";
   source: string;
+  value?: string;
 };
 
 export type MF2MarkupPart = {

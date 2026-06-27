@@ -748,6 +748,10 @@ branch is under active implementation.
   typed core errors where those options exist, and direct `relative-time-core`
   wraps non-coercible operands, locales, and option enums as typed core errors.
   Targeted JavaScript, Python, and PHP tests cover these host-object paths.
+- JavaScript fallback part typing: the public `MF2FallbackPart` declaration now
+  includes optional `value`, matching runtime recovery output and the Python,
+  Rust, Swift, Java, Kotlin, Go, and PHP parts contracts. The package-boundary
+  type check narrows fallback parts and reads the optional value field.
 - Official Unicode parts assertions: the JavaScript official-test runner now
   validates the upstream `expParts` assertions in the wired official files by
   projecting Mojito's public parts into the official parts vocabulary for

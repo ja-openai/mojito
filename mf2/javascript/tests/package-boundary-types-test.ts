@@ -6,6 +6,7 @@ import {
   parseToModel,
   type MF2FormatResult,
   type MF2FormatOptions,
+  type MF2FallbackPart,
   type MF2PatternMessage,
   type MF2Part,
   type MF2PartsResult,
@@ -66,6 +67,14 @@ const parsed = parseToModel("Hello {$name}");
 const parsedFromSubpath = parseToModelFromParser("Hello {$name}");
 const diagnostics: MF2ParseDiagnostic[] = parseToModel("Hello {$name").diagnostics;
 const parts: MF2Part[] = formatMessageToParts(parsed.model ?? model, { name: "Mojito" }, options).parts;
+const fallbackPart: MF2FallbackPart = { type: "fallback", source: "$name", value: "" };
+const recoveredParts: MF2Part[] = formatMessageToParts(model, {}, { onMissingArgument: () => "" }).parts;
+for (const part of recoveredParts) {
+  if (part.type === "fallback") {
+    const fallbackValue: string | undefined = part.value;
+    void fallbackValue;
+  }
+}
 const output: string = formatMessage(model, { name: "Mojito" }, options).value;
 const formatterOutput: string = formatMessageFromFormatter(model, { name: "Mojito" }, { functions: intlRegistry }).value;
 const numberCoreOutput: string = formatNumberCore(1234.5, {
@@ -155,6 +164,7 @@ void safeOutput;
 void safeParts;
 void recovery;
 void parts;
+void fallbackPart;
 void error;
 void portableRegistry;
 void portableRegistryFromSubpath;
