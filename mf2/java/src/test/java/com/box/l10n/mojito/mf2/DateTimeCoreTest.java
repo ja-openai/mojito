@@ -168,6 +168,35 @@ public final class DateTimeCoreTest {
                 throw new AssertionError("date-time core object operand got " + error.code());
             }
         }
+        CharSequence throwingText = new CharSequence() {
+            @Override
+            public int length() {
+                return 1;
+            }
+
+            @Override
+            public char charAt(int index) {
+                return 'x';
+            }
+
+            @Override
+            public CharSequence subSequence(int start, int end) {
+                return this;
+            }
+
+            @Override
+            public String toString() {
+                throw new IllegalStateException("boom stringify");
+            }
+        };
+        try {
+            Mf2DateTimeCore.formatDateTime(throwingText, Mf2DateTimeCore.options().build());
+            throw new AssertionError("date-time core should wrap CharSequence stringify failures");
+        } catch (Mf2Exception error) {
+            if (!"bad-operand".equals(error.code())) {
+                throw new AssertionError("date-time core throwing CharSequence operand got " + error.code());
+            }
+        }
     }
 
     private static void checkDefaultOverloads() throws Exception {

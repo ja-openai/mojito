@@ -70,6 +70,24 @@ object KotlinDateTimeCoreTest {
                 throw AssertionError("date-time core object operand got ${error.code}")
             }
         }
+        val throwingText =
+            object : CharSequence {
+                override val length: Int = 1
+
+                override fun get(index: Int): Char = 'x'
+
+                override fun subSequence(startIndex: Int, endIndex: Int): CharSequence = this
+
+                override fun toString(): String = throw IllegalStateException("boom stringify")
+            }
+        try {
+            Mf2DateTimeCore.formatDateTime(throwingText)
+            throw AssertionError("date-time core should wrap CharSequence stringify failures")
+        } catch (error: Mf2Error) {
+            if (error.code != "bad-operand") {
+                throw AssertionError("date-time core throwing CharSequence operand got ${error.code}")
+            }
+        }
     }
 
     private fun checkFormatCases(cases: List<Any?>): Int {

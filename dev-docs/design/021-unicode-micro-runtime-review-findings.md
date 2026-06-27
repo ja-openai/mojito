@@ -208,6 +208,10 @@ branch is under active implementation.
   non-primitive operands and recover as MF2 `bad-operand` instead of leaking raw
   unchecked host exceptions. Targeted Java and Kotlin core tests cover the
   throwing-operand path.
+- JVM direct date/time operand exceptions: Java and Kotlin date-time-core direct
+  APIs now also catch hostile `CharSequence.toString()` failures and recover as
+  MF2 `bad-operand` instead of leaking raw unchecked host exceptions. Targeted
+  Java and Kotlin date-time core tests cover the throwing-operand path.
 - Relative-time data validation: data-explicit relative-time constructors and
   registry helpers now reject empty `localeMap`, empty `patternSets`, and
   pattern-set entries with empty ids or empty data maps as MF2

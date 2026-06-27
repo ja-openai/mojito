@@ -306,7 +306,14 @@ object Mf2DateTimeCore {
                 }
                 Instant.ofEpochMilli(epochMillis.toLong()).atZone(ZoneOffset.UTC)
             }
-            is CharSequence -> parseDateString(value.toString().trim())
+            is CharSequence -> {
+                val text = try {
+                    value.toString().trim()
+                } catch (_: RuntimeException) {
+                    throw Mf2Error.badOperand("Date/time core requires a valid host date/time value or ISO date string.")
+                }
+                parseDateString(text)
+            }
             else -> throw Mf2Error.badOperand("Date/time core requires a valid host date/time value or ISO date string.")
         }
     }

@@ -548,7 +548,12 @@ public final class Mf2DateTimeCore {
         if (!(value instanceof CharSequence)) {
             throw Mf2Exception.badOperand("Date/time core requires a valid host date/time value or ISO date string.");
         }
-        String text = value.toString().trim();
+        String text;
+        try {
+            text = value.toString().trim();
+        } catch (RuntimeException error) {
+            throw Mf2Exception.badOperand("Date/time core requires a valid host date/time value or ISO date string.");
+        }
         if (text.length() > MAX_OPERAND_LENGTH) {
             throw Mf2Exception.badOperand("Date/time core requires a valid host date/time value or ISO date string.");
         }
