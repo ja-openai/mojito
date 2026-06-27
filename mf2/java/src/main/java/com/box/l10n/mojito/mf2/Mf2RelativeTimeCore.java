@@ -268,7 +268,12 @@ public final class Mf2RelativeTimeCore {
         if (value instanceof Number number) {
             parsed = number.doubleValue();
         } else {
-            String text = String.valueOf(value).trim();
+            String text;
+            try {
+                text = String.valueOf(value).trim();
+            } catch (RuntimeException error) {
+                throw Mf2Exception.badOperand("Relative-time core requires a finite numeric value.");
+            }
             if (text.isEmpty()) {
                 throw Mf2Exception.badOperand("Relative-time core requires a finite numeric value.");
             }

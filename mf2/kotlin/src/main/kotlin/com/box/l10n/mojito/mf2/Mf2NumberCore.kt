@@ -337,7 +337,11 @@ object Mf2NumberCore {
                 )
             }
             else -> {
-                val text = value?.toString()?.trim().orEmpty()
+                val text = try {
+                    value?.toString()?.trim().orEmpty()
+                } catch (error: RuntimeException) {
+                    return null
+                }
                 if (text.length > MAX_OPERAND_LENGTH || !decimalText.matches(text)) {
                     null
                 } else {

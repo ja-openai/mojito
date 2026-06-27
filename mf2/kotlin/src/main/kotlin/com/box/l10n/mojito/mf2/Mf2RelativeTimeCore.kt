@@ -362,7 +362,11 @@ object Mf2RelativeTimeCore {
         val parsed = when (value) {
             is Number -> value.toDouble()
             else -> {
-                val text = value.toString().trim()
+                val text = try {
+                    value.toString().trim()
+                } catch (error: RuntimeException) {
+                    throw Mf2Error.badOperand("Relative-time core requires a finite numeric value.")
+                }
                 if (text.length > MAX_OPERAND_LENGTH) {
                     throw Mf2Error.badOperand("Relative-time core requires a finite numeric value.")
                 }

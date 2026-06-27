@@ -184,6 +184,21 @@ public final class RelativeTimeCoreTest {
                         "huge relative-time quantity expected bad-operand, got " + error.code());
             }
         }
+        Object throwingOperand = new Object() {
+            @Override
+            public String toString() {
+                throw new IllegalStateException("relative-time operand coercion failed");
+            }
+        };
+        try {
+            Mf2RelativeTimeCore.format(throwingOperand, data);
+            throw new AssertionError("throwing relative-time operand expected bad-operand");
+        } catch (Mf2Exception error) {
+            if (!error.code().equals("bad-operand")) {
+                throw new AssertionError(
+                        "throwing relative-time operand expected bad-operand, got " + error.code());
+            }
+        }
     }
 
     private static void assertSameDefault(String label, String overloaded, String explicitDefault) {

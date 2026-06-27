@@ -393,7 +393,12 @@ public final class Mf2NumberCore {
             }
             return new ParsedNumber(BigDecimal.valueOf(doubleValue), Double.compare(doubleValue, 0.0d) < 0);
         }
-        String text = String.valueOf(value == null ? "" : value).trim();
+        String text;
+        try {
+            text = String.valueOf(value == null ? "" : value).trim();
+        } catch (RuntimeException error) {
+            return null;
+        }
         if (text.length() > MAX_OPERAND_LENGTH) {
             return null;
         }

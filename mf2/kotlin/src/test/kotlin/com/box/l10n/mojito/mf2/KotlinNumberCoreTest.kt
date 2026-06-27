@@ -26,6 +26,7 @@ object KotlinNumberCoreTest {
         val registryCases = checkRegistryIntegration(KotlinJsonSupport.arrayOrEmpty(fixture["registryCases"]))
         val registryErrorCases = checkRegistryErrorCases(KotlinJsonSupport.arrayOrEmpty(fixture["registryErrorCases"]))
         checkDirectParts()
+        checkDirectOperandErrors()
         println(
             "Kotlin number core test passed $formatCases format cases, " +
                 "$referenceCases JDK reference cases, $errorCases error cases, " +
@@ -40,6 +41,20 @@ object KotlinNumberCoreTest {
         val actual = Mf2NumberCore.formatToParts(1234.5)
         if (actual != expected) {
             throw AssertionError("number core formatToParts expected $expected, got $actual")
+        }
+    }
+
+    private fun checkDirectOperandErrors() {
+        val throwingOperand = object {
+            override fun toString(): String = throw IllegalStateException("number operand coercion failed")
+        }
+        try {
+            Mf2NumberCore.format(throwingOperand)
+            throw AssertionError("throwing number-core operand expected bad-operand")
+        } catch (error: Mf2Error) {
+            if (error.code != "bad-operand") {
+                throw AssertionError("throwing number-core operand expected bad-operand, got ${error.code}")
+            }
         }
     }
 

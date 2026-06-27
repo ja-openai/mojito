@@ -177,6 +177,17 @@ object KotlinRelativeTimeCoreTest {
                 throw AssertionError("huge relative-time quantity expected bad-operand, got ${error.code}")
             }
         }
+        val throwingOperand = object {
+            override fun toString(): String = throw IllegalStateException("relative-time operand coercion failed")
+        }
+        try {
+            Mf2RelativeTimeCore.format(throwingOperand, data)
+            throw AssertionError("throwing relative-time operand expected bad-operand")
+        } catch (error: Mf2Error) {
+            if (error.code != "bad-operand") {
+                throw AssertionError("throwing relative-time operand expected bad-operand, got ${error.code}")
+            }
+        }
     }
 
     private fun checkIntlReferenceCases(data: Mf2RelativeTimeCore.Data): Int {

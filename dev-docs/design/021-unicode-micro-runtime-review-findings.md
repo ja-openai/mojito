@@ -197,6 +197,11 @@ branch is under active implementation.
   fixed-width integer clamps, and implementation-defined casts for huge finite
   operands such as `1e30`. The shared relative-time fixture covers the reviewer
   repro and direct API tests cover the same bound.
+- JVM direct numeric operand exceptions: Java and Kotlin number-core and
+  relative-time-core direct APIs now catch hostile `toString()` failures from
+  non-primitive operands and recover as MF2 `bad-operand` instead of leaking raw
+  unchecked host exceptions. Targeted Java and Kotlin core tests cover the
+  throwing-operand path.
 - Relative-time data validation: data-explicit relative-time constructors and
   registry helpers now reject empty `localeMap`, empty `patternSets`, and
   pattern-set entries with empty ids or empty data maps as MF2

@@ -22,6 +22,7 @@ public final class NumberCoreTest {
         int registryCases = checkRegistryIntegration(arrayOrEmpty(fixture.get("registryCases")));
         int registryErrorCases = checkRegistryErrorCases(arrayOrEmpty(fixture.get("registryErrorCases")));
         checkDefaultOverload();
+        checkDirectOperandErrors();
         System.out.printf(
                 "Java number core test passed %d format cases, %d JDK reference cases, "
                         + "%d error cases, %d registry cases, %d registry error cases, and default overloads.%n",
@@ -176,6 +177,24 @@ public final class NumberCoreTest {
         if (!parts.equals(expectedParts) || !explicitParts.equals(expectedParts)) {
             throw new AssertionError("number core formatToParts expected "
                     + expectedParts + ", got " + parts + " and " + explicitParts);
+        }
+    }
+
+    private static void checkDirectOperandErrors() throws Exception {
+        Object throwingOperand = new Object() {
+            @Override
+            public String toString() {
+                throw new IllegalStateException("number operand coercion failed");
+            }
+        };
+        try {
+            Mf2NumberCore.format(throwingOperand);
+            throw new AssertionError("throwing number-core operand expected bad-operand");
+        } catch (Mf2Exception error) {
+            if (!error.code().equals("bad-operand")) {
+                throw new AssertionError(
+                        "throwing number-core operand expected bad-operand, got " + error.code());
+            }
         }
     }
 
