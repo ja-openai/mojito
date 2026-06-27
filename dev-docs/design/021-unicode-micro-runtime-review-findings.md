@@ -683,7 +683,9 @@ branch is under active implementation.
   silent JavaScript/Python acceptance of malformed option or attribute
   containers. Public API and conformance regressions cover these malformed model
   shapes while preserving parser-generated `true` presence attributes and
-  literal attribute objects.
+  literal attribute objects. Python's public `MF2AttributeValue` typing now also
+  includes the `Literal[True]` presence marker so the typed API matches parser
+  and parts output.
 - JavaScript top-level options getter hardening: hostile getters on
   `functions`, `onMissingArgument`, `onFormatError`, and `bidiIsolation` now
   recover as `bad-option` setup failures instead of escaping as raw host

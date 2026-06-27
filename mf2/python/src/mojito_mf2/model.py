@@ -27,9 +27,7 @@ class MF2FunctionAnnotation(TypedDict):
     options: NotRequired[dict[str, MF2ExpressionArgument]]
 
 
-class MF2AttributeValue(TypedDict):
-    type: Literal["literal"]
-    value: str
+MF2AttributeValue: TypeAlias = MF2LiteralArgument | Literal[True]
 
 
 class MF2Expression(TypedDict):

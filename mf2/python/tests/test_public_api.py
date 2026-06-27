@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from typing import Literal, get_args
 
 import mojito_mf2
 import mojito_mf2.parser
@@ -70,6 +71,20 @@ class PublicApiTest(unittest.TestCase):
         self.assertEqual([], parts.errors)
         self.assertTrue(parts.ok)
         self.assertFalse(parts.has_errors)
+
+    def test_presence_attributes_are_public_model_values(self) -> None:
+        result = parse_to_model("Hello, {$name @private}!")
+        self.assertFalse(result.has_diagnostics, result.diagnostics)
+        self.assertIn(Literal[True], get_args(mojito_mf2.MF2AttributeValue))
+
+        expression = result.model["pattern"][1]  # type: ignore[index]
+        self.assertEqual({"private": True}, expression["attributes"])
+
+        parts = format_message_to_parts(result.model, {"name": "Mojito"})
+        self.assertEqual(
+            {"private": True},
+            parts.parts[1]["attributes"],
+        )
 
     def test_recovery_callbacks_can_replace_missing_arguments(self) -> None:
         result = parse_to_model("Welcome, {$name}!")
