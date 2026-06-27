@@ -144,10 +144,9 @@ overrides, and append-item fallback landed showed:
 
 These are harness smoke numbers only. They exist to catch order-of-magnitude
 regressions in generated resource shape and lookup cost while the real
-number/date-time formatter APIs are still being expanded across native
-runtimes. The Swift date-time-core number is from the debug SwiftPM smoke path
-and is intentionally tracked as a follow-up optimization target rather than a
-release-mode claim.
+generated formatter data and API ergonomics continue to settle. The Swift
+date-time-core number is from the debug SwiftPM smoke path and is intentionally
+tracked as a follow-up optimization target rather than a release-mode claim.
 
 Java JFR smoke profiles point at ordinary string/parser work after warmup:
 quoted-pattern scanning, name splitting, immutable model list construction, and
