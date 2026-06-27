@@ -425,7 +425,7 @@ public enum MF2DateTimeCore {
         switch value {
         case let .string(text), let .number(text):
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.count <= maxOperandLength, let date = parseDateString(trimmed) {
+            if trimmed.count <= maxOperandLength, let date = parseDateString(trimmed), isPortableDate(date) {
                 return date
             }
         case .bool, .null:
@@ -452,6 +452,16 @@ public enum MF2DateTimeCore {
         }
         formatter.formatOptions = [.withInternetDateTime]
         return formatter.date(from: value)
+    }
+
+    private static func isPortableDate(_ value: Date) -> Bool {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let components = calendar.dateComponents([.era, .year], from: value)
+        guard components.era == 1, let year = components.year else {
+            return false
+        }
+        return year >= 1 && year <= 9999
     }
 
     private static func hasValidISO8601Offset(_ value: String) -> Bool {

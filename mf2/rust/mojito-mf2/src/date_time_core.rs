@@ -688,7 +688,7 @@ fn parse_datetime(value: &str) -> Result<DateTimeValue, Diagnostic> {
     if let Some((date, time)) = text.split_once('T') {
         let (year, month, day) = parse_date_parts(date)?;
         let (hour, minute, second, millisecond) = parse_time_parts(time)?;
-        return Ok(normalize_source_offset(
+        return validate_datetime_value(normalize_source_offset(
             DateTimeValue {
                 year,
                 month,
@@ -707,7 +707,7 @@ fn parse_datetime(value: &str) -> Result<DateTimeValue, Diagnostic> {
     }
     if text.contains(':') {
         let (hour, minute, second, millisecond) = parse_time_parts(text)?;
-        return Ok(DateTimeValue {
+        return validate_datetime_value(DateTimeValue {
             year: 1970,
             month: 1,
             day: 1,
@@ -719,7 +719,7 @@ fn parse_datetime(value: &str) -> Result<DateTimeValue, Diagnostic> {
         });
     }
     let (year, month, day) = parse_date_parts(text)?;
-    Ok(DateTimeValue {
+    validate_datetime_value(DateTimeValue {
         year,
         month,
         day,
@@ -729,6 +729,13 @@ fn parse_datetime(value: &str) -> Result<DateTimeValue, Diagnostic> {
         millisecond: 0,
         offset_minutes: 0,
     })
+}
+
+fn validate_datetime_value(value: DateTimeValue) -> Result<DateTimeValue, Diagnostic> {
+    if value.year < 1 || value.year > 9999 {
+        return Err(invalid_date_time_operand());
+    }
+    Ok(value)
 }
 
 fn split_datetime_source_offset(value: &str) -> Result<(&str, i32), Diagnostic> {

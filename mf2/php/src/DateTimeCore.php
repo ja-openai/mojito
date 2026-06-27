@@ -324,14 +324,14 @@ final class DateTimeCore
     {
         $utc = new \DateTimeZone(self::UTC);
         if ($value instanceof \DateTimeInterface) {
-            return \DateTimeImmutable::createFromInterface($value)->setTimezone($utc);
+            return self::validateDateTime(\DateTimeImmutable::createFromInterface($value)->setTimezone($utc));
         }
         if ((is_int($value) || is_float($value)) && is_finite((float) $value)) {
             $timestamp = (float) $value;
             if ($timestamp >= self::MIN_TIMESTAMP_MS && $timestamp <= self::MAX_TIMESTAMP_MS) {
                 $parsed = \DateTimeImmutable::createFromFormat('U.u', sprintf('%.6F', $timestamp / 1000), $utc);
                 if ($parsed !== false) {
-                    return $parsed->setTimezone($utc);
+                    return self::validateDateTime($parsed->setTimezone($utc));
                 }
             }
         }
@@ -341,7 +341,7 @@ final class DateTimeCore
             throw MF2Error::badOperand('Date/time core requires a valid host date/time value or ISO date string.');
         }
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $text) === 1) {
-            return self::parseStrictDateTime('!Y-m-d', $text, $utc);
+            return self::validateDateTime(self::parseStrictDateTime('!Y-m-d', $text, $utc));
         }
         if (preg_match(
             '/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,9}))?)?(Z|[+-]\d{2}:\d{2})?$/',
@@ -357,12 +357,21 @@ final class DateTimeCore
                     throw MF2Error::badOperand('Date/time core requires a valid host date/time value or ISO date string.');
                 }
                 $normalized .= $zone === 'Z' ? '+00:00' : $zone;
-                return self::parseStrictDateTime('!Y-m-d\TH:i:s.uP', $normalized, $utc)->setTimezone($utc);
+                return self::validateDateTime(self::parseStrictDateTime('!Y-m-d\TH:i:s.uP', $normalized, $utc)->setTimezone($utc));
             }
-            return self::parseStrictDateTime('!Y-m-d\TH:i:s.u', $normalized, $utc)->setTimezone($utc);
+            return self::validateDateTime(self::parseStrictDateTime('!Y-m-d\TH:i:s.u', $normalized, $utc)->setTimezone($utc));
         }
 
         throw MF2Error::badOperand('Date/time core requires a valid host date/time value or ISO date string.');
+    }
+
+    private static function validateDateTime(\DateTimeImmutable $value): \DateTimeImmutable
+    {
+        $year = (int) $value->format('Y');
+        if ($year < 1 || $year > 9999) {
+            throw MF2Error::badOperand('Date/time core requires a valid host date/time value or ISO date string.');
+        }
+        return $value;
     }
 
     private static function parseStrictDateTime(string $format, string $value, \DateTimeZone $timeZone): \DateTimeImmutable

@@ -520,7 +520,13 @@ def _time_precision_style_option(value: str, name: str) -> str:
 
 def _parse_datetime(value: Any) -> datetime:
     if isinstance(value, datetime):
-        return _to_utc(value)
+        try:
+            return _to_utc(value)
+        except (OverflowError, OSError, ValueError) as error:
+            raise MF2Error(
+                "bad-operand",
+                "Date/time core requires a valid host date/time value or ISO date string.",
+            ) from error
     if isinstance(value, date):
         return datetime.combine(value, time(), tzinfo=timezone.utc)
     if isinstance(value, time):
@@ -563,7 +569,7 @@ def _parse_datetime(value: Any) -> datetime:
         if zone not in {"", "Z"} and _parse_offset_minutes(zone) is None:
             raise ValueError("invalid ISO date-time offset")
         return _to_utc(datetime.fromisoformat(text.replace("Z", "+00:00")))
-    except ValueError as error:
+    except (OverflowError, OSError, ValueError) as error:
         raise MF2Error(
             "bad-operand",
             "Date/time core requires a valid host date/time value or ISO date string.",

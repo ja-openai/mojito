@@ -389,10 +389,15 @@ function parseDate(value) {
     throw new DateTimeCoreError("bad-operand", "Date/time core requires a valid Date, timestamp, or ISO date string.");
   }
   const date = value instanceof Date ? value : typeof value === "string" ? parseDateString(value) : new Date(value);
-  if (!Number.isFinite(date.getTime())) {
+  if (!isPortableDate(date)) {
     throw new DateTimeCoreError("bad-operand", "Date/time core requires a valid Date, timestamp, or ISO date string.");
   }
   return date;
+}
+
+function isPortableDate(date) {
+  const timestamp = date.getTime();
+  return Number.isFinite(timestamp) && timestamp >= MIN_TIMESTAMP_MS && timestamp <= MAX_TIMESTAMP_MS;
 }
 
 function parseDateString(value) {

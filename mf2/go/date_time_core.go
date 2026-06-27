@@ -525,7 +525,7 @@ func dateTimeCoreOffsetZoneName(offsetMinutes int) string {
 func parseDateTimeCore(value any) (time.Time, error) {
 	switch typed := value.(type) {
 	case time.Time:
-		return typed.UTC(), nil
+		return validateDateTimeCoreTime(typed.UTC())
 	case int:
 		return parseDateTimeCoreTimestampMillis(int64(typed))
 	case int8:
@@ -594,10 +594,27 @@ func parseDateTimeCoreText(value string) (time.Time, error) {
 	} {
 		parsed, err := time.Parse(layout, text)
 		if err == nil {
-			return parsed.UTC(), nil
+			return validateDateTimeCoreTime(parsed.UTC())
 		}
 	}
 	return time.Time{}, badOperand("Date/time core requires a valid host date/time value or ISO date string.")
+}
+
+func validateDateTimeCoreTime(value time.Time) (time.Time, error) {
+	if value.Before(dateTimeCoreMinTime()) || value.After(dateTimeCoreMaxTime()) {
+		return time.Time{}, badOperand("Date/time core requires a valid host date/time value or ISO date string.")
+	}
+	return value, nil
+}
+
+func dateTimeCoreMinTime() time.Time {
+	value, _ := parseDateTimeCoreTimestampMillis(dateTimeCoreMinTimestampMillis)
+	return value
+}
+
+func dateTimeCoreMaxTime() time.Time {
+	value, _ := parseDateTimeCoreTimestampMillis(dateTimeCoreMaxTimestampMillis)
+	return value
 }
 
 func validateDateTimeCoreTextOffset(text string) error {

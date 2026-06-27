@@ -17,6 +17,8 @@ public final class Mf2DateTimeCore {
     private static final String UTC = "UTC";
     private static final double MIN_TIMESTAMP_MS = -62_135_596_800_000D;
     private static final double MAX_TIMESTAMP_MS = 253_402_300_799_999D;
+    private static final Instant MIN_INSTANT = Instant.ofEpochMilli((long) MIN_TIMESTAMP_MS);
+    private static final Instant MAX_INSTANT = Instant.ofEpochMilli((long) MAX_TIMESTAMP_MS);
     private static final int MAX_OPTION_LENGTH = 256;
     private static final int MAX_OPERAND_LENGTH = 256;
     private static final int MAX_SKELETON_FIELD_WIDTH = 32;
@@ -527,16 +529,16 @@ public final class Mf2DateTimeCore {
 
     private static ZonedDateTime parseDate(Object value) throws Mf2Exception {
         if (value instanceof ZonedDateTime zonedDateTime) {
-            return zonedDateTime.withZoneSameInstant(ZoneOffset.UTC);
+            return validateDate(zonedDateTime.withZoneSameInstant(ZoneOffset.UTC));
         }
         if (value instanceof OffsetDateTime offsetDateTime) {
-            return offsetDateTime.atZoneSameInstant(ZoneOffset.UTC);
+            return validateDate(offsetDateTime.atZoneSameInstant(ZoneOffset.UTC));
         }
         if (value instanceof Instant instant) {
-            return instant.atZone(ZoneOffset.UTC);
+            return validateDate(instant.atZone(ZoneOffset.UTC));
         }
         if (value instanceof Date date) {
-            return date.toInstant().atZone(ZoneOffset.UTC);
+            return validateDate(date.toInstant().atZone(ZoneOffset.UTC));
         }
         if (value instanceof Number number) {
             double epochMillis = number.doubleValue();
@@ -558,25 +560,33 @@ public final class Mf2DateTimeCore {
             throw Mf2Exception.badOperand("Date/time core requires a valid host date/time value or ISO date string.");
         }
         try {
-            return Instant.parse(text).atZone(ZoneOffset.UTC);
+            return validateDate(Instant.parse(text).atZone(ZoneOffset.UTC));
         } catch (DateTimeParseException ignored) {
             // Try the other ISO host types below.
         }
         try {
-            return OffsetDateTime.parse(text).atZoneSameInstant(ZoneOffset.UTC);
+            return validateDate(OffsetDateTime.parse(text).atZoneSameInstant(ZoneOffset.UTC));
         } catch (DateTimeParseException ignored) {
             // Try the other ISO host types below.
         }
         try {
-            return LocalDateTime.parse(text).atZone(ZoneOffset.UTC);
+            return validateDate(LocalDateTime.parse(text).atZone(ZoneOffset.UTC));
         } catch (DateTimeParseException ignored) {
             // Try the date-only form below.
         }
         try {
-            return LocalDate.parse(text).atStartOfDay(ZoneOffset.UTC);
+            return validateDate(LocalDate.parse(text).atStartOfDay(ZoneOffset.UTC));
         } catch (DateTimeParseException ignored) {
             throw Mf2Exception.badOperand("Date/time core requires a valid host date/time value or ISO date string.");
         }
+    }
+
+    private static ZonedDateTime validateDate(ZonedDateTime value) throws Mf2Exception {
+        Instant instant = value.toInstant();
+        if (instant.isBefore(MIN_INSTANT) || instant.isAfter(MAX_INSTANT)) {
+            throw Mf2Exception.badOperand("Date/time core requires a valid host date/time value or ISO date string.");
+        }
+        return value;
     }
 
     private static String formatSkeleton(

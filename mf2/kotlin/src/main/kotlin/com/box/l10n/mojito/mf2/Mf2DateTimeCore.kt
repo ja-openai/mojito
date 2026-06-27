@@ -14,6 +14,8 @@ object Mf2DateTimeCore {
     private const val UTC = "UTC"
     private const val MIN_TIMESTAMP_MS = -62_135_596_800_000.0
     private const val MAX_TIMESTAMP_MS = 253_402_300_799_999.0
+    private val minInstant: Instant = Instant.ofEpochMilli(MIN_TIMESTAMP_MS.toLong())
+    private val maxInstant: Instant = Instant.ofEpochMilli(MAX_TIMESTAMP_MS.toLong())
     private const val MAX_OPTION_LENGTH = 256
     private const val MAX_OPERAND_LENGTH = 256
     private const val MAX_SKELETON_FIELD_WIDTH = 32
@@ -295,16 +297,16 @@ object Mf2DateTimeCore {
 
     private fun parseDate(value: Any?): ZonedDateTime {
         return when (value) {
-            is ZonedDateTime -> value.withZoneSameInstant(ZoneOffset.UTC)
-            is OffsetDateTime -> value.atZoneSameInstant(ZoneOffset.UTC)
-            is Instant -> value.atZone(ZoneOffset.UTC)
-            is java.util.Date -> value.toInstant().atZone(ZoneOffset.UTC)
+            is ZonedDateTime -> validateDate(value.withZoneSameInstant(ZoneOffset.UTC))
+            is OffsetDateTime -> validateDate(value.atZoneSameInstant(ZoneOffset.UTC))
+            is Instant -> validateDate(value.atZone(ZoneOffset.UTC))
+            is java.util.Date -> validateDate(value.toInstant().atZone(ZoneOffset.UTC))
             is Number -> {
                 val epochMillis = value.toDouble()
                 if (!epochMillis.isFinite() || epochMillis < MIN_TIMESTAMP_MS || epochMillis > MAX_TIMESTAMP_MS) {
                     throw Mf2Error.badOperand("Date/time core requires a valid host date/time value or ISO date string.")
                 }
-                Instant.ofEpochMilli(epochMillis.toLong()).atZone(ZoneOffset.UTC)
+                validateDate(Instant.ofEpochMilli(epochMillis.toLong()).atZone(ZoneOffset.UTC))
             }
             is CharSequence -> {
                 val text = try {
@@ -323,22 +325,30 @@ object Mf2DateTimeCore {
             throw Mf2Error.badOperand("Date/time core requires a valid host date/time value or ISO date string.")
         }
         try {
-            return Instant.parse(value).atZone(ZoneOffset.UTC)
+            return validateDate(Instant.parse(value).atZone(ZoneOffset.UTC))
         } catch (_: DateTimeParseException) {
         }
         try {
-            return OffsetDateTime.parse(value).atZoneSameInstant(ZoneOffset.UTC)
+            return validateDate(OffsetDateTime.parse(value).atZoneSameInstant(ZoneOffset.UTC))
         } catch (_: DateTimeParseException) {
         }
         try {
-            return LocalDateTime.parse(value).atZone(ZoneOffset.UTC)
+            return validateDate(LocalDateTime.parse(value).atZone(ZoneOffset.UTC))
         } catch (_: DateTimeParseException) {
         }
         try {
-            return LocalDate.parse(value).atStartOfDay(ZoneOffset.UTC)
+            return validateDate(LocalDate.parse(value).atStartOfDay(ZoneOffset.UTC))
         } catch (_: DateTimeParseException) {
             throw Mf2Error.badOperand("Date/time core requires a valid host date/time value or ISO date string.")
         }
+    }
+
+    private fun validateDate(value: ZonedDateTime): ZonedDateTime {
+        val instant = value.toInstant()
+        if (instant < minInstant || instant > maxInstant) {
+            throw Mf2Error.badOperand("Date/time core requires a valid host date/time value or ISO date string.")
+        }
+        return value
     }
 
     private fun formatSkeleton(
