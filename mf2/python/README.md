@@ -162,8 +162,8 @@ Current scope:
 Planned:
 
 - richer locale negotiation
-- generated-data ports for the remaining Rust, Go, and PHP number/date-time
-  core gaps
+- cross-runtime generated-data API polish and adapter parity follow-ups once
+  the experimental core APIs settle
 
 Run:
 
