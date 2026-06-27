@@ -499,6 +499,66 @@ object KotlinConformance {
                 mapOf("state" to "ok"),
             )
         }
+        for ((label, model, code) in listOf(
+            Triple(
+                "expression arg",
+                mapOf("type" to "message", "pattern" to listOf(mapOf("type" to "expression", "arg" to 1))),
+                "unsupported-expression-arg",
+            ),
+            Triple(
+                "expression function",
+                mapOf(
+                    "type" to "message",
+                    "pattern" to listOf(mapOf("type" to "expression", "arg" to mapOf("type" to "literal", "value" to "x"), "function" to 1)),
+                ),
+                "bad-option",
+            ),
+            Triple(
+                "function options",
+                mapOf(
+                    "type" to "message",
+                    "pattern" to listOf(
+                        mapOf(
+                            "type" to "expression",
+                            "arg" to mapOf("type" to "literal", "value" to "x"),
+                            "function" to mapOf("type" to "function", "name" to "string", "options" to 1),
+                        ),
+                    ),
+                ),
+                "bad-option",
+            ),
+            Triple(
+                "function option value",
+                mapOf(
+                    "type" to "message",
+                    "pattern" to listOf(
+                        mapOf(
+                            "type" to "expression",
+                            "arg" to mapOf("type" to "literal", "value" to "x"),
+                            "function" to mapOf("type" to "function", "name" to "string", "options" to mapOf("foo" to 1)),
+                        ),
+                    ),
+                ),
+                "bad-option",
+            ),
+            Triple(
+                "markup options",
+                mapOf("type" to "message", "pattern" to listOf(mapOf("type" to "markup", "kind" to "standalone", "name" to "x", "options" to 1))),
+                "bad-option",
+            ),
+            Triple(
+                "markup option value",
+                mapOf(
+                    "type" to "message",
+                    "pattern" to listOf(mapOf("type" to "markup", "kind" to "standalone", "name" to "x", "options" to mapOf("foo" to 1))),
+                ),
+                "bad-option",
+            ),
+        )) {
+            assertThrowsMf2Code("invalid nested $label", code) {
+                Mf2Formatter.formatMessage(model)
+            }
+        }
     }
 
     private fun parsePublicApiModel(source: String): Mf2Model {

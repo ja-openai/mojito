@@ -582,6 +582,7 @@ function modelObjectEntries(values, name) {
 function validateDeclarations(declarations) {
   const names = new Set();
   for (const declaration of declarations) {
+    if (declaration.value != null) validateExpression(declaration.value);
     const name = declaration.name ?? "";
     if (declaration.type === "input") validateInputDeclaration(declaration);
     if (names.has(name)) throw new MF2Error("duplicate-declaration", `Declaration $${name} is defined more than once.`);
@@ -625,7 +626,10 @@ function validatePattern(pattern) {
     if (part == null || typeof part !== "object" || Array.isArray(part)) {
       throw new MF2Error("unsupported-pattern-part", "Unsupported pattern part: ");
     }
-    if (part.type === "expression") continue;
+    if (part.type === "expression") {
+      validateExpression(part);
+      continue;
+    }
     if (part.type === "markup") {
       validateMarkup(part);
       continue;
@@ -634,7 +638,35 @@ function validatePattern(pattern) {
   }
 }
 
+function validateExpression(expression) {
+  if (expression == null || typeof expression !== "object" || Array.isArray(expression)) {
+    throw MF2Error.badOption("Expression must be an object.");
+  }
+  if (expression.arg != null && (typeof expression.arg !== "object" || Array.isArray(expression.arg))) {
+    throw new MF2Error("unsupported-expression-arg", "Unsupported expression arg: ");
+  }
+  if (expression.function != null) validateFunctionRef(expression.function);
+}
+
+function validateFunctionRef(functionRef) {
+  if (functionRef == null || typeof functionRef !== "object" || Array.isArray(functionRef)) {
+    throw MF2Error.badOption("Function reference must be an object.");
+  }
+  validateOptionsMap(functionRef.options, "function options");
+}
+
+function validateOptionsMap(options, name) {
+  if (options == null) return;
+  if (typeof options !== "object" || Array.isArray(options)) throw MF2Error.badOption(`${name} must be an object.`);
+  for (const option of Object.values(options)) {
+    if (option == null || typeof option !== "object" || Array.isArray(option)) {
+      throw MF2Error.badOption(`${name} values must be objects.`);
+    }
+  }
+}
+
 function validateMarkup(markup) {
+  validateOptionsMap(markup.options, "markup options");
   if (["open", "standalone", "close"].includes(markup.kind)) return;
   throw new MF2Error("invalid-markup-kind", "Markup kind must be open, standalone, or close.");
 }

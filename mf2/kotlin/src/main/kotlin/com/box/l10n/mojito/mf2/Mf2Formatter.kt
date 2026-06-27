@@ -615,6 +615,7 @@ private fun validateModel(model: Mf2Model) {
 private fun validateDeclarations(declarations: List<Map<String, Any?>>) {
     val names = mutableSetOf<String>()
     for (declaration in declarations) {
+        if (declaration["value"] != null) validateExpression(modelObject(declaration["value"], "Expression"))
         val name = stringValue(declaration["name"])
         if (declaration["type"] == "input") validateInputDeclaration(declaration)
         if (!names.add(name)) throw Mf2Error("duplicate-declaration", "Declaration $$name is defined more than once.")
@@ -659,14 +660,41 @@ private fun validatePattern(pattern: List<Any?>) {
         @Suppress("UNCHECKED_CAST")
         val item = part as? Map<String, Any?> ?: throw Mf2Error("unsupported-pattern-part", "Unsupported pattern part: ")
         when (item["type"]) {
-            "expression" -> continue
+            "expression" -> validateExpression(item)
             "markup" -> validateMarkup(item)
             else -> throw Mf2Error("unsupported-pattern-part", "Unsupported pattern part: ${item["type"]}")
         }
     }
 }
 
+private fun modelObject(value: Any?, label: String): Map<String, Any?> {
+    @Suppress("UNCHECKED_CAST")
+    return value as? Map<String, Any?> ?: throw Mf2Error("bad-option", "$label must be an object.")
+}
+
+private fun validateExpression(expression: Map<String, Any?>) {
+    if (expression["arg"] != null && expression["arg"] !is Map<*, *>) throw Mf2Error(
+        "unsupported-expression-arg",
+        "Unsupported expression arg: ",
+    )
+    if (expression["function"] != null) validateFunctionRef(modelObject(expression["function"], "Function reference"))
+}
+
+private fun validateFunctionRef(functionRef: Map<String, Any?>) {
+    validateOptionsMap(functionRef["options"], "function options")
+}
+
+private fun validateOptionsMap(options: Any?, label: String) {
+    if (options == null) return
+    @Suppress("UNCHECKED_CAST")
+    val optionMap = options as? Map<String, Any?> ?: throw Mf2Error("bad-option", "$label must be an object.")
+    for (option in optionMap.values) {
+        if (option !is Map<*, *>) throw Mf2Error("bad-option", "$label values must be objects.")
+    }
+}
+
 private fun validateMarkup(markup: Map<String, Any?>) {
+    validateOptionsMap(markup["options"], "markup options")
     if (stringValue(markup["kind"]) in setOf("open", "standalone", "close")) return
     throw Mf2Error("invalid-markup-kind", "Markup kind must be open, standalone, or close.")
 }

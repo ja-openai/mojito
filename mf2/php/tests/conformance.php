@@ -846,6 +846,36 @@ function assert_public_api_boundary(): void
     ], ['state' => 'ok']);
     assert_same('unselected invalid pattern value', '', $unselectedInvalidPattern['value']);
     assert_json_equal('unselected invalid pattern errors', ['unsupported-pattern-part'], array_map(static fn($error): string => error_code($error), $unselectedInvalidPattern['errors']));
+    foreach ([
+        'expression arg' => [
+            ['type' => 'message', 'pattern' => [['type' => 'expression', 'arg' => 1]]],
+            'unsupported-expression-arg',
+        ],
+        'expression function' => [
+            ['type' => 'message', 'pattern' => [['type' => 'expression', 'arg' => ['type' => 'literal', 'value' => 'x'], 'function' => 1]]],
+            'bad-option',
+        ],
+        'function options' => [
+            ['type' => 'message', 'pattern' => [['type' => 'expression', 'arg' => ['type' => 'literal', 'value' => 'x'], 'function' => ['type' => 'function', 'name' => 'string', 'options' => 1]]]],
+            'bad-option',
+        ],
+        'function option value' => [
+            ['type' => 'message', 'pattern' => [['type' => 'expression', 'arg' => ['type' => 'literal', 'value' => 'x'], 'function' => ['type' => 'function', 'name' => 'string', 'options' => ['foo' => 1]]]]],
+            'bad-option',
+        ],
+        'markup options' => [
+            ['type' => 'message', 'pattern' => [['type' => 'markup', 'kind' => 'standalone', 'name' => 'x', 'options' => 1]]],
+            'bad-option',
+        ],
+        'markup option value' => [
+            ['type' => 'message', 'pattern' => [['type' => 'markup', 'kind' => 'standalone', 'name' => 'x', 'options' => ['foo' => 1]]]],
+            'bad-option',
+        ],
+    ] as $label => [$model, $code]) {
+        $invalidNestedModel = format_message($model);
+        assert_same("invalid nested {$label} value", '', $invalidNestedModel['value']);
+        assert_json_equal("invalid nested {$label} errors", [$code], array_map(static fn($error): string => error_code($error), $invalidNestedModel['errors']));
+    }
 
     $throwingNumberOption = parse_to_model('Hello {1 :number minimumFractionDigits=$d}')['model'];
     $throwingNumberOptionResult = format_message($throwingNumberOption, ['d' => new ThrowingStringValue()], [

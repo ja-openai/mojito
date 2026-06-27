@@ -224,6 +224,28 @@ assert.throws(
   }, { state: "ok" }),
   (error) => error instanceof MF2Error && error.code === "unsupported-pattern-part",
 );
+for (const [label, model, code] of [
+  ["expression arg", { type: "message", pattern: [{ type: "expression", arg: 1 }] }, "unsupported-expression-arg"],
+  ["expression function", { type: "message", pattern: [{ type: "expression", arg: { type: "literal", value: "x" }, function: 1 }] }, "bad-option"],
+  [
+    "function options",
+    { type: "message", pattern: [{ type: "expression", arg: { type: "literal", value: "x" }, function: { type: "function", name: "string", options: 1 } }] },
+    "bad-option",
+  ],
+  [
+    "function option value",
+    { type: "message", pattern: [{ type: "expression", arg: { type: "literal", value: "x" }, function: { type: "function", name: "string", options: { foo: 1 } } }] },
+    "bad-option",
+  ],
+  ["markup options", { type: "message", pattern: [{ type: "markup", kind: "standalone", name: "x", options: 1 }] }, "bad-option"],
+  ["markup option value", { type: "message", pattern: [{ type: "markup", kind: "standalone", name: "x", options: { foo: 1 } }] }, "bad-option"],
+]) {
+  assert.throws(
+    () => formatMessage(model),
+    (error) => error instanceof MF2Error && error.code === code,
+    label,
+  );
+}
 assert.equal(FunctionRegistry.defaults().hasFormatter({ name: "string" }), true);
 assert.equal(FunctionRegistry.portable().hasFormatter({ name: "number" }), true);
 assert.equal(createPortableFunctionRegistry(FunctionRegistry).hasFormatter({ name: "number" }), true);

@@ -827,6 +827,15 @@ func modelObjectEntries(values []any, name string) ([]map[string]any, error) {
 func validateDeclarations(declarations []map[string]any) error {
 	names := map[string]bool{}
 	for _, declaration := range declarations {
+		if value, ok := declaration["value"]; ok && value != nil {
+			expression, err := modelObject(value, "Expression")
+			if err != nil {
+				return err
+			}
+			if err := validateExpression(expression); err != nil {
+				return err
+			}
+		}
 		name := stringField(declaration, "name")
 		if stringField(declaration, "type") == "input" {
 			if err := validateInputDeclaration(declaration); err != nil {
@@ -892,7 +901,9 @@ func validatePattern(pattern []any) error {
 		object := asObject(part)
 		switch stringField(object, "type") {
 		case "expression":
-			continue
+			if err := validateExpression(object); err != nil {
+				return err
+			}
 		case "markup":
 			if err := validateMarkup(object); err != nil {
 				return err
@@ -904,7 +915,48 @@ func validatePattern(pattern []any) error {
 	return nil
 }
 
+func modelObject(value any, label string) (map[string]any, error) {
+	object := asObject(value)
+	if object != nil {
+		return object, nil
+	}
+	return nil, badOption(label + " must be an object.")
+}
+
+func validateExpression(expression map[string]any) error {
+	if raw, ok := expression["arg"]; ok && raw != nil && asObject(raw) == nil {
+		return mf2Error("unsupported-expression-arg", "Unsupported expression arg: ")
+	}
+	if raw, ok := expression["function"]; ok && raw != nil {
+		functionRef, err := modelObject(raw, "Function reference")
+		if err != nil {
+			return err
+		}
+		return validateOptionsMap(functionRef["options"], "function options")
+	}
+	return nil
+}
+
+func validateOptionsMap(raw any, label string) error {
+	if raw == nil {
+		return nil
+	}
+	options := asObject(raw)
+	if options == nil {
+		return badOption(label + " must be an object.")
+	}
+	for _, option := range options {
+		if asObject(option) == nil {
+			return badOption(label + " values must be objects.")
+		}
+	}
+	return nil
+}
+
 func validateMarkup(markup map[string]any) error {
+	if err := validateOptionsMap(markup["options"], "markup options"); err != nil {
+		return err
+	}
 	switch stringField(markup, "kind") {
 	case "open", "standalone", "close":
 		return nil

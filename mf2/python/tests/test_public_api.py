@@ -466,6 +466,82 @@ class PublicApiTest(unittest.TestCase):
             )
         self.assertEqual("unsupported-pattern-part", formatted.exception.code)
 
+    def test_invalid_nested_model_option_fields_raise_mf2_error(self) -> None:
+        cases = (
+            ("expression arg", {"type": "message", "pattern": [{"type": "expression", "arg": 1}]}, "unsupported-expression-arg"),
+            (
+                "expression function",
+                {
+                    "type": "message",
+                    "pattern": [
+                        {
+                            "type": "expression",
+                            "arg": {"type": "literal", "value": "x"},
+                            "function": 1,
+                        }
+                    ],
+                },
+                "bad-option",
+            ),
+            (
+                "function options",
+                {
+                    "type": "message",
+                    "pattern": [
+                        {
+                            "type": "expression",
+                            "arg": {"type": "literal", "value": "x"},
+                            "function": {"type": "function", "name": "string", "options": 1},
+                        }
+                    ],
+                },
+                "bad-option",
+            ),
+            (
+                "function option value",
+                {
+                    "type": "message",
+                    "pattern": [
+                        {
+                            "type": "expression",
+                            "arg": {"type": "literal", "value": "x"},
+                            "function": {
+                                "type": "function",
+                                "name": "string",
+                                "options": {"foo": 1},
+                            },
+                        }
+                    ],
+                },
+                "bad-option",
+            ),
+            (
+                "markup options",
+                {"type": "message", "pattern": [{"type": "markup", "kind": "standalone", "name": "x", "options": 1}]},
+                "bad-option",
+            ),
+            (
+                "markup option value",
+                {
+                    "type": "message",
+                    "pattern": [
+                        {
+                            "type": "markup",
+                            "kind": "standalone",
+                            "name": "x",
+                            "options": {"foo": 1},
+                        }
+                    ],
+                },
+                "bad-option",
+            ),
+        )
+        for label, model, code in cases:
+            with self.subTest(label=label):
+                with self.assertRaises(MF2Error) as formatted:
+                    format_message(model)
+                self.assertEqual(code, formatted.exception.code)
+
     def test_custom_selector_can_match_variant_key(self) -> None:
         model = {
             "type": "select",

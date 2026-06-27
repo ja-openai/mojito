@@ -180,6 +180,45 @@ func TestUnsupportedModelTypeReturnsDiagnostic(t *testing.T) {
 		},
 	}, map[string]any{"state": "ok"}, Options{})
 	assertErrorCodesExact(t, "unselected invalid pattern", result.Errors, []string{"unsupported-pattern-part"})
+	for _, item := range []struct {
+		label string
+		model Model
+		code  string
+	}{
+		{
+			"expression arg",
+			Model{"type": "message", "pattern": []any{map[string]any{"type": "expression", "arg": 1}}},
+			"unsupported-expression-arg",
+		},
+		{
+			"expression function",
+			Model{"type": "message", "pattern": []any{map[string]any{"type": "expression", "arg": map[string]any{"type": "literal", "value": "x"}, "function": 1}}},
+			"bad-option",
+		},
+		{
+			"function options",
+			Model{"type": "message", "pattern": []any{map[string]any{"type": "expression", "arg": map[string]any{"type": "literal", "value": "x"}, "function": map[string]any{"type": "function", "name": "string", "options": 1}}}},
+			"bad-option",
+		},
+		{
+			"function option value",
+			Model{"type": "message", "pattern": []any{map[string]any{"type": "expression", "arg": map[string]any{"type": "literal", "value": "x"}, "function": map[string]any{"type": "function", "name": "string", "options": map[string]any{"foo": 1}}}}},
+			"bad-option",
+		},
+		{
+			"markup options",
+			Model{"type": "message", "pattern": []any{map[string]any{"type": "markup", "kind": "standalone", "name": "x", "options": 1}}},
+			"bad-option",
+		},
+		{
+			"markup option value",
+			Model{"type": "message", "pattern": []any{map[string]any{"type": "markup", "kind": "standalone", "name": "x", "options": map[string]any{"foo": 1}}}},
+			"bad-option",
+		},
+	} {
+		result := FormatMessage(item.model, nil, Options{})
+		assertErrorCodesExact(t, "invalid nested "+item.label, result.Errors, []string{item.code})
+	}
 }
 
 func TestRecoveryCallbacksHandleEmptyAndDeclinedValues(t *testing.T) {

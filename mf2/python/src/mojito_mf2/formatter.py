@@ -212,6 +212,8 @@ def _validate_model(model: dict[str, Any]) -> None:
 def _validate_declarations(declarations: list[dict[str, Any]]) -> None:
     names: set[str] = set()
     for declaration in declarations:
+        if declaration.get("value") is not None:
+            _validate_expression(_model_object(declaration["value"], "Expression"))
         name = declaration.get("name", "")
         if declaration.get("type") == "input":
             _validate_input_declaration(declaration)
@@ -273,6 +275,7 @@ def _validate_pattern(pattern: list[Any]) -> None:
             continue
         part_type = part.get("type")
         if part_type == "expression":
+            _validate_expression(part)
             continue
         if part_type == "markup":
             _validate_markup(part)
@@ -280,7 +283,37 @@ def _validate_pattern(pattern: list[Any]) -> None:
         raise MF2Error("unsupported-pattern-part", f"Unsupported pattern part: {part_type}")
 
 
+def _model_object(value: Any, label: str) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return cast(dict[str, Any], value)
+    raise MF2Error("bad-option", f"{label} must be an object.")
+
+
+def _validate_expression(expression: dict[str, Any]) -> None:
+    arg = expression.get("arg")
+    if arg is not None and not isinstance(arg, dict):
+        raise MF2Error("unsupported-expression-arg", "Unsupported expression arg: ")
+    function = expression.get("function")
+    if function is not None:
+        _validate_function_ref(_model_object(function, "Function reference"))
+
+
+def _validate_function_ref(function: dict[str, Any]) -> None:
+    _validate_options_map(function.get("options"), "function options")
+
+
+def _validate_options_map(options: Any, label: str) -> None:
+    if options is None:
+        return
+    if not isinstance(options, dict):
+        raise MF2Error("bad-option", f"{label} must be an object.")
+    for option in options.values():
+        if not isinstance(option, dict):
+            raise MF2Error("bad-option", f"{label} values must be objects.")
+
+
 def _validate_markup(markup: dict[str, Any]) -> None:
+    _validate_options_map(markup.get("options"), "markup options")
     if markup.get("kind") in {"open", "standalone", "close"}:
         return
     raise MF2Error(

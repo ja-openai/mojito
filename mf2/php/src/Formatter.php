@@ -643,6 +643,9 @@ function validate_declarations(array $declarations): void
 {
     $names = [];
     foreach ($declarations as $declaration) {
+        if (($declaration['value'] ?? null) !== null) {
+            validate_expression(model_object($declaration['value'], 'Expression'));
+        }
         $name = (string) ($declaration['name'] ?? '');
         if (($declaration['type'] ?? '') === 'input') {
             validate_input_declaration($declaration);
@@ -710,6 +713,7 @@ function validate_pattern(array $pattern): void
             throw new MF2Error('unsupported-pattern-part', 'Unsupported pattern part: ');
         }
         if (($part['type'] ?? '') === 'expression') {
+            validate_expression($part);
             continue;
         }
         if (($part['type'] ?? '') === 'markup') {
@@ -720,8 +724,47 @@ function validate_pattern(array $pattern): void
     }
 }
 
+function model_object(mixed $value, string $label): array
+{
+    if (is_array($value)) {
+        return $value;
+    }
+    throw MF2Error::badOption("{$label} must be an object.");
+}
+
+function validate_expression(array $expression): void
+{
+    if (isset($expression['arg']) && !is_array($expression['arg'])) {
+        throw new MF2Error('unsupported-expression-arg', 'Unsupported expression arg: ');
+    }
+    if (isset($expression['function'])) {
+        validate_function_ref(model_object($expression['function'], 'Function reference'));
+    }
+}
+
+function validate_function_ref(array $functionRef): void
+{
+    validate_options_map($functionRef['options'] ?? null, 'function options');
+}
+
+function validate_options_map(mixed $options, string $label): void
+{
+    if ($options === null) {
+        return;
+    }
+    if (!is_array($options)) {
+        throw MF2Error::badOption("{$label} must be an object.");
+    }
+    foreach ($options as $option) {
+        if (!is_array($option)) {
+            throw MF2Error::badOption("{$label} values must be objects.");
+        }
+    }
+}
+
 function validate_markup(array $markup): void
 {
+    validate_options_map($markup['options'] ?? null, 'markup options');
     if (in_array($markup['kind'] ?? '', ['open', 'standalone', 'close'], true)) {
         return;
     }
