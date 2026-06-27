@@ -128,8 +128,8 @@ public enum MF2NumberCore {
                 currency: currencyOption(call, style: style),
                 currencyDisplay: currencyDisplayOption(call.optionValue("currencyDisplay", default: "symbol") ?? "symbol"),
                 useGrouping: booleanOption(call.optionValue("useGrouping", default: "true") ?? "true", name: "useGrouping"),
-                minimumFractionDigits: integerOption(call.optionValue("minimumFractionDigits")),
-                maximumFractionDigits: integerOption(call.optionValue("maximumFractionDigits")),
+                minimumFractionDigits: integerOption(call.optionValue("minimumFractionDigits"), name: "minimumFractionDigits"),
+                maximumFractionDigits: integerOption(call.optionValue("maximumFractionDigits"), name: "maximumFractionDigits"),
                 signDisplay: signDisplayOption(call.optionValue("signDisplay", default: "auto") ?? "auto")
             )
         )
@@ -447,12 +447,15 @@ public enum MF2NumberCore {
         return text.uppercased()
     }
 
-    private static func integerOption(_ value: String?) throws -> Int? {
+    private static func integerOption(_ value: String?, name: String) throws -> Int? {
         guard let value else {
             return nil
         }
+        if value.count > maxOptionLength {
+            throw MF2Error.badOption("\(name) must not exceed 256 characters.")
+        }
         guard !value.isEmpty, value.allSatisfy(isAsciiDigit), let parsed = Int(value) else {
-            throw MF2Error.badOption("Option must be a non-negative integer.")
+            throw MF2Error.badOption("\(name) must be a non-negative integer.")
         }
         return parsed
     }

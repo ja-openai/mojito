@@ -899,6 +899,11 @@ fn non_negative_option(value: Option<String>, name: &str) -> Result<Option<usize
     let Some(value) = value else {
         return Ok(None);
     };
+    if value.chars().count() > MAX_OPTION_LENGTH {
+        return Err(bad_option(format!(
+            "{name} must not exceed 256 characters."
+        )));
+    }
     if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
         return Err(bad_option(format!(
             "{name} must be a non-negative integer."
