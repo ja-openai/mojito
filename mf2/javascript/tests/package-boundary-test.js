@@ -50,6 +50,13 @@ assert.deepEqual(formatMessageToPartsFromRoot(parsed.model, {}, { onMissingArgum
   { type: "text", value: "Hello " },
   { type: "fallback", source: "$name" },
 ]);
+const invalidMissingRecovery = formatMessage(parsed.model, {}, { onMissingArgument: 1 });
+assert.equal(invalidMissingRecovery.value, "Hello {$name}");
+assert.deepEqual(invalidMissingRecovery.errors.map((error) => error.code), ["unresolved-variable"]);
+assert.deepEqual(formatMessageToPartsFromRoot(parsed.model, {}, { onMissingArgument: 1 }).parts, [
+  { type: "text", value: "Hello " },
+  { type: "fallback", source: "$name" },
+]);
 const badInteger = parseToModel("Hello {$name :integer}");
 const emptyFormatError = formatMessage(badInteger.model, { name: "abc" }, { onFormatError: () => "" });
 assert.equal(emptyFormatError.value, "Hello ");
@@ -57,6 +64,13 @@ assert.deepEqual(emptyFormatError.errors.map((error) => error.code), ["bad-opera
 assert.deepEqual(formatMessageToPartsFromRoot(badInteger.model, { name: "abc" }, { onFormatError: () => "" }).parts, [
   { type: "text", value: "Hello " },
   { type: "fallback", source: "$name", value: "" },
+]);
+const invalidFormatRecovery = formatMessage(badInteger.model, { name: "abc" }, { onFormatError: 1 });
+assert.equal(invalidFormatRecovery.value, "Hello {$name}");
+assert.deepEqual(invalidFormatRecovery.errors.map((error) => error.code), ["bad-operand"]);
+assert.deepEqual(formatMessageToPartsFromRoot(badInteger.model, { name: "abc" }, { onFormatError: 1 }).parts, [
+  { type: "text", value: "Hello " },
+  { type: "fallback", source: "$name" },
 ]);
 const nativeErrorMessage = parseToModel("Hello {$name :nativeError}");
 const nativeErrorRegistry = FunctionRegistry.portable().withFunction("nativeError", () => {

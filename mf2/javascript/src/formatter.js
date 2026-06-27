@@ -117,8 +117,8 @@ class FormatContext {
     this.locale = locale;
     this.functions = functions;
     this.fallback = fallback;
-    this.onMissingArgument = options.onMissingArgument ?? defaultRecovery;
-    this.onFormatError = options.onFormatError ?? defaultRecovery;
+    this.onMissingArgument = recoveryHandlerOption(options.onMissingArgument);
+    this.onFormatError = recoveryHandlerOption(options.onFormatError);
     this.selectorAnnotations = new Map();
   }
 
@@ -764,6 +764,10 @@ function fallbackValue(source) {
 
 function defaultRecovery(context) {
   return context.fallbackValue;
+}
+
+function recoveryHandlerOption(handler) {
+  return typeof handler === "function" ? handler : defaultRecovery;
 }
 
 function recoverValue(handler, context) {

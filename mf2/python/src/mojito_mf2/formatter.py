@@ -308,8 +308,8 @@ class _FormatContext:
         self.failed_locals: set[str] = set()
         self.errors: list[MF2Error] = []
         self.fallback = fallback
-        self.on_missing_argument = on_missing_argument or _default_recovery
-        self.on_format_error = on_format_error or _default_recovery
+        self.on_missing_argument = _recovery_handler_option(on_missing_argument)
+        self.on_format_error = _recovery_handler_option(on_format_error)
 
     def apply_declarations(self, declarations: list[dict[str, Any]]) -> None:
         self.selector_annotations = _selector_annotations(declarations)
@@ -824,6 +824,10 @@ class _ExpressionOutput:
 
 def _default_recovery(context: MF2RecoveryContext) -> str:
     return context.fallback_value
+
+
+def _recovery_handler_option(handler: Any) -> MF2RecoveryHandler:
+    return handler if callable(handler) else _default_recovery
 
 
 def _recover_value(handler: MF2RecoveryHandler, context: MF2RecoveryContext) -> str:

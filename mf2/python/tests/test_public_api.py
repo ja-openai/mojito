@@ -149,6 +149,50 @@ class PublicApiTest(unittest.TestCase):
         )
         self.assertEqual(["bad-operand"], [error.code for error in formatted.errors])
 
+    def test_invalid_recovery_handlers_default_to_visible_fallback(self) -> None:
+        missing = parse_to_model("Welcome, {$name}!")
+        missing_formatted = format_message(missing.model, {}, on_missing_argument=1)
+        missing_parts = format_message_to_parts(
+            missing.model, {}, on_missing_argument=1
+        )
+
+        self.assertEqual("Welcome, {$name}!", missing_formatted.value)
+        self.assertEqual(
+            [
+                {"type": "text", "value": "Welcome, "},
+                {"type": "fallback", "source": "$name"},
+                {"type": "text", "value": "!"},
+            ],
+            missing_parts.parts,
+        )
+        self.assertEqual(
+            ["unresolved-variable"],
+            [error.code for error in missing_formatted.errors],
+        )
+        self.assertEqual(
+            ["unresolved-variable"], [error.code for error in missing_parts.errors]
+        )
+
+        bad_integer = parse_to_model("Welcome, {$name :integer}!")
+        bad_formatted = format_message(
+            bad_integer.model, {"name": "abc"}, on_format_error=1
+        )
+        bad_parts = format_message_to_parts(
+            bad_integer.model, {"name": "abc"}, on_format_error=1
+        )
+
+        self.assertEqual("Welcome, {$name}!", bad_formatted.value)
+        self.assertEqual(
+            [
+                {"type": "text", "value": "Welcome, "},
+                {"type": "fallback", "source": "$name"},
+                {"type": "text", "value": "!"},
+            ],
+            bad_parts.parts,
+        )
+        self.assertEqual(["bad-operand"], [error.code for error in bad_formatted.errors])
+        self.assertEqual(["bad-operand"], [error.code for error in bad_parts.errors])
+
     def test_default_unknown_function_recovery_uses_visible_fallback(self) -> None:
         result = parse_to_model("Total: {$amount :currency currency=USD}")
         self.assertFalse(result.has_diagnostics, result.diagnostics)

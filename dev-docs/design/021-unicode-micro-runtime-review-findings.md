@@ -655,6 +655,12 @@ branch is under active implementation.
   the typed `parts_to_string()` helper. This matches the other dynamic runtimes'
   effective behavior for invalid isolation values and avoids a raw PHP
   `TypeError` after formatting has otherwise succeeded.
+- JavaScript/Python recovery handler option hardening: non-callable
+  `onMissingArgument` and `onFormatError` option values now use the default
+  visible-fallback recovery instead of leaking host `TypeError` exceptions,
+  matching PHP's existing callable guard. Public package/API regressions cover
+  invalid missing-argument and format-error handlers for both string and parts
+  formatting.
 - PHP option-variable error classification: variable-valued option coercion now
   uses a dedicated option path, so throwing host option values recover with
   `bad-option` while ordinary expression and selector operands continue to
