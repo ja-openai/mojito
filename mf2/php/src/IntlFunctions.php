@@ -10,6 +10,7 @@ final class IntlFunctions
     private const MAX_FRACTION_DIGITS = 100;
     private const MAX_DATE_OPERAND_LENGTH = 256;
     private const MAX_NUMERIC_OPTION_LENGTH = 256;
+    private const MAX_OPTION_LENGTH = 256;
     private const MAX_LOCALE_LENGTH = 256;
     private const MAX_TIME_ZONE_OPTION_LENGTH = 256;
     private const MIN_TIMESTAMP_MS = -62135596800000.0;
@@ -99,7 +100,7 @@ final class IntlFunctions
     {
         $timeZone = self::timeZone($call);
         $value = self::dateTimeValue($call, 'Datetime function requires a date or datetime operand.', $timeZone, self::DATETIME_OPERAND);
-        $sharedStyle = self::option($call, 'style', null);
+        $sharedStyle = self::boundedOption($call, 'style', null);
         $defaultStyle = $sharedStyle ?? 'medium';
         $dateStyle = self::dateStyle($call, $defaultStyle, 'dateStyle', 'dateLength');
         $timeStyle = self::timeStyle($call, $defaultStyle, 'timeStyle', 'timePrecision');
@@ -337,7 +338,7 @@ final class IntlFunctions
 
     private static function applySignDisplay(string $formatted, float $value, array $call): string
     {
-        return $value >= 0 && self::option($call, 'signDisplay', null) === 'always' ? '+' . $formatted : $formatted;
+        return $value >= 0 && self::boundedOption($call, 'signDisplay', null) === 'always' ? '+' . $formatted : $formatted;
     }
 
     private static function formatNumeric(\NumberFormatter $formatter, float $value): string
@@ -358,6 +359,15 @@ final class IntlFunctions
     {
         $value = ($call['optionValue'] ?? static fn(string $name, mixed $fallback): mixed => $fallback)($name, $fallback);
         return $value === null ? null : (string) $value;
+    }
+
+    private static function boundedOption(array $call, string $name, ?string $fallback): ?string
+    {
+        $value = self::option($call, $name, $fallback);
+        if ($value !== null && strlen($value) > self::MAX_OPTION_LENGTH) {
+            throw MF2Error::badOption("{$name} option must not exceed 256 characters.");
+        }
+        return $value;
     }
 
     private static function sourceOption(?array $source, string $name): ?string
@@ -403,7 +413,7 @@ final class IntlFunctions
     private static function firstOption(array $call, array $names, string $fallback): string
     {
         foreach ($names as $name) {
-            $value = self::option($call, $name, null);
+            $value = self::boundedOption($call, $name, null);
             if ($value !== null) {
                 return $value;
             }

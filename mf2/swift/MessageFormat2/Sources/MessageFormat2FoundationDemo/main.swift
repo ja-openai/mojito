@@ -62,6 +62,35 @@ guard oversizedTimeZoneResult.errors.map(\.code) == ["bad-option"] else {
     throw DemoError.formatErrors("oversizedTimeZone", oversizedTimeZoneResult.errors.map(\.code))
 }
 
+let oversizedStyle = String(repeating: "A", count: 257)
+let oversizedStyleModel = try requireModel(
+    parseToModel("{$value :datetime style=\(oversizedStyle) timeZone=UTC}"),
+    label: "oversizedStyle"
+)
+let oversizedStyleResult = try formatMessage(
+    oversizedStyleModel,
+    arguments: ["value": .string("2020-01-02T03:04:05Z")],
+    locale: "en",
+    functions: registry
+)
+guard oversizedStyleResult.errors.map(\.code) == ["bad-option"] else {
+    throw DemoError.formatErrors("oversizedStyle", oversizedStyleResult.errors.map(\.code))
+}
+
+let oversizedSignDisplayModel = try requireModel(
+    parseToModel("{$value :number signDisplay=\(oversizedStyle)}"),
+    label: "oversizedSignDisplay"
+)
+let oversizedSignDisplayResult = try formatMessage(
+    oversizedSignDisplayModel,
+    arguments: ["value": .number("1")],
+    locale: "en",
+    functions: registry
+)
+guard oversizedSignDisplayResult.errors.map(\.code) == ["bad-option"] else {
+    throw DemoError.formatErrors("oversizedSignDisplay", oversizedSignDisplayResult.errors.map(\.code))
+}
+
 private func requireModel(_ result: MF2ParseResult, label: String) throws -> MF2Message {
     guard let model = result.model else {
         throw DemoError.parseFailed(label, result.diagnostics.map(\.message))

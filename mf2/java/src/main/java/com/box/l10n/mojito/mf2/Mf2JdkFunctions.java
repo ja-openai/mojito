@@ -22,6 +22,7 @@ import java.util.regex.Pattern;
 final class Mf2JdkFunctions {
     private static final int MAX_DATE_OPERAND_LENGTH = 256;
     private static final int MAX_LOCALE_LENGTH = 256;
+    private static final int MAX_OPTION_LENGTH = 256;
     private static final int MAX_TIME_ZONE_OPTION_LENGTH = 256;
     private static final Pattern ISO_DATE_TIME_OPERAND =
             Pattern.compile("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d{1,9})?)?(?:Z|[+-]\\d{2}:\\d{2})?");
@@ -190,16 +191,12 @@ final class Mf2JdkFunctions {
     }
 
     private static String applySignDisplay(
-            String formatted, double value, Mf2FunctionRegistry.FunctionCall call) {
-        if (value >= 0.0 && "always".equals(functionOptionLiteral(call.function(), "signDisplay", null))) {
+            String formatted, double value, Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        if (value >= 0.0 && "always".equals(boundedOptionValue(call, "signDisplay", null))) {
             return "+" + formatted;
         }
         return formatted;
-    }
-
-    private static String functionOptionLiteral(Mf2Message.FunctionRef function, String name, String fallback) {
-        Mf2Message.ExpressionArgument option = function.options().get(name);
-        return option instanceof Mf2Message.LiteralArgument literal ? literal.value() : fallback;
     }
 
     private static Locale locale(String locale) throws Mf2Exception {
@@ -268,30 +265,44 @@ final class Mf2JdkFunctions {
 
     private static String dateStyleOption(Mf2FunctionRegistry.FunctionCall call)
             throws Mf2Exception {
-        return call.optionValue(
-                "dateStyle",
-                call.optionValue("length", call.optionValue("style", "short")));
+        return firstOptionValue(call, "short", "dateStyle", "length", "style");
     }
 
     private static String timeStyleOption(Mf2FunctionRegistry.FunctionCall call)
             throws Mf2Exception {
-        return call.optionValue(
-                "timeStyle",
-                call.optionValue("precision", call.optionValue("style", "short")));
+        return firstOptionValue(call, "short", "timeStyle", "precision", "style");
     }
 
     private static String dateTimeDateStyleOption(Mf2FunctionRegistry.FunctionCall call)
             throws Mf2Exception {
-        return call.optionValue(
-                "dateStyle",
-                call.optionValue("dateLength", call.optionValue("style", "short")));
+        return firstOptionValue(call, "short", "dateStyle", "dateLength", "style");
     }
 
     private static String dateTimeTimeStyleOption(Mf2FunctionRegistry.FunctionCall call)
             throws Mf2Exception {
-        return call.optionValue(
-                "timeStyle",
-                call.optionValue("timePrecision", call.optionValue("style", "short")));
+        return firstOptionValue(call, "short", "timeStyle", "timePrecision", "style");
+    }
+
+    private static String firstOptionValue(
+            Mf2FunctionRegistry.FunctionCall call, String fallback, String... names)
+            throws Mf2Exception {
+        for (String name : names) {
+            String value = boundedOptionValue(call, name, null);
+            if (value != null) {
+                return value;
+            }
+        }
+        return fallback;
+    }
+
+    private static String boundedOptionValue(
+            Mf2FunctionRegistry.FunctionCall call, String name, String fallback)
+            throws Mf2Exception {
+        String value = call.optionValue(name, fallback);
+        if (value != null && value.length() > MAX_OPTION_LENGTH) {
+            throw Mf2FunctionSupport.badOption(name + " option must not exceed 256 characters.");
+        }
+        return value;
     }
 
     private static ZoneId timeZone(Mf2FunctionRegistry.FunctionCall call)

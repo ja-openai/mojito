@@ -504,6 +504,11 @@ branch is under active implementation.
 - Rust ICU4X enum option bounds: the feature-gated ICU4X registry now rejects
   oversized enum-style option values before validating them. Feature tests cover
   `signDisplay`, shared date-time `style`, and date-time style options.
+- Host-adapter enum option bounds: the Python Babel, PHP Intl, Swift
+  Foundation, Java JDK, and Kotlin JDK registries now reject oversized
+  enum-style option values before validating or passing them through host
+  formatter paths. Adapter checks cover date-time style and numeric
+  `signDisplay` options.
 - Cross-runtime fraction option text bounds: portable numeric helpers across
   Java, Kotlin, JavaScript, Python, PHP, Go, Swift, and Rust plus the JavaScript
   Intl, Python Babel, PHP Intl, Swift Foundation, JVM JDK/ICU4J, Kotlin

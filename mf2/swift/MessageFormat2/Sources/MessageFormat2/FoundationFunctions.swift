@@ -5,6 +5,7 @@ private let maxFoundationDateOperandLength = 256
 private let maxFoundationLocaleLength = 256
 private let maxFoundationNumericOperandLength = 256
 private let maxFoundationNumericOptionLength = 256
+private let maxFoundationOptionLength = 256
 private let maxFoundationTimeZoneOptionLength = 256
 private let foundationISO8601DatePattern = #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})$"#
 private let foundationDateTimeSecondPattern = #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$"#
@@ -127,8 +128,8 @@ private func formatFoundationDateTime(_ call: MF2FunctionCall) throws -> String 
 
         let formatter = RelativeDateTimeFormatter()
         formatter.locale = try foundationLocale(call.locale)
-        formatter.unitsStyle = try relativeUnitsStyle(try call.optionValue("style", default: "long") ?? "long")
-        formatter.dateTimeStyle = try relativeDateTimeStyle(try call.optionValue("numeric", default: "always") ?? "always")
+        formatter.unitsStyle = try relativeUnitsStyle(try boundedOptionValue(call, "style", defaultValue: "long") ?? "long")
+        formatter.dateTimeStyle = try relativeDateTimeStyle(try boundedOptionValue(call, "numeric", defaultValue: "always") ?? "always")
         return formatter.localizedString(from: try dateComponents(value: value, unit: unit))
     }
 
@@ -254,7 +255,7 @@ private func formatterString(_ formatter: NumberFormatter, _ value: Double) thro
 }
 
 private func applySignDisplay(_ formatted: String, value: Double, call: MF2FunctionCall) throws -> String {
-    if value >= 0.0, try call.optionValue("signDisplay") == "always" {
+    if value >= 0.0, try boundedOptionValue(call, "signDisplay") == "always" {
         return "+\(formatted)"
     }
     return formatted
@@ -487,31 +488,19 @@ private func isAsciiDigit(_ value: Character) -> Bool {
 }
 
 private func dateStyleOption(_ call: MF2FunctionCall) throws -> String {
-    try call.optionValue(
-        "dateStyle",
-        default: try call.optionValue("length", default: try call.optionValue("style", default: "medium"))
-    ) ?? "medium"
+    try firstBoundedOptionValue(call, ["dateStyle", "length", "style"], defaultValue: "medium")
 }
 
 private func timeStyleOption(_ call: MF2FunctionCall) throws -> String {
-    try call.optionValue(
-        "timeStyle",
-        default: try call.optionValue("precision", default: try call.optionValue("style", default: "medium"))
-    ) ?? "medium"
+    try firstBoundedOptionValue(call, ["timeStyle", "precision", "style"], defaultValue: "medium")
 }
 
 private func dateTimeDateStyleOption(_ call: MF2FunctionCall) throws -> String {
-    try call.optionValue(
-        "dateStyle",
-        default: try call.optionValue("dateLength", default: try call.optionValue("style", default: "medium"))
-    ) ?? "medium"
+    try firstBoundedOptionValue(call, ["dateStyle", "dateLength", "style"], defaultValue: "medium")
 }
 
 private func dateTimeTimeStyleOption(_ call: MF2FunctionCall) throws -> String {
-    try call.optionValue(
-        "timeStyle",
-        default: try call.optionValue("timePrecision", default: try call.optionValue("style", default: "medium"))
-    ) ?? "medium"
+    try firstBoundedOptionValue(call, ["timeStyle", "timePrecision", "style"], defaultValue: "medium")
 }
 
 private func dateStyle(_ value: String) throws -> DateFormatter.Style {
@@ -563,12 +552,40 @@ private func optionOneOf(
     _ allowed: Set<String>,
     defaultValue: String?
 ) throws -> String? {
-    let value = try call.optionValue(name, default: defaultValue)
+    let value = try boundedOptionValue(call, name, defaultValue: defaultValue)
     guard let value else {
         return nil
     }
     guard allowed.contains(value) else {
         throw MF2Error.badOption("\(name) option must be one of \(allowed.sorted().joined(separator: ", ")).")
+    }
+    return value
+}
+
+private func firstBoundedOptionValue(
+    _ call: MF2FunctionCall,
+    _ names: [String],
+    defaultValue: String
+) throws -> String {
+    for name in names {
+        if let value = try boundedOptionValue(call, name) {
+            return value
+        }
+    }
+    return defaultValue
+}
+
+private func boundedOptionValue(
+    _ call: MF2FunctionCall,
+    _ name: String,
+    defaultValue: String? = nil
+) throws -> String? {
+    let value = try call.optionValue(name, default: defaultValue)
+    guard let value else {
+        return nil
+    }
+    guard value.count <= maxFoundationOptionLength else {
+        throw MF2Error.badOption("\(name) option must not exceed 256 characters.")
     }
     return value
 }

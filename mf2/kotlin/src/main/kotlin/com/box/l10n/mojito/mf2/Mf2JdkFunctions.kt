@@ -19,6 +19,7 @@ import java.util.Locale
 internal object Mf2JdkFunctions {
     private const val MAX_DATE_OPERAND_LENGTH = 256
     private const val MAX_LOCALE_LENGTH = 256
+    private const val MAX_OPTION_LENGTH = 256
     private const val MAX_TIME_ZONE_OPTION_LENGTH = 256
     private val isoDateTimeOperand =
         Regex("""\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})?""")
@@ -139,7 +140,7 @@ internal object Mf2JdkFunctions {
             ?.let { Mf2PortableFunctions.parseNonNegativeOption(it, "maximumFractionDigits option must be a non-negative integer.") }
 
     private fun applySignDisplay(formatted: String, value: Double, call: Mf2FunctionCall): String =
-        if (value >= 0.0 && functionOptionLiteral(call.function, "signDisplay", null) == "always") "+$formatted" else formatted
+        if (value >= 0.0 && boundedOptionValue(call, "signDisplay", null) == "always") "+$formatted" else formatted
 
     private fun locale(locale: String): Locale {
         if (locale.length > MAX_LOCALE_LENGTH) {
@@ -201,28 +202,31 @@ internal object Mf2JdkFunctions {
         isAsciiLetter(ch) || ch in '0'..'9'
 
     private fun dateStyleOption(call: Mf2FunctionCall): String =
-        call.optionValue(
-            "dateStyle",
-            call.optionValue("length", call.optionValue("style", "short")),
-        ) ?: "short"
+        firstOptionValue(call, "short", "dateStyle", "length", "style")
 
     private fun timeStyleOption(call: Mf2FunctionCall): String =
-        call.optionValue(
-            "timeStyle",
-            call.optionValue("precision", call.optionValue("style", "short")),
-        ) ?: "short"
+        firstOptionValue(call, "short", "timeStyle", "precision", "style")
 
     private fun dateTimeDateStyleOption(call: Mf2FunctionCall): String =
-        call.optionValue(
-            "dateStyle",
-            call.optionValue("dateLength", call.optionValue("style", "short")),
-        ) ?: "short"
+        firstOptionValue(call, "short", "dateStyle", "dateLength", "style")
 
     private fun dateTimeTimeStyleOption(call: Mf2FunctionCall): String =
-        call.optionValue(
-            "timeStyle",
-            call.optionValue("timePrecision", call.optionValue("style", "short")),
-        ) ?: "short"
+        firstOptionValue(call, "short", "timeStyle", "timePrecision", "style")
+
+    private fun firstOptionValue(call: Mf2FunctionCall, fallback: String, vararg names: String): String {
+        for (name in names) {
+            boundedOptionValue(call, name, null)?.let { return it }
+        }
+        return fallback
+    }
+
+    private fun boundedOptionValue(call: Mf2FunctionCall, name: String, fallback: String?): String? {
+        val value = call.optionValue(name, fallback)
+        if (value != null && value.length > MAX_OPTION_LENGTH) {
+            throw Mf2Error.badOption("$name option must not exceed 256 characters.")
+        }
+        return value
+    }
 
     private fun timeZone(call: Mf2FunctionCall): ZoneId {
         val value = call.optionValue("timeZone", "UTC") ?: "UTC"

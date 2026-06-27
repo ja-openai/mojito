@@ -29,6 +29,7 @@ _MAX_FRACTION_DIGITS = 100
 _MAX_DATE_OPERAND_LENGTH = 256
 _MAX_DECIMAL_OPERAND_LENGTH = 256
 _MAX_NUMERIC_OPTION_LENGTH = 256
+_MAX_OPTION_LENGTH = 256
 _MAX_TIME_ZONE_OPTION_LENGTH = 256
 _MAX_DECIMAL_EXPONENT = 1_000_000
 _ABSENT_OPTION = "\x00__mojito_mf2_absent__"
@@ -488,7 +489,7 @@ def _time_style(call: FunctionCall) -> str:
 
 
 def _datetime_style(call: FunctionCall) -> str:
-    shared = call.option_value("style")
+    shared = _bounded_option_value(call, "style")
     date_style = _first_option(call, ("dateStyle", "dateLength"))
     time_style = _first_option(call, ("timeStyle", "timePrecision"))
     if date_style is not None and time_style is not None and date_style != time_style:
@@ -510,7 +511,7 @@ def _style(
 
 def _first_option(call: FunctionCall, option_names: tuple[str, ...]) -> str | None:
     for option_name in option_names:
-        value = call.option_value(option_name)
+        value = _bounded_option_value(call, option_name)
         if value is not None:
             return value
     return None
@@ -531,7 +532,7 @@ def _option_one_of(
     allowed: set[str],
     default: str,
 ) -> str:
-    value = call.option_value(option_name, default) or default
+    value = _bounded_option_value(call, option_name, default) or default
     if value not in allowed:
         raise MF2Error(
             "bad-option",
@@ -570,18 +571,18 @@ def _timedelta(value: Decimal, unit: str) -> timedelta:
 
 
 def _apply_sign_display(rendered: str, value: Decimal, call: FunctionCall) -> str:
-    if value >= 0 and _function_option_literal(call.function, "signDisplay") == "always":
+    sign_display = _bounded_option_value(call, "signDisplay")
+    if value >= 0 and sign_display == "always":
         return f"+{rendered}"
     return rendered
 
 
-def _function_option_literal(
-    function_ref: dict[str, object],
+def _bounded_option_value(
+    call: FunctionCall,
     name: str,
-    fallback: str | None = None,
+    default: str | None = None,
 ) -> str | None:
-    options = function_ref.get("options")
-    option = options.get(name) if isinstance(options, dict) else None
-    if isinstance(option, dict) and option.get("type") == "literal":
-        return str(option.get("value", ""))
-    return fallback
+    value = call.option_value(name, default)
+    if value is not None and len(value) > _MAX_OPTION_LENGTH:
+        raise MF2Error("bad-option", f"{name} option must not exceed 256 characters.")
+    return value

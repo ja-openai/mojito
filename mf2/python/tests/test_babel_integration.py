@@ -216,6 +216,26 @@ class BabelIntegrationTest(unittest.TestCase):
             ["bad-option"], [error.code for error in oversized_time_zone.errors]
         )
 
+        oversized_style = format_message(
+            parse_to_model(
+                "{$instant :datetime style=" + ("A" * 257) + " timeZone=UTC}"
+            ).model,
+            {"instant": "2020-01-02T03:04:05Z"},
+            locale="en",
+            functions=functions,
+        )
+        self.assertEqual(["bad-option"], [error.code for error in oversized_style.errors])
+
+        oversized_sign_display = format_message(
+            parse_to_model("{$amount :number signDisplay=" + ("A" * 257) + "}").model,
+            {"amount": 1},
+            locale="en",
+            functions=functions,
+        )
+        self.assertEqual(
+            ["bad-option"], [error.code for error in oversized_sign_display.errors]
+        )
+
         unknown_locale = format_message(
             parse_to_model("{$amount :number}").model,
             {"amount": 1},

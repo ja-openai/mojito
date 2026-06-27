@@ -107,6 +107,18 @@ $oversizedTimeZoneOutput = format_message($oversizedTimeZone, ['start' => '2026-
 ]);
 assert_error_codes('oversized timeZone errors', $oversizedTimeZoneOutput['errors'], ['bad-option']);
 
+$oversizedStyle = parse_to_model('datetime={$start :datetime style=' . str_repeat('A', 257) . ' timeZone=UTC}')['model'];
+$oversizedStyleOutput = format_message($oversizedStyle, ['start' => '2026-05-21T14:30:15Z'], [
+    'functions' => IntlFunctions::registry(),
+]);
+assert_error_codes('oversized style errors', $oversizedStyleOutput['errors'], ['bad-option']);
+
+$oversizedSignDisplay = parse_to_model('number={$amount :number signDisplay=' . str_repeat('A', 257) . '}')['model'];
+$oversizedSignDisplayOutput = format_message($oversizedSignDisplay, ['amount' => 1], [
+    'functions' => IntlFunctions::registry(),
+]);
+assert_error_codes('oversized signDisplay errors', $oversizedSignDisplayOutput['errors'], ['bad-option']);
+
 $oversizedDigits = parse_to_model('number={$amount :number minimumFractionDigits=10000}')['model'];
 $oversizedDigitsOutput = format_message($oversizedDigits, ['amount' => 1], [
     'functions' => IntlFunctions::registry(),
