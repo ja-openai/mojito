@@ -36,6 +36,15 @@ public final class PublicApiDemo {
         assertEquals("fallback result ok", false, fallback.ok());
         assertEquals("fallback error count", 1, fallback.errors().size());
 
+        assertEquals(
+                "null locale defaults",
+                "en",
+                Mf2FormatOptions.builder().locale(null).build().locale());
+        assertEquals(
+                "blank locale defaults",
+                "en",
+                Mf2FormatOptions.builder().locale(" \t").build().locale());
+
         Mf2FormatOptions recoveryOptions = Mf2FormatOptions.builder()
                 .onMissingArgument(context -> "[missing " + context.variableName() + "]")
                 .build();

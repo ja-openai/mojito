@@ -11,10 +11,7 @@ public record Mf2FormatOptions(
     private static final Mf2RecoveryHandler DEFAULT_RECOVERY = context -> context.fallbackValue();
 
     public Mf2FormatOptions {
-        locale = Objects.requireNonNull(locale, "locale");
-        if (locale.isBlank()) {
-            throw new IllegalArgumentException("locale must not be blank");
-        }
+        locale = locale == null || locale.isBlank() ? "en" : locale;
         functions = Objects.requireNonNullElseGet(functions, Mf2FunctionRegistry::defaults);
         bidiIsolation = Objects.requireNonNullElse(bidiIsolation, Mf2BidiIsolation.NONE);
         onMissingArgument = Objects.requireNonNullElse(onMissingArgument, DEFAULT_RECOVERY);

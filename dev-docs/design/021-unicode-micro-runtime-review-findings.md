@@ -644,6 +644,10 @@ branch is under active implementation.
   a recoverable `bad-option`, matching the PHP top-level setup guard. Python now
   covers the plural selector path that previously leaked a raw locale-key
   `TypeError`.
+- Java top-level locale defaulting: `Mf2FormatOptions` now treats null or blank
+  locale builder values as the default `en`, matching the other top-level
+  formatter APIs and Java's direct core locale fallback behavior. The Java
+  public API demo covers the normalized null and whitespace cases.
 - PHP option-variable error classification: variable-valued option coercion now
   uses a dedicated option path, so throwing host option values recover with
   `bad-option` while ordinary expression and selector operands continue to
