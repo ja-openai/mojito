@@ -164,6 +164,31 @@ assert.equal(
   new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeZone: "UTC" }).format(new Date("2026-05-21T14:30:15Z")),
 );
 assert.deepEqual(inheritedIntlDateResult.errors.map((error) => error.code), []);
+function assertIntlDateBadOperand(label, source, instant) {
+  const parsed = parseToModelFromParser(source);
+  const result = formatMessageFromFormatter(parsed.model, { instant }, { locale: "en-US", functions: intlRegistry, bidiIsolation: "none" });
+  assert.deepEqual(result.errors.map((error) => error.code), ["bad-operand"], label);
+}
+assertIntlDateBadOperand(
+  "Intl adapter rejects unpadded date strings",
+  "At {$instant :date dateStyle=medium timeZone=UTC}",
+  "2020-1-2",
+);
+assertIntlDateBadOperand(
+  "Intl adapter rejects impossible dates",
+  "At {$instant :date dateStyle=medium timeZone=UTC}",
+  "2020-02-30",
+);
+assertIntlDateBadOperand(
+  "Intl adapter rejects impossible datetime dates",
+  "At {$instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}",
+  "2020-02-30T03:04:05Z",
+);
+assertIntlDateBadOperand(
+  "Intl adapter rejects out-of-range datetime offsets",
+  "At {$instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}",
+  "2020-01-02T03:04:05+18:01",
+);
 assert.equal(new MF2Error("test", "test").code, "test");
 assert.equal("partsToString" in core, false);
 assert.equal("formatMessageStrict" in core, false);

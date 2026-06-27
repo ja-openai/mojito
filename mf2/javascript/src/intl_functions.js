@@ -4,6 +4,10 @@ import { registerNumericSelectors } from "./numeric_selectors.js";
 import { formatOffset } from "./offset_function.js";
 
 const MAX_FRACTION_DIGITS = 100;
+const MAX_DATE_OPERAND_LENGTH = 256;
+const MIN_TIMESTAMP_MS = -62_135_596_800_000;
+const MAX_TIMESTAMP_MS = 253_402_300_799_999;
+const ISO_DATE_TIME_RE = /^([0-9]{4})-([0-9]{2})-([0-9]{2})(?:T([0-9]{2}):([0-9]{2})(?::([0-9]{2})(?:\.([0-9]{1,9}))?)?(Z|[+-][0-9]{2}:[0-9]{2})?)?$/;
 
 export function createIntlFunctionRegistry(FunctionRegistry) {
   const formatters = new Map();
@@ -143,8 +147,69 @@ function isDateTimeSourceFunction(functionRef) {
 }
 
 function parseDateValue(rawValue, rendered) {
-  const date = rawValue instanceof Date ? rawValue : new Date(rendered);
-  return Number.isNaN(date.getTime()) ? null : date;
+  if (rawValue instanceof Date) return isPortableDate(rawValue) ? rawValue : null;
+  if (typeof rawValue === "number") {
+    if (!Number.isFinite(rawValue) || rawValue < MIN_TIMESTAMP_MS || rawValue > MAX_TIMESTAMP_MS) return null;
+    return new Date(rawValue);
+  }
+  if (typeof rendered !== "string") return null;
+  return parseDateString(rendered);
+}
+
+function parseDateString(value) {
+  const text = value.trim();
+  if (text.length > MAX_DATE_OPERAND_LENGTH) return null;
+  const match = ISO_DATE_TIME_RE.exec(text);
+  if (match == null) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4] ?? "0");
+  const minute = Number(match[5] ?? "0");
+  const second = Number(match[6] ?? "0");
+  const millisecond = Number((match[7] ?? "").slice(0, 3).padEnd(3, "0"));
+  const zone = match[8] ?? "";
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > daysInMonth(year, month) ||
+    hour > 23 ||
+    minute > 59 ||
+    second > 59
+  ) {
+    return null;
+  }
+  const offsetMinutes = zone === "" || zone === "Z" ? 0 : parseOffsetMinutes(zone);
+  if (offsetMinutes == null) return null;
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  date.setUTCHours(hour, minute - offsetMinutes, second, millisecond);
+  return isPortableDate(date) ? date : null;
+}
+
+function isPortableDate(date) {
+  const timestamp = date.getTime();
+  return Number.isFinite(timestamp) && timestamp >= MIN_TIMESTAMP_MS && timestamp <= MAX_TIMESTAMP_MS;
+}
+
+function parseOffsetMinutes(value) {
+  const match = /^([+-])([0-9]{2}):([0-9]{2})$/.exec(value);
+  if (match == null) return null;
+  const hours = Number(match[2]);
+  const minutes = Number(match[3]);
+  if (hours > 18 || minutes > 59 || (hours === 18 && minutes !== 0)) return null;
+  const total = hours * 60 + minutes;
+  return match[1] === "-" ? -total : total;
+}
+
+function daysInMonth(year, month) {
+  if (month === 2) return isLeapYear(year) ? 29 : 28;
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
+}
+
+function isLeapYear(year) {
+  return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
 }
 
 function dateTimeStyle(call, optionName, legacyOptionName, fallback) {

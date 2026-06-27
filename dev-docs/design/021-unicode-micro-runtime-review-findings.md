@@ -434,6 +434,11 @@ branch is under active implementation.
   Kotlin, and Swift host adapters for annotated locals such as
   `.local $date = {$instant :date dateStyle=full ...} {{{$date :date dateStyle=short ...}}}`;
   targeted adapter tests cover the French localized-display repro.
+- JavaScript Intl date operand grammar: the explicit `@mojito-mf2/core/intl`
+  registry now parses date, time, and datetime string operands through the same
+  bounded ASCII ISO grammar as date-time-core instead of delegating to
+  host-lenient `new Date(string)`. Package-boundary tests cover unpadded dates,
+  impossible dates, impossible datetimes, and out-of-range operand offsets.
 - JVM host-adapter currency option errors: Java and Kotlin JDK `:currency`
   formatters now classify missing or invalid `currency` options as `bad-option`
   instead of `bad-operand`, matching JavaScript Intl, Python Babel, PHP Intl,
