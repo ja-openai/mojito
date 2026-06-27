@@ -69,6 +69,14 @@ object KotlinIcu4jRegistryDemo {
         assertUnsupportedUnitFallsBack()
         assertOversizedNumericOperandFallsBack()
         assertOversizedFractionDigitsFallsBack()
+        assertErrorCode("invalid currency option", "currency={${'$'}price :currency currency=||}", "bad-option")
+        assertErrorCode(
+            "oversized currency option",
+            "currency={${'$'}price :currency currency=${"A".repeat(257)}}",
+            "bad-option",
+        )
+        assertErrorCode("missing currency option", "currency={${'$'}price :currency}", "bad-option")
+        assertFormats("lowercase currency option", "currency={${'$'}price :currency currency=usd}")
         assertLocaleErrorCode("malformed locale", "bad locale ???", "bad-option")
         assertLocaleErrorCode("private-use-only locale", "x-private", "bad-option")
         assertLocaleErrorCode("oversized locale", "a".repeat(257), "bad-option")
@@ -199,6 +207,30 @@ object KotlinIcu4jRegistryDemo {
         )
         if (!result.hasErrors || result.value != "{${'$'}value}" || result.errors.first().code != "bad-option") {
             error("oversized fraction digits should recover with bad-option")
+        }
+    }
+
+    private fun assertErrorCode(label: String, source: String, expectedCode: String) {
+        val result: Mf2FormatResult = Mf2Formatter.formatMessage(
+            model = parse(source),
+            arguments = mapOf("price" to PRICE),
+            locale = "en-US",
+            functions = Mf2Icu4jFunctions.registry(),
+        )
+        if (result.errors.size != 1 || result.errors.first().code != expectedCode) {
+            error("$label expected $expectedCode, got ${result.errors}")
+        }
+    }
+
+    private fun assertFormats(label: String, source: String) {
+        val result: Mf2FormatResult = Mf2Formatter.formatMessage(
+            model = parse(source),
+            arguments = mapOf("price" to PRICE),
+            locale = "en-US",
+            functions = Mf2Icu4jFunctions.registry(),
+        )
+        if (result.hasErrors) {
+            error("$label returned errors: ${result.errors}")
         }
     }
 

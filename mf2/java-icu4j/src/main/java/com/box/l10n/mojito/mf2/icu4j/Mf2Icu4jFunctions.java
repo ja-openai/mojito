@@ -82,9 +82,10 @@ public final class Mf2Icu4jFunctions {
         if (currencyCode == null) {
             throw badOption("Currency function requires a currency option.");
         }
+        String normalizedCurrency = normalizeCurrencyCode(currencyCode);
         NumberFormat format = NumberFormat.getCurrencyInstance(locale(call));
         try {
-            format.setCurrency(Currency.getInstance(currencyCode.toUpperCase(Locale.ROOT)));
+            format.setCurrency(Currency.getInstance(normalizedCurrency));
         } catch (IllegalArgumentException error) {
             throw badOption("Currency option must be an ISO 4217 currency code.");
         }
@@ -434,6 +435,14 @@ public final class Mf2Icu4jFunctions {
             return currency;
         }
         return inheritedCurrencyCode(call.inheritedSource());
+    }
+
+    private static String normalizeCurrencyCode(String currency) throws Mf2Exception {
+        if (currency.length() != 3
+                || !currency.chars().allMatch(Mf2Icu4jFunctions::isAsciiAlpha)) {
+            throw badOption("Currency option must be an ISO 4217 currency code.");
+        }
+        return currency.toUpperCase(Locale.ROOT);
     }
 
     private static String inheritedCurrencyCode(Mf2FunctionRegistry.FunctionSourceRef source)

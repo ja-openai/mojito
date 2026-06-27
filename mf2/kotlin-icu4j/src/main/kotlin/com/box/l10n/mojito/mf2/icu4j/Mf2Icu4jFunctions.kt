@@ -74,9 +74,10 @@ object Mf2Icu4jFunctions {
         val value = numericValue(call, "Currency function requires a numeric operand.")
         val currencyCode = currencyCode(call)
             ?: throw Mf2Error.badOption("Currency function requires a currency option.")
+        val normalizedCurrency = normalizeCurrencyCode(currencyCode)
         val format = NumberFormat.getCurrencyInstance(locale(call))
         try {
-            format.currency = Currency.getInstance(currencyCode.uppercase(Locale.ROOT))
+            format.currency = Currency.getInstance(normalizedCurrency)
         } catch (error: IllegalArgumentException) {
             throw Mf2Error.badOption("Currency option must be an ISO 4217 currency code.")
         }
@@ -446,6 +447,13 @@ object Mf2Icu4jFunctions {
 
     private fun currencyCode(call: Mf2FunctionCall): String? =
         call.optionValue("currency", null) ?: inheritedCurrencyCode(call.inheritedSource)
+
+    private fun normalizeCurrencyCode(currency: String): String {
+        if (currency.length != 3 || !currency.all(::isAsciiLetter)) {
+            throw Mf2Error.badOption("Currency option must be an ISO 4217 currency code.")
+        }
+        return currency.uppercase(Locale.ROOT)
+    }
 
     private fun inheritedCurrencyCode(source: Mf2FunctionSource?): String? {
         if (source == null) return null

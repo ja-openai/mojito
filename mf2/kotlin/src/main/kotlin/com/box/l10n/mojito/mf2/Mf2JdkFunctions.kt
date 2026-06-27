@@ -60,9 +60,10 @@ internal object Mf2JdkFunctions {
     private fun formatCurrency(call: Mf2FunctionCall): String {
         val value = Mf2PortableFunctions.parseCallDecimal(call, "Currency function requires a numeric operand.")
         val currency = currencyCode(call) ?: throw Mf2Error.badOption("Currency function requires a currency option.")
+        val normalizedCurrency = normalizeCurrencyCode(currency)
         val format = NumberFormat.getCurrencyInstance(locale(call.locale))
         try {
-            format.currency = Currency.getInstance(currency)
+            format.currency = Currency.getInstance(normalizedCurrency)
         } catch (error: IllegalArgumentException) {
             throw Mf2Error.badOption("Currency option must be an ISO 4217 currency code.")
         }
@@ -107,6 +108,13 @@ internal object Mf2JdkFunctions {
 
     private fun currencyCode(call: Mf2FunctionCall): String? =
         call.optionValue("currency", null) ?: inheritedCurrencyCode(call.inheritedSource)
+
+    private fun normalizeCurrencyCode(currency: String): String {
+        if (currency.length != 3 || !currency.all(::isAsciiLetter)) {
+            throw Mf2Error.badOption("Currency option must be an ISO 4217 currency code.")
+        }
+        return currency.uppercase(Locale.ROOT)
+    }
 
     private fun inheritedCurrencyCode(source: Mf2FunctionSource?): String? {
         if (source == null) return null

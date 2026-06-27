@@ -82,9 +82,10 @@ final class Mf2JdkFunctions {
         if (currency == null) {
             throw Mf2FunctionSupport.badOption("Currency function requires a currency option.");
         }
+        String normalizedCurrency = normalizeCurrencyCode(currency);
         NumberFormat format = NumberFormat.getCurrencyInstance(locale(call.locale()));
         try {
-            format.setCurrency(Currency.getInstance(currency));
+            format.setCurrency(Currency.getInstance(normalizedCurrency));
         } catch (IllegalArgumentException error) {
             throw Mf2FunctionSupport.badOption("Currency option must be an ISO 4217 currency code.");
         }
@@ -136,6 +137,14 @@ final class Mf2JdkFunctions {
             return currency;
         }
         return inheritedCurrencyCode(call.inheritedSource());
+    }
+
+    private static String normalizeCurrencyCode(String currency) throws Mf2Exception {
+        if (currency.length() != 3
+                || !currency.chars().allMatch(Mf2JdkFunctions::isAsciiAlpha)) {
+            throw Mf2FunctionSupport.badOption("Currency option must be an ISO 4217 currency code.");
+        }
+        return currency.toUpperCase(Locale.ROOT);
     }
 
     private static String inheritedCurrencyCode(Mf2FunctionRegistry.FunctionSourceRef source)

@@ -55,7 +55,13 @@ object KotlinJdkRegistryDemo {
             if (!quiet) println("$locale -> ${result.value}")
         }
         assertErrorCode("invalid currency option", "currency={${'$'}price :currency currency=||}", "bad-option")
+        assertErrorCode(
+            "oversized currency option",
+            "currency={${'$'}price :currency currency=${"A".repeat(257)}}",
+            "bad-option",
+        )
         assertErrorCode("missing currency option", "currency={${'$'}price :currency}", "bad-option")
+        assertFormats("lowercase currency option", "currency={${'$'}price :currency currency=usd}")
         assertLocaleErrorCode("malformed locale", "bad locale ???", "bad-option")
         assertLocaleErrorCode("private-use-only locale", "x-private", "bad-option")
         assertLocaleErrorCode("oversized locale", "a".repeat(257), "bad-option")
@@ -114,6 +120,18 @@ object KotlinJdkRegistryDemo {
         )
         if (result.errors.size != 1 || result.errors[0].code != expectedCode) {
             error("$label expected $expectedCode, got ${result.errors}")
+        }
+    }
+
+    private fun assertFormats(label: String, source: String) {
+        val result = Mf2Formatter.formatMessage(
+            model = parse(source),
+            arguments = mapOf("price" to PRICE),
+            locale = "en-US",
+            functions = Mf2FunctionRegistry.defaults(),
+        )
+        if (result.hasErrors) {
+            error("$label returned errors: ${result.errors}")
         }
     }
 

@@ -543,11 +543,13 @@ branch is under active implementation.
   numeric extensions such as leading plus signs, whitespace, leading-dot,
   trailing-dot, and leading-zero decimal spellings that JavaScript Intl and
   Python Babel already reject.
-- JVM host-adapter currency option errors: Java and Kotlin JDK `:currency`
-  formatters now classify missing or invalid `currency` options as `bad-option`
-  instead of `bad-operand`, matching JavaScript Intl, Python Babel, PHP Intl,
-  Swift Foundation, and number-core option semantics. JDK registry demos cover
-  both invalid-current and missing-currency cases.
+- JVM host-adapter currency option errors: Java and Kotlin JDK/ICU4J
+  `:currency` formatters now prevalidate `currency` options as three ASCII
+  letters, normalize lowercase codes before host lookup, and classify missing,
+  invalid, and oversized options as `bad-option` instead of `bad-operand` or raw
+  host parser behavior. This matches JavaScript Intl, Python Babel, PHP Intl,
+  Swift Foundation, and number-core option semantics. JDK and ICU4J registry
+  demos cover invalid, missing, oversized, and lowercase currency cases.
 - JavaScript primitive BigInt rendering: unannotated `bigint` host values now
   route through number-core with the message locale just like finite numeric
   primitives, including the existing unsafe-BigInt `bad-operand` bound.
