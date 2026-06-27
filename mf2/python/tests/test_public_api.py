@@ -432,6 +432,40 @@ class PublicApiTest(unittest.TestCase):
             format_message({"type": "message", "pattern": [1]})
         self.assertEqual("unsupported-pattern-part", formatted.exception.code)
 
+        with self.assertRaises(MF2Error) as unknown:
+            format_message({"type": "message", "pattern": [{"type": "bogus"}]})
+        self.assertEqual("unsupported-pattern-part", unknown.exception.code)
+
+    def test_unselected_invalid_variant_pattern_raises_mf2_error(self) -> None:
+        with self.assertRaises(MF2Error) as formatted:
+            format_message(
+                {
+                    "type": "select",
+                    "declarations": [
+                        {
+                            "type": "input",
+                            "name": "state",
+                            "value": {
+                                "type": "expression",
+                                "arg": {"type": "variable", "name": "state"},
+                                "function": {
+                                    "type": "function",
+                                    "name": "string",
+                                    "options": {},
+                                },
+                            },
+                        }
+                    ],
+                    "selectors": [{"type": "variable", "name": "state"}],
+                    "variants": [
+                        {"keys": [{"type": "literal", "value": "bad"}], "value": [1]},
+                        {"keys": [{"type": "*"}], "value": ["fallback"]},
+                    ],
+                },
+                {"state": "ok"},
+            )
+        self.assertEqual("unsupported-pattern-part", formatted.exception.code)
+
     def test_custom_selector_can_match_variant_key(self) -> None:
         model = {
             "type": "select",

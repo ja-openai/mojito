@@ -652,9 +652,17 @@ private fun validateInputDeclaration(declaration: Map<String, Any?>) {
 
 private fun validatePattern(pattern: List<Any?>) {
     for (part in pattern) {
-        if (part is String && part.isEmpty()) throw Mf2Error("invalid-pattern-text", "Pattern text parts must be non-empty.")
-        val item = asMap(part)
-        if (item["type"] == "markup") validateMarkup(item)
+        if (part is String) {
+            if (part.isEmpty()) throw Mf2Error("invalid-pattern-text", "Pattern text parts must be non-empty.")
+            continue
+        }
+        @Suppress("UNCHECKED_CAST")
+        val item = part as? Map<String, Any?> ?: throw Mf2Error("unsupported-pattern-part", "Unsupported pattern part: ")
+        when (item["type"]) {
+            "expression" -> continue
+            "markup" -> validateMarkup(item)
+            else -> throw Mf2Error("unsupported-pattern-part", "Unsupported pattern part: ${item["type"]}")
+        }
     }
 }
 

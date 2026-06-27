@@ -269,8 +269,15 @@ def _validate_pattern(pattern: list[Any]) -> None:
             )
         if not isinstance(part, (str, dict)):
             raise MF2Error("unsupported-pattern-part", "Unsupported pattern part: ")
-        if isinstance(part, dict) and part.get("type") == "markup":
+        if not isinstance(part, dict):
+            continue
+        part_type = part.get("type")
+        if part_type == "expression":
+            continue
+        if part_type == "markup":
             _validate_markup(part)
+            continue
+        raise MF2Error("unsupported-pattern-part", f"Unsupported pattern part: {part_type}")
 
 
 def _validate_markup(markup: dict[str, Any]) -> None:

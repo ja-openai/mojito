@@ -700,12 +700,23 @@ function validate_input_declaration(array $declaration): void
 function validate_pattern(array $pattern): void
 {
     foreach ($pattern as $part) {
-        if (is_string($part) && $part === '') {
-            throw new MF2Error('invalid-pattern-text', 'Pattern text parts must be non-empty.');
+        if (is_string($part)) {
+            if ($part === '') {
+                throw new MF2Error('invalid-pattern-text', 'Pattern text parts must be non-empty.');
+            }
+            continue;
         }
-        if (is_array($part) && ($part['type'] ?? '') === 'markup') {
+        if (!is_array($part)) {
+            throw new MF2Error('unsupported-pattern-part', 'Unsupported pattern part: ');
+        }
+        if (($part['type'] ?? '') === 'expression') {
+            continue;
+        }
+        if (($part['type'] ?? '') === 'markup') {
             validate_markup($part);
+            continue;
         }
+        throw new MF2Error('unsupported-pattern-part', 'Unsupported pattern part: ' . ($part['type'] ?? ''));
     }
 }
 

@@ -824,6 +824,28 @@ function assert_public_api_boundary(): void
         assert_same("non-object {$label} value", '', $nonObjectEntry['value']);
         assert_json_equal("non-object {$label} errors", ['bad-option'], array_map(static fn($error): string => error_code($error), $nonObjectEntry['errors']));
     }
+    $invalidPatternPart = format_message(['type' => 'message', 'pattern' => [1]]);
+    assert_same('invalid pattern part value', '', $invalidPatternPart['value']);
+    assert_json_equal('invalid pattern part errors', ['unsupported-pattern-part'], array_map(static fn($error): string => error_code($error), $invalidPatternPart['errors']));
+    $unselectedInvalidPattern = format_message([
+        'type' => 'select',
+        'declarations' => [[
+            'type' => 'input',
+            'name' => 'state',
+            'value' => [
+                'type' => 'expression',
+                'arg' => ['type' => 'variable', 'name' => 'state'],
+                'function' => ['type' => 'function', 'name' => 'string', 'options' => []],
+            ],
+        ]],
+        'selectors' => [['type' => 'variable', 'name' => 'state']],
+        'variants' => [
+            ['keys' => [['type' => 'literal', 'value' => 'bad']], 'value' => [1]],
+            ['keys' => [['type' => '*']], 'value' => ['fallback']],
+        ],
+    ], ['state' => 'ok']);
+    assert_same('unselected invalid pattern value', '', $unselectedInvalidPattern['value']);
+    assert_json_equal('unselected invalid pattern errors', ['unsupported-pattern-part'], array_map(static fn($error): string => error_code($error), $unselectedInvalidPattern['errors']));
 
     $throwingNumberOption = parse_to_model('Hello {1 :number minimumFractionDigits=$d}')['model'];
     $throwingNumberOptionResult = format_message($throwingNumberOption, ['d' => new ThrowingStringValue()], [

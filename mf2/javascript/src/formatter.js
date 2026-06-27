@@ -618,8 +618,19 @@ function validateInputDeclaration(declaration) {
 
 function validatePattern(pattern) {
   for (const part of pattern) {
-    if (typeof part === "string" && part === "") throw new MF2Error("invalid-pattern-text", "Pattern text parts must be non-empty.");
-    if (typeof part === "object" && part?.type === "markup") validateMarkup(part);
+    if (typeof part === "string") {
+      if (part === "") throw new MF2Error("invalid-pattern-text", "Pattern text parts must be non-empty.");
+      continue;
+    }
+    if (part == null || typeof part !== "object" || Array.isArray(part)) {
+      throw new MF2Error("unsupported-pattern-part", "Unsupported pattern part: ");
+    }
+    if (part.type === "expression") continue;
+    if (part.type === "markup") {
+      validateMarkup(part);
+      continue;
+    }
+    throw new MF2Error("unsupported-pattern-part", `Unsupported pattern part: ${part.type ?? ""}`);
   }
 }
 

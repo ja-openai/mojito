@@ -675,8 +675,10 @@ branch is under active implementation.
   Kotlin now reject non-array model containers and non-object declaration,
   selector, variant, and variant-key entries with MF2 `bad-option` diagnostics
   instead of raw host exceptions, silent coercion, or later selector failures.
-  Python also rejects primitive pattern parts as MF2 `unsupported-pattern-part`.
-  Public API and conformance regressions cover these malformed model shapes.
+  These runtimes also reject primitive or unknown pattern parts during model
+  validation as MF2 `unsupported-pattern-part`, so invalid pattern parts in
+  unselected variants cannot be silently accepted. Public API and conformance
+  regressions cover these malformed model shapes.
 - JavaScript top-level options getter hardening: hostile getters on
   `functions`, `onMissingArgument`, `onFormatError`, and `bidiIsolation` now
   recover as `bad-option` setup failures instead of escaping as raw host

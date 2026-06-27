@@ -200,6 +200,30 @@ for (const [label, model] of [
     label,
   );
 }
+assert.throws(
+  () => formatMessage({ type: "message", pattern: [1] }),
+  (error) => error instanceof MF2Error && error.code === "unsupported-pattern-part",
+);
+assert.throws(
+  () => formatMessage({
+    type: "select",
+    declarations: [{
+      type: "input",
+      name: "state",
+      value: {
+        type: "expression",
+        arg: { type: "variable", name: "state" },
+        function: { type: "function", name: "string", options: {} },
+      },
+    }],
+    selectors: [{ type: "variable", name: "state" }],
+    variants: [
+      { keys: [{ type: "literal", value: "bad" }], value: [1] },
+      { keys: [{ type: "*" }], value: ["fallback"] },
+    ],
+  }, { state: "ok" }),
+  (error) => error instanceof MF2Error && error.code === "unsupported-pattern-part",
+);
 assert.equal(FunctionRegistry.defaults().hasFormatter({ name: "string" }), true);
 assert.equal(FunctionRegistry.portable().hasFormatter({ name: "number" }), true);
 assert.equal(createPortableFunctionRegistry(FunctionRegistry).hasFormatter({ name: "number" }), true);

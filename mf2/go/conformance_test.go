@@ -160,6 +160,26 @@ func TestUnsupportedModelTypeReturnsDiagnostic(t *testing.T) {
 		result := FormatMessage(item.model, nil, Options{})
 		assertErrorCodesExact(t, "non-object "+item.label, result.Errors, []string{"bad-option"})
 	}
+	result = FormatMessage(Model{"type": "message", "pattern": []any{1}}, nil, Options{})
+	assertErrorCodesExact(t, "invalid pattern part", result.Errors, []string{"unsupported-pattern-part"})
+	result = FormatMessage(Model{
+		"type": "select",
+		"declarations": []any{map[string]any{
+			"type": "input",
+			"name": "state",
+			"value": map[string]any{
+				"type":     "expression",
+				"arg":      map[string]any{"type": "variable", "name": "state"},
+				"function": map[string]any{"type": "function", "name": "string", "options": map[string]any{}},
+			},
+		}},
+		"selectors": []any{map[string]any{"type": "variable", "name": "state"}},
+		"variants": []any{
+			map[string]any{"keys": []any{map[string]any{"type": "literal", "value": "bad"}}, "value": []any{1}},
+			map[string]any{"keys": []any{map[string]any{"type": "*"}}, "value": []any{"fallback"}},
+		},
+	}, map[string]any{"state": "ok"}, Options{})
+	assertErrorCodesExact(t, "unselected invalid pattern", result.Errors, []string{"unsupported-pattern-part"})
 }
 
 func TestRecoveryCallbacksHandleEmptyAndDeclinedValues(t *testing.T) {

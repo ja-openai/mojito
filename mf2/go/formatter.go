@@ -883,14 +883,22 @@ func validateInputDeclaration(declaration map[string]any) error {
 
 func validatePattern(pattern []any) error {
 	for _, part := range pattern {
-		if text, ok := part.(string); ok && text == "" {
-			return mf2Error("invalid-pattern-text", "Pattern text parts must be non-empty.")
+		if text, ok := part.(string); ok {
+			if text == "" {
+				return mf2Error("invalid-pattern-text", "Pattern text parts must be non-empty.")
+			}
+			continue
 		}
 		object := asObject(part)
-		if len(object) > 0 && stringField(object, "type") == "markup" {
+		switch stringField(object, "type") {
+		case "expression":
+			continue
+		case "markup":
 			if err := validateMarkup(object); err != nil {
 				return err
 			}
+		default:
+			return mf2Error("unsupported-pattern-part", "Unsupported pattern part: "+stringField(object, "type"))
 		}
 	}
 	return nil

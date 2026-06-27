@@ -472,6 +472,33 @@ object KotlinConformance {
                 Mf2Formatter.formatMessage(model)
             }
         }
+        assertThrowsMf2Code("invalid pattern part", "unsupported-pattern-part") {
+            Mf2Formatter.formatMessage(mapOf("type" to "message", "pattern" to listOf(1)))
+        }
+        assertThrowsMf2Code("unselected invalid pattern", "unsupported-pattern-part") {
+            Mf2Formatter.formatMessage(
+                mapOf(
+                    "type" to "select",
+                    "declarations" to listOf(
+                        mapOf(
+                            "type" to "input",
+                            "name" to "state",
+                            "value" to mapOf(
+                                "type" to "expression",
+                                "arg" to mapOf("type" to "variable", "name" to "state"),
+                                "function" to mapOf("type" to "function", "name" to "string", "options" to emptyMap<String, Any?>()),
+                            ),
+                        ),
+                    ),
+                    "selectors" to listOf(mapOf("type" to "variable", "name" to "state")),
+                    "variants" to listOf(
+                        mapOf("keys" to listOf(mapOf("type" to "literal", "value" to "bad")), "value" to listOf(1)),
+                        mapOf("keys" to listOf(mapOf("type" to "*")), "value" to listOf("fallback")),
+                    ),
+                ),
+                mapOf("state" to "ok"),
+            )
+        }
     }
 
     private fun parsePublicApiModel(source: String): Mf2Model {
