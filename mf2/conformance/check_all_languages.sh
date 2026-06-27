@@ -5,6 +5,8 @@ ROOT="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
 FIXTURES="${1:-$ROOT/conformance/fixtures/source-to-model}"
 SWIFT_PACKAGE="$ROOT/swift/MessageFormat2"
 
+GO_CACHE_SCOPE=conformance . "$ROOT/go_cache_env.sh"
+
 swift_conformance() {
   sh "$SWIFT_PACKAGE/run.sh" run MessageFormat2Conformance "$@"
 }

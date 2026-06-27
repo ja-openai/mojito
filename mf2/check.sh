@@ -3,6 +3,8 @@ set -eu
 
 cd "$(dirname "$0")"
 
+GO_CACHE_SCOPE=check . ./go_cache_env.sh
+
 sh static_check.sh
 (cd cldr && sh check_size_gates.sh)
 (cd cldr && sh validate_plural_rules.sh)

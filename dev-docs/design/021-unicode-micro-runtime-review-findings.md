@@ -60,6 +60,12 @@ branch is under active implementation.
   Swift demo invocation, Swift static build, and Swift performance scripts use
   the same package-local SwiftPM cache/config wrapper as the all-language
   runner, so these entry points are executable in the managed Codex workspace.
+- Go gate cache isolation: `mf2/check.sh`, `mf2/static_check.sh`, and the
+  all-language conformance runner now share a small Go cache environment helper
+  that creates invocation-scoped `/private/tmp` cache paths unless callers
+  explicitly provide `GOPATH`, `GOMODCACHE`, or `GOCACHE`. This prevents a
+  stale shared module cache from breaking maintainer validation before tests
+  run while preserving caller overrides.
 - Official Unicode runner documentation: the conformance README now describes
   the Rust, Java, JavaScript, Go, and PHP official-test scoreboard runners and
   their shared baseline instead of implying that only the Rust runner is wired.

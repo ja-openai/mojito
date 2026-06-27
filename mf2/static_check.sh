@@ -3,6 +3,8 @@ set -eu
 
 cd "$(dirname "$0")"
 
+GO_CACHE_SCOPE=static . ./go_cache_env.sh
+
 section() {
   printf '\n== %s ==\n' "$1"
 }
