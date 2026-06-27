@@ -530,7 +530,7 @@ func parseNumberCoreFinite(value any) (numberCoreValue, bool) {
 
 func parseNumberCoreDecimalText(value string) (numberCoreValue, bool) {
 	text := strings.TrimSpace(value)
-	if len([]rune(text)) > maxNumberCoreOperandLength {
+	if runeCountExceeds(text, maxNumberCoreOperandLength) {
 		return numberCoreValue{}, false
 	}
 	if !numberCoreDecimalRe.MatchString(text) {
@@ -569,7 +569,7 @@ func isSupportedNumberCoreMagnitude(value numberCoreValue) bool {
 }
 
 func parseNumberCoreCurrency(value string) (string, error) {
-	if len([]rune(value)) > maxNumberCoreOptionLength {
+	if runeCountExceeds(value, maxNumberCoreOptionLength) {
 		return "", badOption("currency must not exceed 256 characters.")
 	}
 	if !numberCoreCurrencyRe.MatchString(value) {
@@ -594,7 +594,7 @@ func numberCoreIntegerOptionFromCall(call FunctionCall, name string) (*int, erro
 }
 
 func numberCoreOptionOneOf(value, name string, allowed []string) (string, error) {
-	if len([]rune(value)) > maxNumberCoreOptionLength {
+	if runeCountExceeds(value, maxNumberCoreOptionLength) {
 		return "", badOption(name + " must not exceed 256 characters.")
 	}
 	for _, candidate := range allowed {
@@ -606,7 +606,7 @@ func numberCoreOptionOneOf(value, name string, allowed []string) (string, error)
 }
 
 func numberCoreBooleanOption(value, name string) (bool, error) {
-	if len([]rune(value)) > maxNumberCoreOptionLength {
+	if runeCountExceeds(value, maxNumberCoreOptionLength) {
 		return false, badOption(name + " must not exceed 256 characters.")
 	}
 	switch value {

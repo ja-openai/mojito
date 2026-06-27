@@ -334,7 +334,7 @@ func parseRelativeTimeCoreFinite(value any) (float64, error) {
 	if text == "" {
 		return 0, badOperand("Relative-time core requires a finite numeric value.")
 	}
-	if len([]rune(text)) > maxRelativeTimeCoreOperandLength {
+	if runeCountExceeds(text, maxRelativeTimeCoreOperandLength) {
 		return 0, badOperand("Relative-time core requires a finite numeric value.")
 	}
 	if !relativeTimeCoreDecimalNumberPattern.MatchString(text) {
@@ -348,7 +348,7 @@ func parseRelativeTimeCoreFinite(value any) (float64, error) {
 }
 
 func relativeTimeCoreOptionOneOf(value, name string, allowed []string) (string, error) {
-	if len([]rune(value)) > maxRelativeTimeCoreOptionLength {
+	if runeCountExceeds(value, maxRelativeTimeCoreOptionLength) {
 		return "", badOption(name + " must not exceed 256 characters.")
 	}
 	for _, candidate := range allowed {

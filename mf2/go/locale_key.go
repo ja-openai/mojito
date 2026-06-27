@@ -6,14 +6,14 @@ const maxLocaleOptionLength = 256
 
 func localeOption(locale, fallback string) (string, error) {
 	value := defaultString(locale, fallback)
-	if len([]rune(value)) > maxLocaleOptionLength {
+	if runeCountExceeds(value, maxLocaleOptionLength) {
 		return "", badOption("locale must not exceed 256 characters.")
 	}
 	return value, nil
 }
 
 func canonicalLocaleKey(locale string) string {
-	if len([]rune(locale)) > maxLocaleOptionLength {
+	if runeCountExceeds(locale, maxLocaleOptionLength) {
 		return ""
 	}
 	rawParts := strings.FieldsFunc(strings.TrimSpace(locale), func(r rune) bool {
@@ -24,7 +24,7 @@ func canonicalLocaleKey(locale string) string {
 		if part == "" {
 			continue
 		}
-		if len([]rune(part)) == 1 {
+		if runeCountEqualsOne(part) {
 			break
 		}
 		parts = append(parts, canonicalSubtag(index, part))
@@ -58,7 +58,7 @@ func featureLookupChain(locale string, parents map[string]string) []string {
 func appendFeatureLookupChain(locale string, parents map[string]string, output *[]string) {
 	current := locale
 	for current != "" {
-		if len([]rune(current)) > maxLocaleOptionLength {
+		if runeCountExceeds(current, maxLocaleOptionLength) {
 			return
 		}
 		if containsString(*output, current) {
@@ -70,6 +70,31 @@ func appendFeatureLookupChain(locale string, parents map[string]string, output *
 		}
 		current = structuralParent(current)
 	}
+}
+
+func runeCountExceeds(value string, max int) bool {
+	if len(value) <= max {
+		return false
+	}
+	count := 0
+	for range value {
+		count++
+		if count > max {
+			return true
+		}
+	}
+	return false
+}
+
+func runeCountEqualsOne(value string) bool {
+	count := 0
+	for range value {
+		count++
+		if count > 1 {
+			return false
+		}
+	}
+	return count == 1
 }
 
 func canonicalSubtag(index int, part string) string {

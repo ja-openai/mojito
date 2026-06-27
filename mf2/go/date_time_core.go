@@ -408,7 +408,7 @@ func dateTimeCoreNumberingSystemDigits(numberingSystem string) (string, bool) {
 
 func validateDateTimeCoreOptions(options DateTimeCoreOptions, locale string) error {
 	calendar := firstNonEmptyString(options.Calendar, dateTimeCoreLocaleUnicodeExtension(locale, "ca"))
-	if len([]rune(calendar)) > dateTimeCoreMaxOptionLength {
+	if runeCountExceeds(calendar, dateTimeCoreMaxOptionLength) {
 		return badOption("calendar must not exceed 256 characters.")
 	}
 	if calendar != "" && calendar != "gregorian" && calendar != "gregory" {
@@ -421,7 +421,7 @@ func validateDateTimeCoreHourCycle(value string) (string, error) {
 	if value == "" {
 		return "", nil
 	}
-	if len([]rune(value)) > dateTimeCoreMaxOptionLength {
+	if runeCountExceeds(value, dateTimeCoreMaxOptionLength) {
 		return "", badOption("hourCycle must not exceed 256 characters.")
 	}
 	if value == "h11" || value == "h12" || value == "h23" || value == "h24" {
@@ -431,7 +431,7 @@ func validateDateTimeCoreHourCycle(value string) (string, error) {
 }
 
 func parseDateTimeCoreTimeZone(value string) (int, error) {
-	if value != "" && len([]rune(value)) > dateTimeCoreMaxOptionLength {
+	if value != "" && runeCountExceeds(value, dateTimeCoreMaxOptionLength) {
 		return 0, badOption("timeZone must not exceed 256 characters.")
 	}
 	text := strings.TrimSpace(defaultString(value, dateTimeCoreUTC))
@@ -580,7 +580,7 @@ func parseDateTimeCoreTimestampMillis(value int64) (time.Time, error) {
 
 func parseDateTimeCoreText(value string) (time.Time, error) {
 	text := strings.TrimSpace(value)
-	if len([]rune(text)) > dateTimeCoreMaxOperandLength {
+	if runeCountExceeds(text, dateTimeCoreMaxOperandLength) {
 		return time.Time{}, badOperand("Date/time core requires a valid host date/time value or ISO date string.")
 	}
 	if err := validateDateTimeCoreTextOffset(text); err != nil {
@@ -685,7 +685,7 @@ func readDateTimeCoreQuotedPattern(pattern []rune, start int) dateTimeCoreQuoted
 }
 
 func formatDateTimeCoreSkeleton(skeleton string, value time.Time, localeData cldrDateTimeLocaleData, hourCycle string, preserveSameFamilyHourCycle bool) (string, error) {
-	if len([]rune(skeleton)) > dateTimeCoreMaxSkeletonLength {
+	if runeCountExceeds(skeleton, dateTimeCoreMaxSkeletonLength) {
 		return "", badOption("Date/time skeleton is too large.")
 	}
 	if formatted, ok, err := formatDateTimeCoreSemanticStyleSkeleton(skeleton, value, localeData, hourCycle, preserveSameFamilyHourCycle); ok || err != nil {
@@ -3421,7 +3421,7 @@ func dateTimeCoreCallOption(call FunctionCall, optionName, fallback string) (str
 }
 
 func dateTimeCoreStyleOption(value, name string) (string, error) {
-	if len([]rune(value)) > dateTimeCoreMaxOptionLength {
+	if runeCountExceeds(value, dateTimeCoreMaxOptionLength) {
 		return "", badOption(name + " must not exceed 256 characters.")
 	}
 	switch value {

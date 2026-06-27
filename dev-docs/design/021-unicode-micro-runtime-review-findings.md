@@ -697,6 +697,9 @@ branch is under active implementation.
   Swift before locale-key normalization or Unicode extension parsing. Shared
   number-core/date-time-core fixtures cover the consumed conformance paths, and
   the proposal relative-time fixture records the same `bad-option` expectation.
+  Go now checks these and adjacent option/operand bounds with a non-allocating
+  bounded rune counter so oversized inputs are rejected without first building
+  attacker-proportional `[]rune` buffers.
 - Locale-key direct lookup bounds: shared locale-key canonicalization and
   lookup-chain helpers now fail closed for source or feature-parent locale
   strings longer than 256 characters across JavaScript, Python, PHP, Go, Java,
