@@ -195,7 +195,7 @@ class FormatContext {
     if (!this.hasValue(selector.name)) {
       if (!this.fallback) throw MF2Error.missingArgument(selector.name);
       if (!this.failedLocals.has(selector.name)) this.errors.push(unresolvedVariable(selector.name));
-      if (annotation != null && this.functions.hasSelector(annotation.function)) {
+      if (annotation != null && (this.failedLocals.has(selector.name) || this.functions.hasSelector(annotation.function))) {
         if (!this.failedLocals.has(selector.name)) this.errors.push(MF2Error.badOperand("Selector operand is not available."));
         this.errors.push(new MF2Error("bad-selector", "Selector operand is not available."));
       }
@@ -220,7 +220,7 @@ class FormatContext {
       const recoverable = fallbackError(error);
       if (!this.fallback) throw recoverable;
       this.errors.push(recoverable);
-      if (annotation != null && this.functions.hasSelector(annotation.function)) {
+      if (annotation != null) {
         this.errors.push(new MF2Error("bad-selector", "Selector operand is not available."));
       }
       return {

@@ -295,7 +295,9 @@ public final class Mf2Formatter {
                         errors.add(Mf2Exception.unresolvedVariable(selector.name()));
                     }
                     SelectorAnnotation annotation = selectorAnnotation(selector.name());
-                    if (annotation != null && functions.hasSelector(annotation.function())) {
+                    if (annotation != null
+                            && (isFailedLocal(selector.name())
+                                    || functions.hasSelector(annotation.function()))) {
                         if (!isFailedLocal(selector.name())) {
                             errors.add(Mf2Exception.badOperand("Selector operand is not available."));
                         }

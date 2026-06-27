@@ -358,7 +358,10 @@ class _FormatContext:
                             source=None,
                         )
                     )
-                    if annotation is not None and self.functions.has_selector(annotation.function):
+                    if annotation is not None and (
+                        name in self.failed_locals
+                        or self.functions.has_selector(annotation.function)
+                    ):
                         if name not in self.failed_locals:
                             self.errors.append(
                                 MF2Error("bad-operand", "Selector operand is not available.")
@@ -376,7 +379,7 @@ class _FormatContext:
                 if not self.fallback:
                     raise
                 self.errors.append(_fallback_error(error))
-                if annotation is not None and self.functions.has_selector(annotation.function):
+                if annotation is not None:
                     self.errors.append(
                         MF2Error("bad-selector", "Selector operand is not available.")
                     )

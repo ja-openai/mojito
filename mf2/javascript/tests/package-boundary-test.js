@@ -82,7 +82,7 @@ assert.deepEqual(hostileStringResult.errors.map((error) => error.code), ["bad-op
 const hostileSelector = parseToModel(".input {$name :string}\n.match $name\nok {{selected}}\n* {{fallback}}");
 const hostileSelectorResult = formatMessage(hostileSelector.model, { name: hostileValue });
 assert.equal(hostileSelectorResult.value, "fallback");
-assert.deepEqual(hostileSelectorResult.errors.map((error) => error.code), ["bad-operand"]);
+assert.deepEqual(hostileSelectorResult.errors.map((error) => error.code), ["bad-operand", "bad-selector"]);
 const hostileLocale = {
   toString() {
     throw new Error("locale coercion failed");

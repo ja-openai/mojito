@@ -371,7 +371,9 @@ branch is under active implementation.
 - Host-object value rendering: JavaScript and Python now treat throwing host
   objects used as ordinary placeholder, `:string`, or selector input values as
   recoverable MF2 `bad-operand` errors instead of letting raw JavaScript errors
-  escape or silently rendering an empty Python string with `ok=True`.
+  escape or silently rendering an empty Python string with `ok=True`. Hostile
+  annotated selectors now also record `bad-selector` before falling through to
+  the catch-all variant, matching PHP and the JVM runtimes.
 - JVM host-object formatter recovery: Java and Kotlin now catch throwing host
   `toString()` values before ordinary placeholder, annotated placeholder,
   selector, and variable-valued option rendering. Operand failures recover as

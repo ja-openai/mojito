@@ -291,7 +291,10 @@ class PublicApiTest(unittest.TestCase):
         selector_formatted = format_message(selector.model, {"name": BadObject()})
         self.assertFalse(selector_formatted.ok)
         self.assertEqual("fallback", selector_formatted.value)
-        self.assertEqual(["bad-operand"], [error.code for error in selector_formatted.errors])
+        self.assertEqual(
+            ["bad-operand", "bad-selector"],
+            [error.code for error in selector_formatted.errors],
+        )
 
     def test_top_level_locale_coercion_failure_is_recoverable(self) -> None:
         class BadObject:

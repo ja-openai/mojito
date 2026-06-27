@@ -262,7 +262,7 @@ private class FormatContext(
         if (!hasValue(name)) {
             if (!fallback) throw Mf2Error.missingArgument(name)
             if (!failedLocals.contains(name)) errors += unresolvedVariable(name)
-            if (annotation != null && functions.hasSelector(annotation.function)) {
+            if (annotation != null && (failedLocals.contains(name) || functions.hasSelector(annotation.function))) {
                 if (!failedLocals.contains(name)) errors += Mf2Error.badOperand("Selector operand is not available.")
                 errors += Mf2Error.badSelector("Selector operand is not available.")
             }
