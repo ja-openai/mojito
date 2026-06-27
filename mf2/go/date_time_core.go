@@ -538,7 +538,7 @@ func parseDateTimeCore(value any) (time.Time, error) {
 	case string:
 		return parseDateTimeCoreText(typed)
 	default:
-		return parseDateTimeCoreText(fmt.Sprint(value))
+		return time.Time{}, badOperand("Date/time core requires a valid host date/time value or ISO date string.")
 	}
 }
 

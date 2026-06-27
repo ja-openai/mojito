@@ -11,6 +11,12 @@ import (
 	"testing"
 )
 
+type dateTimeCoreStringerOperand struct{}
+
+func (dateTimeCoreStringerOperand) String() string {
+	return "2026-05-21T14:30:15Z"
+}
+
 func TestSourceToModelFixtures(t *testing.T) {
 	for _, path := range fixturePaths(t, "../conformance/fixtures/source-to-model") {
 		fixture := readFixture(t, path)
@@ -408,6 +414,9 @@ func TestDateTimeCoreFixtures(t *testing.T) {
 			t.Fatalf("date-time-core %s direct parts: expected %#v, got %#v", item.name, expected, parts)
 		}
 	}
+	if _, err := FormatDateTimeCore(dateTimeCoreStringerOperand{}, DateTimeCoreOptions{}); asMF2Error(err).Code != "bad-operand" {
+		t.Fatalf("date-time-core direct Stringer operand: expected bad-operand, got %v", err)
+	}
 
 	registry := DateTimeCoreFunctionRegistry()
 	for _, raw := range arrayValue(fixture["registryFormatCases"]) {
@@ -424,6 +433,10 @@ func TestDateTimeCoreFixtures(t *testing.T) {
 			t.Fatalf("%s: expected %q, got %q errors=%v", stringValue(item["name"]), stringValue(item["expected"]), result.Value, result.Errors)
 		}
 	}
+	objectResult := FormatMessage(ParseToModel("At {$instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}").Model, map[string]any{
+		"instant": dateTimeCoreStringerOperand{},
+	}, Options{Locale: "en-US", Functions: registry})
+	assertErrorCodesExact(t, "date-time-core registry Stringer operand errors", objectResult.Errors, []string{"bad-operand"})
 	for _, raw := range arrayValue(fixture["registryErrorCases"]) {
 		item := asObject(raw)
 		parsed := ParseToModel(stringValue(item["source"]))
