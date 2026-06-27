@@ -979,6 +979,26 @@ private func runPublicApiEdgeChecks() throws {
         [.text("Hello "), .fallback(source: "$name", value: "")]
     )
 
+    let selectorOnly = try parsePublicApiModel("""
+    .input {$flag :raw}
+    .match $flag
+    raw {{raw}}
+    * {{fallback}}
+    """)
+    let selectorOnlyRegistry = MF2FunctionRegistry.portable.withSelector("raw") { match in
+        if match.rawValue == .bool(true), match.key == "raw" {
+            return 1
+        }
+        return nil
+    }
+    let selectorOnlyResult = try formatMessage(
+        selectorOnly,
+        arguments: ["flag": .bool(true)],
+        functions: selectorOnlyRegistry
+    )
+    try expectValue("public-api selector-only rawValue", selectorOnlyResult.value, "raw")
+    try expectCodes("public-api selector-only rawValue errors", selectorOnlyResult.errors, [])
+
     func expectPortable(_ label: String, source: String, expected: String) throws {
         let actual = try formatMessage(try parsePublicApiModel(source))
         try expectValue(label, actual.value, expected)

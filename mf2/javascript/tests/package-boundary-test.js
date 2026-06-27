@@ -83,6 +83,13 @@ const hostileSelector = parseToModel(".input {$name :string}\n.match $name\nok {
 const hostileSelectorResult = formatMessage(hostileSelector.model, { name: hostileValue });
 assert.equal(hostileSelectorResult.value, "fallback");
 assert.deepEqual(hostileSelectorResult.errors.map((error) => error.code), ["bad-operand", "bad-selector"]);
+const selectorOnly = parseToModel(".input {$flag :raw}\n.match $flag\nraw {{raw}}\n* {{fallback}}");
+const selectorOnlyRegistry = FunctionRegistry.portable().withSelector("raw", (match) =>
+  match.rawValue === true && match.key === "raw" ? 1 : null,
+);
+const selectorOnlyResult = formatMessage(selectorOnly.model, { flag: true }, { functions: selectorOnlyRegistry });
+assert.equal(selectorOnlyResult.value, "raw");
+assert.deepEqual(selectorOnlyResult.errors, []);
 const hostileLocale = {
   toString() {
     throw new Error("locale coercion failed");

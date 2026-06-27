@@ -102,6 +102,29 @@ fn public_runtime_api_exposes_result_and_parts() {
 }
 
 #[test]
+fn selector_only_annotation_preserves_raw_value() {
+    let result = parse_to_model(".input {$flag :raw}\n.match $flag\nraw {{raw}}\n* {{fallback}}");
+    assert_diagnostics_empty(Path::new("selector-only rawValue"), &result.diagnostics);
+    let model = result.model.as_ref().expect("model exists");
+    fn select_raw(match_: mojito_mf2::FunctionMatch<'_>) -> Result<Option<i32>, Diagnostic> {
+        match (match_.raw_value(), match_.key()) {
+            (ArgumentValue::Bool(true), "raw") => Ok(Some(1)),
+            _ => Ok(None),
+        }
+    }
+    let registry = FunctionRegistry::portable().with_selector("raw", select_raw);
+    let options = FormatOptions::new("en").with_functions(&registry);
+    let formatted = format_message_with_options(
+        model,
+        &Arguments::new().with("flag", true),
+        &options,
+    )
+    .unwrap();
+    assert_eq!(formatted.value, "raw");
+    assert!(formatted.errors.is_empty());
+}
+
+#[test]
 fn format_options_can_recover_missing_argument_values() {
     let result = parse_to_model("Hello {$name}");
     assert_diagnostics_empty(Path::new("public-api"), &result.diagnostics);

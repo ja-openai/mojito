@@ -353,6 +353,20 @@ class PublicApiTest(unittest.TestCase):
         self.assertEqual("selected", formatted.value)
         self.assertTrue(formatted.ok)
 
+    def test_selector_only_annotation_preserves_raw_value(self) -> None:
+        parsed = parse_to_model(
+            ".input {$flag :raw}\n.match $flag\nraw {{raw}}\n* {{fallback}}"
+        )
+        registry = FunctionRegistry.portable().with_selector(
+            "raw",
+            lambda match: 1 if match.raw_value is True and match.key == "raw" else None,
+        )
+
+        formatted = format_message(parsed.model, {"flag": True}, functions=registry)
+
+        self.assertEqual("raw", formatted.value)
+        self.assertTrue(formatted.ok)
+
     def test_default_percent_function_formats_and_selects(self) -> None:
         message = {
             "type": "message",

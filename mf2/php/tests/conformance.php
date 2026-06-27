@@ -759,6 +759,15 @@ function assert_public_api_boundary(): void
     assert_same('throwing host selector recovery value', 'fallback', $throwingSelectorResult['value']);
     assert_json_equal('throwing host selector recovery errors', ['bad-operand', 'bad-selector'], array_map(static fn($error): string => error_code($error), $throwingSelectorResult['errors']));
 
+    $selectorOnly = parse_to_model('.input {$flag :raw}' . "\n" . '.match $flag' . "\n" . 'raw {{raw}}' . "\n" . '* {{fallback}}')['model'];
+    $selectorOnlyRegistry = FunctionRegistry::portable()->withSelector(
+        'raw',
+        static fn(array $match): ?int => ($match['rawValue'] ?? null) === true && ($match['key'] ?? '') === 'raw' ? 1 : null,
+    );
+    $selectorOnlyResult = format_message($selectorOnly, ['flag' => true], ['functions' => $selectorOnlyRegistry]);
+    assert_same('selector-only annotation rawValue value', 'raw', $selectorOnlyResult['value']);
+    assert_json_equal('selector-only annotation rawValue errors', [], array_map(static fn($error): string => error_code($error), $selectorOnlyResult['errors']));
+
     $throwingLocaleResult = format_message($throwingPlaceholder, ['x' => 'ok'], ['locale' => new ThrowingStringValue()]);
     assert_same('throwing host locale recovery value', '', $throwingLocaleResult['value']);
     assert_json_equal('throwing host locale recovery errors', ['bad-option'], array_map(static fn($error): string => error_code($error), $throwingLocaleResult['errors']));

@@ -802,10 +802,10 @@ branch is under active implementation.
   formatted string.
 - Custom selector raw-value consistency: Go, Java, and Kotlin now pass the
   selector operand's original raw value to `FunctionMatch` callbacks instead of
-  the rendered string, matching JavaScript, Python, PHP, Rust, and Swift. Public
-  API regressions cover selector-only annotations where the function is
-  selectable but intentionally has no formatter, so `.input` leaves the original
-  Boolean argument available for selection.
+  the rendered string, matching JavaScript, Python, PHP, Rust, and Swift.
+  Public API regressions across all runtimes cover selector-only annotations
+  where the function is selectable but intentionally has no formatter, so
+  `.input` leaves the original Boolean argument available for selection.
 
 ## Open
 
