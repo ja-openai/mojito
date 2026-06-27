@@ -90,7 +90,7 @@ private func formatFoundationDate(_ call: MF2FunctionCall) throws -> String {
 }
 
 private func formatFoundationTime(_ call: MF2FunctionCall) throws -> String {
-    let date = try foundationDate(call, message: "Time function requires a time or datetime operand.")
+    let date = try foundationTime(call, message: "Time function requires a time or datetime operand.")
     let formatter = DateFormatter()
     formatter.locale = try foundationLocale(call.locale)
     formatter.timeZone = try timeZone(call)
@@ -100,7 +100,7 @@ private func formatFoundationTime(_ call: MF2FunctionCall) throws -> String {
 }
 
 private func formatFoundationDateTime(_ call: MF2FunctionCall) throws -> String {
-    let date = try foundationDate(call, message: "Datetime function requires a date or datetime operand.")
+    let date = try foundationDateTime(call, message: "Datetime function requires a date or datetime operand.")
     let formatter = DateFormatter()
     formatter.locale = try foundationLocale(call.locale)
     formatter.timeZone = try timeZone(call)
@@ -305,20 +305,34 @@ private func isCurrencyCode(_ value: String) -> Bool {
 }
 
 private func foundationDate(_ call: MF2FunctionCall, message: String) throws -> Date {
-    if let parsed = parseFoundationDate(call.value) ?? parseSourceDate(call.inheritedSource) {
+    if let parsed = parseFoundationDate(call.value) ?? parseSourceDate(call.inheritedSource, parser: parseFoundationDate) {
         return parsed
     }
     throw MF2Error.badOperand(message)
 }
 
-private func parseSourceDate(_ source: MF2FunctionSource?) -> Date? {
+private func foundationTime(_ call: MF2FunctionCall, message: String) throws -> Date {
+    if let parsed = parseFoundationTime(call.value) ?? parseSourceDate(call.inheritedSource, parser: parseFoundationTime) {
+        return parsed
+    }
+    throw MF2Error.badOperand(message)
+}
+
+private func foundationDateTime(_ call: MF2FunctionCall, message: String) throws -> Date {
+    if let parsed = parseFoundationDateTime(call.value) ?? parseSourceDate(call.inheritedSource, parser: parseFoundationDateTime) {
+        return parsed
+    }
+    throw MF2Error.badOperand(message)
+}
+
+private func parseSourceDate(_ source: MF2FunctionSource?, parser: (String) -> Date?) -> Date? {
     guard let source else {
         return nil
     }
     if source.function.name == "date" || source.function.name == "time" || source.function.name == "datetime" {
-        return parseFoundationDate(source.value)
+        return parser(source.value)
     }
-    return parseSourceDate(source.inheritedSource)
+    return parseSourceDate(source.inheritedSource, parser: parser)
 }
 
 private func parseFoundationDate(_ value: String) -> Date? {
@@ -337,8 +351,43 @@ private func parseFoundationDate(_ value: String) -> Date? {
             pattern: foundationDateTimeMinutePattern
         )
         ?? parseFixedDate(value, format: "yyyy-MM-dd", pattern: foundationDatePattern)
-        ?? parseFixedDate(value, format: "HH:mm:ss", pattern: foundationTimeSecondPattern)
+}
+
+private func parseFoundationTime(_ value: String) -> Date? {
+    guard value.count <= maxFoundationDateOperandLength else {
+        return nil
+    }
+    return parseFixedDate(value, format: "HH:mm:ss", pattern: foundationTimeSecondPattern)
         ?? parseFixedDate(value, format: "HH:mm", pattern: foundationTimeMinutePattern)
+        ?? parseISO8601Date(value)
+        ?? parseFixedDate(
+            value,
+            format: "yyyy-MM-dd'T'HH:mm:ss",
+            pattern: foundationDateTimeSecondPattern
+        )
+        ?? parseFixedDate(
+            value,
+            format: "yyyy-MM-dd'T'HH:mm",
+            pattern: foundationDateTimeMinutePattern
+        )
+}
+
+private func parseFoundationDateTime(_ value: String) -> Date? {
+    guard value.count <= maxFoundationDateOperandLength else {
+        return nil
+    }
+    return parseISO8601Date(value)
+        ?? parseFixedDate(
+            value,
+            format: "yyyy-MM-dd'T'HH:mm:ss",
+            pattern: foundationDateTimeSecondPattern
+        )
+        ?? parseFixedDate(
+            value,
+            format: "yyyy-MM-dd'T'HH:mm",
+            pattern: foundationDateTimeMinutePattern
+        )
+        ?? parseFixedDate(value, format: "yyyy-MM-dd", pattern: foundationDatePattern)
 }
 
 private func parseISO8601Date(_ value: String) -> Date? {

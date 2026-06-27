@@ -1026,6 +1026,21 @@ private func runPublicApiEdgeChecks() throws {
         try expectCodes(label, result.errors, ["bad-option"])
     }
 
+    func expectFoundationNoErrors(_ label: String, source: String, value: String) throws {
+        let result = try formatMessage(
+            try parsePublicApiModel(source),
+            arguments: ["value": .string(value)],
+            locale: "en-US",
+            functions: .foundation
+        )
+        if result.hasErrors {
+            throw ConformanceError.expectedNoFormatErrors(
+                fixture: label,
+                actual: result.errors.map(\.code)
+            )
+        }
+    }
+
     func expectFoundationNumber(_ label: String, locale: String, value: String, expected: String) throws {
         let result = try formatMessage(
             try parsePublicApiModel("{$value :number}"),
@@ -1067,6 +1082,26 @@ private func runPublicApiEdgeChecks() throws {
         "public-api foundation rejects unpadded time",
         source: "{$value :time timeStyle=medium timeZone=UTC}",
         value: "1:2"
+    )
+    try expectFoundationNoErrors(
+        "public-api foundation accepts time-only time",
+        source: "{$value :time timeStyle=medium timeZone=UTC}",
+        value: "03:04:05"
+    )
+    try expectFoundationBadOperand(
+        "public-api foundation rejects date-only time",
+        source: "{$value :time timeStyle=medium timeZone=UTC}",
+        value: "2020-01-02"
+    )
+    try expectFoundationBadOperand(
+        "public-api foundation rejects time-only date",
+        source: "{$value :date dateStyle=medium timeZone=UTC}",
+        value: "03:04:05"
+    )
+    try expectFoundationBadOperand(
+        "public-api foundation rejects time-only datetime",
+        source: "{$value :datetime dateStyle=medium timeStyle=medium timeZone=UTC}",
+        value: "03:04:05"
     )
     try expectFoundationBadOption(
         "public-api foundation rejects malformed locale",
