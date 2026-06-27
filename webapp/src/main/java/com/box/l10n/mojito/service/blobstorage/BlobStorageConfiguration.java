@@ -11,6 +11,7 @@ import com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobStorageConfi
 import com.box.l10n.mojito.service.blobstorage.database.MBlobRepository;
 import com.box.l10n.mojito.service.blobstorage.s3.S3BlobStorage;
 import com.box.l10n.mojito.service.blobstorage.s3.S3BlobStorageConfigurationProperties;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.util.Map;
 import org.quartz.JobDetail;
@@ -100,13 +101,16 @@ public class BlobStorageConfiguration {
     @Autowired
     DataIntegrityViolationExceptionRetryTemplate dataIntegrityViolationExceptionRetryTemplate;
 
+    @Autowired MeterRegistry meterRegistry;
+
     @Bean
     public DatabaseBlobStorage databaseBlobStorage() {
       logger.info("Configure DatabaseBlobStorage");
       return new DatabaseBlobStorage(
           databaseBlobStorageConfigurationProperties,
           mBlobRepository,
-          dataIntegrityViolationExceptionRetryTemplate);
+          dataIntegrityViolationExceptionRetryTemplate,
+          meterRegistry);
     }
 
     @Bean(name = "jobDetailDatabaseBlobStorageCleanupJob")
