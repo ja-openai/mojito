@@ -214,7 +214,7 @@ private func parseSourceNumber(_ source: MF2FunctionSource?) -> Double? {
 
 private func parseFoundationNumberLiteral(_ value: String) -> Double? {
     guard let range = value.range(
-        of: #"^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$"#,
+        of: #"^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$"#,
         options: .regularExpression
     ), range == value.startIndex..<value.endIndex,
           let parsed = Double(value),

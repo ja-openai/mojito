@@ -43,6 +43,11 @@ branch is under active implementation.
   digit lookalikes instead of accepting host Unicode digit predicates in
   Python and Kotlin. Shared source-to-model and number-core registry fixtures
   cover Arabic-Indic `minimumFractionDigits`.
+- Swift Foundation numeric grammar hardening: the opt-in Foundation-backed
+  numeric registry now uses the same explicit ASCII `[0-9]` prefilter as the
+  portable Swift numeric paths instead of ICU regex `\d`, keeping the platform
+  formatter path aligned with the cross-runtime grammar even when host
+  `Double` parsing already fails closed.
 - Locale-key ASCII subtag grammar: Python, Kotlin, and Swift now only apply
   script/region casing rules to ASCII alphabetic or digit subtags. Shared
   locale-key fixtures cover non-ASCII two- and four-character subtags plus the
