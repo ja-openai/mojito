@@ -11,12 +11,12 @@ const catalog = {
 const args = {
   amount: 12345.678,
   ratio: 0.1234,
-  price: 9876,
+  price: 9876.5,
   instant: "2026-05-21T14:30:15Z",
   delta: -3,
 };
 
-for (const locale of ["en", "fr", "ja", "ar"]) {
+for (const locale of ["en-US", "fr-FR", "ja-JP", "ar-EG"]) {
   for (const [id, source] of Object.entries(catalog)) {
     const parsed = parseToModel(source);
     if (parsed.hasDiagnostics) throw new Error(`${id}: ${JSON.stringify(parsed.diagnostics)}`);

@@ -39,12 +39,13 @@ class BabelIntegrationTest(unittest.TestCase):
         arguments = {
             "amount": 12345.678,
             "rate": 0.1234,
-            "price": 9876,
+            "price": 9876.5,
             "instant": instant,
             "delta": -3,
         }
 
-        for locale in ["en", "fr", "ja", "ar"]:
+        for locale in ["en-US", "fr-FR", "ja-JP", "ar-EG"]:
+            babel_locale = locale.replace("-", "_")
             actual = format_message(
                 parsed.model,
                 arguments,
@@ -52,13 +53,13 @@ class BabelIntegrationTest(unittest.TestCase):
                 functions=functions,
             )
             expected = (
-                f"number={format_decimal(12345.678, format='#,##0.##', locale=locale)}; "
-                f"percent={format_percent(0.1234, format='#,##0.#%', locale=locale)}; "
-                f"currency={format_currency(9876, 'EUR', locale=locale)}; "
-                f"date={format_date(instant.date(), format='full', locale=locale)}; "
-                f"time={format_time(instant.time(), format='medium', locale=locale, tzinfo=get_timezone('UTC'))}; "
-                f"datetime={format_datetime(instant, format='medium', locale=locale, tzinfo=get_timezone('UTC'))}; "
-                f"relative={format_timedelta(timedelta(days=-3), granularity='day', add_direction=True, format='long', locale=locale)}"
+                f"number={format_decimal(12345.678, format='#,##0.##', locale=babel_locale)}; "
+                f"percent={format_percent(0.1234, format='#,##0.#%', locale=babel_locale)}; "
+                f"currency={format_currency(9876.5, 'EUR', locale=babel_locale)}; "
+                f"date={format_date(instant.date(), format='full', locale=babel_locale)}; "
+                f"time={format_time(instant.time(), format='medium', locale=babel_locale, tzinfo=get_timezone('UTC'))}; "
+                f"datetime={format_datetime(instant, format='medium', locale=babel_locale, tzinfo=get_timezone('UTC'))}; "
+                f"relative={format_timedelta(timedelta(days=-3), granularity='day', add_direction=True, format='long', locale=babel_locale)}"
             )
             self.assertEqual(expected, actual.value)
             self.assertEqual([], actual.errors)
@@ -185,6 +186,15 @@ class BabelIntegrationTest(unittest.TestCase):
             functions=functions,
         )
         self.assertEqual(["bad-option"], [error.code for error in oversized_result.errors])
+
+        unknown_locale = format_message(
+            parse_to_model("{$amount :number}").model,
+            {"amount": 1},
+            locale="zz-ZZ",
+            functions=functions,
+            bidi_isolation="none",
+        )
+        self.assertEqual(["bad-option"], [error.code for error in unknown_locale.errors])
 
     @unittest.skipIf(not BABEL_AVAILABLE, "Babel is not installed")
     def test_babel_registry_keeps_currency_out_of_portable_registry(self) -> None:

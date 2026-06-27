@@ -460,6 +460,11 @@ branch is under active implementation.
   lookalikes and underscore groupings that Python accepts. Babel formatter
   decimal overflows now recover as MF2 `bad-operand` instead of leaking raw
   `InvalidOperation` or `OverflowError` exceptions.
+- Python Babel locale tag normalization: the optional Babel adapter now
+  normalizes public BCP47-style locale tags such as `fr-FR` and `ar-EG` to
+  Babel's underscore form before calling Babel APIs. This keeps the adapter
+  aligned with the rest of the runtime surface and prevents raw Babel
+  `ValueError` locale parse exceptions from escaping normal MF2 recovery.
 - PHP Intl numeric operand grammar: the explicit PHP Intl registry now reuses
   the shared portable decimal parser instead of `is_numeric()`, rejecting host
   numeric extensions such as leading plus signs, whitespace, leading-dot,

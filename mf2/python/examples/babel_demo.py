@@ -24,11 +24,11 @@ def main() -> None:
     arguments = {
         "amount": 12345.678,
         "ratio": 0.1234,
-        "price": 9876,
+        "price": 9876.5,
         "instant": "2026-05-21T14:30:15+00:00",
         "delta": -3,
     }
-    for locale in ["en", "fr", "ja", "ar"]:
+    for locale in ["en-US", "fr-FR", "ja-JP", "ar-EG"]:
         for name, source in CATALOG.items():
             parsed = parse_to_model(source)
             if parsed.has_diagnostics:

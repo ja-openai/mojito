@@ -19,6 +19,7 @@ except ModuleNotFoundError as error:  # pragma: no cover - exercised when Babel 
         'Babel support is optional. Install it with: pip install "mojito-mf2[babel]"'
     ) from error
 
+from ._locale_key import canonical_locale_key
 from .errors import MF2Error
 from .functions import FunctionCall, FunctionRegistry
 
@@ -55,15 +56,20 @@ def babel_function_registry() -> FunctionRegistry:
 def _format_number(call: FunctionCall) -> str:
     message = "Number function requires a numeric operand."
     value = _parse_call_decimal(call, message)
+    locale = _babel_locale(call)
+    pattern = _decimal_pattern(call)
+    decimal_quantization = _maximum_fraction_digits(call) is not None
     try:
         rendered = format_decimal(
             value,
-            format=_decimal_pattern(call),
-            locale=call.locale,
-            decimal_quantization=_maximum_fraction_digits(call) is not None,
+            format=pattern,
+            locale=locale,
+            decimal_quantization=decimal_quantization,
         )
     except InvalidOperation as error:
         raise MF2Error("bad-operand", message) from error
+    except Exception as error:
+        raise MF2Error("bad-option", str(error)) from error
     return _apply_sign_display(
         rendered,
         value,
@@ -74,15 +80,20 @@ def _format_number(call: FunctionCall) -> str:
 def _format_percent(call: FunctionCall) -> str:
     message = "Percent function requires a numeric operand."
     value = _parse_call_decimal(call, message)
+    locale = _babel_locale(call)
+    pattern = _decimal_pattern(call, suffix="%")
+    decimal_quantization = _maximum_fraction_digits(call) is not None
     try:
         rendered = format_percent(
             value,
-            format=_decimal_pattern(call, suffix="%"),
-            locale=call.locale,
-            decimal_quantization=_maximum_fraction_digits(call) is not None,
+            format=pattern,
+            locale=locale,
+            decimal_quantization=decimal_quantization,
         )
     except InvalidOperation as error:
         raise MF2Error("bad-operand", message) from error
+    except Exception as error:
+        raise MF2Error("bad-option", str(error)) from error
     return _apply_sign_display(
         rendered,
         value,
@@ -94,10 +105,13 @@ def _format_integer(call: FunctionCall) -> str:
     message = "Integer function requires a numeric operand."
     value = _parse_call_decimal(call, message)
     integer = value.to_integral_value(rounding=ROUND_DOWN)
+    locale = _babel_locale(call)
     try:
-        rendered = format_decimal(integer, format="#,##0", locale=call.locale)
+        rendered = format_decimal(integer, format="#,##0", locale=locale)
     except InvalidOperation as error:
         raise MF2Error("bad-operand", message) from error
+    except Exception as error:
+        raise MF2Error("bad-option", str(error)) from error
     return _apply_sign_display(
         rendered,
         integer,
@@ -116,8 +130,9 @@ def _format_currency(call: FunctionCall) -> str:
         or not currency.isalpha()
     ):
         raise MF2Error("bad-option", "Currency function requires a three-letter currency option.")
+    locale = _babel_locale(call)
     try:
-        return format_currency(value, currency.upper(), locale=call.locale)
+        return format_currency(value, currency.upper(), locale=locale)
     except InvalidOperation as error:
         raise MF2Error("bad-operand", message) from error
     except Exception as error:
@@ -126,31 +141,48 @@ def _format_currency(call: FunctionCall) -> str:
 
 def _format_date(call: FunctionCall) -> str:
     value = _parse_call_date(call, "Date function requires a date operand.")
-    return format_date(
-        value,
-        format=_date_style(call),
-        locale=call.locale,
-    )
+    locale = _babel_locale(call)
+    style = _date_style(call)
+    try:
+        return format_date(
+            value,
+            format=style,
+            locale=locale,
+        )
+    except Exception as error:
+        raise MF2Error("bad-option", str(error)) from error
 
 
 def _format_time(call: FunctionCall) -> str:
     value = _parse_call_time(call, "Time function requires a time operand.")
-    return format_time(
-        value,
-        format=_time_style(call),
-        locale=call.locale,
-        tzinfo=_time_zone(call),
-    )
+    locale = _babel_locale(call)
+    style = _time_style(call)
+    time_zone = _time_zone(call)
+    try:
+        return format_time(
+            value,
+            format=style,
+            locale=locale,
+            tzinfo=time_zone,
+        )
+    except Exception as error:
+        raise MF2Error("bad-option", str(error)) from error
 
 
 def _format_datetime(call: FunctionCall) -> str:
     value = _parse_call_datetime(call, "Datetime function requires a datetime operand.")
-    return format_datetime(
-        value,
-        format=_datetime_style(call),
-        locale=call.locale,
-        tzinfo=_time_zone(call),
-    )
+    locale = _babel_locale(call)
+    style = _datetime_style(call)
+    time_zone = _time_zone(call)
+    try:
+        return format_datetime(
+            value,
+            format=style,
+            locale=locale,
+            tzinfo=time_zone,
+        )
+    except Exception as error:
+        raise MF2Error("bad-option", str(error)) from error
 
 
 def _format_relative_time(call: FunctionCall) -> str:
@@ -168,13 +200,24 @@ def _format_relative_time(call: FunctionCall) -> str:
         delta = _timedelta(value, unit)
     except (OverflowError, ValueError) as error:
         raise MF2Error("bad-operand", message) from error
-    return format_timedelta(
-        delta,
-        granularity=unit,
-        add_direction=True,
-        format=style,
-        locale=call.locale,
-    )
+    locale = _babel_locale(call)
+    try:
+        return format_timedelta(
+            delta,
+            granularity=unit,
+            add_direction=True,
+            format=style,
+            locale=locale,
+        )
+    except Exception as error:
+        raise MF2Error("bad-option", str(error)) from error
+
+
+def _babel_locale(call: FunctionCall) -> str:
+    locale = canonical_locale_key(call.locale).replace("-", "_")
+    if not locale:
+        raise MF2Error("bad-option", "Locale option must be a valid locale identifier.")
+    return locale
 
 
 def _decimal_pattern(call: FunctionCall, suffix: str = "") -> str | None:

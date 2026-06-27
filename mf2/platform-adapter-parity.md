@@ -66,16 +66,16 @@ choice is deliberate for product strings, document that JVM defaults are
 
 The current demos do not all use the same locale tags:
 
-- Java, Kotlin, and PHP use `en-US`, `fr-FR`, `ja-JP`, and `ar-EG`.
-- JavaScript and Python demos use `en`, `fr`, `ja`, and `ar`.
+- Java, Kotlin, JavaScript, Python Babel, and PHP use `en-US`, `fr-FR`,
+  `ja-JP`, and `ar-EG`.
 - Swift and Rust demos cover one or a few locales per function rather than the
   full four-locale matrix.
 
 This matters most for Arabic. `ar-EG` through ICU4J/PHP Intl shapes digits to
-Arabic-Indic digits, while the current JavaScript/Python `ar` demos produce
-Latin digits for some numeric output. A dedicated parity demo should use the
-same locale tags and input values across every adapter before treating output
-differences as library differences.
+Arabic-Indic digits, while some other platform libraries still produce Latin
+digits for selected Arabic numeric output. A dedicated parity demo should use
+the same locale tags and input values across every adapter before treating
+output differences as library differences.
 
 ### Date And Time Option Aliases
 
