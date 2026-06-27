@@ -1005,6 +1005,42 @@ private func runPublicApiEdgeChecks() throws {
         source: "{1e20 :integer}",
         expected: "100000000000000000000"
     )
+
+    func expectFoundationBadOperand(_ label: String, source: String, value: String) throws {
+        let result = try formatMessage(
+            try parsePublicApiModel(source),
+            arguments: ["value": .string(value)],
+            locale: "en-US",
+            functions: .foundation
+        )
+        try expectCodes(label, result.errors, ["bad-operand"])
+    }
+
+    try expectFoundationBadOperand(
+        "public-api foundation rejects non-ascii digit date",
+        source: "{$value :date dateStyle=medium timeZone=UTC}",
+        value: "٢٠٢٠-٠١-٠٢"
+    )
+    try expectFoundationBadOperand(
+        "public-api foundation rejects unpadded date",
+        source: "{$value :date dateStyle=medium timeZone=UTC}",
+        value: "2020-1-2"
+    )
+    try expectFoundationBadOperand(
+        "public-api foundation rejects impossible date",
+        source: "{$value :date dateStyle=medium timeZone=UTC}",
+        value: "2020-02-30"
+    )
+    try expectFoundationBadOperand(
+        "public-api foundation rejects non-ascii digit datetime",
+        source: "{$value :datetime dateStyle=medium timeStyle=medium timeZone=UTC}",
+        value: "٢٠٢٠-٠١-٠٢T٠٣:٠٤:٠٥Z"
+    )
+    try expectFoundationBadOperand(
+        "public-api foundation rejects unpadded time",
+        source: "{$value :time timeStyle=medium timeZone=UTC}",
+        value: "1:2"
+    )
 }
 
 private func parsePublicApiModel(_ source: String) throws -> MF2Message {

@@ -48,6 +48,12 @@ branch is under active implementation.
   portable Swift numeric paths instead of ICU regex `\d`, keeping the platform
   formatter path aligned with the cross-runtime grammar even when host
   `Double` parsing already fails closed.
+- Swift Foundation date/time grammar hardening: the opt-in Foundation-backed
+  `:date`, `:time`, and `:datetime` functions now prefilter operands with
+  fixed ASCII shapes, reject host-normalized Unicode digits and unpadded
+  fields, disable lenient calendar rollovers, and keep parsed dates inside the
+  portable year range before handing values to Foundation formatters. Swift
+  public API edge checks cover the host-leniency regressions.
 - Locale-key ASCII subtag grammar: Python, Kotlin, and Swift now only apply
   script/region casing rules to ASCII alphabetic or digit subtags. Shared
   locale-key fixtures cover non-ASCII two- and four-character subtags plus the

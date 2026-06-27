@@ -1,6 +1,13 @@
 import Foundation
 
 private let maxFoundationFractionDigits = 100
+private let maxFoundationDateOperandLength = 256
+private let foundationISO8601DatePattern = #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})$"#
+private let foundationDateTimeSecondPattern = #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$"#
+private let foundationDateTimeMinutePattern = #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}$"#
+private let foundationDatePattern = #"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"#
+private let foundationTimeSecondPattern = #"^[0-9]{2}:[0-9]{2}:[0-9]{2}$"#
+private let foundationTimeMinutePattern = #"^[0-9]{2}:[0-9]{2}$"#
 
 func makeFoundationFunctionRegistry() -> MF2FunctionRegistry {
     var registry = MF2FunctionRegistry.portable
@@ -314,31 +321,112 @@ private func parseSourceDate(_ source: MF2FunctionSource?) -> Date? {
 }
 
 private func parseFoundationDate(_ value: String) -> Date? {
-    parseISO8601Date(value)
-        ?? parseFixedDate(value, format: "yyyy-MM-dd'T'HH:mm:ss")
-        ?? parseFixedDate(value, format: "yyyy-MM-dd'T'HH:mm")
-        ?? parseFixedDate(value, format: "yyyy-MM-dd")
-        ?? parseFixedDate(value, format: "HH:mm:ss")
-        ?? parseFixedDate(value, format: "HH:mm")
+    guard value.count <= maxFoundationDateOperandLength else {
+        return nil
+    }
+    return parseISO8601Date(value)
+        ?? parseFixedDate(
+            value,
+            format: "yyyy-MM-dd'T'HH:mm:ss",
+            pattern: foundationDateTimeSecondPattern
+        )
+        ?? parseFixedDate(
+            value,
+            format: "yyyy-MM-dd'T'HH:mm",
+            pattern: foundationDateTimeMinutePattern
+        )
+        ?? parseFixedDate(value, format: "yyyy-MM-dd", pattern: foundationDatePattern)
+        ?? parseFixedDate(value, format: "HH:mm:ss", pattern: foundationTimeSecondPattern)
+        ?? parseFixedDate(value, format: "HH:mm", pattern: foundationTimeMinutePattern)
 }
 
 private func parseISO8601Date(_ value: String) -> Date? {
+    guard matches(value, foundationISO8601DatePattern),
+          hasValidISO8601Offset(value)
+    else {
+        return nil
+    }
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    if let date = formatter.date(from: value) {
+    if let date = formatter.date(from: value), isPortableDate(date) {
         return date
     }
     formatter.formatOptions = [.withInternetDateTime]
-    return formatter.date(from: value)
+    guard let date = formatter.date(from: value), isPortableDate(date) else {
+        return nil
+    }
+    return date
 }
 
-private func parseFixedDate(_ value: String, format: String) -> Date? {
+private func hasValidISO8601Offset(_ value: String) -> Bool {
+    if value.hasSuffix("Z") {
+        return true
+    }
+    guard let timeIndex = value.firstIndex(of: "T"),
+          let signIndex = value[value.index(after: timeIndex)...].lastIndex(where: { $0 == "+" || $0 == "-" })
+    else {
+        return false
+    }
+    return parseOffsetMinutes(String(value[signIndex...])) != nil
+}
+
+private func parseOffsetMinutes(_ value: String) -> Int? {
+    guard value.count == 6, let sign = value.first, sign == "+" || sign == "-" else {
+        return nil
+    }
+    let body = value.dropFirst()
+    guard body[body.index(body.startIndex, offsetBy: 2)] == ":" else {
+        return nil
+    }
+    let hourText = String(body.prefix(2))
+    let minuteText = String(body.suffix(2))
+    guard hourText.allSatisfy(isAsciiDigit), minuteText.allSatisfy(isAsciiDigit),
+          let hours = Int(hourText), let minutes = Int(minuteText),
+          hours <= 18, minutes <= 59, !(hours == 18 && minutes != 0)
+    else {
+        return nil
+    }
+    return (hours * 60) + minutes
+}
+
+private func parseFixedDate(_ value: String, format: String, pattern: String) -> Date? {
+    guard matches(value, pattern) else {
+        return nil
+    }
     let formatter = DateFormatter()
     formatter.locale = Locale(identifier: "en_US_POSIX")
     formatter.calendar = Calendar(identifier: .gregorian)
     formatter.timeZone = TimeZone(secondsFromGMT: 0)
     formatter.dateFormat = format
-    return formatter.date(from: value)
+    formatter.isLenient = false
+    guard let date = formatter.date(from: value),
+          formatter.string(from: date) == value,
+          isPortableDate(date)
+    else {
+        return nil
+    }
+    return date
+}
+
+private func isPortableDate(_ value: Date) -> Bool {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+    let components = calendar.dateComponents([.era, .year], from: value)
+    guard components.era == 1, let year = components.year else {
+        return false
+    }
+    return year >= 1 && year <= 9999
+}
+
+private func matches(_ value: String, _ pattern: String) -> Bool {
+    value.range(of: pattern, options: .regularExpression) == value.startIndex..<value.endIndex
+}
+
+private func isAsciiDigit(_ value: Character) -> Bool {
+    guard value.unicodeScalars.count == 1, let scalar = value.unicodeScalars.first else {
+        return false
+    }
+    return scalar.value >= 48 && scalar.value <= 57
 }
 
 private func dateStyleOption(_ call: MF2FunctionCall) throws -> String {
