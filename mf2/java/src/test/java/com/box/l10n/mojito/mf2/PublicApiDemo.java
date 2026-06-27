@@ -83,6 +83,51 @@ public final class PublicApiDemo {
                 "$name",
                 "");
 
+        Mf2FormatResult throwingPlaceholder =
+                message.format(Map.of("name", new ThrowingStringValue()), options);
+        assertEquals("throwing host placeholder value", "Hello {$name}", throwingPlaceholder.value());
+        assertErrorCodes("throwing host placeholder errors", List.of("bad-operand"), throwingPlaceholder.errors());
+
+        Mf2Message throwingStringMessage = parse("Hello {$name :string}");
+        Mf2FormatResult throwingString =
+                throwingStringMessage.format(Map.of("name", new ThrowingStringValue()), options);
+        assertEquals("throwing host annotated value", "Hello {$name}", throwingString.value());
+        assertErrorCodes("throwing host annotated errors", List.of("bad-operand"), throwingString.errors());
+
+        Mf2Message throwingSelectorMessage = parse("""
+                .input {$name :string}
+                .match $name
+                ok {{ok}}
+                * {{fallback}}""");
+        Mf2FormatResult throwingSelector =
+                throwingSelectorMessage.format(Map.of("name", new ThrowingStringValue()), options);
+        assertEquals("throwing host selector value", "fallback", throwingSelector.value());
+        assertErrorCodes(
+                "throwing host selector errors",
+                List.of("bad-operand", "bad-selector"),
+                throwingSelector.errors());
+
+        Mf2Message throwingOptionMessage = parse("Hello {1 :number minimumFractionDigits=$digits}");
+        Mf2FormatResult throwingNumberOption = throwingOptionMessage.format(
+                Map.of("digits", new ThrowingStringValue()), options);
+        assertEquals("throwing host number option value", "Hello {|1|}", throwingNumberOption.value());
+        assertErrorCodes("throwing host number option errors", List.of("bad-option"), throwingNumberOption.errors());
+
+        Mf2Message throwingOptionSelectorMessage = parse("""
+                .input {$count :number minimumFractionDigits=$digits}
+                .match $count
+                one {{one}}
+                * {{fallback}}""");
+        Mf2FormatResult throwingOptionSelector = throwingOptionSelectorMessage.format(
+                Map.of("count", 1, "digits", new ThrowingStringValue()), options);
+        assertEquals("throwing host number option selector value", "fallback", throwingOptionSelector.value());
+        List<String> throwingOptionSelectorCodes = errorCodes(throwingOptionSelector.errors());
+        assertEquals("throwing host number option selector first error", "bad-option", throwingOptionSelectorCodes.get(0));
+        assertContainsAll(
+                "throwing host number option selector errors",
+                throwingOptionSelectorCodes,
+                List.of("bad-option", "bad-selector"));
+
         Mf2FormatOptions portableOptions = Mf2FormatOptions.builder()
                 .functions(Mf2FunctionRegistry.portable())
                 .build();
@@ -158,9 +203,33 @@ public final class PublicApiDemo {
         }
     }
 
+    private static void assertErrorCodes(String label, List<String> expected, List<Mf2Exception> errors) {
+        List<String> actual = errorCodes(errors);
+        if (!expected.equals(actual)) {
+            throw new AssertionError(label + " expected " + expected + ", got " + actual);
+        }
+    }
+
+    private static List<String> errorCodes(List<Mf2Exception> errors) {
+        return errors.stream().map(Mf2Exception::code).toList();
+    }
+
+    private static void assertContainsAll(String label, List<String> actual, List<String> expected) {
+        if (!actual.containsAll(expected)) {
+            throw new AssertionError(label + " expected " + expected + " to be present in " + actual);
+        }
+    }
+
     private static void assertEquals(String label, Object expected, Object actual) {
         if (!expected.equals(actual)) {
             throw new AssertionError(label + " expected " + expected + ", got " + actual);
+        }
+    }
+
+    private static final class ThrowingStringValue {
+        @Override
+        public String toString() {
+            throw new IllegalStateException("host string conversion failed");
         }
     }
 }

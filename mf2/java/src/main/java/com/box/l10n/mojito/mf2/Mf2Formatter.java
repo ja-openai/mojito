@@ -236,9 +236,9 @@ public final class Mf2Formatter {
                 throw Mf2Exception.missingArgument(input.name());
             }
             ResolvedValue inputValue = value(input.name());
-            String rendered = inputValue.rendered();
             recordFunctionResolutionErrors(function, inputValue.source());
             try {
+                String rendered = inputValue.rendered();
                 String formatted = functions.format(new Mf2FunctionRegistry.FunctionCall(
                         rendered,
                         inputValue.rawValue(),
@@ -312,16 +312,33 @@ public final class Mf2Formatter {
                 throw Mf2Exception.missingArgument(selector.name());
             }
             ResolvedValue value = value(selector.name());
-            String rendered = value.rendered();
             SelectorAnnotation annotation = selectorAnnotation(selector.name());
-            recordSelectorResolutionErrors(annotation);
-            return new SelectorValue(
-                    rendered,
-                    annotation != null && annotation.isString() ? normalizeStringKey(rendered) : null,
-                    annotation == null || annotation.exactMatch(),
-                    selectionKey(annotation, value),
-                    annotation == null ? null : annotation.function(),
-                    value.source());
+            try {
+                String rendered = value.rendered();
+                recordSelectorResolutionErrors(annotation);
+                return new SelectorValue(
+                        rendered,
+                        annotation != null && annotation.isString() ? normalizeStringKey(rendered) : null,
+                        annotation == null || annotation.exactMatch(),
+                        selectionKey(annotation, value),
+                        annotation == null ? null : annotation.function(),
+                        value.source());
+            } catch (Mf2Exception error) {
+                if (!fallback) {
+                    throw error;
+                }
+                errors.add(fallbackError(error));
+                if (annotation != null) {
+                    errors.add(Mf2FunctionSupport.badSelector("Selector operand is not available."));
+                }
+                return new SelectorValue(
+                        "",
+                        annotation != null && annotation.isString() ? normalizeStringKey("") : null,
+                        false,
+                        null,
+                        annotation == null ? null : annotation.function(),
+                        value.source());
+            }
         }
 
         List<Mf2FormattedPart> formatPatternToParts(List<Mf2Message.PatternPart> pattern)
@@ -393,8 +410,23 @@ public final class Mf2Formatter {
                     }
                     ResolvedValue resolved = value(variable.name());
                     rawValue = resolved.rawValue();
-                    value = resolved.rendered();
                     source = resolved.source();
+                    try {
+                        value = resolved.rendered();
+                    } catch (Mf2Exception error) {
+                        if (!fallback) {
+                            throw error;
+                        }
+                        Mf2Exception recoverable = fallbackError(error);
+                        errors.add(recoverable);
+                        String fallbackSource = fallbackSource(expression);
+                        return new ExpressionOutput(
+                                recoverFormatError(expression, fallbackSource, recoverable),
+                                true,
+                                null,
+                                null,
+                                fallbackSource);
+                    }
                 }
             }
 
@@ -516,7 +548,7 @@ public final class Mf2Formatter {
                     if (!hasValue(variable.name())) {
                         throw Mf2Exception.missingArgument(variable.name());
                     }
-                    yield value(variable.name()).rendered();
+                    yield optionValueToString(value(variable.name()).rawValue());
                 }
             };
         }
@@ -526,7 +558,8 @@ public final class Mf2Formatter {
             return annotation == null || annotation.exactMatch();
         }
 
-        private String selectionKey(SelectorAnnotation annotation, ResolvedValue value) {
+        private String selectionKey(SelectorAnnotation annotation, ResolvedValue value)
+                throws Mf2Exception {
             if (annotation == null || !annotation.isNumeric()) {
                 return null;
             }
@@ -757,8 +790,8 @@ public final class Mf2Formatter {
             return new ResolvedValue(value, source);
         }
 
-        String rendered() {
-            return valueToString(rawValue);
+        String rendered() throws Mf2Exception {
+            return operandValueToString(rawValue);
         }
     }
 
@@ -1021,6 +1054,22 @@ public final class Mf2Formatter {
         return value.toString();
     }
 
+    private static String operandValueToString(Object value) throws Mf2Exception {
+        try {
+            return valueToString(value);
+        } catch (RuntimeException error) {
+            throw Mf2Exception.badOperand("Value could not be rendered.");
+        }
+    }
+
+    private static String optionValueToString(Object value) throws Mf2Exception {
+        try {
+            return valueToString(value);
+        } catch (RuntimeException error) {
+            throw Mf2FunctionSupport.badOption("Function option value could not be rendered.");
+        }
+    }
+
     private static String partsToString(
             List<Mf2FormattedPart> parts, Mf2BidiIsolation bidiIsolation) {
         StringBuilder output = new StringBuilder();
@@ -1150,7 +1199,7 @@ public final class Mf2Formatter {
             return isNumericFunction(function);
         }
 
-        String operandForSelection(ResolvedValue value) {
+        String operandForSelection(ResolvedValue value) throws Mf2Exception {
             String rendered = value.rendered();
             if (function.name().equals("percent")) {
                 if (rendered.endsWith("%")) {

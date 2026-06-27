@@ -372,6 +372,15 @@ branch is under active implementation.
   objects used as ordinary placeholder, `:string`, or selector input values as
   recoverable MF2 `bad-operand` errors instead of letting raw JavaScript errors
   escape or silently rendering an empty Python string with `ok=True`.
+- JVM host-object formatter recovery: Java and Kotlin now catch throwing host
+  `toString()` values before ordinary placeholder, annotated placeholder,
+  selector, and variable-valued option rendering. Operand failures recover as
+  `bad-operand`, option-variable failures recover as `bad-option`, and failed
+  annotated selectors also record `bad-selector` before falling through to the
+  catch-all variant. Kotlin also normalizes host-thrown `Mf2Error` values from
+  `toString()` so host objects cannot inject arbitrary MF2 error codes. Java
+  public API checks and Kotlin conformance cover the same compact repros
+  already exercised by JavaScript, Python, and PHP.
 - Go date-time/relative-time option-variable propagation: Go registry
   adapters now propagate failed variable-valued option lookups for date-time
   `style`/style aliases/`timeZone`/`calendar`/`skeleton`/`hourCycle` and

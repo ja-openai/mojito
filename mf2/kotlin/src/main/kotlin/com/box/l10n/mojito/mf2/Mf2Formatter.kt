@@ -199,7 +199,7 @@ private class FormatContext(
         val inputValue = value(name)
         recordFunctionResolutionErrors(functionRef, inputValue.source)
         try {
-            val rendered = valueToString(inputValue.rawValue)
+            val rendered = operandValueToString(inputValue.rawValue)
             val formatted = functions.format(
                 Mf2FunctionCall(
                     value = rendered,
@@ -276,16 +276,32 @@ private class FormatContext(
             )
         }
         val resolved = value(name)
-        val rendered = valueToString(resolved.rawValue)
-        recordSelectorResolutionErrors(annotation)
-        return SelectorValue(
-            rendered = rendered,
-            normalizedRendered = if (annotation?.isString == true) normalizeStringKey(rendered) else null,
-            exactMatch = annotation == null || annotation.exactMatch,
-            selectionKey = selectionKey(locale, annotation, resolved),
-            function = annotation?.function,
-            source = resolved.source,
-        )
+        return try {
+            val rendered = operandValueToString(resolved.rawValue)
+            recordSelectorResolutionErrors(annotation)
+            SelectorValue(
+                rendered = rendered,
+                normalizedRendered = if (annotation?.isString == true) normalizeStringKey(rendered) else null,
+                exactMatch = annotation == null || annotation.exactMatch,
+                selectionKey = selectionKey(locale, annotation, resolved),
+                function = annotation?.function,
+                source = resolved.source,
+            )
+        } catch (error: Mf2Error) {
+            if (!fallback) throw error
+            errors += fallbackError(error)
+            if (annotation != null) {
+                errors += Mf2Error.badSelector("Selector operand is not available.")
+            }
+            SelectorValue(
+                rendered = "",
+                normalizedRendered = if (annotation?.isString == true) normalizeStringKey("") else null,
+                exactMatch = false,
+                selectionKey = null,
+                function = annotation?.function,
+                source = resolved.source,
+            )
+        }
     }
 
     fun formatPatternToParts(pattern: List<Any?>): List<Mf2Part> {
@@ -367,8 +383,22 @@ private class FormatContext(
                 }
                 val resolved = value(name)
                 rawValue = resolved.rawValue
-                value = valueToString(rawValue)
                 source = resolved.source
+                try {
+                    value = operandValueToString(rawValue)
+                } catch (error: Mf2Error) {
+                    if (!fallback) throw error
+                    val recoverable = fallbackError(error)
+                    errors += recoverable
+                    val source = fallbackSource(expression)
+                    return ExpressionOutput(
+                        recoverFormatError(expression, source, recoverable),
+                        true,
+                        null,
+                        null,
+                        source,
+                    )
+                }
             }
             else -> throw Mf2Error("unsupported-expression-arg", "Unsupported expression arg: ${arg?.get("type")}")
         }
@@ -491,7 +521,7 @@ private class FormatContext(
             "variable" -> {
                 val name = stringValue(optionMap["name"])
                 if (!hasValue(name)) throw Mf2Error.missingArgument(name)
-                valueToString(value(name).rawValue)
+                optionValueToString(value(name).rawValue)
             }
             else -> fallbackValue
         }
@@ -784,7 +814,7 @@ private fun renderSourceDecimal(operand: SourceDecimal, trimFractionZeros: Boole
 
 private fun selectionKey(locale: String, annotation: SelectorAnnotation?, resolvedValue: ResolvedValue): String? {
     if (annotation == null || !annotation.isNumeric || annotation.numberSelect == "exact") return null
-    var operand = valueToString(resolvedValue.rawValue)
+    var operand = operandValueToString(resolvedValue.rawValue)
     if (annotation.function["name"] == "percent") {
         operand = if (operand.endsWith("%")) {
             operand.dropLast(1)
@@ -893,6 +923,20 @@ private fun valueToString(value: Any?): String =
         is Double -> formatNumberValue(value)
         is Number -> value.toString()
         else -> value.toString()
+    }
+
+private fun operandValueToString(value: Any?): String =
+    try {
+        valueToString(value)
+    } catch (_: Exception) {
+        throw Mf2Error.badOperand("Value could not be rendered.")
+    }
+
+private fun optionValueToString(value: Any?): String =
+    try {
+        valueToString(value)
+    } catch (_: Exception) {
+        throw Mf2Error.badOption("Function option value could not be rendered.")
     }
 
 private fun formatNumberValue(value: Double): String =

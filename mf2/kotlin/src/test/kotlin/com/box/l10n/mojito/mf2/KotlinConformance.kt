@@ -339,6 +339,95 @@ object KotlinConformance {
             ),
             KotlinFormattedPartJson.toMaps(emptyFormatErrorParts.parts),
         )
+
+        val throwingPlaceholder = Mf2Formatter.formatMessage(
+            model = message,
+            arguments = mapOf("name" to ThrowingStringValue()),
+        )
+        assertPublicApiValue("throwing host placeholder", "Hello {${'$'}name}", throwingPlaceholder.value)
+        assertPublicApiCodes("throwing host placeholder errors", listOf("bad-operand"), throwingPlaceholder.errors)
+
+        val throwingMf2Placeholder = Mf2Formatter.formatMessage(
+            model = message,
+            arguments = mapOf("name" to ThrowingMf2StringValue()),
+        )
+        assertPublicApiValue("throwing MF2 host placeholder", "Hello {${'$'}name}", throwingMf2Placeholder.value)
+        assertPublicApiCodes(
+            "throwing MF2 host placeholder errors",
+            listOf("bad-operand"),
+            throwingMf2Placeholder.errors,
+        )
+
+        val throwingStringMessage = parsePublicApiModel("Hello {${'$'}name :string}")
+        val throwingString = Mf2Formatter.formatMessage(
+            model = throwingStringMessage,
+            arguments = mapOf("name" to ThrowingStringValue()),
+        )
+        assertPublicApiValue("throwing host annotated", "Hello {${'$'}name}", throwingString.value)
+        assertPublicApiCodes("throwing host annotated errors", listOf("bad-operand"), throwingString.errors)
+
+        val throwingSelectorMessage = parsePublicApiModel(
+            """
+            .input {${'$'}name :string}
+            .match ${'$'}name
+            ok {{ok}}
+            * {{fallback}}
+            """.trimIndent(),
+        )
+        val throwingSelector = Mf2Formatter.formatMessage(
+            model = throwingSelectorMessage,
+            arguments = mapOf("name" to ThrowingStringValue()),
+        )
+        assertPublicApiValue("throwing host selector", "fallback", throwingSelector.value)
+        assertPublicApiCodes(
+            "throwing host selector errors",
+            listOf("bad-operand", "bad-selector"),
+            throwingSelector.errors,
+        )
+
+        val throwingOptionMessage = parsePublicApiModel("Hello {1 :number minimumFractionDigits=${'$'}digits}")
+        val throwingNumberOption = Mf2Formatter.formatMessage(
+            model = throwingOptionMessage,
+            arguments = mapOf("digits" to ThrowingStringValue()),
+        )
+        assertPublicApiValue("throwing host number option", "Hello {|1|}", throwingNumberOption.value)
+        assertPublicApiCodes("throwing host number option errors", listOf("bad-option"), throwingNumberOption.errors)
+
+        val throwingMf2NumberOption = Mf2Formatter.formatMessage(
+            model = throwingOptionMessage,
+            arguments = mapOf("digits" to ThrowingMf2StringValue()),
+        )
+        assertPublicApiValue("throwing MF2 host number option", "Hello {|1|}", throwingMf2NumberOption.value)
+        assertPublicApiCodes(
+            "throwing MF2 host number option errors",
+            listOf("bad-option"),
+            throwingMf2NumberOption.errors,
+        )
+
+        val throwingOptionSelectorMessage = parsePublicApiModel(
+            """
+            .input {${'$'}count :number minimumFractionDigits=${'$'}digits}
+            .match ${'$'}count
+            one {{one}}
+            * {{fallback}}
+            """.trimIndent(),
+        )
+        val throwingOptionSelector = Mf2Formatter.formatMessage(
+            model = throwingOptionSelectorMessage,
+            arguments = mapOf("count" to 1, "digits" to ThrowingStringValue()),
+        )
+        assertPublicApiValue("throwing host number option selector", "fallback", throwingOptionSelector.value)
+        val throwingOptionSelectorCodes = throwingOptionSelector.errors.map { it.code }
+        assertPublicApiValue(
+            "throwing host number option selector first error",
+            "bad-option",
+            throwingOptionSelectorCodes.firstOrNull() ?: "",
+        )
+        assertContainsAll(
+            "throwing host number option selector errors",
+            throwingOptionSelectorCodes,
+            listOf("bad-option", "bad-selector"),
+        )
     }
 
     private fun parsePublicApiModel(source: String): Mf2Model {
@@ -370,6 +459,20 @@ object KotlinConformance {
         if (actual != expected) {
             throw ConformanceFailure("public-api $label: expected $expected, got $actual")
         }
+    }
+
+    private fun assertContainsAll(label: String, actual: List<String>, expected: List<String>) {
+        if (!actual.containsAll(expected)) {
+            throw ConformanceFailure("public-api $label: expected $expected to be present in $actual")
+        }
+    }
+
+    private class ThrowingStringValue {
+        override fun toString(): String = throw IllegalStateException("host string conversion failed")
+    }
+
+    private class ThrowingMf2StringValue {
+        override fun toString(): String = throw Mf2Error.badSelector("host MF2 error should not escape")
     }
 
     private fun jsonFiles(dir: Path): List<Path> =
