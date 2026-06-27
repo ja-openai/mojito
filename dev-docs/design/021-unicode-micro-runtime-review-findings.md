@@ -465,6 +465,11 @@ branch is under active implementation.
   Babel's underscore form before calling Babel APIs. This keeps the adapter
   aligned with the rest of the runtime surface and prevents raw Babel
   `ValueError` locale parse exceptions from escaping normal MF2 recovery.
+- PHP Intl locale error recovery: the optional PHP Intl adapter now wraps
+  `NumberFormatter`/`IntlDateFormatter` locale constructor failures as MF2
+  `bad-option` errors. Targeted adapter tests cover malformed, unknown, and
+  oversized locale strings so raw PHP Intl exceptions cannot surface as generic
+  formatter errors.
 - PHP Intl numeric operand grammar: the explicit PHP Intl registry now reuses
   the shared portable decimal parser instead of `is_numeric()`, rejecting host
   numeric extensions such as leading plus signs, whitespace, leading-dot,

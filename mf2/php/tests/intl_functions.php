@@ -40,6 +40,31 @@ foreach (['en-US', 'fr-FR', 'ja-JP', 'ar-EG'] as $locale) {
     assert_same("{$locale} Intl adapter output", expected_output($locale, $arguments), $actual['value']);
 }
 
+assert_intl_locale_bad_option(
+    'malformed locale number errors',
+    'number={$amount :number}',
+    ['amount' => 1],
+    'bad locale ???',
+);
+assert_intl_locale_bad_option(
+    'unknown locale number errors',
+    'number={$amount :number}',
+    ['amount' => 1],
+    'zz-ZZ',
+);
+assert_intl_locale_bad_option(
+    'malformed locale date errors',
+    'date={$instant :date dateStyle=medium timeZone=UTC}',
+    ['instant' => '2026-05-21'],
+    'bad locale ???',
+);
+assert_intl_locale_bad_option(
+    'oversized locale date errors',
+    'date={$instant :date dateStyle=medium timeZone=UTC}',
+    ['instant' => '2026-05-21'],
+    str_repeat('a', 257),
+);
+
 $relative = parse_to_model('relative={$days :relativeTime unit=day}')['model'];
 $relativeOutput = format_message($relative, ['days' => -1], ['functions' => IntlFunctions::registry()]);
 assert_same('relativeTime fallback value', 'relative={$days}', $relativeOutput['value']);
@@ -209,6 +234,16 @@ function assert_intl_numeric_bad_operand(string $label, string $amount): void
         'bidiIsolation' => 'none',
     ]);
     assert_error_codes($label, $output['errors'], ['bad-operand']);
+}
+
+function assert_intl_locale_bad_option(string $label, string $source, array $arguments, string $locale): void
+{
+    $output = format_message(parse_to_model($source)['model'], $arguments, [
+        'locale' => $locale,
+        'functions' => IntlFunctions::registry(),
+        'bidiIsolation' => 'none',
+    ]);
+    assert_error_codes($label, $output['errors'], ['bad-option']);
 }
 
 function fail(string $message): never

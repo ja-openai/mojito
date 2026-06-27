@@ -9,6 +9,7 @@ final class IntlFunctions
     private const UTC = 'UTC';
     private const MAX_FRACTION_DIGITS = 100;
     private const MAX_DATE_OPERAND_LENGTH = 256;
+    private const MAX_LOCALE_LENGTH = 256;
     private const MIN_TIMESTAMP_MS = -62135596800000.0;
     private const MAX_TIMESTAMP_MS = 253402300799999.0;
 
@@ -103,7 +104,11 @@ final class IntlFunctions
 
     private static function numberFormatter(array $call, int $style): \NumberFormatter
     {
-        return new \NumberFormatter((string) ($call['locale'] ?? 'en'), $style);
+        try {
+            return new \NumberFormatter(self::locale($call), $style);
+        } catch (\Throwable $error) {
+            throw MF2Error::badOption($error->getMessage());
+        }
     }
 
     private static function dateFormatter(
@@ -113,13 +118,37 @@ final class IntlFunctions
         \DateTimeZone $timeZone,
     ): \IntlDateFormatter
     {
-        return new \IntlDateFormatter(
-            (string) ($call['locale'] ?? 'en'),
-            $dateStyle,
-            $timeStyle,
-            $timeZone->getName(),
-            \IntlDateFormatter::GREGORIAN,
-        );
+        try {
+            return new \IntlDateFormatter(
+                self::locale($call),
+                $dateStyle,
+                $timeStyle,
+                $timeZone->getName(),
+                \IntlDateFormatter::GREGORIAN,
+            );
+        } catch (\Throwable $error) {
+            throw MF2Error::badOption($error->getMessage());
+        }
+    }
+
+    private static function locale(array $call): string
+    {
+        $value = $call['locale'] ?? 'en';
+        if (is_array($value)) {
+            throw MF2Error::badOption('locale option must be coercible to a string.');
+        }
+        try {
+            $locale = (string) $value;
+        } catch (\Throwable) {
+            throw MF2Error::badOption('locale option must be coercible to a string.');
+        }
+        if ($locale === '') {
+            throw MF2Error::badOption('Locale option must be a valid locale identifier.');
+        }
+        if (strlen($locale) > self::MAX_LOCALE_LENGTH) {
+            throw MF2Error::badOption('locale must not exceed 256 characters.');
+        }
+        return $locale;
     }
 
     private static function numericValue(array $call, string $message): float
