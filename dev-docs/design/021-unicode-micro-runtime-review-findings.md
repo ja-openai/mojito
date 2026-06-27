@@ -268,8 +268,9 @@ branch is under active implementation.
   Go, Java, and Kotlin. Values outside that range reject as MF2 `bad-operand`,
   including the former ECMAScript-only `+/-8640000000000000` boundary accepted
   by JS/PHP/Go but not Python. The shared date-time fixture covers huge and
-  just-outside-portable rejection; a numeric timestamp fixture covers the
-  portable inclusive endpoints in the runtimes with numeric date-time operands.
+  just-outside-portable rejection; numeric timestamp fixtures cover the portable
+  inclusive endpoints and truncation of fractional negative milliseconds toward
+  zero in the runtimes with numeric date-time operands.
   Go now accepts the normal primitive numeric family for direct timestamp
   operands instead of only `int`, `int64`, and `float64`, while still rejecting
   unsigned values above the portable maximum. Rust and Swift normalize numeric

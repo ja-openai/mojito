@@ -4890,6 +4890,17 @@
         "timeZone": "UTC"
       },
       "expected": "Dec 31, 9999, 11:59:59 PM"
+    },
+    {
+      "name": "truncates negative fractional numeric timestamp",
+      "kind": "time",
+      "value": -1.5,
+      "locale": "en-US",
+      "options": {
+        "skeleton": "HHmmssSSS",
+        "timeZone": "UTC"
+      },
+      "expected": "23:59:59.999"
     }
   ],
   "intlReferenceCases": [

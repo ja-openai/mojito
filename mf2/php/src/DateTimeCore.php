@@ -329,7 +329,14 @@ final class DateTimeCore
         if ((is_int($value) || is_float($value)) && is_finite((float) $value)) {
             $timestamp = (float) $value;
             if ($timestamp >= self::MIN_TIMESTAMP_MS && $timestamp <= self::MAX_TIMESTAMP_MS) {
-                $parsed = \DateTimeImmutable::createFromFormat('U.u', sprintf('%.6F', $timestamp / 1000), $utc);
+                $timestamp = (int) $timestamp;
+                $seconds = intdiv($timestamp, 1000);
+                $milliseconds = $timestamp % 1000;
+                if ($milliseconds < 0) {
+                    $seconds -= 1;
+                    $milliseconds += 1000;
+                }
+                $parsed = \DateTimeImmutable::createFromFormat('U.u', sprintf('%d.%06d', $seconds, $milliseconds * 1000), $utc);
                 if ($parsed !== false) {
                     return self::validateDateTime($parsed->setTimezone($utc));
                 }

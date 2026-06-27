@@ -536,6 +536,7 @@ def _parse_datetime(value: Any) -> datetime:
             timestamp = float(value)
             if timestamp < _MIN_TIMESTAMP_MS or timestamp > _MAX_TIMESTAMP_MS:
                 raise ValueError("timestamp is outside the supported range")
+            timestamp = int(timestamp)
             return datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(milliseconds=timestamp)
         except (OverflowError, OSError, ValueError) as error:
             raise MF2Error(
