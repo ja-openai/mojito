@@ -21,7 +21,7 @@ final class FormattedPartJson {
             case Mf2FormattedPart.Fallback fallback -> {
                 map.put("type", "fallback");
                 map.put("source", fallback.source());
-                if (!fallback.value().equals("{" + fallback.source() + "}")) {
+                if (fallback.value() != null) {
                     map.put("value", fallback.value());
                 }
             }

@@ -752,6 +752,10 @@ branch is under active implementation.
   includes optional `value`, matching runtime recovery output and the Python,
   Rust, Swift, Java, Kotlin, Go, and PHP parts contracts. The package-boundary
   type check narrows fallback parts and reads the optional value field.
+- Java fallback part semantics: Java `Mf2FormattedPart.Fallback.value()` now
+  uses null for the default visible fallback, matching Swift/Rust optional
+  fields and the dynamic runtimes' omitted `value` map field. Java public API
+  checks cover empty recovery values and default fallback values separately.
 - Official Unicode parts assertions: the JavaScript official-test runner now
   validates the upstream `expParts` assertions in the wired official files by
   projecting Mojito's public parts into the official parts vocabulary for

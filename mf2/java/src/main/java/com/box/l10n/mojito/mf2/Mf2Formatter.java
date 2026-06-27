@@ -377,7 +377,10 @@ public final class Mf2Formatter {
                             String source = rendered.fallbackSource() == null
                                     ? fallbackSource(expression.expression())
                                     : rendered.fallbackSource();
-                            output.add(new Mf2FormattedPart.Fallback(source, rendered.value()));
+                            String value = rendered.value().equals(fallbackValue(source))
+                                    ? null
+                                    : rendered.value();
+                            output.add(new Mf2FormattedPart.Fallback(source, value));
                         } else {
                             output.add(new Mf2FormattedPart.Expression(
                                     rendered.value(),
@@ -1100,7 +1103,10 @@ public final class Mf2Formatter {
         for (Mf2FormattedPart part : parts) {
             switch (part) {
                 case Mf2FormattedPart.Text text -> output.append(text.value());
-                case Mf2FormattedPart.Fallback fallback -> output.append(fallback.value());
+                case Mf2FormattedPart.Fallback fallback -> output.append(
+                        fallback.value() == null
+                                ? fallbackValue(fallback.source())
+                                : fallback.value());
                 case Mf2FormattedPart.Expression expression ->
                         output.append(isolateExpression(
                                 expression.value(), bidiIsolation, expression.direction()));

@@ -238,8 +238,8 @@ public final class PublicApiDemo {
                 || !(parts.get(1) instanceof Mf2FormattedPart.Fallback fallback)
                 || !fallback.source().equals(source)
                 || (value == null
-                        ? !fallback.value().equals("{" + source + "}")
-                        : !fallback.value().equals(value))) {
+                        ? fallback.value() != null
+                        : !value.equals(fallback.value()))) {
             throw new AssertionError(label + " got unexpected parts: " + parts);
         }
     }

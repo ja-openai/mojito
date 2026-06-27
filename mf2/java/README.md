@@ -61,6 +61,8 @@ delegate to `Mf2Formatter`. Formatting output lives in top-level result types:
 `Mf2Formatter.formatMessageToParts` returns `Mf2PartsResult` with `parts()`,
 `errors()`, `ok()`, and `hasErrors()`. Individual parts use
 `Mf2FormattedPart.Text`, `.Expression`, `.Fallback`, and `.Markup`.
+`Mf2FormattedPart.Fallback.value()` is null when callers should render the
+standard visible fallback from `source()`.
 Formatting uses `Mf2FormatOptions`; the builder defaults to locale `en`, and
 production integrations should set the active app locale explicitly:
 
