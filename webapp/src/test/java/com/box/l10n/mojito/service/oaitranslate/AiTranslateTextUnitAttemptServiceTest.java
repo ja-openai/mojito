@@ -2,11 +2,13 @@ package com.box.l10n.mojito.service.oaitranslate;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.AiTranslateTextUnitAttempt;
@@ -62,6 +64,7 @@ public class AiTranslateTextUnitAttemptServiceTest {
             mock(AiTranslateTextUnitAttemptRepository.class),
             mock(AiTranslateRunRepository.class),
             structuredBlobStorage,
+            new AiTranslateConfigurationProperties(),
             new ObjectMapper());
 
     String blobName =
@@ -75,6 +78,26 @@ public class AiTranslateTextUnitAttemptServiceTest {
             eq("42/group/request.json"),
             eq("{\"image_url\":\"[image data omitted]\"}"),
             eq(Retention.PERMANENT));
+  }
+
+  @Test
+  public void putPayloadBlobSkipsStorageWhenLineagePayloadStorageIsDisabled() {
+    StructuredBlobStorage structuredBlobStorage = mock(StructuredBlobStorage.class);
+    AiTranslateConfigurationProperties configurationProperties =
+        new AiTranslateConfigurationProperties();
+    configurationProperties.getLineage().setPayloadStorageEnabled(false);
+    AiTranslateTextUnitAttemptService service =
+        new AiTranslateTextUnitAttemptService(
+            mock(AiTranslateTextUnitAttemptRepository.class),
+            mock(AiTranslateRunRepository.class),
+            structuredBlobStorage,
+            configurationProperties,
+            new ObjectMapper());
+
+    String blobName = service.putPayloadBlob(42L, "group", "request.json", "{\"ok\":true}");
+
+    assertNull(blobName);
+    verifyNoInteractions(structuredBlobStorage);
   }
 
   @Test
@@ -107,6 +130,7 @@ public class AiTranslateTextUnitAttemptServiceTest {
             repository,
             mock(AiTranslateRunRepository.class),
             mock(StructuredBlobStorage.class),
+            new AiTranslateConfigurationProperties(),
             new ObjectMapper());
 
     List<AiTranslateTextUnitAttemptService.TextUnitAttemptSummary> summaries =
@@ -152,6 +176,7 @@ public class AiTranslateTextUnitAttemptServiceTest {
             repository,
             mock(AiTranslateRunRepository.class),
             mock(StructuredBlobStorage.class),
+            new AiTranslateConfigurationProperties(),
             new ObjectMapper());
 
     Optional<AiTranslateTextUnitAttemptService.TextUnitAttemptSummary> summary =
@@ -205,6 +230,7 @@ public class AiTranslateTextUnitAttemptServiceTest {
             repository,
             mock(AiTranslateRunRepository.class),
             mock(StructuredBlobStorage.class),
+            new AiTranslateConfigurationProperties(),
             new ObjectMapper());
 
     List<AiTranslateTextUnitAttemptService.TextUnitAttemptLineageSummary> summaries =
@@ -267,6 +293,7 @@ public class AiTranslateTextUnitAttemptServiceTest {
             repository,
             mock(AiTranslateRunRepository.class),
             mock(StructuredBlobStorage.class),
+            new AiTranslateConfigurationProperties(),
             new ObjectMapper());
 
     List<AiTranslateTextUnitAttemptService.TextUnitAttemptLineageSummary> summaries =
@@ -297,8 +324,31 @@ public class AiTranslateTextUnitAttemptServiceTest {
             repository,
             mock(AiTranslateRunRepository.class),
             structuredBlobStorage,
+            new AiTranslateConfigurationProperties(),
             new ObjectMapper());
 
     assertEquals(Optional.of("{\"ok\":true}"), service.getRequestPayload(1L, 2L, 7L));
+  }
+
+  @Test
+  public void getRequestPayloadReturnsEmptyWithoutBlobName() {
+    AiTranslateTextUnitAttemptRepository repository =
+        mock(AiTranslateTextUnitAttemptRepository.class);
+    StructuredBlobStorage structuredBlobStorage = mock(StructuredBlobStorage.class);
+    AiTranslateTextUnitAttempt attempt = new AiTranslateTextUnitAttempt();
+
+    when(repository.findByIdAndTmTextUnit_IdAndLocale_Id(7L, 1L, 2L))
+        .thenReturn(Optional.of(attempt));
+
+    AiTranslateTextUnitAttemptService service =
+        new AiTranslateTextUnitAttemptService(
+            repository,
+            mock(AiTranslateRunRepository.class),
+            structuredBlobStorage,
+            new AiTranslateConfigurationProperties(),
+            new ObjectMapper());
+
+    assertEquals(Optional.empty(), service.getRequestPayload(1L, 2L, 7L));
+    verifyNoInteractions(structuredBlobStorage);
   }
 }

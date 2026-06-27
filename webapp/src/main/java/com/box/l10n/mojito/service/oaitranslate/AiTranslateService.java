@@ -944,6 +944,8 @@ public class AiTranslateService {
 
   void putReportContent(PollableTask currentTask, List<String> reportFilenames) {
     logger.debug("Put report content for id: {}", currentTask.getId());
+    // TODO: These operational reports are also DB-backed permanent blobs when using
+    // DatabaseBlobStorage; add retention or route them to external blob storage.
     structuredBlobStorage.put(
         AI_TRANSALATE_NO_BATCH_OUTPUT,
         getReportFilename(currentTask.getId()),

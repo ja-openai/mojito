@@ -14,6 +14,7 @@ public class AiTranslateConfigurationProperties {
   PoolProperties pool = new PoolProperties();
   RetryProperties retry = new RetryProperties();
   NoBatchProperties noBatch = new NoBatchProperties();
+  LineageProperties lineage = new LineageProperties();
   PricingProperties pricing = new PricingProperties();
   ResponsesProperties responses = new ResponsesProperties();
 
@@ -63,6 +64,14 @@ public class AiTranslateConfigurationProperties {
 
   public void setNoBatch(NoBatchProperties noBatch) {
     this.noBatch = noBatch;
+  }
+
+  public LineageProperties getLineage() {
+    return lineage;
+  }
+
+  public void setLineage(LineageProperties lineage) {
+    this.lineage = lineage;
   }
 
   public PricingProperties getPricing() {
@@ -199,6 +208,18 @@ public class AiTranslateConfigurationProperties {
           default -> reasoningNoneMultiplier;
         };
       }
+    }
+  }
+
+  public static class LineageProperties {
+    boolean payloadStorageEnabled = true;
+
+    public boolean isPayloadStorageEnabled() {
+      return payloadStorageEnabled;
+    }
+
+    public void setPayloadStorageEnabled(boolean payloadStorageEnabled) {
+      this.payloadStorageEnabled = payloadStorageEnabled;
     }
   }
 
