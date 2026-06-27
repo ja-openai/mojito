@@ -117,6 +117,19 @@ public final class Icu4jRegistryDemo {
                 "datetime={$instant :datetime dateStyle=medium timeStyle=medium timeZone=" + "A".repeat(257) + "}",
                 "2026-05-21T14:30:15Z",
                 "bad-option");
+        assertDateOperandErrorCode(
+                "oversized dateStyle option",
+                "datetime={$instant :datetime dateStyle=" + "A".repeat(257) + " timeStyle=medium timeZone=UTC}",
+                "2026-05-21T14:30:15Z",
+                "bad-option");
+        assertErrorCode(
+                "oversized signDisplay option",
+                "number={$price :number signDisplay=" + "A".repeat(257) + "}",
+                "bad-option");
+        assertErrorCode(
+                "oversized relativeTime style option",
+                "relative={$price :relativeTime unit=day style=" + "A".repeat(257) + "}",
+                "bad-option");
 
         if (!quiet) {
             System.out.println("Java ICU4J registry demo passed");

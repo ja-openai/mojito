@@ -31,6 +31,7 @@ object Mf2Icu4jFunctions {
     private const val MAX_LOCALE_LENGTH = 256
     private const val MAX_NUMERIC_OPERAND_LENGTH = 256
     private const val MAX_NUMERIC_OPTION_LENGTH = 256
+    private const val MAX_OPTION_LENGTH = 256
     private const val MAX_TIME_ZONE_OPTION_LENGTH = 256
     private val epochDate: LocalDate = LocalDate.of(1970, 1, 1)
     private val isoDateTimeOperand =
@@ -104,16 +105,10 @@ object Mf2Icu4jFunctions {
 
     private fun formatDateTime(call: Mf2FunctionCall): String {
         val zone = zoneId(call)
-        val sharedStyle = call.optionValue("style", null)
+        val sharedStyle = option(call, "style", null)
         val defaultStyle = sharedStyle ?: "medium"
-        val dateStyleOption = call.optionValue(
-            "dateStyle",
-            call.optionValue("dateLength", defaultStyle),
-        ) ?: defaultStyle
-        val timeStyleOption = call.optionValue(
-            "timeStyle",
-            call.optionValue("timePrecision", defaultStyle),
-        ) ?: defaultStyle
+        val dateStyleOption = firstOptionValue(call, defaultStyle, "dateStyle", "dateLength")
+        val timeStyleOption = firstOptionValue(call, defaultStyle, "timeStyle", "timePrecision")
         val format = DateFormat.getDateTimeInstance(
             dateStyle(dateStyleOption),
             timeStyle(timeStyleOption),
@@ -322,19 +317,13 @@ object Mf2Icu4jFunctions {
     private fun hasValidDateOperandLength(value: String): Boolean = value.length <= MAX_DATE_OPERAND_LENGTH
 
     private fun dateStyleOption(call: Mf2FunctionCall): String =
-        call.optionValue(
-            "dateStyle",
-            call.optionValue("length", call.optionValue("style", "medium")),
-        ) ?: "medium"
+        firstOptionValue(call, "medium", "dateStyle", "length", "style")
 
     private fun timeStyleOption(call: Mf2FunctionCall): String =
-        call.optionValue(
-            "timeStyle",
-            call.optionValue("precision", call.optionValue("style", "medium")),
-        ) ?: "medium"
+        firstOptionValue(call, "medium", "timeStyle", "precision", "style")
 
     private fun zoneId(call: Mf2FunctionCall): ZoneId {
-        val value = call.optionValue("timeZone", "UTC") ?: "UTC"
+        val value = option(call, "timeZone", "UTC") ?: "UTC"
         if (value.length > MAX_TIME_ZONE_OPTION_LENGTH) {
             throw Mf2Error.badOption("timeZone option must not exceed 256 characters.")
         }
@@ -412,10 +401,29 @@ object Mf2Icu4jFunctions {
         fallback: String?,
         vararg allowedValues: String,
     ): String {
-        val value = call.optionValue(name, fallback)
+        val value = option(call, name, fallback)
             ?: throw Mf2Error.badOption("$name option is required.")
         if (value in allowedValues) return value
         throw Mf2Error.badOption("$name option must be one of ${allowedValues.joinToString(", ")}.")
+    }
+
+    private fun option(call: Mf2FunctionCall, name: String, fallback: String?): String? {
+        val value = call.optionValue(name, fallback)
+        if (value != null && value.length > MAX_OPTION_LENGTH) {
+            throw Mf2Error.badOption("$name option must not exceed 256 characters.")
+        }
+        return value
+    }
+
+    private fun firstOptionValue(
+        call: Mf2FunctionCall,
+        fallback: String,
+        vararg names: String,
+    ): String {
+        for (name in names) {
+            option(call, name, null)?.let { return it }
+        }
+        return fallback
     }
 
     private fun minimumFractionDigits(call: Mf2FunctionCall): Int? =

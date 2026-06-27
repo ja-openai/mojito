@@ -505,10 +505,10 @@ branch is under active implementation.
   oversized enum-style option values before validating them. Feature tests cover
   `signDisplay`, shared date-time `style`, and date-time style options.
 - Host-adapter enum option bounds: the Python Babel, PHP Intl, Swift
-  Foundation, Java JDK, and Kotlin JDK registries now reject oversized
-  enum-style option values before validating or passing them through host
-  formatter paths. Adapter checks cover date-time style and numeric
-  `signDisplay` options.
+  Foundation, Java JDK, Kotlin JDK, Java ICU4J, and Kotlin ICU4J registries now
+  reject oversized enum-style option values before validating or passing them
+  through host formatter paths. Adapter checks cover date-time style, numeric
+  `signDisplay`, and relative-time `style` options.
 - Cross-runtime fraction option text bounds: portable numeric helpers across
   Java, Kotlin, JavaScript, Python, PHP, Go, Swift, and Rust plus the JavaScript
   Intl, Python Babel, PHP Intl, Swift Foundation, JVM JDK/ICU4J, Kotlin

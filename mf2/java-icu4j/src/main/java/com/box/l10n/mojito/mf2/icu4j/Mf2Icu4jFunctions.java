@@ -31,6 +31,7 @@ public final class Mf2Icu4jFunctions {
     private static final int MAX_LOCALE_LENGTH = 256;
     private static final int MAX_NUMERIC_OPERAND_LENGTH = 256;
     private static final int MAX_NUMERIC_OPTION_LENGTH = 256;
+    private static final int MAX_OPTION_LENGTH = 256;
     private static final int MAX_TIME_ZONE_OPTION_LENGTH = 256;
     private static final LocalDate EPOCH_DATE = LocalDate.of(1970, 1, 1);
     private static final Pattern ISO_DATE_TIME_OPERAND =
@@ -124,10 +125,9 @@ public final class Mf2Icu4jFunctions {
         Date value = dateTimeValue(call, zone);
         String sharedStyle = option(call, "style", null);
         String defaultStyle = sharedStyle == null ? "medium" : sharedStyle;
-        String dateStyleOption =
-                option(call, "dateStyle", option(call, "dateLength", defaultStyle));
+        String dateStyleOption = firstOptionValue(call, defaultStyle, "dateStyle", "dateLength");
         String timeStyleOption =
-                option(call, "timeStyle", option(call, "timePrecision", defaultStyle));
+                firstOptionValue(call, defaultStyle, "timeStyle", "timePrecision");
         int dateStyle = dateStyle(dateStyleOption);
         int timeStyle = timeStyle(timeStyleOption);
         DateFormat format = DateFormat.getDateTimeInstance(dateStyle, timeStyle, locale(call));
@@ -461,15 +461,12 @@ public final class Mf2Icu4jFunctions {
 
     private static String dateStyleOption(Mf2FunctionRegistry.FunctionCall call)
             throws Mf2Exception {
-        return option(call, "dateStyle", option(call, "length", option(call, "style", "medium")));
+        return firstOptionValue(call, "medium", "dateStyle", "length", "style");
     }
 
     private static String timeStyleOption(Mf2FunctionRegistry.FunctionCall call)
             throws Mf2Exception {
-        return option(
-                call,
-                "timeStyle",
-                option(call, "precision", option(call, "style", "medium")));
+        return firstOptionValue(call, "medium", "timeStyle", "precision", "style");
     }
 
     private static ZoneId zoneId(Mf2FunctionRegistry.FunctionCall call)
@@ -567,7 +564,23 @@ public final class Mf2Icu4jFunctions {
     private static String option(
             Mf2FunctionRegistry.FunctionCall call, String name, String fallback)
             throws Mf2Exception {
-        return call.optionValue(name, fallback);
+        String value = call.optionValue(name, fallback);
+        if (value != null && value.length() > MAX_OPTION_LENGTH) {
+            throw badOption(name + " option must not exceed 256 characters.");
+        }
+        return value;
+    }
+
+    private static String firstOptionValue(
+            Mf2FunctionRegistry.FunctionCall call, String fallback, String... names)
+            throws Mf2Exception {
+        for (String name : names) {
+            String value = option(call, name, null);
+            if (value != null) {
+                return value;
+            }
+        }
+        return fallback;
     }
 
     private static String applySignDisplay(
