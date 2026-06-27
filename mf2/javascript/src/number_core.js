@@ -1,4 +1,9 @@
 import { NUMBER_DATA } from "./cldr_number_data.js";
+import {
+  parseDecimalOperand,
+  shiftDecimalOperand,
+  truncateDecimalOperandToInteger,
+} from "./function_support.js";
 import { localeLookupChain } from "./locale-key.js";
 
 const DEFAULT_LOCALE = "en-US";
@@ -6,7 +11,6 @@ const MAX_LOCALE_LENGTH = 256;
 const MAX_OPTION_LENGTH = 256;
 const MAX_OPERAND_LENGTH = 256;
 const MAX_FRACTION_DIGITS = 100;
-const MAX_ABSOLUTE_FORMAT_VALUE = 1e21;
 const MAX_SAFE_BIGINT = BigInt(Number.MAX_SAFE_INTEGER);
 const DIGIT_ZERO = "0".charCodeAt(0);
 
@@ -21,20 +25,20 @@ export class NumberCoreError extends Error {
 export function formatNumberCore(value, options = {}) {
   const style = optionOneOf(options.style ?? "number", ["number", "integer", "percent", "currency"], "style");
   const localeData = resolveLocaleData(options.locale ?? DEFAULT_LOCALE);
-  const parsed = parseFiniteNumber(value);
+  const parsed = parseFiniteDecimalOperand(value);
   if (parsed == null) throw new NumberCoreError("bad-operand", "Number core requires a finite numeric value.");
 
   const currency = style === "currency" ? parseCurrency(options.currency) : null;
   const pattern = patternForStyle(localeData, style);
   const fraction = fractionOptions(localeData, style, currency, options, pattern);
-  const normalized = style === "integer" ? Math.trunc(parsed) : parsed;
-  const scaled = style === "percent" ? normalized * 100 : normalized;
+  const normalized = style === "integer" ? truncateDecimalPreservingZeroSign(parsed) : parsed;
+  const scaled = style === "percent" ? shiftDecimalPreservingZeroSign(normalized, 2) : normalized;
   if (!isSupportedMagnitude(scaled)) {
     throw new NumberCoreError("bad-operand", "Number core numeric value is outside the supported magnitude.");
   }
   const signDisplay = optionOneOf(options.signDisplay ?? "auto", ["auto", "always", "never"], "signDisplay");
   const useGrouping = booleanOption(options.useGrouping ?? true, "useGrouping");
-  const formatted = formatDecimal(Math.abs(scaled), localeData, pattern, fraction, useGrouping);
+  const formatted = formatDecimal(absDecimalOperand(scaled), localeData, pattern, fraction, useGrouping);
 
   if (style === "percent") {
     return applySignedPattern(pattern, formatted, scaled, localeData.symbols, signDisplay, {
@@ -131,7 +135,7 @@ function fractionDefaultsFromPattern(pattern) {
 }
 
 function formatDecimal(value, localeData, pattern, fraction, useGrouping) {
-  const rounded = roundFixed(value, fraction.maximum);
+  const rounded = roundDecimalOperand(value, fraction.maximum);
   let [integer, decimal = ""] = rounded.split(".");
   while (decimal.length > fraction.minimum && decimal.endsWith("0")) decimal = decimal.slice(0, -1);
   while (decimal.length < fraction.minimum) decimal += "0";
@@ -145,8 +149,8 @@ function formatDecimal(value, localeData, pattern, fraction, useGrouping) {
   return integer;
 }
 
-function roundFixed(value, maximumFractionDigits) {
-  const { integer, fraction } = decimalParts(String(value));
+function roundDecimalOperand(value, maximumFractionDigits) {
+  const { integer, fraction } = decimalParts(decimalOperandToString(value));
   const dropped = fraction.length - maximumFractionDigits;
   let units;
   let roundDigit = "0";
@@ -249,7 +253,7 @@ function applySignedPattern(pattern, formatted, value, symbols, signDisplay, rep
 }
 
 function isNegative(value) {
-  return value < 0 || Object.is(value, -0);
+  return value.negative;
 }
 
 function currencyDisplay(localeData, currency, display) {
@@ -273,32 +277,61 @@ function currencySpacingInsert(localeData, direction) {
   return localeData.currencySpacing?.[direction]?.insertBetween ?? "\u00a0";
 }
 
-function parseFiniteNumber(value) {
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  if (typeof value === "bigint") {
-    if (value > MAX_SAFE_BIGINT || value < -MAX_SAFE_BIGINT) return null;
-    return Number(value);
-  }
-  const text = coerceStringOperand(value ?? "").trim();
+function parseFiniteDecimalOperand(value) {
+  if (typeof value === "number" && !Number.isFinite(value)) return null;
+  if (typeof value === "number" && Object.is(value, -0)) return { negative: true, digits: "0", scale: 0 };
+  if (typeof value === "bigint" && (value > MAX_SAFE_BIGINT || value < -MAX_SAFE_BIGINT)) return null;
+  const text = (typeof value === "bigint" ? value.toString() : coerceStringOperand(value ?? "")).trim();
   if (text.length > MAX_OPERAND_LENGTH) return null;
-  if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(text)) return null;
-  const parsed = Number(text);
-  return Number.isFinite(parsed) ? parsed : null;
+  const parsed = parseDecimalOperand(text);
+  if (parsed == null) return null;
+  return text.startsWith("-") && parsed.digits === "0" && parsed.scale === 0
+    ? { ...parsed, negative: true }
+    : parsed;
 }
 
 function isSupportedMagnitude(value) {
-  return Number.isFinite(value) && Math.abs(value) < MAX_ABSOLUTE_FORMAT_VALUE;
+  return decimalIntegerDigitCount(value) <= 21;
 }
 
 function callNumberValue(call, style) {
   if (call.inheritedSource != null) {
     if (style === "number" && call.inheritedSource.function?.name === "integer") {
-      const parsed = parseFiniteNumber(call.inheritedSource.value);
-      if (parsed != null) return Math.trunc(parsed);
+      const parsed = parseFiniteDecimalOperand(call.inheritedSource.value);
+      if (parsed != null) return decimalOperandToString(truncateDecimalPreservingZeroSign(parsed));
     }
     return call.inheritedSource.value;
   }
   return call.rawValue ?? call.value;
+}
+
+function decimalOperandToString(operand) {
+  const sign = operand.negative ? "-" : "";
+  if (operand.scale <= 0) return `${sign}${operand.digits}${"0".repeat(-operand.scale)}`;
+  if (operand.scale >= operand.digits.length) {
+    return `${sign}0.${"0".repeat(operand.scale - operand.digits.length)}${operand.digits}`;
+  }
+  const integerDigits = operand.digits.length - operand.scale;
+  return `${sign}${operand.digits.slice(0, integerDigits)}.${operand.digits.slice(integerDigits)}`;
+}
+
+function absDecimalOperand(operand) {
+  return operand.negative ? { ...operand, negative: false } : operand;
+}
+
+function shiftDecimalPreservingZeroSign(operand, places) {
+  const shifted = shiftDecimalOperand(operand, places);
+  return operand.negative && shifted.digits === "0" && shifted.scale === 0 ? { ...shifted, negative: true } : shifted;
+}
+
+function truncateDecimalPreservingZeroSign(operand) {
+  const truncated = truncateDecimalOperandToInteger(operand);
+  return operand.negative && truncated.digits === "0" && truncated.scale === 0 ? { ...truncated, negative: true } : truncated;
+}
+
+function decimalIntegerDigitCount(operand) {
+  if (operand.scale <= 0) return operand.digits.length - operand.scale;
+  return Math.max(operand.digits.length - operand.scale, 0);
 }
 
 function inheritedOptionValue(call, name, fallback) {

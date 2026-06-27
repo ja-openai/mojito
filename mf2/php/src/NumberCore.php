@@ -12,7 +12,6 @@ final class NumberCore
     private const MAX_OPTION_LENGTH = 256;
     private const MAX_OPERAND_LENGTH = 256;
     private const MAX_FRACTION_DIGITS = 100;
-    private const MAX_ABSOLUTE_FORMAT_VALUE = 1.0E21;
     private const STYLE_NUMBER = 'number';
     private const STYLE_INTEGER = 'integer';
     private const STYLE_PERCENT = 'percent';
@@ -50,7 +49,7 @@ final class NumberCore
             'signDisplay',
         );
         $localeData = self::resolveLocaleData(self::localeOption($options['locale'] ?? self::DEFAULT_LOCALE));
-        $parsed = self::parseFiniteDecimal($value);
+        $parsed = self::parseFiniteDecimalOperand($value);
         if ($parsed === null) {
             throw MF2Error::badOperand('Number core requires a finite numeric value.');
         }
@@ -64,11 +63,11 @@ final class NumberCore
             $options['maximumFractionDigits'] ?? null,
             $pattern,
         );
-        $normalized = $style === self::STYLE_INTEGER ? self::truncate($parsed) : $parsed;
-        $scaled = $style === self::STYLE_PERCENT ? $normalized * 100 : $normalized;
+        $normalized = $style === self::STYLE_INTEGER ? self::truncateDecimalPreservingZeroSign($parsed) : $parsed;
+        $scaled = $style === self::STYLE_PERCENT ? self::shiftDecimalPreservingZeroSign($normalized, 2) : $normalized;
         self::ensureSupportedMagnitude($scaled);
         $formatted = self::formatDecimal(
-            abs($scaled),
+            self::absDecimalOperand($scaled),
             $localeData,
             $pattern,
             $fraction,
@@ -128,9 +127,9 @@ final class NumberCore
                 $style === self::STYLE_NUMBER
                 && (($source['function']['name'] ?? null) === self::STYLE_INTEGER)
             ) {
-                $parsed = self::parseFiniteDecimal($source['value'] ?? null);
+                $parsed = self::parseFiniteDecimalOperand($source['value'] ?? null);
                 if ($parsed !== null) {
-                    return self::truncate($parsed);
+                    return Internal\decimal_operand_to_string(self::truncateDecimalPreservingZeroSign($parsed));
                 }
             }
             return $source['value'] ?? null;
@@ -233,13 +232,15 @@ final class NumberCore
     }
 
     private static function formatDecimal(
-        float $value,
+        array $value,
         array $localeData,
         string $pattern,
         array $fraction,
         bool $useGrouping,
     ): string {
-        $rounded = number_format($value, $fraction['maximum'], '.', '');
+        $rounded = Internal\decimal_operand_to_string(
+            Internal\round_decimal_operand_to_maximum_fraction_digits($value, $fraction['maximum']),
+        );
         [$integer, $decimal] = array_pad(explode('.', $rounded, 2), 2, '');
         while (strlen($decimal) > $fraction['minimum'] && str_ends_with($decimal, '0')) {
             $decimal = substr($decimal, 0, -1);
@@ -293,7 +294,7 @@ final class NumberCore
         return implode($separator, $groups);
     }
 
-    private static function applySign(string $formatted, float $value, array $symbols, string $signDisplay): string
+    private static function applySign(string $formatted, array $value, array $symbols, string $signDisplay): string
     {
         if ($signDisplay === self::SIGN_DISPLAY_NEVER) {
             return $formatted;
@@ -326,7 +327,7 @@ final class NumberCore
     private static function applySignedPattern(
         string $pattern,
         string $formatted,
-        float $value,
+        array $value,
         array $symbols,
         string $signDisplay,
         ?string $percentSign = null,
@@ -347,9 +348,9 @@ final class NumberCore
         return $output;
     }
 
-    private static function isNegative(float $value): bool
+    private static function isNegative(array $value): bool
     {
-        return $value < 0 || json_encode($value) === '-0';
+        return $value['negative'];
     }
 
     private static function currencyDisplay(array $localeData, string $currency, string $display): string
@@ -387,14 +388,13 @@ final class NumberCore
         return is_string($insert) && $insert !== '' ? $insert : "\u{a0}";
     }
 
-    private static function parseFiniteDecimal(mixed $value): ?float
+    private static function parseFiniteDecimalOperand(mixed $value): ?array
     {
         if (is_bool($value) || $value === null) {
             return null;
         }
-        if (is_int($value) || is_float($value)) {
-            $parsed = (float) $value;
-            return is_finite($parsed) ? $parsed : null;
+        if (is_float($value) && !is_finite($value)) {
+            return null;
         }
         if (is_object($value) && !method_exists($value, '__toString')) {
             return null;
@@ -409,20 +409,50 @@ final class NumberCore
         if (preg_match('/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/', $text) !== 1) {
             return null;
         }
-        $parsed = (float) $text;
-        return is_finite($parsed) ? $parsed : null;
+        $parsed = Internal\parse_decimal_operand($text);
+        if ($parsed !== null && str_starts_with($text, '-') && $parsed['digits'] === '0' && $parsed['scale'] === 0) {
+            $parsed['negative'] = true;
+        }
+        return $parsed;
     }
 
-    private static function truncate(float $value): float
+    private static function shiftDecimalPreservingZeroSign(array $operand, int $places): array
     {
-        return $value < 0 ? ceil($value) : floor($value);
+        $shifted = Internal\shift_decimal_operand($operand, $places);
+        if ($operand['negative'] && $shifted['digits'] === '0' && $shifted['scale'] === 0) {
+            $shifted['negative'] = true;
+        }
+        return $shifted;
     }
 
-    private static function ensureSupportedMagnitude(float $value): void
+    private static function truncateDecimalPreservingZeroSign(array $operand): array
     {
-        if (!is_finite($value) || abs($value) >= self::MAX_ABSOLUTE_FORMAT_VALUE) {
+        $truncated = Internal\truncate_decimal_operand_to_integer($operand);
+        if ($operand['negative'] && $truncated['digits'] === '0' && $truncated['scale'] === 0) {
+            $truncated['negative'] = true;
+        }
+        return $truncated;
+    }
+
+    private static function absDecimalOperand(array $operand): array
+    {
+        $operand['negative'] = false;
+        return $operand;
+    }
+
+    private static function ensureSupportedMagnitude(array $value): void
+    {
+        if (self::decimalIntegerDigitCount($value) > 21) {
             throw MF2Error::badOperand('Number core numeric value is outside the supported magnitude.');
         }
+    }
+
+    private static function decimalIntegerDigitCount(array $operand): int
+    {
+        if ($operand['scale'] <= 0) {
+            return strlen($operand['digits']) - $operand['scale'];
+        }
+        return max(strlen($operand['digits']) - $operand['scale'], 0);
     }
 
     private static function parseCurrency(mixed $value): string

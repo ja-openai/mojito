@@ -15,6 +15,20 @@
       "expected": "100"
     },
     {
+      "name": "large string integer operand keeps decimal precision",
+      "locale": "en-US",
+      "value": "9007199254740993",
+      "options": { "style": "number", "useGrouping": false },
+      "expected": "9007199254740993"
+    },
+    {
+      "name": "large string percent operand keeps decimal precision",
+      "locale": "en-US",
+      "value": "9007199254740993",
+      "options": { "style": "percent", "useGrouping": false },
+      "expected": "900719925474099300%"
+    },
+    {
       "name": "fr decimal",
       "locale": "fr-FR",
       "value": 1234.5,

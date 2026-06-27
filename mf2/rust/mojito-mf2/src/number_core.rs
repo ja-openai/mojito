@@ -10,7 +10,7 @@ const MAX_LOCALE_LENGTH: usize = 256;
 const MAX_OPTION_LENGTH: usize = 256;
 const MAX_OPERAND_LENGTH: usize = 256;
 const MAX_FRACTION_DIGITS: usize = 100;
-const MAX_ABSOLUTE_FORMAT_VALUE: f64 = 1e21;
+const MAX_DECIMAL_OUTPUT_CHARS: i64 = 512;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NumberCoreStyle {
@@ -177,7 +177,7 @@ fn format_number_core_argument(
 }
 
 fn format_number_core_parsed(
-    parsed: f64,
+    parsed: DecimalOperand,
     options: &NumberCoreOptions,
 ) -> Result<String, Diagnostic> {
     let style = options.style;
@@ -196,22 +196,22 @@ fn format_number_core_parsed(
         pattern,
     )?;
     let normalized = if style == NumberCoreStyle::Integer {
-        parsed.trunc()
+        parsed.truncate_to_integer()
     } else {
         parsed
     };
     let scaled = if style == NumberCoreStyle::Percent {
-        normalized * 100.0
+        normalized.shift(2)
     } else {
         normalized
     };
-    if !is_supported_magnitude(scaled) {
+    if !is_supported_magnitude(&scaled) {
         return Err(bad_operand(
             "Number core numeric value is outside the supported magnitude.",
         ));
     }
     let formatted = format_decimal(
-        scaled.abs(),
+        &scaled.abs(),
         locale_data,
         pattern,
         fraction,
@@ -221,7 +221,7 @@ fn format_number_core_parsed(
         NumberCoreStyle::Percent => Ok(apply_signed_pattern(
             pattern,
             &formatted,
-            scaled,
+            &scaled,
             locale_data.symbols,
             options.sign_display,
             Some(symbol(locale_data.symbols, "percentSign", "%")),
@@ -230,7 +230,7 @@ fn format_number_core_parsed(
         NumberCoreStyle::Currency => Ok(apply_signed_pattern(
             pattern,
             &formatted,
-            scaled,
+            &scaled,
             locale_data.symbols,
             options.sign_display,
             None,
@@ -242,7 +242,7 @@ fn format_number_core_parsed(
         )),
         NumberCoreStyle::Number | NumberCoreStyle::Integer => Ok(apply_sign(
             formatted,
-            scaled,
+            &scaled,
             locale_data.symbols,
             options.sign_display,
         )),
@@ -362,11 +362,14 @@ fn fraction_options(
     Ok(options)
 }
 
-fn parse_call_finite_decimal(call: &FunctionCall<'_>, style: NumberCoreStyle) -> Option<f64> {
+fn parse_call_finite_decimal(
+    call: &FunctionCall<'_>,
+    style: NumberCoreStyle,
+) -> Option<DecimalOperand> {
     if let Some(source) = call.inherited_source() {
         if style == NumberCoreStyle::Number && source.function().name == "integer" {
             if let Some(parsed) = parse_finite_decimal_text(source.value()) {
-                return Some(parsed.trunc());
+                return Some(parsed.truncate_to_integer());
             }
         }
         return parse_finite_decimal_text(source.value());
@@ -389,13 +392,14 @@ fn fraction_defaults_from_pattern(pattern: &str) -> FractionOptions {
 }
 
 fn format_decimal(
-    value: f64,
+    value: &DecimalOperand,
     locale_data: &CldrNumberLocaleData,
     pattern: &str,
     fraction: FractionOptions,
     use_grouping: bool,
 ) -> String {
-    let rounded = round_fixed(value, fraction.maximum);
+    let rounded = value.round_to_maximum_fraction_digits(fraction.maximum);
+    let rounded = decimal_operand_to_string(&rounded);
     let (mut integer, mut decimal) = rounded
         .split_once('.')
         .map(|(integer, decimal)| (integer.to_string(), decimal.to_string()))
@@ -430,71 +434,6 @@ fn format_decimal(
     }
 }
 
-fn round_fixed(value: f64, maximum_fraction_digits: usize) -> String {
-    let (integer, fraction) = decimal_parts(&value.to_string());
-    let dropped = fraction.len() as isize - maximum_fraction_digits as isize;
-    let mut round_digit = b'0';
-    let mut units = if dropped <= 0 {
-        format!("{}{}{}", integer, fraction, "0".repeat((-dropped) as usize))
-    } else {
-        round_digit = fraction.as_bytes()[maximum_fraction_digits];
-        format!("{}{}", integer, &fraction[..maximum_fraction_digits])
-    };
-    units = trim_leading_zero_digits(&units);
-    if round_digit >= b'5' {
-        units = increment_digits(&units);
-    }
-    if maximum_fraction_digits == 0 {
-        return units;
-    }
-    if units.len() <= maximum_fraction_digits {
-        units = format!(
-            "{}{}",
-            "0".repeat(maximum_fraction_digits - units.len() + 1),
-            units
-        );
-    }
-    let split = units.len() - maximum_fraction_digits;
-    format!("{}.{}", &units[..split], &units[split..])
-}
-
-fn decimal_parts(text: &str) -> (String, String) {
-    let (mantissa, exponent) = text
-        .split_once(['e', 'E'])
-        .map(|(mantissa, exponent)| (mantissa, exponent.parse::<isize>().unwrap_or(0)))
-        .unwrap_or((text, 0));
-    let mantissa = mantissa.trim_start_matches(['+', '-']);
-    let (mut integer, fraction) = mantissa
-        .split_once('.')
-        .map(|(integer, fraction)| (integer, fraction))
-        .unwrap_or((mantissa, ""));
-    if integer.is_empty() {
-        integer = "0";
-    }
-    let digits = format!("{}{}", integer, fraction);
-    let point = integer.len() as isize + exponent;
-    if point <= 0 {
-        return (
-            "0".to_string(),
-            trim_trailing_zero_digits(&format!("{}{}", "0".repeat((-point) as usize), digits)),
-        );
-    }
-    if point as usize >= digits.len() {
-        return (
-            trim_leading_zero_digits(&format!(
-                "{}{}",
-                digits,
-                "0".repeat(point as usize - digits.len())
-            )),
-            String::new(),
-        );
-    }
-    (
-        trim_leading_zero_digits(&digits[..point as usize]),
-        trim_trailing_zero_digits(&digits[point as usize..]),
-    )
-}
-
 fn trim_leading_zero_digits(value: &str) -> String {
     let trimmed = value.trim_start_matches('0');
     if trimmed.is_empty() {
@@ -502,25 +441,6 @@ fn trim_leading_zero_digits(value: &str) -> String {
     } else {
         trimmed.to_string()
     }
-}
-
-fn trim_trailing_zero_digits(value: &str) -> String {
-    value.trim_end_matches('0').to_string()
-}
-
-fn increment_digits(value: &str) -> String {
-    let mut digits = value.as_bytes().to_vec();
-    for index in (0..digits.len()).rev() {
-        if digits[index] != b'9' {
-            digits[index] += 1;
-            return String::from_utf8(digits).expect("ASCII digits");
-        }
-        digits[index] = b'0';
-    }
-    format!(
-        "1{}",
-        String::from_utf8(digits).expect("ASCII digits after carry")
-    )
 }
 
 #[derive(Clone, Copy)]
@@ -569,14 +489,14 @@ fn group_integer(integer: &str, grouping: GroupingInfo, separator: &str) -> Stri
 
 fn apply_sign(
     formatted: String,
-    value: f64,
+    value: &DecimalOperand,
     symbols: &[(&str, &str)],
     sign_display: NumberCoreSignDisplay,
 ) -> String {
     if sign_display == NumberCoreSignDisplay::Never {
         return formatted;
     }
-    if value.is_sign_negative() {
+    if value.negative {
         return format!("{}{}", symbol(symbols, "minusSign", "-"), formatted);
     }
     if sign_display == NumberCoreSignDisplay::Always {
@@ -608,7 +528,7 @@ fn apply_pattern(
 fn apply_signed_pattern(
     pattern: &str,
     formatted: &str,
-    value: f64,
+    value: &DecimalOperand,
     symbols: &[(&str, &str)],
     sign_display: NumberCoreSignDisplay,
     percent_sign: Option<&str>,
@@ -619,7 +539,7 @@ fn apply_signed_pattern(
         .map_or((pattern, None), |(positive, negative)| {
             (positive, Some(negative))
         });
-    if value.is_sign_negative() && sign_display != NumberCoreSignDisplay::Never {
+    if value.negative && sign_display != NumberCoreSignDisplay::Never {
         if let Some(negative_pattern) = negative_pattern {
             return apply_pattern(negative_pattern, formatted, percent_sign, currency);
         }
@@ -681,7 +601,77 @@ fn currency_code_display(locale_data: &CldrNumberLocaleData, currency: &str) -> 
     format!("{}{}{}", before, currency, after)
 }
 
-fn parse_finite_decimal(value: &ArgumentValue) -> Option<f64> {
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct DecimalOperand {
+    negative: bool,
+    digits: String,
+    scale: i64,
+}
+
+impl DecimalOperand {
+    fn shift(&self, places: i64) -> Self {
+        normalize_decimal_operand_preserving_zero_sign(
+            self.negative,
+            self.digits.clone(),
+            self.scale - places,
+        )
+    }
+
+    fn truncate_to_integer(&self) -> Self {
+        if self.scale <= 0 {
+            return self.clone();
+        }
+        let keep = self.digits.len() as i64 - self.scale;
+        if keep <= 0 {
+            return DecimalOperand {
+                negative: self.negative,
+                digits: "0".to_string(),
+                scale: 0,
+            };
+        }
+        normalize_decimal_operand_preserving_zero_sign(
+            self.negative,
+            self.digits[..keep as usize].to_string(),
+            0,
+        )
+    }
+
+    fn round_to_maximum_fraction_digits(&self, maximum_fraction_digits: usize) -> Self {
+        let maximum_fraction_digits = maximum_fraction_digits as i64;
+        if self.scale <= maximum_fraction_digits {
+            return self.clone();
+        }
+        let drop = self.scale - maximum_fraction_digits;
+        let keep = self.digits.len() as i64 - drop;
+        let (kept, remainder) = if keep > 0 {
+            (
+                self.digits[..keep as usize].to_string(),
+                self.digits[keep as usize..].to_string(),
+            )
+        } else {
+            ("0".to_string(), self.digits.clone())
+        };
+        let mut rounded = trim_leading_zero_digits(&kept);
+        if compare_decimal_remainder_to_half(&remainder, drop) >= 0 {
+            rounded = increment_decimal_string(&rounded);
+        }
+        normalize_decimal_operand_preserving_zero_sign(
+            self.negative,
+            rounded,
+            maximum_fraction_digits,
+        )
+    }
+
+    fn abs(&self) -> Self {
+        Self {
+            negative: false,
+            digits: self.digits.clone(),
+            scale: self.scale,
+        }
+    }
+}
+
+fn parse_finite_decimal(value: &ArgumentValue) -> Option<DecimalOperand> {
     match value {
         ArgumentValue::Number(value) | ArgumentValue::String(value) => {
             parse_finite_decimal_text(value)
@@ -690,7 +680,7 @@ fn parse_finite_decimal(value: &ArgumentValue) -> Option<f64> {
     }
 }
 
-fn parse_finite_decimal_text(value: &str) -> Option<f64> {
+fn parse_finite_decimal_text(value: &str) -> Option<DecimalOperand> {
     let text = value.trim();
     if text.chars().count() > MAX_OPERAND_LENGTH {
         return None;
@@ -698,12 +688,134 @@ fn parse_finite_decimal_text(value: &str) -> Option<f64> {
     if !is_decimal_literal(text) {
         return None;
     }
-    let parsed = text.parse::<f64>().ok()?;
-    parsed.is_finite().then_some(parsed)
+    parse_decimal_operand(text).ok()
 }
 
-fn is_supported_magnitude(value: f64) -> bool {
-    value.is_finite() && value.abs() < MAX_ABSOLUTE_FORMAT_VALUE
+fn parse_decimal_operand(value: &str) -> Result<DecimalOperand, ()> {
+    let negative = value.starts_with('-');
+    let body = if negative { &value[1..] } else { value };
+    let (significand, exponent) = split_decimal_exponent(body);
+    let exponent = parse_bounded_decimal_exponent(exponent).ok_or(())?;
+    let (integer, fraction) = significand.split_once('.').unwrap_or((significand, ""));
+    Ok(normalize_decimal_operand_preserving_zero_sign(
+        negative,
+        format!("{integer}{fraction}"),
+        fraction.len() as i64 - exponent,
+    ))
+}
+
+fn split_decimal_exponent(value: &str) -> (&str, &str) {
+    match value.find(['e', 'E']) {
+        Some(index) => (&value[..index], &value[index + 1..]),
+        None => (value, ""),
+    }
+}
+
+fn parse_bounded_decimal_exponent(value: &str) -> Option<i64> {
+    if value.is_empty() {
+        return Some(0);
+    }
+    let negative = value.starts_with('-');
+    let unsigned = value.strip_prefix(['+', '-']).unwrap_or(value);
+    let digits = unsigned.trim_start_matches('0');
+    if digits.is_empty() {
+        return Some(0);
+    }
+    if digits.len() > 7 {
+        return None;
+    }
+    let parsed = digits.parse::<i64>().ok()?;
+    if parsed > 1_000_000 {
+        return None;
+    }
+    Some(if negative { -parsed } else { parsed })
+}
+
+fn normalize_decimal_operand_preserving_zero_sign(
+    negative: bool,
+    digits: String,
+    mut scale: i64,
+) -> DecimalOperand {
+    let mut digits = digits.trim_start_matches('0').to_string();
+    if digits.is_empty() {
+        return DecimalOperand {
+            negative,
+            digits: "0".to_string(),
+            scale: 0,
+        };
+    }
+    while digits.ends_with('0') {
+        digits.pop();
+        scale -= 1;
+    }
+    DecimalOperand {
+        negative,
+        digits,
+        scale,
+    }
+}
+
+fn decimal_operand_to_string(value: &DecimalOperand) -> String {
+    if value.scale <= 0 {
+        return format!("{}{}", value.digits, "0".repeat((-value.scale) as usize));
+    }
+    if value.scale as usize >= value.digits.len() {
+        return format!(
+            "0.{}{}",
+            "0".repeat(value.scale as usize - value.digits.len()),
+            value.digits
+        );
+    }
+    let integer_digits = value.digits.len() - value.scale as usize;
+    format!(
+        "{}.{}",
+        &value.digits[..integer_digits],
+        &value.digits[integer_digits..]
+    )
+}
+
+fn compare_decimal_remainder_to_half(remainder: &str, dropped_digits: i64) -> i32 {
+    if !remainder.bytes().any(|byte| byte != b'0') {
+        return -1;
+    }
+    if (remainder.len() as i64) < dropped_digits {
+        return -1;
+    }
+    match remainder.as_bytes()[0] {
+        b'0'..=b'4' => -1,
+        b'6'..=b'9' => 1,
+        _ if remainder.as_bytes()[1..].iter().any(|byte| *byte != b'0') => 1,
+        _ => 0,
+    }
+}
+
+fn increment_decimal_string(value: &str) -> String {
+    let mut digits = value.as_bytes().to_vec();
+    for index in (0..digits.len()).rev() {
+        if digits[index] != b'9' {
+            digits[index] += 1;
+            return String::from_utf8(digits).expect("decimal digits are utf-8");
+        }
+        digits[index] = b'0';
+    }
+    format!(
+        "1{}",
+        String::from_utf8(digits).expect("decimal digits are utf-8")
+    )
+}
+
+fn estimated_decimal_output_chars(operand: &DecimalOperand) -> i64 {
+    if operand.scale <= 0 {
+        return operand.digits.len() as i64 - operand.scale;
+    }
+    let integer_digits = (operand.digits.len() as i64 - operand.scale).max(1);
+    let fraction_digits = operand.scale;
+    integer_digits + 1 + fraction_digits
+}
+
+fn is_supported_magnitude(value: &DecimalOperand) -> bool {
+    estimated_decimal_output_chars(&value.abs()) <= MAX_DECIMAL_OUTPUT_CHARS
+        && (value.digits.len() as i64 - value.scale) <= 21
 }
 
 fn is_decimal_literal(value: &str) -> bool {

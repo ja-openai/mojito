@@ -404,6 +404,13 @@ branch is under active implementation.
   Go tests cover the reviewer repro values `9007199254740993` and
   `9223372036854775807` as both native `int64` and decimal strings with
   grouping disabled.
+- Direct number-core decimal string precision: JavaScript, PHP, and Rust direct
+  number-core APIs now parse accepted decimal string operands into bounded
+  decimal operands before integer truncation, percent scaling, rounding,
+  grouping, and sign handling. This closes the direct API precision drift where
+  `9007199254740993` formatted as `9007199254740992` after narrowing through
+  host binary floats. Shared number-core fixtures cover number and percent
+  output with grouping disabled.
 - Number-core signed zero and explicit zero signs: JavaScript, Python, PHP, Go,
   Java, Kotlin, Rust, and Swift now preserve `-0` through number, percent, and
   currency formatting and show `+0` for `signDisplay=always`. Shared fixtures
