@@ -127,6 +127,16 @@ func TestUnsupportedModelTypeReturnsDiagnostic(t *testing.T) {
 		assertJSONEqual(t, "unsupported model type parts", []Part(nil), parts.Parts)
 		assertErrorCodesExact(t, "unsupported model type parts", parts.Errors, []string{"unsupported-message-type"})
 	}
+
+	model := Model{
+		"type": "bogus",
+		"declarations": []any{
+			map[string]any{"type": "local", "name": "dup", "value": map[string]any{}},
+			map[string]any{"type": "local", "name": "dup", "value": map[string]any{}},
+		},
+	}
+	actual := FormatMessage(model, nil, Options{})
+	assertErrorCodesExact(t, "unsupported model type duplicate declaration", actual.Errors, []string{"duplicate-declaration"})
 }
 
 func TestRecoveryCallbacksHandleEmptyAndDeclinedValues(t *testing.T) {

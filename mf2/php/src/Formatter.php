@@ -603,17 +603,16 @@ final class FormatContext
 function validate_model(array $model): void
 {
     $type = (string) ($model['type'] ?? '');
-    if ($type !== 'message' && $type !== 'select') {
-        throw new MF2Error('unsupported-message-type', "Unsupported message type: {$type}.");
-    }
     validate_declarations($model['declarations'] ?? []);
     if ($type === 'message') {
         validate_pattern($model['pattern'] ?? []);
-    } else {
+    } elseif ($type === 'select') {
         validate_selector_annotations($model['declarations'] ?? [], $model['selectors'] ?? []);
         foreach ($model['variants'] ?? [] as $variant) {
             validate_pattern($variant['value'] ?? []);
         }
+    } else {
+        throw new MF2Error('unsupported-message-type', "Unsupported message type: {$type}.");
     }
 }
 

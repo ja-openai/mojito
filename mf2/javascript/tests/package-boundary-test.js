@@ -161,6 +161,16 @@ assert.throws(
   () => formatMessage({ type: "bogus" }),
   (error) => error instanceof MF2Error && error.code === "unsupported-message-type",
 );
+assert.throws(
+  () => formatMessage({
+    type: "bogus",
+    declarations: [
+      { type: "local", name: "dup", value: {} },
+      { type: "local", name: "dup", value: {} },
+    ],
+  }),
+  (error) => error instanceof MF2Error && error.code === "duplicate-declaration",
+);
 assert.equal(FunctionRegistry.defaults().hasFormatter({ name: "string" }), true);
 assert.equal(FunctionRegistry.portable().hasFormatter({ name: "number" }), true);
 assert.equal(createPortableFunctionRegistry(FunctionRegistry).hasFormatter({ name: "number" }), true);

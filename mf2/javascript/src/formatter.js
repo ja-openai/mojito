@@ -547,15 +547,17 @@ class FormatContext {
 }
 
 function validateModel(model) {
-  const type = model?.type;
-  if (type !== "message" && type !== "select") {
-    throw new MF2Error("unsupported-message-type", `Unsupported message type: ${type ?? ""}.`);
+  if (model == null || typeof model !== "object") {
+    throw new MF2Error("unsupported-message-type", "Unsupported message type: .");
   }
+  const type = model.type;
   validateDeclarations(model.declarations ?? []);
   if (type === "message") validatePattern(model.pattern ?? []);
-  else {
+  else if (type === "select") {
     validateSelectorAnnotations(model.declarations ?? [], model.selectors ?? []);
     for (const variant of model.variants ?? []) validatePattern(variant.value ?? []);
+  } else {
+    throw new MF2Error("unsupported-message-type", `Unsupported message type: ${type ?? ""}.`);
   }
 }
 

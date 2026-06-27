@@ -792,6 +792,15 @@ function assert_public_api_boundary(): void
     $unsupportedModelType = format_message(['type' => 'bogus']);
     assert_same('unsupported model type value', '', $unsupportedModelType['value']);
     assert_json_equal('unsupported model type errors', ['unsupported-message-type'], array_map(static fn($error): string => error_code($error), $unsupportedModelType['errors']));
+    $unsupportedModelTypeWithDuplicateDeclaration = format_message([
+        'type' => 'bogus',
+        'declarations' => [
+            ['type' => 'local', 'name' => 'dup', 'value' => []],
+            ['type' => 'local', 'name' => 'dup', 'value' => []],
+        ],
+    ]);
+    assert_same('unsupported model type duplicate declaration value', '', $unsupportedModelTypeWithDuplicateDeclaration['value']);
+    assert_json_equal('unsupported model type duplicate declaration errors', ['duplicate-declaration'], array_map(static fn($error): string => error_code($error), $unsupportedModelTypeWithDuplicateDeclaration['errors']));
 
     $throwingNumberOption = parse_to_model('Hello {1 :number minimumFractionDigits=$d}')['model'];
     $throwingNumberOptionResult = format_message($throwingNumberOption, ['d' => new ThrowingStringValue()], [

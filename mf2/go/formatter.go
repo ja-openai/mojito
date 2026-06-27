@@ -733,14 +733,11 @@ func (c *formatContext) keyMatchRank(key map[string]any, selector selectorValue)
 }
 
 func validateModel(model Model) error {
-	messageType := stringField(map[string]any(model), "type")
-	if messageType != "message" && messageType != "select" {
-		return mf2Error("unsupported-message-type", "Unsupported message type: "+messageType+".")
-	}
 	declarations := arrayField(map[string]any(model), "declarations")
 	if err := validateDeclarations(declarations); err != nil {
 		return err
 	}
+	messageType := stringField(map[string]any(model), "type")
 	switch messageType {
 	case "message":
 		return validatePattern(arrayField(map[string]any(model), "pattern"))
@@ -753,6 +750,8 @@ func validateModel(model Model) error {
 				return err
 			}
 		}
+	default:
+		return mf2Error("unsupported-message-type", "Unsupported message type: "+messageType+".")
 	}
 	return nil
 }
