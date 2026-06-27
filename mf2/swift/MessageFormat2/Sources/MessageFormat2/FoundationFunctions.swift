@@ -2,6 +2,7 @@ import Foundation
 
 private let maxFoundationFractionDigits = 100
 private let maxFoundationDateOperandLength = 256
+private let maxFoundationLocaleLength = 256
 private let foundationISO8601DatePattern = #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})$"#
 private let foundationDateTimeSecondPattern = #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$"#
 private let foundationDateTimeMinutePattern = #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}$"#
@@ -29,7 +30,7 @@ func makeFoundationFunctionRegistry() -> MF2FunctionRegistry {
 private func formatFoundationNumber(_ call: MF2FunctionCall) throws -> String {
     let value = try parseFoundationNumber(call, message: "Number function requires a numeric operand.")
     let formatter = NumberFormatter()
-    formatter.locale = foundationLocale(call.locale)
+    formatter.locale = try foundationLocale(call.locale)
     formatter.numberStyle = .decimal
     try applyFractionOptions(call, formatter: formatter)
     return try applySignDisplay(formatterString(formatter, value), value: value, call: call)
@@ -38,7 +39,7 @@ private func formatFoundationNumber(_ call: MF2FunctionCall) throws -> String {
 private func formatFoundationPercent(_ call: MF2FunctionCall) throws -> String {
     let value = try parseFoundationNumber(call, message: "Percent function requires a numeric operand.")
     let formatter = NumberFormatter()
-    formatter.locale = foundationLocale(call.locale)
+    formatter.locale = try foundationLocale(call.locale)
     formatter.numberStyle = .percent
     try applyFractionOptions(call, formatter: formatter)
     return try applySignDisplay(formatterString(formatter, value), value: value, call: call)
@@ -47,7 +48,7 @@ private func formatFoundationPercent(_ call: MF2FunctionCall) throws -> String {
 private func formatFoundationInteger(_ call: MF2FunctionCall) throws -> String {
     let value = try parseFoundationNumber(call, message: "Integer function requires a numeric operand.")
     let formatter = NumberFormatter()
-    formatter.locale = foundationLocale(call.locale)
+    formatter.locale = try foundationLocale(call.locale)
     formatter.numberStyle = .decimal
     formatter.maximumFractionDigits = 0
     formatter.minimumFractionDigits = 0
@@ -68,7 +69,7 @@ private func formatFoundationCurrency(_ call: MF2FunctionCall) throws -> String 
     }
 
     let formatter = NumberFormatter()
-    formatter.locale = foundationLocale(call.locale)
+    formatter.locale = try foundationLocale(call.locale)
     formatter.numberStyle = .currency
     formatter.currencyCode = currency.uppercased()
     if let fractionDigits = try nonNegativeIntegerOption(call, "fractionDigits") {
@@ -81,7 +82,7 @@ private func formatFoundationCurrency(_ call: MF2FunctionCall) throws -> String 
 private func formatFoundationDate(_ call: MF2FunctionCall) throws -> String {
     let date = try foundationDate(call, message: "Date function requires a date or datetime operand.")
     let formatter = DateFormatter()
-    formatter.locale = foundationLocale(call.locale)
+    formatter.locale = try foundationLocale(call.locale)
     formatter.timeZone = try timeZone(call)
     formatter.dateStyle = try dateStyle(try dateStyleOption(call))
     formatter.timeStyle = .none
@@ -91,7 +92,7 @@ private func formatFoundationDate(_ call: MF2FunctionCall) throws -> String {
 private func formatFoundationTime(_ call: MF2FunctionCall) throws -> String {
     let date = try foundationDate(call, message: "Time function requires a time or datetime operand.")
     let formatter = DateFormatter()
-    formatter.locale = foundationLocale(call.locale)
+    formatter.locale = try foundationLocale(call.locale)
     formatter.timeZone = try timeZone(call)
     formatter.dateStyle = .none
     formatter.timeStyle = try timeStyle(try timeStyleOption(call))
@@ -101,7 +102,7 @@ private func formatFoundationTime(_ call: MF2FunctionCall) throws -> String {
 private func formatFoundationDateTime(_ call: MF2FunctionCall) throws -> String {
     let date = try foundationDate(call, message: "Datetime function requires a date or datetime operand.")
     let formatter = DateFormatter()
-    formatter.locale = foundationLocale(call.locale)
+    formatter.locale = try foundationLocale(call.locale)
     formatter.timeZone = try timeZone(call)
     formatter.dateStyle = try dateStyle(try dateTimeDateStyleOption(call))
     formatter.timeStyle = try timeStyle(try dateTimeTimeStyleOption(call))
@@ -122,7 +123,7 @@ private func formatFoundationDateTime(_ call: MF2FunctionCall) throws -> String 
         }
 
         let formatter = RelativeDateTimeFormatter()
-        formatter.locale = foundationLocale(call.locale)
+        formatter.locale = try foundationLocale(call.locale)
         formatter.unitsStyle = try relativeUnitsStyle(try call.optionValue("style", default: "long") ?? "long")
         formatter.dateTimeStyle = try relativeDateTimeStyle(try call.optionValue("numeric", default: "always") ?? "always")
         return formatter.localizedString(from: try dateComponents(value: value, unit: unit))
@@ -513,6 +514,68 @@ private func optionOneOf(
     return value
 }
 
-private func foundationLocale(_ locale: String) -> Locale {
-    Locale(identifier: locale.replacingOccurrences(of: "-", with: "_"))
+private func foundationLocale(_ locale: String) throws -> Locale {
+    guard isWellFormedFoundationLocaleIdentifier(locale) else {
+        throw MF2Error.badOption("Locale option must be a valid locale identifier.")
+    }
+    return Locale(identifier: locale.replacingOccurrences(of: "-", with: "_"))
+}
+
+private func isWellFormedFoundationLocaleIdentifier(_ locale: String) -> Bool {
+    guard !locale.isEmpty, locale.count <= maxFoundationLocaleLength else {
+        return false
+    }
+    let subtags = locale
+        .replacingOccurrences(of: "_", with: "-")
+        .split(separator: "-", omittingEmptySubsequences: false)
+        .map(String.init)
+    guard let language = subtags.first,
+          (2...8).contains(language.count),
+          language.allSatisfy({ isAsciiLetter($0) })
+    else {
+        return false
+    }
+
+    var index = 1
+    while index < subtags.count {
+        let subtag = subtags[index]
+        if subtag.count == 1 {
+            guard let singleton = subtag.first,
+                  isAsciiAlphanumeric(singleton)
+            else {
+                return false
+            }
+            let isPrivateUse = subtag.lowercased() == "x"
+            index += 1
+            let extensionStart = index
+            while index < subtags.count,
+                  ((isPrivateUse ? 1 : 2)...8).contains(subtags[index].count),
+                  subtags[index].allSatisfy(isAsciiAlphanumeric) {
+                index += 1
+            }
+            guard index > extensionStart else {
+                return false
+            }
+            if isPrivateUse {
+                return index == subtags.count
+            }
+            continue
+        }
+        guard (2...8).contains(subtag.count), subtag.allSatisfy(isAsciiAlphanumeric) else {
+            return false
+        }
+        index += 1
+    }
+    return true
+}
+
+private func isAsciiLetter(_ character: Character) -> Bool {
+    guard let ascii = character.asciiValue else {
+        return false
+    }
+    return (ascii >= 65 && ascii <= 90) || (ascii >= 97 && ascii <= 122)
+}
+
+private func isAsciiAlphanumeric(_ character: Character) -> Bool {
+    isAsciiLetter(character) || isAsciiDigit(character)
 }

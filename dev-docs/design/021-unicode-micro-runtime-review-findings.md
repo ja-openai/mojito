@@ -470,6 +470,11 @@ branch is under active implementation.
   `bad-option` errors. Targeted adapter tests cover malformed, unknown, and
   oversized locale strings so raw PHP Intl exceptions cannot surface as generic
   formatter errors.
+- Swift Foundation locale strictness: the optional Foundation adapter now
+  validates locale identifiers before handing them to non-throwing Foundation
+  formatters, rejecting malformed, private-use-only, and oversized locale
+  strings as MF2 `bad-option` instead of silently falling back to odd host
+  output. The public API edge checks cover number and date paths.
 - PHP Intl numeric operand grammar: the explicit PHP Intl registry now reuses
   the shared portable decimal parser instead of `is_numeric()`, rejecting host
   numeric extensions such as leading plus signs, whitespace, leading-dot,

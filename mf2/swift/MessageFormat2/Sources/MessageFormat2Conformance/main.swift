@@ -1016,6 +1016,33 @@ private func runPublicApiEdgeChecks() throws {
         try expectCodes(label, result.errors, ["bad-operand"])
     }
 
+    func expectFoundationBadOption(_ label: String, source: String, locale: String, value: String) throws {
+        let result = try formatMessage(
+            try parsePublicApiModel(source),
+            arguments: ["value": .string(value)],
+            locale: locale,
+            functions: .foundation
+        )
+        try expectCodes(label, result.errors, ["bad-option"])
+    }
+
+    func expectFoundationNumber(_ label: String, locale: String, value: String, expected: String) throws {
+        let result = try formatMessage(
+            try parsePublicApiModel("{$value :number}"),
+            arguments: ["value": .string(value)],
+            locale: locale,
+            functions: .foundation,
+            bidiIsolation: .none
+        )
+        try expectValue(label, result.value, expected)
+        if result.hasErrors {
+            throw ConformanceError.expectedNoFormatErrors(
+                fixture: label,
+                actual: result.errors.map(\.code)
+            )
+        }
+    }
+
     try expectFoundationBadOperand(
         "public-api foundation rejects non-ascii digit date",
         source: "{$value :date dateStyle=medium timeZone=UTC}",
@@ -1040,6 +1067,30 @@ private func runPublicApiEdgeChecks() throws {
         "public-api foundation rejects unpadded time",
         source: "{$value :time timeStyle=medium timeZone=UTC}",
         value: "1:2"
+    )
+    try expectFoundationBadOption(
+        "public-api foundation rejects malformed locale",
+        source: "{$value :number}",
+        locale: "bad locale ???",
+        value: "1"
+    )
+    try expectFoundationBadOption(
+        "public-api foundation rejects private-use-only locale",
+        source: "{$value :number}",
+        locale: "x-private",
+        value: "1"
+    )
+    try expectFoundationBadOption(
+        "public-api foundation rejects oversized locale",
+        source: "{$value :date dateStyle=medium timeZone=UTC}",
+        locale: String(repeating: "a", count: 257),
+        value: "2026-05-21"
+    )
+    try expectFoundationNumber(
+        "public-api foundation accepts private-use extension locale",
+        locale: "en-x-private",
+        value: "1",
+        expected: "1"
     )
 }
 
