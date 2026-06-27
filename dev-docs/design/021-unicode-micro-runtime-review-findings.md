@@ -671,6 +671,11 @@ branch is under active implementation.
   `bad-option` instead of leaking host exceptions before formatter recovery
   state exists. Public package/API regressions cover throwing JS proxy
   arguments and Python mapping-like objects.
+- JavaScript top-level options getter hardening: hostile getters on
+  `functions`, `onMissingArgument`, `onFormatError`, and `bidiIsolation` now
+  recover as `bad-option` setup failures instead of escaping as raw host
+  exceptions. The `formatMessage` path preserves earlier setup errors before
+  reading string-only bidi isolation options.
 - PHP option-variable error classification: variable-valued option coercion now
   uses a dedicated option path, so throwing host option values recover with
   `bad-option` while ordinary expression and selector operands continue to

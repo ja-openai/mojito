@@ -14,8 +14,11 @@ import {
 export function formatMessage(model, arguments_ = {}, options = {}) {
   const result = formatMessageToParts(model, arguments_, options);
   const errors = result.errors;
+  if (result.parts.length === 0 && errors.length > 0) return { value: "", errors, ok: false, hasErrors: true };
+  const bidiIsolation = bidiIsolationOption(options);
+  if (bidiIsolation.error) return formatErrorResult(bidiIsolation.error);
   return {
-    value: partsToString(result.parts, options.bidiIsolation ?? "none"),
+    value: partsToString(result.parts, bidiIsolation.value),
     errors,
     ok: errors.length === 0,
     hasErrors: errors.length > 0,
@@ -30,7 +33,9 @@ export function formatMessageToParts(model, arguments_ = {}, options = {}) {
   if (functions.error) return errorPartsResult(functions.error);
   const argumentsMap = argumentsOption(arguments_);
   if (argumentsMap.error) return errorPartsResult(argumentsMap.error);
-  const context = new FormatContext(argumentsMap.value, locale.value, functions.value, true, options);
+  const recoveryHandlers = recoveryHandlersOption(options);
+  if (recoveryHandlers.error) return errorPartsResult(recoveryHandlers.error);
+  const context = new FormatContext(argumentsMap.value, locale.value, functions.value, true, recoveryHandlers.value);
   context.applyDeclarations(model.declarations ?? []);
   const parts = model.type === "message"
     ? context.formatPatternToParts(model.pattern ?? [])
@@ -53,9 +58,13 @@ function localeOption(options) {
 }
 
 function functionsOption(options) {
-  const value = options.functions ?? FunctionRegistry.defaults();
-  if (value instanceof FunctionRegistry) return { value };
-  return { error: MF2Error.badOption("functions must be a FunctionRegistry.") };
+  try {
+    const value = options.functions ?? FunctionRegistry.defaults();
+    if (value instanceof FunctionRegistry) return { value };
+    return { error: MF2Error.badOption("functions must be a FunctionRegistry.") };
+  } catch (error) {
+    return { error: MF2Error.badOption(safeErrorMessage(error)) };
+  }
 }
 
 function argumentsOption(arguments_) {
@@ -64,6 +73,32 @@ function argumentsOption(arguments_) {
   } catch (error) {
     return { error: MF2Error.badOption(safeErrorMessage(error)) };
   }
+}
+
+function recoveryHandlersOption(options) {
+  try {
+    return {
+      value: {
+        onMissingArgument: recoveryHandlerOption(options.onMissingArgument),
+        onFormatError: recoveryHandlerOption(options.onFormatError),
+      },
+    };
+  } catch (error) {
+    return { error: MF2Error.badOption(safeErrorMessage(error)) };
+  }
+}
+
+function bidiIsolationOption(options) {
+  try {
+    const value = options.bidiIsolation ?? "none";
+    return { value: typeof value === "string" ? value : "none" };
+  } catch (error) {
+    return { error: MF2Error.badOption(safeErrorMessage(error)) };
+  }
+}
+
+function formatErrorResult(error) {
+  return { value: "", errors: [error], ok: false, hasErrors: true };
 }
 
 function errorPartsResult(error) {
@@ -127,7 +162,7 @@ export class FunctionRegistry {
 }
 
 class FormatContext {
-  constructor(argumentsMap, locale, functions, fallback = false, options = {}) {
+  constructor(argumentsMap, locale, functions, fallback = false, recoveryHandlers = {}) {
     this.arguments = argumentsMap;
     this.locals = new Map();
     this.failedLocals = new Set();
@@ -135,8 +170,8 @@ class FormatContext {
     this.locale = locale;
     this.functions = functions;
     this.fallback = fallback;
-    this.onMissingArgument = recoveryHandlerOption(options.onMissingArgument);
-    this.onFormatError = recoveryHandlerOption(options.onFormatError);
+    this.onMissingArgument = recoveryHandlers.onMissingArgument ?? defaultRecovery;
+    this.onFormatError = recoveryHandlers.onFormatError ?? defaultRecovery;
     this.selectorAnnotations = new Map();
   }
 

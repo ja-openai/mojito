@@ -133,6 +133,26 @@ assert.deepEqual(hostileArgumentsResult.errors.map((error) => error.code), ["bad
 const hostileArgumentsPartsResult = formatMessageToPartsFromRoot(parsed.model, hostileArguments);
 assert.deepEqual(hostileArgumentsPartsResult.parts, []);
 assert.deepEqual(hostileArgumentsPartsResult.errors.map((error) => error.code), ["bad-option"]);
+function throwingOption(name) {
+  return new Proxy({}, {
+    get(_target, key) {
+      if (key === name) throw new Error(`${name} getter failed`);
+      return undefined;
+    },
+  });
+}
+const throwingFunctionsPartsResult = formatMessageToPartsFromRoot(parsed.model, { name: "Mojito" }, throwingOption("functions"));
+assert.deepEqual(throwingFunctionsPartsResult.parts, []);
+assert.deepEqual(throwingFunctionsPartsResult.errors.map((error) => error.code), ["bad-option"]);
+const throwingMissingRecoveryPartsResult = formatMessageToPartsFromRoot(parsed.model, {}, throwingOption("onMissingArgument"));
+assert.deepEqual(throwingMissingRecoveryPartsResult.parts, []);
+assert.deepEqual(throwingMissingRecoveryPartsResult.errors.map((error) => error.code), ["bad-option"]);
+const throwingFormatRecoveryPartsResult = formatMessageToPartsFromRoot(badInteger.model, { name: "abc" }, throwingOption("onFormatError"));
+assert.deepEqual(throwingFormatRecoveryPartsResult.parts, []);
+assert.deepEqual(throwingFormatRecoveryPartsResult.errors.map((error) => error.code), ["bad-option"]);
+const throwingBidiResult = formatMessage(parsed.model, { name: "Mojito" }, throwingOption("bidiIsolation"));
+assert.equal(throwingBidiResult.value, "");
+assert.deepEqual(throwingBidiResult.errors.map((error) => error.code), ["bad-option"]);
 assert.equal(FunctionRegistry.defaults().hasFormatter({ name: "string" }), true);
 assert.equal(FunctionRegistry.portable().hasFormatter({ name: "number" }), true);
 assert.equal(createPortableFunctionRegistry(FunctionRegistry).hasFormatter({ name: "number" }), true);
