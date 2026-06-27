@@ -3463,8 +3463,14 @@ fn semantic_numeric_field_width(
 
 fn semantic_fractional_second_width(options: &[(String, String)]) -> Result<usize, Diagnostic> {
     semantic_option_value(options, "fractionalsecond")
-        .and_then(|value| value.parse::<usize>().ok())
-        .filter(|width| (1..=9).contains(width))
+        .and_then(|value| {
+            let bytes = value.as_bytes();
+            if bytes.len() == 1 && (b'1'..=b'9').contains(&bytes[0]) {
+                Some(usize::from(bytes[0] - b'0'))
+            } else {
+                None
+            }
+        })
         .ok_or_else(|| {
             bad_option(
                 "Date/time semantic skeleton fractionalSecond must be an integer from 1 to 9.",

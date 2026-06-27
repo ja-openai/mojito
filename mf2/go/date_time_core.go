@@ -2212,11 +2212,11 @@ func dateTimeCoreSemanticNumericFieldWidth(options map[string]string, key string
 }
 
 func dateTimeCoreSemanticFractionalSecondWidth(options map[string]string) (int, error) {
-	width, err := strconv.Atoi(options["fractionalsecond"])
-	if err != nil || width < 1 || width > 9 {
+	text := options["fractionalsecond"]
+	if len(text) != 1 || text[0] < '1' || text[0] > '9' {
 		return 0, badOption("Date/time semantic skeleton fractionalSecond must be an integer from 1 to 9.")
 	}
-	return width, nil
+	return int(text[0] - '0'), nil
 }
 
 func dateTimeCoreSemanticTimeSkeleton(timePrecision, hourCycle, alignment string, value time.Time, options map[string]string) (string, error) {

@@ -1762,10 +1762,15 @@ public enum MF2DateTimeCore {
     }
 
     private static func semanticFractionalSecondWidth(_ options: [String: String]) throws -> Int {
-        guard let text = options["fractionalsecond"], let width = Int(text), (1 ... 9).contains(width) else {
+        guard let text = options["fractionalsecond"],
+              text.count == 1,
+              let ascii = text.first?.asciiValue,
+              ascii >= 49,
+              ascii <= 57
+        else {
             throw MF2Error.badOption("Date/time semantic skeleton fractionalSecond must be an integer from 1 to 9.")
         }
-        return width
+        return Int(ascii - 48)
     }
 
     private static func semanticTimeSkeleton(

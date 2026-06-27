@@ -1530,11 +1530,11 @@ object Mf2DateTimeCore {
         }
 
     private fun semanticFractionalSecondWidth(options: Map<String, String>): Int {
-        val width = options["fractionalsecond"]?.toIntOrNull()
-        if (width == null || width !in 1..9) {
+        val text = options["fractionalsecond"]
+        if (text == null || text.length != 1 || text[0] !in '1'..'9') {
             throw Mf2Error.badOption("Date/time semantic skeleton fractionalSecond must be an integer from 1 to 9.")
         }
-        return width
+        return text[0] - '0'
     }
 
     private fun semanticTimeSkeleton(

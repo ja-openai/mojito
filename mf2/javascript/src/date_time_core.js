@@ -1327,11 +1327,10 @@ function semanticNumericFieldWidth(options, key, fallbackWidth) {
 
 function semanticFractionalSecondWidth(options) {
   const fractionalSecond = options.get("fractionalsecond");
-  const width = Number(fractionalSecond);
-  if (!Number.isInteger(width) || width < 1 || width > 9) {
+  if (fractionalSecond == null || !/^[1-9]$/.test(fractionalSecond)) {
     throw new DateTimeCoreError("bad-option", "Date/time semantic skeleton fractionalSecond must be an integer from 1 to 9.");
   }
-  return width;
+  return fractionalSecond.charCodeAt(0) - DIGIT_ZERO;
 }
 
 function semanticTimeSkeleton(timePrecision, hourCycle, alignment, date, options) {
@@ -1340,12 +1339,7 @@ function semanticTimeSkeleton(timePrecision, hourCycle, alignment, date, options
   if (timePrecision === "minute-optional" && date.getUTCMinutes() !== 0) skeleton += "m";
   if (timePrecision === "second" || timePrecision === "fractional-second") skeleton += "s";
   if (timePrecision === "fractional-second") {
-    const fractionalSecond = options.get("fractionalsecond");
-    const width = Number(fractionalSecond);
-    if (!Number.isInteger(width) || width < 1 || width > 9) {
-      throw new DateTimeCoreError("bad-option", "Date/time semantic skeleton fractionalSecond must be an integer from 1 to 9.");
-    }
-    skeleton += "S".repeat(width);
+    skeleton += "S".repeat(semanticFractionalSecondWidth(options));
   } else if (options.has("fractionalsecond")) {
     throw new DateTimeCoreError("bad-option", "fractionalSecond requires timePrecision=fractional-second.");
   }

@@ -2005,16 +2005,11 @@ public final class Mf2DateTimeCore {
     }
 
     private static int semanticFractionalSecondWidth(Map<String, String> options) throws Mf2Exception {
-        int width;
-        try {
-            width = Integer.parseInt(options.getOrDefault("fractionalsecond", ""));
-        } catch (NumberFormatException e) {
+        String text = options.getOrDefault("fractionalsecond", "");
+        if (text.length() != 1 || text.charAt(0) < '1' || text.charAt(0) > '9') {
             throw Mf2FunctionSupport.badOption("Date/time semantic skeleton fractionalSecond must be an integer from 1 to 9.");
         }
-        if (width < 1 || width > 9) {
-            throw Mf2FunctionSupport.badOption("Date/time semantic skeleton fractionalSecond must be an integer from 1 to 9.");
-        }
-        return width;
+        return text.charAt(0) - '0';
     }
 
     private static String semanticTimeSkeleton(

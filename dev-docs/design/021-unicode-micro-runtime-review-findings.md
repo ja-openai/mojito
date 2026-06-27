@@ -32,6 +32,12 @@ branch is under active implementation.
   date operands, date-time `timeZone`, and exact numeric selector paths so one
   runtime cannot silently normalize them to ASCII decimal values while others
   reject them.
+- Semantic date-time skeleton numeric grammar: `fractionalSecond` widths now
+  require exactly one ASCII digit from `1` through `9` across JavaScript,
+  Python, PHP, Go, Java, Kotlin, Rust, and Swift. Shared date-time fixtures
+  reject Arabic-Indic digit lookalikes and numeric-coercion spellings such as
+  `2.0`, preventing host integer/number parsers from accepting widths that
+  other runtimes reject.
 - PHP/Rust direct-parts coverage: existing conformance tests now assert that
   direct number-core and date-time-core parts helpers return the same single
   text part shape as their direct string helpers, matching the relative-time

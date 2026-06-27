@@ -1612,11 +1612,11 @@ final class DateTimeCore
 
     private static function semanticFractionalSecondWidth(array $options): int
     {
-        $width = filter_var($options['fractionalsecond'] ?? null, FILTER_VALIDATE_INT);
-        if (!is_int($width) || $width < 1 || $width > 9) {
+        $text = $options['fractionalsecond'] ?? null;
+        if (!is_string($text) || strlen($text) !== 1 || $text < '1' || $text > '9') {
             throw MF2Error::badOption('Date/time semantic skeleton fractionalSecond must be an integer from 1 to 9.');
         }
-        return $width;
+        return (int) $text;
     }
 
     private static function semanticTimeSkeleton(string $timePrecision, string $hourCycle, string $alignment, \DateTimeImmutable $value, array $options): string

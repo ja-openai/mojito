@@ -1636,13 +1636,10 @@ def _semantic_numeric_field_width(options: dict[str, str], key: str, fallback_wi
 
 
 def _semantic_fractional_second_width(options: dict[str, str]) -> int:
-    try:
-        width = int(options.get("fractionalsecond", ""))
-    except ValueError as error:
-        raise MF2Error("bad-option", "Date/time semantic skeleton fractionalSecond must be an integer from 1 to 9.") from error
-    if width < 1 or width > 9:
+    text = options.get("fractionalsecond", "")
+    if len(text) != 1 or not ("1" <= text <= "9"):
         raise MF2Error("bad-option", "Date/time semantic skeleton fractionalSecond must be an integer from 1 to 9.")
-    return width
+    return ord(text) - _DIGIT_ZERO
 
 
 def _semantic_time_skeleton(
