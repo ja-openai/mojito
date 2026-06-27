@@ -12,8 +12,9 @@ const maxFractionDigits = 100
 const maxDecimalOperandLength = 256
 const maxDecimalOutputChars = 1000
 const maxOffsetIntegerText = "1000000000000000000000"
+const maxOffsetIntegerDigits = len(maxOffsetIntegerText) - 1
 
-var maxOffsetInteger = mustParseOffsetLimit()
+var maxOffsetInteger = new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(maxOffsetIntegerDigits)), nil)
 
 func PortableFunctionRegistry() FunctionRegistry {
 	registry := FunctionRegistry{
@@ -654,12 +655,4 @@ func parseOffsetInteger(value string) (*big.Int, bool) {
 
 func offsetIntegerInRange(value *big.Int) bool {
 	return new(big.Int).Abs(value).Cmp(maxOffsetInteger) < 0
-}
-
-func mustParseOffsetLimit() *big.Int {
-	limit, ok := new(big.Int).SetString(maxOffsetIntegerText, 10)
-	if !ok {
-		panic("invalid max offset integer")
-	}
-	return limit
 }
