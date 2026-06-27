@@ -83,6 +83,18 @@ const hostileSelector = parseToModel(".input {$name :string}\n.match $name\nok {
 const hostileSelectorResult = formatMessage(hostileSelector.model, { name: hostileValue });
 assert.equal(hostileSelectorResult.value, "fallback");
 assert.deepEqual(hostileSelectorResult.errors.map((error) => error.code), ["bad-operand"]);
+const hostileLocale = {
+  toString() {
+    throw new Error("locale coercion failed");
+  },
+};
+const hostileLocaleResult = formatMessageFromFormatter(parsed.model, { name: "Locale" }, { locale: hostileLocale });
+assert.equal(hostileLocaleResult.value, "");
+assert.deepEqual(hostileLocaleResult.errors.map((error) => error.code), ["bad-option"]);
+assert.equal(hostileLocaleResult.errors[0] instanceof MF2Error, true);
+const hostileLocalePartsResult = formatMessageToPartsFromRoot(parsed.model, { name: "Locale" }, { locale: hostileLocale });
+assert.deepEqual(hostileLocalePartsResult.parts, []);
+assert.deepEqual(hostileLocalePartsResult.errors.map((error) => error.code), ["bad-option"]);
 assert.equal(FunctionRegistry.defaults().hasFormatter({ name: "string" }), true);
 assert.equal(FunctionRegistry.portable().hasFormatter({ name: "number" }), true);
 assert.equal(createPortableFunctionRegistry(FunctionRegistry).hasFormatter({ name: "number" }), true);

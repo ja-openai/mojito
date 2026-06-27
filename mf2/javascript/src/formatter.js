@@ -24,7 +24,9 @@ export function formatMessage(model, arguments_ = {}, options = {}) {
 
 export function formatMessageToParts(model, arguments_ = {}, options = {}) {
   validateModel(model);
-  const context = new FormatContext(arguments_, options.locale ?? "en", options.functions ?? FunctionRegistry.defaults(), true, options);
+  const locale = localeOption(options);
+  if (locale.error) return errorPartsResult(locale.error);
+  const context = new FormatContext(arguments_, locale.value, options.functions ?? FunctionRegistry.defaults(), true, options);
   context.applyDeclarations(model.declarations ?? []);
   const parts = model.type === "message"
     ? context.formatPatternToParts(model.pattern ?? [])
@@ -35,6 +37,19 @@ export function formatMessageToParts(model, arguments_ = {}, options = {}) {
     ok: context.errors.length === 0,
     hasErrors: context.errors.length > 0,
   };
+}
+
+function localeOption(options) {
+  try {
+    const value = String(options.locale ?? "en").trim();
+    return { value: value === "" ? "en" : value };
+  } catch (error) {
+    return { error: MF2Error.badOption(safeErrorMessage(error)) };
+  }
+}
+
+function errorPartsResult(error) {
+  return { parts: [], errors: [error], ok: false, hasErrors: true };
 }
 
 export class FunctionRegistry {
@@ -99,7 +114,7 @@ class FormatContext {
     this.locals = new Map();
     this.failedLocals = new Set();
     this.errors = [];
-    this.locale = locale == null || String(locale).trim() === "" ? "en" : String(locale);
+    this.locale = locale;
     this.functions = functions;
     this.fallback = fallback;
     this.onMissingArgument = options.onMissingArgument ?? defaultRecovery;

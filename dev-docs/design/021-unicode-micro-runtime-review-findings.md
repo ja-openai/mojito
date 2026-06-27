@@ -627,6 +627,10 @@ branch is under active implementation.
   Top-level `locale` option coercion is now guarded during formatter context
   setup as well, returning a normal `bad-option` result instead of leaking a
   host exception before recovery state exists.
+- JavaScript top-level locale recovery: public formatter entrypoints now coerce
+  the `locale` option before creating formatter state and convert throwing
+  host-object `toString()` failures into an empty parts result with a
+  recoverable `bad-option`, matching the PHP top-level setup guard.
 - PHP option-variable error classification: variable-valued option coercion now
   uses a dedicated option path, so throwing host option values recover with
   `bad-option` while ordinary expression and selector operands continue to
