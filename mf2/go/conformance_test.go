@@ -137,6 +137,15 @@ func TestUnsupportedModelTypeReturnsDiagnostic(t *testing.T) {
 	}
 	actual := FormatMessage(model, nil, Options{})
 	assertErrorCodesExact(t, "unsupported model type duplicate declaration", actual.Errors, []string{"duplicate-declaration"})
+
+	for _, field := range []string{"declarations", "pattern"} {
+		result := FormatMessage(Model{"type": "message", field: 1}, nil, Options{})
+		assertErrorCodesExact(t, "non-array "+field, result.Errors, []string{"bad-option"})
+	}
+	for _, field := range []string{"selectors", "variants"} {
+		result := FormatMessage(Model{"type": "select", field: 1}, nil, Options{})
+		assertErrorCodesExact(t, "non-array "+field, result.Errors, []string{"bad-option"})
+	}
 }
 
 func TestRecoveryCallbacksHandleEmptyAndDeclinedValues(t *testing.T) {

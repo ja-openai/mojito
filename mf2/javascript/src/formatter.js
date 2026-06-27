@@ -36,10 +36,10 @@ export function formatMessageToParts(model, arguments_ = {}, options = {}) {
   const recoveryHandlers = recoveryHandlersOption(options);
   if (recoveryHandlers.error) return errorPartsResult(recoveryHandlers.error);
   const context = new FormatContext(argumentsMap.value, locale.value, functions.value, true, recoveryHandlers.value);
-  context.applyDeclarations(model.declarations ?? []);
+  context.applyDeclarations(modelArrayField(model, "declarations"));
   const parts = model.type === "message"
-    ? context.formatPatternToParts(model.pattern ?? [])
-    : context.formatSelectToParts(model.selectors ?? [], model.variants ?? []);
+    ? context.formatPatternToParts(modelArrayField(model, "pattern"))
+    : context.formatSelectToParts(modelArrayField(model, "selectors"), modelArrayField(model, "variants"));
   return {
     parts,
     errors: context.errors,
@@ -551,14 +551,22 @@ function validateModel(model) {
     throw new MF2Error("unsupported-message-type", "Unsupported message type: .");
   }
   const type = model.type;
-  validateDeclarations(model.declarations ?? []);
-  if (type === "message") validatePattern(model.pattern ?? []);
+  const declarations = modelArrayField(model, "declarations");
+  validateDeclarations(declarations);
+  if (type === "message") validatePattern(modelArrayField(model, "pattern"));
   else if (type === "select") {
-    validateSelectorAnnotations(model.declarations ?? [], model.selectors ?? []);
-    for (const variant of model.variants ?? []) validatePattern(variant.value ?? []);
+    validateSelectorAnnotations(declarations, modelArrayField(model, "selectors"));
+    for (const variant of modelArrayField(model, "variants")) validatePattern(modelArrayField(variant, "value"));
   } else {
     throw new MF2Error("unsupported-message-type", `Unsupported message type: ${type ?? ""}.`);
   }
+}
+
+function modelArrayField(object, name) {
+  const value = object?.[name];
+  if (value == null) return [];
+  if (Array.isArray(value)) return value;
+  throw MF2Error.badOption(`${name} must be an array.`);
 }
 
 function validateDeclarations(declarations) {

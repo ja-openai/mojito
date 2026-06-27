@@ -175,6 +175,18 @@ assert.throws(
   }),
   (error) => error instanceof MF2Error && error.code === "duplicate-declaration",
 );
+for (const field of ["declarations", "pattern"]) {
+  assert.throws(
+    () => formatMessage({ type: "message", [field]: 1 }),
+    (error) => error instanceof MF2Error && error.code === "bad-option",
+  );
+}
+for (const field of ["selectors", "variants"]) {
+  assert.throws(
+    () => formatMessage({ type: "select", [field]: 1 }),
+    (error) => error instanceof MF2Error && error.code === "bad-option",
+  );
+}
 assert.equal(FunctionRegistry.defaults().hasFormatter({ name: "string" }), true);
 assert.equal(FunctionRegistry.portable().hasFormatter({ name: "number" }), true);
 assert.equal(createPortableFunctionRegistry(FunctionRegistry).hasFormatter({ name: "number" }), true);

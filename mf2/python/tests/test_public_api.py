@@ -397,6 +397,19 @@ class PublicApiTest(unittest.TestCase):
                     format_message_to_parts(model)  # type: ignore[arg-type]
                 self.assertEqual("unsupported-message-type", parts.exception.code)
 
+    def test_non_list_model_fields_raise_mf2_error(self) -> None:
+        for field in ("declarations", "pattern"):
+            with self.subTest(field=field):
+                with self.assertRaises(MF2Error) as formatted:
+                    format_message({"type": "message", field: 1})
+                self.assertEqual("bad-option", formatted.exception.code)
+
+        for field in ("selectors", "variants"):
+            with self.subTest(field=field):
+                with self.assertRaises(MF2Error) as formatted:
+                    format_message({"type": "select", field: 1})
+                self.assertEqual("bad-option", formatted.exception.code)
+
     def test_custom_selector_can_match_variant_key(self) -> None:
         model = {
             "type": "select",

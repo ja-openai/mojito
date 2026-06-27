@@ -448,6 +448,17 @@ object KotlinConformance {
             throwingOptionSelectorCodes,
             listOf("bad-option", "bad-selector"),
         )
+
+        for (field in listOf("declarations", "pattern")) {
+            assertThrowsMf2Code("non-array $field", "bad-option") {
+                Mf2Formatter.formatMessage(mapOf("type" to "message", field to 1))
+            }
+        }
+        for (field in listOf("selectors", "variants")) {
+            assertThrowsMf2Code("non-array $field", "bad-option") {
+                Mf2Formatter.formatMessage(mapOf("type" to "select", field to 1))
+            }
+        }
     }
 
     private fun parsePublicApiModel(source: String): Mf2Model {
@@ -469,6 +480,16 @@ object KotlinConformance {
         if (actual != expected) {
             throw ConformanceFailure("public-api $label: expected $expected, got $actual")
         }
+    }
+
+    private fun assertThrowsMf2Code(label: String, expected: String, action: () -> Unit) {
+        try {
+            action()
+        } catch (error: Mf2Error) {
+            if (error.code == expected) return
+            throw ConformanceFailure("public-api $label: expected $expected, got ${error.code}")
+        }
+        throw ConformanceFailure("public-api $label: expected $expected")
     }
 
     private fun assertPublicApiParts(

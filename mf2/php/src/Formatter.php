@@ -93,14 +93,14 @@ function format_message_to_parts(array $model, array $arguments = [], array $opt
         return ['parts' => [], 'errors' => [Internal\as_mf2_error($error)], 'ok' => false, 'hasErrors' => true];
     }
     try {
-        $context->applyDeclarations($model['declarations'] ?? []);
+        $context->applyDeclarations(Internal\model_array_field($model, 'declarations'));
     } catch (\Throwable $error) {
         $context->errors[] = Internal\as_mf2_error($error);
     }
     try {
         $parts = ($model['type'] ?? '') === 'message'
-            ? $context->formatPatternToParts($model['pattern'] ?? [])
-            : $context->formatSelectToParts($model['selectors'] ?? [], $model['variants'] ?? []);
+            ? $context->formatPatternToParts(Internal\model_array_field($model, 'pattern'))
+            : $context->formatSelectToParts(Internal\model_array_field($model, 'selectors'), Internal\model_array_field($model, 'variants'));
     } catch (\Throwable $error) {
         $context->errors[] = Internal\as_mf2_error($error);
         $parts = [];
@@ -603,17 +603,29 @@ final class FormatContext
 function validate_model(array $model): void
 {
     $type = (string) ($model['type'] ?? '');
-    validate_declarations($model['declarations'] ?? []);
+    $declarations = model_array_field($model, 'declarations');
+    validate_declarations($declarations);
     if ($type === 'message') {
-        validate_pattern($model['pattern'] ?? []);
+        validate_pattern(model_array_field($model, 'pattern'));
     } elseif ($type === 'select') {
-        validate_selector_annotations($model['declarations'] ?? [], $model['selectors'] ?? []);
-        foreach ($model['variants'] ?? [] as $variant) {
-            validate_pattern($variant['value'] ?? []);
+        validate_selector_annotations($declarations, model_array_field($model, 'selectors'));
+        foreach (model_array_field($model, 'variants') as $variant) {
+            validate_pattern(is_array($variant) ? model_array_field($variant, 'value') : []);
         }
     } else {
         throw new MF2Error('unsupported-message-type', "Unsupported message type: {$type}.");
     }
+}
+
+function model_array_field(array $model, string $name): array
+{
+    if (!array_key_exists($name, $model) || $model[$name] === null) {
+        return [];
+    }
+    if (is_array($model[$name])) {
+        return $model[$name];
+    }
+    throw MF2Error::badOption("{$name} must be an array.");
 }
 
 function validate_declarations(array $declarations): void

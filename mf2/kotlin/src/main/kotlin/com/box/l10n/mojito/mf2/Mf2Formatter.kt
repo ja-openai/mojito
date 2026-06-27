@@ -104,7 +104,7 @@ object Mf2Formatter {
         )
         context.applyDeclarations(modelDeclarations(model))
         val parts = when (model["type"]) {
-            "message" -> context.formatPatternToParts(asList(model["pattern"]))
+            "message" -> context.formatPatternToParts(modelListField(model, "pattern"))
             "select" -> context.formatSelectToParts(modelSelectors(model), modelVariants(model))
             else -> throw Mf2Error("unsupported-message-type", "Unsupported message type: ${model["type"]}")
         }
@@ -604,10 +604,10 @@ private fun validateModel(model: Mf2Model) {
     val declarations = modelDeclarations(model)
     validateDeclarations(declarations)
     when (model["type"]) {
-        "message" -> validatePattern(asList(model["pattern"]))
+        "message" -> validatePattern(modelListField(model, "pattern"))
         "select" -> {
             validateSelectorAnnotations(declarations, modelSelectors(model))
-            for (variant in modelVariants(model)) validatePattern(asList(variant["value"]))
+            for (variant in modelVariants(model)) validatePattern(modelListField(variant, "value"))
         }
     }
 }
@@ -699,11 +699,17 @@ private fun selectorAnnotations(declarations: List<Map<String, Any?>>): Map<Stri
     return annotations
 }
 
-private fun modelDeclarations(model: Mf2Model): List<Map<String, Any?>> = asList(model["declarations"]).map(::asMap)
+private fun modelDeclarations(model: Mf2Model): List<Map<String, Any?>> = modelListField(model, "declarations").map(::asMap)
 
-private fun modelSelectors(model: Mf2Model): List<Map<String, Any?>> = asList(model["selectors"]).map(::asMap)
+private fun modelSelectors(model: Mf2Model): List<Map<String, Any?>> = modelListField(model, "selectors").map(::asMap)
 
-private fun modelVariants(model: Mf2Model): List<Map<String, Any?>> = asList(model["variants"]).map(::asMap)
+private fun modelVariants(model: Mf2Model): List<Map<String, Any?>> = modelListField(model, "variants").map(::asMap)
+
+private fun modelListField(model: Map<String, Any?>, name: String): List<Any?> {
+    val value = model[name] ?: return emptyList()
+    if (value is List<*>) return value
+    throw Mf2Error("bad-option", "$name must be an array.")
+}
 
 private fun variantKeys(variant: Map<String, Any?>): List<Map<String, Any?>> = asList(variant["keys"]).map(::asMap)
 

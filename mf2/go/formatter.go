@@ -733,20 +733,40 @@ func (c *formatContext) keyMatchRank(key map[string]any, selector selectorValue)
 }
 
 func validateModel(model Model) error {
-	declarations := arrayField(map[string]any(model), "declarations")
+	modelObject := map[string]any(model)
+	declarations, err := modelArrayField(modelObject, "declarations")
+	if err != nil {
+		return err
+	}
 	if err := validateDeclarations(declarations); err != nil {
 		return err
 	}
-	messageType := stringField(map[string]any(model), "type")
+	messageType := stringField(modelObject, "type")
 	switch messageType {
 	case "message":
-		return validatePattern(arrayField(map[string]any(model), "pattern"))
-	case "select":
-		if err := validateSelectorAnnotations(declarations, arrayField(map[string]any(model), "selectors")); err != nil {
+		pattern, err := modelArrayField(modelObject, "pattern")
+		if err != nil {
 			return err
 		}
-		for _, raw := range arrayField(map[string]any(model), "variants") {
-			if err := validatePattern(arrayField(asObject(raw), "value")); err != nil {
+		return validatePattern(pattern)
+	case "select":
+		selectors, err := modelArrayField(modelObject, "selectors")
+		if err != nil {
+			return err
+		}
+		if err := validateSelectorAnnotations(declarations, selectors); err != nil {
+			return err
+		}
+		variants, err := modelArrayField(modelObject, "variants")
+		if err != nil {
+			return err
+		}
+		for _, raw := range variants {
+			value, err := modelArrayField(asObject(raw), "value")
+			if err != nil {
+				return err
+			}
+			if err := validatePattern(value); err != nil {
 				return err
 			}
 		}
@@ -754,6 +774,20 @@ func validateModel(model Model) error {
 		return mf2Error("unsupported-message-type", "Unsupported message type: "+messageType+".")
 	}
 	return nil
+}
+
+func modelArrayField(object map[string]any, name string) ([]any, error) {
+	if object == nil {
+		return nil, nil
+	}
+	raw, ok := object[name]
+	if !ok || raw == nil {
+		return nil, nil
+	}
+	if values, ok := raw.([]any); ok {
+		return values, nil
+	}
+	return nil, badOption(name + " must be an array.")
 }
 
 func validateDeclarations(declarations []any) error {

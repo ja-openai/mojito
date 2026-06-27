@@ -801,6 +801,16 @@ function assert_public_api_boundary(): void
     ]);
     assert_same('unsupported model type duplicate declaration value', '', $unsupportedModelTypeWithDuplicateDeclaration['value']);
     assert_json_equal('unsupported model type duplicate declaration errors', ['duplicate-declaration'], array_map(static fn($error): string => error_code($error), $unsupportedModelTypeWithDuplicateDeclaration['errors']));
+    foreach (['declarations', 'pattern'] as $field) {
+        $nonArrayField = format_message(['type' => 'message', $field => 1]);
+        assert_same("non-array {$field} value", '', $nonArrayField['value']);
+        assert_json_equal("non-array {$field} errors", ['bad-option'], array_map(static fn($error): string => error_code($error), $nonArrayField['errors']));
+    }
+    foreach (['selectors', 'variants'] as $field) {
+        $nonArrayField = format_message(['type' => 'select', $field => 1]);
+        assert_same("non-array {$field} value", '', $nonArrayField['value']);
+        assert_json_equal("non-array {$field} errors", ['bad-option'], array_map(static fn($error): string => error_code($error), $nonArrayField['errors']));
+    }
 
     $throwingNumberOption = parse_to_model('Hello {1 :number minimumFractionDigits=$d}')['model'];
     $throwingNumberOptionResult = format_message($throwingNumberOption, ['d' => new ThrowingStringValue()], [

@@ -130,14 +130,15 @@ def format_message_to_parts(
         on_missing_argument=on_missing_argument,
         on_format_error=on_format_error,
     )
-    context.apply_declarations(model_data.get("declarations", []))
+    context.apply_declarations(_model_list_field(model_data, "declarations"))
 
     message_type = model_data.get("type")
     if message_type == "message":
-        parts = context.format_pattern_to_parts(model_data.get("pattern", []))
+        parts = context.format_pattern_to_parts(_model_list_field(model_data, "pattern"))
     elif message_type == "select":
         parts = context.format_select_to_parts(
-            model_data.get("selectors", []), model_data.get("variants", [])
+            _model_list_field(model_data, "selectors"),
+            _model_list_field(model_data, "variants"),
         )
     else:
         raise MF2Error("unsupported-message-type", f"Unsupported message type: {message_type}")
@@ -173,17 +174,29 @@ def _model_data(model: Any) -> dict[str, Any]:
     raise MF2Error("unsupported-message-type", "Unsupported message type: ")
 
 
+def _model_list_field(model: Any, name: str) -> list[Any]:
+    if not isinstance(model, dict):
+        return []
+    value = model.get(name)
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    raise MF2Error("bad-option", f"{name} must be an array.")
+
+
 def _validate_model(model: dict[str, Any]) -> None:
-    _validate_declarations(model.get("declarations", []))
+    declarations = _model_list_field(model, "declarations")
+    _validate_declarations(declarations)
     if model.get("type") == "message":
-        _validate_pattern(model.get("pattern", []))
+        _validate_pattern(_model_list_field(model, "pattern"))
     elif model.get("type") == "select":
         _validate_selector_annotations(
-            model.get("declarations", []),
-            model.get("selectors", []),
+            declarations,
+            _model_list_field(model, "selectors"),
         )
-        for variant in model.get("variants", []):
-            _validate_pattern(variant.get("value", []))
+        for variant in _model_list_field(model, "variants"):
+            _validate_pattern(_model_list_field(variant, "value"))
 
 
 def _validate_declarations(declarations: list[dict[str, Any]]) -> None:
