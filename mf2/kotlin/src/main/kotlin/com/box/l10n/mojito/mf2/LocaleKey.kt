@@ -64,14 +64,22 @@ internal object LocaleKey {
             }
             val part = when {
                 index == 0 -> rawPart.lowercase()
-                rawPart.length == 2 || rawPart.length == 3 && rawPart.all { it.isDigit() } -> rawPart.uppercase()
-                rawPart.length == 4 -> rawPart.lowercase().replaceFirstChar { it.titlecase() }
+                rawPart.length == 4 && rawPart.all(::isAsciiLetter) ->
+                    rawPart.lowercase().replaceFirstChar { it.titlecase() }
+                (rawPart.length == 2 && rawPart.all(::isAsciiLetter)) ||
+                    (rawPart.length == 3 && rawPart.all(::isAsciiDigit)) -> rawPart.uppercase()
                 else -> rawPart.lowercase()
             }
             output += part
         }
         return output
     }
+
+    private fun isAsciiLetter(ch: Char): Boolean =
+        ch in 'A'..'Z' || ch in 'a'..'z'
+
+    private fun isAsciiDigit(ch: Char): Boolean =
+        ch in '0'..'9'
 
     private fun structuralParent(locale: String): String {
         val index = locale.lastIndexOf('-')

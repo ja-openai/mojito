@@ -2,6 +2,9 @@
   "canonical": [
     { "source": " FR_ca ", "expected": "fr-CA" },
     { "source": "zh_hant_tw", "expected": "zh-Hant-TW" },
+    { "source": "en-a1", "expected": "en-a1" },
+    { "source": "en-éé", "expected": "en-éé" },
+    { "source": "zh-éééé", "expected": "zh-éééé" },
     { "source": "pt-PT-u-nu-latn", "expected": "pt-PT" },
     { "source": "kok-Latn", "expected": "kok-Latn" },
     { "source": "en-US-x-private", "expected": "en-US" },

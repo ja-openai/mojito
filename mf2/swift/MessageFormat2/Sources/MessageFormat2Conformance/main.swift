@@ -1977,15 +1977,29 @@ private func canonicalSubtag(index: Int, part: String) -> String {
     if index == 0 {
         return part.lowercased()
     }
-    if part.count == 4, part.allSatisfy(\.isLetter) {
+    if part.count == 4, part.allSatisfy(isAsciiLetter) {
         return part.prefix(1).uppercased() + part.dropFirst().lowercased()
     }
-    if (part.count == 2 && part.allSatisfy(\.isLetter))
-        || (part.count == 3 && part.allSatisfy(\.isNumber))
+    if (part.count == 2 && part.allSatisfy(isAsciiLetter))
+        || (part.count == 3 && part.allSatisfy(isAsciiDigit))
     {
         return part.uppercased()
     }
     return part.lowercased()
+}
+
+private func isAsciiLetter(_ character: Character) -> Bool {
+    guard let ascii = character.asciiValue else {
+        return false
+    }
+    return (ascii >= 65 && ascii <= 90) || (ascii >= 97 && ascii <= 122)
+}
+
+private func isAsciiDigit(_ character: Character) -> Bool {
+    guard let ascii = character.asciiValue else {
+        return false
+    }
+    return ascii >= 48 && ascii <= 57
 }
 
 private enum ConformanceError: Error, CustomStringConvertible {

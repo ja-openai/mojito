@@ -43,6 +43,11 @@ branch is under active implementation.
   digit lookalikes instead of accepting host Unicode digit predicates in
   Python and Kotlin. Shared source-to-model and number-core registry fixtures
   cover Arabic-Indic `minimumFractionDigits`.
+- Locale-key ASCII subtag grammar: Python, Kotlin, and Swift now only apply
+  script/region casing rules to ASCII alphabetic or digit subtags. Shared
+  locale-key fixtures cover non-ASCII two- and four-character subtags plus the
+  Kotlin two-character alphanumeric case that was incorrectly uppercased as a
+  region.
 - PHP/Rust direct-parts coverage: existing conformance tests now assert that
   direct number-core and date-time-core parts helpers return the same single
   text part shape as their direct string helpers, matching the relative-time

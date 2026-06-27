@@ -79,12 +79,20 @@ def _locale_parts(locale: str) -> list[str]:
 def _canonical_subtag(index: int, part: str) -> str:
     if index == 0:
         return part.lower()
-    if len(part) == 4 and part.isalpha():
+    if len(part) == 4 and _is_ascii_alpha(part):
         return part.title()
-    if (len(part) == 2 and part.isalpha()) or (len(part) == 3 and part.isdigit()):
+    if (len(part) == 2 and _is_ascii_alpha(part)) or (len(part) == 3 and _is_ascii_digit(part)):
         return part.upper()
     return part.lower()
 
 
 def _structural_parent(locale: str) -> str:
     return locale.rsplit("-", 1)[0] if "-" in locale else ""
+
+
+def _is_ascii_alpha(value: str) -> bool:
+    return bool(value) and all(("A" <= ch <= "Z") or ("a" <= ch <= "z") for ch in value)
+
+
+def _is_ascii_digit(value: str) -> bool:
+    return bool(value) and all("0" <= ch <= "9" for ch in value)
