@@ -109,7 +109,7 @@ public extension MF2Message {
             values: Dictionary(
                 uniqueKeysWithValues: arguments.map { (MF2NameKey($0.key), $0.value) }
             ),
-            locale: locale,
+            locale: normalizedFormatterLocale(locale),
             functions: functions,
             fallback: true,
             onMissingArgument: onMissingArgument,
@@ -211,6 +211,10 @@ public extension MF2Message {
         }
     }
 
+}
+
+private func normalizedFormatterLocale(_ locale: String) -> String {
+    locale.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "en" : locale
 }
 
 private struct MF2FormatContext {

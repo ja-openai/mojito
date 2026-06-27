@@ -332,6 +332,14 @@ impl Default for FormatOptions<'static> {
     }
 }
 
+fn normalized_formatter_locale(locale: &str) -> &str {
+    if locale.trim().is_empty() {
+        "en"
+    } else {
+        locale
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BidiIsolation {
     None,
@@ -955,7 +963,7 @@ impl<'a> FormatContext<'a> {
             selector_annotations: BTreeMap::new(),
             failed_values: BTreeSet::new(),
             errors: Vec::new(),
-            locale: locale.to_string(),
+            locale: normalized_formatter_locale(locale).to_string(),
             functions,
             fallback: false,
             on_missing_argument: None,

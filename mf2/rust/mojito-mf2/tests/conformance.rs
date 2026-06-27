@@ -99,6 +99,22 @@ fn public_runtime_api_exposes_result_and_parts() {
 
     assert!(parts.is_ok());
     assert!(!parts.has_errors());
+
+    let select_result = parse_to_model(".input {$n :number}\n.match $n\none {{one}}\n* {{other}}");
+    assert_diagnostics_empty(
+        Path::new("public-api blank locale"),
+        &select_result.diagnostics,
+    );
+    let select_model = select_result.model.as_ref().expect("select model exists");
+    let blank_locale_options = FormatOptions::new(" \t");
+    let blank_locale = format_message_with_options(
+        select_model,
+        Arguments::new().with("n", 1),
+        &blank_locale_options,
+    )
+    .unwrap();
+    assert_eq!(blank_locale.value, "one");
+    assert!(blank_locale.errors.is_empty());
 }
 
 #[test]
@@ -114,12 +130,8 @@ fn selector_only_annotation_preserves_raw_value() {
     }
     let registry = FunctionRegistry::portable().with_selector("raw", select_raw);
     let options = FormatOptions::new("en").with_functions(&registry);
-    let formatted = format_message_with_options(
-        model,
-        &Arguments::new().with("flag", true),
-        &options,
-    )
-    .unwrap();
+    let formatted =
+        format_message_with_options(model, &Arguments::new().with("flag", true), &options).unwrap();
     assert_eq!(formatted.value, "raw");
     assert!(formatted.errors.is_empty());
 }

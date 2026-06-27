@@ -999,6 +999,20 @@ private func runPublicApiEdgeChecks() throws {
     try expectValue("public-api selector-only rawValue", selectorOnlyResult.value, "raw")
     try expectCodes("public-api selector-only rawValue errors", selectorOnlyResult.errors, [])
 
+    let blankLocaleSelect = try parsePublicApiModel("""
+    .input {$n :number}
+    .match $n
+    one {{one}}
+    * {{other}}
+    """)
+    let blankLocaleResult = try formatMessage(
+        blankLocaleSelect,
+        arguments: ["n": .number("1")],
+        locale: " \t"
+    )
+    try expectValue("public-api blank locale defaults", blankLocaleResult.value, "one")
+    try expectCodes("public-api blank locale errors", blankLocaleResult.errors, [])
+
     func expectPortable(_ label: String, source: String, expected: String) throws {
         let actual = try formatMessage(try parsePublicApiModel(source))
         try expectValue(label, actual.value, expected)
