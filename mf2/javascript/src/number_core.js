@@ -150,42 +150,24 @@ function formatDecimal(value, localeData, pattern, fraction, useGrouping) {
 }
 
 function roundDecimalOperand(value, maximumFractionDigits) {
-  const { integer, fraction } = decimalParts(decimalOperandToString(value));
-  const dropped = fraction.length - maximumFractionDigits;
-  let units;
-  let roundDigit = "0";
-  if (dropped <= 0) {
-    units = `${integer}${fraction}${"0".repeat(-dropped)}`;
-  } else {
-    units = `${integer}${fraction.slice(0, maximumFractionDigits)}`;
-    roundDigit = fraction.charAt(maximumFractionDigits) || "0";
+  if (value.scale <= maximumFractionDigits) return decimalOperandToString(value);
+  const dropped = value.scale - maximumFractionDigits;
+  const keep = value.digits.length - dropped;
+  const kept = keep > 0 ? value.digits.slice(0, keep) : "0";
+  const remainder = keep > 0 ? value.digits.slice(keep) : value.digits;
+  let rounded = kept.replace(/^0+/, "") || "0";
+  if (compareDecimalRemainderToHalf(remainder, dropped) >= 0) {
+    rounded = incrementDigits(rounded);
   }
-  units = units.replace(/^0+/, "") || "0";
-  if (roundDigit >= "5") units = incrementDigits(units);
-  if (maximumFractionDigits === 0) return units;
-  units = units.padStart(maximumFractionDigits + 1, "0");
-  return `${units.slice(0, -maximumFractionDigits)}.${units.slice(-maximumFractionDigits)}`;
+  return decimalOperandToString({ negative: value.negative, digits: rounded, scale: maximumFractionDigits });
 }
 
-function decimalParts(text) {
-  let [mantissa, exponentText = "0"] = text.toLowerCase().split("e", 2);
-  let exponent = Number(exponentText);
-  if (!Number.isFinite(exponent)) exponent = 0;
-  if (mantissa.startsWith("+") || mantissa.startsWith("-")) mantissa = mantissa.slice(1);
-  let [integer, fraction = ""] = mantissa.split(".", 2);
-  if (integer === "") integer = "0";
-  const digits = `${integer}${fraction}` || "0";
-  const point = integer.length + exponent;
-  if (point <= 0) {
-    return { integer: "0", fraction: `${"0".repeat(-point)}${digits}`.replace(/0+$/, "") };
-  }
-  if (point >= digits.length) {
-    return { integer: `${digits}${"0".repeat(point - digits.length)}`.replace(/^0+(?=\d)/, ""), fraction: "" };
-  }
-  return {
-    integer: digits.slice(0, point).replace(/^0+(?=\d)/, "") || "0",
-    fraction: digits.slice(point).replace(/0+$/, ""),
-  };
+function compareDecimalRemainderToHalf(remainder, droppedDigits) {
+  if (!/[1-9]/.test(remainder)) return -1;
+  if (remainder.length < droppedDigits) return -1;
+  if (remainder[0] < "5") return -1;
+  if (remainder[0] > "5") return 1;
+  return /[1-9]/.test(remainder.slice(1)) ? 1 : 0;
 }
 
 function incrementDigits(value) {

@@ -40,6 +40,21 @@ for (const item of decimalRoundingReferenceCases) {
   assert.equal(actual, expected, `Intl decimal rounding ${item.locale} ${JSON.stringify(item.options)}`);
 }
 
+const originalRepeat = String.prototype.repeat;
+try {
+  String.prototype.repeat = function guardedRepeat(count) {
+    if (count > 1000) throw new Error(`unexpected large repeat: ${count}`);
+    return originalRepeat.call(this, count);
+  };
+  assert.equal(
+    formatNumberCore("1e-100000", { locale: "en-US", style: "number", maximumFractionDigits: 2 }),
+    "0",
+    "large negative exponent rounds without expanding decimal zeros",
+  );
+} finally {
+  String.prototype.repeat = originalRepeat;
+}
+
 const signedZeroReferenceCases = [
   { locale: "en-US", value: -0, options: { style: "number" } },
   { locale: "en-US", value: -0, options: { style: "percent" } },

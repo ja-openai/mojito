@@ -411,6 +411,12 @@ branch is under active implementation.
   `9007199254740993` formatted as `9007199254740992` after narrowing through
   host binary floats. Shared number-core fixtures cover number and percent
   output with grouping disabled.
+- JavaScript direct number-core exponent expansion: the JavaScript generated
+  number-core rounder now rounds decimal operands by `digits`/`scale` before
+  converting to fixed-point text, matching the PHP/Go/Rust bounded-decimal
+  shape and avoiding large zero expansion for compact inputs such as
+  `1e-100000` with small `maximumFractionDigits`. A direct unit regression
+  guards against reintroducing large internal string repeats.
 - Number-core signed zero and explicit zero signs: JavaScript, Python, PHP, Go,
   Java, Kotlin, Rust, and Swift now preserve `-0` through number, percent, and
   currency formatting and show `+0` for `signDisplay=always`. Shared fixtures
