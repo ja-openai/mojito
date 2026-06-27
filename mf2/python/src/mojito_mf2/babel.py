@@ -26,6 +26,7 @@ from .functions import FunctionCall, FunctionRegistry
 __all__ = ["babel_function_registry"]
 
 _MAX_FRACTION_DIGITS = 100
+_MAX_DATE_OPERAND_LENGTH = 256
 _MAX_DECIMAL_OPERAND_LENGTH = 256
 _MAX_DECIMAL_EXPONENT = 1_000_000
 _ABSENT_OPTION = "\x00__mojito_mf2_absent__"
@@ -402,6 +403,8 @@ def _date_from(raw_value: Any, rendered: str) -> date | None:
         return raw_value.date()
     if isinstance(raw_value, date):
         return raw_value
+    if not _has_valid_date_operand_length(rendered):
+        return None
     if _ISO_DATE_RE.fullmatch(rendered) is None:
         parsed_datetime = _parse_datetime_or_none(rendered)
         if parsed_datetime is not None:
@@ -418,6 +421,8 @@ def _time_from(raw_value: Any, rendered: str) -> time | None:
         return raw_value.time()
     if isinstance(raw_value, time):
         return raw_value
+    if not _has_valid_date_operand_length(rendered):
+        return None
     if _ISO_TIME_RE.fullmatch(rendered) is None:
         parsed_datetime = _parse_datetime_or_none(rendered)
         if parsed_datetime is not None:
@@ -443,12 +448,20 @@ def _datetime_from(raw_value: Any, rendered: str) -> datetime | None:
 
 
 def _parse_datetime_or_none(rendered: str) -> datetime | None:
-    if _ISO_DATE_TIME_RE.fullmatch(rendered) is None or not _has_valid_iso_offset(rendered):
+    if (
+        not _has_valid_date_operand_length(rendered)
+        or _ISO_DATE_TIME_RE.fullmatch(rendered) is None
+        or not _has_valid_iso_offset(rendered)
+    ):
         return None
     try:
         return datetime.fromisoformat(rendered.replace("Z", "+00:00"))
     except ValueError:
         return None
+
+
+def _has_valid_date_operand_length(value: str) -> bool:
+    return len(value) <= _MAX_DATE_OPERAND_LENGTH
 
 
 def _has_valid_iso_offset(value: str) -> bool:

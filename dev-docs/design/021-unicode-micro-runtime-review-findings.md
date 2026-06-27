@@ -459,8 +459,9 @@ branch is under active implementation.
   now avoids `DateTimeImmutable` free-form parsing for string operands and uses
   a separate `:time` operand grammar so date-only strings reject while
   time-only strings remain valid. Python keeps existing `datetime` local-source
-  compatibility and rejects offsets beyond `+18:00`/`-18:00`. Adapter
-  integration tests cover the compact repros.
+  compatibility, rejects offsets beyond `+18:00`/`-18:00`, and caps date/time
+  string operands at 256 characters before regex matching or
+  `datetime.fromisoformat`. Adapter integration tests cover the compact repros.
 - Python Babel numeric operand grammar: the explicit Babel registry now
   prefilters number, currency, and relative-time operands with the shared
   bounded ASCII decimal grammar before `Decimal`, rejecting Unicode digit

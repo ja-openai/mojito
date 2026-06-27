@@ -141,6 +141,21 @@ class BabelIntegrationTest(unittest.TestCase):
             "{$instant :time timeStyle=medium timeZone=UTC}",
             "03:04:05+18:01",
         )
+        assert_date_bad_operand(
+            "Babel adapter rejects oversized date operands",
+            "{$instant :date dateStyle=medium timeZone=UTC}",
+            "2020-01-02" + "0" * 257,
+        )
+        assert_date_bad_operand(
+            "Babel adapter rejects oversized time operands",
+            "{$instant :time timeStyle=medium timeZone=UTC}",
+            "03:04:05." + "0" * 257,
+        )
+        assert_date_bad_operand(
+            "Babel adapter rejects oversized datetime operands",
+            "{$instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}",
+            "2020-01-02T03:04:05." + "0" * 257,
+        )
 
         def assert_numeric_bad_operand(label: str, source: str, value: str) -> None:
             result = format_message(
