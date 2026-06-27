@@ -12,6 +12,10 @@ branch is under active implementation.
   asserting those implementation helpers stay off the root package export. This
   catches drift where a parts implementation exists but the published subpath
   surface or declarations stop exposing it.
+- Top-level ICU4J adapter coverage: `mf2/check.sh` now runs the explicit Java
+  and Kotlin ICU4J adapter smoke checks in addition to the core JDK registry
+  checks, so the documented opt-in platform artifacts cannot silently drift
+  while the umbrella gate stays green.
 - JavaScript number-core registry parity: `createNumberCoreFunctionRegistry`
   now returns a portable registry with generated `number`, `integer`, `percent`,
   and `currency` formatters layered on top. This matches the JavaScript

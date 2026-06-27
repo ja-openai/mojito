@@ -33,3 +33,5 @@ fi
 (cd java && sh run.sh demo)
 (cd java && sh run.sh inline-demo)
 (cd java && sh run.sh datetime-demo)
+(cd java-icu4j && sh run.sh check)
+(cd kotlin-icu4j && sh run.sh check)

@@ -375,6 +375,10 @@ Run all current checks:
 sh check.sh
 ```
 
+This includes static checks, CLDR data validation, ICU4J reference witnesses,
+all-language conformance, official Unicode runners, demos, and the explicit
+Java/Kotlin ICU4J adapter smoke checks.
+
 Run only compile, type, format, lint, and syntax checks:
 
 ```sh
