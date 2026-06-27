@@ -353,11 +353,12 @@ func (c *formatContext) selectorValue(selector map[string]any) (selectorValue, e
 		if !c.fallback {
 			return selectorValue{}, missingArgument(name)
 		}
-		if !c.failedLocals[name] {
+		failedLocal := c.failedLocals[name]
+		if !failedLocal {
 			c.errors = append(c.errors, unresolvedVariable(name))
 		}
-		if hasAnnotation && c.functions.HasSelector(annotation.function) {
-			if !c.failedLocals[name] {
+		if hasAnnotation && (failedLocal || c.functions.HasSelector(annotation.function)) {
+			if !failedLocal {
 				c.errors = append(c.errors, badOperand("Selector operand is not available."))
 			}
 			c.errors = append(c.errors, mf2Error("bad-selector", "Selector operand is not available."))

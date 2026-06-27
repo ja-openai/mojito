@@ -1070,7 +1070,7 @@ impl<'a> FormatContext<'a> {
                             self.errors.push(unresolved_variable(&selector.name));
                         }
                         if annotation.as_ref().is_some_and(|annotation| {
-                            self.functions.has_selector(&annotation.function)
+                            failed_value || self.functions.has_selector(&annotation.function)
                         }) {
                             if !failed_value {
                                 self.errors

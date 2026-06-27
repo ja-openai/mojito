@@ -259,12 +259,13 @@ private struct MF2FormatContext {
             let key = MF2NameKey(selector.name)
             guard !failedLocals.contains(key), let value = values[key] else {
                 if fallback {
-                    if !failedLocals.contains(key) {
+                    let failedLocal = failedLocals.contains(key)
+                    if !failedLocal {
                         errors.append(.unresolvedVariable(selector.name))
                     }
                     let annotation = selectorAnnotations[key]
-                    if let annotation, functions.hasSelector(annotation.function) {
-                        if !failedLocals.contains(key) {
+                    if let annotation, failedLocal || functions.hasSelector(annotation.function) {
+                        if !failedLocal {
                             errors.append(.badOperand("Selector operand is not available."))
                         }
                         errors.append(.badSelector("Selector operand is not available."))

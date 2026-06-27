@@ -241,11 +241,12 @@ final class FormatContext
             if (!$this->fallback) {
                 throw MF2Error::missingArgument($name);
             }
-            if (!isset($this->failedLocals[$name])) {
+            $failedLocal = isset($this->failedLocals[$name]);
+            if (!$failedLocal) {
                 $this->errors[] = unresolved_variable($name);
             }
-            if ($annotation !== null && $this->functions->hasSelector($annotation->function)) {
-                if (!isset($this->failedLocals[$name])) {
+            if ($annotation !== null && ($failedLocal || $this->functions->hasSelector($annotation->function))) {
+                if (!$failedLocal) {
                     $this->errors[] = MF2Error::badOperand('Selector operand is not available.');
                 }
                 $this->errors[] = new MF2Error('bad-selector', 'Selector operand is not available.');

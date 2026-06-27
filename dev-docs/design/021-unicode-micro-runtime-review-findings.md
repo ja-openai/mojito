@@ -781,6 +781,11 @@ branch is under active implementation.
   instead of `other`, matching the other runtimes and preventing an invalid
   ordinal operand from selecting a literal `other` variant. A shared
   source-to-model fixture covers the unsafe-integer `select=ordinal` repro.
+- Failed-local selector diagnostics: Go, PHP, Rust, and Swift now emit
+  `bad-selector` when a selector references a failed local even if the local's
+  annotation function is not itself selectable, matching JavaScript, Python,
+  Java, and Kotlin. A shared source-to-model fallback fixture covers a local
+  that fails with `unknown-function` before selection.
 - Direct core parts API consistency: number-core and date-time-core now expose
   direct text-part wrappers in Java, Kotlin, Go, and Swift, matching the existing
   JavaScript, Python, PHP, and Rust public API surface. Focused runtime checks

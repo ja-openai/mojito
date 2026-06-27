@@ -1,0 +1,36 @@
+{
+  "name": "failed-local-unsupported-selector-unavailable",
+  "source": ".local $x = {$n :unknown}\n.match $x\n* {{fallback}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "x",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "n" },
+          "function": {
+            "type": "function",
+            "name": "unknown"
+          }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "x" }],
+    "variants": [
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["fallback"]
+      }
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": { "n": 1 },
+      "expected": "fallback",
+      "expectedErrors": [{ "code": "unknown-function" }, { "code": "bad-selector" }]
+    }
+  ]
+}
