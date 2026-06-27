@@ -650,6 +650,11 @@ branch is under active implementation.
   Public API regressions cover Java null/whitespace defaults plus Rust and
   Swift whitespace locale selectors that would otherwise choose `other` for
   English `one`.
+- PHP top-level bidi isolation option hardening: `format_message()` now
+  normalizes non-string `bidiIsolation` option values to `none` before calling
+  the typed `parts_to_string()` helper. This matches the other dynamic runtimes'
+  effective behavior for invalid isolation values and avoids a raw PHP
+  `TypeError` after formatting has otherwise succeeded.
 - PHP option-variable error classification: variable-valued option coercion now
   uses a dedicated option path, so throwing host option values recover with
   `bad-option` while ordinary expression and selector operands continue to

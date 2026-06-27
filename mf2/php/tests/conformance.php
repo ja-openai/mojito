@@ -775,6 +775,10 @@ function assert_public_api_boundary(): void
     assert_json_equal('throwing host locale recovery parts', [], $throwingLocaleParts['parts']);
     assert_json_equal('throwing host locale recovery part errors', ['bad-option'], array_map(static fn($error): string => error_code($error), $throwingLocaleParts['errors']));
 
+    $invalidBidiIsolation = format_message($message, ['name' => 'Mojito'], ['bidiIsolation' => []]);
+    assert_same('invalid bidiIsolation defaults value', 'Hello Mojito', $invalidBidiIsolation['value']);
+    assert_json_equal('invalid bidiIsolation defaults errors', [], array_map(static fn($error): string => error_code($error), $invalidBidiIsolation['errors']));
+
     $throwingNumberOption = parse_to_model('Hello {1 :number minimumFractionDigits=$d}')['model'];
     $throwingNumberOptionResult = format_message($throwingNumberOption, ['d' => new ThrowingStringValue()], [
         'locale' => 'en-US',

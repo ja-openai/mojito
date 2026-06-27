@@ -66,7 +66,7 @@ function format_message(array $model, array $arguments = [], array $options = []
 {
     $result = format_message_to_parts($model, $arguments, $options);
     return [
-        'value' => Internal\parts_to_string($result['parts'], $options['bidiIsolation'] ?? 'none'),
+        'value' => Internal\parts_to_string($result['parts'], Internal\bidi_isolation_option($options)),
         'errors' => $result['errors'],
         'ok' => $result['errors'] === [],
         'hasErrors' => $result['errors'] !== [],
@@ -126,6 +126,12 @@ function locale_option(array $options): string
         throw MF2Error::badOption($error->getMessage());
     }
     return $locale === '' ? 'en' : $locale;
+}
+
+function bidi_isolation_option(array $options): string
+{
+    $value = $options['bidiIsolation'] ?? 'none';
+    return is_string($value) ? $value : 'none';
 }
 
 function functions_option(array $options): FunctionRegistry
