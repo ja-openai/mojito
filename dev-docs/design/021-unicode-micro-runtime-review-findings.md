@@ -446,7 +446,9 @@ branch is under active implementation.
   registry now parses date, time, and datetime string operands through the same
   bounded ASCII ISO grammar as date-time-core instead of delegating to
   host-lenient `new Date(string)`. Package-boundary tests cover unpadded dates,
-  impossible dates, impossible datetimes, and out-of-range operand offsets.
+  impossible dates, impossible datetimes, out-of-range operand offsets, and the
+  `:time` split between accepted time-only strings and rejected date-only
+  strings.
 - Python Babel/PHP Intl date operand grammar: the explicit Babel and PHP Intl
   registries now reject date/time operands with host-lenient rollover or
   out-of-range offsets instead of accepting Python/PHP parser extensions. PHP

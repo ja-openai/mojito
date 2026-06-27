@@ -189,6 +189,16 @@ assertIntlDateBadOperand(
   "At {$instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}",
   "2020-01-02T03:04:05+18:01",
 );
+const intlTimeOnly = parseToModelFromParser("At {$instant :time timeStyle=medium timeZone=UTC}");
+assert.equal(
+  formatMessageFromFormatter(intlTimeOnly.model, { instant: "03:04:05" }, { locale: "en-US", functions: intlRegistry }).value,
+  `At ${new Intl.DateTimeFormat("en-US", { timeStyle: "medium", timeZone: "UTC" }).format(new Date(Date.UTC(1970, 0, 1, 3, 4, 5)))}`,
+);
+assertIntlDateBadOperand(
+  "Intl adapter rejects date-only time operands",
+  "At {$instant :time timeStyle=medium timeZone=UTC}",
+  "2020-01-02",
+);
 assert.equal(new MF2Error("test", "test").code, "test");
 assert.equal("partsToString" in core, false);
 assert.equal("formatMessageStrict" in core, false);

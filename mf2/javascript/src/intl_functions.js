@@ -8,6 +8,7 @@ const MAX_DATE_OPERAND_LENGTH = 256;
 const MIN_TIMESTAMP_MS = -62_135_596_800_000;
 const MAX_TIMESTAMP_MS = 253_402_300_799_999;
 const ISO_DATE_TIME_RE = /^([0-9]{4})-([0-9]{2})-([0-9]{2})(?:T([0-9]{2}):([0-9]{2})(?::([0-9]{2})(?:\.([0-9]{1,9}))?)?(Z|[+-][0-9]{2}:[0-9]{2})?)?$/;
+const ISO_TIME_RE = /^([0-9]{2}):([0-9]{2})(?::([0-9]{2})(?:\.([0-9]{1,9}))?)?(Z|[+-][0-9]{2}:[0-9]{2})?$/;
 
 export function createIntlFunctionRegistry(FunctionRegistry) {
   const formatters = new Map();
@@ -53,7 +54,7 @@ function formatIntlDate(call) {
 }
 
 function formatIntlTime(call) {
-  return dateFormatter(call.locale, call, { timeStyle: dateTimeStyle(call, "timeStyle", "precision", "medium") }).format(parseCallDate(call, "Time function requires a date operand."));
+  return dateFormatter(call.locale, call, { timeStyle: dateTimeStyle(call, "timeStyle", "precision", "medium") }).format(parseCallTime(call, "Time function requires a time or datetime operand."));
 }
 
 function formatIntlDateTime(call) {
@@ -133,10 +134,25 @@ function parseCallDate(call, message) {
   return date;
 }
 
+function parseCallTime(call, message) {
+  const date = parseTimeValue(call.rawValue, call.value) ?? parseSourceTime(call.inheritedSource);
+  if (date == null) throw MF2Error.badOperand(message);
+  return date;
+}
+
 function parseSourceDate(source) {
   for (let current = source; current != null; current = current.inherited) {
     if (!isDateTimeSourceFunction(current.function)) continue;
     const date = parseDateValue(null, current.value);
+    if (date != null) return date;
+  }
+  return null;
+}
+
+function parseSourceTime(source) {
+  for (let current = source; current != null; current = current.inherited) {
+    if (!isDateTimeSourceFunction(current.function)) continue;
+    const date = parseTimeValue(null, current.value);
     if (date != null) return date;
   }
   return null;
@@ -154,6 +170,16 @@ function parseDateValue(rawValue, rendered) {
   }
   if (typeof rendered !== "string") return null;
   return parseDateString(rendered);
+}
+
+function parseTimeValue(rawValue, rendered) {
+  if (rawValue instanceof Date) return isPortableDate(rawValue) ? rawValue : null;
+  if (typeof rawValue === "number") {
+    if (!Number.isFinite(rawValue) || rawValue < MIN_TIMESTAMP_MS || rawValue > MAX_TIMESTAMP_MS) return null;
+    return new Date(rawValue);
+  }
+  if (typeof rendered !== "string") return null;
+  return parseTimeString(rendered) ?? parseDateTimeStringWithTime(rendered);
 }
 
 function parseDateString(value) {
@@ -186,6 +212,32 @@ function parseDateString(value) {
   date.setUTCFullYear(year, month - 1, day);
   date.setUTCHours(hour, minute - offsetMinutes, second, millisecond);
   return isPortableDate(date) ? date : null;
+}
+
+function parseTimeString(value) {
+  const text = value.trim();
+  if (text.length > MAX_DATE_OPERAND_LENGTH) return null;
+  const match = ISO_TIME_RE.exec(text);
+  if (match == null) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const second = Number(match[3] ?? "0");
+  const millisecond = Number((match[4] ?? "").slice(0, 3).padEnd(3, "0"));
+  const zone = match[5] ?? "";
+  if (hour > 23 || minute > 59 || second > 59) return null;
+  const offsetMinutes = zone === "" || zone === "Z" ? 0 : parseOffsetMinutes(zone);
+  if (offsetMinutes == null) return null;
+  const date = new Date(0);
+  date.setUTCFullYear(1970, 0, 1);
+  date.setUTCHours(hour, minute - offsetMinutes, second, millisecond);
+  return isPortableDate(date) ? date : null;
+}
+
+function parseDateTimeStringWithTime(value) {
+  const text = value.trim();
+  const match = ISO_DATE_TIME_RE.exec(text);
+  if (match == null || match[4] == null) return null;
+  return parseDateString(text);
 }
 
 function isPortableDate(date) {
