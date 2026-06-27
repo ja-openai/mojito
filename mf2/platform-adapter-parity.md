@@ -4,7 +4,13 @@ This note tracks concrete differences between the current MF2 platform-backed
 function registries. It is intentionally scoped to runtime behavior and package
 boundaries; portable/unlocalized registries should stay dependency-free.
 
-Last audited: 2026-06-01.
+Last audited: 2026-06-27.
+
+The top-level `mf2/check.sh` gate now runs explicit smoke checks for the
+implemented JavaScript Intl, Swift Foundation, PHP Intl, Java/Kotlin ICU4J, and
+optional Python Babel adapters. That gate proves the adapters keep loading and
+formatting representative messages, but it is not yet a shared output-parity
+fixture because the demos still use different locale tags and case matrices.
 
 ## Registry Coverage
 
@@ -139,9 +145,10 @@ cross-language contract.
 
 ## Recommended Follow-Up Slices
 
-1. Add a single shared platform parity fixture or demo that uses the same
-   source strings, values, locale tags, and option names across all adapters.
-   Keep assertions structural where host locale data legitimately differs.
+1. Replace the per-adapter smoke demos with a shared platform parity fixture or
+   add a shared fixture underneath them. Use the same source strings, values,
+   locale tags, and option names across all adapters; keep assertions
+   structural where host locale data legitimately differs.
 2. Decide whether Java/Kotlin JDK defaults should enable grouping for
    `:number`, `:integer`, and `:percent`.
 3. Add a datetime-style mapping note for Python Babel or a richer Babel
