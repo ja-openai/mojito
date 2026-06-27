@@ -468,6 +468,11 @@ branch is under active implementation.
   lookalikes and underscore groupings that Python accepts. Babel formatter
   decimal overflows now recover as MF2 `bad-operand` instead of leaking raw
   `InvalidOperation` or `OverflowError` exceptions.
+- Rust ICU4X operand bounds: the feature-gated ICU4X registry now caps numeric
+  and date/time string operands at 256 characters before ICU4X decimal parsing
+  or adapter date/time parsing. This matches the other optional host registries'
+  bounded operand behavior and keeps oversized operands in MF2 `bad-operand`
+  recovery.
 - Python Babel locale tag normalization: the optional Babel adapter now
   normalizes public BCP47-style locale tags such as `fr-FR` and `ar-EG` to
   Babel's underscore form before calling Babel APIs. This keeps the adapter

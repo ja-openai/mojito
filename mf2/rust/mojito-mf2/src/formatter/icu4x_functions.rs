@@ -13,6 +13,7 @@ use crate::diagnostic::Diagnostic;
 use super::{FunctionCall, FunctionRegistry};
 
 const MAX_FRACTION_DIGITS: i16 = 100;
+const MAX_OPERAND_LENGTH: usize = 256;
 const MAX_LOCALE_LENGTH: usize = 256;
 const MAX_TIME_ZONE_OPTION_LENGTH: usize = 256;
 
@@ -189,6 +190,9 @@ fn format_datetime_with_styles(
 }
 
 fn parse_decimal(value: &str) -> Result<Decimal, ()> {
+    if value.len() > MAX_OPERAND_LENGTH {
+        return Err(());
+    }
     Decimal::from_str(value).map_err(|_| ())
 }
 
@@ -274,6 +278,9 @@ fn validate_utc_time_zone(call: &FunctionCall<'_>) -> Result<(), Diagnostic> {
 }
 
 fn parse_datetime_value(value: &str) -> Result<DateTime<Iso>, ()> {
+    if value.len() > MAX_OPERAND_LENGTH {
+        return Err(());
+    }
     let value = strip_utc_suffix(value);
     let (date, time) = value.split_once('T').ok_or(())?;
     Ok(DateTime {
@@ -283,12 +290,18 @@ fn parse_datetime_value(value: &str) -> Result<DateTime<Iso>, ()> {
 }
 
 fn parse_date_value(value: &str) -> Result<Date<Iso>, ()> {
+    if value.len() > MAX_OPERAND_LENGTH {
+        return Err(());
+    }
     let value = strip_utc_suffix(value);
     let date = value.split_once('T').map_or(value, |(date, _)| date);
     parse_date(date)
 }
 
 fn parse_time_value(value: &str) -> Result<Time, ()> {
+    if value.len() > MAX_OPERAND_LENGTH {
+        return Err(());
+    }
     let value = strip_utc_suffix(value);
     let time = value.split_once('T').map_or(value, |(_, time)| time);
     parse_time(time)

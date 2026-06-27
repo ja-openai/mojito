@@ -108,6 +108,29 @@ fn icu4x_registry_rejects_oversized_locales() {
     assert_eq!(result.errors[0].code, "bad-option");
 }
 
+#[test]
+fn icu4x_registry_rejects_oversized_operands() {
+    let registry = FunctionRegistry::icu4x();
+
+    let number_result = format_result_with(
+        "{$value :number}",
+        "en",
+        Arguments::new().with("value", "1".repeat(257)),
+        &registry,
+    );
+    assert!(number_result.has_errors());
+    assert_eq!(number_result.errors[0].code, "bad-operand");
+
+    let date_result = format_result_with(
+        "{$value :date dateStyle=medium timeZone=UTC}",
+        "en",
+        Arguments::new().with("value", "2026-05-21".to_string() + &"0".repeat(257)),
+        &registry,
+    );
+    assert!(date_result.has_errors());
+    assert_eq!(date_result.errors[0].code, "bad-operand");
+}
+
 fn format_with(
     source: &str,
     locale: &str,
