@@ -473,6 +473,11 @@ branch is under active implementation.
   Babel's underscore form before calling Babel APIs. This keeps the adapter
   aligned with the rest of the runtime surface and prevents raw Babel
   `ValueError` locale parse exceptions from escaping normal MF2 recovery.
+- JavaScript Intl and Rust ICU4X locale bounds: the optional JavaScript Intl
+  and Rust ICU4X adapters now reject locale strings longer than 256 characters
+  before calling `Intl.*Format` or ICU4X locale parsing. This matches the
+  existing Python Babel, PHP Intl, Swift Foundation, and JVM adapter locale
+  limits and keeps oversized locale inputs in MF2 `bad-option` recovery.
 - PHP Intl locale error recovery: the optional PHP Intl adapter now wraps
   `NumberFormatter`/`IntlDateFormatter` locale constructor failures as MF2
   `bad-option` errors. Targeted adapter tests cover malformed, unknown, and

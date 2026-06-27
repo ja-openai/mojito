@@ -95,6 +95,19 @@ fn icu4x_registry_rejects_oversized_time_zone_options() {
     assert_eq!(result.errors[0].code, "bad-option");
 }
 
+#[test]
+fn icu4x_registry_rejects_oversized_locales() {
+    let registry = FunctionRegistry::icu4x();
+    let result = format_result_with(
+        "{$value :number}",
+        &"a".repeat(257),
+        Arguments::new().with("value", 1),
+        &registry,
+    );
+    assert!(result.has_errors());
+    assert_eq!(result.errors[0].code, "bad-option");
+}
+
 fn format_with(
     source: &str,
     locale: &str,

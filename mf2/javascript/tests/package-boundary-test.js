@@ -143,6 +143,12 @@ for (const locale of ["en", "fr", "ja", "ar"]) {
     `Due ${new Intl.RelativeTimeFormat(locale, { numeric: "always", style: "long" }).format(-1, "day")}`,
   );
 }
+const oversizedIntlLocaleResult = formatMessageFromFormatter(
+  relative.model,
+  { delta: -1 },
+  { locale: "a".repeat(257), functions: intlRegistry, bidiIsolation: "none" },
+);
+assert.deepEqual(oversizedIntlLocaleResult.errors.map((error) => error.code), ["bad-option"]);
 const intlDate = parseToModelFromParser("At {$instant :datetime dateStyle=full timeStyle=short timeZone=UTC}");
 assert.equal(
   formatMessageFromFormatter(intlDate.model, { instant: "2026-05-21T14:30:15Z" }, { locale: "ja-JP", functions: intlRegistry }).value,

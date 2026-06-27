@@ -13,6 +13,7 @@ use crate::diagnostic::Diagnostic;
 use super::{FunctionCall, FunctionRegistry};
 
 const MAX_FRACTION_DIGITS: i16 = 100;
+const MAX_LOCALE_LENGTH: usize = 256;
 const MAX_TIME_ZONE_OPTION_LENGTH: usize = 256;
 
 pub(super) fn register(registry: &mut FunctionRegistry) {
@@ -246,6 +247,9 @@ fn non_negative_i16_option(
 }
 
 fn parse_locale(locale: &str) -> Result<Locale, Diagnostic> {
+    if locale.len() > MAX_LOCALE_LENGTH {
+        return Err(bad_option("locale must not exceed 256 characters."));
+    }
     locale
         .replace('_', "-")
         .parse()

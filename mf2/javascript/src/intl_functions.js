@@ -5,6 +5,7 @@ import { formatOffset } from "./offset_function.js";
 
 const MAX_FRACTION_DIGITS = 100;
 const MAX_DATE_OPERAND_LENGTH = 256;
+const MAX_LOCALE_LENGTH = 256;
 const MAX_TIME_ZONE_OPTION_LENGTH = 256;
 const MIN_TIMESTAMP_MS = -62_135_596_800_000;
 const MAX_TIMESTAMP_MS = 253_402_300_799_999;
@@ -73,8 +74,9 @@ function formatIntlRelativeTime(call) {
   }
   const numeric = optionOneOf(call, "numeric", ["always", "auto"], "always");
   const style = optionOneOf(call, "style", ["long", "short", "narrow"], "long");
+  const locale = boundedLocale(call.locale);
   try {
-    return new Intl.RelativeTimeFormat(call.locale, { numeric, style }).format(value, unit);
+    return new Intl.RelativeTimeFormat(locale, { numeric, style }).format(value, unit);
   } catch (error) {
     throw MF2Error.badOption(error.message);
   }
@@ -90,7 +92,7 @@ function numberFormatter(locale, call, baseOptions) {
   if (minimumFractionDigits != null) options.minimumFractionDigits = minimumFractionDigits;
   if (maximumFractionDigits != null) options.maximumFractionDigits = maximumFractionDigits;
   try {
-    return new Intl.NumberFormat(locale, options);
+    return new Intl.NumberFormat(boundedLocale(locale), options);
   } catch (error) {
     throw MF2Error.badOption(error.message);
   }
@@ -103,10 +105,15 @@ function dateFormatter(locale, call, options) {
     options.timeZone = timeZone;
   }
   try {
-    return new Intl.DateTimeFormat(locale, options);
+    return new Intl.DateTimeFormat(boundedLocale(locale), options);
   } catch (error) {
     throw MF2Error.badOption(error.message);
   }
+}
+
+function boundedLocale(locale) {
+  if (locale.length > MAX_LOCALE_LENGTH) throw MF2Error.badOption("locale must not exceed 256 characters.");
+  return locale;
 }
 
 function parseCallNumber(call, message) {
