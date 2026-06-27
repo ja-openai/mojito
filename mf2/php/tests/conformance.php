@@ -759,6 +759,13 @@ function assert_public_api_boundary(): void
     assert_same('throwing host selector recovery value', 'fallback', $throwingSelectorResult['value']);
     assert_json_equal('throwing host selector recovery errors', ['bad-operand', 'bad-selector'], array_map(static fn($error): string => error_code($error), $throwingSelectorResult['errors']));
 
+    $throwingLocaleResult = format_message($throwingPlaceholder, ['x' => 'ok'], ['locale' => new ThrowingStringValue()]);
+    assert_same('throwing host locale recovery value', '', $throwingLocaleResult['value']);
+    assert_json_equal('throwing host locale recovery errors', ['bad-option'], array_map(static fn($error): string => error_code($error), $throwingLocaleResult['errors']));
+    $throwingLocaleParts = format_message_to_parts($throwingPlaceholder, ['x' => 'ok'], ['locale' => new ThrowingStringValue()]);
+    assert_json_equal('throwing host locale recovery parts', [], $throwingLocaleParts['parts']);
+    assert_json_equal('throwing host locale recovery part errors', ['bad-option'], array_map(static fn($error): string => error_code($error), $throwingLocaleParts['errors']));
+
     $throwingNumberOption = parse_to_model('Hello {1 :number minimumFractionDigits=$d}')['model'];
     $throwingNumberOptionResult = format_message($throwingNumberOption, ['d' => new ThrowingStringValue()], [
         'locale' => 'en-US',

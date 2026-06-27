@@ -80,14 +80,18 @@ function format_message_to_parts(array $model, array $arguments = [], array $opt
     } catch (\Throwable $error) {
         return ['parts' => [], 'errors' => [Internal\as_mf2_error($error)], 'ok' => false, 'hasErrors' => true];
     }
-    $context = new Internal\FormatContext(
-        $arguments,
-        Internal\locale_option($options),
-        Internal\functions_option($options),
-        true,
-        $options['onMissingArgument'] ?? null,
-        $options['onFormatError'] ?? null,
-    );
+    try {
+        $context = new Internal\FormatContext(
+            $arguments,
+            Internal\locale_option($options),
+            Internal\functions_option($options),
+            true,
+            $options['onMissingArgument'] ?? null,
+            $options['onFormatError'] ?? null,
+        );
+    } catch (\Throwable $error) {
+        return ['parts' => [], 'errors' => [Internal\as_mf2_error($error)], 'ok' => false, 'hasErrors' => true];
+    }
     try {
         $context->applyDeclarations($model['declarations'] ?? []);
     } catch (\Throwable $error) {
@@ -116,7 +120,11 @@ use Mojito\MessageFormat2\MF2Error;
 
 function locale_option(array $options): string
 {
-    $locale = trim((string) ($options['locale'] ?? 'en'));
+    try {
+        $locale = trim((string) ($options['locale'] ?? 'en'));
+    } catch (\Throwable $error) {
+        throw MF2Error::badOption($error->getMessage());
+    }
     return $locale === '' ? 'en' : $locale;
 }
 

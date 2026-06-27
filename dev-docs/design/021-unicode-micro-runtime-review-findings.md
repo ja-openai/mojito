@@ -524,6 +524,9 @@ branch is under active implementation.
   inside the per-expression/per-selector recovery path. PHP returns the
   expression fallback with `bad-operand` instead of letting one hostile object
   escape to the top-level formatter catch and erase the whole message.
+  Top-level `locale` option coercion is now guarded during formatter context
+  setup as well, returning a normal `bad-option` result instead of leaking a
+  host exception before recovery state exists.
 - PHP option-variable error classification: variable-valued option coercion now
   uses a dedicated option path, so throwing host option values recover with
   `bad-option` while ordinary expression and selector operands continue to
