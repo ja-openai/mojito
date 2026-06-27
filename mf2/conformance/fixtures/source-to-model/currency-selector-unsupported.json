@@ -1,0 +1,43 @@
+{
+  "name": "currency-selector-unsupported",
+  "source": ".input {$x :currency currency=USD}\n.match $x\n1 {{one}}\n* {{fallback}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "x",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "x" },
+          "function": {
+            "type": "function",
+            "name": "currency",
+            "options": {
+              "currency": { "type": "literal", "value": "USD" }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "x" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "1" }],
+        "value": ["one"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["fallback"]
+      }
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": { "x": 1 },
+      "expected": "fallback",
+      "expectedErrors": [{ "code": "bad-selector" }]
+    }
+  ]
+}

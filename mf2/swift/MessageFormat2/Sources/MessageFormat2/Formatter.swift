@@ -287,6 +287,7 @@ private struct MF2FormatContext {
             }
             let annotation = selectorAnnotations[MF2NameKey(selector.name)]
             let rendered = value.rendered
+            try recordSelectorResolutionErrors(annotation)
             return MF2SelectorValue(
                 rendered: rendered,
                 rawValue: value,
@@ -632,6 +633,17 @@ private struct MF2FormatContext {
                 return nil
             }
         }
+    }
+
+    mutating func recordSelectorResolutionErrors(_ annotation: MF2SelectorAnnotation?) throws {
+        guard annotation?.function.name == "currency" else {
+            return
+        }
+        let error = MF2Error.badSelector("Currency selector is not supported.")
+        guard fallback else {
+            throw error
+        }
+        errors.append(error)
     }
 }
 

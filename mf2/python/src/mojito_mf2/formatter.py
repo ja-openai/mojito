@@ -406,6 +406,7 @@ class _FormatContext:
             normalized_rendered = (
                 _normalize_string_key(rendered) if self._string_select(name) else None
             )
+            self._record_selector_resolution_errors(annotation)
             selector_values.append(
                 _SelectorValue(
                     rendered=rendered,
@@ -757,6 +758,14 @@ class _FormatContext:
             self.errors.append(_fallback_error(error))
             self.errors.append(MF2Error("bad-selector", "Selector failed to match."))
             return None
+
+    def _record_selector_resolution_errors(self, annotation: _SelectorAnnotation | None) -> None:
+        if annotation is None or annotation.function.get("name") != "currency":
+            return
+        error = MF2Error("bad-selector", "Currency selector is not supported.")
+        if not self.fallback:
+            raise error
+        self.errors.append(error)
 
 
 @dataclass(frozen=True)

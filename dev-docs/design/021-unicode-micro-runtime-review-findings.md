@@ -791,6 +791,10 @@ branch is under active implementation.
   selectors, matching JavaScript, PHP, Go, Java, Kotlin, and Rust. A shared
   source-to-model fixture covers an unsupported input annotation that must not
   poison later variable formatting.
+- Currency selector diagnostics: Python and Swift now emit the same recoverable
+  `bad-selector` diagnostic as JavaScript, PHP, Go, Java, Kotlin, and Rust when
+  a selector is annotated with unsupported `:currency`. A shared fallback
+  fixture covers the unsupported selector path.
 - Direct core parts API consistency: number-core and date-time-core now expose
   direct text-part wrappers in Java, Kotlin, Go, and Swift, matching the existing
   JavaScript, Python, PHP, and Rust public API surface. Focused runtime checks
