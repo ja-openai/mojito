@@ -9,6 +9,7 @@ final class IntlFunctions
     private const UTC = 'UTC';
     private const MAX_FRACTION_DIGITS = 100;
     private const MAX_DATE_OPERAND_LENGTH = 256;
+    private const MAX_NUMERIC_OPTION_LENGTH = 256;
     private const MAX_LOCALE_LENGTH = 256;
     private const MAX_TIME_ZONE_OPTION_LENGTH = 256;
     private const MIN_TIMESTAMP_MS = -62135596800000.0;
@@ -379,7 +380,7 @@ final class IntlFunctions
         if ($value === null || $value === 'auto') {
             return null;
         }
-        if (preg_match('/^\d+$/', $value) !== 1) {
+        if (strlen($value) > self::MAX_NUMERIC_OPTION_LENGTH || preg_match('/^\d+$/', $value) !== 1) {
             throw MF2Error::badOption("{$name} option must be auto or a non-negative integer.");
         }
         $parsed = (int) $value;

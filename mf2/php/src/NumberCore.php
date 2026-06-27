@@ -476,7 +476,7 @@ final class NumberCore
             return $value;
         }
         $text = trim(self::stringOption($value, $name));
-        if (preg_match('/^\d+$/', $text) !== 1) {
+        if (strlen($text) > self::MAX_OPTION_LENGTH || preg_match('/^\d+$/', $text) !== 1) {
             throw MF2Error::badOption("{$name} must be a non-negative integer.");
         }
         $parsed = (int) $text;

@@ -528,7 +528,10 @@ fn minimum_fraction_digits(call: &FunctionCall<'_>) -> Result<usize, Diagnostic>
     let Some(value) = call.option_value("minimumFractionDigits")? else {
         return Ok(0);
     };
-    if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+    if value.is_empty()
+        || value.len() > MAX_DECIMAL_OPERAND_LENGTH
+        || !value.bytes().all(|byte| byte.is_ascii_digit())
+    {
         return Err(bad_option(
             "minimumFractionDigits option must be a non-negative integer.",
         ));
@@ -548,7 +551,10 @@ fn maximum_fraction_digits(call: &FunctionCall<'_>) -> Result<Option<usize>, Dia
     let Some(value) = call.option_value("maximumFractionDigits")? else {
         return Ok(None);
     };
-    if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+    if value.is_empty()
+        || value.len() > MAX_DECIMAL_OPERAND_LENGTH
+        || !value.bytes().all(|byte| byte.is_ascii_digit())
+    {
         return Err(bad_option(
             "maximumFractionDigits option must be a non-negative integer.",
         ));

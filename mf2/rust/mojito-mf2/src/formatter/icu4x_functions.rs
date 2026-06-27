@@ -232,7 +232,10 @@ fn non_negative_i16_option(
     let Some(value) = call.option_value(option_name)? else {
         return Ok(None);
     };
-    if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+    if value.is_empty()
+        || value.len() > MAX_OPERAND_LENGTH
+        || !value.bytes().all(|byte| byte.is_ascii_digit())
+    {
         return Err(bad_option(format!(
             "{option_name} option must be a non-negative integer."
         )));

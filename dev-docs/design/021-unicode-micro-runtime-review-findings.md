@@ -488,6 +488,12 @@ branch is under active implementation.
   option text longer than 256 characters before integer regex matching or
   numeric coercion. This keeps attacker-controlled fraction digit option
   literals in the same bounded `bad-option` recovery path as numeric operands.
+- Cross-runtime fraction option text bounds: portable numeric helpers across
+  Java, Kotlin, JavaScript, Python, PHP, Go, Swift, and Rust plus the JavaScript
+  Intl, PHP Intl, JVM JDK, Kotlin JDK, and Rust ICU4X adapters now reject
+  oversized integer fraction option text before digit regex/scans or integer
+  coercion. Shared conformance covers an oversized `maximumFractionDigits`
+  literal.
 - PHP Intl locale error recovery: the optional PHP Intl adapter now wraps
   `NumberFormatter`/`IntlDateFormatter` locale constructor failures as MF2
   `bad-option` errors. Targeted adapter tests cover malformed, unknown, and

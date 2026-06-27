@@ -90,6 +90,9 @@ final class Mf2FunctionSupport {
 
     static int parseNonNegativeOption(String value, String message)
             throws Mf2Exception {
+        if (value.length() > MAX_DECIMAL_OPERAND_LENGTH) {
+            throw badOption(message);
+        }
         if (value.isEmpty() || !value.chars().allMatch(Mf2FunctionSupport::isAsciiDigit)) {
             throw badOption(message);
         }

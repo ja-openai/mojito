@@ -121,6 +121,7 @@ internal object Mf2PortableFunctions {
     }
 
     fun parseNonNegativeOption(value: String, message: String): Int {
+        if (value.length > MAX_DECIMAL_OPERAND_LENGTH) throw Mf2Error.badOption(message)
         if (!value.all { it in '0'..'9' }) throw Mf2Error.badOption(message)
         val parsed = value.toIntOrNull() ?: throw Mf2Error.badOption(message)
         if (parsed > MAX_FRACTION_DIGITS) throw Mf2Error.badOption(message)

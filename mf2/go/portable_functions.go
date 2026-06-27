@@ -568,7 +568,7 @@ func validateFractionDigits(minimum int, maximum *int) error {
 }
 
 func parseNonNegativeOption(value, message string) (int, error) {
-	if value == "" {
+	if value == "" || len(value) > maxDecimalOperandLength {
 		return 0, badOption(message)
 	}
 	for _, r := range value {

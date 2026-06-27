@@ -489,10 +489,11 @@ function validate_fraction_digits(int $minimumFractionDigits, ?int $maximumFract
 
 function parse_non_negative_option(mixed $value, string $message): int
 {
-    if (preg_match('/^\d+$/', value_to_string($value)) !== 1) {
+    $text = value_to_string($value);
+    if (strlen($text) > MAX_DECIMAL_OPERAND_LENGTH || preg_match('/^\d+$/', $text) !== 1) {
         throw MF2Error::badOption($message);
     }
-    $parsed = (int) $value;
+    $parsed = (int) $text;
     if ($parsed > MAX_FRACTION_DIGITS) {
         throw MF2Error::badOption($message);
     }

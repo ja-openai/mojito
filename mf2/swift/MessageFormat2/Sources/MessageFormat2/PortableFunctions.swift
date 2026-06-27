@@ -508,6 +508,9 @@ private func validateFractionDigits(minimum: Int, maximum: Int?) throws {
 }
 
 private func parseNonNegativeIntegerOption(_ value: String, error: MF2Error) throws -> Int {
+    guard value.utf8.count <= maxDecimalOperandLength else {
+        throw error
+    }
     guard isNonNegativeIntegerLiteral(value), let parsed = Int(value), parsed <= maxFractionDigits else {
         throw error
     }
