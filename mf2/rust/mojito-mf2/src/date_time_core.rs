@@ -705,19 +705,6 @@ fn parse_datetime(value: &str) -> Result<DateTimeValue, Diagnostic> {
     if source_offset_minutes != 0 {
         return Err(invalid_date_time_operand());
     }
-    if text.contains(':') {
-        let (hour, minute, second, millisecond) = parse_time_parts(text)?;
-        return validate_datetime_value(DateTimeValue {
-            year: 1970,
-            month: 1,
-            day: 1,
-            hour,
-            minute,
-            second,
-            millisecond,
-            offset_minutes: 0,
-        });
-    }
     let (year, month, day) = parse_date_parts(text)?;
     validate_datetime_value(DateTimeValue {
         year,

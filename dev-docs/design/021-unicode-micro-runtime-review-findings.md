@@ -296,11 +296,12 @@ branch is under active implementation.
   validates offsets before `createFromFormat` and avoids implicit object
   stringification, Go rejects `fmt.Stringer` host objects instead of accepting
   their rendered ISO text, Swift disables lenient fixed format parsing and
-  prevalidates ISO offsets, and Java/Kotlin reject arbitrary object operands
-  instead of formatting `toString()` results. Shared fixtures cover the invalid
-  date/offset cases, valid fixed-offset source normalization, and source
-  offsets that normalize outside the portable date range; direct language tests
-  cover object boundary recovery.
+  prevalidates ISO offsets, Rust rejects time-only string operands instead of
+  mapping them onto the Unix epoch, and Java/Kotlin reject arbitrary object
+  operands instead of formatting `toString()` results. Shared fixtures cover the
+  invalid date/offset cases, time-only string rejection, valid fixed-offset
+  source normalization, and source offsets that normalize outside the portable
+  date range; direct language tests cover object boundary recovery.
 - Python variable-valued option coercion: registry formatting now converts
   throwing host objects used as option variables into recoverable MF2
   `bad-option` errors instead of letting raw Python exceptions escape.
