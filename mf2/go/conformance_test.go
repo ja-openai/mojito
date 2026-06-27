@@ -417,6 +417,36 @@ func TestDateTimeCoreFixtures(t *testing.T) {
 	if _, err := FormatDateTimeCore(dateTimeCoreStringerOperand{}, DateTimeCoreOptions{}); asMF2Error(err).Code != "bad-operand" {
 		t.Fatalf("date-time-core direct Stringer operand: expected bad-operand, got %v", err)
 	}
+	timestampOptions := DateTimeCoreOptions{Locale: "en-US", DateStyle: DateTimeCoreStyleMedium, TimeStyle: DateTimeCoreStyleMedium}
+	expectedTimestamp, err := FormatDateTimeCore(int(0), timestampOptions)
+	if err != nil {
+		t.Fatalf("date-time-core direct timestamp baseline: unexpected error: %v", err)
+	}
+	for _, item := range []struct {
+		name  string
+		value any
+	}{
+		{"int8", int8(0)},
+		{"int16", int16(0)},
+		{"int32", int32(0)},
+		{"uint", uint(0)},
+		{"uint8", uint8(0)},
+		{"uint16", uint16(0)},
+		{"uint32", uint32(0)},
+		{"uint64", uint64(0)},
+		{"float32", float32(0)},
+	} {
+		actual, err := FormatDateTimeCore(item.value, timestampOptions)
+		if err != nil {
+			t.Fatalf("date-time-core direct %s timestamp: unexpected error: %v", item.name, err)
+		}
+		if actual != expectedTimestamp {
+			t.Fatalf("date-time-core direct %s timestamp: expected %q, got %q", item.name, expectedTimestamp, actual)
+		}
+	}
+	if _, err := FormatDateTimeCore(uint64(dateTimeCoreMaxTimestampMillis)+1, timestampOptions); asMF2Error(err).Code != "bad-operand" {
+		t.Fatalf("date-time-core direct uint64 timestamp bound: expected bad-operand, got %v", err)
+	}
 
 	registry := DateTimeCoreFunctionRegistry()
 	for _, raw := range arrayValue(fixture["registryFormatCases"]) {

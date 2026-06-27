@@ -270,8 +270,11 @@ branch is under active implementation.
   by JS/PHP/Go but not Python. The shared date-time fixture covers huge and
   just-outside-portable rejection; a numeric timestamp fixture covers the
   portable inclusive endpoints in the runtimes with numeric date-time operands.
-  Rust and Swift normalize numeric fixture values through their string-based
-  date-time APIs and reject out-of-range numbers via the ISO parser.
+  Go now accepts the normal primitive numeric family for direct timestamp
+  operands instead of only `int`, `int64`, and `float64`, while still rejecting
+  unsigned values above the portable maximum. Rust and Swift normalize numeric
+  fixture values through their string-based date-time APIs and reject
+  out-of-range numbers via the ISO parser.
 - Date/time skeleton field-width bounds: direct date-time-core skeleton parsing
   now rejects skeleton field runs wider than 32 as MF2 `bad-option` across
   JavaScript, Python, PHP, Go, Java, Kotlin, Rust, and Swift, preventing

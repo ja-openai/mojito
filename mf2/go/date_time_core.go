@@ -528,18 +528,47 @@ func parseDateTimeCore(value any) (time.Time, error) {
 		return typed.UTC(), nil
 	case int:
 		return parseDateTimeCoreTimestampMillis(int64(typed))
+	case int8:
+		return parseDateTimeCoreTimestampMillis(int64(typed))
+	case int16:
+		return parseDateTimeCoreTimestampMillis(int64(typed))
+	case int32:
+		return parseDateTimeCoreTimestampMillis(int64(typed))
 	case int64:
 		return parseDateTimeCoreTimestampMillis(typed)
+	case uint:
+		return parseDateTimeCoreUnsignedTimestampMillis(uint64(typed))
+	case uint8:
+		return parseDateTimeCoreTimestampMillis(int64(typed))
+	case uint16:
+		return parseDateTimeCoreTimestampMillis(int64(typed))
+	case uint32:
+		return parseDateTimeCoreTimestampMillis(int64(typed))
+	case uint64:
+		return parseDateTimeCoreUnsignedTimestampMillis(typed)
 	case float64:
 		if math.IsNaN(typed) || typed < float64(dateTimeCoreMinTimestampMillis) || typed > float64(dateTimeCoreMaxTimestampMillis) {
 			return time.Time{}, badOperand("Date/time core requires a valid host date/time value or ISO date string.")
 		}
 		return parseDateTimeCoreTimestampMillis(int64(typed))
+	case float32:
+		value := float64(typed)
+		if math.IsNaN(value) || value < float64(dateTimeCoreMinTimestampMillis) || value > float64(dateTimeCoreMaxTimestampMillis) {
+			return time.Time{}, badOperand("Date/time core requires a valid host date/time value or ISO date string.")
+		}
+		return parseDateTimeCoreTimestampMillis(int64(value))
 	case string:
 		return parseDateTimeCoreText(typed)
 	default:
 		return time.Time{}, badOperand("Date/time core requires a valid host date/time value or ISO date string.")
 	}
+}
+
+func parseDateTimeCoreUnsignedTimestampMillis(value uint64) (time.Time, error) {
+	if value > uint64(dateTimeCoreMaxTimestampMillis) {
+		return time.Time{}, badOperand("Date/time core requires a valid host date/time value or ISO date string.")
+	}
+	return parseDateTimeCoreTimestampMillis(int64(value))
 }
 
 func parseDateTimeCoreTimestampMillis(value int64) (time.Time, error) {
