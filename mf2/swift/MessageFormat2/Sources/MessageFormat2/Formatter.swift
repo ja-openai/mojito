@@ -230,7 +230,10 @@ private struct MF2FormatContext {
         for declaration in declarations {
             switch declaration {
             case let .input(name, value):
-                guard value.function != nil, values[MF2NameKey(name)] != nil else {
+                guard let function = value.function,
+                      functions.hasFormatter(function),
+                      functions.hasSelector(function),
+                      values[MF2NameKey(name)] != nil else {
                     continue
                 }
                 let rendered = try formatExpressionOutput(value)

@@ -786,6 +786,11 @@ branch is under active implementation.
   annotation function is not itself selectable, matching JavaScript, Python,
   Java, and Kotlin. A shared source-to-model fallback fixture covers a local
   that fails with `unknown-function` before selection.
+- Input declaration function gating: Python and Swift now ignore `.input`
+  annotations whose functions are not available as both formatters and
+  selectors, matching JavaScript, PHP, Go, Java, Kotlin, and Rust. A shared
+  source-to-model fixture covers an unsupported input annotation that must not
+  poison later variable formatting.
 - Direct core parts API consistency: number-core and date-time-core now expose
   direct text-part wrappers in Java, Kotlin, Go, and Swift, matching the existing
   JavaScript, Python, PHP, and Rust public API surface. Focused runtime checks

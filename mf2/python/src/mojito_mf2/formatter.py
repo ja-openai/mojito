@@ -316,7 +316,13 @@ class _FormatContext:
         for declaration in declarations:
             if declaration.get("type") == "input":
                 value = declaration.get("value", {})
-                if value.get("function") is None or declaration["name"] not in self.values:
+                function_ref = value.get("function")
+                if (
+                    function_ref is None
+                    or not self.functions.has_formatter(function_ref)
+                    or not self.functions.has_selector(function_ref)
+                    or declaration["name"] not in self.values
+                ):
                     continue
                 rendered = self._format_expression_output(value)
                 if rendered.had_error:

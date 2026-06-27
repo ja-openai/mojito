@@ -1,0 +1,36 @@
+{
+  "name": "input-unsupported-function-ignored",
+  "source": ".input {$x :unknown}\n{{Value {$x}}}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "x",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "x" },
+          "function": {
+            "type": "function",
+            "name": "unknown"
+          }
+        }
+      }
+    ],
+    "pattern": [
+      "Value ",
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "x" }
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "x": 1 },
+      "expected": "Value 1",
+      "expectedErrors": []
+    }
+  ]
+}

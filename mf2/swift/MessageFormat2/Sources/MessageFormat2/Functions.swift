@@ -38,6 +38,10 @@ public struct MF2FunctionRegistry: @unchecked Sendable {
         return try formatter(call)
     }
 
+    func hasFormatter(_ function: MF2Function) -> Bool {
+        formatters[function.name] != nil
+    }
+
     func hasSelector(_ function: MF2Function) -> Bool {
         selectors[function.name] != nil
     }
