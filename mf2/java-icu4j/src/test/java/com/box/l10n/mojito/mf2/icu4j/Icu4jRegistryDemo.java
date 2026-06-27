@@ -80,6 +80,10 @@ public final class Icu4jRegistryDemo {
 
         assertUnsupportedUnitFallsBack();
         assertOversizedFractionDigitsFallsBack();
+        assertLocaleErrorCode("malformed locale", "bad locale ???", "bad-option");
+        assertLocaleErrorCode("private-use-only locale", "x-private", "bad-option");
+        assertLocaleErrorCode("oversized locale", "a".repeat(257), "bad-option");
+        assertLocaleFormats("private-use extension locale", "en-x-private");
 
         if (!quiet) {
             System.out.println("Java ICU4J registry demo passed");
@@ -180,6 +184,32 @@ public final class Icu4jRegistryDemo {
                 || !result.errors().get(0).code().equals("bad-option")) {
             throw new AssertionError(
                     "oversized fraction digits should recover with bad-option");
+        }
+    }
+
+    private static void assertLocaleErrorCode(String label, String locale, String expectedCode) throws Mf2Exception {
+        Mf2Message message = parse("{$amount :number}");
+        Mf2FormatResult result = message.format(
+                Map.of("amount", AMOUNT),
+                Mf2FormatOptions.builder()
+                        .locale(locale)
+                        .functions(Mf2Icu4jFunctions.registry())
+                        .build());
+        if (result.errors().size() != 1 || !expectedCode.equals(result.errors().get(0).code())) {
+            throw new AssertionError(label + " expected " + expectedCode + ", got " + result.errors());
+        }
+    }
+
+    private static void assertLocaleFormats(String label, String locale) throws Mf2Exception {
+        Mf2Message message = parse("{$amount :number}");
+        Mf2FormatResult result = message.format(
+                Map.of("amount", AMOUNT),
+                Mf2FormatOptions.builder()
+                        .locale(locale)
+                        .functions(Mf2Icu4jFunctions.registry())
+                        .build());
+        if (result.hasErrors()) {
+            throw new AssertionError(label + " returned errors: " + result.errors());
         }
     }
 }

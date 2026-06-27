@@ -17,6 +17,8 @@ import java.util.Currency
 import java.util.Locale
 
 internal object Mf2JdkFunctions {
+    private const val MAX_LOCALE_LENGTH = 256
+
     fun registerFormatters(formatters: MutableMap<String, Mf2FunctionFormatter>) {
         formatters["number"] = ::formatNumber
         formatters["percent"] = ::formatPercent
@@ -127,7 +129,64 @@ internal object Mf2JdkFunctions {
     private fun applySignDisplay(formatted: String, value: Double, call: Mf2FunctionCall): String =
         if (value >= 0.0 && functionOptionLiteral(call.function, "signDisplay", null) == "always") "+$formatted" else formatted
 
-    private fun locale(locale: String): Locale = Locale.forLanguageTag(locale.replace('_', '-'))
+    private fun locale(locale: String): Locale {
+        if (locale.length > MAX_LOCALE_LENGTH) {
+            throw Mf2Error.badOption("locale must not exceed 256 characters.")
+        }
+        val normalized = locale.replace('_', '-')
+        if (!isWellFormedLocaleIdentifier(normalized)) {
+            throw Mf2Error.badOption("Locale option must be a valid locale identifier.")
+        }
+        return Locale.forLanguageTag(normalized)
+    }
+
+    private fun isWellFormedLocaleIdentifier(locale: String): Boolean {
+        if (locale.isEmpty()) return false
+        val subtags = localeSubtags(locale)
+        val language = subtags.first()
+        if (language.length !in 2..8 || !language.all(::isAsciiLetter)) return false
+        var index = 1
+        while (index < subtags.size) {
+            val subtag = subtags[index]
+            if (subtag.length == 1) {
+                if (!subtag.all(::isAsciiAlphanumeric)) return false
+                val isPrivateUse = subtag.equals("x", ignoreCase = true)
+                index++
+                val extensionStart = index
+                while (index < subtags.size &&
+                    subtags[index].length in (if (isPrivateUse) 1..8 else 2..8) &&
+                    subtags[index].all(::isAsciiAlphanumeric)
+                ) {
+                    index++
+                }
+                if (index == extensionStart) return false
+                if (isPrivateUse) return index == subtags.size
+                continue
+            }
+            if (subtag.length !in 2..8 || !subtag.all(::isAsciiAlphanumeric)) return false
+            index++
+        }
+        return true
+    }
+
+    private fun localeSubtags(locale: String): List<String> {
+        val output = mutableListOf<String>()
+        var start = 0
+        for (index in locale.indices) {
+            if (locale[index] == '-') {
+                output += locale.substring(start, index)
+                start = index + 1
+            }
+        }
+        output += locale.substring(start)
+        return output
+    }
+
+    private fun isAsciiLetter(ch: Char): Boolean =
+        ch in 'A'..'Z' || ch in 'a'..'z'
+
+    private fun isAsciiAlphanumeric(ch: Char): Boolean =
+        isAsciiLetter(ch) || ch in '0'..'9'
 
     private fun dateStyleOption(call: Mf2FunctionCall): String =
         call.optionValue(

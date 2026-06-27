@@ -475,6 +475,12 @@ branch is under active implementation.
   formatters, rejecting malformed, private-use-only, and oversized locale
   strings as MF2 `bad-option` instead of silently falling back to odd host
   output. The public API edge checks cover number and date paths.
+- JVM host-adapter locale strictness: the Java/Kotlin JDK and ICU4J adapters
+  now validate locale identifiers before handing them to lenient
+  `Locale.forLanguageTag`/`ULocale.forLanguageTag` APIs, rejecting malformed,
+  private-use-only, and oversized locale strings as MF2 `bad-option` while
+  still accepting private-use extensions on normal language tags. The JDK and
+  ICU4J registry checks cover both Java and Kotlin.
 - PHP Intl numeric operand grammar: the explicit PHP Intl registry now reuses
   the shared portable decimal parser instead of `is_numeric()`, rejecting host
   numeric extensions such as leading plus signs, whitespace, leading-dot,

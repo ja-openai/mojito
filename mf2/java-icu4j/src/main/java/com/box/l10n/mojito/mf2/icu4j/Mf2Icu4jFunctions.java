@@ -26,6 +26,7 @@ import java.util.OptionalInt;
 
 public final class Mf2Icu4jFunctions {
     private static final int MAX_FRACTION_DIGITS = 100;
+    private static final int MAX_LOCALE_LENGTH = 256;
     private static final LocalDate EPOCH_DATE = LocalDate.of(1970, 1, 1);
 
     private Mf2Icu4jFunctions() {}
@@ -141,8 +142,69 @@ public final class Mf2Icu4jFunctions {
                 : formatter.formatNumeric(value, unit);
     }
 
-    private static ULocale locale(Mf2FunctionRegistry.FunctionCall call) {
-        return ULocale.forLanguageTag(call.locale().replace('_', '-'));
+    private static ULocale locale(Mf2FunctionRegistry.FunctionCall call) throws Mf2Exception {
+        String locale = call.locale();
+        if (locale.length() > MAX_LOCALE_LENGTH) {
+            throw badOption("locale must not exceed 256 characters.");
+        }
+        String normalized = locale.replace('_', '-');
+        if (!isWellFormedLocaleIdentifier(normalized)) {
+            throw badOption("Locale option must be a valid locale identifier.");
+        }
+        return ULocale.forLanguageTag(normalized);
+    }
+
+    private static boolean isWellFormedLocaleIdentifier(String locale) {
+        if (locale.isEmpty()) {
+            return false;
+        }
+        String[] subtags = locale.split("-", -1);
+        String language = subtags[0];
+        if (language.length() < 2
+                || language.length() > 8
+                || !language.chars().allMatch(Mf2Icu4jFunctions::isAsciiAlpha)) {
+            return false;
+        }
+        int index = 1;
+        while (index < subtags.length) {
+            String subtag = subtags[index];
+            if (subtag.length() == 1) {
+                if (!subtag.chars().allMatch(Mf2Icu4jFunctions::isAsciiAlphanumeric)) {
+                    return false;
+                }
+                boolean isPrivateUse = subtag.equalsIgnoreCase("x");
+                index++;
+                int extensionStart = index;
+                while (index < subtags.length
+                        && subtags[index].length() >= (isPrivateUse ? 1 : 2)
+                        && subtags[index].length() <= 8
+                        && subtags[index].chars().allMatch(Mf2Icu4jFunctions::isAsciiAlphanumeric)) {
+                    index++;
+                }
+                if (index == extensionStart) {
+                    return false;
+                }
+                if (isPrivateUse) {
+                    return index == subtags.length;
+                }
+                continue;
+            }
+            if (subtag.length() < 2
+                    || subtag.length() > 8
+                    || !subtag.chars().allMatch(Mf2Icu4jFunctions::isAsciiAlphanumeric)) {
+                return false;
+            }
+            index++;
+        }
+        return true;
+    }
+
+    private static boolean isAsciiAlpha(int ch) {
+        return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z');
+    }
+
+    private static boolean isAsciiAlphanumeric(int ch) {
+        return isAsciiAlpha(ch) || (ch >= '0' && ch <= '9');
     }
 
     private static double numericValue(Mf2FunctionRegistry.FunctionCall call, String message)

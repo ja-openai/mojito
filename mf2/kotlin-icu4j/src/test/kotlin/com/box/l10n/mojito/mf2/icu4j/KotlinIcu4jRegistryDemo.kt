@@ -68,6 +68,10 @@ object KotlinIcu4jRegistryDemo {
         }
         assertUnsupportedUnitFallsBack()
         assertOversizedFractionDigitsFallsBack()
+        assertLocaleErrorCode("malformed locale", "bad locale ???", "bad-option")
+        assertLocaleErrorCode("private-use-only locale", "x-private", "bad-option")
+        assertLocaleErrorCode("oversized locale", "a".repeat(257), "bad-option")
+        assertLocaleFormats("private-use extension locale", "en-x-private")
         if (!quiet) println("Kotlin ICU4J registry demo passed")
     }
 
@@ -153,6 +157,34 @@ object KotlinIcu4jRegistryDemo {
         )
         if (!result.hasErrors || result.value != "{${'$'}value}" || result.errors.first().code != "bad-option") {
             error("oversized fraction digits should recover with bad-option")
+        }
+    }
+
+    private fun assertLocaleErrorCode(
+        label: String,
+        locale: String,
+        expectedCode: String,
+    ) {
+        val result: Mf2FormatResult = Mf2Formatter.formatMessage(
+            model = parse("{${'$'}amount :number}"),
+            arguments = mapOf("amount" to AMOUNT),
+            locale = locale,
+            functions = Mf2Icu4jFunctions.registry(),
+        )
+        if (result.errors.size != 1 || result.errors.first().code != expectedCode) {
+            error("$label expected $expectedCode, got ${result.errors}")
+        }
+    }
+
+    private fun assertLocaleFormats(label: String, locale: String) {
+        val result: Mf2FormatResult = Mf2Formatter.formatMessage(
+            model = parse("{${'$'}amount :number}"),
+            arguments = mapOf("amount" to AMOUNT),
+            locale = locale,
+            functions = Mf2Icu4jFunctions.registry(),
+        )
+        if (result.hasErrors) {
+            error("$label returned errors: ${result.errors}")
         }
     }
 }

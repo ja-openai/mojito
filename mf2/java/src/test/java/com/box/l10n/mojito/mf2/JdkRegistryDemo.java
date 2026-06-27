@@ -68,6 +68,10 @@ public final class JdkRegistryDemo {
         }
         assertErrorCode("invalid currency option", "currency={$price :currency currency=||}", "bad-option");
         assertErrorCode("missing currency option", "currency={$price :currency}", "bad-option");
+        assertLocaleErrorCode("malformed locale", "bad locale ???", "bad-option");
+        assertLocaleErrorCode("private-use-only locale", "x-private", "bad-option");
+        assertLocaleErrorCode("oversized locale", "a".repeat(257), "bad-option");
+        assertLocaleFormats("private-use extension locale", "en-x-private");
         if (!quiet) {
             System.out.println("Java JDK registry demo passed");
         }
@@ -90,6 +94,30 @@ public final class JdkRegistryDemo {
                         .build());
         if (result.errors().size() != 1 || !expectedCode.equals(result.errors().get(0).code())) {
             throw new AssertionError(label + " expected " + expectedCode + ", got " + result.errors());
+        }
+    }
+
+    private static void assertLocaleErrorCode(String label, String locale, String expectedCode) throws Mf2Exception {
+        Mf2FormatResult result = parse("{$amount :number}").format(
+                Map.of("amount", AMOUNT),
+                Mf2FormatOptions.builder()
+                        .locale(locale)
+                        .functions(Mf2FunctionRegistry.defaults())
+                        .build());
+        if (result.errors().size() != 1 || !expectedCode.equals(result.errors().get(0).code())) {
+            throw new AssertionError(label + " expected " + expectedCode + ", got " + result.errors());
+        }
+    }
+
+    private static void assertLocaleFormats(String label, String locale) throws Mf2Exception {
+        Mf2FormatResult result = parse("{$amount :number}").format(
+                Map.of("amount", AMOUNT),
+                Mf2FormatOptions.builder()
+                        .locale(locale)
+                        .functions(Mf2FunctionRegistry.defaults())
+                        .build());
+        if (result.hasErrors()) {
+            throw new AssertionError(label + " returned errors: " + result.errors());
         }
     }
 

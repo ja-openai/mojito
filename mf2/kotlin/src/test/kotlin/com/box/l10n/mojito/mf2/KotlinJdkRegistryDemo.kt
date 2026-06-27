@@ -56,6 +56,10 @@ object KotlinJdkRegistryDemo {
         }
         assertErrorCode("invalid currency option", "currency={${'$'}price :currency currency=||}", "bad-option")
         assertErrorCode("missing currency option", "currency={${'$'}price :currency}", "bad-option")
+        assertLocaleErrorCode("malformed locale", "bad locale ???", "bad-option")
+        assertLocaleErrorCode("private-use-only locale", "x-private", "bad-option")
+        assertLocaleErrorCode("oversized locale", "a".repeat(257), "bad-option")
+        assertLocaleFormats("private-use extension locale", "en-x-private")
         if (!quiet) println("Kotlin JDK registry demo passed")
     }
 
@@ -80,6 +84,34 @@ object KotlinJdkRegistryDemo {
         )
         if (result.errors.size != 1 || result.errors[0].code != expectedCode) {
             error("$label expected $expectedCode, got ${result.errors}")
+        }
+    }
+
+    private fun assertLocaleErrorCode(
+        label: String,
+        locale: String,
+        expectedCode: String,
+    ) {
+        val result = Mf2Formatter.formatMessage(
+            model = parse("{${'$'}amount :number}"),
+            arguments = mapOf("amount" to AMOUNT),
+            locale = locale,
+            functions = Mf2FunctionRegistry.defaults(),
+        )
+        if (result.errors.size != 1 || result.errors[0].code != expectedCode) {
+            error("$label expected $expectedCode, got ${result.errors}")
+        }
+    }
+
+    private fun assertLocaleFormats(label: String, locale: String) {
+        val result = Mf2Formatter.formatMessage(
+            model = parse("{${'$'}amount :number}"),
+            arguments = mapOf("amount" to AMOUNT),
+            locale = locale,
+            functions = Mf2FunctionRegistry.defaults(),
+        )
+        if (result.hasErrors) {
+            error("$label returned errors: ${result.errors}")
         }
     }
 

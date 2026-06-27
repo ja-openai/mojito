@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.Optional;
 
 final class Mf2JdkFunctions {
+    private static final int MAX_LOCALE_LENGTH = 256;
+
     private Mf2JdkFunctions() {}
 
     static void registerFormatters(Map<String, Mf2FunctionRegistry.Formatter> formatters) {
@@ -186,8 +188,68 @@ final class Mf2JdkFunctions {
         return option instanceof Mf2Message.LiteralArgument literal ? literal.value() : fallback;
     }
 
-    private static Locale locale(String locale) {
-        return Locale.forLanguageTag(locale.replace('_', '-'));
+    private static Locale locale(String locale) throws Mf2Exception {
+        if (locale.length() > MAX_LOCALE_LENGTH) {
+            throw Mf2FunctionSupport.badOption("locale must not exceed 256 characters.");
+        }
+        String normalized = locale.replace('_', '-');
+        if (!isWellFormedLocaleIdentifier(normalized)) {
+            throw Mf2FunctionSupport.badOption("Locale option must be a valid locale identifier.");
+        }
+        return Locale.forLanguageTag(normalized);
+    }
+
+    private static boolean isWellFormedLocaleIdentifier(String locale) {
+        if (locale.isEmpty()) {
+            return false;
+        }
+        String[] subtags = locale.split("-", -1);
+        String language = subtags[0];
+        if (language.length() < 2
+                || language.length() > 8
+                || !language.chars().allMatch(Mf2JdkFunctions::isAsciiAlpha)) {
+            return false;
+        }
+        int index = 1;
+        while (index < subtags.length) {
+            String subtag = subtags[index];
+            if (subtag.length() == 1) {
+                if (!subtag.chars().allMatch(Mf2JdkFunctions::isAsciiAlphanumeric)) {
+                    return false;
+                }
+                boolean isPrivateUse = subtag.equalsIgnoreCase("x");
+                index++;
+                int extensionStart = index;
+                while (index < subtags.length
+                        && subtags[index].length() >= (isPrivateUse ? 1 : 2)
+                        && subtags[index].length() <= 8
+                        && subtags[index].chars().allMatch(Mf2JdkFunctions::isAsciiAlphanumeric)) {
+                    index++;
+                }
+                if (index == extensionStart) {
+                    return false;
+                }
+                if (isPrivateUse) {
+                    return index == subtags.length;
+                }
+                continue;
+            }
+            if (subtag.length() < 2
+                    || subtag.length() > 8
+                    || !subtag.chars().allMatch(Mf2JdkFunctions::isAsciiAlphanumeric)) {
+                return false;
+            }
+            index++;
+        }
+        return true;
+    }
+
+    private static boolean isAsciiAlpha(int ch) {
+        return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z');
+    }
+
+    private static boolean isAsciiAlphanumeric(int ch) {
+        return isAsciiAlpha(ch) || (ch >= '0' && ch <= '9');
     }
 
     private static String dateStyleOption(Mf2FunctionRegistry.FunctionCall call)
