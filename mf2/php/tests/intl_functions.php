@@ -69,6 +69,13 @@ $oversizedDigitsOutput = format_message($oversizedDigits, ['amount' => 1], [
 ]);
 assert_error_codes('oversized fraction digits errors', $oversizedDigitsOutput['errors'], ['bad-option']);
 
+assert_intl_numeric_bad_operand('Intl adapter rejects leading plus numeric operands', '+1');
+assert_intl_numeric_bad_operand('Intl adapter rejects leading whitespace numeric operands', ' 1');
+assert_intl_numeric_bad_operand('Intl adapter rejects trailing whitespace numeric operands', '1 ');
+assert_intl_numeric_bad_operand('Intl adapter rejects leading-dot numeric operands', '.5');
+assert_intl_numeric_bad_operand('Intl adapter rejects trailing-dot numeric operands', '1.');
+assert_intl_numeric_bad_operand('Intl adapter rejects leading-zero numeric operands', '01');
+
 $inheritedCurrency = parse_to_model(".local \$price = {\$amount :currency currency=\$currency}\n{{{\$price :currency}}}")['model'];
 $inheritedCurrencyOutput = format_message($inheritedCurrency, ['amount' => 12.3, 'currency' => 'EUR'], [
     'locale' => 'en-US',
@@ -187,6 +194,16 @@ function assert_error_codes(string $label, array $actualErrors, array $expected)
 function assert_intl_date_bad_operand(string $label, string $source, string $instant): void
 {
     $output = format_message(parse_to_model($source)['model'], ['instant' => $instant], [
+        'locale' => 'en-US',
+        'functions' => IntlFunctions::registry(),
+        'bidiIsolation' => 'none',
+    ]);
+    assert_error_codes($label, $output['errors'], ['bad-operand']);
+}
+
+function assert_intl_numeric_bad_operand(string $label, string $amount): void
+{
+    $output = format_message(parse_to_model('number={$amount :number}')['model'], ['amount' => $amount], [
         'locale' => 'en-US',
         'functions' => IntlFunctions::registry(),
         'bidiIsolation' => 'none',

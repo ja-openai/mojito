@@ -452,6 +452,11 @@ branch is under active implementation.
   lookalikes and underscore groupings that Python accepts. Babel formatter
   decimal overflows now recover as MF2 `bad-operand` instead of leaking raw
   `InvalidOperation` or `OverflowError` exceptions.
+- PHP Intl numeric operand grammar: the explicit PHP Intl registry now reuses
+  the shared portable decimal parser instead of `is_numeric()`, rejecting host
+  numeric extensions such as leading plus signs, whitespace, leading-dot,
+  trailing-dot, and leading-zero decimal spellings that JavaScript Intl and
+  Python Babel already reject.
 - JVM host-adapter currency option errors: Java and Kotlin JDK `:currency`
   formatters now classify missing or invalid `currency` options as `bad-option`
   instead of `bad-operand`, matching JavaScript Intl, Python Babel, PHP Intl,

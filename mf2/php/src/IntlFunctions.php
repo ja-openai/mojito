@@ -127,8 +127,8 @@ final class IntlFunctions
         $rawValue = $call['rawValue'] ?? null;
         if (is_int($rawValue) || is_float($rawValue)) {
             $value = (float) $rawValue;
-        } elseif (is_numeric($call['value'] ?? null)) {
-            $value = (float) $call['value'];
+        } elseif (($parsedValue = Internal\parse_decimal_number($call['value'] ?? null)) !== null) {
+            $value = $parsedValue;
         } elseif (($sourceValue = Internal\parse_source_decimal($call['inheritedSource'] ?? null)) !== null) {
             $value = $sourceValue;
         } else {
