@@ -506,11 +506,11 @@ boundary.
 ## Relative-Time Data
 
 `generated/relative-time/all/relative_time.json` is a generated CLDR
-relative-time data artifact for a future optional `:relativeTime` function
-package. It is not part of the tiny MF2 core runtime yet. The data comes from
-CLDR `cldr-dates-full` `dateFields` and keeps localized numeric patterns such
-as `{0}m ago`, `in {0} days`, and locale-specific forms that deliberately omit
-`{0}` for categories like Arabic `one`/`two`.
+relative-time data artifact for the optional data-explicit `:relativeTime`
+registry helpers. It is not bundled into the tiny MF2 default runtimes. The data
+comes from CLDR `cldr-dates-full` `dateFields` and keeps localized numeric
+patterns such as `{0}m ago`, `in {0} days`, and locale-specific forms that
+deliberately omit `{0}` for categories like Arabic `one`/`two`.
 
 Regenerate all-locale relative-time data:
 
@@ -551,10 +551,10 @@ Current size smoke results from CLDR `main` on 2026-05-21:
 
 MF2 does not currently standardize a `:relativeTime` function. Treat this data
 as the generated-locale-data foundation for Mojito/UMF registry functions, not
-as a core MessageFormat 2 grammar feature. JavaScript exposes an experimental
-data-explicit `@mojito-mf2/core/relative-time-core` formatter and registry
-helper that consumes this resource without bundling it into the package by
-default.
+as a core MessageFormat 2 grammar feature. The runtime packages expose
+experimental data-explicit relative-time formatters and registries that consume
+this resource, or generated subsets of it, without bundling all-locale data into
+their default registries.
 
 Do not silently ship the all-locale artifact in tiny runtime cores. Java/Kotlin
 relative-time support should be an explicit CLDR/ICU adapter with a resource

@@ -60,41 +60,44 @@ The implementation work is deliberately kept dry and separable:
 
 The current implementations mirror those boundaries even before they become
 separate published packages. Rust exposes the parser, model, runtime,
-diagnostic surface, and explicit generated-data number/date-time cores while
-keeping CLDR data and locale-key helpers as crate internals.
-Python uses a `pyproject.toml`/`src/mojito_mf2` package layout with source
-parsing, formatting, errors, a compatibility `model` facade, and explicit
-generated-data `number_core`/`date_time_core` modules; internal `_locale_key`,
-`_plural`, `_cldr_plural_rules`, `_cldr_number_data`, and
-`_cldr_date_time_data` modules back runtime behavior and conformance tooling
-but stay outside the stable root API.
-JavaScript has a publish-shaped ESM package with source parsing, generated CLDR
-plural rules, runtime formatting, parts output, internal locale-key helpers,
-public `.d.ts` exports, explicit generated-data `number-core` and
-`date-time-core` subpaths, a small root API, and tools/tests outside the
-published runtime files. Go has source parsing, generated CLDR plural rules, runtime
-formatting, parts output, internal locale-key helpers, generated-data
-number/date-time-core helpers, and a real `github.com/box/mojito/mf2/go` module path; it
-uses `golang.org/x/text` for spec-compliant NFC string selection while a
-generated zero-dependency normalizer remains an open packaging decision. PHP has
-source parsing, generated CLDR plural rules, generated-data number/date-time
-cores, runtime formatting, parts output, Composer metadata, and
-`Mojito\MessageFormat2` autoloading; locale-key and CLDR helpers plus
-parser/runtime implementation functions sit under the `Internal` namespace. It
-relies on PHP `intl` for spec-compliant NFC string selection. Kotlin keeps
-locale-key, plural-rule, and experimental generated number/date-time-core
-helpers internal while exposing idiomatic `Mf2*` parser, formatter, function
-registry, model, result, and error types under a Maven-managed package boundary. Swift keeps
-locale-key, plural-rule, and experimental generated number-core helpers inside
-the runtime target while exposing Swift-native `MF2*` parser, formatter,
-function registry, model, result, and error types. Java keeps the production artifact under `src/main/java`;
-conformance runners, demos, benchmarks, fixture JSON loading, and demo-only
-functions live under `src/test/java` so they do not ship in the library jar. The locale-key
-helpers are string-only; generated plural rules keep string APIs and do not
-depend on a rich locale object. Java also exposes experimental
-`Mf2NumberCore` and `Mf2DateTimeCore` generated-data formatters that exercise
-native CLDR number/date-time tables without changing the default JDK-backed
-registry.
+diagnostic surface, explicit generated-data number/date-time cores, and a
+data-explicit relative-time core while keeping CLDR data and locale-key helpers
+as crate internals. Python uses a `pyproject.toml`/`src/mojito_mf2` package
+layout with source parsing, formatting, errors, a compatibility `model` facade,
+explicit generated-data `number_core`/`date_time_core` modules, and a
+data-explicit `relative_time_core` module; internal `_locale_key`, `_plural`,
+`_cldr_plural_rules`, `_cldr_number_data`, and `_cldr_date_time_data` modules
+back runtime behavior and conformance tooling but stay outside the stable root
+API. JavaScript has a publish-shaped ESM package with source parsing, generated
+CLDR plural rules, runtime formatting, parts output, internal locale-key
+helpers, public `.d.ts` exports, explicit generated-data `number-core`,
+`date-time-core`, and data-explicit `relative-time-core` subpaths, a small root
+API, and tools/tests outside the published runtime files. Go has source
+parsing, generated CLDR plural rules, runtime formatting, parts output,
+internal locale-key helpers, generated-data number/date-time-core helpers,
+data-explicit relative-time helpers, and a real
+`github.com/box/mojito/mf2/go` module path; it uses `golang.org/x/text` for
+spec-compliant NFC string selection while a generated zero-dependency
+normalizer remains an open packaging decision. PHP has source parsing,
+generated CLDR plural rules, generated-data number/date-time cores,
+data-explicit relative-time core, runtime formatting, parts output, Composer
+metadata, and `Mojito\MessageFormat2` autoloading; locale-key and CLDR helpers
+plus parser/runtime implementation functions sit under the `Internal`
+namespace. It relies on PHP `intl` for spec-compliant NFC string selection.
+Kotlin keeps locale-key and plural-rule helpers internal while exposing
+idiomatic `Mf2*` parser, formatter, function registry, model, result, error,
+generated number/date-time core, and data-explicit relative-time core types
+under a Maven-managed package boundary. Swift keeps locale-key, plural-rule,
+and experimental generated-data core helpers inside the runtime target while
+exposing Swift-native `MF2*` parser, formatter, function registry, model,
+result, and error types. Java keeps the production artifact under
+`src/main/java`; conformance runners, demos, benchmarks, fixture JSON loading,
+and demo-only functions live under `src/test/java` so they do not ship in the
+library jar. The locale-key helpers are string-only; generated plural rules keep
+string APIs and do not depend on a rich locale object. Java also exposes
+experimental `Mf2NumberCore` and `Mf2DateTimeCore` generated-data formatters
+plus the data-explicit `Mf2RelativeTimeCore` formatter without changing the
+default JDK-backed registry.
 
 The date-time cores accept both CLDR pattern-letter skeletons such as `yMMMd`
 and Mojito semantic skeleton strings with a `semantic:` prefix, for example
@@ -159,8 +162,8 @@ Current platform adapter status:
   registry for Babel-backed number, percent, integer, currency, date, time,
   datetime, and relative-time formatting.
 - Python also exposes explicit generated-data `number_core` and
-  `date_time_core` registries for the probe locale set without importing Babel
-  or runtime JSON.
+  `date_time_core` registries plus a data-explicit `relative_time_core`
+  registry without importing Babel or hidden runtime JSON.
 - Swift exposes an explicit `MF2FunctionRegistry.foundation` registry for
   Foundation-backed number, percent, integer, currency, date, time, and datetime
   formatting. On Apple platforms it also supports relative time via
@@ -178,15 +181,18 @@ Current platform adapter status:
   are not stable enough in the currently used crates, so those functions are
   not faked in the adapter.
 - Rust also exposes explicit generated-data `number_core_function_registry()`
-  and `date_time_core_function_registry()` helpers for the probe locale set
-  without enabling the optional ICU4X feature or parsing runtime JSON.
+  and `date_time_core_function_registry()` helpers for the probe locale set,
+  plus `relative_time_core_function_registry(data)` for caller-supplied
+  relative-time data, without enabling the optional ICU4X feature or parsing
+  hidden runtime JSON.
 - PHP has an explicit `IntlFunctions::registry()` adapter for PHP Intl-backed
   number, percent, integer, currency, date, time, and datetime formatting.
   Relative time remains deferred because PHP's current Intl extension does not
   expose `IntlRelativeTimeFormatter` in this environment.
 - PHP also exposes explicit generated-data `NumberCore` and `DateTimeCore`
-  registries for the probe locale set without importing runtime JSON or making
-  PHP Intl the default registry.
+  registries for the probe locale set plus `RelativeTimeCore::registry($data)`
+  for caller-supplied relative-time data, without importing hidden runtime JSON
+  or making PHP Intl the default registry.
 - Go keeps platform formatting deferred. `golang.org/x/text/message` is useful
   for localized numeric printing, but it does not provide the clean date, time,
   currency, and relative-time surface needed for an honest MF2 platform registry.
