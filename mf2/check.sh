@@ -16,6 +16,7 @@ sh static_check.sh
 (cd conformance && python3 validate_relative_time_fixture.py)
 sh conformance/check_all_languages.sh
 (cd rust/mojito-mf2 && cargo run -- unicode-tests)
+(cd rust/mojito-mf2 && cargo test --features icu4x)
 (cd rust/mojito-mf2 && cargo run --example translate_demo)
 (cd rust/mojito-mf2 && cargo run --example inline_translate_demo)
 (cd rust/mojito-mf2 && cargo run --features icu4x --example icu4x_demo)

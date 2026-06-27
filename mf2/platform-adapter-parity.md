@@ -9,9 +9,10 @@ Last audited: 2026-06-27.
 The top-level `mf2/check.sh` gate now runs explicit smoke checks for the
 implemented JavaScript Intl, Swift Foundation, PHP Intl, Java/Kotlin ICU4J, and
 Rust ICU4X adapters, plus Python Babel when Babel is installed. That gate proves
-the adapters keep loading and formatting representative messages, but it is not
-yet a shared output-parity fixture because the demos still use different locale
-tags and case matrices.
+the adapters keep loading and formatting representative messages, and it runs
+Rust's ICU4X feature tests so the feature-gated adapter assertions execute. It
+is not yet a shared output-parity fixture because the demos still use different
+locale tags and case matrices.
 
 ## Registry Coverage
 

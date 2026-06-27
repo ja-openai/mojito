@@ -379,7 +379,9 @@ This includes static checks, CLDR data validation, ICU4J reference witnesses,
 all-language conformance, official Unicode runners, demos, and explicit
 platform-adapter smoke checks for JavaScript Intl, Swift Foundation, PHP Intl,
 Java/Kotlin ICU4J, Rust ICU4X, and Python Babel when the optional Babel
-dependency is installed.
+dependency is installed. The Rust ICU4X feature tests are also included so the
+feature-gated adapter assertions do not compile as zero tests under the default
+feature set.
 
 Run only compile, type, format, lint, and syntax checks:
 
