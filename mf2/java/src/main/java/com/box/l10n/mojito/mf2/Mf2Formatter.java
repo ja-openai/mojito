@@ -58,6 +58,7 @@ public final class Mf2Formatter {
             throws Mf2Exception {
         Set<String> names = new HashSet<>();
         for (Mf2Message.Declaration declaration : declarations) {
+            validateExpression(declaration.value());
             if (declaration instanceof Mf2Message.InputDeclaration input) {
                 validateInputDeclaration(input);
             }
@@ -123,16 +124,34 @@ public final class Mf2Formatter {
             if (part instanceof Mf2Message.TextPart text && text.value().isEmpty()) {
                 throw Mf2Exception.invalidPatternText();
             }
+            if (part instanceof Mf2Message.ExpressionPart expression) {
+                validateExpression(expression.expression());
+            }
             if (part instanceof Mf2Message.MarkupPart markup) {
                 validateMarkup(markup.markup());
             }
         }
     }
 
+    private static void validateExpression(Mf2Message.Expression expression)
+            throws Mf2Exception {
+        validateAttributes(expression.attributes());
+    }
+
     private static void validateMarkup(Mf2Message.Markup markup) throws Mf2Exception {
+        validateAttributes(markup.attributes());
         switch (markup.kind()) {
             case "open", "standalone", "close" -> {}
             default -> throw Mf2Exception.invalidMarkupKind();
+        }
+    }
+
+    private static void validateAttributes(Map<String, Mf2Message.AttributeValue> attributes)
+            throws Mf2Exception {
+        for (Mf2Message.AttributeValue attribute : attributes.values()) {
+            if (attribute instanceof Mf2Message.PresentAttribute present && !present.value()) {
+                throw Mf2Exception.badOption("Attribute presence values must be true.");
+            }
         }
     }
 

@@ -32,6 +32,10 @@ public final class Mf2Exception extends Exception {
         return new Mf2Exception("bad-operand", message);
     }
 
+    static Mf2Exception badOption(String message) {
+        return new Mf2Exception("bad-option", message);
+    }
+
     static Mf2Exception duplicateDeclaration(String name) {
         return new Mf2Exception(
                 "duplicate-declaration",

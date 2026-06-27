@@ -188,6 +188,18 @@ public final class PublicApiDemo {
         assertEquals("selector-only annotation rawValue", "raw", selectorOnlyResult.value());
         assertEmpty("selector-only annotation rawValue errors", selectorOnlyResult.errors());
 
+        Mf2Message falsePresenceAttribute = new Mf2Message.PatternMessage(
+                List.of(),
+                List.of(new Mf2Message.ExpressionPart(
+                        new Mf2Message.Expression(
+                                null,
+                                null,
+                                Map.of("private", new Mf2Message.PresentAttribute(false))))));
+        assertThrowsCode(
+                "false presence attribute",
+                "bad-option",
+                () -> falsePresenceAttribute.format(Map.of(), options));
+
         System.out.println("Java public API demo passed");
     }
 
@@ -247,10 +259,24 @@ public final class PublicApiDemo {
         }
     }
 
+    private static void assertThrowsCode(String label, String expected, ThrowingRunnable action) throws Exception {
+        try {
+            action.run();
+        } catch (Mf2Exception error) {
+            assertEquals(label + " code", expected, error.code());
+            return;
+        }
+        throw new AssertionError(label + " expected " + expected);
+    }
+
     private static void assertEquals(String label, Object expected, Object actual) {
         if (!expected.equals(actual)) {
             throw new AssertionError(label + " expected " + expected + ", got " + actual);
         }
+    }
+
+    private interface ThrowingRunnable {
+        void run() throws Exception;
     }
 
     private static final class ThrowingStringValue {

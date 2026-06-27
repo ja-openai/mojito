@@ -149,6 +149,7 @@ public extension MF2Message {
     private func validate(declarations: [MF2Declaration]) throws {
         var names: Set<MF2NameKey> = []
         for declaration in declarations {
+            try validate(expression: declaration.value)
             if case let .input(name, value) = declaration {
                 try validateInputDeclaration(name: name, value: value)
             }
@@ -186,18 +187,34 @@ public extension MF2Message {
             if case let .text(text) = part, text.isEmpty {
                 throw MF2Error.invalidPatternText
             }
+            if case let .expression(expression) = part {
+                try validate(expression: expression)
+            }
             if case let .markup(markup) = part {
                 try validate(markup: markup)
             }
         }
     }
 
+    private func validate(expression: MF2Expression) throws {
+        try validate(attributes: expression.attributes)
+    }
+
     private func validate(markup: MF2Markup) throws {
+        try validate(attributes: markup.attributes)
         switch markup.kind {
         case "open", "standalone", "close":
             return
         default:
             throw MF2Error.invalidMarkupKind
+        }
+    }
+
+    private func validate(attributes: [String: MF2AttributeValue]) throws {
+        for attribute in attributes.values {
+            if case .present(false) = attribute {
+                throw MF2Error.badOption("Attribute presence values must be true.")
+            }
         }
     }
 

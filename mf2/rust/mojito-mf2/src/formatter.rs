@@ -785,10 +785,14 @@ fn validate_declarations(declarations: &[Declaration]) -> Result<(), Diagnostic>
     for declaration in declarations {
         let name = match declaration {
             Declaration::Input { name, value } => {
+                validate_expression(value)?;
                 validate_input_declaration(name, value)?;
                 name
             }
-            Declaration::Local { name, .. } => name,
+            Declaration::Local { name, value } => {
+                validate_expression(value)?;
+                name
+            }
         };
         if !names.insert(name) {
             return Err(model_error(
@@ -864,6 +868,7 @@ fn validate_pattern(pattern: &[PatternPart]) -> Result<(), Diagnostic> {
                     "Pattern text parts must be non-empty.",
                 ));
             }
+            PatternPart::Expression(expression) => validate_expression(expression)?,
             PatternPart::Markup(markup) => validate_markup(markup)?,
             _ => {}
         }
@@ -871,7 +876,12 @@ fn validate_pattern(pattern: &[PatternPart]) -> Result<(), Diagnostic> {
     Ok(())
 }
 
+fn validate_expression(expression: &Expression) -> Result<(), Diagnostic> {
+    validate_attributes(expression.attributes.as_ref())
+}
+
 fn validate_markup(markup: &Markup) -> Result<(), Diagnostic> {
+    validate_attributes(markup.attributes.as_ref())?;
     match markup.kind.as_str() {
         "open" | "standalone" | "close" => Ok(()),
         _ => Err(model_error(
@@ -879,6 +889,23 @@ fn validate_markup(markup: &Markup) -> Result<(), Diagnostic> {
             "Markup kind must be open, standalone, or close.",
         )),
     }
+}
+
+fn validate_attributes(
+    attributes: Option<&BTreeMap<String, AttributeValue>>,
+) -> Result<(), Diagnostic> {
+    let Some(attributes) = attributes else {
+        return Ok(());
+    };
+    for attribute in attributes.values() {
+        if matches!(attribute, AttributeValue::Present(false)) {
+            return Err(model_error(
+                "bad-option",
+                "Attribute presence values must be true.",
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn validate_selector_annotations(

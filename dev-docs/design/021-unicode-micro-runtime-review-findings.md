@@ -685,7 +685,9 @@ branch is under active implementation.
   shapes while preserving parser-generated `true` presence attributes and
   literal attribute objects. Python's public `MF2AttributeValue` typing now also
   includes the `Literal[True]` presence marker so the typed API matches parser
-  and parts output.
+  and parts output. Typed Java, Swift, and Rust formatters now reject
+  `Present(false)`/`false` presence attributes as `bad-option`, matching the
+  shared message schema and the dynamic runtimes.
 - JavaScript top-level options getter hardening: hostile getters on
   `functions`, `onMissingArgument`, `onFormatError`, and `bidiIsolation` now
   recover as `bad-option` setup failures instead of escaping as raw host

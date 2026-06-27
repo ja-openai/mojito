@@ -115,6 +115,20 @@ fn public_runtime_api_exposes_result_and_parts() {
     .unwrap();
     assert_eq!(blank_locale.value, "one");
     assert!(blank_locale.errors.is_empty());
+
+    let false_presence_attribute: MessageModel = serde_json::from_value(serde_json::json!({
+        "type": "message",
+        "declarations": [],
+        "pattern": [
+            {
+                "type": "expression",
+                "attributes": { "private": false }
+            }
+        ]
+    }))
+    .expect("false presence attribute model decodes");
+    let error = format_message(&false_presence_attribute, Arguments::new()).unwrap_err();
+    assert_eq!(error.code, "bad-option");
 }
 
 #[test]

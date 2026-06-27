@@ -999,6 +999,33 @@ private func runPublicApiEdgeChecks() throws {
     try expectValue("public-api selector-only rawValue", selectorOnlyResult.value, "raw")
     try expectCodes("public-api selector-only rawValue errors", selectorOnlyResult.errors, [])
 
+    let falsePresenceAttribute = try JSONDecoder().decode(
+        MF2Message.self,
+        from: Data(
+            """
+            {
+              "type": "message",
+              "declarations": [],
+              "pattern": [
+                {
+                  "type": "expression",
+                  "attributes": { "private": false }
+                }
+              ]
+            }
+            """.utf8
+        )
+    )
+    do {
+        _ = try formatMessage(falsePresenceAttribute)
+        throw ConformanceError.expectedFormatError(
+            fixture: "public-api false presence attribute",
+            actual: "success"
+        )
+    } catch let error as MF2Error {
+        try expectCodes("public-api false presence attribute", [error], ["bad-option"])
+    }
+
     let blankLocaleSelect = try parsePublicApiModel("""
     .input {$n :number}
     .match $n
