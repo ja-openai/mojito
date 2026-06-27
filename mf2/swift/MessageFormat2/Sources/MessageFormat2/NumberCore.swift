@@ -60,7 +60,7 @@ public enum MF2NumberCore {
 
     private static let defaultLocale = "en-US"
     private static let decimalText = try! NSRegularExpression(
-        pattern: #"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$"#
+        pattern: #"^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$"#
     )
     private static let currencyCode = try! NSRegularExpression(pattern: #"^[A-Za-z]{3}$"#)
 
@@ -451,7 +451,7 @@ public enum MF2NumberCore {
         guard let value else {
             return nil
         }
-        guard !value.isEmpty, value.allSatisfy(\.isNumber), let parsed = Int(value) else {
+        guard !value.isEmpty, value.allSatisfy(isAsciiDigit), let parsed = Int(value) else {
             throw MF2Error.badOption("Option must be a non-negative integer.")
         }
         return parsed
@@ -543,6 +543,13 @@ public enum MF2NumberCore {
             }
             return digitArray[Int(ascii - 48)]
         })
+    }
+
+    private static func isAsciiDigit(_ character: Character) -> Bool {
+        guard let ascii = character.asciiValue else {
+            return false
+        }
+        return ascii >= 48 && ascii <= 57
     }
 
     private struct NumericValue {

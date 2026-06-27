@@ -5,7 +5,7 @@ public enum MF2RelativeTimeCore {
     private static let maxOptionLength = 256
     private static let maxOperandLength = 256
     private static let maxRelativeTimeQuantity = 1_000_000_000.0
-    private static let decimalNumberPattern = #"^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$"#
+    private static let decimalNumberPattern = #"^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$"#
 
     public enum Style {
         case long

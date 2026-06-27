@@ -387,7 +387,9 @@ public enum MF2DateTimeCore {
             return nil
         }
         let hourText = String(value[value.index(after: signIndex)...])
-        guard !hourText.isEmpty, hourText.count <= 2, let hours = Int(hourText), hours <= 14 else {
+        guard !hourText.isEmpty, hourText.count <= 2, hourText.allSatisfy(isAsciiDigit),
+              let hours = Int(hourText), hours <= 14
+        else {
             return nil
         }
         let offset = hours * 60
@@ -412,6 +414,7 @@ public enum MF2DateTimeCore {
             minuteText = "00"
         }
         guard !hourText.isEmpty, hourText.count <= 2, minuteText.count == 2,
+              hourText.allSatisfy(isAsciiDigit), minuteText.allSatisfy(isAsciiDigit),
               let hours = Int(hourText), let minutes = Int(minuteText),
               hours <= 18, minutes <= 59, !(hours == 18 && minutes != 0)
         else {
@@ -435,7 +438,10 @@ public enum MF2DateTimeCore {
     }
 
     private static func parseDateString(_ value: String) -> Date? {
-        parseISO8601Date(value)
+        guard value.allSatisfy({ !$0.isNumber || isAsciiDigit($0) }) else {
+            return nil
+        }
+        return parseISO8601Date(value)
             ?? parseFixedDate(value, format: "yyyy-MM-dd'T'HH:mm:ss")
             ?? parseFixedDate(value, format: "yyyy-MM-dd'T'HH:mm")
             ?? parseFixedDate(value, format: "yyyy-MM-dd")
@@ -3003,6 +3009,13 @@ public enum MF2DateTimeCore {
             }
             return digitArray[Int(ascii - 48)]
         })
+    }
+
+    private static func isAsciiDigit(_ character: Character) -> Bool {
+        guard let ascii = character.asciiValue else {
+            return false
+        }
+        return ascii >= 48 && ascii <= 57
     }
 
     private static func dateParts(_ date: Date, timeZone: TimeZone) -> DateParts {

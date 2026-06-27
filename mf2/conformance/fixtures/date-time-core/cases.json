@@ -5581,6 +5581,16 @@
       "expectedError": "bad-operand"
     },
     {
+      "name": "rejects non-ascii digit date operand",
+      "kind": "date",
+      "value": "2026-05-2٢",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium"
+      },
+      "expectedError": "bad-operand"
+    },
+    {
       "name": "rejects non-ascii digit timeZone offset",
       "kind": "datetime",
       "value": "2026-05-21T14:30:15Z",
