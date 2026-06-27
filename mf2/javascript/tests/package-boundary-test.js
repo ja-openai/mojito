@@ -239,6 +239,10 @@ for (const [label, model, code] of [
   ],
   ["markup options", { type: "message", pattern: [{ type: "markup", kind: "standalone", name: "x", options: 1 }] }, "bad-option"],
   ["markup option value", { type: "message", pattern: [{ type: "markup", kind: "standalone", name: "x", options: { foo: 1 } }] }, "bad-option"],
+  ["expression attributes", { type: "message", pattern: [{ type: "expression", arg: { type: "literal", value: "x" }, attributes: 1 }] }, "bad-option"],
+  ["expression attribute value", { type: "message", pattern: [{ type: "expression", arg: { type: "literal", value: "x" }, attributes: { foo: 1 } }] }, "bad-option"],
+  ["markup attributes", { type: "message", pattern: [{ type: "markup", kind: "standalone", name: "x", attributes: 1 }] }, "bad-option"],
+  ["markup attribute value", { type: "message", pattern: [{ type: "markup", kind: "standalone", name: "x", attributes: { foo: 1 } }] }, "bad-option"],
 ]) {
   assert.throws(
     () => formatMessage(model),

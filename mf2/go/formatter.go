@@ -932,9 +932,11 @@ func validateExpression(expression map[string]any) error {
 		if err != nil {
 			return err
 		}
-		return validateOptionsMap(functionRef["options"], "function options")
+		if err := validateOptionsMap(functionRef["options"], "function options"); err != nil {
+			return err
+		}
 	}
-	return nil
+	return validateAttributesMap(expression["attributes"], "expression attributes")
 }
 
 func validateOptionsMap(raw any, label string) error {
@@ -953,8 +955,31 @@ func validateOptionsMap(raw any, label string) error {
 	return nil
 }
 
+func validateAttributesMap(raw any, label string) error {
+	if raw == nil {
+		return nil
+	}
+	attributes := asObject(raw)
+	if attributes == nil {
+		return badOption(label + " must be an object.")
+	}
+	for _, attribute := range attributes {
+		if present, ok := attribute.(bool); ok && present {
+			continue
+		}
+		if asObject(attribute) != nil {
+			continue
+		}
+		return badOption(label + " values must be true or objects.")
+	}
+	return nil
+}
+
 func validateMarkup(markup map[string]any) error {
 	if err := validateOptionsMap(markup["options"], "markup options"); err != nil {
+		return err
+	}
+	if err := validateAttributesMap(markup["attributes"], "markup attributes"); err != nil {
 		return err
 	}
 	switch stringField(markup, "kind") {

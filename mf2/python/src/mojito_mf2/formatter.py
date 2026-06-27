@@ -296,6 +296,7 @@ def _validate_expression(expression: dict[str, Any]) -> None:
     function = expression.get("function")
     if function is not None:
         _validate_function_ref(_model_object(function, "Function reference"))
+    _validate_attributes_map(expression.get("attributes"), "expression attributes")
 
 
 def _validate_function_ref(function: dict[str, Any]) -> None:
@@ -312,8 +313,20 @@ def _validate_options_map(options: Any, label: str) -> None:
             raise MF2Error("bad-option", f"{label} values must be objects.")
 
 
+def _validate_attributes_map(attributes: Any, label: str) -> None:
+    if attributes is None:
+        return
+    if not isinstance(attributes, dict):
+        raise MF2Error("bad-option", f"{label} must be an object.")
+    for attribute in attributes.values():
+        if attribute is True or isinstance(attribute, dict):
+            continue
+        raise MF2Error("bad-option", f"{label} values must be true or objects.")
+
+
 def _validate_markup(markup: dict[str, Any]) -> None:
     _validate_options_map(markup.get("options"), "markup options")
+    _validate_attributes_map(markup.get("attributes"), "markup attributes")
     if markup.get("kind") in {"open", "standalone", "close"}:
         return
     raise MF2Error(

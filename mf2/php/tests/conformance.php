@@ -871,6 +871,22 @@ function assert_public_api_boundary(): void
             ['type' => 'message', 'pattern' => [['type' => 'markup', 'kind' => 'standalone', 'name' => 'x', 'options' => ['foo' => 1]]]],
             'bad-option',
         ],
+        'expression attributes' => [
+            ['type' => 'message', 'pattern' => [['type' => 'expression', 'arg' => ['type' => 'literal', 'value' => 'x'], 'attributes' => 1]]],
+            'bad-option',
+        ],
+        'expression attribute value' => [
+            ['type' => 'message', 'pattern' => [['type' => 'expression', 'arg' => ['type' => 'literal', 'value' => 'x'], 'attributes' => ['foo' => 1]]]],
+            'bad-option',
+        ],
+        'markup attributes' => [
+            ['type' => 'message', 'pattern' => [['type' => 'markup', 'kind' => 'standalone', 'name' => 'x', 'attributes' => 1]]],
+            'bad-option',
+        ],
+        'markup attribute value' => [
+            ['type' => 'message', 'pattern' => [['type' => 'markup', 'kind' => 'standalone', 'name' => 'x', 'attributes' => ['foo' => 1]]]],
+            'bad-option',
+        ],
     ] as $label => [$model, $code]) {
         $invalidNestedModel = format_message($model);
         assert_same("invalid nested {$label} value", '', $invalidNestedModel['value']);

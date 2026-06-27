@@ -740,6 +740,7 @@ function validate_expression(array $expression): void
     if (isset($expression['function'])) {
         validate_function_ref(model_object($expression['function'], 'Function reference'));
     }
+    validate_attributes_map($expression['attributes'] ?? null, 'expression attributes');
 }
 
 function validate_function_ref(array $functionRef): void
@@ -762,9 +763,26 @@ function validate_options_map(mixed $options, string $label): void
     }
 }
 
+function validate_attributes_map(mixed $attributes, string $label): void
+{
+    if ($attributes === null) {
+        return;
+    }
+    if (!is_array($attributes)) {
+        throw MF2Error::badOption("{$label} must be an object.");
+    }
+    foreach ($attributes as $attribute) {
+        if ($attribute === true || is_array($attribute)) {
+            continue;
+        }
+        throw MF2Error::badOption("{$label} values must be true or objects.");
+    }
+}
+
 function validate_markup(array $markup): void
 {
     validate_options_map($markup['options'] ?? null, 'markup options');
+    validate_attributes_map($markup['attributes'] ?? null, 'markup attributes');
     if (in_array($markup['kind'] ?? '', ['open', 'standalone', 'close'], true)) {
         return;
     }

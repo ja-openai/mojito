@@ -646,6 +646,7 @@ function validateExpression(expression) {
     throw new MF2Error("unsupported-expression-arg", "Unsupported expression arg: ");
   }
   if (expression.function != null) validateFunctionRef(expression.function);
+  validateAttributesMap(expression.attributes, "expression attributes");
 }
 
 function validateFunctionRef(functionRef) {
@@ -665,8 +666,19 @@ function validateOptionsMap(options, name) {
   }
 }
 
+function validateAttributesMap(attributes, name) {
+  if (attributes == null) return;
+  if (typeof attributes !== "object" || Array.isArray(attributes)) throw MF2Error.badOption(`${name} must be an object.`);
+  for (const attribute of Object.values(attributes)) {
+    if (attribute === true) continue;
+    if (attribute != null && typeof attribute === "object" && !Array.isArray(attribute)) continue;
+    throw MF2Error.badOption(`${name} values must be true or objects.`);
+  }
+}
+
 function validateMarkup(markup) {
   validateOptionsMap(markup.options, "markup options");
+  validateAttributesMap(markup.attributes, "markup attributes");
   if (["open", "standalone", "close"].includes(markup.kind)) return;
   throw new MF2Error("invalid-markup-kind", "Markup kind must be open, standalone, or close.");
 }

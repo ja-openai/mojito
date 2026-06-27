@@ -215,6 +215,26 @@ func TestUnsupportedModelTypeReturnsDiagnostic(t *testing.T) {
 			Model{"type": "message", "pattern": []any{map[string]any{"type": "markup", "kind": "standalone", "name": "x", "options": map[string]any{"foo": 1}}}},
 			"bad-option",
 		},
+		{
+			"expression attributes",
+			Model{"type": "message", "pattern": []any{map[string]any{"type": "expression", "arg": map[string]any{"type": "literal", "value": "x"}, "attributes": 1}}},
+			"bad-option",
+		},
+		{
+			"expression attribute value",
+			Model{"type": "message", "pattern": []any{map[string]any{"type": "expression", "arg": map[string]any{"type": "literal", "value": "x"}, "attributes": map[string]any{"foo": 1}}}},
+			"bad-option",
+		},
+		{
+			"markup attributes",
+			Model{"type": "message", "pattern": []any{map[string]any{"type": "markup", "kind": "standalone", "name": "x", "attributes": 1}}},
+			"bad-option",
+		},
+		{
+			"markup attribute value",
+			Model{"type": "message", "pattern": []any{map[string]any{"type": "markup", "kind": "standalone", "name": "x", "attributes": map[string]any{"foo": 1}}}},
+			"bad-option",
+		},
 	} {
 		result := FormatMessage(item.model, nil, Options{})
 		assertErrorCodesExact(t, "invalid nested "+item.label, result.Errors, []string{item.code})

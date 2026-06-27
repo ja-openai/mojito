@@ -678,6 +678,7 @@ private fun validateExpression(expression: Map<String, Any?>) {
         "Unsupported expression arg: ",
     )
     if (expression["function"] != null) validateFunctionRef(modelObject(expression["function"], "Function reference"))
+    validateAttributesMap(expression["attributes"], "expression attributes")
 }
 
 private fun validateFunctionRef(functionRef: Map<String, Any?>) {
@@ -693,8 +694,19 @@ private fun validateOptionsMap(options: Any?, label: String) {
     }
 }
 
+private fun validateAttributesMap(attributes: Any?, label: String) {
+    if (attributes == null) return
+    @Suppress("UNCHECKED_CAST")
+    val attributeMap = attributes as? Map<String, Any?> ?: throw Mf2Error("bad-option", "$label must be an object.")
+    for (attribute in attributeMap.values) {
+        if (attribute == true || attribute is Map<*, *>) continue
+        throw Mf2Error("bad-option", "$label values must be true or objects.")
+    }
+}
+
 private fun validateMarkup(markup: Map<String, Any?>) {
     validateOptionsMap(markup["options"], "markup options")
+    validateAttributesMap(markup["attributes"], "markup attributes")
     if (stringValue(markup["kind"]) in setOf("open", "standalone", "close")) return
     throw Mf2Error("invalid-markup-kind", "Markup kind must be open, standalone, or close.")
 }

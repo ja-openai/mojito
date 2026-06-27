@@ -554,6 +554,41 @@ object KotlinConformance {
                 ),
                 "bad-option",
             ),
+            Triple(
+                "expression attributes",
+                mapOf(
+                    "type" to "message",
+                    "pattern" to listOf(mapOf("type" to "expression", "arg" to mapOf("type" to "literal", "value" to "x"), "attributes" to 1)),
+                ),
+                "bad-option",
+            ),
+            Triple(
+                "expression attribute value",
+                mapOf(
+                    "type" to "message",
+                    "pattern" to listOf(
+                        mapOf(
+                            "type" to "expression",
+                            "arg" to mapOf("type" to "literal", "value" to "x"),
+                            "attributes" to mapOf("foo" to 1),
+                        ),
+                    ),
+                ),
+                "bad-option",
+            ),
+            Triple(
+                "markup attributes",
+                mapOf("type" to "message", "pattern" to listOf(mapOf("type" to "markup", "kind" to "standalone", "name" to "x", "attributes" to 1))),
+                "bad-option",
+            ),
+            Triple(
+                "markup attribute value",
+                mapOf(
+                    "type" to "message",
+                    "pattern" to listOf(mapOf("type" to "markup", "kind" to "standalone", "name" to "x", "attributes" to mapOf("foo" to 1))),
+                ),
+                "bad-option",
+            ),
         )) {
             assertThrowsMf2Code("invalid nested $label", code) {
                 Mf2Formatter.formatMessage(model)

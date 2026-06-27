@@ -535,6 +535,59 @@ class PublicApiTest(unittest.TestCase):
                 },
                 "bad-option",
             ),
+            (
+                "expression attributes",
+                {
+                    "type": "message",
+                    "pattern": [
+                        {
+                            "type": "expression",
+                            "arg": {"type": "literal", "value": "x"},
+                            "attributes": 1,
+                        }
+                    ],
+                },
+                "bad-option",
+            ),
+            (
+                "expression attribute value",
+                {
+                    "type": "message",
+                    "pattern": [
+                        {
+                            "type": "expression",
+                            "arg": {"type": "literal", "value": "x"},
+                            "attributes": {"foo": 1},
+                        }
+                    ],
+                },
+                "bad-option",
+            ),
+            (
+                "markup attributes",
+                {
+                    "type": "message",
+                    "pattern": [
+                        {"type": "markup", "kind": "standalone", "name": "x", "attributes": 1}
+                    ],
+                },
+                "bad-option",
+            ),
+            (
+                "markup attribute value",
+                {
+                    "type": "message",
+                    "pattern": [
+                        {
+                            "type": "markup",
+                            "kind": "standalone",
+                            "name": "x",
+                            "attributes": {"foo": 1},
+                        }
+                    ],
+                },
+                "bad-option",
+            ),
         )
         for label, model, code in cases:
             with self.subTest(label=label):

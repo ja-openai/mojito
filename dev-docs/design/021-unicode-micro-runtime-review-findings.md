@@ -677,11 +677,13 @@ branch is under active implementation.
   instead of raw host exceptions, silent coercion, or later selector failures.
   These runtimes also reject primitive or unknown pattern parts during model
   validation as MF2 `unsupported-pattern-part`, so invalid pattern parts in
-  unselected variants cannot be silently accepted. Function references and
-  function/markup option maps now validate nested object shapes up front,
-  avoiding raw Python attribute failures and silent JavaScript/PHP acceptance of
-  malformed option containers. Public API and conformance regressions cover
-  these malformed model shapes.
+  unselected variants cannot be silently accepted. Function references,
+  function/markup option maps, and expression/markup attribute maps now validate
+  nested object shapes up front, avoiding raw Python/PHP attribute failures and
+  silent JavaScript/Python acceptance of malformed option or attribute
+  containers. Public API and conformance regressions cover these malformed model
+  shapes while preserving parser-generated `true` presence attributes and
+  literal attribute objects.
 - JavaScript top-level options getter hardening: hostile getters on
   `functions`, `onMissingArgument`, `onFormatError`, and `bidiIsolation` now
   recover as `bad-option` setup failures instead of escaping as raw host
