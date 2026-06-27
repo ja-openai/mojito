@@ -358,6 +358,18 @@ class PublicApiTest(unittest.TestCase):
         self.assertEqual([], parts.parts)
         self.assertEqual(["bad-option"], [error.code for error in parts.errors])
 
+    def test_top_level_functions_option_must_be_registry(self) -> None:
+        message = parse_to_model("Hello {$name}")
+        formatted = format_message(message.model, {"name": "Mojito"}, functions=1)
+        self.assertFalse(formatted.ok)
+        self.assertEqual("", formatted.value)
+        self.assertEqual(["bad-option"], [error.code for error in formatted.errors])
+
+        parts = format_message_to_parts(message.model, {"name": "Mojito"}, functions=1)
+        self.assertFalse(parts.ok)
+        self.assertEqual([], parts.parts)
+        self.assertEqual(["bad-option"], [error.code for error in parts.errors])
+
     def test_custom_selector_can_match_variant_key(self) -> None:
         model = {
             "type": "select",

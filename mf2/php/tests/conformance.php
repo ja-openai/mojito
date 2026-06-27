@@ -779,6 +779,13 @@ function assert_public_api_boundary(): void
     assert_same('invalid bidiIsolation defaults value', 'Hello Mojito', $invalidBidiIsolation['value']);
     assert_json_equal('invalid bidiIsolation defaults errors', [], array_map(static fn($error): string => error_code($error), $invalidBidiIsolation['errors']));
 
+    $invalidFunctions = format_message($message, ['name' => 'Mojito'], ['functions' => 1]);
+    assert_same('invalid functions option value', '', $invalidFunctions['value']);
+    assert_json_equal('invalid functions option errors', ['bad-option'], array_map(static fn($error): string => error_code($error), $invalidFunctions['errors']));
+    $invalidFunctionsParts = format_message_to_parts($message, ['name' => 'Mojito'], ['functions' => 1]);
+    assert_json_equal('invalid functions option parts', [], $invalidFunctionsParts['parts']);
+    assert_json_equal('invalid functions option part errors', ['bad-option'], array_map(static fn($error): string => error_code($error), $invalidFunctionsParts['errors']));
+
     $throwingNumberOption = parse_to_model('Hello {1 :number minimumFractionDigits=$d}')['model'];
     $throwingNumberOptionResult = format_message($throwingNumberOption, ['d' => new ThrowingStringValue()], [
         'locale' => 'en-US',

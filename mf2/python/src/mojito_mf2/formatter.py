@@ -114,10 +114,14 @@ def format_message_to_parts(
         normalized_locale = _locale_option(locale)
     except MF2Error as error:
         return PartsResult(parts=[], errors=[error])
+    try:
+        function_registry = _functions_option(functions)
+    except MF2Error as error:
+        return PartsResult(parts=[], errors=[error])
     context = _FormatContext(
         dict(arguments or {}),
         normalized_locale,
-        functions or _DEFAULT_FUNCTION_REGISTRY,
+        function_registry,
         fallback=True,
         on_missing_argument=on_missing_argument,
         on_format_error=on_format_error,
@@ -142,6 +146,14 @@ def _locale_option(locale: Any) -> str:
     except Exception as error:
         raise MF2Error("bad-option", _safe_exception_message(error)) from error
     return value or "en"
+
+
+def _functions_option(functions: Any) -> FunctionRegistry:
+    if functions is None:
+        return _DEFAULT_FUNCTION_REGISTRY
+    if isinstance(functions, FunctionRegistry):
+        return functions
+    raise MF2Error("bad-option", "functions must be a FunctionRegistry.")
 
 
 def _validate_model(model: dict[str, Any]) -> None:

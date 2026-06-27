@@ -26,7 +26,9 @@ export function formatMessageToParts(model, arguments_ = {}, options = {}) {
   validateModel(model);
   const locale = localeOption(options);
   if (locale.error) return errorPartsResult(locale.error);
-  const context = new FormatContext(arguments_, locale.value, options.functions ?? FunctionRegistry.defaults(), true, options);
+  const functions = functionsOption(options);
+  if (functions.error) return errorPartsResult(functions.error);
+  const context = new FormatContext(arguments_, locale.value, functions.value, true, options);
   context.applyDeclarations(model.declarations ?? []);
   const parts = model.type === "message"
     ? context.formatPatternToParts(model.pattern ?? [])
@@ -46,6 +48,12 @@ function localeOption(options) {
   } catch (error) {
     return { error: MF2Error.badOption(safeErrorMessage(error)) };
   }
+}
+
+function functionsOption(options) {
+  const value = options.functions ?? FunctionRegistry.defaults();
+  if (value instanceof FunctionRegistry) return { value };
+  return { error: MF2Error.badOption("functions must be a FunctionRegistry.") };
 }
 
 function errorPartsResult(error) {

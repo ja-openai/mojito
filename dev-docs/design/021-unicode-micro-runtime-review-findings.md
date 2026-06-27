@@ -661,6 +661,11 @@ branch is under active implementation.
   matching PHP's existing callable guard. Public package/API regressions cover
   invalid missing-argument and format-error handlers for both string and parts
   formatting.
+- Dynamic `functions` option hardening: JavaScript, Python, and PHP now reject
+  non-registry `functions` option values during formatter setup with
+  `bad-option` and empty string/parts output. This prevents Python from leaking
+  raw `AttributeError`, and keeps JavaScript/PHP from reporting malformed
+  registries as generic formatting errors.
 - PHP option-variable error classification: variable-valued option coercion now
   uses a dedicated option path, so throwing host option values recover with
   `bad-option` while ordinary expression and selector operands continue to

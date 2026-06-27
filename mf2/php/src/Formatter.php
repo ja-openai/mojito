@@ -136,7 +136,11 @@ function bidi_isolation_option(array $options): string
 
 function functions_option(array $options): FunctionRegistry
 {
-    return $options['functions'] ?? FunctionRegistry::defaults();
+    $value = $options['functions'] ?? FunctionRegistry::defaults();
+    if ($value instanceof FunctionRegistry) {
+        return $value;
+    }
+    throw MF2Error::badOption('functions must be a FunctionRegistry.');
 }
 
 final class FormatContext
