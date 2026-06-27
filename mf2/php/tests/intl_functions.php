@@ -82,6 +82,19 @@ assert_same(
     $laTimeOutput['value'],
 );
 
+$timeOnly = parse_to_model('time={$start :time timeStyle=medium timeZone=UTC}')['model'];
+$timeOnlyOutput = format_message($timeOnly, ['start' => '03:04:05'], [
+    'locale' => 'en-US',
+    'functions' => IntlFunctions::registry(),
+    'bidiIsolation' => 'none',
+]);
+assert_error_codes('time-only Intl adapter errors', $timeOnlyOutput['errors'], []);
+assert_same(
+    'time-only Intl adapter output',
+    'time=' . expected_date('en-US', '1970-01-01T03:04:05+00:00', IntlDateFormatter::NONE, IntlDateFormatter::MEDIUM),
+    $timeOnlyOutput['value'],
+);
+
 $badTimeZone = parse_to_model('time={$start :time timeStyle=short timeZone=No/Such_Zone}')['model'];
 $badTimeZoneOutput = format_message($badTimeZone, ['start' => '2026-05-21T14:30:15Z'], [
     'functions' => IntlFunctions::registry(),
@@ -131,6 +144,11 @@ assert_intl_date_bad_operand(
     'Intl adapter rejects unpadded date strings',
     'date={$instant :date dateStyle=medium timeZone=UTC}',
     '2020-1-2',
+);
+assert_intl_date_bad_operand(
+    'Intl adapter rejects date-only time strings',
+    'time={$instant :time timeStyle=medium timeZone=UTC}',
+    '2020-01-02',
 );
 assert_intl_date_bad_operand(
     'Intl adapter rejects impossible dates',

@@ -454,10 +454,11 @@ branch is under active implementation.
 - Python Babel/PHP Intl date operand grammar: the explicit Babel and PHP Intl
   registries now reject date/time operands with host-lenient rollover or
   out-of-range offsets instead of accepting Python/PHP parser extensions. PHP
-  now avoids `DateTimeImmutable` free-form parsing for string operands, while
-  Python keeps existing `datetime` local-source compatibility and rejects
-  offsets beyond `+18:00`/`-18:00`. Adapter integration tests cover the compact
-  repros.
+  now avoids `DateTimeImmutable` free-form parsing for string operands and uses
+  a separate `:time` operand grammar so date-only strings reject while
+  time-only strings remain valid. Python keeps existing `datetime` local-source
+  compatibility and rejects offsets beyond `+18:00`/`-18:00`. Adapter
+  integration tests cover the compact repros.
 - Python Babel numeric operand grammar: the explicit Babel registry now
   prefilters number, currency, and relative-time operands with the shared
   bounded ASCII decimal grammar before `Decimal`, rejecting Unicode digit

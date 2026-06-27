@@ -12,6 +12,9 @@ final class IntlFunctions
     private const MAX_LOCALE_LENGTH = 256;
     private const MIN_TIMESTAMP_MS = -62135596800000.0;
     private const MAX_TIMESTAMP_MS = 253402300799999.0;
+    private const DATE_OPERAND = 'date';
+    private const TIME_OPERAND = 'time';
+    private const DATETIME_OPERAND = 'datetime';
 
     private function __construct()
     {
@@ -77,7 +80,7 @@ final class IntlFunctions
     private static function formatDate(array $call): string
     {
         $timeZone = self::timeZone($call);
-        $value = self::dateTimeValue($call, 'Date function requires a date or datetime operand.', $timeZone, false);
+        $value = self::dateTimeValue($call, 'Date function requires a date or datetime operand.', $timeZone, self::DATE_OPERAND);
         return self::dateFormatter($call, self::dateStyle($call, 'medium'), \IntlDateFormatter::NONE, $timeZone)->format($value)
             ?: throw MF2Error::badOperand('Date function could not format this operand.');
     }
@@ -85,7 +88,7 @@ final class IntlFunctions
     private static function formatTime(array $call): string
     {
         $timeZone = self::timeZone($call);
-        $value = self::dateTimeValue($call, 'Datetime and time functions require a datetime operand.', $timeZone, true);
+        $value = self::dateTimeValue($call, 'Time function requires a time or datetime operand.', $timeZone, self::TIME_OPERAND);
         return self::dateFormatter($call, \IntlDateFormatter::NONE, self::timeStyle($call, 'medium'), $timeZone)->format($value)
             ?: throw MF2Error::badOperand('Time function could not format this operand.');
     }
@@ -93,7 +96,7 @@ final class IntlFunctions
     private static function formatDateTime(array $call): string
     {
         $timeZone = self::timeZone($call);
-        $value = self::dateTimeValue($call, 'Datetime function requires a date or datetime operand.', $timeZone, false);
+        $value = self::dateTimeValue($call, 'Datetime function requires a date or datetime operand.', $timeZone, self::DATETIME_OPERAND);
         $sharedStyle = self::option($call, 'style', null);
         $defaultStyle = $sharedStyle ?? 'medium';
         $dateStyle = self::dateStyle($call, $defaultStyle, 'dateStyle', 'dateLength');
@@ -169,10 +172,10 @@ final class IntlFunctions
         return $value;
     }
 
-    private static function dateTimeValue(array $call, string $message, \DateTimeZone $timeZone, bool $allowTimeOnly): \DateTimeImmutable
+    private static function dateTimeValue(array $call, string $message, \DateTimeZone $timeZone, string $operandKind): \DateTimeImmutable
     {
-        $value = self::dateTimeValueOrNull($call['rawValue'] ?? null, $call['value'] ?? null, $timeZone, $allowTimeOnly)
-            ?? self::sourceDateTimeValue($call['inheritedSource'] ?? null, $timeZone, $allowTimeOnly);
+        $value = self::dateTimeValueOrNull($call['rawValue'] ?? null, $call['value'] ?? null, $timeZone, $operandKind)
+            ?? self::sourceDateTimeValue($call['inheritedSource'] ?? null, $timeZone, $operandKind);
         if ($value === null) {
             throw MF2Error::badOperand($message);
         }
@@ -183,7 +186,7 @@ final class IntlFunctions
         mixed $rawValue,
         mixed $value,
         \DateTimeZone $timeZone,
-        bool $allowTimeOnly,
+        string $operandKind,
     ): ?\DateTimeImmutable
     {
         if ($rawValue instanceof \DateTimeInterface) {
@@ -200,7 +203,7 @@ final class IntlFunctions
         if (strlen($text) > self::MAX_DATE_OPERAND_LENGTH) {
             return null;
         }
-        if (preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/', $text) === 1) {
+        if ($operandKind !== self::TIME_OPERAND && preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/', $text) === 1) {
             return self::strictDateTimeOrNull('!Y-m-d', $text, $timeZone);
         }
         if (preg_match(
@@ -218,7 +221,7 @@ final class IntlFunctions
                 $timeZone,
             );
         }
-        if ($allowTimeOnly && preg_match(
+        if ($operandKind === self::TIME_OPERAND && preg_match(
             '/^([0-9]{2}):([0-9]{2})(?::([0-9]{2})(?:\.([0-9]{1,9}))?)?(Z|[+-][0-9]{2}:[0-9]{2})?$/',
             $text,
             $matches,
@@ -304,13 +307,13 @@ final class IntlFunctions
         return $year >= 1 && $year <= 9999 ? $value : null;
     }
 
-    private static function sourceDateTimeValue(?array $source, \DateTimeZone $timeZone, bool $allowTimeOnly): ?\DateTimeImmutable
+    private static function sourceDateTimeValue(?array $source, \DateTimeZone $timeZone, string $operandKind): ?\DateTimeImmutable
     {
         for ($current = $source; $current !== null; $current = $current['inherited'] ?? null) {
             if (!in_array($current['function']['name'] ?? null, ['date', 'time', 'datetime'], true)) {
                 continue;
             }
-            $value = self::dateTimeValueOrNull(null, $current['value'] ?? null, $timeZone, $allowTimeOnly);
+            $value = self::dateTimeValueOrNull(null, $current['value'] ?? null, $timeZone, $operandKind);
             if ($value !== null) {
                 return $value;
             }
