@@ -736,6 +736,12 @@ branch is under active implementation.
   characters across JavaScript, Python, PHP, Go, Java, Kotlin, Rust, and Swift
   before regex matching or host date/time parser attempts. The shared
   date-time-core fixture covers an oversized fractional-second operand.
+- Swift ISO datetime operand offset strictness: Swift now validates source
+  datetime offsets with the same `[+-]HH:MM` grammar used by the other
+  runtimes before calling Foundation's ISO parser, so bare-hour offsets like
+  `+01` and offsets with seconds are rejected as `bad-operand` instead of being
+  normalized by Foundation. The shared date-time-core fixture covers the
+  failing bare-hour repro.
 - Relative-time raw operand text bounds: relative-time-core direct APIs and the
   experimental registry source operands now reject numeric operand strings
   longer than 256 characters across JavaScript, Python, PHP, Go, Java, Kotlin,

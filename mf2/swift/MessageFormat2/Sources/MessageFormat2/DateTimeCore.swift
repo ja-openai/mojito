@@ -478,7 +478,30 @@ public enum MF2DateTimeCore {
         guard let signIndex = timePart.lastIndex(where: { $0 == "+" || $0 == "-" }) else {
             return true
         }
-        return parseOffsetMinutes(String(value[signIndex...])) != nil
+        return isValidISO8601OperandOffset(String(value[signIndex...]))
+    }
+
+    private static func isValidISO8601OperandOffset(_ value: String) -> Bool {
+        let characters = Array(value)
+        guard characters.count == 6,
+              characters[0] == "+" || characters[0] == "-",
+              characters[3] == ":",
+              isAsciiDigit(characters[1]),
+              isAsciiDigit(characters[2]),
+              isAsciiDigit(characters[4]),
+              isAsciiDigit(characters[5])
+        else {
+            return false
+        }
+        guard let hours = Int(String(characters[1...2])),
+              let minutes = Int(String(characters[4...5])),
+              hours <= 18,
+              minutes <= 59,
+              !(hours == 18 && minutes != 0)
+        else {
+            return false
+        }
+        return true
     }
 
     private static func parseFixedDate(_ value: String, format: String) -> Date? {
