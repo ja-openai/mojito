@@ -169,6 +169,11 @@ function assertIntlDateBadOperand(label, source, instant) {
   const result = formatMessageFromFormatter(parsed.model, { instant }, { locale: "en-US", functions: intlRegistry, bidiIsolation: "none" });
   assert.deepEqual(result.errors.map((error) => error.code), ["bad-operand"], label);
 }
+function assertIntlDateBadOption(label, source, instant) {
+  const parsed = parseToModelFromParser(source);
+  const result = formatMessageFromFormatter(parsed.model, { instant }, { locale: "en-US", functions: intlRegistry, bidiIsolation: "none" });
+  assert.deepEqual(result.errors.map((error) => error.code), ["bad-option"], label);
+}
 assertIntlDateBadOperand(
   "Intl adapter rejects unpadded date strings",
   "At {$instant :date dateStyle=medium timeZone=UTC}",
@@ -188,6 +193,11 @@ assertIntlDateBadOperand(
   "Intl adapter rejects out-of-range datetime offsets",
   "At {$instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}",
   "2020-01-02T03:04:05+18:01",
+);
+assertIntlDateBadOption(
+  "Intl adapter rejects oversized timeZone options",
+  `At {$instant :datetime dateStyle=medium timeStyle=medium timeZone=${"A".repeat(257)}}`,
+  "2020-01-02T03:04:05Z",
 );
 const intlTimeOnly = parseToModelFromParser("At {$instant :time timeStyle=medium timeZone=UTC}");
 assert.equal(

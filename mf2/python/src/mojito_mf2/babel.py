@@ -28,6 +28,7 @@ __all__ = ["babel_function_registry"]
 _MAX_FRACTION_DIGITS = 100
 _MAX_DATE_OPERAND_LENGTH = 256
 _MAX_DECIMAL_OPERAND_LENGTH = 256
+_MAX_TIME_ZONE_OPTION_LENGTH = 256
 _MAX_DECIMAL_EXPONENT = 1_000_000
 _ABSENT_OPTION = "\x00__mojito_mf2_absent__"
 _DECIMAL_RE = re.compile(r"^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$")
@@ -538,6 +539,11 @@ def _option_one_of(
 
 def _time_zone(call: FunctionCall) -> Any:
     value = call.option_value("timeZone", "UTC") or "UTC"
+    if len(value) > _MAX_TIME_ZONE_OPTION_LENGTH:
+        raise MF2Error(
+            "bad-option",
+            "timeZone option must not exceed 256 characters.",
+        )
     try:
         return get_timezone(value)
     except Exception as error:

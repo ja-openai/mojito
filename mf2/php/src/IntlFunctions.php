@@ -10,6 +10,7 @@ final class IntlFunctions
     private const MAX_FRACTION_DIGITS = 100;
     private const MAX_DATE_OPERAND_LENGTH = 256;
     private const MAX_LOCALE_LENGTH = 256;
+    private const MAX_TIME_ZONE_OPTION_LENGTH = 256;
     private const MIN_TIMESTAMP_MS = -62135596800000.0;
     private const MAX_TIMESTAMP_MS = 253402300799999.0;
     private const DATE_OPERAND = 'date';
@@ -412,6 +413,9 @@ final class IntlFunctions
     private static function timeZone(array $call): \DateTimeZone
     {
         $value = self::option($call, 'timeZone', self::UTC) ?? self::UTC;
+        if (strlen($value) > self::MAX_TIME_ZONE_OPTION_LENGTH) {
+            throw MF2Error::badOption('timeZone option must not exceed 256 characters.');
+        }
         try {
             return new \DateTimeZone($value);
         } catch (\Exception) {

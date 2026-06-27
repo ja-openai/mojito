@@ -47,6 +47,21 @@ for example in examples {
     print("relativeTime -> deferred on this Swift platform")
 #endif
 
+let oversizedTimeZone = String(repeating: "A", count: 257)
+let oversizedTimeZoneModel = try requireModel(
+    parseToModel("{$value :datetime dateStyle=medium timeStyle=medium timeZone=\(oversizedTimeZone)}"),
+    label: "oversizedTimeZone"
+)
+let oversizedTimeZoneResult = try formatMessage(
+    oversizedTimeZoneModel,
+    arguments: ["value": .string("2020-01-02T03:04:05Z")],
+    locale: "en",
+    functions: registry
+)
+guard oversizedTimeZoneResult.errors.map(\.code) == ["bad-option"] else {
+    throw DemoError.formatErrors("oversizedTimeZone", oversizedTimeZoneResult.errors.map(\.code))
+}
+
 private func requireModel(_ result: MF2ParseResult, label: String) throws -> MF2Message {
     guard let model = result.model else {
         throw DemoError.parseFailed(label, result.diagnostics.map(\.message))

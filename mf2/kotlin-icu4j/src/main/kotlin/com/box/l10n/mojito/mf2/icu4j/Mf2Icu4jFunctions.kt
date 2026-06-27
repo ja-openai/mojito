@@ -29,6 +29,7 @@ object Mf2Icu4jFunctions {
     private const val MAX_DATE_OPERAND_LENGTH = 256
     private const val MAX_FRACTION_DIGITS = 100
     private const val MAX_LOCALE_LENGTH = 256
+    private const val MAX_TIME_ZONE_OPTION_LENGTH = 256
     private val epochDate: LocalDate = LocalDate.of(1970, 1, 1)
     private val isoDateTimeOperand =
         Regex("""\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})?""")
@@ -328,6 +329,9 @@ object Mf2Icu4jFunctions {
 
     private fun zoneId(call: Mf2FunctionCall): ZoneId {
         val value = call.optionValue("timeZone", "UTC") ?: "UTC"
+        if (value.length > MAX_TIME_ZONE_OPTION_LENGTH) {
+            throw Mf2Error.badOption("timeZone option must not exceed 256 characters.")
+        }
         return try {
             ZoneId.of(value)
         } catch (error: DateTimeException) {

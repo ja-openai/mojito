@@ -101,6 +101,12 @@ $badTimeZoneOutput = format_message($badTimeZone, ['start' => '2026-05-21T14:30:
 ]);
 assert_error_codes('invalid timeZone errors', $badTimeZoneOutput['errors'], ['bad-option']);
 
+$oversizedTimeZone = parse_to_model('time={$start :time timeStyle=short timeZone=' . str_repeat('A', 257) . '}')['model'];
+$oversizedTimeZoneOutput = format_message($oversizedTimeZone, ['start' => '2026-05-21T14:30:15Z'], [
+    'functions' => IntlFunctions::registry(),
+]);
+assert_error_codes('oversized timeZone errors', $oversizedTimeZoneOutput['errors'], ['bad-option']);
+
 $oversizedDigits = parse_to_model('number={$amount :number minimumFractionDigits=10000}')['model'];
 $oversizedDigitsOutput = format_message($oversizedDigits, ['amount' => 1], [
     'functions' => IntlFunctions::registry(),

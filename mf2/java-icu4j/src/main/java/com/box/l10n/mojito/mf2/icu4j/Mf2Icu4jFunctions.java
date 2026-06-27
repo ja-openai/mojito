@@ -29,6 +29,7 @@ public final class Mf2Icu4jFunctions {
     private static final int MAX_DATE_OPERAND_LENGTH = 256;
     private static final int MAX_FRACTION_DIGITS = 100;
     private static final int MAX_LOCALE_LENGTH = 256;
+    private static final int MAX_TIME_ZONE_OPTION_LENGTH = 256;
     private static final LocalDate EPOCH_DATE = LocalDate.of(1970, 1, 1);
     private static final Pattern ISO_DATE_TIME_OPERAND =
             Pattern.compile("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d{1,9})?)?(?:Z|[+-]\\d{2}:\\d{2})?");
@@ -457,6 +458,9 @@ public final class Mf2Icu4jFunctions {
     private static ZoneId zoneId(Mf2FunctionRegistry.FunctionCall call)
             throws Mf2Exception {
         String value = option(call, "timeZone", "UTC");
+        if (value.length() > MAX_TIME_ZONE_OPTION_LENGTH) {
+            throw badOption("timeZone option must not exceed 256 characters.");
+        }
         try {
             return ZoneId.of(value);
         } catch (DateTimeException error) {

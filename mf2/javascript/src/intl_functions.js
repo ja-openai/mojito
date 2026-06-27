@@ -5,6 +5,7 @@ import { formatOffset } from "./offset_function.js";
 
 const MAX_FRACTION_DIGITS = 100;
 const MAX_DATE_OPERAND_LENGTH = 256;
+const MAX_TIME_ZONE_OPTION_LENGTH = 256;
 const MIN_TIMESTAMP_MS = -62_135_596_800_000;
 const MAX_TIMESTAMP_MS = 253_402_300_799_999;
 const ISO_DATE_TIME_RE = /^([0-9]{4})-([0-9]{2})-([0-9]{2})(?:T([0-9]{2}):([0-9]{2})(?::([0-9]{2})(?:\.([0-9]{1,9}))?)?(Z|[+-][0-9]{2}:[0-9]{2})?)?$/;
@@ -97,7 +98,10 @@ function numberFormatter(locale, call, baseOptions) {
 
 function dateFormatter(locale, call, options) {
   const timeZone = call.optionValue("timeZone", null);
-  if (timeZone != null) options.timeZone = timeZone;
+  if (timeZone != null) {
+    if (timeZone.length > MAX_TIME_ZONE_OPTION_LENGTH) throw MF2Error.badOption("timeZone option must not exceed 256 characters.");
+    options.timeZone = timeZone;
+  }
   try {
     return new Intl.DateTimeFormat(locale, options);
   } catch (error) {

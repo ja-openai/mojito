@@ -202,6 +202,20 @@ class BabelIntegrationTest(unittest.TestCase):
         )
         self.assertEqual(["bad-option"], [error.code for error in oversized_result.errors])
 
+        oversized_time_zone = format_message(
+            parse_to_model(
+                "{$instant :datetime dateStyle=medium timeStyle=medium timeZone="
+                + ("A" * 257)
+                + "}"
+            ).model,
+            {"instant": "2020-01-02T03:04:05Z"},
+            locale="en",
+            functions=functions,
+        )
+        self.assertEqual(
+            ["bad-option"], [error.code for error in oversized_time_zone.errors]
+        )
+
         unknown_locale = format_message(
             parse_to_model("{$amount :number}").model,
             {"amount": 1},

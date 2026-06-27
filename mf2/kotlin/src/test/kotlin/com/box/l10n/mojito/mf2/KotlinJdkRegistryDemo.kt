@@ -84,6 +84,12 @@ object KotlinJdkRegistryDemo {
             "2026-05-21" + "0".repeat(257),
             "bad-operand",
         )
+        assertDateOperandErrorCode(
+            "oversized timeZone option",
+            "datetime={${'$'}instant :datetime dateStyle=medium timeStyle=medium timeZone=" + "A".repeat(257) + "}",
+            "2026-05-21T14:30:15Z",
+            "bad-option",
+        )
         if (!quiet) println("Kotlin JDK registry demo passed")
     }
 

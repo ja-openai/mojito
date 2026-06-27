@@ -3,6 +3,7 @@ import Foundation
 private let maxFoundationFractionDigits = 100
 private let maxFoundationDateOperandLength = 256
 private let maxFoundationLocaleLength = 256
+private let maxFoundationTimeZoneOptionLength = 256
 private let foundationISO8601DatePattern = #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})$"#
 private let foundationDateTimeSecondPattern = #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$"#
 private let foundationDateTimeMinutePattern = #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}$"#
@@ -540,6 +541,9 @@ private func timeStyle(_ value: String) throws -> DateFormatter.Style {
 private func timeZone(_ call: MF2FunctionCall) throws -> TimeZone {
     guard let identifier = try call.optionValue("timeZone") else {
         return TimeZone(secondsFromGMT: 0)!
+    }
+    guard identifier.count <= maxFoundationTimeZoneOptionLength else {
+        throw MF2Error.badOption("timeZone option must not exceed 256 characters.")
     }
     guard let timeZone = TimeZone(identifier: identifier) else {
         throw MF2Error.badOption("timeZone option must be a valid time zone identifier.")
