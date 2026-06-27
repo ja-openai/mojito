@@ -13,11 +13,11 @@ branch is under active implementation.
   catches drift where a parts implementation exists but the published subpath
   surface or declarations stop exposing it.
 - Top-level platform-adapter coverage: `mf2/check.sh` now runs explicit
-  JavaScript Intl, Swift Foundation, PHP Intl, and Java/Kotlin ICU4J adapter
-  smoke checks in addition to the core/default registry checks; Python Babel is
-  included when the optional Babel dependency is installed. This keeps the
-  documented opt-in platform artifacts from silently drifting while the umbrella
-  gate stays green.
+  JavaScript Intl, Swift Foundation, PHP Intl, Java/Kotlin ICU4J, and Rust ICU4X
+  adapter smoke checks in addition to the core/default registry checks; Python
+  Babel is included when the optional Babel dependency is installed. This keeps
+  the documented opt-in platform artifacts from silently drifting while the
+  umbrella gate stays green.
 - JavaScript number-core registry parity: `createNumberCoreFunctionRegistry`
   now returns a portable registry with generated `number`, `integer`, `percent`,
   and `currency` formatters layered on top. This matches the JavaScript

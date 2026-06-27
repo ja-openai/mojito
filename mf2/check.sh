@@ -18,6 +18,7 @@ sh conformance/check_all_languages.sh
 (cd rust/mojito-mf2 && cargo run -- unicode-tests)
 (cd rust/mojito-mf2 && cargo run --example translate_demo)
 (cd rust/mojito-mf2 && cargo run --example inline_translate_demo)
+(cd rust/mojito-mf2 && cargo run --features icu4x --example icu4x_demo)
 (cd swift/MessageFormat2 && sh run.sh run MessageFormat2TranslateDemo)
 (cd swift/MessageFormat2 && sh run.sh run MessageFormat2FoundationDemo)
 (cd python && sh run.sh demo)
