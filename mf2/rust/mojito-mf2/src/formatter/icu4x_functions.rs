@@ -15,6 +15,7 @@ use super::{FunctionCall, FunctionRegistry};
 const MAX_FRACTION_DIGITS: i16 = 100;
 const MAX_OPERAND_LENGTH: usize = 256;
 const MAX_LOCALE_LENGTH: usize = 256;
+const MAX_OPTION_LENGTH: usize = 256;
 const MAX_TIME_ZONE_OPTION_LENGTH: usize = 256;
 
 pub(super) fn register(registry: &mut FunctionRegistry) {
@@ -61,7 +62,7 @@ fn format_icu4x_datetime(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
     validate_utc_time_zone(&call)?;
     let datetime = parse_datetime_value(call.value())
         .map_err(|_| bad_operand("Datetime function requires an ISO date or datetime operand."))?;
-    let style = call.option_value("style")?;
+    let style = bounded_option_value(&call, "style")?;
     if let Some(style) = style {
         let style = date_time_style(&style)?;
         return format_datetime(call.locale(), datetime, style);
@@ -210,7 +211,8 @@ fn apply_fraction_digit_options(
 }
 
 fn apply_sign_display(value: &mut Decimal, call: &FunctionCall<'_>) -> Result<(), Diagnostic> {
-    match call.option_value("signDisplay")?.as_deref() {
+    let sign_display = bounded_option_value(call, "signDisplay")?;
+    match sign_display.as_deref() {
         Some("always") => value.apply_sign_display(SignDisplay::Always),
         Some("exceptZero") => value.apply_sign_display(SignDisplay::ExceptZero),
         Some("never") => value.apply_sign_display(SignDisplay::Never),
@@ -223,6 +225,22 @@ fn apply_sign_display(value: &mut Decimal, call: &FunctionCall<'_>) -> Result<()
         }
     }
     Ok(())
+}
+
+fn bounded_option_value(
+    call: &FunctionCall<'_>,
+    option_name: &str,
+) -> Result<Option<String>, Diagnostic> {
+    let value = call.option_value(option_name)?;
+    if value
+        .as_deref()
+        .is_some_and(|value| value.len() > MAX_OPTION_LENGTH)
+    {
+        return Err(bad_option(format!(
+            "{option_name} option must not exceed 256 characters."
+        )));
+    }
+    Ok(value)
 }
 
 fn non_negative_i16_option(
@@ -378,12 +396,10 @@ fn date_style(
     legacy_option_name: &str,
     fallback: &str,
 ) -> Result<DateStyle, Diagnostic> {
-    let fallback = call
-        .option_value("style")?
-        .unwrap_or_else(|| fallback.to_string());
-    let value = match call.option_value(option_name)? {
+    let fallback = bounded_option_value(call, "style")?.unwrap_or_else(|| fallback.to_string());
+    let value = match bounded_option_value(call, option_name)? {
         Some(value) => value,
-        None => call.option_value(legacy_option_name)?.unwrap_or(fallback),
+        None => bounded_option_value(call, legacy_option_name)?.unwrap_or(fallback),
     };
     date_time_style(&value)
 }
@@ -406,12 +422,10 @@ fn time_style(
     legacy_option_name: &str,
     fallback: &str,
 ) -> Result<TimeStyle, Diagnostic> {
-    let fallback = call
-        .option_value("style")?
-        .unwrap_or_else(|| fallback.to_string());
-    let value = match call.option_value(option_name)? {
+    let fallback = bounded_option_value(call, "style")?.unwrap_or_else(|| fallback.to_string());
+    let value = match bounded_option_value(call, option_name)? {
         Some(value) => value,
-        None => call.option_value(legacy_option_name)?.unwrap_or(fallback),
+        None => bounded_option_value(call, legacy_option_name)?.unwrap_or(fallback),
     };
     match value.as_str() {
         "full" => Ok(TimeStyle::Full),

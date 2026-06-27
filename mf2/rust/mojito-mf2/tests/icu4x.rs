@@ -109,6 +109,43 @@ fn icu4x_registry_rejects_oversized_locales() {
 }
 
 #[test]
+fn icu4x_registry_rejects_oversized_enum_options() {
+    let registry = FunctionRegistry::icu4x();
+
+    let sign_display_source = "{$value :number signDisplay=".to_string() + &"a".repeat(257) + "}";
+    let sign_display_result = format_result_with(
+        &sign_display_source,
+        "en",
+        Arguments::new().with("value", 1),
+        &registry,
+    );
+    assert!(sign_display_result.has_errors());
+    assert_eq!(sign_display_result.errors[0].code, "bad-option");
+
+    let style_source = "{$value :datetime style=".to_string() + &"a".repeat(257) + " timeZone=UTC}";
+    let style_result = format_result_with(
+        &style_source,
+        "en",
+        Arguments::new().with("value", "2020-01-02T03:04:05Z"),
+        &registry,
+    );
+    assert!(style_result.has_errors());
+    assert_eq!(style_result.errors[0].code, "bad-option");
+
+    let date_style_source = "{$value :datetime dateStyle=".to_string()
+        + &"a".repeat(257)
+        + " timeStyle=medium timeZone=UTC}";
+    let date_style_result = format_result_with(
+        &date_style_source,
+        "en",
+        Arguments::new().with("value", "2020-01-02T03:04:05Z"),
+        &registry,
+    );
+    assert!(date_style_result.has_errors());
+    assert_eq!(date_style_result.errors[0].code, "bad-option");
+}
+
+#[test]
 fn icu4x_registry_rejects_oversized_operands() {
     let registry = FunctionRegistry::icu4x();
 

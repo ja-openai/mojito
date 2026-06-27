@@ -501,6 +501,9 @@ branch is under active implementation.
   rejects oversized enum-style option values before validating or passing them
   to Intl constructors. Package-boundary checks cover `signDisplay`,
   relative-time `unit`/`style`, and date-time style options.
+- Rust ICU4X enum option bounds: the feature-gated ICU4X registry now rejects
+  oversized enum-style option values before validating them. Feature tests cover
+  `signDisplay`, shared date-time `style`, and date-time style options.
 - Cross-runtime fraction option text bounds: portable numeric helpers across
   Java, Kotlin, JavaScript, Python, PHP, Go, Swift, and Rust plus the JavaScript
   Intl, Python Babel, PHP Intl, Swift Foundation, JVM JDK/ICU4J, Kotlin
