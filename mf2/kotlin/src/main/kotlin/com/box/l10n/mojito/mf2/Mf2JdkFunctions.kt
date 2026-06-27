@@ -18,6 +18,8 @@ import java.util.Locale
 
 internal object Mf2JdkFunctions {
     private const val MAX_LOCALE_LENGTH = 256
+    private val isoDateTimeOperand =
+        Regex("""\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})?""")
 
     fun registerFormatters(formatters: MutableMap<String, Mf2FunctionFormatter>) {
         formatters["number"] = ::formatNumber
@@ -312,6 +314,9 @@ internal object Mf2JdkFunctions {
         }
 
     private fun parseZonedDateTime(value: String): ZonedDateTime? {
+        if (!isoDateTimeOperand.matches(value)) {
+            return null
+        }
         try {
             return OffsetDateTime.parse(value, DateTimeFormatter.ISO_OFFSET_DATE_TIME).toZonedDateTime()
         } catch (error: DateTimeParseException) {

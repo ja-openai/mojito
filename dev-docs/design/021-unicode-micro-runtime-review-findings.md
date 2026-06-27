@@ -352,11 +352,13 @@ branch is under active implementation.
   mapping them onto the Unix epoch, and Java/Kotlin reject arbitrary object
   operands instead of formatting `toString()` results while accepting direct
   `LocalDate`, `LocalTime`, and `LocalDateTime` host values with the same UTC
-  interpretation as accepted string forms. Shared fixtures cover the invalid
-  date/offset cases, time-only string rejection, valid fixed-offset source
-  normalization, and source offsets that normalize outside the portable date
-  range; direct language tests cover object boundary recovery and JVM local
-  host date/time values.
+  interpretation as accepted string forms. Java/Kotlin direct-core string
+  operands now also prefilter offset shapes so host-accepted bare-hour offsets
+  and offset seconds reject like the other runtimes. Shared fixtures cover the
+  invalid date/offset cases, time-only string rejection, valid fixed-offset
+  source normalization, and source offsets that normalize outside the portable
+  date range; direct language tests cover object boundary recovery and JVM
+  local host date/time values.
 - Python variable-valued option coercion: registry formatting now converts
   throwing host objects used as option variables into recoverable MF2
   `bad-option` errors instead of letting raw Python exceptions escape.
@@ -489,11 +491,12 @@ branch is under active implementation.
 - JVM host-adapter date-time string grammar: the Java/Kotlin JDK and ICU4J
   adapters now parse string operands through local date/time, local datetime,
   offset datetime, and instant shapes without the host-only
-  `ZonedDateTime.parse` bracketed-zone extension. Raw host `ZonedDateTime`
-  values remain supported, while strings such as
-  `2026-05-21T14:30:15+02:00[Europe/Paris]` recover as MF2 `bad-operand`
-  like the other runtimes. JDK and ICU4J registry demos cover both Java and
-  Kotlin.
+  `ZonedDateTime.parse` bracketed-zone extension and without host-accepted
+  offset spellings outside `Z`/`±HH:mm`. Raw host `ZonedDateTime` values remain
+  supported, while strings such as
+  `2026-05-21T14:30:15+02:00[Europe/Paris]`, `2026-05-21T14:30:15+01`, and
+  `2026-05-21T14:30:15+01:02:03` recover as MF2 `bad-operand` like the other
+  runtimes. JDK and ICU4J registry demos cover both Java and Kotlin.
 - PHP Intl numeric operand grammar: the explicit PHP Intl registry now reuses
   the shared portable decimal parser instead of `is_numeric()`, rejecting host
   numeric extensions such as leading plus signs, whitespace, leading-dot,

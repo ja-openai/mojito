@@ -23,11 +23,14 @@ import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.Locale;
 import java.util.OptionalInt;
+import java.util.regex.Pattern;
 
 public final class Mf2Icu4jFunctions {
     private static final int MAX_FRACTION_DIGITS = 100;
     private static final int MAX_LOCALE_LENGTH = 256;
     private static final LocalDate EPOCH_DATE = LocalDate.of(1970, 1, 1);
+    private static final Pattern ISO_DATE_TIME_OPERAND =
+            Pattern.compile("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d{1,9})?)?(?:Z|[+-]\\d{2}:\\d{2})?");
 
     private Mf2Icu4jFunctions() {}
 
@@ -340,6 +343,9 @@ public final class Mf2Icu4jFunctions {
     }
 
     private static ZonedDateTime parseZonedDateTime(String value) {
+        if (!ISO_DATE_TIME_OPERAND.matcher(value).matches()) {
+            return null;
+        }
         try {
             OffsetDateTime dateTime =
                     OffsetDateTime.parse(value, DateTimeFormatter.ISO_OFFSET_DATE_TIME);

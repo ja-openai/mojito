@@ -5581,6 +5581,28 @@
       "expectedError": "bad-operand"
     },
     {
+      "name": "rejects bare-hour operand offset",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15+01",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium",
+        "timeStyle": "medium"
+      },
+      "expectedError": "bad-operand"
+    },
+    {
+      "name": "rejects seconds operand offset",
+      "kind": "datetime",
+      "value": "2026-05-21T14:30:15+01:02:03",
+      "locale": "en-US",
+      "options": {
+        "dateStyle": "medium",
+        "timeStyle": "medium"
+      },
+      "expectedError": "bad-operand"
+    },
+    {
       "name": "rejects non-ascii digit date operand",
       "kind": "date",
       "value": "2026-05-2٢",

@@ -12,6 +12,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public final class Mf2DateTimeCore {
     private static final String DEFAULT_LOCALE = "en-US";
@@ -24,6 +25,8 @@ public final class Mf2DateTimeCore {
     private static final int MAX_OPERAND_LENGTH = 256;
     private static final int MAX_SKELETON_FIELD_WIDTH = 32;
     private static final int MAX_SKELETON_LENGTH = 256;
+    private static final Pattern ISO_DATE_TIME_OPERAND =
+            Pattern.compile("\\d{4}-\\d{2}-\\d{2}(?:T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d{1,9})?)?(?:Z|[+-]\\d{2}:\\d{2})?)?");
     private static final String SEMANTIC_SKELETON_PREFIX = "semantic:";
     private static final List<String> SEMANTIC_FIELD_ORDER =
             List.of(
@@ -571,6 +574,9 @@ public final class Mf2DateTimeCore {
             throw Mf2Exception.badOperand("Date/time core requires a valid host date/time value or ISO date string.");
         }
         if (text.length() > MAX_OPERAND_LENGTH) {
+            throw Mf2Exception.badOperand("Date/time core requires a valid host date/time value or ISO date string.");
+        }
+        if (!ISO_DATE_TIME_OPERAND.matcher(text).matches()) {
             throw Mf2Exception.badOperand("Date/time core requires a valid host date/time value or ISO date string.");
         }
         try {

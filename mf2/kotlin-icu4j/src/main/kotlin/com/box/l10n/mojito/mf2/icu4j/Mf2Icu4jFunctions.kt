@@ -29,6 +29,8 @@ object Mf2Icu4jFunctions {
     private const val MAX_FRACTION_DIGITS = 100
     private const val MAX_LOCALE_LENGTH = 256
     private val epochDate: LocalDate = LocalDate.of(1970, 1, 1)
+    private val isoDateTimeOperand =
+        Regex("""\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})?""")
 
     @JvmStatic
     fun registry(): Mf2FunctionRegistry =
@@ -281,6 +283,9 @@ object Mf2Icu4jFunctions {
         }
 
     private fun parseZonedDateTime(value: String): ZonedDateTime? {
+        if (!isoDateTimeOperand.matches(value)) {
+            return null
+        }
         try {
             return OffsetDateTime.parse(
                 value,

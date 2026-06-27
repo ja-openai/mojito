@@ -17,9 +17,12 @@ import java.util.Currency;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 final class Mf2JdkFunctions {
     private static final int MAX_LOCALE_LENGTH = 256;
+    private static final Pattern ISO_DATE_TIME_OPERAND =
+            Pattern.compile("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d{1,9})?)?(?:Z|[+-]\\d{2}:\\d{2})?");
 
     private Mf2JdkFunctions() {}
 
@@ -432,6 +435,9 @@ final class Mf2JdkFunctions {
     }
 
     private static Optional<ZonedDateTime> parseZonedDateTime(String value) {
+        if (!ISO_DATE_TIME_OPERAND.matcher(value).matches()) {
+            return Optional.empty();
+        }
         try {
             return Optional.of(OffsetDateTime.parse(value, DateTimeFormatter.ISO_OFFSET_DATE_TIME).toZonedDateTime());
         } catch (DateTimeParseException ignored) {

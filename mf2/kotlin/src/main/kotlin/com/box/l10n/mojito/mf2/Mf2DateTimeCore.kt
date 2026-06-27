@@ -21,6 +21,8 @@ object Mf2DateTimeCore {
     private const val MAX_OPERAND_LENGTH = 256
     private const val MAX_SKELETON_FIELD_WIDTH = 32
     private const val MAX_SKELETON_LENGTH = 256
+    private val isoDateTimeOperand =
+        Regex("""\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})?)?""")
     private const val SEMANTIC_SKELETON_PREFIX = "semantic:"
     private val semanticFieldOrder = listOf("era", "year", "quarter", "month", "weekofmonth", "day", "dayofyear", "dayofweekinmonth", "modifiedjulianday", "weekday", "weekofyear", "dayperiod", "hour", "minute", "second", "fractionalsecond", "millisecondsinday", "time", "zone")
     private val semanticDateFieldOrder = listOf("era", "year", "quarter", "month", "weekofmonth", "day", "dayofyear", "dayofweekinmonth", "modifiedjulianday", "weekday", "weekofyear")
@@ -329,6 +331,9 @@ object Mf2DateTimeCore {
 
     private fun parseDateString(value: String): ZonedDateTime {
         if (value.length > MAX_OPERAND_LENGTH) {
+            throw Mf2Error.badOperand("Date/time core requires a valid host date/time value or ISO date string.")
+        }
+        if (!isoDateTimeOperand.matches(value)) {
             throw Mf2Error.badOperand("Date/time core requires a valid host date/time value or ISO date string.")
         }
         try {

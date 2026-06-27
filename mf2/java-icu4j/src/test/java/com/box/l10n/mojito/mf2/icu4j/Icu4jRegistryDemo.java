@@ -89,6 +89,16 @@ public final class Icu4jRegistryDemo {
                 "datetime={$instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}",
                 "2026-05-21T14:30:15+02:00[Europe/Paris]",
                 "bad-operand");
+        assertDateOperandErrorCode(
+                "bare-hour offset datetime",
+                "datetime={$instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}",
+                "2026-05-21T14:30:15+01",
+                "bad-operand");
+        assertDateOperandErrorCode(
+                "seconds offset datetime",
+                "datetime={$instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}",
+                "2026-05-21T14:30:15+01:02:03",
+                "bad-operand");
 
         if (!quiet) {
             System.out.println("Java ICU4J registry demo passed");
