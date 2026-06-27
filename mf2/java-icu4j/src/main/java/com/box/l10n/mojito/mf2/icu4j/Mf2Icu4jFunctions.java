@@ -29,6 +29,7 @@ public final class Mf2Icu4jFunctions {
     private static final int MAX_DATE_OPERAND_LENGTH = 256;
     private static final int MAX_FRACTION_DIGITS = 100;
     private static final int MAX_LOCALE_LENGTH = 256;
+    private static final int MAX_NUMERIC_OPERAND_LENGTH = 256;
     private static final int MAX_NUMERIC_OPTION_LENGTH = 256;
     private static final int MAX_TIME_ZONE_OPTION_LENGTH = 256;
     private static final LocalDate EPOCH_DATE = LocalDate.of(1970, 1, 1);
@@ -220,6 +221,9 @@ public final class Mf2Icu4jFunctions {
         if (rawValue instanceof Number number) {
             value = number.doubleValue();
         } else {
+            if (call.value().length() > MAX_NUMERIC_OPERAND_LENGTH) {
+                throw badOperand(message);
+            }
             try {
                 value = Double.parseDouble(call.value());
             } catch (NumberFormatException error) {

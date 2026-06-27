@@ -67,6 +67,7 @@ object KotlinIcu4jRegistryDemo {
             if (!quiet) println("$locale -> ${result.value}")
         }
         assertUnsupportedUnitFallsBack()
+        assertOversizedNumericOperandFallsBack()
         assertOversizedFractionDigitsFallsBack()
         assertLocaleErrorCode("malformed locale", "bad locale ???", "bad-option")
         assertLocaleErrorCode("private-use-only locale", "x-private", "bad-option")
@@ -176,6 +177,17 @@ object KotlinIcu4jRegistryDemo {
         )
         if (!result.hasErrors || result.value != "{${'$'}value}") {
             error("unsupported relativeTime unit should recover with visible fallback")
+        }
+    }
+
+    private fun assertOversizedNumericOperandFallsBack() {
+        val result: Mf2FormatResult = Mf2Formatter.formatMessage(
+            model = parse("{${'$'}value :number}"),
+            arguments = mapOf("value" to "1".repeat(257)),
+            functions = Mf2Icu4jFunctions.registry(),
+        )
+        if (!result.hasErrors || result.value != "{${'$'}value}" || result.errors.first().code != "bad-operand") {
+            error("oversized numeric operand should recover with bad-operand")
         }
     }
 

@@ -79,6 +79,7 @@ public final class Icu4jRegistryDemo {
         }
 
         assertUnsupportedUnitFallsBack();
+        assertOversizedNumericOperandFallsBack();
         assertOversizedFractionDigitsFallsBack();
         assertLocaleErrorCode("malformed locale", "bad locale ???", "bad-option");
         assertLocaleErrorCode("private-use-only locale", "x-private", "bad-option");
@@ -194,6 +195,21 @@ public final class Icu4jRegistryDemo {
         if (!result.hasErrors() || !result.value().equals("{$value}")) {
             throw new AssertionError(
                     "unsupported relativeTime unit should recover with visible fallback");
+        }
+    }
+
+    private static void assertOversizedNumericOperandFallsBack() throws Mf2Exception {
+        Mf2Message message = parse("{$value :number}");
+        Mf2FormatResult result = message.format(
+                Map.of("value", "1".repeat(257)),
+                Mf2FormatOptions.builder()
+                        .functions(Mf2Icu4jFunctions.registry())
+                        .build());
+        if (!result.hasErrors()
+                || !result.value().equals("{$value}")
+                || !result.errors().get(0).code().equals("bad-operand")) {
+            throw new AssertionError(
+                    "oversized numeric operand should recover with bad-operand");
         }
     }
 

@@ -29,6 +29,7 @@ object Mf2Icu4jFunctions {
     private const val MAX_DATE_OPERAND_LENGTH = 256
     private const val MAX_FRACTION_DIGITS = 100
     private const val MAX_LOCALE_LENGTH = 256
+    private const val MAX_NUMERIC_OPERAND_LENGTH = 256
     private const val MAX_NUMERIC_OPTION_LENGTH = 256
     private const val MAX_TIME_ZONE_OPTION_LENGTH = 256
     private val epochDate: LocalDate = LocalDate.of(1970, 1, 1)
@@ -200,7 +201,10 @@ object Mf2Icu4jFunctions {
     private fun numericValue(call: Mf2FunctionCall, message: String): Double {
         val value = when (val raw = call.rawValue) {
             is Number -> raw.toDouble()
-            else -> call.value.toDoubleOrNull() ?: throw Mf2Error.badOperand(message)
+            else -> call.value
+                .takeIf { it.length <= MAX_NUMERIC_OPERAND_LENGTH }
+                ?.toDoubleOrNull()
+                ?: throw Mf2Error.badOperand(message)
         }
         if (!value.isFinite()) throw Mf2Error.badOperand(message)
         return value

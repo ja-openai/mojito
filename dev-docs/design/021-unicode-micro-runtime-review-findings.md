@@ -473,6 +473,11 @@ branch is under active implementation.
   or adapter date/time parsing. This matches the other optional host registries'
   bounded operand behavior and keeps oversized operands in MF2 `bad-operand`
   recovery.
+- JVM ICU4J numeric operand bounds: the Java and Kotlin ICU4J registries now cap
+  string numeric operands at 256 characters before JVM double parsing. This
+  keeps oversized number, percent, currency, integer, and relative-time operands
+  in the same MF2 `bad-operand` recovery path as the other optional host
+  adapters.
 - Python Babel locale tag normalization: the optional Babel adapter now
   normalizes public BCP47-style locale tags such as `fr-FR` and `ar-EG` to
   Babel's underscore form before calling Babel APIs. This keeps the adapter
