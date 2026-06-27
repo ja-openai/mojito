@@ -19,13 +19,22 @@ sh conformance/check_all_languages.sh
 (cd rust/mojito-mf2 && cargo run --example translate_demo)
 (cd rust/mojito-mf2 && cargo run --example inline_translate_demo)
 (cd swift/MessageFormat2 && sh run.sh run MessageFormat2TranslateDemo)
+(cd swift/MessageFormat2 && sh run.sh run MessageFormat2FoundationDemo)
 (cd python && sh run.sh demo)
+if (cd python && python3 -c "import babel" >/dev/null 2>&1); then
+  (cd python && sh run.sh babel-demo)
+else
+  echo "Skipping Python Babel demo; Babel is not installed."
+fi
 (cd kotlin && sh run.sh demo)
 (cd go && env GOPATH="${GOPATH:-/private/tmp/mojito-mf2-go-gopath}" GOMODCACHE="${GOMODCACHE:-/private/tmp/mojito-mf2-go-modcache}" GOCACHE="${GOCACHE:-/private/tmp/mojito-mf2-go-cache}" GOTOOLCHAIN="${GOTOOLCHAIN:-local}" go run ./cmd/demo)
 (cd php && php tests/unicode_tests.php)
+(cd php && php tests/intl_functions.php)
 (cd php && php examples/demo.php)
+(cd php && php examples/intl_demo.php)
 (cd javascript && npm run unicode-tests)
 (cd javascript && npm run demo)
+(cd javascript && npm run demo:intl)
 if [ -d react/node_modules ]; then
   (cd react && npm run check)
 fi

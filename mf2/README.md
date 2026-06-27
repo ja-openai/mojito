@@ -376,8 +376,10 @@ sh check.sh
 ```
 
 This includes static checks, CLDR data validation, ICU4J reference witnesses,
-all-language conformance, official Unicode runners, demos, and the explicit
-Java/Kotlin ICU4J adapter smoke checks.
+all-language conformance, official Unicode runners, demos, and explicit
+platform-adapter smoke checks for JavaScript Intl, Swift Foundation, PHP Intl,
+Java/Kotlin ICU4J, and Python Babel when the optional Babel dependency is
+installed.
 
 Run only compile, type, format, lint, and syntax checks:
 
