@@ -75,8 +75,14 @@ object Mf2NumberCore {
                 currency = currencyOption(call, style),
                 currencyDisplay = currencyDisplayOption(call.optionValue("currencyDisplay", "symbol") ?: "symbol"),
                 useGrouping = booleanOption(call.optionValue("useGrouping", "true") ?: "true", "useGrouping"),
-                minimumFractionDigits = integerOption(call.optionValue("minimumFractionDigits", null)),
-                maximumFractionDigits = integerOption(call.optionValue("maximumFractionDigits", null)),
+                minimumFractionDigits = integerOption(
+                    call.optionValue("minimumFractionDigits", null),
+                    "minimumFractionDigits",
+                ),
+                maximumFractionDigits = integerOption(
+                    call.optionValue("maximumFractionDigits", null),
+                    "maximumFractionDigits",
+                ),
                 signDisplay = signDisplayOption(call.optionValue("signDisplay", "auto") ?: "auto"),
             ),
         )
@@ -368,14 +374,15 @@ object Mf2NumberCore {
         return text.uppercase(Locale.ROOT)
     }
 
-    private fun integerOption(value: String?): Int? {
+    private fun integerOption(value: String?, name: String): Int? {
         if (value == null) {
             return null
         }
-        if (value.isEmpty() || !value.all { it in '0'..'9' }) {
-            throw Mf2Error.badOption("Option must be a non-negative integer.")
+        val text = optionName(value, name)
+        if (text.isEmpty() || !text.all { it in '0'..'9' }) {
+            throw Mf2Error.badOption("$name must be a non-negative integer.")
         }
-        return value.toIntOrNull() ?: throw Mf2Error.badOption("Option must be a non-negative integer.")
+        return text.toIntOrNull() ?: throw Mf2Error.badOption("$name must be a non-negative integer.")
     }
 
     private fun signDisplayOption(value: String): SignDisplay =

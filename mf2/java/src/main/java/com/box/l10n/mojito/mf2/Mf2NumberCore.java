@@ -103,8 +103,12 @@ public final class Mf2NumberCore {
                         .style(style)
                         .currency(currencyOption(call, style))
                         .currencyDisplay(currencyDisplayOption(call.optionValue("currencyDisplay", "symbol")))
-                        .minimumFractionDigits(integerOption(call.optionValue("minimumFractionDigits", null)))
-                        .maximumFractionDigits(integerOption(call.optionValue("maximumFractionDigits", null)))
+                        .minimumFractionDigits(integerOption(
+                                call.optionValue("minimumFractionDigits", null),
+                                "minimumFractionDigits"))
+                        .maximumFractionDigits(integerOption(
+                                call.optionValue("maximumFractionDigits", null),
+                                "maximumFractionDigits"))
                         .signDisplay(signDisplayOption(call.optionValue("signDisplay", "auto")))
                         .useGrouping(booleanOption(call.optionValue("useGrouping", "true"), "useGrouping"))
                         .build());
@@ -426,11 +430,12 @@ public final class Mf2NumberCore {
         return value.toUpperCase();
     }
 
-    private static Integer integerOption(String value) throws Mf2Exception {
+    private static Integer integerOption(String value, String name) throws Mf2Exception {
         if (value == null) {
             return null;
         }
-        return Mf2FunctionSupport.parseNonNegativeOption(value, "Option must be a non-negative integer.");
+        String text = optionName(value, name);
+        return Mf2FunctionSupport.parseNonNegativeOption(text, name + " must be a non-negative integer.");
     }
 
     private static SignDisplay signDisplayOption(String value) throws Mf2Exception {
