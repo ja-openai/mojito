@@ -103,6 +103,11 @@ public class DatabaseBlobStorage implements BlobStorage {
     return mBlobRepository.findByName(name).map(MBlob::getContent);
   }
 
+  @Override
+  public String getTargetDescription(String name) {
+    return "mblob:" + name;
+  }
+
   public void deleteExpired() {
     int deletedCount;
     do {

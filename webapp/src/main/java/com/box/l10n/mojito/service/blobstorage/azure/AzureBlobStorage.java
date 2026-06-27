@@ -96,6 +96,11 @@ public class AzureBlobStorage implements BlobStorage {
     return getBlobClient(name).getBlobUrl();
   }
 
+  @Override
+  public String getTargetDescription(String name) {
+    return getAzureUrl(name);
+  }
+
   BlobClient getBlobClient(String name) {
     return blobContainerClient.getBlobClient(getFullName(name));
   }

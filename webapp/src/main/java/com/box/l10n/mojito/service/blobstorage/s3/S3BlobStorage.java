@@ -155,6 +155,11 @@ public class S3BlobStorage implements BlobStorage {
         "s3://%s/%s", s3BlobStorageConfigurationProperties.getBucket(), getFullName(name));
   }
 
+  @Override
+  public String getTargetDescription(String name) {
+    return getS3Url(name);
+  }
+
   String getFullName(String name) {
     return s3BlobStorageConfigurationProperties.getPrefix() + "/" + name;
   }

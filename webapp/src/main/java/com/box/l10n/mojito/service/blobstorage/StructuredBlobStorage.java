@@ -41,6 +41,16 @@ public class StructuredBlobStorage {
     return getBlobStorage(prefix).exists(getFullName(prefix, name));
   }
 
+  /** Returns the concrete backend selected by the current per-prefix routing configuration. */
+  public String getStorageType(Prefix prefix) {
+    return getBlobStorage(prefix).getClass().getSimpleName();
+  }
+
+  /** Returns a credential-free description of the resolved storage target. */
+  public String getTargetDescription(Prefix prefix, String name) {
+    return getBlobStorage(prefix).getTargetDescription(getFullName(prefix, name));
+  }
+
   String getFullName(Prefix prefix, String name) {
     return prefix.toString().toLowerCase() + "/" + name;
   }
