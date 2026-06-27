@@ -3,6 +3,7 @@ import Foundation
 private let maxFoundationFractionDigits = 100
 private let maxFoundationDateOperandLength = 256
 private let maxFoundationLocaleLength = 256
+private let maxFoundationNumericOperandLength = 256
 private let maxFoundationNumericOptionLength = 256
 private let maxFoundationTimeZoneOptionLength = 256
 private let foundationISO8601DatePattern = #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})$"#
@@ -223,7 +224,8 @@ private func parseSourceNumber(_ source: MF2FunctionSource?) -> Double? {
 }
 
 private func parseFoundationNumberLiteral(_ value: String) -> Double? {
-    guard let range = value.range(
+    guard value.utf8.count <= maxFoundationNumericOperandLength,
+          let range = value.range(
         of: #"^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$"#,
         options: .regularExpression
     ), range == value.startIndex..<value.endIndex,

@@ -1109,6 +1109,11 @@ private func runPublicApiEdgeChecks() throws {
         locale: "en-US",
         value: "1"
     )
+    try expectFoundationBadOperand(
+        "public-api foundation rejects oversized numeric operand",
+        source: "{$value :number}",
+        value: String(repeating: "1", count: 257)
+    )
     try expectFoundationBadOption(
         "public-api foundation rejects malformed locale",
         source: "{$value :number}",

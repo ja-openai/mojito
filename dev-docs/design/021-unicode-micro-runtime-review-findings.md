@@ -478,6 +478,10 @@ branch is under active implementation.
   keeps oversized number, percent, currency, integer, and relative-time operands
   in the same MF2 `bad-operand` recovery path as the other optional host
   adapters.
+- Swift Foundation numeric operand bounds: the optional Foundation registry now
+  caps string numeric operands at 256 bytes before regex matching or `Double`
+  parsing, keeping oversized number, percent, integer, and currency operands in
+  MF2 `bad-operand` recovery.
 - Python Babel locale tag normalization: the optional Babel adapter now
   normalizes public BCP47-style locale tags such as `fr-FR` and `ar-EG` to
   Babel's underscore form before calling Babel APIs. This keeps the adapter
