@@ -312,8 +312,8 @@ The current conformance slice covers:
 - `.input` and `.local` declarations, including multiple inputs and chained locals
 - markup placeholders, stripped from string output for now
 - `format_to_parts` / `formatToParts` output for text, expression output, and
-  markup boundaries, preserving expression attributes plus markup options and
-  attributes for UI renderers
+  markup boundaries, preserving expression attributes and `direction` metadata
+  plus markup options and attributes for UI renderers
 - safe default formatting APIs that return output plus collected runtime errors
   for unresolved variables/selectors, including fallback parts with source
   metadata

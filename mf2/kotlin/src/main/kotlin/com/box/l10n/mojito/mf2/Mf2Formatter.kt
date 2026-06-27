@@ -142,7 +142,7 @@ object Mf2Formatter {
                     isolateExpression(
                         stringValue(part["value"]),
                         bidiIsolation,
-                        part["dir"] as? String,
+                        part["direction"] as? String ?: part["dir"] as? String,
                     ),
                 )
             }
@@ -327,7 +327,7 @@ private class FormatContext(
                         val expressionPart = linkedMapOf<String, Any?>("type" to "expression", "value" to output.value)
                         val attributes = asMap(item["attributes"])
                         if (attributes.isNotEmpty()) expressionPart["attributes"] = attributes
-                        if (output.direction != null) expressionPart["dir"] = output.direction
+                        if (output.direction != null) expressionPart["direction"] = output.direction
                         parts += expressionPart
                     }
                 }

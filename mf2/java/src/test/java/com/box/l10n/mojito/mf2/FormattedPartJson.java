@@ -29,7 +29,7 @@ final class FormattedPartJson {
                 map.put("type", "expression");
                 map.put("value", expression.value());
                 if (expression.direction() != null) {
-                    map.put("dir", expression.direction());
+                    map.put("direction", expression.direction());
                 }
                 putAttributes(map, expression.attributes());
             }

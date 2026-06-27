@@ -41,8 +41,8 @@ pub enum FormattedPart {
     #[serde(rename = "expression")]
     Expression {
         value: String,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        dir: Option<String>,
+        #[serde(default, alias = "dir", skip_serializing_if = "Option::is_none")]
+        direction: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         attributes: Option<BTreeMap<String, AttributeValue>>,
     },
@@ -1279,7 +1279,9 @@ impl<'a> FormatContext<'a> {
                     }
                     output.push(FormattedPart::Expression {
                         value: rendered.value,
-                        dir: rendered.bidi_direction.map(|dir| dir.name().to_string()),
+                        direction: rendered
+                            .bidi_direction
+                            .map(|direction| direction.name().to_string()),
                         attributes: expression.attributes.clone(),
                     });
                 }
@@ -2084,12 +2086,14 @@ fn parts_to_string(parts: &[FormattedPart], bidi_isolation: BidiIsolation) -> St
                     output.push_str(&fallback_value(source));
                 }
             }
-            FormattedPart::Expression { value, dir, .. } => {
+            FormattedPart::Expression {
+                value, direction, ..
+            } => {
                 push_expression(
                     &mut output,
                     value,
                     bidi_isolation,
-                    dir.as_deref().and_then(bidi_direction_from_name),
+                    direction.as_deref().and_then(bidi_direction_from_name),
                 );
             }
             FormattedPart::Markup { .. } => {}

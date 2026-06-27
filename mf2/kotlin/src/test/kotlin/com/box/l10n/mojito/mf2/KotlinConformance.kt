@@ -405,6 +405,36 @@ object KotlinConformance {
         assertPublicApiValue("selector-only annotation rawValue", "raw", selectorOnlyResult.value)
         assertPublicApiCodes("selector-only annotation rawValue errors", emptyList(), selectorOnlyResult.errors)
 
+        val directedMessage = parsePublicApiModel("Hello {${'$'}name :string u:dir=rtl}")
+        val directedParts = Mf2Formatter.formatMessageToParts(
+            model = directedMessage,
+            arguments = mapOf("name" to "Mojito"),
+        )
+        assertPublicApiParts(
+            "direction field parts",
+            listOf(
+                mapOf("type" to "text", "value" to "Hello "),
+                mapOf("type" to "expression", "value" to "Mojito", "direction" to "rtl"),
+            ),
+            directedParts.parts,
+        )
+        assertPublicApiValue(
+            "direction field partsToString",
+            "\u2067Mojito\u2069",
+            Mf2Formatter.partsToString(
+                listOf(mapOf("type" to "expression", "value" to "Mojito", "direction" to "rtl")),
+                Mf2BidiIsolation.DEFAULT,
+            ),
+        )
+        assertPublicApiValue(
+            "legacy dir partsToString",
+            "\u2067Mojito\u2069",
+            Mf2Formatter.partsToString(
+                listOf(mapOf("type" to "expression", "value" to "Mojito", "dir" to "rtl")),
+                Mf2BidiIsolation.DEFAULT,
+            ),
+        )
+
         val throwingOptionMessage = parsePublicApiModel("Hello {1 :number minimumFractionDigits=${'$'}digits}")
         val throwingNumberOption = Mf2Formatter.formatMessage(
             model = throwingOptionMessage,

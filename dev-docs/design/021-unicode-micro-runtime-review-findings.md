@@ -738,7 +738,9 @@ branch is under active implementation.
   errors instead of escaping through JavaScript, PHP, Go, Java, or Kotlin hard
   failures, and markup `u:dir` is rejected as `bad-option` in Python and Swift
   to match the existing ports. Shared fixtures cover an inherited `rtl`
-  expression and combined invalid expression/markup recovery.
+  expression and combined invalid expression/markup recovery. Public parts
+  output uses the `direction` field consistently across runtimes; Rust still
+  accepts legacy fixture JSON using `dir`.
 - JavaScript/Python/PHP direct API coercion hardening: direct `number-core` now
   wraps non-coercible operands, locales, and fraction digit options as typed
   core errors in these ports, direct `date-time-core` wraps non-coercible

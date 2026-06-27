@@ -188,6 +188,14 @@ public final class PublicApiDemo {
         assertEquals("selector-only annotation rawValue", "raw", selectorOnlyResult.value());
         assertEmpty("selector-only annotation rawValue errors", selectorOnlyResult.errors());
 
+        Mf2Message directedMessage = parse("Hello {$name :string u:dir=rtl}");
+        Mf2PartsResult directedParts = directedMessage.formatToParts(Map.of("name", "Mojito"), options);
+        Map<String, Object> directedExpression = FormattedPartJson.toMaps(directedParts.parts()).get(1);
+        assertEquals("direction field part", "rtl", directedExpression.get("direction"));
+        if (directedExpression.containsKey("dir")) {
+            throw new AssertionError("direction field part used stale dir key: " + directedExpression);
+        }
+
         Mf2Message falsePresenceAttribute = new Mf2Message.PatternMessage(
                 List.of(),
                 List.of(new Mf2Message.ExpressionPart(

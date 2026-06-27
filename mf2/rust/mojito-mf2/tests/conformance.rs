@@ -92,13 +92,53 @@ fn public_runtime_api_exposes_result_and_parts() {
             FormattedPart::Expression {
                 value: "Mojito".to_string(),
                 attributes: None,
-                dir: None,
+                direction: None,
             },
         ]
     );
 
     assert!(parts.is_ok());
     assert!(!parts.has_errors());
+
+    let directed_result = parse_to_model("Hello {$name :string u:dir=rtl}");
+    assert_diagnostics_empty(
+        Path::new("public-api direction"),
+        &directed_result.diagnostics,
+    );
+    let directed_model = directed_result
+        .model
+        .as_ref()
+        .expect("directed model exists");
+    let directed_parts = format_message_to_parts(directed_model, &arguments).unwrap();
+    assert_eq!(
+        directed_parts.parts,
+        vec![
+            FormattedPart::Text {
+                value: "Hello ".to_string(),
+            },
+            FormattedPart::Expression {
+                value: "Mojito".to_string(),
+                attributes: None,
+                direction: Some("rtl".to_string()),
+            },
+        ]
+    );
+    assert_eq!(
+        serde_json::to_value(&directed_parts.parts[1]).expect("part serializes"),
+        serde_json::json!({"type":"expression","value":"Mojito","direction":"rtl"})
+    );
+    let legacy_direction: FormattedPart = serde_json::from_value(
+        serde_json::json!({"type":"expression","value":"Mojito","dir":"rtl"}),
+    )
+    .expect("legacy dir field deserializes");
+    assert_eq!(
+        legacy_direction,
+        FormattedPart::Expression {
+            value: "Mojito".to_string(),
+            attributes: None,
+            direction: Some("rtl".to_string()),
+        }
+    );
 
     let select_result = parse_to_model(".input {$n :number}\n.match $n\none {{one}}\n* {{other}}");
     assert_diagnostics_empty(
