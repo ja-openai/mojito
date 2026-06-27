@@ -483,6 +483,11 @@ branch is under active implementation.
   before calling `Intl.*Format` or ICU4X locale parsing. This matches the
   existing Python Babel, PHP Intl, Swift Foundation, and JVM adapter locale
   limits and keeps oversized locale inputs in MF2 `bad-option` recovery.
+- JavaScript Intl numeric option text bounds: the optional JavaScript Intl
+  adapter now rejects `minimumFractionDigits` and `maximumFractionDigits`
+  option text longer than 256 characters before integer regex matching or
+  numeric coercion. This keeps attacker-controlled fraction digit option
+  literals in the same bounded `bad-option` recovery path as numeric operands.
 - PHP Intl locale error recovery: the optional PHP Intl adapter now wraps
   `NumberFormatter`/`IntlDateFormatter` locale constructor failures as MF2
   `bad-option` errors. Targeted adapter tests cover malformed, unknown, and

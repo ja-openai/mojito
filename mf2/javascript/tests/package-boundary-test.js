@@ -136,6 +136,13 @@ const invalidCurrentIntlCurrencyResult = formatMessageFromFormatter(
   { locale: "en-US", functions: intlRegistry, bidiIsolation: "none" },
 );
 assert.deepEqual(invalidCurrentIntlCurrencyResult.errors.map((error) => error.code), ["bad-option"]);
+const oversizedIntlFraction = parseToModelFromParser(`Rounded {$amount :number maximumFractionDigits=${"1".repeat(257)}}`);
+const oversizedIntlFractionResult = formatMessageFromFormatter(
+  oversizedIntlFraction.model,
+  { amount: 12.3 },
+  { locale: "en-US", functions: intlRegistry, bidiIsolation: "none" },
+);
+assert.deepEqual(oversizedIntlFractionResult.errors.map((error) => error.code), ["bad-option"]);
 const relative = parseToModelFromParser("Due {$delta :relativeTime unit=day}");
 for (const locale of ["en", "fr", "ja", "ar"]) {
   assert.equal(

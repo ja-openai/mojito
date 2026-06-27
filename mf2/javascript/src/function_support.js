@@ -103,8 +103,10 @@ function normalizeDecimalOperand(negative, digits, scale) {
 }
 
 export function parseInteger(value) {
-  if (!INTEGER_PATTERN.test(String(value))) return null;
-  const parsed = Number(value);
+  const text = String(value);
+  if (text.length > MAX_DECIMAL_OPERAND_LENGTH) return null;
+  if (!INTEGER_PATTERN.test(text)) return null;
+  const parsed = Number(text);
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
