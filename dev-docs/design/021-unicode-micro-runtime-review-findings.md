@@ -486,6 +486,14 @@ branch is under active implementation.
   private-use-only, and oversized locale strings as MF2 `bad-option` while
   still accepting private-use extensions on normal language tags. The JDK and
   ICU4J registry checks cover both Java and Kotlin.
+- JVM host-adapter date-time string grammar: the Java/Kotlin JDK and ICU4J
+  adapters now parse string operands through local date/time, local datetime,
+  offset datetime, and instant shapes without the host-only
+  `ZonedDateTime.parse` bracketed-zone extension. Raw host `ZonedDateTime`
+  values remain supported, while strings such as
+  `2026-05-21T14:30:15+02:00[Europe/Paris]` recover as MF2 `bad-operand`
+  like the other runtimes. JDK and ICU4J registry demos cover both Java and
+  Kotlin.
 - PHP Intl numeric operand grammar: the explicit PHP Intl registry now reuses
   the shared portable decimal parser instead of `is_numeric()`, rejecting host
   numeric extensions such as leading plus signs, whitespace, leading-dot,

@@ -341,10 +341,6 @@ public final class Mf2Icu4jFunctions {
 
     private static ZonedDateTime parseZonedDateTime(String value) {
         try {
-            return ZonedDateTime.parse(value);
-        } catch (DateTimeParseException error) {
-        }
-        try {
             OffsetDateTime dateTime =
                     OffsetDateTime.parse(value, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
             return dateTime.toZonedDateTime();

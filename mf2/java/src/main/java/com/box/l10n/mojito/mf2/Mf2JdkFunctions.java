@@ -433,10 +433,6 @@ final class Mf2JdkFunctions {
 
     private static Optional<ZonedDateTime> parseZonedDateTime(String value) {
         try {
-            return Optional.of(ZonedDateTime.parse(value));
-        } catch (DateTimeParseException ignored) {
-        }
-        try {
             return Optional.of(OffsetDateTime.parse(value, DateTimeFormatter.ISO_OFFSET_DATE_TIME).toZonedDateTime());
         } catch (DateTimeParseException ignored) {
         }

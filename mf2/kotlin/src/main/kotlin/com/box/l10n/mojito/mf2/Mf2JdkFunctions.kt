@@ -313,10 +313,6 @@ internal object Mf2JdkFunctions {
 
     private fun parseZonedDateTime(value: String): ZonedDateTime? {
         try {
-            return ZonedDateTime.parse(value)
-        } catch (error: DateTimeParseException) {
-        }
-        try {
             return OffsetDateTime.parse(value, DateTimeFormatter.ISO_OFFSET_DATE_TIME).toZonedDateTime()
         } catch (error: DateTimeParseException) {
         }

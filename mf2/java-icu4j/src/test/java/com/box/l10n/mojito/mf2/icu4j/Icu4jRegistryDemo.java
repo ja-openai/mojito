@@ -84,6 +84,11 @@ public final class Icu4jRegistryDemo {
         assertLocaleErrorCode("private-use-only locale", "x-private", "bad-option");
         assertLocaleErrorCode("oversized locale", "a".repeat(257), "bad-option");
         assertLocaleFormats("private-use extension locale", "en-x-private");
+        assertDateOperandErrorCode(
+                "bracketed zone datetime",
+                "datetime={$instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}",
+                "2026-05-21T14:30:15+02:00[Europe/Paris]",
+                "bad-operand");
 
         if (!quiet) {
             System.out.println("Java ICU4J registry demo passed");
@@ -210,6 +215,20 @@ public final class Icu4jRegistryDemo {
                         .build());
         if (result.hasErrors()) {
             throw new AssertionError(label + " returned errors: " + result.errors());
+        }
+    }
+
+    private static void assertDateOperandErrorCode(
+            String label, String source, String instant, String expectedCode) throws Mf2Exception {
+        Mf2Message message = parse(source);
+        Mf2FormatResult result = message.format(
+                Map.of("instant", instant),
+                Mf2FormatOptions.builder()
+                        .locale("en-US")
+                        .functions(Mf2Icu4jFunctions.registry())
+                        .build());
+        if (result.errors().size() != 1 || !expectedCode.equals(result.errors().get(0).code())) {
+            throw new AssertionError(label + " expected " + expectedCode + ", got " + result.errors());
         }
     }
 }

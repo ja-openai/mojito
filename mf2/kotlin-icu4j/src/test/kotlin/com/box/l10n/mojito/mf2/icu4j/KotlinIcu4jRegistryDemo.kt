@@ -72,6 +72,12 @@ object KotlinIcu4jRegistryDemo {
         assertLocaleErrorCode("private-use-only locale", "x-private", "bad-option")
         assertLocaleErrorCode("oversized locale", "a".repeat(257), "bad-option")
         assertLocaleFormats("private-use extension locale", "en-x-private")
+        assertDateOperandErrorCode(
+            "bracketed zone datetime",
+            "datetime={${'$'}instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}",
+            "2026-05-21T14:30:15+02:00[Europe/Paris]",
+            "bad-operand",
+        )
         if (!quiet) println("Kotlin ICU4J registry demo passed")
     }
 
@@ -185,6 +191,23 @@ object KotlinIcu4jRegistryDemo {
         )
         if (result.hasErrors) {
             error("$label returned errors: ${result.errors}")
+        }
+    }
+
+    private fun assertDateOperandErrorCode(
+        label: String,
+        source: String,
+        instant: String,
+        expectedCode: String,
+    ) {
+        val result: Mf2FormatResult = Mf2Formatter.formatMessage(
+            model = parse(source),
+            arguments = mapOf("instant" to instant),
+            locale = "en-US",
+            functions = Mf2Icu4jFunctions.registry(),
+        )
+        if (result.errors.size != 1 || result.errors.first().code != expectedCode) {
+            error("$label expected $expectedCode, got ${result.errors}")
         }
     }
 }
