@@ -90,6 +90,12 @@ object KotlinIcu4jRegistryDemo {
             "2026-05-21T14:30:15+01:02:03",
             "bad-operand",
         )
+        assertDateOperandErrorCode(
+            "oversized date operand",
+            "date={${'$'}instant :date dateStyle=medium timeZone=UTC}",
+            "2026-05-21" + "0".repeat(257),
+            "bad-operand",
+        )
         if (!quiet) println("Kotlin ICU4J registry demo passed")
     }
 

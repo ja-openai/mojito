@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 final class Mf2JdkFunctions {
+    private static final int MAX_DATE_OPERAND_LENGTH = 256;
     private static final int MAX_LOCALE_LENGTH = 256;
     private static final Pattern ISO_DATE_TIME_OPERAND =
             Pattern.compile("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d{1,9})?)?(?:Z|[+-]\\d{2}:\\d{2})?");
@@ -411,6 +412,9 @@ final class Mf2JdkFunctions {
     }
 
     private static Optional<LocalDate> parseLocalDate(String value) {
+        if (!hasValidDateOperandLength(value)) {
+            return Optional.empty();
+        }
         try {
             return Optional.of(LocalDate.parse(value, DateTimeFormatter.ISO_LOCAL_DATE));
         } catch (DateTimeParseException error) {
@@ -419,6 +423,9 @@ final class Mf2JdkFunctions {
     }
 
     private static Optional<LocalTime> parseLocalTime(String value) {
+        if (!hasValidDateOperandLength(value)) {
+            return Optional.empty();
+        }
         try {
             return Optional.of(LocalTime.parse(value, DateTimeFormatter.ISO_LOCAL_TIME));
         } catch (DateTimeParseException error) {
@@ -427,6 +434,9 @@ final class Mf2JdkFunctions {
     }
 
     private static Optional<LocalDateTime> parseLocalDateTime(String value) {
+        if (!hasValidDateOperandLength(value)) {
+            return Optional.empty();
+        }
         try {
             return Optional.of(LocalDateTime.parse(value, DateTimeFormatter.ISO_LOCAL_DATE_TIME));
         } catch (DateTimeParseException error) {
@@ -435,7 +445,7 @@ final class Mf2JdkFunctions {
     }
 
     private static Optional<ZonedDateTime> parseZonedDateTime(String value) {
-        if (!ISO_DATE_TIME_OPERAND.matcher(value).matches()) {
+        if (!hasValidDateOperandLength(value) || !ISO_DATE_TIME_OPERAND.matcher(value).matches()) {
             return Optional.empty();
         }
         try {
@@ -447,5 +457,9 @@ final class Mf2JdkFunctions {
         } catch (DateTimeParseException ignored) {
             return Optional.empty();
         }
+    }
+
+    private static boolean hasValidDateOperandLength(String value) {
+        return value.length() <= MAX_DATE_OPERAND_LENGTH;
     }
 }

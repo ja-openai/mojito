@@ -17,6 +17,7 @@ import java.util.Currency
 import java.util.Locale
 
 internal object Mf2JdkFunctions {
+    private const val MAX_DATE_OPERAND_LENGTH = 256
     private const val MAX_LOCALE_LENGTH = 256
     private val isoDateTimeOperand =
         Regex("""\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})?""")
@@ -292,29 +293,35 @@ internal object Mf2JdkFunctions {
         return zonedDateTimeFrom(source.value, source.value, zone) ?: parseSourceZonedDateTime(source.inherited, zone)
     }
 
-    private fun parseLocalDate(value: String): LocalDate? =
-        try {
+    private fun parseLocalDate(value: String): LocalDate? {
+        if (!hasValidDateOperandLength(value)) return null
+        return try {
             LocalDate.parse(value, DateTimeFormatter.ISO_LOCAL_DATE)
         } catch (error: DateTimeParseException) {
             null
         }
+    }
 
-    private fun parseLocalTime(value: String): LocalTime? =
-        try {
+    private fun parseLocalTime(value: String): LocalTime? {
+        if (!hasValidDateOperandLength(value)) return null
+        return try {
             LocalTime.parse(value, DateTimeFormatter.ISO_LOCAL_TIME)
         } catch (error: DateTimeParseException) {
             null
         }
+    }
 
-    private fun parseLocalDateTime(value: String): LocalDateTime? =
-        try {
+    private fun parseLocalDateTime(value: String): LocalDateTime? {
+        if (!hasValidDateOperandLength(value)) return null
+        return try {
             LocalDateTime.parse(value, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
         } catch (error: DateTimeParseException) {
             null
         }
+    }
 
     private fun parseZonedDateTime(value: String): ZonedDateTime? {
-        if (!isoDateTimeOperand.matches(value)) {
+        if (!hasValidDateOperandLength(value) || !isoDateTimeOperand.matches(value)) {
             return null
         }
         try {
@@ -327,4 +334,6 @@ internal object Mf2JdkFunctions {
             null
         }
     }
+
+    private fun hasValidDateOperandLength(value: String): Boolean = value.length <= MAX_DATE_OPERAND_LENGTH
 }

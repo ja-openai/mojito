@@ -492,7 +492,9 @@ branch is under active implementation.
   adapters now parse string operands through local date/time, local datetime,
   offset datetime, and instant shapes without the host-only
   `ZonedDateTime.parse` bracketed-zone extension and without host-accepted
-  offset spellings outside `Z`/`±HH:mm`. Raw host `ZonedDateTime` values remain
+  offset spellings outside `Z`/`±HH:mm`. String date/time operands are capped at
+  256 characters before any host date parser runs, matching the other optional
+  adapters' bounded-input behavior. Raw host `ZonedDateTime` values remain
   supported, while strings such as
   `2026-05-21T14:30:15+02:00[Europe/Paris]`, `2026-05-21T14:30:15+01`, and
   `2026-05-21T14:30:15+01:02:03` recover as MF2 `bad-operand` like the other

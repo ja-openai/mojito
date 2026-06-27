@@ -26,6 +26,7 @@ import java.util.OptionalInt;
 import java.util.regex.Pattern;
 
 public final class Mf2Icu4jFunctions {
+    private static final int MAX_DATE_OPERAND_LENGTH = 256;
     private static final int MAX_FRACTION_DIGITS = 100;
     private static final int MAX_LOCALE_LENGTH = 256;
     private static final LocalDate EPOCH_DATE = LocalDate.of(1970, 1, 1);
@@ -327,6 +328,9 @@ public final class Mf2Icu4jFunctions {
     }
 
     private static LocalDate parseLocalDate(String value) {
+        if (!hasValidDateOperandLength(value)) {
+            return null;
+        }
         try {
             return LocalDate.parse(value, DateTimeFormatter.ISO_LOCAL_DATE);
         } catch (DateTimeParseException error) {
@@ -335,6 +339,9 @@ public final class Mf2Icu4jFunctions {
     }
 
     private static LocalTime parseLocalTime(String value) {
+        if (!hasValidDateOperandLength(value)) {
+            return null;
+        }
         try {
             return LocalTime.parse(value, DateTimeFormatter.ISO_LOCAL_TIME);
         } catch (DateTimeParseException error) {
@@ -343,7 +350,7 @@ public final class Mf2Icu4jFunctions {
     }
 
     private static ZonedDateTime parseZonedDateTime(String value) {
-        if (!ISO_DATE_TIME_OPERAND.matcher(value).matches()) {
+        if (!hasValidDateOperandLength(value) || !ISO_DATE_TIME_OPERAND.matcher(value).matches()) {
             return null;
         }
         try {
@@ -363,6 +370,10 @@ public final class Mf2Icu4jFunctions {
         } catch (DateTimeParseException error) {
             return null;
         }
+    }
+
+    private static boolean hasValidDateOperandLength(String value) {
+        return value.length() <= MAX_DATE_OPERAND_LENGTH;
     }
 
     private static OptionalInt minimumFractionDigits(Mf2FunctionRegistry.FunctionCall call)
