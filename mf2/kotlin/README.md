@@ -69,10 +69,12 @@ digits, `hourCycle`, and UTC/fixed-offset `timeZone` values for the current
 probe locale set. Use `Mf2DateTimeCore.registry()` when a caller wants generated-data date/time handlers explicitly;
 `Mf2FunctionRegistry.defaults()` continues to mean JDK-backed formatting. Direct
 callers can use `formatDate(...)`, `formatTime(...)`, `formatDateTime(...)`, and
-the corresponding `format*ToParts(...)` wrappers with defaulted options. The
-shared `date-time-core` fixture checks static outputs, semantic skeleton
-outputs, error codes, registry integration, and `DateTimeFormatter` reference
-behavior.
+the corresponding `format*ToParts(...)` wrappers with defaulted options. Direct
+host operands accept `LocalDate`, `LocalTime`, `LocalDateTime`, `Instant`,
+`OffsetDateTime`, `ZonedDateTime`, legacy `Date`, numeric epoch milliseconds,
+and ISO date/date-time strings. The shared `date-time-core` fixture checks
+static outputs, semantic skeleton outputs, error codes, registry integration,
+and `DateTimeFormatter` reference behavior.
 
 `Mf2RelativeTimeCore` is the experimental data-explicit relative-time formatter.
 It consumes the generated

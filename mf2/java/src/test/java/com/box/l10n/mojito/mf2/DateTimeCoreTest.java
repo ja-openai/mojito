@@ -3,6 +3,9 @@ package com.box.l10n.mojito.mf2;
 import java.nio.file.Path;
 import java.time.DateTimeException;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.time.format.DecimalStyle;
 import java.time.format.DateTimeFormatter;
@@ -29,6 +32,7 @@ public final class DateTimeCoreTest {
         int registryErrorCases = checkRegistryErrorCases(arrayOrEmpty(fixture.get("registryErrorCases")));
         checkRegistryIntegration();
         checkOperandBoundary();
+        checkDirectHostDateTypes();
         checkDefaultOverloads();
         System.out.printf(
                 "Java date/time core test passed %d format cases, %d numeric timestamp cases, "
@@ -197,6 +201,15 @@ public final class DateTimeCoreTest {
                 throw new AssertionError("date-time core throwing CharSequence operand got " + error.code());
             }
         }
+    }
+
+    private static void checkDirectHostDateTypes() throws Exception {
+        assertSameDefault("date LocalDate", "May 21, 2026", Mf2DateTimeCore.formatDate(LocalDate.of(2026, 5, 21)));
+        assertSameDefault("time LocalTime", "2:30:15\u202fPM", Mf2DateTimeCore.formatTime(LocalTime.of(14, 30, 15)));
+        assertSameDefault(
+                "datetime LocalDateTime",
+                "May 21, 2026, 2:30:15\u202fPM",
+                Mf2DateTimeCore.formatDateTime(LocalDateTime.of(2026, 5, 21, 14, 30, 15)));
     }
 
     private static void checkDefaultOverloads() throws Exception {

@@ -3,6 +3,7 @@ package com.box.l10n.mojito.mf2
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
@@ -297,6 +298,9 @@ object Mf2DateTimeCore {
 
     private fun parseDate(value: Any?): ZonedDateTime {
         return when (value) {
+            is LocalDateTime -> validateDate(value.atZone(ZoneOffset.UTC))
+            is LocalDate -> validateDate(value.atStartOfDay(ZoneOffset.UTC))
+            is LocalTime -> validateDate(value.atDate(LocalDate.of(1970, 1, 1)).atZone(ZoneOffset.UTC))
             is ZonedDateTime -> validateDate(value.withZoneSameInstant(ZoneOffset.UTC))
             is OffsetDateTime -> validateDate(value.atZoneSameInstant(ZoneOffset.UTC))
             is Instant -> validateDate(value.atZone(ZoneOffset.UTC))

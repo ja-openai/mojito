@@ -3,6 +3,7 @@ package com.box.l10n.mojito.mf2;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -528,6 +529,15 @@ public final class Mf2DateTimeCore {
     }
 
     private static ZonedDateTime parseDate(Object value) throws Mf2Exception {
+        if (value instanceof LocalDateTime localDateTime) {
+            return validateDate(localDateTime.atZone(ZoneOffset.UTC));
+        }
+        if (value instanceof LocalDate localDate) {
+            return validateDate(localDate.atStartOfDay(ZoneOffset.UTC));
+        }
+        if (value instanceof LocalTime localTime) {
+            return validateDate(localTime.atDate(LocalDate.of(1970, 1, 1)).atZone(ZoneOffset.UTC));
+        }
         if (value instanceof ZonedDateTime zonedDateTime) {
             return validateDate(zonedDateTime.withZoneSameInstant(ZoneOffset.UTC));
         }

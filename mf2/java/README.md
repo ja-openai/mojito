@@ -132,7 +132,10 @@ handlers explicitly; `Mf2FunctionRegistry.defaults()` continues to mean
 JDK-backed formatting. Direct Java callers can use `formatDate(value)`,
 `formatTime(value)`, `formatDateTime(value)`, and the corresponding
 `format*ToParts(value)` wrappers for default options, or the `(value, options)`
-overloads with `Mf2DateTimeCore.options()`.
+overloads with `Mf2DateTimeCore.options()`. Direct host operands accept
+`LocalDate`, `LocalTime`, `LocalDateTime`, `Instant`, `OffsetDateTime`,
+`ZonedDateTime`, legacy `Date`, numeric epoch milliseconds, and ISO
+date/date-time strings.
 The shared `date-time-core` fixture checks static outputs, semantic skeleton
 outputs, error codes, registry integration, and `DateTimeFormatter` reference
 behavior.
