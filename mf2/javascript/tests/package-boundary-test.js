@@ -122,6 +122,17 @@ assert.deepEqual(invalidFunctionsResult.errors.map((error) => error.code), ["bad
 const invalidFunctionsPartsResult = formatMessageToPartsFromRoot(parsed.model, { name: "Mojito" }, { functions: 1 });
 assert.deepEqual(invalidFunctionsPartsResult.parts, []);
 assert.deepEqual(invalidFunctionsPartsResult.errors.map((error) => error.code), ["bad-option"]);
+const hostileArguments = new Proxy({}, {
+  ownKeys() {
+    throw new Error("arguments enumeration failed");
+  },
+});
+const hostileArgumentsResult = formatMessage(parsed.model, hostileArguments);
+assert.equal(hostileArgumentsResult.value, "");
+assert.deepEqual(hostileArgumentsResult.errors.map((error) => error.code), ["bad-option"]);
+const hostileArgumentsPartsResult = formatMessageToPartsFromRoot(parsed.model, hostileArguments);
+assert.deepEqual(hostileArgumentsPartsResult.parts, []);
+assert.deepEqual(hostileArgumentsPartsResult.errors.map((error) => error.code), ["bad-option"]);
 assert.equal(FunctionRegistry.defaults().hasFormatter({ name: "string" }), true);
 assert.equal(FunctionRegistry.portable().hasFormatter({ name: "number" }), true);
 assert.equal(createPortableFunctionRegistry(FunctionRegistry).hasFormatter({ name: "number" }), true);

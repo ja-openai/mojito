@@ -666,6 +666,11 @@ branch is under active implementation.
   `bad-option` and empty string/parts output. This prevents Python from leaking
   raw `AttributeError`, and keeps JavaScript/PHP from reporting malformed
   registries as generic formatting errors.
+- JavaScript/Python top-level argument map hardening: argument-map construction
+  now catches hostile enumeration failures and returns empty output/parts with
+  `bad-option` instead of leaking host exceptions before formatter recovery
+  state exists. Public package/API regressions cover throwing JS proxy
+  arguments and Python mapping-like objects.
 - PHP option-variable error classification: variable-valued option coercion now
   uses a dedicated option path, so throwing host option values recover with
   `bad-option` while ordinary expression and selector operands continue to

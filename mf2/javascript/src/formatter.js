@@ -28,7 +28,9 @@ export function formatMessageToParts(model, arguments_ = {}, options = {}) {
   if (locale.error) return errorPartsResult(locale.error);
   const functions = functionsOption(options);
   if (functions.error) return errorPartsResult(functions.error);
-  const context = new FormatContext(arguments_, locale.value, functions.value, true, options);
+  const argumentsMap = argumentsOption(arguments_);
+  if (argumentsMap.error) return errorPartsResult(argumentsMap.error);
+  const context = new FormatContext(argumentsMap.value, locale.value, functions.value, true, options);
   context.applyDeclarations(model.declarations ?? []);
   const parts = model.type === "message"
     ? context.formatPatternToParts(model.pattern ?? [])
@@ -54,6 +56,14 @@ function functionsOption(options) {
   const value = options.functions ?? FunctionRegistry.defaults();
   if (value instanceof FunctionRegistry) return { value };
   return { error: MF2Error.badOption("functions must be a FunctionRegistry.") };
+}
+
+function argumentsOption(arguments_) {
+  try {
+    return { value: new Map(Object.entries(arguments_ ?? {})) };
+  } catch (error) {
+    return { error: MF2Error.badOption(safeErrorMessage(error)) };
+  }
 }
 
 function errorPartsResult(error) {
@@ -117,8 +127,8 @@ export class FunctionRegistry {
 }
 
 class FormatContext {
-  constructor(arguments_, locale, functions, fallback = false, options = {}) {
-    this.arguments = new Map(Object.entries(arguments_ ?? {}));
+  constructor(argumentsMap, locale, functions, fallback = false, options = {}) {
+    this.arguments = argumentsMap;
     this.locals = new Map();
     this.failedLocals = new Set();
     this.errors = [];

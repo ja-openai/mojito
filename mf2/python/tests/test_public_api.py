@@ -370,6 +370,22 @@ class PublicApiTest(unittest.TestCase):
         self.assertEqual([], parts.parts)
         self.assertEqual(["bad-option"], [error.code for error in parts.errors])
 
+    def test_top_level_arguments_enumeration_failure_is_recoverable(self) -> None:
+        class BadArguments:
+            def keys(self) -> list[str]:
+                raise RuntimeError("arguments enumeration failed")
+
+        message = parse_to_model("Hello {$name}")
+        formatted = format_message(message.model, BadArguments())
+        self.assertFalse(formatted.ok)
+        self.assertEqual("", formatted.value)
+        self.assertEqual(["bad-option"], [error.code for error in formatted.errors])
+
+        parts = format_message_to_parts(message.model, BadArguments())
+        self.assertFalse(parts.ok)
+        self.assertEqual([], parts.parts)
+        self.assertEqual(["bad-option"], [error.code for error in parts.errors])
+
     def test_custom_selector_can_match_variant_key(self) -> None:
         model = {
             "type": "select",

@@ -118,8 +118,12 @@ def format_message_to_parts(
         function_registry = _functions_option(functions)
     except MF2Error as error:
         return PartsResult(parts=[], errors=[error])
+    try:
+        argument_values = _arguments_option(arguments)
+    except MF2Error as error:
+        return PartsResult(parts=[], errors=[error])
     context = _FormatContext(
-        dict(arguments or {}),
+        argument_values,
         normalized_locale,
         function_registry,
         fallback=True,
@@ -154,6 +158,13 @@ def _functions_option(functions: Any) -> FunctionRegistry:
     if isinstance(functions, FunctionRegistry):
         return functions
     raise MF2Error("bad-option", "functions must be a FunctionRegistry.")
+
+
+def _arguments_option(arguments: Any) -> dict[str, Any]:
+    try:
+        return dict(arguments or {})
+    except Exception as error:
+        raise MF2Error("bad-option", _safe_exception_message(error)) from error
 
 
 def _validate_model(model: dict[str, Any]) -> None:
