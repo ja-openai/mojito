@@ -410,6 +410,28 @@ class PublicApiTest(unittest.TestCase):
                     format_message({"type": "select", field: 1})
                 self.assertEqual("bad-option", formatted.exception.code)
 
+        with self.assertRaises(MF2Error) as formatted:
+            format_message({"type": "select", "variants": [{"keys": 1, "value": []}]})
+        self.assertEqual("bad-option", formatted.exception.code)
+
+    def test_non_mapping_model_field_entries_raise_mf2_error(self) -> None:
+        cases = (
+            {"type": "message", "declarations": [1]},
+            {"type": "select", "selectors": [1]},
+            {"type": "select", "variants": [1]},
+            {"type": "select", "variants": [{"keys": [1], "value": []}]},
+        )
+        for model in cases:
+            with self.subTest(model=model):
+                with self.assertRaises(MF2Error) as formatted:
+                    format_message(model)
+                self.assertEqual("bad-option", formatted.exception.code)
+
+    def test_non_mapping_pattern_part_raises_mf2_error(self) -> None:
+        with self.assertRaises(MF2Error) as formatted:
+            format_message({"type": "message", "pattern": [1]})
+        self.assertEqual("unsupported-pattern-part", formatted.exception.code)
+
     def test_custom_selector_can_match_variant_key(self) -> None:
         model = {
             "type": "select",

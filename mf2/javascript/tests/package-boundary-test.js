@@ -187,6 +187,19 @@ for (const field of ["selectors", "variants"]) {
     (error) => error instanceof MF2Error && error.code === "bad-option",
   );
 }
+for (const [label, model] of [
+  ["declaration entry", { type: "message", declarations: [1] }],
+  ["selector entry", { type: "select", selectors: [1] }],
+  ["variant entry", { type: "select", variants: [1] }],
+  ["variant keys", { type: "select", variants: [{ keys: 1, value: [] }] }],
+  ["variant key entry", { type: "select", variants: [{ keys: [1], value: [] }] }],
+]) {
+  assert.throws(
+    () => formatMessage(model),
+    (error) => error instanceof MF2Error && error.code === "bad-option",
+    label,
+  );
+}
 assert.equal(FunctionRegistry.defaults().hasFormatter({ name: "string" }), true);
 assert.equal(FunctionRegistry.portable().hasFormatter({ name: "number" }), true);
 assert.equal(createPortableFunctionRegistry(FunctionRegistry).hasFormatter({ name: "number" }), true);

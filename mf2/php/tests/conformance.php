@@ -811,6 +811,19 @@ function assert_public_api_boundary(): void
         assert_same("non-array {$field} value", '', $nonArrayField['value']);
         assert_json_equal("non-array {$field} errors", ['bad-option'], array_map(static fn($error): string => error_code($error), $nonArrayField['errors']));
     }
+    $nonArrayVariantKeys = format_message(['type' => 'select', 'variants' => [['keys' => 1, 'value' => []]]]);
+    assert_same('non-array variant keys value', '', $nonArrayVariantKeys['value']);
+    assert_json_equal('non-array variant keys errors', ['bad-option'], array_map(static fn($error): string => error_code($error), $nonArrayVariantKeys['errors']));
+    foreach ([
+        'declaration entry' => ['type' => 'message', 'declarations' => [1]],
+        'selector entry' => ['type' => 'select', 'selectors' => [1]],
+        'variant entry' => ['type' => 'select', 'variants' => [1]],
+        'variant key entry' => ['type' => 'select', 'variants' => [['keys' => [1], 'value' => []]]],
+    ] as $label => $model) {
+        $nonObjectEntry = format_message($model);
+        assert_same("non-object {$label} value", '', $nonObjectEntry['value']);
+        assert_json_equal("non-object {$label} errors", ['bad-option'], array_map(static fn($error): string => error_code($error), $nonObjectEntry['errors']));
+    }
 
     $throwingNumberOption = parse_to_model('Hello {1 :number minimumFractionDigits=$d}')['model'];
     $throwingNumberOptionResult = format_message($throwingNumberOption, ['d' => new ThrowingStringValue()], [

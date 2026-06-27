@@ -551,12 +551,15 @@ function validateModel(model) {
     throw new MF2Error("unsupported-message-type", "Unsupported message type: .");
   }
   const type = model.type;
-  const declarations = modelArrayField(model, "declarations");
+  const declarations = modelObjectEntries(modelArrayField(model, "declarations"), "declarations");
   validateDeclarations(declarations);
   if (type === "message") validatePattern(modelArrayField(model, "pattern"));
   else if (type === "select") {
-    validateSelectorAnnotations(declarations, modelArrayField(model, "selectors"));
-    for (const variant of modelArrayField(model, "variants")) validatePattern(modelArrayField(variant, "value"));
+    validateSelectorAnnotations(declarations, modelObjectEntries(modelArrayField(model, "selectors"), "selectors"));
+    for (const variant of modelObjectEntries(modelArrayField(model, "variants"), "variants")) {
+      modelObjectEntries(modelArrayField(variant, "keys"), "variant keys");
+      validatePattern(modelArrayField(variant, "value"));
+    }
   } else {
     throw new MF2Error("unsupported-message-type", `Unsupported message type: ${type ?? ""}.`);
   }
@@ -567,6 +570,13 @@ function modelArrayField(object, name) {
   if (value == null) return [];
   if (Array.isArray(value)) return value;
   throw MF2Error.badOption(`${name} must be an array.`);
+}
+
+function modelObjectEntries(values, name) {
+  return values.map((value) => {
+    if (value != null && typeof value === "object" && !Array.isArray(value)) return value;
+    throw MF2Error.badOption(`${name} entries must be objects.`);
+  });
 }
 
 function validateDeclarations(declarations) {

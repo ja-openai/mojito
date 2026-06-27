@@ -236,9 +236,12 @@ func newFormatContext(
 }
 
 func (c *formatContext) applyDeclarations(declarations []any) error {
-	c.selectorAnnotations = selectorAnnotations(declarations)
-	for _, raw := range declarations {
-		declaration := asObject(raw)
+	declarationObjects, err := modelObjectEntries(declarations, "declarations")
+	if err != nil {
+		return err
+	}
+	c.selectorAnnotations = selectorAnnotations(declarationObjects)
+	for _, declaration := range declarationObjects {
 		switch stringField(declaration, "type") {
 		case "input":
 			if err := c.applyInputDeclaration(declaration); err != nil {
@@ -734,7 +737,11 @@ func (c *formatContext) keyMatchRank(key map[string]any, selector selectorValue)
 
 func validateModel(model Model) error {
 	modelObject := map[string]any(model)
-	declarations, err := modelArrayField(modelObject, "declarations")
+	rawDeclarations, err := modelArrayField(modelObject, "declarations")
+	if err != nil {
+		return err
+	}
+	declarations, err := modelObjectEntries(rawDeclarations, "declarations")
 	if err != nil {
 		return err
 	}
@@ -750,19 +757,34 @@ func validateModel(model Model) error {
 		}
 		return validatePattern(pattern)
 	case "select":
-		selectors, err := modelArrayField(modelObject, "selectors")
+		rawSelectors, err := modelArrayField(modelObject, "selectors")
+		if err != nil {
+			return err
+		}
+		selectors, err := modelObjectEntries(rawSelectors, "selectors")
 		if err != nil {
 			return err
 		}
 		if err := validateSelectorAnnotations(declarations, selectors); err != nil {
 			return err
 		}
-		variants, err := modelArrayField(modelObject, "variants")
+		rawVariants, err := modelArrayField(modelObject, "variants")
 		if err != nil {
 			return err
 		}
-		for _, raw := range variants {
-			value, err := modelArrayField(asObject(raw), "value")
+		variants, err := modelObjectEntries(rawVariants, "variants")
+		if err != nil {
+			return err
+		}
+		for _, variant := range variants {
+			keys, err := modelArrayField(variant, "keys")
+			if err != nil {
+				return err
+			}
+			if _, err := modelObjectEntries(keys, "variant keys"); err != nil {
+				return err
+			}
+			value, err := modelArrayField(variant, "value")
 			if err != nil {
 				return err
 			}
@@ -790,10 +812,21 @@ func modelArrayField(object map[string]any, name string) ([]any, error) {
 	return nil, badOption(name + " must be an array.")
 }
 
-func validateDeclarations(declarations []any) error {
+func modelObjectEntries(values []any, name string) ([]map[string]any, error) {
+	entries := make([]map[string]any, 0, len(values))
+	for _, value := range values {
+		object := asObject(value)
+		if object == nil {
+			return nil, badOption(name + " entries must be objects.")
+		}
+		entries = append(entries, object)
+	}
+	return entries, nil
+}
+
+func validateDeclarations(declarations []map[string]any) error {
 	names := map[string]bool{}
-	for _, raw := range declarations {
-		declaration := asObject(raw)
+	for _, declaration := range declarations {
 		name := stringField(declaration, "name")
 		if stringField(declaration, "type") == "input" {
 			if err := validateInputDeclaration(declaration); err != nil {
@@ -808,10 +841,10 @@ func validateDeclarations(declarations []any) error {
 	return validateLocalReferences(declarations)
 }
 
-func validateLocalReferences(declarations []any) error {
+func validateLocalReferences(declarations []map[string]any) error {
 	forbidden := map[string]bool{}
 	for index := len(declarations) - 1; index >= 0; index-- {
-		declaration := asObject(declarations[index])
+		declaration := declarations[index]
 		if stringField(declaration, "type") != "local" {
 			continue
 		}
@@ -872,10 +905,10 @@ func validateMarkup(markup map[string]any) error {
 	}
 }
 
-func validateSelectorAnnotations(declarations []any, selectors []any) error {
+func validateSelectorAnnotations(declarations []map[string]any, selectors []map[string]any) error {
 	annotations := selectorAnnotations(declarations)
 	for _, selector := range selectors {
-		name := stringField(asObject(selector), "name")
+		name := stringField(selector, "name")
 		if _, ok := annotations[name]; !ok {
 			return mf2Error("missing-selector-annotation", "Selector $"+name+" must reference a declaration with a function.")
 		}
@@ -888,11 +921,10 @@ type selectorAnnotation struct {
 	numberSelect string
 }
 
-func selectorAnnotations(declarations []any) map[string]selectorAnnotation {
+func selectorAnnotations(declarations []map[string]any) map[string]selectorAnnotation {
 	expressions := map[string]map[string]any{}
 	annotations := map[string]selectorAnnotation{}
-	for _, raw := range declarations {
-		declaration := asObject(raw)
+	for _, declaration := range declarations {
 		name := stringField(declaration, "name")
 		value := asObject(declaration["value"])
 		expressions[name] = value

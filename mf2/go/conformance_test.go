@@ -146,6 +146,20 @@ func TestUnsupportedModelTypeReturnsDiagnostic(t *testing.T) {
 		result := FormatMessage(Model{"type": "select", field: 1}, nil, Options{})
 		assertErrorCodesExact(t, "non-array "+field, result.Errors, []string{"bad-option"})
 	}
+	result := FormatMessage(Model{"type": "select", "variants": []any{map[string]any{"keys": 1, "value": []any{}}}}, nil, Options{})
+	assertErrorCodesExact(t, "non-array variant keys", result.Errors, []string{"bad-option"})
+	for _, item := range []struct {
+		label string
+		model Model
+	}{
+		{"declaration entry", Model{"type": "message", "declarations": []any{1}}},
+		{"selector entry", Model{"type": "select", "selectors": []any{1}}},
+		{"variant entry", Model{"type": "select", "variants": []any{1}}},
+		{"variant key entry", Model{"type": "select", "variants": []any{map[string]any{"keys": []any{1}, "value": []any{}}}}},
+	} {
+		result := FormatMessage(item.model, nil, Options{})
+		assertErrorCodesExact(t, "non-object "+item.label, result.Errors, []string{"bad-option"})
+	}
 }
 
 func TestRecoveryCallbacksHandleEmptyAndDeclinedValues(t *testing.T) {

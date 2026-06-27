@@ -459,6 +459,19 @@ object KotlinConformance {
                 Mf2Formatter.formatMessage(mapOf("type" to "select", field to 1))
             }
         }
+        assertThrowsMf2Code("non-array variant keys", "bad-option") {
+            Mf2Formatter.formatMessage(mapOf("type" to "select", "variants" to listOf(mapOf("keys" to 1, "value" to emptyList<Any?>()))))
+        }
+        for ((label, model) in listOf(
+            "declaration entry" to mapOf("type" to "message", "declarations" to listOf(1)),
+            "selector entry" to mapOf("type" to "select", "selectors" to listOf(1)),
+            "variant entry" to mapOf("type" to "select", "variants" to listOf(1)),
+            "variant key entry" to mapOf("type" to "select", "variants" to listOf(mapOf("keys" to listOf(1), "value" to emptyList<Any?>()))),
+        )) {
+            assertThrowsMf2Code("non-object $label", "bad-option") {
+                Mf2Formatter.formatMessage(model)
+            }
+        }
     }
 
     private fun parsePublicApiModel(source: String): Mf2Model {

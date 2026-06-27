@@ -699,11 +699,14 @@ private fun selectorAnnotations(declarations: List<Map<String, Any?>>): Map<Stri
     return annotations
 }
 
-private fun modelDeclarations(model: Mf2Model): List<Map<String, Any?>> = modelListField(model, "declarations").map(::asMap)
+private fun modelDeclarations(model: Mf2Model): List<Map<String, Any?>> =
+    modelObjectEntries(modelListField(model, "declarations"), "declarations")
 
-private fun modelSelectors(model: Mf2Model): List<Map<String, Any?>> = modelListField(model, "selectors").map(::asMap)
+private fun modelSelectors(model: Mf2Model): List<Map<String, Any?>> =
+    modelObjectEntries(modelListField(model, "selectors"), "selectors")
 
-private fun modelVariants(model: Mf2Model): List<Map<String, Any?>> = modelListField(model, "variants").map(::asMap)
+private fun modelVariants(model: Mf2Model): List<Map<String, Any?>> =
+    modelObjectEntries(modelListField(model, "variants"), "variants")
 
 private fun modelListField(model: Map<String, Any?>, name: String): List<Any?> {
     val value = model[name] ?: return emptyList()
@@ -711,7 +714,14 @@ private fun modelListField(model: Map<String, Any?>, name: String): List<Any?> {
     throw Mf2Error("bad-option", "$name must be an array.")
 }
 
-private fun variantKeys(variant: Map<String, Any?>): List<Map<String, Any?>> = asList(variant["keys"]).map(::asMap)
+private fun modelObjectEntries(values: List<Any?>, name: String): List<Map<String, Any?>> =
+    values.map { value ->
+        @Suppress("UNCHECKED_CAST")
+        value as? Map<String, Any?> ?: throw Mf2Error("bad-option", "$name entries must be objects.")
+    }
+
+private fun variantKeys(variant: Map<String, Any?>): List<Map<String, Any?>> =
+    modelObjectEntries(modelListField(variant, "keys"), "variant keys")
 
 private fun variantKeySignature(keys: List<Map<String, Any?>>, selectorValues: List<SelectorValue>): List<String> =
     keys.mapIndexed { index, key ->

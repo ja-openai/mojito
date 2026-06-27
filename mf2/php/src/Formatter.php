@@ -603,14 +603,15 @@ final class FormatContext
 function validate_model(array $model): void
 {
     $type = (string) ($model['type'] ?? '');
-    $declarations = model_array_field($model, 'declarations');
+    $declarations = model_object_entries(model_array_field($model, 'declarations'), 'declarations');
     validate_declarations($declarations);
     if ($type === 'message') {
         validate_pattern(model_array_field($model, 'pattern'));
     } elseif ($type === 'select') {
-        validate_selector_annotations($declarations, model_array_field($model, 'selectors'));
-        foreach (model_array_field($model, 'variants') as $variant) {
-            validate_pattern(is_array($variant) ? model_array_field($variant, 'value') : []);
+        validate_selector_annotations($declarations, model_object_entries(model_array_field($model, 'selectors'), 'selectors'));
+        foreach (model_object_entries(model_array_field($model, 'variants'), 'variants') as $variant) {
+            model_object_entries(model_array_field($variant, 'keys'), 'variant keys');
+            validate_pattern(model_array_field($variant, 'value'));
         }
     } else {
         throw new MF2Error('unsupported-message-type', "Unsupported message type: {$type}.");
@@ -626,6 +627,16 @@ function model_array_field(array $model, string $name): array
         return $model[$name];
     }
     throw MF2Error::badOption("{$name} must be an array.");
+}
+
+function model_object_entries(array $values, string $name): array
+{
+    foreach ($values as $value) {
+        if (!is_array($value)) {
+            throw MF2Error::badOption("{$name} entries must be objects.");
+        }
+    }
+    return $values;
 }
 
 function validate_declarations(array $declarations): void

@@ -671,6 +671,12 @@ branch is under active implementation.
   `bad-option` instead of leaking host exceptions before formatter recovery
   state exists. Public package/API regressions cover throwing JS proxy
   arguments and Python mapping-like objects.
+- Dynamic programmatic model shape hardening: JavaScript, Python, PHP, Go, and
+  Kotlin now reject non-array model containers and non-object declaration,
+  selector, variant, and variant-key entries with MF2 `bad-option` diagnostics
+  instead of raw host exceptions, silent coercion, or later selector failures.
+  Python also rejects primitive pattern parts as MF2 `unsupported-pattern-part`.
+  Public API and conformance regressions cover these malformed model shapes.
 - JavaScript top-level options getter hardening: hostile getters on
   `functions`, `onMissingArgument`, `onFormatError`, and `bidiIsolation` now
   recover as `bad-option` setup failures instead of escaping as raw host

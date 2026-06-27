@@ -185,17 +185,27 @@ def _model_list_field(model: Any, name: str) -> list[Any]:
     raise MF2Error("bad-option", f"{name} must be an array.")
 
 
+def _model_object_entries(values: list[Any], name: str) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    for value in values:
+        if not isinstance(value, dict):
+            raise MF2Error("bad-option", f"{name} entries must be objects.")
+        entries.append(cast(dict[str, Any], value))
+    return entries
+
+
 def _validate_model(model: dict[str, Any]) -> None:
-    declarations = _model_list_field(model, "declarations")
+    declarations = _model_object_entries(_model_list_field(model, "declarations"), "declarations")
     _validate_declarations(declarations)
     if model.get("type") == "message":
         _validate_pattern(_model_list_field(model, "pattern"))
     elif model.get("type") == "select":
         _validate_selector_annotations(
             declarations,
-            _model_list_field(model, "selectors"),
+            _model_object_entries(_model_list_field(model, "selectors"), "selectors"),
         )
-        for variant in _model_list_field(model, "variants"):
+        for variant in _model_object_entries(_model_list_field(model, "variants"), "variants"):
+            _model_object_entries(_model_list_field(variant, "keys"), "variant keys")
             _validate_pattern(_model_list_field(variant, "value"))
 
 
@@ -257,6 +267,8 @@ def _validate_pattern(pattern: list[Any]) -> None:
                 "invalid-pattern-text",
                 "Pattern text parts must be non-empty.",
             )
+        if not isinstance(part, (str, dict)):
+            raise MF2Error("unsupported-pattern-part", "Unsupported pattern part: ")
         if isinstance(part, dict) and part.get("type") == "markup":
             _validate_markup(part)
 
@@ -503,6 +515,8 @@ class _FormatContext:
             if isinstance(part, str):
                 parts.append({"type": "text", "value": part})
                 continue
+            if not isinstance(part, dict):
+                raise MF2Error("unsupported-pattern-part", "Unsupported pattern part: ")
             part_type = part.get("type")
             if part_type == "expression":
                 rendered = self._format_expression_output(part)
