@@ -451,8 +451,8 @@ conformance runner:
 python3 conformance/generate_plural_category_fixtures.py
 ```
 
-Validate generated CLDR relative-time data for a future optional
-`:relativeTime` registry function:
+Validate generated CLDR relative-time data for optional data-explicit
+`:relativeTime` registry helpers:
 
 ```sh
 (cd cldr && sh validate_relative_time_data.sh)
