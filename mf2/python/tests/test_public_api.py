@@ -293,6 +293,24 @@ class PublicApiTest(unittest.TestCase):
         self.assertEqual("fallback", selector_formatted.value)
         self.assertEqual(["bad-operand"], [error.code for error in selector_formatted.errors])
 
+    def test_top_level_locale_coercion_failure_is_recoverable(self) -> None:
+        class BadObject:
+            def __str__(self) -> str:
+                raise RuntimeError("locale coercion failed")
+
+        plural = parse_to_model(
+            ".input {$n :number}\n.match $n\none {{one}}\n* {{other}}"
+        )
+        formatted = format_message(plural.model, {"n": 1}, locale=BadObject())
+        self.assertFalse(formatted.ok)
+        self.assertEqual("", formatted.value)
+        self.assertEqual(["bad-option"], [error.code for error in formatted.errors])
+
+        parts = format_message_to_parts(plural.model, {"n": 1}, locale=BadObject())
+        self.assertFalse(parts.ok)
+        self.assertEqual([], parts.parts)
+        self.assertEqual(["bad-option"], [error.code for error in parts.errors])
+
     def test_custom_selector_can_match_variant_key(self) -> None:
         model = {
             "type": "select",

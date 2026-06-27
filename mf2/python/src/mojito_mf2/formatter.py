@@ -110,9 +110,13 @@ def format_message_to_parts(
 ) -> PartsResult:
     model_data = cast(dict[str, Any], model)
     _validate_model(model_data)
+    try:
+        normalized_locale = _locale_option(locale)
+    except MF2Error as error:
+        return PartsResult(parts=[], errors=[error])
     context = _FormatContext(
         dict(arguments or {}),
-        locale,
+        normalized_locale,
         functions or _DEFAULT_FUNCTION_REGISTRY,
         fallback=True,
         on_missing_argument=on_missing_argument,
@@ -130,6 +134,14 @@ def format_message_to_parts(
     else:
         raise MF2Error("unsupported-message-type", f"Unsupported message type: {message_type}")
     return PartsResult(parts=parts, errors=context.errors)
+
+
+def _locale_option(locale: Any) -> str:
+    try:
+        value = str(locale if locale is not None else "en").strip()
+    except Exception as error:
+        raise MF2Error("bad-option", _safe_exception_message(error)) from error
+    return value or "en"
 
 
 def _validate_model(model: dict[str, Any]) -> None:
@@ -948,6 +960,14 @@ def _fallback_error(error: MF2Error) -> MF2Error:
     if error.code == "unsupported-function":
         return MF2Error("unknown-function", error.message)
     return error
+
+
+def _safe_exception_message(error: BaseException) -> str:
+    try:
+        message = str(error)
+    except Exception:
+        return "Formatting failed."
+    return message or "Formatting failed."
 
 
 def _fallback_source(expression: dict[str, Any]) -> str:
