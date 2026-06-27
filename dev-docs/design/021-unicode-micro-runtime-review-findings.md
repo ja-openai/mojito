@@ -439,6 +439,13 @@ branch is under active implementation.
   bounded ASCII ISO grammar as date-time-core instead of delegating to
   host-lenient `new Date(string)`. Package-boundary tests cover unpadded dates,
   impossible dates, impossible datetimes, and out-of-range operand offsets.
+- Python Babel/PHP Intl date operand grammar: the explicit Babel and PHP Intl
+  registries now reject date/time operands with host-lenient rollover or
+  out-of-range offsets instead of accepting Python/PHP parser extensions. PHP
+  now avoids `DateTimeImmutable` free-form parsing for string operands, while
+  Python keeps existing `datetime` local-source compatibility and rejects
+  offsets beyond `+18:00`/`-18:00`. Adapter integration tests cover the compact
+  repros.
 - JVM host-adapter currency option errors: Java and Kotlin JDK `:currency`
   formatters now classify missing or invalid `currency` options as `bad-option`
   instead of `bad-operand`, matching JavaScript Intl, Python Babel, PHP Intl,

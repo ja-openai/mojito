@@ -8,6 +8,9 @@ final class IntlFunctions
 {
     private const UTC = 'UTC';
     private const MAX_FRACTION_DIGITS = 100;
+    private const MAX_DATE_OPERAND_LENGTH = 256;
+    private const MIN_TIMESTAMP_MS = -62135596800000.0;
+    private const MAX_TIMESTAMP_MS = 253402300799999.0;
 
     private function __construct()
     {
@@ -73,7 +76,7 @@ final class IntlFunctions
     private static function formatDate(array $call): string
     {
         $timeZone = self::timeZone($call);
-        $value = self::dateTimeValue($call, 'Date function requires a date or datetime operand.', $timeZone);
+        $value = self::dateTimeValue($call, 'Date function requires a date or datetime operand.', $timeZone, false);
         return self::dateFormatter($call, self::dateStyle($call, 'medium'), \IntlDateFormatter::NONE, $timeZone)->format($value)
             ?: throw MF2Error::badOperand('Date function could not format this operand.');
     }
@@ -81,7 +84,7 @@ final class IntlFunctions
     private static function formatTime(array $call): string
     {
         $timeZone = self::timeZone($call);
-        $value = self::dateTimeValue($call, 'Datetime and time functions require a datetime operand.', $timeZone);
+        $value = self::dateTimeValue($call, 'Datetime and time functions require a datetime operand.', $timeZone, true);
         return self::dateFormatter($call, \IntlDateFormatter::NONE, self::timeStyle($call, 'medium'), $timeZone)->format($value)
             ?: throw MF2Error::badOperand('Time function could not format this operand.');
     }
@@ -89,7 +92,7 @@ final class IntlFunctions
     private static function formatDateTime(array $call): string
     {
         $timeZone = self::timeZone($call);
-        $value = self::dateTimeValue($call, 'Datetime function requires a date or datetime operand.', $timeZone);
+        $value = self::dateTimeValue($call, 'Datetime function requires a date or datetime operand.', $timeZone, false);
         $sharedStyle = self::option($call, 'style', null);
         $defaultStyle = $sharedStyle ?? 'medium';
         $dateStyle = self::dateStyle($call, $defaultStyle, 'dateStyle', 'dateLength');
@@ -137,39 +140,148 @@ final class IntlFunctions
         return $value;
     }
 
-    private static function dateTimeValue(array $call, string $message, \DateTimeZone $timeZone): \DateTimeImmutable
+    private static function dateTimeValue(array $call, string $message, \DateTimeZone $timeZone, bool $allowTimeOnly): \DateTimeImmutable
     {
-        $value = self::dateTimeValueOrNull($call['rawValue'] ?? null, $call['value'] ?? null, $timeZone)
-            ?? self::sourceDateTimeValue($call['inheritedSource'] ?? null, $timeZone);
+        $value = self::dateTimeValueOrNull($call['rawValue'] ?? null, $call['value'] ?? null, $timeZone, $allowTimeOnly)
+            ?? self::sourceDateTimeValue($call['inheritedSource'] ?? null, $timeZone, $allowTimeOnly);
         if ($value === null) {
             throw MF2Error::badOperand($message);
         }
         return $value;
     }
 
-    private static function dateTimeValueOrNull(mixed $rawValue, mixed $value, \DateTimeZone $timeZone): ?\DateTimeImmutable
+    private static function dateTimeValueOrNull(
+        mixed $rawValue,
+        mixed $value,
+        \DateTimeZone $timeZone,
+        bool $allowTimeOnly,
+    ): ?\DateTimeImmutable
     {
         if ($rawValue instanceof \DateTimeInterface) {
-            return \DateTimeImmutable::createFromInterface($rawValue);
+            return self::validateDateTime(\DateTimeImmutable::createFromInterface($rawValue));
+        }
+        if ((is_int($rawValue) || is_float($rawValue)) && is_finite((float) $rawValue)) {
+            return self::dateTimeFromTimestampMillis((float) $rawValue);
         }
         $text = (string) ($value ?? '');
         if ($text === '') {
             return null;
         }
-        try {
-            return new \DateTimeImmutable($text, $timeZone);
-        } catch (\Exception) {
+        $text = trim($text);
+        if (strlen($text) > self::MAX_DATE_OPERAND_LENGTH) {
             return null;
         }
+        if (preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/', $text) === 1) {
+            return self::strictDateTimeOrNull('!Y-m-d', $text, $timeZone);
+        }
+        if (preg_match(
+            '/^([0-9]{4}-[0-9]{2}-[0-9]{2})T([0-9]{2}):([0-9]{2})(?::([0-9]{2})(?:\.([0-9]{1,9}))?)?(Z|[+-][0-9]{2}:[0-9]{2})?$/',
+            $text,
+            $matches,
+        ) === 1) {
+            return self::parseDateTimeText(
+                $matches[1],
+                $matches[2],
+                $matches[3],
+                $matches[4] ?? null,
+                $matches[5] ?? null,
+                $matches[6] ?? null,
+                $timeZone,
+            );
+        }
+        if ($allowTimeOnly && preg_match(
+            '/^([0-9]{2}):([0-9]{2})(?::([0-9]{2})(?:\.([0-9]{1,9}))?)?(Z|[+-][0-9]{2}:[0-9]{2})?$/',
+            $text,
+            $matches,
+        ) === 1) {
+            return self::parseDateTimeText(
+                '1970-01-01',
+                $matches[1],
+                $matches[2],
+                $matches[3] ?? null,
+                $matches[4] ?? null,
+                $matches[5] ?? null,
+                $timeZone,
+            );
+        }
+        return null;
     }
 
-    private static function sourceDateTimeValue(?array $source, \DateTimeZone $timeZone): ?\DateTimeImmutable
+    private static function dateTimeFromTimestampMillis(float $timestamp): ?\DateTimeImmutable
+    {
+        if ($timestamp < self::MIN_TIMESTAMP_MS || $timestamp > self::MAX_TIMESTAMP_MS) {
+            return null;
+        }
+        $timestamp = (int) $timestamp;
+        $seconds = intdiv($timestamp, 1000);
+        $milliseconds = $timestamp % 1000;
+        if ($milliseconds < 0) {
+            $seconds -= 1;
+            $milliseconds += 1000;
+        }
+        $parsed = \DateTimeImmutable::createFromFormat('U.u', sprintf('%d.%06d', $seconds, $milliseconds * 1000), new \DateTimeZone(self::UTC));
+        return $parsed === false ? null : self::validateDateTime($parsed);
+    }
+
+    private static function parseDateTimeText(
+        string $date,
+        string $hour,
+        string $minute,
+        ?string $seconds,
+        ?string $rawFraction,
+        ?string $zone,
+        \DateTimeZone $timeZone,
+    ): ?\DateTimeImmutable {
+        $seconds ??= '00';
+        $fraction = str_pad(substr($rawFraction ?? '', 0, 6), 6, '0');
+        $zone ??= '';
+        $normalized = "{$date}T{$hour}:{$minute}:{$seconds}.{$fraction}";
+        if ($zone !== '') {
+            if ($zone !== 'Z' && self::parseOffsetMinutes($zone) === null) {
+                return null;
+            }
+            $normalized .= $zone === 'Z' ? '+00:00' : $zone;
+            return self::strictDateTimeOrNull('!Y-m-d\TH:i:s.uP', $normalized, $timeZone);
+        }
+        return self::strictDateTimeOrNull('!Y-m-d\TH:i:s.u', $normalized, $timeZone);
+    }
+
+    private static function parseOffsetMinutes(string $value): ?int
+    {
+        if (preg_match('/^([+-])([0-9]{2}):([0-9]{2})$/', $value, $matches) !== 1) {
+            return null;
+        }
+        $hours = (int) $matches[2];
+        $minutes = (int) $matches[3];
+        if ($hours > 18 || $minutes > 59 || ($hours === 18 && $minutes !== 0)) {
+            return null;
+        }
+        return ($hours * 60 + $minutes) * ($matches[1] === '-' ? -1 : 1);
+    }
+
+    private static function strictDateTimeOrNull(string $format, string $value, \DateTimeZone $timeZone): ?\DateTimeImmutable
+    {
+        $parsed = \DateTimeImmutable::createFromFormat($format, $value, $timeZone);
+        $errors = \DateTimeImmutable::getLastErrors();
+        if ($parsed === false || ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0))) {
+            return null;
+        }
+        return self::validateDateTime($parsed);
+    }
+
+    private static function validateDateTime(\DateTimeImmutable $value): ?\DateTimeImmutable
+    {
+        $year = (int) $value->format('Y');
+        return $year >= 1 && $year <= 9999 ? $value : null;
+    }
+
+    private static function sourceDateTimeValue(?array $source, \DateTimeZone $timeZone, bool $allowTimeOnly): ?\DateTimeImmutable
     {
         for ($current = $source; $current !== null; $current = $current['inherited'] ?? null) {
             if (!in_array($current['function']['name'] ?? null, ['date', 'time', 'datetime'], true)) {
                 continue;
             }
-            $value = self::dateTimeValueOrNull(null, $current['value'] ?? null, $timeZone);
+            $value = self::dateTimeValueOrNull(null, $current['value'] ?? null, $timeZone, $allowTimeOnly);
             if ($value !== null) {
                 return $value;
             }

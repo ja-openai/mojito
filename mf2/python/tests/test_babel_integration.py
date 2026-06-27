@@ -105,6 +105,42 @@ class BabelIntegrationTest(unittest.TestCase):
         self.assertEqual(format_date(instant.date(), format="short", locale="fr"), inherited_date_result.value)
         self.assertEqual([], inherited_date_result.errors)
 
+        def assert_date_bad_operand(label: str, source: str, value: str) -> None:
+            result = format_message(
+                parse_to_model(source).model,
+                {"instant": value},
+                locale="en",
+                functions=functions,
+                bidi_isolation="none",
+            )
+            self.assertEqual(["bad-operand"], [error.code for error in result.errors], label)
+
+        assert_date_bad_operand(
+            "Babel adapter rejects unpadded date strings",
+            "{$instant :date dateStyle=medium timeZone=UTC}",
+            "2020-1-2",
+        )
+        assert_date_bad_operand(
+            "Babel adapter rejects impossible dates",
+            "{$instant :date dateStyle=medium timeZone=UTC}",
+            "2020-02-30",
+        )
+        assert_date_bad_operand(
+            "Babel adapter rejects impossible datetimes",
+            "{$instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}",
+            "2020-02-30T03:04:05Z",
+        )
+        assert_date_bad_operand(
+            "Babel adapter rejects out-of-range datetime offsets",
+            "{$instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}",
+            "2020-01-02T03:04:05+18:01",
+        )
+        assert_date_bad_operand(
+            "Babel adapter rejects out-of-range time offsets",
+            "{$instant :time timeStyle=medium timeZone=UTC}",
+            "03:04:05+18:01",
+        )
+
         oversized_digits = parse_to_model("{$amount :number minimumFractionDigits=10000}")
         oversized_result = format_message(
             oversized_digits.model,

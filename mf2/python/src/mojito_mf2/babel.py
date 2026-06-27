@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_DOWN
 from typing import Any
@@ -25,6 +26,13 @@ __all__ = ["babel_function_registry"]
 
 _MAX_FRACTION_DIGITS = 100
 _ABSENT_OPTION = "\x00__mojito_mf2_absent__"
+_ISO_DATE_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+_ISO_TIME_RE = re.compile(
+    r"^[0-9]{2}:[0-9]{2}(?::[0-9]{2}(?:\.[0-9]{1,9})?)?(Z|[+-][0-9]{2}:[0-9]{2})?$"
+)
+_ISO_DATE_TIME_RE = re.compile(
+    r"^[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9]{2}:[0-9]{2}(?::[0-9]{2}(?:\.[0-9]{1,9})?)?(Z|[+-][0-9]{2}:[0-9]{2})?$"
+)
 
 
 def babel_function_registry() -> FunctionRegistry:
@@ -299,12 +307,14 @@ def _date_from(raw_value: Any, rendered: str) -> date | None:
         return raw_value.date()
     if isinstance(raw_value, date):
         return raw_value
-    try:
-        return date.fromisoformat(rendered)
-    except ValueError:
+    if _ISO_DATE_RE.fullmatch(rendered) is None:
         parsed_datetime = _parse_datetime_or_none(rendered)
         if parsed_datetime is not None:
             return parsed_datetime.date()
+        return None
+    try:
+        return date.fromisoformat(rendered)
+    except ValueError:
         return None
 
 
@@ -313,12 +323,16 @@ def _time_from(raw_value: Any, rendered: str) -> time | None:
         return raw_value.time()
     if isinstance(raw_value, time):
         return raw_value
-    try:
-        return time.fromisoformat(rendered)
-    except ValueError:
+    if _ISO_TIME_RE.fullmatch(rendered) is None:
         parsed_datetime = _parse_datetime_or_none(rendered)
         if parsed_datetime is not None:
             return parsed_datetime.time()
+        return None
+    if not _has_valid_iso_offset(rendered):
+        return None
+    try:
+        return time.fromisoformat(rendered.replace("Z", "+00:00"))
+    except ValueError:
         return None
 
 
@@ -334,10 +348,23 @@ def _datetime_from(raw_value: Any, rendered: str) -> datetime | None:
 
 
 def _parse_datetime_or_none(rendered: str) -> datetime | None:
+    if _ISO_DATE_TIME_RE.fullmatch(rendered) is None or not _has_valid_iso_offset(rendered):
+        return None
     try:
         return datetime.fromisoformat(rendered.replace("Z", "+00:00"))
     except ValueError:
         return None
+
+
+def _has_valid_iso_offset(value: str) -> bool:
+    if value.endswith("Z"):
+        return True
+    match = re.search(r"([+-])([0-9]{2}):([0-9]{2})$", value)
+    if match is None:
+        return True
+    hours = int(match.group(2))
+    minutes = int(match.group(3))
+    return hours < 18 or (hours == 18 and minutes == 0)
 
 
 def _date_style(call: FunctionCall) -> str:

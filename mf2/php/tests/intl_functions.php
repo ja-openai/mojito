@@ -95,6 +95,27 @@ $inheritedDateOutput = format_message($inheritedDate, ['instant' => '2026-05-21T
 assert_error_codes('inherited date Intl adapter errors', $inheritedDateOutput['errors'], []);
 assert_same('inherited date Intl adapter output', expected_date('fr-FR', '2026-05-21T14:30:15Z', IntlDateFormatter::SHORT, IntlDateFormatter::NONE), $inheritedDateOutput['value']);
 
+assert_intl_date_bad_operand(
+    'Intl adapter rejects unpadded date strings',
+    'date={$instant :date dateStyle=medium timeZone=UTC}',
+    '2020-1-2',
+);
+assert_intl_date_bad_operand(
+    'Intl adapter rejects impossible dates',
+    'date={$instant :date dateStyle=medium timeZone=UTC}',
+    '2020-02-30',
+);
+assert_intl_date_bad_operand(
+    'Intl adapter rejects impossible datetimes',
+    'datetime={$instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}',
+    '2020-02-30T03:04:05Z',
+);
+assert_intl_date_bad_operand(
+    'Intl adapter rejects out-of-range datetime offsets',
+    'datetime={$instant :datetime dateStyle=medium timeStyle=medium timeZone=UTC}',
+    '2020-01-02T03:04:05+18:01',
+);
+
 echo "PHP Intl function registry tests passed.\n";
 
 function expected_output(string $locale, array $arguments): string
@@ -161,6 +182,16 @@ function assert_error_codes(string $label, array $actualErrors, array $expected)
     sort($actual, SORT_STRING);
     sort($expected, SORT_STRING);
     assert_same($label, $expected, $actual);
+}
+
+function assert_intl_date_bad_operand(string $label, string $source, string $instant): void
+{
+    $output = format_message(parse_to_model($source)['model'], ['instant' => $instant], [
+        'locale' => 'en-US',
+        'functions' => IntlFunctions::registry(),
+        'bidiIsolation' => 'none',
+    ]);
+    assert_error_codes($label, $output['errors'], ['bad-operand']);
 }
 
 function fail(string $message): never
