@@ -371,7 +371,7 @@ func (c *formatContext) selectorValue(selector map[string]any) (selectorValue, e
 		if hasAnnotation {
 			function = annotation.function
 		}
-		return selectorValue{rendered: "", normalizedRendered: normalized, exactMatch: false, function: function}, nil
+		return selectorValue{rendered: "", rawValue: "", normalizedRendered: normalized, exactMatch: false, function: function}, nil
 	}
 	value := c.value(name)
 	rendered := value.rendered()
@@ -392,6 +392,7 @@ func (c *formatContext) selectorValue(selector map[string]any) (selectorValue, e
 	}
 	return selectorValue{
 		rendered:           rendered,
+		rawValue:           value.rawValue,
 		normalizedRendered: normalized,
 		exactMatch:         !hasAnnotation || annotation.exactMatch(),
 		selectionKey:       selectionKey,
@@ -709,7 +710,7 @@ func (c *formatContext) keyMatchRank(key map[string]any, selector selectorValue)
 	}
 	rank, err := c.functions.Select(FunctionMatch{
 		Value:    selector.rendered,
-		RawValue: selector.rendered,
+		RawValue: selector.rawValue,
 		Function: selector.function,
 		Key:      value,
 		Locale:   c.locale,
@@ -907,6 +908,7 @@ func (a selectorAnnotation) isNumeric() bool {
 
 type selectorValue struct {
 	rendered           string
+	rawValue           any
 	normalizedRendered string
 	exactMatch         bool
 	selectionKey       string

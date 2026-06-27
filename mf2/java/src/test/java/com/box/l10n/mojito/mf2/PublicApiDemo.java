@@ -161,6 +161,24 @@ public final class PublicApiDemo {
                 currencyMessage.format(Map.of("amount", 12.5), portableOptions);
         assertEquals("portable registry does not include currency shim", true, portableCurrency.hasErrors());
 
+        Mf2Message selectorOnlyMessage = parse("""
+                .input {$flag :raw}
+                .match $flag
+                raw {{raw}}
+                * {{fallback}}""");
+        Mf2FunctionRegistry selectorOnlyRegistry = Mf2FunctionRegistry.portable()
+                .withSelector("raw", match -> {
+                    if (Boolean.TRUE.equals(match.rawValue()) && match.key().equals("raw")) {
+                        return 1;
+                    }
+                    return null;
+                });
+        Mf2FormatResult selectorOnlyResult = selectorOnlyMessage.format(
+                Map.of("flag", true),
+                Mf2FormatOptions.builder().functions(selectorOnlyRegistry).build());
+        assertEquals("selector-only annotation rawValue", "raw", selectorOnlyResult.value());
+        assertEmpty("selector-only annotation rawValue errors", selectorOnlyResult.errors());
+
         System.out.println("Java public API demo passed");
     }
 

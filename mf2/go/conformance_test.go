@@ -168,6 +168,24 @@ func TestRecoveryCallbacksHandleEmptyAndDeclinedValues(t *testing.T) {
 	}, emptyFormatParts.Parts)
 }
 
+func TestSelectorOnlyAnnotationPreservesRawValue(t *testing.T) {
+	parse := ParseToModel(".input {$flag :raw}\n.match $flag\nraw {{raw}}\n* {{fallback}}")
+	if parse.HasDiagnostics {
+		t.Fatalf("unexpected selector-only diagnostics: %#v", parse.Diagnostics)
+	}
+	registry := PortableFunctionRegistry().WithSelector("raw", func(match FunctionMatch) (*int, error) {
+		if raw, ok := match.RawValue.(bool); ok && raw && match.Key == "raw" {
+			rank := 1
+			return &rank, nil
+		}
+		return nil, nil
+	})
+	actual := FormatMessage(parse.Model, map[string]any{"flag": true}, Options{Functions: registry})
+	if actual.Value != "raw" || actual.HasErrors() {
+		t.Fatalf("selector rawValue should preserve original operand, got %q errors=%v", actual.Value, actual.Errors)
+	}
+}
+
 func TestLocaleKeyFixtures(t *testing.T) {
 	fixture := readFixture(t, "../conformance/fixtures/locale-key/cases.json")
 	checked := 0

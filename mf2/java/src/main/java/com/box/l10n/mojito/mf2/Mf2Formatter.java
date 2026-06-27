@@ -305,6 +305,7 @@ public final class Mf2Formatter {
                     }
                     return new SelectorValue(
                             "",
+                            "",
                             annotation != null && annotation.isString() ? normalizeStringKey("") : null,
                             false,
                             null,
@@ -320,6 +321,7 @@ public final class Mf2Formatter {
                 recordSelectorResolutionErrors(annotation);
                 return new SelectorValue(
                         rendered,
+                        value.rawValue(),
                         annotation != null && annotation.isString() ? normalizeStringKey(rendered) : null,
                         annotation == null || annotation.exactMatch(),
                         selectionKey(annotation, value),
@@ -334,6 +336,7 @@ public final class Mf2Formatter {
                     errors.add(Mf2FunctionSupport.badSelector("Selector operand is not available."));
                 }
                 return new SelectorValue(
+                        "",
                         "",
                         annotation != null && annotation.isString() ? normalizeStringKey("") : null,
                         false,
@@ -664,7 +667,7 @@ public final class Mf2Formatter {
                     try {
                         yield functions.select(new Mf2FunctionRegistry.FunctionMatch(
                                 selector.rendered(),
-                                selector.rendered(),
+                                selector.rawValue(),
                                 selector.function(),
                                 literal.value(),
                                 locale,
@@ -1223,6 +1226,7 @@ public final class Mf2Formatter {
 
     private record SelectorValue(
             String rendered,
+            Object rawValue,
             String normalizedRendered,
             boolean exactMatch,
             String selectionKey,

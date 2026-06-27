@@ -268,6 +268,7 @@ private class FormatContext(
             }
             return SelectorValue(
                 rendered = "",
+                rawValue = "",
                 normalizedRendered = if (annotation?.isString == true) normalizeStringKey("") else null,
                 exactMatch = false,
                 selectionKey = null,
@@ -281,6 +282,7 @@ private class FormatContext(
             recordSelectorResolutionErrors(annotation)
             SelectorValue(
                 rendered = rendered,
+                rawValue = resolved.rawValue,
                 normalizedRendered = if (annotation?.isString == true) normalizeStringKey(rendered) else null,
                 exactMatch = annotation == null || annotation.exactMatch,
                 selectionKey = selectionKey(locale, annotation, resolved),
@@ -295,6 +297,7 @@ private class FormatContext(
             }
             SelectorValue(
                 rendered = "",
+                rawValue = "",
                 normalizedRendered = if (annotation?.isString == true) normalizeStringKey("") else null,
                 exactMatch = false,
                 selectionKey = null,
@@ -580,7 +583,7 @@ private class FormatContext(
             functions.select(
                 Mf2FunctionMatch(
                     value = selector.rendered,
-                    rawValue = selector.rendered,
+                    rawValue = selector.rawValue,
                     function = functionRef,
                     key = keyValue,
                     locale = locale,
@@ -960,6 +963,7 @@ private data class ExpressionOutput(
 
 private data class SelectorValue(
     val rendered: String,
+    val rawValue: Any?,
     val normalizedRendered: String?,
     val exactMatch: Boolean,
     val selectionKey: String?,

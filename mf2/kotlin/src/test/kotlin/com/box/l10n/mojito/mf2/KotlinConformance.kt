@@ -385,6 +385,26 @@ object KotlinConformance {
             throwingSelector.errors,
         )
 
+        val selectorOnlyMessage = parsePublicApiModel(
+            """
+            .input {${'$'}flag :raw}
+            .match ${'$'}flag
+            raw {{raw}}
+            * {{fallback}}
+            """.trimIndent(),
+        )
+        val selectorOnlyRegistry = Mf2FunctionRegistry.portable()
+            .withSelector("raw") { match ->
+                if (match.rawValue == true && match.key == "raw") 1 else null
+            }
+        val selectorOnlyResult = Mf2Formatter.formatMessage(
+            model = selectorOnlyMessage,
+            arguments = mapOf("flag" to true),
+            functions = selectorOnlyRegistry,
+        )
+        assertPublicApiValue("selector-only annotation rawValue", "raw", selectorOnlyResult.value)
+        assertPublicApiCodes("selector-only annotation rawValue errors", emptyList(), selectorOnlyResult.errors)
+
         val throwingOptionMessage = parsePublicApiModel("Hello {1 :number minimumFractionDigits=${'$'}digits}")
         val throwingNumberOption = Mf2Formatter.formatMessage(
             model = throwingOptionMessage,
