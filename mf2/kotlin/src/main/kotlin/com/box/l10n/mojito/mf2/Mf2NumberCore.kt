@@ -372,7 +372,7 @@ object Mf2NumberCore {
         if (value == null) {
             return null
         }
-        if (!value.all { it.isDigit() }) {
+        if (value.isEmpty() || !value.all { it in '0'..'9' }) {
             throw Mf2Error.badOption("Option must be a non-negative integer.")
         }
         return value.toIntOrNull() ?: throw Mf2Error.badOption("Option must be a non-negative integer.")

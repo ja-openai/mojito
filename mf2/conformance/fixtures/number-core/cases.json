@@ -552,6 +552,13 @@
       "source": "{1234.5 :number useGrouping=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}",
       "arguments": {},
       "expectedErrors": ["bad-option"]
+    },
+    {
+      "name": "non-ascii minimum fraction digits registry",
+      "locale": "en-US",
+      "source": "{1 :number minimumFractionDigits=٢}",
+      "arguments": {},
+      "expectedErrors": ["bad-option"]
     }
   ]
 }

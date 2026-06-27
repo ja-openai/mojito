@@ -173,7 +173,7 @@ def _non_negative_integer_option(call: FunctionCall, name: str) -> int | None:
     value = call.option_value(name)
     if value is None:
         return None
-    if not value.isdigit():
+    if not value or not all("0" <= ch <= "9" for ch in value):
         raise MF2Error("bad-option", f"{name} option must be a non-negative integer.")
     if len(value) > len(str(_MAX_FRACTION_DIGITS)):
         raise MF2Error("bad-option", f"{name} option must be a non-negative integer.")

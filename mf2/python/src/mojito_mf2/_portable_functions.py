@@ -279,7 +279,7 @@ def _validate_fraction_digits(minimum: int, maximum: int | None) -> None:
 
 def _parse_non_negative_integer_option(value: str, message: str) -> int:
     text = str(value)
-    if not text or not text.isdigit():
+    if not text or not all("0" <= ch <= "9" for ch in text):
         raise MF2Error("bad-option", message)
     if len(text) > len(str(_MAX_FRACTION_DIGITS)):
         raise MF2Error("bad-option", message)

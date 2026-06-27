@@ -266,7 +266,7 @@ private func nonNegativeIntegerOption(_ call: MF2FunctionCall, _ name: String) t
     guard let value = try call.optionValue(name) else {
         return nil
     }
-    guard value.range(of: #"^\d+$"#, options: .regularExpression) == value.startIndex..<value.endIndex,
+    guard value.range(of: #"^[0-9]+$"#, options: .regularExpression) == value.startIndex..<value.endIndex,
           let parsed = Int(value),
           parsed <= maxFoundationFractionDigits
     else {

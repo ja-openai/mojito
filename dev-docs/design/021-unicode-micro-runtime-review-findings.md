@@ -38,6 +38,11 @@ branch is under active implementation.
   reject Arabic-Indic digit lookalikes and numeric-coercion spellings such as
   `2.0`, preventing host integer/number parsers from accepting widths that
   other runtimes reject.
+- Numeric option ASCII grammar: portable `:number`/`:percent` fraction digit
+  options and number-core registry fraction digit options now reject non-ASCII
+  digit lookalikes instead of accepting host Unicode digit predicates in
+  Python and Kotlin. Shared source-to-model and number-core registry fixtures
+  cover Arabic-Indic `minimumFractionDigits`.
 - PHP/Rust direct-parts coverage: existing conformance tests now assert that
   direct number-core and date-time-core parts helpers return the same single
   text part shape as their direct string helpers, matching the relative-time

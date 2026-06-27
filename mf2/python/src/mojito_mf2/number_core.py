@@ -414,7 +414,7 @@ def _non_negative_integer_option(value: int | str | None, fallback: int, name: s
     if value is None:
         return fallback
     text = _coerce_string_option(value, name)
-    if not text.isdigit():
+    if not text or not all("0" <= ch <= "9" for ch in text):
         raise MF2Error("bad-option", f"{name} must be a non-negative integer.")
     if len(text) > len(str(_MAX_FRACTION_DIGITS)):
         raise MF2Error("bad-option", f"{name} must be a non-negative integer.")
