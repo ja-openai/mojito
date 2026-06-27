@@ -1975,8 +1975,11 @@ object Mf2DateTimeCore {
                 val requestedWidth = widthForPatternSymbol(ch, requestedWidths)
                 val candidateWidth = widthForPatternSymbol(ch, candidateWidths)
                 val patternWidth = end - index
-                val width = if (shouldAdjustPatternWidth(requestedSymbol, requestedWidth, candidateWidth, patternWidth)) {
-                    requestedWidth!!
+                val width = if (
+                    requestedWidth != null &&
+                    shouldAdjustPatternWidth(requestedSymbol, requestedWidth, candidateWidth, patternWidth)
+                ) {
+                    requestedWidth
                 } else {
                     patternWidth
                 }

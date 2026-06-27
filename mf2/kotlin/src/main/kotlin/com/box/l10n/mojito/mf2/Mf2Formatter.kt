@@ -242,7 +242,8 @@ private class FormatContext(
             val keys = variantKeys(variant)
             if (fallbackVariant == null && keys.all { it["type"] == "*" }) fallbackVariant = variant
             val rank = variantMatchRank(variant, selectorValues)
-            if (rank != null && (selectedRank == null || compareRank(rank, selectedRank!!) > 0)) {
+            val previousRank = selectedRank
+            if (rank != null && (previousRank == null || compareRank(rank, previousRank) > 0)) {
                 selected = variant
                 selectedRank = rank
             }
@@ -938,7 +939,7 @@ private data class SelectorAnnotation(
     companion object {
         fun from(functionRef: Map<String, Any?>): SelectorAnnotation {
             val select = functionOptionLiteral(functionRef, "select", null)
-            return SelectorAnnotation(functionRef, if (select in setOf("ordinal", "exact")) select!! else "plural")
+            return SelectorAnnotation(functionRef, if (select == "ordinal" || select == "exact") select else "plural")
         }
     }
 }

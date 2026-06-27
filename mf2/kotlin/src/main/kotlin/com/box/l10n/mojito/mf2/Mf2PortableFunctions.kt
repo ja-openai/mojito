@@ -134,7 +134,9 @@ internal object Mf2PortableFunctions {
         if ((add == null && subtract == null) || (add != null && subtract != null)) {
             throw Mf2Error.badOption("Offset function requires exactly one of add or subtract.")
         }
-        val value = parseInteger(add ?: subtract!!)
+        val option = add ?: subtract
+            ?: throw Mf2Error.badOption("Offset function requires exactly one of add or subtract.")
+        val value = parseInteger(option)
             ?: throw Mf2Error.badOption(if (add != null) "Offset add option must be an integer." else "Offset subtract option must be an integer.")
         return if (add != null) value else value.negate()
     }
