@@ -11,7 +11,7 @@ public final class Mf2RelativeTimeCore {
     private static final int MAX_OPERAND_LENGTH = 256;
     private static final int MAX_RELATIVE_TIME_QUANTITY = 1_000_000_000;
     private static final Pattern DECIMAL_NUMBER_PATTERN =
-            Pattern.compile("-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?");
+            Pattern.compile("-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?");
 
     private static final List<PolicyStep> PRECISE_POLICY = List.of(
             new PolicyStep(60, Unit.SECOND),

@@ -26,9 +26,9 @@ from .number_core import format_number_core
 from ._plural import select_plural_category
 
 
-_DECIMAL_LITERAL_RE = re.compile(r"^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$")
+_DECIMAL_LITERAL_RE = re.compile(r"^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$")
 _SOURCE_DECIMAL_RE = re.compile(
-    r"^(?P<sign>-?)(?P<integer>0|[1-9]\d*)(?:\.(?P<fraction>\d+))?(?:[eE](?P<exponent>[+-]?\d+))?$"
+    r"^(?P<sign>-?)(?P<integer>0|[1-9][0-9]*)(?:\.(?P<fraction>[0-9]+))?(?:[eE](?P<exponent>[+-]?[0-9]+))?$"
 )
 _MAX_SOURCE_DECIMAL_EXPONENT = 1_000_000
 _MAX_SOURCE_DECIMAL_KEY_LENGTH = 4096

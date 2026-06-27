@@ -482,7 +482,7 @@ public final class Mf2DateTimeCore {
             return null;
         }
         String hourText = value.substring(prefix.length() + 1);
-        if (hourText.isBlank() || hourText.length() > 2 || !hourText.chars().allMatch(Character::isDigit)) {
+        if (hourText.isBlank() || hourText.length() > 2 || !hourText.chars().allMatch(Mf2DateTimeCore::isAsciiDigit)) {
             return null;
         }
         int hours = Integer.parseInt(hourText);
@@ -513,6 +513,10 @@ public final class Mf2DateTimeCore {
             minuteText = body.substring(body.length() - 2);
         }
         if (hourText.isEmpty() || hourText.length() > 2 || minuteText.length() != 2) {
+            return null;
+        }
+        if (!hourText.chars().allMatch(Mf2DateTimeCore::isAsciiDigit)
+                || !minuteText.chars().allMatch(Mf2DateTimeCore::isAsciiDigit)) {
             return null;
         }
         try {
@@ -3158,6 +3162,10 @@ public final class Mf2DateTimeCore {
 
     private static boolean isAsciiLetter(char ch) {
         return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z');
+    }
+
+    private static boolean isAsciiDigit(int ch) {
+        return ch >= '0' && ch <= '9';
     }
 
     private static String styleKey(Style style) {

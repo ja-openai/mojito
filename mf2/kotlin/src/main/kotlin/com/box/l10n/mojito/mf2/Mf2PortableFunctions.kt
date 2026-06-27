@@ -78,7 +78,7 @@ internal object Mf2PortableFunctions {
         return parseSourceDecimalOperand(source.inherited)
     }
 
-    private val decimalRegex = Regex("""^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$""")
+    private val decimalRegex = Regex("""^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$""")
 
     fun parseDecimalNumber(value: String): Double? {
         if (value.length > MAX_DECIMAL_OPERAND_LENGTH) return null
@@ -121,7 +121,7 @@ internal object Mf2PortableFunctions {
     }
 
     fun parseNonNegativeOption(value: String, message: String): Int {
-        if (!value.all { it.isDigit() }) throw Mf2Error.badOption(message)
+        if (!value.all { it in '0'..'9' }) throw Mf2Error.badOption(message)
         val parsed = value.toIntOrNull() ?: throw Mf2Error.badOption(message)
         if (parsed > MAX_FRACTION_DIGITS) throw Mf2Error.badOption(message)
         return parsed
@@ -141,7 +141,7 @@ internal object Mf2PortableFunctions {
     private fun parseRequiredInteger(value: String, message: String): BigInteger =
         parseInteger(value) ?: throw Mf2Error.badOperand(message)
 
-    private val integerRegex = Regex("""^[+-]?\d+$""")
+    private val integerRegex = Regex("""^[+-]?[0-9]+$""")
 
     private fun parseInteger(value: String): BigInteger? {
         if (!integerRegex.matches(value)) return null

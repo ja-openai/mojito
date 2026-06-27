@@ -11,7 +11,7 @@ object Mf2NumberCore {
     private const val MAX_OPTION_LENGTH = 256
     private const val MAX_OPERAND_LENGTH = 256
     private val maxAbsoluteFormatValue = BigDecimal("1e21")
-    private val decimalText = Regex("^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$")
+    private val decimalText = Regex("^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$")
     private val currencyCode = Regex("^[A-Za-z]{3}$")
     private val numberPattern = Regex("[#0,.]+")
 

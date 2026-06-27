@@ -9,7 +9,7 @@ object Mf2RelativeTimeCore {
     private const val MAX_OPERAND_LENGTH = 256
     private const val MAX_RELATIVE_TIME_QUANTITY = 1_000_000_000.0
     private val decimalNumberPattern =
-        Regex("""-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?""")
+        Regex("""-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?""")
     private val precisePolicy = listOf(
         PolicyStep(60.0, Unit.SECOND),
         PolicyStep(3_600.0, Unit.MINUTE),

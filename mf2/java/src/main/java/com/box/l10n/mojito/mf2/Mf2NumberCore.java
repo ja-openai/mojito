@@ -14,7 +14,7 @@ public final class Mf2NumberCore {
     private static final int MAX_OPERAND_LENGTH = 256;
     private static final BigDecimal MAX_ABSOLUTE_FORMAT_VALUE = new BigDecimal("1e21");
     private static final Pattern DECIMAL_TEXT =
-            Pattern.compile("^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$");
+            Pattern.compile("^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$");
     private static final Pattern CURRENCY_CODE = Pattern.compile("^[A-Za-z]{3}$");
     private static final Pattern NUMBER_PATTERN = Pattern.compile("[#0,.]+");
 

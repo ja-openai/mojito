@@ -262,7 +262,7 @@ object Mf2DateTimeCore {
         val sign = value[prefix.length]
         if (sign != '+' && sign != '-') return null
         val hourText = value.substring(prefix.length + 1)
-        if (hourText.isEmpty() || hourText.length > 2 || !hourText.all { it.isDigit() }) return null
+        if (hourText.isEmpty() || hourText.length > 2 || !hourText.all(::isAsciiDigit)) return null
         val hours = hourText.toInt()
         if (hours > 14) return null
         val offset = hours * 60
@@ -285,6 +285,9 @@ object Mf2DateTimeCore {
             minuteText = body.substring(body.length - 2)
         }
         if (hourText.isEmpty() || hourText.length > 2 || minuteText.length != 2) {
+            return null
+        }
+        if (!hourText.all(::isAsciiDigit) || !minuteText.all(::isAsciiDigit)) {
             return null
         }
         val hours = hourText.toIntOrNull() ?: return null
@@ -2531,6 +2534,9 @@ object Mf2DateTimeCore {
 
     private fun isAsciiLetter(ch: Char): Boolean =
         ch in 'A'..'Z' || ch in 'a'..'z'
+
+    private fun isAsciiDigit(ch: Char): Boolean =
+        ch in '0'..'9'
 
     private fun styleKey(style: Style): String =
         style.name.lowercase(Locale.ROOT)

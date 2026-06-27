@@ -4,7 +4,7 @@ package com.box.l10n.mojito.mf2
 private const val MAX_PLURAL_OPERAND_LENGTH = 256
 private const val MAX_SAFE_PLURAL_INTEGER = 9_007_199_254_740_991.0
 private const val MAX_SAFE_PLURAL_LONG = 9_007_199_254_740_991L
-private val PLURAL_OPERAND_REGEX = Regex("^[+-]?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$")
+private val PLURAL_OPERAND_REGEX = Regex("^[+-]?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$")
 
 internal object CldrPluralRules {
     fun selectCardinal(locale: String, operands: NumberOperands): String =

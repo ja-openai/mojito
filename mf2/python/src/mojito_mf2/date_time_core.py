@@ -161,9 +161,9 @@ _SKELETON_TIME_FIELDS = set("abBhHkKJmsSAzZOvVXx")
 _SKELETON_HOUR_FIELDS = {"h", "H", "k", "K"}
 _WEEKDAY_KEYS = ("sun", "mon", "tue", "wed", "thu", "fri", "sat")
 _DIGIT_ZERO = ord("0")
-_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_ISO_DATE_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 _ISO_DATE_TIME_RE = re.compile(
-    r"^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,9}))?)?(Z|[+-]\d{2}:\d{2})?$"
+    r"^([0-9]{4}-[0-9]{2}-[0-9]{2})T([0-9]{2}):([0-9]{2})(?::([0-9]{2})(?:\.([0-9]{1,9}))?)?(Z|[+-][0-9]{2}:[0-9]{2})?$"
 )
 
 
@@ -466,7 +466,7 @@ def _parse_time_zone(value: str | None) -> timezone:
 
 
 def _parse_etc_gmt_offset_minutes(value: str) -> int | None:
-    match = re.fullmatch(r"Etc/GMT([+-]\d{1,2})", value)
+    match = re.fullmatch(r"Etc/GMT([+-][0-9]{1,2})", value)
     if match is None:
         return None
     hours = int(match.group(1))
@@ -476,7 +476,7 @@ def _parse_etc_gmt_offset_minutes(value: str) -> int | None:
 
 
 def _parse_offset_minutes(value: str) -> int | None:
-    match = re.fullmatch(r"([+-])(\d{1,2})(?::?(\d{2}))?", value)
+    match = re.fullmatch(r"([+-])([0-9]{1,2})(?::?([0-9]{2}))?", value)
     if match is None:
         return None
     hours = int(match.group(2))

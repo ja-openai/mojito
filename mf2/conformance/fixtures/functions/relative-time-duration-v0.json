@@ -331,6 +331,13 @@
       "expectedError": { "code": "bad-operand" }
     },
     {
+      "label": "non-ascii-digit-string-operand",
+      "source": "{$delta :relativeTime style=short numeric=always policy=precise}",
+      "locale": "en",
+      "arguments": { "delta": "1٢" },
+      "expectedError": { "code": "bad-operand" }
+    },
+    {
       "label": "fractionless-exponent-string-operand",
       "source": "{$delta :relativeTime style=short numeric=always policy=precise}",
       "locale": "en",

@@ -162,7 +162,7 @@ final class Mf2PortableFunctions {
     }
 
     private static BigInteger parseOffsetInteger(String value) {
-        if (!value.matches("^[+-]?\\d+$")) {
+        if (!value.matches("^[+-]?[0-9]+$")) {
             return null;
         }
         boolean negative = value.startsWith("-");
@@ -187,7 +187,7 @@ final class Mf2PortableFunctions {
         if (value.length() > Mf2FunctionSupport.MAX_DECIMAL_OPERAND_LENGTH) {
             return null;
         }
-        if (!value.matches("^[+-]?\\d+$")) {
+        if (!value.matches("^[+-]?[0-9]+$")) {
             return null;
         }
         try {

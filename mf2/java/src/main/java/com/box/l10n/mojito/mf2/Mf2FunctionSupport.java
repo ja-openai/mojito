@@ -90,7 +90,7 @@ final class Mf2FunctionSupport {
 
     static int parseNonNegativeOption(String value, String message)
             throws Mf2Exception {
-        if (value.isEmpty() || !value.chars().allMatch(Character::isDigit)) {
+        if (value.isEmpty() || !value.chars().allMatch(Mf2FunctionSupport::isAsciiDigit)) {
             throw badOption(message);
         }
         try {
@@ -132,7 +132,7 @@ final class Mf2FunctionSupport {
             index++;
         } else if (first >= '1' && first <= '9') {
             index++;
-            while (index < value.length() && Character.isDigit(value.charAt(index))) {
+            while (index < value.length() && isAsciiDigit(value.charAt(index))) {
                 index++;
             }
         } else {
@@ -141,7 +141,7 @@ final class Mf2FunctionSupport {
         if (index < value.length() && value.charAt(index) == '.') {
             index++;
             int fractionStart = index;
-            while (index < value.length() && Character.isDigit(value.charAt(index))) {
+            while (index < value.length() && isAsciiDigit(value.charAt(index))) {
                 index++;
             }
             if (index == fractionStart) {
@@ -154,7 +154,7 @@ final class Mf2FunctionSupport {
                 index++;
             }
             int exponentStart = index;
-            while (index < value.length() && Character.isDigit(value.charAt(index))) {
+            while (index < value.length() && isAsciiDigit(value.charAt(index))) {
                 index++;
             }
             if (index == exponentStart) {
@@ -162,6 +162,10 @@ final class Mf2FunctionSupport {
             }
         }
         return index == value.length();
+    }
+
+    private static boolean isAsciiDigit(int value) {
+        return value >= '0' && value <= '9';
     }
 
     private static Integer parseBoundedDecimalExponent(String value) {

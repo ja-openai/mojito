@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 
 public final class Mf2Formatter {
     private static final Pattern SOURCE_DECIMAL_PATTERN =
-            Pattern.compile("^(-?)(0|[1-9]\\d*)(?:\\.(\\d+))?(?:[eE]([+-]?\\d+))?$");
+            Pattern.compile("^(-?)(0|[1-9][0-9]*)(?:\\.([0-9]+))?(?:[eE]([+-]?[0-9]+))?$");
     private static final int MAX_SOURCE_DECIMAL_EXPONENT = 1_000_000;
     private static final int MAX_SOURCE_DECIMAL_KEY_LENGTH = 4096;
 

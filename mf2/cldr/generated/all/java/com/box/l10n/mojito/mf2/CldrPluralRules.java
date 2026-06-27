@@ -447,7 +447,7 @@ final class CldrPluralRules {
         private static final double MAX_SAFE_PLURAL_INTEGER = 9_007_199_254_740_991.0;
         private static final long MAX_SAFE_PLURAL_LONG = 9_007_199_254_740_991L;
         private static final Pattern PLURAL_OPERAND_PATTERN =
-                Pattern.compile("^[+-]?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$");
+                Pattern.compile("^[+-]?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$");
 
         private final double n;
         private final long i;

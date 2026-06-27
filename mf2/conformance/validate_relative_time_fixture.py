@@ -51,7 +51,7 @@ POLICIES = {
     ],
 }
 OPTION_RE = re.compile(r"\b(style|numeric|policy|unit)=([A-Za-z]+)\b")
-NUMERIC_STRING_RE = re.compile(r"-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?")
+NUMERIC_STRING_RE = re.compile(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?")
 
 
 def main() -> int:

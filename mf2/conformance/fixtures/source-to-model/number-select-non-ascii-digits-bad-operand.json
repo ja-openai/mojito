@@ -1,0 +1,48 @@
+{
+  "name": "number-select-non-ascii-digits-bad-operand",
+  "source": ".input {$n :number select=exact}\n.match $n\n12 {{ascii twelve}}\n* {{fallback}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "n",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "n" },
+          "function": {
+            "type": "function",
+            "name": "number",
+            "options": {
+              "select": { "type": "literal", "value": "exact" }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "n" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "12" }],
+        "value": ["ascii twelve"]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": ["fallback"]
+      }
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": { "n": "1٢" },
+      "expected": "fallback",
+      "expectedErrors": [
+        { "code": "bad-operand" },
+        { "code": "bad-selector" },
+        { "code": "bad-selector" },
+        { "code": "bad-selector" }
+      ]
+    }
+  ]
+}

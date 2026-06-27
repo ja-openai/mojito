@@ -3,8 +3,8 @@ package com.box.l10n.mojito.mf2
 import java.text.Normalizer
 import kotlin.math.truncate
 
-private val DECIMAL_LITERAL_PATTERN = Regex("-?(0|[1-9]\\d*)(\\.\\d+)?([eE][+-]?\\d+)?")
-private val SOURCE_DECIMAL_PATTERN = Regex("(-?)(0|[1-9]\\d*)(?:\\.(\\d+))?(?:[eE]([+-]?\\d+))?")
+private val DECIMAL_LITERAL_PATTERN = Regex("-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][+-]?[0-9]+)?")
+private val SOURCE_DECIMAL_PATTERN = Regex("(-?)(0|[1-9][0-9]*)(?:\\.([0-9]+))?(?:[eE]([+-]?[0-9]+))?")
 private const val MAX_SOURCE_DECIMAL_EXPONENT = 1_000_000
 private const val MAX_SOURCE_DECIMAL_KEY_LENGTH = 4096
 

@@ -354,6 +354,13 @@
       "expectedError": "bad-operand"
     },
     {
+      "name": "non-ascii digit string operand",
+      "locale": "en-US",
+      "value": "1٢",
+      "options": { "style": "number" },
+      "expectedError": "bad-operand"
+    },
+    {
       "name": "fractionless exponent string operand",
       "locale": "en-US",
       "value": "1.e3",

@@ -23,6 +23,14 @@ branch is under active implementation.
   parts helpers from their public submodules while asserting those experimental
   helpers remain off the root package export. The Python README now documents
   the explicit core `*_to_parts` wrappers and type-boundary coverage.
+- Direct-core ASCII digit grammar: Python, Java, and Kotlin direct number-core
+  and relative-time operands, date-time fixed-offset time zone options, and
+  formatter exact numeric source parsing now use explicit ASCII `[0-9]`
+  grammar instead of Unicode digit predicates or host decimal constructors that
+  accept Arabic-Indic lookalikes. Shared fixtures reject non-ASCII digits in
+  number-core, relative-time, date-time `timeZone`, and exact numeric selector
+  paths so one runtime cannot silently normalize them to ASCII decimal values
+  while others reject them.
 - PHP/Rust direct-parts coverage: existing conformance tests now assert that
   direct number-core and date-time-core parts helpers return the same single
   text part shape as their direct string helpers, matching the relative-time
