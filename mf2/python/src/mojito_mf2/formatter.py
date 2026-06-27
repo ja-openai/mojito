@@ -108,7 +108,7 @@ def format_message_to_parts(
     on_missing_argument: MF2RecoveryHandler | None = None,
     on_format_error: MF2RecoveryHandler | None = None,
 ) -> PartsResult:
-    model_data = cast(dict[str, Any], model)
+    model_data = _model_data(model)
     _validate_model(model_data)
     try:
         normalized_locale = _locale_option(locale)
@@ -165,6 +165,12 @@ def _arguments_option(arguments: Any) -> dict[str, Any]:
         return dict(arguments or {})
     except Exception as error:
         raise MF2Error("bad-option", _safe_exception_message(error)) from error
+
+
+def _model_data(model: Any) -> dict[str, Any]:
+    if isinstance(model, dict):
+        return cast(dict[str, Any], model)
+    raise MF2Error("unsupported-message-type", "Unsupported message type: ")
 
 
 def _validate_model(model: dict[str, Any]) -> None:

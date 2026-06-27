@@ -158,6 +158,10 @@ assert.throws(
   (error) => error instanceof MF2Error && error.code === "unsupported-message-type",
 );
 assert.throws(
+  () => formatMessage(null),
+  (error) => error instanceof MF2Error && error.code === "unsupported-message-type",
+);
+assert.throws(
   () => formatMessage({ type: "bogus" }),
   (error) => error instanceof MF2Error && error.code === "unsupported-message-type",
 );

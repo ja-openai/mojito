@@ -116,7 +116,7 @@ func TestUnsupportedDefaultFunctionRecoversWithDiagnostic(t *testing.T) {
 }
 
 func TestUnsupportedModelTypeReturnsDiagnostic(t *testing.T) {
-	for _, model := range []Model{{}, {"type": "bogus"}} {
+	for _, model := range []Model{nil, {}, {"type": "bogus"}} {
 		actual := FormatMessage(model, nil, Options{})
 		if actual.Value != "" {
 			t.Fatalf("expected empty value for unsupported model type, got %q", actual.Value)

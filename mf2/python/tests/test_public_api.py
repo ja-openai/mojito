@@ -386,6 +386,17 @@ class PublicApiTest(unittest.TestCase):
         self.assertEqual([], parts.parts)
         self.assertEqual(["bad-option"], [error.code for error in parts.errors])
 
+    def test_non_mapping_model_raises_mf2_error(self) -> None:
+        for model in (None, []):
+            with self.subTest(model=model):
+                with self.assertRaises(MF2Error) as formatted:
+                    format_message(model)  # type: ignore[arg-type]
+                self.assertEqual("unsupported-message-type", formatted.exception.code)
+
+                with self.assertRaises(MF2Error) as parts:
+                    format_message_to_parts(model)  # type: ignore[arg-type]
+                self.assertEqual("unsupported-message-type", parts.exception.code)
+
     def test_custom_selector_can_match_variant_key(self) -> None:
         model = {
             "type": "select",
