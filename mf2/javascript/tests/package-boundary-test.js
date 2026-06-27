@@ -153,6 +153,14 @@ assert.deepEqual(throwingFormatRecoveryPartsResult.errors.map((error) => error.c
 const throwingBidiResult = formatMessage(parsed.model, { name: "Mojito" }, throwingOption("bidiIsolation"));
 assert.equal(throwingBidiResult.value, "");
 assert.deepEqual(throwingBidiResult.errors.map((error) => error.code), ["bad-option"]);
+assert.throws(
+  () => formatMessage({}),
+  (error) => error instanceof MF2Error && error.code === "unsupported-message-type",
+);
+assert.throws(
+  () => formatMessage({ type: "bogus" }),
+  (error) => error instanceof MF2Error && error.code === "unsupported-message-type",
+);
 assert.equal(FunctionRegistry.defaults().hasFormatter({ name: "string" }), true);
 assert.equal(FunctionRegistry.portable().hasFormatter({ name: "number" }), true);
 assert.equal(createPortableFunctionRegistry(FunctionRegistry).hasFormatter({ name: "number" }), true);

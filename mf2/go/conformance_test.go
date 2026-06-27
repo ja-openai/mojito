@@ -115,6 +115,20 @@ func TestUnsupportedDefaultFunctionRecoversWithDiagnostic(t *testing.T) {
 	}
 }
 
+func TestUnsupportedModelTypeReturnsDiagnostic(t *testing.T) {
+	for _, model := range []Model{{}, {"type": "bogus"}} {
+		actual := FormatMessage(model, nil, Options{})
+		if actual.Value != "" {
+			t.Fatalf("expected empty value for unsupported model type, got %q", actual.Value)
+		}
+		assertErrorCodesExact(t, "unsupported model type", actual.Errors, []string{"unsupported-message-type"})
+
+		parts := FormatMessageToParts(model, nil, Options{})
+		assertJSONEqual(t, "unsupported model type parts", []Part(nil), parts.Parts)
+		assertErrorCodesExact(t, "unsupported model type parts", parts.Errors, []string{"unsupported-message-type"})
+	}
+}
+
 func TestRecoveryCallbacksHandleEmptyAndDeclinedValues(t *testing.T) {
 	parse := ParseToModel("Hello {$name}")
 	if parse.HasDiagnostics {

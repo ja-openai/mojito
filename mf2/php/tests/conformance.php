@@ -786,6 +786,13 @@ function assert_public_api_boundary(): void
     assert_json_equal('invalid functions option parts', [], $invalidFunctionsParts['parts']);
     assert_json_equal('invalid functions option part errors', ['bad-option'], array_map(static fn($error): string => error_code($error), $invalidFunctionsParts['errors']));
 
+    $missingModelType = format_message([]);
+    assert_same('missing model type value', '', $missingModelType['value']);
+    assert_json_equal('missing model type errors', ['unsupported-message-type'], array_map(static fn($error): string => error_code($error), $missingModelType['errors']));
+    $unsupportedModelType = format_message(['type' => 'bogus']);
+    assert_same('unsupported model type value', '', $unsupportedModelType['value']);
+    assert_json_equal('unsupported model type errors', ['unsupported-message-type'], array_map(static fn($error): string => error_code($error), $unsupportedModelType['errors']));
+
     $throwingNumberOption = parse_to_model('Hello {1 :number minimumFractionDigits=$d}')['model'];
     $throwingNumberOptionResult = format_message($throwingNumberOption, ['d' => new ThrowingStringValue()], [
         'locale' => 'en-US',
