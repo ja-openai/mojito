@@ -27,7 +27,7 @@ checks, benchmarks, and demos, but they are not client-facing products.
 - `NumberCore.swift`: experimental generated-data number formatter for decimal,
   integer, percent, and simple currency formatting
 - `DateTimeCore.swift`: experimental generated-data Gregorian date/time
-  formatter for UTC product strings
+  formatter for UTC/fixed-offset product strings
 - `RelativeTimeCore.swift`: experimental data-explicit CLDR relative-time
   formatter
 - `CldrNumberData.swift`: generated probe CLDR number symbols/patterns/currency

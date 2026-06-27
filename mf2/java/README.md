@@ -30,8 +30,8 @@ Current target:
   decimal, integer, percent, and simple currency formatting without depending on
   JDK locale data at runtime
 - expose `Mf2DateTimeCore` as an experimental generated-data Gregorian
-  date/time formatter for UTC product strings without depending on JDK locale
-  data at runtime
+  date/time formatter for UTC/fixed-offset product strings without depending on
+  JDK locale data at runtime
 - expose `Mf2RelativeTimeCore` as an experimental data-explicit relative-time
   formatter; callers decode the generated CLDR relative-time payload they choose
   to ship and pass it to the formatter or opt-in registry

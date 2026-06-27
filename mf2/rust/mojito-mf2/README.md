@@ -72,10 +72,10 @@ native Rust tables generated from the shared CLDR probe data instead of runtime
 JSON. Number core covers decimal, integer, percent, and simple currency
 formatting for the probe locale set. Date/time core covers Gregorian
 `dateStyle`/`timeStyle` formatting and semantic CLDR skeleton lookup with
-`timeZone=UTC`. `RelativeTimeCoreFormatter::new(data)` is the explicit CLDR
-adapter for `:relativeTime`; callers decode the generated relative-time JSON
-payload they choose to ship and pass it to the prepared formatter or
-`relative_time_core_function_registry(data)`.
+UTC/fixed-offset `timeZone` values. `RelativeTimeCoreFormatter::new(data)` is
+the explicit CLDR adapter for `:relativeTime`; callers decode the generated
+relative-time JSON payload they choose to ship and pass it to the prepared
+formatter or `relative_time_core_function_registry(data)`.
 
 The public formatter surface is intentionally small:
 
