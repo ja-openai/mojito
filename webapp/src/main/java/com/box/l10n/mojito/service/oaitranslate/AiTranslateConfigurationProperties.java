@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.oaitranslate;
 
 import com.box.l10n.mojito.quartz.QuartzSchedulerManager;
+import com.box.l10n.mojito.service.blobstorage.Retention;
 import java.util.Locale;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -92,6 +93,7 @@ public class AiTranslateConfigurationProperties {
 
   public static class NoBatchProperties {
     TimeoutProperties timeout = new TimeoutProperties();
+    Retention outputRetention = Retention.MIN_1_DAY;
 
     public TimeoutProperties getTimeout() {
       return timeout;
@@ -99,6 +101,14 @@ public class AiTranslateConfigurationProperties {
 
     public void setTimeout(TimeoutProperties timeout) {
       this.timeout = timeout;
+    }
+
+    public Retention getOutputRetention() {
+      return outputRetention;
+    }
+
+    public void setOutputRetention(Retention outputRetention) {
+      this.outputRetention = outputRetention;
     }
 
     public static class TimeoutProperties {

@@ -24,7 +24,6 @@ import com.box.l10n.mojito.openai.OpenAIClientPool;
 import com.box.l10n.mojito.quartz.QuartzJobInfo;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.assetTextUnit.AssetTextUnitRepository;
-import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateBatchesImportJob.AiTranslateBatchesImportInput;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateBatchesImportJob.AiTranslateBatchesImportOutput;
@@ -944,13 +943,13 @@ public class AiTranslateService {
 
   void putReportContent(PollableTask currentTask, List<String> reportFilenames) {
     logger.debug("Put report content for id: {}", currentTask.getId());
-    // TODO: These operational reports are also DB-backed permanent blobs when using
-    // DatabaseBlobStorage; add retention or route them to external blob storage.
+    // DatabaseBlobStorage keeps report bytes in mblob; use external blob storage for longer
+    // retention instead of making these high-cardinality reports permanent DB rows.
     structuredBlobStorage.put(
         AI_TRANSALATE_NO_BATCH_OUTPUT,
         getReportFilename(currentTask.getId()),
         objectMapper.writeValueAsStringUnchecked(new ReportContent(reportFilenames)),
-        Retention.PERMANENT);
+        aiTranslateConfigurationProperties.getNoBatch().getOutputRetention());
   }
 
   public record ReportContent(List<String> reportLocaleUrls) {}
@@ -967,7 +966,7 @@ public class AiTranslateService {
         AI_TRANSALATE_NO_BATCH_OUTPUT,
         filename,
         objectMapper.writeValueAsStringUnchecked(importReportLines),
-        Retention.PERMANENT);
+        aiTranslateConfigurationProperties.getNoBatch().getOutputRetention());
     reportFilenames.add(filename);
   }
 
