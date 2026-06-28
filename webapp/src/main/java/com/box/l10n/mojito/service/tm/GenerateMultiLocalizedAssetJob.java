@@ -99,7 +99,6 @@ public class GenerateMultiLocalizedAssetJob
     localizedAssetBody.setContent(multiLocalizedAssetBody.getSourceContent());
     localizedAssetBody.setAssetId(multiLocalizedAssetBody.getAssetId());
     localizedAssetBody.setOutputBcp47tag(localeInfo.getOutputBcp47tag());
-    localizedAssetBody.setContent(multiLocalizedAssetBody.getSourceContent());
     localizedAssetBody.setFilterConfigIdOverride(
         multiLocalizedAssetBody.getFilterConfigIdOverride());
     localizedAssetBody.setFilterOptions(multiLocalizedAssetBody.getFilterOptions());
