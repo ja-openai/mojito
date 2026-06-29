@@ -13,6 +13,7 @@ import com.box.l10n.mojito.service.blobstorage.azure.AzureBlobStorageConfigurati
 import com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobStorage;
 import com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobStorageConfigurationProperties;
 import com.box.l10n.mojito.service.blobstorage.database.MBlobRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -80,6 +81,11 @@ public class AzureBlobStorageConfigurationTest {
     public DataIntegrityViolationExceptionRetryTemplate
         dataIntegrityViolationExceptionRetryTemplate() {
       return new DataIntegrityViolationExceptionRetryTemplate();
+    }
+
+    @Bean
+    public SimpleMeterRegistry meterRegistry() {
+      return new SimpleMeterRegistry();
     }
   }
 }
