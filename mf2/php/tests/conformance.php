@@ -173,9 +173,25 @@ function assert_public_api_boundary(): void
         'Mojito\\MessageFormat2\\IntlFunctions',
         'Mojito\\MessageFormat2\\MF2Error',
     ], $classes);
+    foreach (array_merge($functions, $classes) as $name) {
+        $normalized = normalize_public_name($name);
+        if (
+            str_contains($normalized, 'inflection')
+            || str_contains($normalized, 'm2if')
+            || str_contains($normalized, 'compiledtermpack')
+            || str_contains($normalized, 'termpack')
+        ) {
+            fail('Inflection runtime public API must stay out of the PHP package until a product API is approved: ' . $name);
+        }
+    }
 
     assert_same('Intl registry formatter', true, IntlFunctions::registry()->hasFormatter(['name' => 'currency']));
     assert_same('Intl registry keeps relative time unsupported', false, IntlFunctions::registry()->hasFormatter(['name' => 'relativeTime']));
+}
+
+function normalize_public_name(string $name): string
+{
+    return preg_replace('/[^a-z0-9]/', '', strtolower($name)) ?? '';
 }
 
 function read_json(string $path): array

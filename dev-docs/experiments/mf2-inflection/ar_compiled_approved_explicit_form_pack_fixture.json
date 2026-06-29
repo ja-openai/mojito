@@ -1,0 +1,243 @@
+{
+  "diagnostics": [],
+  "formSets": [
+    {
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 4,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 6,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 8,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 9,
+          "kind": "literal",
+          "value": 10
+        },
+        {
+          "key": 11,
+          "kind": "literal",
+          "value": 12
+        },
+        {
+          "key": 13,
+          "kind": "literal",
+          "value": 12
+        },
+        {
+          "key": 14,
+          "kind": "literal",
+          "value": 15
+        },
+        {
+          "key": 16,
+          "kind": "literal",
+          "value": 17
+        },
+        {
+          "key": 18,
+          "kind": "literal",
+          "value": 17
+        },
+        {
+          "key": 19,
+          "kind": "literal",
+          "value": 20
+        },
+        {
+          "key": 21,
+          "kind": "literal",
+          "value": 20
+        },
+        {
+          "key": 22,
+          "kind": "literal",
+          "value": 20
+        },
+        {
+          "key": 23,
+          "kind": "literal",
+          "value": 20
+        },
+        {
+          "key": 24,
+          "kind": "literal",
+          "value": 20
+        },
+        {
+          "key": 25,
+          "kind": "literal",
+          "value": 20
+        }
+      ],
+      "term": 0
+    }
+  ],
+  "generationSummary": {
+    "candidateTerms": 1,
+    "exportPolicy": {
+      "automaticExportTerms": 1,
+      "blockedReasons": {},
+      "blockedTerms": 0,
+      "compositionMode": "explicit-form-rows-v0",
+      "deferredComposition": [],
+      "reviewRequiredReasons": {},
+      "reviewRequiredTerms": 0,
+      "runtimeExport": "closed-world-explicit-forms"
+    },
+    "exportedFormKeys": [
+      "indefinite.nominative.singular",
+      "indefinite.accusative.singular",
+      "indefinite.genitive.singular",
+      "construct.nominative.singular",
+      "construct.accusative.singular",
+      "construct.genitive.singular",
+      "indefinite.nominative.dual",
+      "indefinite.accusative.dual",
+      "indefinite.genitive.dual",
+      "construct.nominative.dual",
+      "construct.accusative.dual",
+      "construct.genitive.dual",
+      "indefinite.nominative.plural",
+      "indefinite.accusative.plural",
+      "indefinite.genitive.plural",
+      "construct.nominative.plural",
+      "construct.accusative.plural",
+      "construct.genitive.plural"
+    ],
+    "exportedTerms": 1,
+    "formRows": 18,
+    "missingFormKeys": [],
+    "policy": "closed-world explicit-form pack",
+    "requiredFormRows": 18,
+    "reviewDiagnostics": [],
+    "sourceRows": [
+      4568,
+      4568,
+      4568,
+      4568,
+      4568,
+      4568,
+      4570,
+      4572,
+      4572,
+      4569,
+      4571,
+      4571,
+      4567,
+      4567,
+      4567,
+      4567,
+      4567,
+      4567
+    ],
+    "sourceRowsByFormKey": {
+      "construct.accusative.dual": 4571,
+      "construct.accusative.plural": 4567,
+      "construct.accusative.singular": 4568,
+      "construct.genitive.dual": 4571,
+      "construct.genitive.plural": 4567,
+      "construct.genitive.singular": 4568,
+      "construct.nominative.dual": 4569,
+      "construct.nominative.plural": 4567,
+      "construct.nominative.singular": 4568,
+      "indefinite.accusative.dual": 4572,
+      "indefinite.accusative.plural": 4567,
+      "indefinite.accusative.singular": 4568,
+      "indefinite.genitive.dual": 4572,
+      "indefinite.genitive.plural": 4567,
+      "indefinite.genitive.singular": 4568,
+      "indefinite.nominative.dual": 4570,
+      "indefinite.nominative.plural": 4567,
+      "indefinite.nominative.singular": 4568
+    }
+  },
+  "locale": "ar",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/ar_explicit_form_pack.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_ar.lst"
+    ],
+    "sources": [
+      {
+        "byteSize": 893500,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_ar.lst",
+        "sha256": "7d3ce5339d95517edbdc9c824f002e076351e6ced9bb67c7109ad3d486e3a77e"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/compiled-term-pack/v0",
+  "sizeEstimates": {
+    "binaryLowerBoundBytes": {
+      "bindingReferenceBytes": 0,
+      "formRowBytes": 216,
+      "stringPoolBytes": 614,
+      "termRowBytes": 20,
+      "totalBytes": 850
+    },
+    "compactJsonBytes": 5819
+  },
+  "strings": [
+    "ar.explicit.message",
+    "رسالة",
+    "inflection=17a",
+    "indefinite.nominative.singular",
+    "indefinite.accusative.singular",
+    "indefinite.genitive.singular",
+    "construct.nominative.singular",
+    "construct.accusative.singular",
+    "construct.genitive.singular",
+    "indefinite.nominative.dual",
+    "رسالتان",
+    "indefinite.accusative.dual",
+    "رسالتين",
+    "indefinite.genitive.dual",
+    "construct.nominative.dual",
+    "رسالتا",
+    "construct.accusative.dual",
+    "رسالتي",
+    "construct.genitive.dual",
+    "indefinite.nominative.plural",
+    "رسائل",
+    "indefinite.accusative.plural",
+    "indefinite.genitive.plural",
+    "construct.nominative.plural",
+    "construct.accusative.plural",
+    "construct.genitive.plural"
+  ],
+  "terms": [
+    {
+      "featureBits": 289,
+      "formSet": 0,
+      "id": 0,
+      "sense": 2,
+      "text": 1
+    }
+  ]
+}

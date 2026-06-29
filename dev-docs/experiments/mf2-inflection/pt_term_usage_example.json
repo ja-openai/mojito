@@ -1,0 +1,50 @@
+{
+  "schema": "mojito-mf2-inflection/message-term-binding-manifest/v0",
+  "locale": "pt",
+  "messages": {
+    "inventory.deleted": "Removido {$item :term article=definite count=$count}.",
+    "inventory.found": "Encontrado {$item :term article=indefinite count=$count}.",
+    "inventory.from": "Removido {$item :term preposition=de article=definite count=$count}.",
+    "inventory.in": "Dispon\u00edvel {$item :term preposition=em article=definite count=$count}.",
+    "inventory.in_one": "Dispon\u00edvel {$item :term preposition=em article=indefinite count=$count}.",
+    "inventory.by": "Filtrado {$item :term preposition=por article=definite count=$count}."
+  },
+  "argumentTerms": {
+    "inventory.deleted": {
+      "item": [
+        "item.field",
+        "item.house"
+      ]
+    },
+    "inventory.found": {
+      "item": [
+        "item.field",
+        "item.house"
+      ]
+    },
+    "inventory.from": {
+      "item": [
+        "item.field",
+        "item.house"
+      ]
+    },
+    "inventory.in": {
+      "item": [
+        "item.field",
+        "item.house"
+      ]
+    },
+    "inventory.in_one": {
+      "item": [
+        "item.field",
+        "item.house"
+      ]
+    },
+    "inventory.by": {
+      "item": [
+        "item.field",
+        "item.house"
+      ]
+    }
+  }
+}

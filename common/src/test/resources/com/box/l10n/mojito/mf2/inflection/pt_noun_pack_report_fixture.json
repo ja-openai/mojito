@@ -1,0 +1,1458 @@
+{
+  "agreementStrategy": {
+    "agreementForms": [
+      {
+        "category": "deDefiniteArticle",
+        "form": "das",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "category": "deDefiniteArticle",
+        "form": "da",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "category": "deDefiniteArticle",
+        "form": "dos",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "category": "deDefiniteArticle",
+        "form": "do",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "category": "deDemonstrativeDistal",
+        "form": "daquelas",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "category": "deDemonstrativeDistal",
+        "form": "daquela",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "category": "deDemonstrativeDistal",
+        "form": "daqueles",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "category": "deDemonstrativeDistal",
+        "form": "daquele",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "category": "deDemonstrativeMedial",
+        "form": "dessas",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "category": "deDemonstrativeMedial",
+        "form": "dessa",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "category": "deDemonstrativeMedial",
+        "form": "desses",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "category": "deDemonstrativeMedial",
+        "form": "desse",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "category": "deDemonstrativeProximal",
+        "form": "destas",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "category": "deDemonstrativeProximal",
+        "form": "desta",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "category": "deDemonstrativeProximal",
+        "form": "destes",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "category": "deDemonstrativeProximal",
+        "form": "deste",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "category": "definiteArticle",
+        "form": "as",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "category": "definiteArticle",
+        "form": "a",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "category": "definiteArticle",
+        "form": "os",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "category": "definiteArticle",
+        "form": "o",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "category": "demonstrativeDistal",
+        "form": "aquelas",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "category": "demonstrativeDistal",
+        "form": "aquela",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "category": "demonstrativeDistal",
+        "form": "aqueles",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "category": "demonstrativeDistal",
+        "form": "aquele",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "category": "demonstrativeMedial",
+        "form": "essas",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "category": "demonstrativeMedial",
+        "form": "essa",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "category": "demonstrativeMedial",
+        "form": "esses",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "category": "demonstrativeMedial",
+        "form": "esse",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "category": "demonstrativeProximal",
+        "form": "estas",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "category": "demonstrativeProximal",
+        "form": "esta",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "category": "demonstrativeProximal",
+        "form": "estes",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "category": "demonstrativeProximal",
+        "form": "este",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "category": "emDefiniteArticle",
+        "form": "nas",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "category": "emDefiniteArticle",
+        "form": "na",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "category": "emDefiniteArticle",
+        "form": "nos",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "category": "emDefiniteArticle",
+        "form": "no",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "category": "emDemonstrativeDistal",
+        "form": "naquelas",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "category": "emDemonstrativeDistal",
+        "form": "naquela",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "category": "emDemonstrativeDistal",
+        "form": "naqueles",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "category": "emDemonstrativeDistal",
+        "form": "naquele",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "category": "emDemonstrativeMedial",
+        "form": "nessas",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "category": "emDemonstrativeMedial",
+        "form": "nessa",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "category": "emDemonstrativeMedial",
+        "form": "nesses",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "category": "emDemonstrativeMedial",
+        "form": "nesse",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "category": "emDemonstrativeProximal",
+        "form": "nestas",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "category": "emDemonstrativeProximal",
+        "form": "nesta",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "category": "emDemonstrativeProximal",
+        "form": "nestes",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "category": "emDemonstrativeProximal",
+        "form": "neste",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "category": "emIndefiniteArticle",
+        "form": "numas",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "category": "emIndefiniteArticle",
+        "form": "numa",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "category": "emIndefiniteArticle",
+        "form": "nuns",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "category": "emIndefiniteArticle",
+        "form": "num",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "category": "indefiniteArticle",
+        "form": "umas",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "category": "indefiniteArticle",
+        "form": "uma",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "category": "indefiniteArticle",
+        "form": "uns",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "category": "indefiniteArticle",
+        "form": "um",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "category": "porDefiniteArticle",
+        "form": "pelas",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "category": "porDefiniteArticle",
+        "form": "pela",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "category": "porDefiniteArticle",
+        "form": "pelos",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "category": "porDefiniteArticle",
+        "form": "pelo",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "category": "possessiveArticle",
+        "form": "suas",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "category": "possessiveArticle",
+        "form": "sua",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "category": "possessiveArticle",
+        "form": "seus",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "category": "possessiveArticle",
+        "form": "seu",
+        "gender": "masculine",
+        "number": "singular"
+      }
+    ],
+    "counts": {
+      "agreementCandidateSurfaces": 6424,
+      "agreementFormCategories": 16
+    },
+    "samples": {
+      "agreementCandidates": [
+        {
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "deDefiniteArticle": "do abacaxi",
+            "deDemonstrativeDistal": "daquele abacaxi",
+            "deDemonstrativeMedial": "desse abacaxi",
+            "deDemonstrativeProximal": "deste abacaxi",
+            "definiteArticle": "o abacaxi",
+            "demonstrativeDistal": "aquele abacaxi",
+            "demonstrativeMedial": "esse abacaxi",
+            "demonstrativeProximal": "este abacaxi",
+            "emDefiniteArticle": "no abacaxi",
+            "emDemonstrativeDistal": "naquele abacaxi",
+            "emDemonstrativeMedial": "nesse abacaxi",
+            "emDemonstrativeProximal": "neste abacaxi",
+            "emIndefiniteArticle": "num abacaxi",
+            "indefiniteArticle": "um abacaxi",
+            "porDefiniteArticle": "pelo abacaxi",
+            "possessiveArticle": "seu abacaxi"
+          },
+          "surface": "abacaxi"
+        },
+        {
+          "gender": "masculine",
+          "number": "plural",
+          "phraseForms": {
+            "deDefiniteArticle": "dos abacaxis",
+            "deDemonstrativeDistal": "daqueles abacaxis",
+            "deDemonstrativeMedial": "desses abacaxis",
+            "deDemonstrativeProximal": "destes abacaxis",
+            "definiteArticle": "os abacaxis",
+            "demonstrativeDistal": "aqueles abacaxis",
+            "demonstrativeMedial": "esses abacaxis",
+            "demonstrativeProximal": "estes abacaxis",
+            "emDefiniteArticle": "nos abacaxis",
+            "emDemonstrativeDistal": "naqueles abacaxis",
+            "emDemonstrativeMedial": "nesses abacaxis",
+            "emDemonstrativeProximal": "nestes abacaxis",
+            "emIndefiniteArticle": "nuns abacaxis",
+            "indefiniteArticle": "uns abacaxis",
+            "porDefiniteArticle": "pelos abacaxis",
+            "possessiveArticle": "seus abacaxis"
+          },
+          "surface": "abacaxis"
+        },
+        {
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "deDefiniteArticle": "do abacaxizinho",
+            "deDemonstrativeDistal": "daquele abacaxizinho",
+            "deDemonstrativeMedial": "desse abacaxizinho",
+            "deDemonstrativeProximal": "deste abacaxizinho",
+            "definiteArticle": "o abacaxizinho",
+            "demonstrativeDistal": "aquele abacaxizinho",
+            "demonstrativeMedial": "esse abacaxizinho",
+            "demonstrativeProximal": "este abacaxizinho",
+            "emDefiniteArticle": "no abacaxizinho",
+            "emDemonstrativeDistal": "naquele abacaxizinho",
+            "emDemonstrativeMedial": "nesse abacaxizinho",
+            "emDemonstrativeProximal": "neste abacaxizinho",
+            "emIndefiniteArticle": "num abacaxizinho",
+            "indefiniteArticle": "um abacaxizinho",
+            "porDefiniteArticle": "pelo abacaxizinho",
+            "possessiveArticle": "seu abacaxizinho"
+          },
+          "surface": "abacaxizinho"
+        },
+        {
+          "gender": "masculine",
+          "number": "plural",
+          "phraseForms": {
+            "deDefiniteArticle": "dos abacaxizinhos",
+            "deDemonstrativeDistal": "daqueles abacaxizinhos",
+            "deDemonstrativeMedial": "desses abacaxizinhos",
+            "deDemonstrativeProximal": "destes abacaxizinhos",
+            "definiteArticle": "os abacaxizinhos",
+            "demonstrativeDistal": "aqueles abacaxizinhos",
+            "demonstrativeMedial": "esses abacaxizinhos",
+            "demonstrativeProximal": "estes abacaxizinhos",
+            "emDefiniteArticle": "nos abacaxizinhos",
+            "emDemonstrativeDistal": "naqueles abacaxizinhos",
+            "emDemonstrativeMedial": "nesses abacaxizinhos",
+            "emDemonstrativeProximal": "nestes abacaxizinhos",
+            "emIndefiniteArticle": "nuns abacaxizinhos",
+            "indefiniteArticle": "uns abacaxizinhos",
+            "porDefiniteArticle": "pelos abacaxizinhos",
+            "possessiveArticle": "seus abacaxizinhos"
+          },
+          "surface": "abacaxizinhos"
+        },
+        {
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "deDefiniteArticle": "do abacaxizão",
+            "deDemonstrativeDistal": "daquele abacaxizão",
+            "deDemonstrativeMedial": "desse abacaxizão",
+            "deDemonstrativeProximal": "deste abacaxizão",
+            "definiteArticle": "o abacaxizão",
+            "demonstrativeDistal": "aquele abacaxizão",
+            "demonstrativeMedial": "esse abacaxizão",
+            "demonstrativeProximal": "este abacaxizão",
+            "emDefiniteArticle": "no abacaxizão",
+            "emDemonstrativeDistal": "naquele abacaxizão",
+            "emDemonstrativeMedial": "nesse abacaxizão",
+            "emDemonstrativeProximal": "neste abacaxizão",
+            "emIndefiniteArticle": "num abacaxizão",
+            "indefiniteArticle": "um abacaxizão",
+            "porDefiniteArticle": "pelo abacaxizão",
+            "possessiveArticle": "seu abacaxizão"
+          },
+          "surface": "abacaxizão"
+        },
+        {
+          "gender": "masculine",
+          "number": "plural",
+          "phraseForms": {
+            "deDefiniteArticle": "dos abacaxizões",
+            "deDemonstrativeDistal": "daqueles abacaxizões",
+            "deDemonstrativeMedial": "desses abacaxizões",
+            "deDemonstrativeProximal": "destes abacaxizões",
+            "definiteArticle": "os abacaxizões",
+            "demonstrativeDistal": "aqueles abacaxizões",
+            "demonstrativeMedial": "esses abacaxizões",
+            "demonstrativeProximal": "estes abacaxizões",
+            "emDefiniteArticle": "nos abacaxizões",
+            "emDemonstrativeDistal": "naqueles abacaxizões",
+            "emDemonstrativeMedial": "nesses abacaxizões",
+            "emDemonstrativeProximal": "nestes abacaxizões",
+            "emIndefiniteArticle": "nuns abacaxizões",
+            "indefiniteArticle": "uns abacaxizões",
+            "porDefiniteArticle": "pelos abacaxizões",
+            "possessiveArticle": "seus abacaxizões"
+          },
+          "surface": "abacaxizões"
+        },
+        {
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "deDefiniteArticle": "do abacaxí",
+            "deDemonstrativeDistal": "daquele abacaxí",
+            "deDemonstrativeMedial": "desse abacaxí",
+            "deDemonstrativeProximal": "deste abacaxí",
+            "definiteArticle": "o abacaxí",
+            "demonstrativeDistal": "aquele abacaxí",
+            "demonstrativeMedial": "esse abacaxí",
+            "demonstrativeProximal": "este abacaxí",
+            "emDefiniteArticle": "no abacaxí",
+            "emDemonstrativeDistal": "naquele abacaxí",
+            "emDemonstrativeMedial": "nesse abacaxí",
+            "emDemonstrativeProximal": "neste abacaxí",
+            "emIndefiniteArticle": "num abacaxí",
+            "indefiniteArticle": "um abacaxí",
+            "porDefiniteArticle": "pelo abacaxí",
+            "possessiveArticle": "seu abacaxí"
+          },
+          "surface": "abacaxí"
+        },
+        {
+          "gender": "masculine",
+          "number": "plural",
+          "phraseForms": {
+            "deDefiniteArticle": "dos abacaxís",
+            "deDemonstrativeDistal": "daqueles abacaxís",
+            "deDemonstrativeMedial": "desses abacaxís",
+            "deDemonstrativeProximal": "destes abacaxís",
+            "definiteArticle": "os abacaxís",
+            "demonstrativeDistal": "aqueles abacaxís",
+            "demonstrativeMedial": "esses abacaxís",
+            "demonstrativeProximal": "estes abacaxís",
+            "emDefiniteArticle": "nos abacaxís",
+            "emDemonstrativeDistal": "naqueles abacaxís",
+            "emDemonstrativeMedial": "nesses abacaxís",
+            "emDemonstrativeProximal": "nestes abacaxís",
+            "emIndefiniteArticle": "nuns abacaxís",
+            "indefiniteArticle": "uns abacaxís",
+            "porDefiniteArticle": "pelos abacaxís",
+            "possessiveArticle": "seus abacaxís"
+          },
+          "surface": "abacaxís"
+        },
+        {
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "deDefiniteArticle": "do abajur",
+            "deDemonstrativeDistal": "daquele abajur",
+            "deDemonstrativeMedial": "desse abajur",
+            "deDemonstrativeProximal": "deste abajur",
+            "definiteArticle": "o abajur",
+            "demonstrativeDistal": "aquele abajur",
+            "demonstrativeMedial": "esse abajur",
+            "demonstrativeProximal": "este abajur",
+            "emDefiniteArticle": "no abajur",
+            "emDemonstrativeDistal": "naquele abajur",
+            "emDemonstrativeMedial": "nesse abajur",
+            "emDemonstrativeProximal": "neste abajur",
+            "emIndefiniteArticle": "num abajur",
+            "indefiniteArticle": "um abajur",
+            "porDefiniteArticle": "pelo abajur",
+            "possessiveArticle": "seu abajur"
+          },
+          "surface": "abajur"
+        },
+        {
+          "gender": "masculine",
+          "number": "plural",
+          "phraseForms": {
+            "deDefiniteArticle": "dos abajures",
+            "deDemonstrativeDistal": "daqueles abajures",
+            "deDemonstrativeMedial": "desses abajures",
+            "deDemonstrativeProximal": "destes abajures",
+            "definiteArticle": "os abajures",
+            "demonstrativeDistal": "aqueles abajures",
+            "demonstrativeMedial": "esses abajures",
+            "demonstrativeProximal": "estes abajures",
+            "emDefiniteArticle": "nos abajures",
+            "emDemonstrativeDistal": "naqueles abajures",
+            "emDemonstrativeMedial": "nesses abajures",
+            "emDemonstrativeProximal": "nestes abajures",
+            "emIndefiniteArticle": "nuns abajures",
+            "indefiniteArticle": "uns abajures",
+            "porDefiniteArticle": "pelos abajures",
+            "possessiveArticle": "seus abajures"
+          },
+          "surface": "abajures"
+        }
+      ],
+      "targetedAgreementCandidates": [
+        {
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "deDefiniteArticle": "do campo",
+            "deDemonstrativeDistal": "daquele campo",
+            "deDemonstrativeMedial": "desse campo",
+            "deDemonstrativeProximal": "deste campo",
+            "definiteArticle": "o campo",
+            "demonstrativeDistal": "aquele campo",
+            "demonstrativeMedial": "esse campo",
+            "demonstrativeProximal": "este campo",
+            "emDefiniteArticle": "no campo",
+            "emDemonstrativeDistal": "naquele campo",
+            "emDemonstrativeMedial": "nesse campo",
+            "emDemonstrativeProximal": "neste campo",
+            "emIndefiniteArticle": "num campo",
+            "indefiniteArticle": "um campo",
+            "porDefiniteArticle": "pelo campo",
+            "possessiveArticle": "seu campo"
+          },
+          "surface": "campo"
+        },
+        {
+          "gender": "feminine",
+          "number": "singular",
+          "phraseForms": {
+            "deDefiniteArticle": "da casa",
+            "deDemonstrativeDistal": "daquela casa",
+            "deDemonstrativeMedial": "dessa casa",
+            "deDemonstrativeProximal": "desta casa",
+            "definiteArticle": "a casa",
+            "demonstrativeDistal": "aquela casa",
+            "demonstrativeMedial": "essa casa",
+            "demonstrativeProximal": "esta casa",
+            "emDefiniteArticle": "na casa",
+            "emDemonstrativeDistal": "naquela casa",
+            "emDemonstrativeMedial": "nessa casa",
+            "emDemonstrativeProximal": "nesta casa",
+            "emIndefiniteArticle": "numa casa",
+            "indefiniteArticle": "uma casa",
+            "porDefiniteArticle": "pela casa",
+            "possessiveArticle": "sua casa"
+          },
+          "surface": "casa"
+        },
+        {
+          "gender": "masculine",
+          "number": "plural",
+          "phraseForms": {
+            "deDefiniteArticle": "dos campos",
+            "deDemonstrativeDistal": "daqueles campos",
+            "deDemonstrativeMedial": "desses campos",
+            "deDemonstrativeProximal": "destes campos",
+            "definiteArticle": "os campos",
+            "demonstrativeDistal": "aqueles campos",
+            "demonstrativeMedial": "esses campos",
+            "demonstrativeProximal": "estes campos",
+            "emDefiniteArticle": "nos campos",
+            "emDemonstrativeDistal": "naqueles campos",
+            "emDemonstrativeMedial": "nesses campos",
+            "emDemonstrativeProximal": "nestes campos",
+            "emIndefiniteArticle": "nuns campos",
+            "indefiniteArticle": "uns campos",
+            "porDefiniteArticle": "pelos campos",
+            "possessiveArticle": "seus campos"
+          },
+          "surface": "campos"
+        },
+        {
+          "gender": "feminine",
+          "number": "plural",
+          "phraseForms": {
+            "deDefiniteArticle": "das casas",
+            "deDemonstrativeDistal": "daquelas casas",
+            "deDemonstrativeMedial": "dessas casas",
+            "deDemonstrativeProximal": "destas casas",
+            "definiteArticle": "as casas",
+            "demonstrativeDistal": "aquelas casas",
+            "demonstrativeMedial": "essas casas",
+            "demonstrativeProximal": "estas casas",
+            "emDefiniteArticle": "nas casas",
+            "emDemonstrativeDistal": "naquelas casas",
+            "emDemonstrativeMedial": "nessas casas",
+            "emDemonstrativeProximal": "nestas casas",
+            "emIndefiniteArticle": "numas casas",
+            "indefiniteArticle": "umas casas",
+            "porDefiniteArticle": "pelas casas",
+            "possessiveArticle": "suas casas"
+          },
+          "surface": "casas"
+        },
+        {
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "deDefiniteArticle": "do primo",
+            "deDemonstrativeDistal": "daquele primo",
+            "deDemonstrativeMedial": "desse primo",
+            "deDemonstrativeProximal": "deste primo",
+            "definiteArticle": "o primo",
+            "demonstrativeDistal": "aquele primo",
+            "demonstrativeMedial": "esse primo",
+            "demonstrativeProximal": "este primo",
+            "emDefiniteArticle": "no primo",
+            "emDemonstrativeDistal": "naquele primo",
+            "emDemonstrativeMedial": "nesse primo",
+            "emDemonstrativeProximal": "neste primo",
+            "emIndefiniteArticle": "num primo",
+            "indefiniteArticle": "um primo",
+            "porDefiniteArticle": "pelo primo",
+            "possessiveArticle": "seu primo"
+          },
+          "surface": "primo"
+        },
+        {
+          "gender": "feminine",
+          "number": "singular",
+          "phraseForms": {
+            "deDefiniteArticle": "da prima",
+            "deDemonstrativeDistal": "daquela prima",
+            "deDemonstrativeMedial": "dessa prima",
+            "deDemonstrativeProximal": "desta prima",
+            "definiteArticle": "a prima",
+            "demonstrativeDistal": "aquela prima",
+            "demonstrativeMedial": "essa prima",
+            "demonstrativeProximal": "esta prima",
+            "emDefiniteArticle": "na prima",
+            "emDemonstrativeDistal": "naquela prima",
+            "emDemonstrativeMedial": "nessa prima",
+            "emDemonstrativeProximal": "nesta prima",
+            "emIndefiniteArticle": "numa prima",
+            "indefiniteArticle": "uma prima",
+            "porDefiniteArticle": "pela prima",
+            "possessiveArticle": "sua prima"
+          },
+          "surface": "prima"
+        }
+      ]
+    },
+    "sizeEstimates": {
+      "eagerPhrasePack": {
+        "binaryLowerBoundBytes": 2775616,
+        "phraseRowBytes": 1233408,
+        "phraseRows": 102784,
+        "stringPoolBytes": 1542208
+      }
+    }
+  },
+  "counts": {
+    "ambiguousSupportedSurfaces": 498,
+    "dictionaryEntries": 35188,
+    "dictionaryInflectionPatterns": 245,
+    "exactGenderNumberSurfaces": 6116,
+    "genderNumberCandidateSurfaces": 6424,
+    "inflectionalPatterns": 291,
+    "missingInflectionPatterns": 0,
+    "nounInflectionalPatterns": 208,
+    "skippedLines": 96,
+    "supportedEntries": 6628,
+    "uniqueSupportedSurfaces": 6614,
+    "usedInflectionalPatterns": 245
+  },
+  "features": {
+    "ambiguityReasons": {
+      "missing-gender": 31,
+      "missing-number": 12,
+      "multiple-analyses": 1,
+      "multiple-genders": 86,
+      "multiple-inflections": 353,
+      "multiple-numbers": 70,
+      "multiple-parts-of-speech": 322
+    },
+    "gender": {
+      "<missing>": 33,
+      "feminine": 3239,
+      "masculine": 3442
+    },
+    "number": {
+      "<missing>": 12,
+      "plural": 3314,
+      "singular": 3372
+    },
+    "partOfSpeech": {
+      "adjective": 128,
+      "noun": 6590,
+      "proper-noun": 89,
+      "verb": 161
+    },
+    "patternPartOfSpeech": {
+      "adjective": 29,
+      "article": 2,
+      "noun": 208,
+      "verb": 52
+    },
+    "patternSlotGenders": {
+      "<missing>": 3533,
+      "feminine": 625,
+      "masculine": 710
+    },
+    "patternSlotNumbers": {
+      "<missing>": 152,
+      "plural": 2392,
+      "singular": 2324
+    }
+  },
+  "locale": "pt",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/pt_noun_pack_report.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_pt.lst",
+      "inflection/resources/org/unicode/inflection/dictionary/inflectional_pt.xml"
+    ],
+    "sources": [
+      {
+        "byteSize": 2345650,
+        "gitLfsPointer": false,
+        "path": "dictionary_pt.lst",
+        "sha256": "00a2c13c4b5c437cc8677e7115a7e8ad3ec62dcba2115698fb283541cdabee70"
+      },
+      {
+        "byteSize": 637727,
+        "gitLfsPointer": false,
+        "path": "inflectional_pt.xml",
+        "sha256": "b223e087bd3ea5470fabebb6277e500561d24a7c7fbd5f867a1d115d2f3d3aef"
+      }
+    ]
+  },
+  "reviewPolicy": {
+    "automaticExportSurfaces": 6116,
+    "blockedReasons": {
+      "missing-gender": 31,
+      "missing-number": 12,
+      "multiple-genders": 86,
+      "multiple-inflections": 80,
+      "multiple-numbers": 70,
+      "multiple-parts-of-speech": 78
+    },
+    "blockedSurfaces": 190,
+    "compactRuntime": "agreement-shell-composition",
+    "reviewRequiredReasons": {
+      "multiple-analyses": 1,
+      "multiple-inflections": 273,
+      "multiple-parts-of-speech": 244
+    },
+    "reviewRequiredSurfaces": 308
+  },
+  "samples": {
+    "blockingAmbiguities": [
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "2",
+          "6"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abandono"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "2",
+          "e"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abate"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "2",
+          "e"
+        ],
+        "numbers": [
+          "plural",
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-numbers",
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abates"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "2",
+          "6"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abismo"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "2",
+          "6"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "aborto"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "104",
+          "5e"
+        ],
+        "numbers": [
+          "plural"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abris"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "1",
+          "2"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "adjective",
+          "noun"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "absurdo"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "1",
+          "2"
+        ],
+        "numbers": [
+          "plural"
+        ],
+        "partsOfSpeech": [
+          "adjective",
+          "noun"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "absurdos"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "1",
+          "2"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "adjective",
+          "noun"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "acadêmico"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "1",
+          "2"
+        ],
+        "numbers": [
+          "plural"
+        ],
+        "partsOfSpeech": [
+          "adjective",
+          "noun"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "acadêmicos"
+      }
+    ],
+    "entries": [
+      {
+        "gender": [],
+        "inflections": [],
+        "line": 1,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Brasil"
+      },
+      {
+        "gender": [],
+        "inflections": [],
+        "line": 2,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Brasis"
+      },
+      {
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [],
+        "line": 3,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Camboja"
+      },
+      {
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [],
+        "line": 4,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Cambojas"
+      },
+      {
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [],
+        "line": 5,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "China"
+      },
+      {
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [],
+        "line": 6,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Chinas"
+      },
+      {
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "4"
+        ],
+        "line": 7,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "Estado"
+      },
+      {
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "4"
+        ],
+        "line": 8,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "Estados"
+      },
+      {
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [],
+        "line": 9,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Europa"
+      },
+      {
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [],
+        "line": 10,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Europas"
+      }
+    ],
+    "genderNumberCandidates": [
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "ab"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abacaxi"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "ab"
+        ],
+        "numbers": [
+          "plural"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abacaxis"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "ab"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abacaxizinho"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "ab"
+        ],
+        "numbers": [
+          "plural"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abacaxizinhos"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "ab"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abacaxizão"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "ab"
+        ],
+        "numbers": [
+          "plural"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abacaxizões"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "ab"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abacaxí"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "ab"
+        ],
+        "numbers": [
+          "plural"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abacaxís"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "a"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abajur"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "a"
+        ],
+        "numbers": [
+          "plural"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abajures"
+      }
+    ],
+    "missingInflectionPatterns": []
+  },
+  "schema": "mojito-mf2-inflection/pt-noun-pack-report/v0",
+  "sizeEstimates": {
+    "genderNumberMetadataPack": {
+      "binaryLowerBoundBytes": 111685,
+      "rowBytes": 51392,
+      "stringPoolBytes": 60293
+    }
+  },
+  "sources": [
+    {
+      "byteSize": 2345650,
+      "gitLfsPointer": false,
+      "path": "dictionary_pt.lst",
+      "sha256": "00a2c13c4b5c437cc8677e7115a7e8ad3ec62dcba2115698fb283541cdabee70"
+    },
+    {
+      "byteSize": 637727,
+      "gitLfsPointer": false,
+      "path": "inflectional_pt.xml",
+      "sha256": "b223e087bd3ea5470fabebb6277e500561d24a7c7fbd5f867a1d115d2f3d3aef"
+    }
+  ]
+}

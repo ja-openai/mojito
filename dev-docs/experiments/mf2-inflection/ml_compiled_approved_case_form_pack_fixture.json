@@ -1,0 +1,235 @@
+{
+  "diagnostics": [],
+  "formSets": [
+    {
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 4,
+          "kind": "literal",
+          "value": 5
+        },
+        {
+          "key": 6,
+          "kind": "literal",
+          "value": 7
+        },
+        {
+          "key": 8,
+          "kind": "literal",
+          "value": 9
+        },
+        {
+          "key": 10,
+          "kind": "literal",
+          "value": 11
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 13
+        },
+        {
+          "key": 14,
+          "kind": "literal",
+          "value": 15
+        },
+        {
+          "key": 16,
+          "kind": "literal",
+          "value": 17
+        },
+        {
+          "key": 18,
+          "kind": "literal",
+          "value": 19
+        },
+        {
+          "key": 20,
+          "kind": "literal",
+          "value": 21
+        },
+        {
+          "key": 22,
+          "kind": "literal",
+          "value": 23
+        },
+        {
+          "key": 24,
+          "kind": "literal",
+          "value": 25
+        },
+        {
+          "key": 26,
+          "kind": "literal",
+          "value": 27
+        },
+        {
+          "key": 28,
+          "kind": "literal",
+          "value": 29
+        },
+        {
+          "key": 30,
+          "kind": "literal",
+          "value": 31
+        },
+        {
+          "key": 32,
+          "kind": "literal",
+          "value": 33
+        }
+      ],
+      "term": 0
+    }
+  ],
+  "generationSummary": {
+    "candidateTerms": 1,
+    "exportPolicy": {
+      "automaticExportTerms": 1,
+      "blockedReasons": {},
+      "blockedTerms": 0,
+      "compositionMode": "explicit-form-rows-v0",
+      "deferredComposition": [],
+      "reviewRequiredReasons": {},
+      "reviewRequiredTerms": 0,
+      "runtimeExport": "closed-world-multi-case-explicit-forms"
+    },
+    "exportedFormKeys": [
+      "nominative.singular",
+      "nominative.plural",
+      "accusative.singular",
+      "accusative.plural",
+      "dative.singular",
+      "dative.plural",
+      "genitive.singular",
+      "genitive.plural",
+      "instrumental.singular",
+      "instrumental.plural",
+      "locative.singular",
+      "locative.plural",
+      "sociative.singular",
+      "sociative.plural",
+      "vocative.singular",
+      "vocative.plural"
+    ],
+    "exportedTerms": 1,
+    "formRows": 16,
+    "missingFormKeys": [],
+    "policy": "closed-world multi-case explicit-form pack",
+    "requiredFormRows": 16,
+    "reviewDiagnostics": [],
+    "sourceRows": [
+      523290,
+      523236,
+      523277,
+      523284,
+      523276,
+      523285,
+      523280,
+      523283,
+      523274,
+      523281,
+      523275,
+      523282,
+      523278,
+      523235,
+      523287,
+      523234
+    ],
+    "sourceRowsByFormKey": {
+      "accusative.plural": 523284,
+      "accusative.singular": 523277,
+      "dative.plural": 523285,
+      "dative.singular": 523276,
+      "genitive.plural": 523283,
+      "genitive.singular": 523280,
+      "instrumental.plural": 523281,
+      "instrumental.singular": 523274,
+      "locative.plural": 523282,
+      "locative.singular": 523275,
+      "nominative.plural": 523236,
+      "nominative.singular": 523290,
+      "sociative.plural": 523235,
+      "sociative.singular": 523278,
+      "vocative.plural": 523234,
+      "vocative.singular": 523287
+    }
+  },
+  "locale": "ml",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/ml_case_form_pack.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_ml.lst"
+    ],
+    "sources": [
+      {
+        "byteSize": 53958746,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_ml.lst",
+        "sha256": "6bda9371a2aa17c08328381e678b77e769269f4ee74749dd4f9e0bd5890cf59c"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/compiled-term-pack/v0",
+  "sizeEstimates": {
+    "binaryLowerBoundBytes": {
+      "bindingReferenceBytes": 0,
+      "formRowBytes": 192,
+      "stringPoolBytes": 820,
+      "termRowBytes": 20,
+      "totalBytes": 1032
+    },
+    "compactJsonBytes": 5483
+  },
+  "strings": [
+    "ml.case.father",
+    "പിതാവ്",
+    "inflection=cb",
+    "nominative.singular",
+    "nominative.plural",
+    "പിതാക്കന്മാർ",
+    "accusative.singular",
+    "പിതാവിനെ",
+    "accusative.plural",
+    "പിതാവുകളെ",
+    "dative.singular",
+    "പിതാവിനു്",
+    "dative.plural",
+    "പിതാവുകൾക്കു്",
+    "genitive.singular",
+    "പിതാവിന്റെ",
+    "genitive.plural",
+    "പിതാവുകളുടെ",
+    "instrumental.singular",
+    "പിതാവാൽ",
+    "instrumental.plural",
+    "പിതാവുകളാൽ",
+    "locative.singular",
+    "പിതാവിങ്കൽ",
+    "locative.plural",
+    "പിതാവുകളിങ്കൽ",
+    "sociative.singular",
+    "പിതാവിനോടു്",
+    "sociative.plural",
+    "പിതാക്കന്മാരോട്",
+    "vocative.singular",
+    "പിതാവേ",
+    "vocative.plural",
+    "പിതാക്കന്മാരേ"
+  ],
+  "terms": [
+    {
+      "featureBits": 273,
+      "formSet": 0,
+      "id": 0,
+      "sense": 2,
+      "text": 1
+    }
+  ]
+}

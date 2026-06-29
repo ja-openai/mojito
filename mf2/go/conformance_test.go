@@ -2,10 +2,14 @@ package mf2
 
 import (
 	"encoding/json"
+	"go/ast"
+	goparser "go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 )
 
@@ -105,6 +109,68 @@ func TestUnsupportedDefaultFunctionRecoversWithDiagnostic(t *testing.T) {
 	if !hasErrorCode(actual.Errors, "unknown-function") {
 		t.Fatalf("expected default registry to reject :currency, got %v", actual.Errors)
 	}
+}
+
+func TestPublicRuntimeAPIDoesNotExportInflectionRuntime(t *testing.T) {
+	var exported []string
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fileSet := token.NewFileSet()
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
+			continue
+		}
+		file, err := goparser.ParseFile(fileSet, entry.Name(), nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, declaration := range file.Decls {
+			switch typed := declaration.(type) {
+			case *ast.FuncDecl:
+				if ast.IsExported(typed.Name.Name) {
+					exported = append(exported, typed.Name.Name)
+				}
+			case *ast.GenDecl:
+				for _, spec := range typed.Specs {
+					switch typedSpec := spec.(type) {
+					case *ast.TypeSpec:
+						if ast.IsExported(typedSpec.Name.Name) {
+							exported = append(exported, typedSpec.Name.Name)
+						}
+					case *ast.ValueSpec:
+						for _, name := range typedSpec.Names {
+							if ast.IsExported(name.Name) {
+								exported = append(exported, name.Name)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	sort.Strings(exported)
+	for _, name := range exported {
+		normalized := normalizePublicName(name)
+		if strings.Contains(normalized, "inflection") ||
+			strings.Contains(normalized, "m2if") ||
+			strings.Contains(normalized, "compiledtermpack") ||
+			strings.Contains(normalized, "termpack") {
+			t.Fatalf("inflection runtime export %q must stay out of the Go package until a product API is approved; exported names: %v", name, exported)
+		}
+	}
+}
+
+func normalizePublicName(name string) string {
+	var builder strings.Builder
+	for _, character := range strings.ToLower(name) {
+		if character >= 'a' && character <= 'z' || character >= '0' && character <= '9' {
+			builder.WriteRune(character)
+		}
+	}
+	return builder.String()
 }
 
 func TestRecoveryCallbacksHandleEmptyAndDeclinedValues(t *testing.T) {

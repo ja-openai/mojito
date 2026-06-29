@@ -1,0 +1,232 @@
+{
+  "diagnostics": [],
+  "formSets": [
+    {
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 4
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 6
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 8
+        },
+        {
+          "key": 9,
+          "kind": "literal",
+          "value": 10
+        },
+        {
+          "key": 11,
+          "kind": "literal",
+          "value": 12
+        },
+        {
+          "key": 13,
+          "kind": "literal",
+          "value": 14
+        },
+        {
+          "key": 15,
+          "kind": "literal",
+          "value": 16
+        },
+        {
+          "key": 17,
+          "kind": "literal",
+          "value": 18
+        },
+        {
+          "key": 19,
+          "kind": "literal",
+          "value": 20
+        },
+        {
+          "key": 21,
+          "kind": "literal",
+          "value": 22
+        },
+        {
+          "key": 23,
+          "kind": "literal",
+          "value": 24
+        },
+        {
+          "key": 25,
+          "kind": "literal",
+          "value": 26
+        },
+        {
+          "key": 27,
+          "kind": "literal",
+          "value": 28
+        },
+        {
+          "key": 29,
+          "kind": "literal",
+          "value": 30
+        }
+      ],
+      "term": 0
+    }
+  ],
+  "generationSummary": {
+    "candidateTerms": 1,
+    "exportedFormKeys": [
+      "indefinite.nominative.singular",
+      "indefinite.accusative.singular",
+      "indefinite.genitive.singular",
+      "construct.nominative.singular",
+      "construct.accusative.singular",
+      "construct.genitive.singular",
+      "indefinite.nominative.dual",
+      "indefinite.accusative.dual",
+      "construct.nominative.dual",
+      "construct.accusative.dual",
+      "indefinite.nominative.plural",
+      "indefinite.accusative.plural",
+      "construct.nominative.plural",
+      "construct.accusative.plural"
+    ],
+    "exportedTerms": 1,
+    "formRows": 14,
+    "missingFormKeys": [
+      "indefinite.genitive.dual",
+      "indefinite.genitive.plural",
+      "construct.genitive.dual",
+      "construct.genitive.plural"
+    ],
+    "policy": "closed-world explicit-form pack",
+    "requiredFormRows": 18,
+    "reviewDiagnostics": [
+      {
+        "formKey": "indefinite.genitive.dual",
+        "reason": "missing-form-cell",
+        "termId": "ar.explicit.mother"
+      },
+      {
+        "formKey": "indefinite.genitive.plural",
+        "reason": "missing-form-cell",
+        "termId": "ar.explicit.mother"
+      },
+      {
+        "formKey": "construct.genitive.dual",
+        "reason": "missing-form-cell",
+        "termId": "ar.explicit.mother"
+      },
+      {
+        "formKey": "construct.genitive.plural",
+        "reason": "missing-form-cell",
+        "termId": "ar.explicit.mother"
+      }
+    ],
+    "sourceRows": [
+      1295,
+      1294,
+      1296,
+      1309,
+      1298,
+      1310,
+      1300,
+      1307,
+      1299,
+      1306,
+      1302,
+      1303,
+      1304,
+      1305
+    ],
+    "sourceRowsByFormKey": {
+      "construct.accusative.dual": 1306,
+      "construct.accusative.plural": 1305,
+      "construct.accusative.singular": 1298,
+      "construct.genitive.singular": 1310,
+      "construct.nominative.dual": 1299,
+      "construct.nominative.plural": 1304,
+      "construct.nominative.singular": 1309,
+      "indefinite.accusative.dual": 1307,
+      "indefinite.accusative.plural": 1303,
+      "indefinite.accusative.singular": 1294,
+      "indefinite.genitive.singular": 1296,
+      "indefinite.nominative.dual": 1300,
+      "indefinite.nominative.plural": 1302,
+      "indefinite.nominative.singular": 1295
+    }
+  },
+  "locale": "ar",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/ar_explicit_form_pack.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_ar.lst"
+    ],
+    "sources": [
+      {
+        "byteSize": 893500,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_ar.lst",
+        "sha256": "7d3ce5339d95517edbdc9c824f002e076351e6ced9bb67c7109ad3d486e3a77e"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/compiled-term-pack/v0",
+  "sizeEstimates": {
+    "binaryLowerBoundBytes": {
+      "bindingReferenceBytes": 0,
+      "formRowBytes": 168,
+      "stringPoolBytes": 653,
+      "termRowBytes": 20,
+      "totalBytes": 841
+    },
+    "compactJsonBytes": 5577
+  },
+  "strings": [
+    "ar.explicit.mother",
+    "أم",
+    "inflection=c2",
+    "indefinite.nominative.singular",
+    "أُمٌّ",
+    "indefinite.accusative.singular",
+    "أُمًّا",
+    "indefinite.genitive.singular",
+    "أُمٍّ",
+    "construct.nominative.singular",
+    "أُمُّ",
+    "construct.accusative.singular",
+    "أُمَّ",
+    "construct.genitive.singular",
+    "أُمِّ",
+    "indefinite.nominative.dual",
+    "أُمَّانِ",
+    "indefinite.accusative.dual",
+    "أُمَّيْنِ",
+    "construct.nominative.dual",
+    "أُمَّا",
+    "construct.accusative.dual",
+    "أُمَّيْ",
+    "indefinite.nominative.plural",
+    "أُمَّهَٰتٌ",
+    "indefinite.accusative.plural",
+    "أُمَّهَٰتٍ",
+    "construct.nominative.plural",
+    "أُمَّهَٰتُ",
+    "construct.accusative.plural",
+    "أُمَّهَٰتِ"
+  ],
+  "terms": [
+    {
+      "featureBits": 289,
+      "formSet": 0,
+      "id": 0,
+      "sense": 2,
+      "text": 1
+    }
+  ]
+}

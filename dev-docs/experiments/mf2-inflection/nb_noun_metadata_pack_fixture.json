@@ -1,0 +1,340 @@
+{
+  "description": "Generated Norwegian Bokmal noun metadata fixture for gender, number, and definiteness validation; not a renderer form pack.",
+  "features": {
+    "definiteness": {
+      "definite": 65584,
+      "indefinite": 50792
+    },
+    "gender": {
+      "feminine": 23701,
+      "masculine": 66763,
+      "neuter": 30160
+    },
+    "number": {
+      "plural": 62647,
+      "singular": 59616
+    },
+    "partOfSpeech": {
+      "noun": 114534,
+      "proper-noun": 25
+    }
+  },
+  "generationSummary": {
+    "caseTaggedNounRows": 1,
+    "dictionaryEntries": 162215,
+    "exportedRows": 12,
+    "metadataCandidateRows": 114535,
+    "metadataCandidateSurfaces": 114089,
+    "multiDefinitenessRows": 1841,
+    "multiGenderRows": 4024,
+    "multiNumberRows": 7728,
+    "reviewDiagnosticRows": 2,
+    "skippedDictionaryLines": 76
+  },
+  "locale": "nb",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/nb_noun_metadata_pack.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_nb.lst"
+    ],
+    "sources": [
+      {
+        "byteSize": 9470180,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_nb.lst",
+        "sha256": "a65316f4458ace28fe0959047590bae0e130bf8eaf973ed492bb3d955aff4d5b"
+      }
+    ]
+  },
+  "rows": [
+    {
+      "definiteness": [
+        "indefinite"
+      ],
+      "featureBits": 4369,
+      "gender": [
+        "masculine"
+      ],
+      "inflectionPatterns": [
+        "1"
+      ],
+      "number": [
+        "singular"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 82799,
+      "surface": 0
+    },
+    {
+      "definiteness": [
+        "definite"
+      ],
+      "featureBits": 8465,
+      "gender": [
+        "masculine"
+      ],
+      "inflectionPatterns": [
+        "1"
+      ],
+      "number": [
+        "singular"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 82832,
+      "surface": 1
+    },
+    {
+      "definiteness": [
+        "indefinite"
+      ],
+      "featureBits": 4625,
+      "gender": [
+        "masculine"
+      ],
+      "inflectionPatterns": [
+        "1"
+      ],
+      "number": [
+        "plural"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 82834,
+      "surface": 2
+    },
+    {
+      "definiteness": [
+        "definite"
+      ],
+      "featureBits": 8721,
+      "gender": [
+        "masculine"
+      ],
+      "inflectionPatterns": [
+        "1"
+      ],
+      "number": [
+        "plural"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 82833,
+      "surface": 3
+    },
+    {
+      "definiteness": [
+        "indefinite"
+      ],
+      "featureBits": 4385,
+      "gender": [
+        "feminine"
+      ],
+      "inflectionPatterns": [
+        "5"
+      ],
+      "number": [
+        "singular"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 88063,
+      "surface": 4
+    },
+    {
+      "definiteness": [
+        "definite"
+      ],
+      "featureBits": 8481,
+      "gender": [
+        "feminine"
+      ],
+      "inflectionPatterns": [
+        "5"
+      ],
+      "number": [
+        "singular"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 88062,
+      "surface": 5
+    },
+    {
+      "definiteness": [
+        "indefinite"
+      ],
+      "featureBits": 4641,
+      "gender": [
+        "feminine"
+      ],
+      "inflectionPatterns": [
+        "5"
+      ],
+      "number": [
+        "plural"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 88066,
+      "surface": 6
+    },
+    {
+      "definiteness": [
+        "definite"
+      ],
+      "featureBits": 8737,
+      "gender": [
+        "feminine"
+      ],
+      "inflectionPatterns": [
+        "5"
+      ],
+      "number": [
+        "plural"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 88065,
+      "surface": 7
+    },
+    {
+      "definiteness": [
+        "indefinite"
+      ],
+      "featureBits": 4929,
+      "gender": [
+        "neuter"
+      ],
+      "inflectionPatterns": [
+        "2"
+      ],
+      "number": [
+        "singular",
+        "plural"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [
+        "multiple-numbers"
+      ],
+      "sourceRow": 20156,
+      "surface": 8
+    },
+    {
+      "definiteness": [
+        "definite"
+      ],
+      "featureBits": 8513,
+      "gender": [
+        "neuter"
+      ],
+      "inflectionPatterns": [
+        "2"
+      ],
+      "number": [
+        "singular"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 20565,
+      "surface": 9
+    },
+    {
+      "definiteness": [
+        "definite"
+      ],
+      "featureBits": 8769,
+      "gender": [
+        "neuter"
+      ],
+      "inflectionPatterns": [
+        "2"
+      ],
+      "number": [
+        "plural"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 20157,
+      "surface": 10
+    },
+    {
+      "definiteness": [
+        "definite"
+      ],
+      "featureBits": 8753,
+      "gender": [
+        "masculine",
+        "feminine"
+      ],
+      "inflectionPatterns": [
+        "1",
+        "136"
+      ],
+      "number": [
+        "plural"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [
+        "multiple-genders",
+        "multiple-inflections"
+      ],
+      "sourceRow": 41293,
+      "surface": 11
+    }
+  ],
+  "schema": "mojito-mf2-inflection/nb-noun-metadata-pack/v0",
+  "sizeEstimates": {
+    "fullMetadataPack": {
+      "binaryLowerBoundBytes": 2696106,
+      "rowBytes": 1374420,
+      "stringPoolBytes": 1321686
+    },
+    "sampleMetadataPack": {
+      "binaryLowerBoundBytes": 224,
+      "jsonBytes": 6404,
+      "rowBytes": 144,
+      "stringPoolBytes": 80
+    }
+  },
+  "strings": [
+    "hund",
+    "hunden",
+    "hunder",
+    "hundene",
+    "jente",
+    "jenta",
+    "jenter",
+    "jentene",
+    "barn",
+    "barnet",
+    "barna",
+    "bøkene"
+  ]
+}

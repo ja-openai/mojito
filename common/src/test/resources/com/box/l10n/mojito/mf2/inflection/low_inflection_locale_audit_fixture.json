@@ -1,0 +1,1262 @@
+{
+  "description": "Audit of low-inflection Unicode locale groups for Mojito MF2 profile-only or no-op support.",
+  "locales": [
+    {
+      "dataState": {
+        "dictionary": "git-lfs-pointer",
+        "inflectional": "git-lfs-pointer",
+        "pronouns": "materialized"
+      },
+      "locale": "en",
+      "pronouns": {
+        "cases": {
+          "accusative": 8,
+          "genitive": 12,
+          "nominative": 9
+        },
+        "features": {
+          "accusative": 8,
+          "dependent": 5,
+          "determination": 2,
+          "feminine": 5,
+          "first": 10,
+          "gender": 19,
+          "genitive": 12,
+          "independent": 5,
+          "masculine": 4,
+          "neuter": 4,
+          "nominative": 9,
+          "number": 5,
+          "plural": 10,
+          "reflexive": 9,
+          "second": 7,
+          "singular": 23,
+          "third": 21
+        },
+        "genders": {
+          "feminine": 5,
+          "gender": 19,
+          "masculine": 4,
+          "neuter": 4
+        },
+        "numbers": {
+          "plural": 10,
+          "singular": 23
+        },
+        "persons": {
+          "first": 10,
+          "second": 7,
+          "third": 21
+        },
+        "registers": {},
+        "rows": 38,
+        "samples": [
+          {
+            "features": [
+              "third",
+              "plural",
+              "nominative"
+            ],
+            "line": 1,
+            "value": "they"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "nominative"
+            ],
+            "line": 2,
+            "value": "they"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "masculine",
+              "nominative"
+            ],
+            "line": 3,
+            "value": "he"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "feminine",
+              "nominative"
+            ],
+            "line": 4,
+            "value": "she"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "neuter",
+              "nominative"
+            ],
+            "line": 5,
+            "value": "it"
+          },
+          {
+            "features": [
+              "second",
+              "singular",
+              "gender",
+              "nominative"
+            ],
+            "line": 6,
+            "value": "you"
+          },
+          {
+            "features": [
+              "second",
+              "plural",
+              "gender",
+              "nominative"
+            ],
+            "line": 7,
+            "value": "you"
+          },
+          {
+            "features": [
+              "first",
+              "singular",
+              "gender",
+              "nominative"
+            ],
+            "line": 8,
+            "value": "I"
+          }
+        ],
+        "uniqueValues": 32
+      },
+      "recommendation": {
+        "mode": "data-materialization-required",
+        "nextAction": "materialize-lfs-data-if-product-use-case-appears",
+        "profileOnly": true,
+        "reason": "Dictionary or inflectional data is a Git LFS pointer; materialize it before deciding whether this locale needs a runtime term-inflection pack.",
+        "runtimeTermInflection": false
+      },
+      "sources": {
+        "dictionary": {
+          "byteSize": 132,
+          "exists": true,
+          "gitLfsObjectSize": 5091040,
+          "gitLfsOidSha256": "c66d69e97eefa5046d1127d8c35365f72d619fe8d5a2b208bddc83483d5aecaf",
+          "gitLfsPointer": true,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_en.lst",
+          "sha256": "1517e0562f778d76e78faaf83baf8c393d28a5c8d2197b49685b725bfccdbe17"
+        },
+        "inflectional": {
+          "byteSize": 131,
+          "exists": true,
+          "gitLfsObjectSize": 635020,
+          "gitLfsOidSha256": "000bf3346f4c24a85d05fb1d65fd95a875c239e0c3bc46b75ba6b6cc63728ebb",
+          "gitLfsPointer": true,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/inflectional_en.xml",
+          "sha256": "fc53ac48f2478b4d343845169756a735d8b66a9566677989534d3bad5fc0b761"
+        },
+        "pronouns": {
+          "byteSize": 1518,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_en.csv",
+          "sha256": "fa5b5b5a7d414e14582a856ba80520143d880ff6539f53e6f7e472603b02cd6f"
+        }
+      }
+    },
+    {
+      "dataState": {
+        "dictionary": "empty-placeholder",
+        "inflectional": "missing",
+        "pronouns": "materialized"
+      },
+      "locale": "id",
+      "pronouns": {
+        "cases": {
+          "genitive": 3,
+          "nominative": 10
+        },
+        "features": {
+          "casual": 3,
+          "exclusive": 1,
+          "first": 5,
+          "formal": 3,
+          "genitive": 3,
+          "inclusive": 1,
+          "nominative": 10,
+          "number": 3,
+          "plural": 4,
+          "second": 4,
+          "singular": 6,
+          "third": 4
+        },
+        "genders": {},
+        "numbers": {
+          "plural": 4,
+          "singular": 6
+        },
+        "persons": {
+          "first": 5,
+          "second": 4,
+          "third": 4
+        },
+        "registers": {
+          "casual": 3,
+          "formal": 3
+        },
+        "rows": 13,
+        "samples": [
+          {
+            "features": [
+              "third",
+              "plural",
+              "nominative"
+            ],
+            "line": 1,
+            "value": "mereka"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "formal",
+              "nominative"
+            ],
+            "line": 2,
+            "value": "beliau"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "casual",
+              "nominative"
+            ],
+            "line": 3,
+            "value": "dia"
+          },
+          {
+            "features": [
+              "second",
+              "plural",
+              "nominative"
+            ],
+            "line": 4,
+            "value": "kalian"
+          },
+          {
+            "features": [
+              "second",
+              "singular",
+              "formal",
+              "nominative"
+            ],
+            "line": 5,
+            "value": "anda"
+          },
+          {
+            "features": [
+              "second",
+              "singular",
+              "casual",
+              "nominative"
+            ],
+            "line": 6,
+            "value": "kamu"
+          },
+          {
+            "features": [
+              "first",
+              "plural",
+              "exclusive",
+              "nominative"
+            ],
+            "line": 7,
+            "value": "kami"
+          },
+          {
+            "features": [
+              "first",
+              "plural",
+              "inclusive",
+              "nominative"
+            ],
+            "line": 8,
+            "value": "kita"
+          }
+        ],
+        "uniqueValues": 13
+      },
+      "recommendation": {
+        "mode": "profile-only-noop",
+        "nextAction": "do-not-build-term-inflection-pack-until-source-data-or-product-need-exists",
+        "profileOnly": true,
+        "reason": "The Unicode checkout has no noun dictionary or inflectional XML rows for this locale group; term rendering should pass through known glossary text and keep only profile/pronoun metadata.",
+        "runtimeTermInflection": false
+      },
+      "sources": {
+        "dictionary": {
+          "byteSize": 0,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_id.lst",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/inflectional_id.xml"
+        },
+        "pronouns": {
+          "byteSize": 447,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_id.csv",
+          "sha256": "3b3a46bc27e2fb318ceae015af49307725e3972388b6741db655e01a10ccf97f"
+        }
+      }
+    },
+    {
+      "dataState": {
+        "dictionary": "empty-placeholder",
+        "inflectional": "missing",
+        "pronouns": "materialized"
+      },
+      "locale": "ja",
+      "pronouns": {
+        "cases": {},
+        "features": {
+          "feminine": 1,
+          "first": 1,
+          "masculine": 1,
+          "neuter": 1,
+          "second": 1,
+          "third": 3
+        },
+        "genders": {
+          "feminine": 1,
+          "masculine": 1,
+          "neuter": 1
+        },
+        "numbers": {},
+        "persons": {
+          "first": 1,
+          "second": 1,
+          "third": 3
+        },
+        "registers": {},
+        "rows": 5,
+        "samples": [
+          {
+            "features": [
+              "third",
+              "masculine"
+            ],
+            "line": 1,
+            "value": "彼"
+          },
+          {
+            "features": [
+              "third",
+              "feminine"
+            ],
+            "line": 2,
+            "value": "彼女"
+          },
+          {
+            "features": [
+              "third",
+              "neuter"
+            ],
+            "line": 3,
+            "value": "それ"
+          },
+          {
+            "features": [
+              "second"
+            ],
+            "line": 4,
+            "value": "あなた"
+          },
+          {
+            "features": [
+              "first"
+            ],
+            "line": 5,
+            "value": "私"
+          }
+        ],
+        "uniqueValues": 5
+      },
+      "recommendation": {
+        "mode": "profile-only-noop",
+        "nextAction": "do-not-build-term-inflection-pack-until-source-data-or-product-need-exists",
+        "profileOnly": true,
+        "reason": "The Unicode checkout has no noun dictionary or inflectional XML rows for this locale group; term rendering should pass through known glossary text and keep only profile/pronoun metadata.",
+        "runtimeTermInflection": false
+      },
+      "sources": {
+        "dictionary": {
+          "byteSize": 0,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_ja.lst",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/inflectional_ja.xml"
+        },
+        "pronouns": {
+          "byteSize": 88,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_ja.csv",
+          "sha256": "cd6619a7249b415b6d640f98a1f953191647b667d5c65e1368439dabee825a4e"
+        }
+      }
+    },
+    {
+      "dataState": {
+        "dictionary": "git-lfs-pointer",
+        "inflectional": "missing",
+        "pronouns": "materialized"
+      },
+      "locale": "ko",
+      "pronouns": {
+        "cases": {
+          "accusative": 16,
+          "genitive": 16,
+          "nominative": 16
+        },
+        "features": {
+          "accusative": 16,
+          "casual": 21,
+          "dependency=pos": 3,
+          "dependency=proper-noun": 3,
+          "exclusive": 3,
+          "feminine": 6,
+          "first": 15,
+          "formal": 27,
+          "genitive": 16,
+          "inclusive": 3,
+          "masculine": 6,
+          "nominative": 16,
+          "plural": 21,
+          "second": 15,
+          "singular": 27,
+          "third": 18
+        },
+        "genders": {
+          "feminine": 6,
+          "masculine": 6
+        },
+        "numbers": {
+          "plural": 21,
+          "singular": 27
+        },
+        "persons": {
+          "first": 15,
+          "second": 15,
+          "third": 18
+        },
+        "registers": {
+          "casual": 21,
+          "formal": 27
+        },
+        "rows": 48,
+        "samples": [
+          {
+            "features": [
+              "third",
+              "singular",
+              "nominative",
+              "casual",
+              "masculine"
+            ],
+            "line": 1,
+            "value": "그"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "nominative",
+              "formal",
+              "masculine"
+            ],
+            "line": 2,
+            "value": "그분"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "nominative",
+              "casual",
+              "feminine"
+            ],
+            "line": 3,
+            "value": "그녀"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "nominative",
+              "formal",
+              "feminine"
+            ],
+            "line": 4,
+            "value": "그분"
+          },
+          {
+            "features": [
+              "third",
+              "plural",
+              "nominative",
+              "casual"
+            ],
+            "line": 5,
+            "value": "그들"
+          },
+          {
+            "features": [
+              "third",
+              "plural",
+              "nominative",
+              "formal"
+            ],
+            "line": 6,
+            "value": "그분들"
+          },
+          {
+            "features": [
+              "second",
+              "singular",
+              "nominative",
+              "casual"
+            ],
+            "line": 7,
+            "value": "너"
+          },
+          {
+            "features": [
+              "second",
+              "singular",
+              "nominative",
+              "formal",
+              "dependency=pos"
+            ],
+            "line": 8,
+            "value": "당신"
+          }
+        ],
+        "uniqueValues": 30
+      },
+      "recommendation": {
+        "mode": "data-materialization-required",
+        "nextAction": "materialize-lfs-data-if-product-use-case-appears",
+        "profileOnly": true,
+        "reason": "Dictionary or inflectional data is a Git LFS pointer; materialize it before deciding whether this locale needs a runtime term-inflection pack.",
+        "runtimeTermInflection": false
+      },
+      "sources": {
+        "dictionary": {
+          "byteSize": 130,
+          "exists": true,
+          "gitLfsObjectSize": 19262,
+          "gitLfsOidSha256": "e8e70ff4dc767ddc5302865aa3371e809b50b8b8c84d52fe13bd672c0af3c244",
+          "gitLfsPointer": true,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_ko.lst",
+          "sha256": "bd94c72b7d1c3566a04953d29602043370ebe59422eb12fe838928265e0e2c07"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/inflectional_ko.xml"
+        },
+        "pronouns": {
+          "byteSize": 2221,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_ko.csv",
+          "sha256": "a7ca8f57240148ac6d758970a4b6a4fc8443b57e145fb07abcdb97ff116ea6e9"
+        }
+      }
+    },
+    {
+      "dataState": {
+        "dictionary": "empty-placeholder",
+        "inflectional": "missing",
+        "pronouns": "materialized"
+      },
+      "locale": "ms",
+      "pronouns": {
+        "cases": {
+          "genitive": 3,
+          "nominative": 9
+        },
+        "features": {
+          "casual": 2,
+          "exclusive": 1,
+          "first": 5,
+          "formal": 2,
+          "genitive": 3,
+          "inclusive": 1,
+          "nominative": 9,
+          "number": 3,
+          "plural": 4,
+          "second": 4,
+          "singular": 5,
+          "third": 3
+        },
+        "genders": {},
+        "numbers": {
+          "plural": 4,
+          "singular": 5
+        },
+        "persons": {
+          "first": 5,
+          "second": 4,
+          "third": 3
+        },
+        "registers": {
+          "casual": 2,
+          "formal": 2
+        },
+        "rows": 12,
+        "samples": [
+          {
+            "features": [
+              "third",
+              "plural",
+              "nominative"
+            ],
+            "line": 1,
+            "value": "mereka"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "nominative"
+            ],
+            "line": 2,
+            "value": "dia"
+          },
+          {
+            "features": [
+              "second",
+              "plural",
+              "nominative"
+            ],
+            "line": 3,
+            "value": "kalian"
+          },
+          {
+            "features": [
+              "second",
+              "singular",
+              "formal",
+              "nominative"
+            ],
+            "line": 4,
+            "value": "anda"
+          },
+          {
+            "features": [
+              "second",
+              "singular",
+              "casual",
+              "nominative"
+            ],
+            "line": 5,
+            "value": "kamu"
+          },
+          {
+            "features": [
+              "first",
+              "plural",
+              "exclusive",
+              "nominative"
+            ],
+            "line": 6,
+            "value": "kami"
+          },
+          {
+            "features": [
+              "first",
+              "plural",
+              "inclusive",
+              "nominative"
+            ],
+            "line": 7,
+            "value": "kita"
+          },
+          {
+            "features": [
+              "first",
+              "singular",
+              "formal",
+              "nominative"
+            ],
+            "line": 8,
+            "value": "saya"
+          }
+        ],
+        "uniqueValues": 12
+      },
+      "recommendation": {
+        "mode": "profile-only-noop",
+        "nextAction": "do-not-build-term-inflection-pack-until-source-data-or-product-need-exists",
+        "profileOnly": true,
+        "reason": "The Unicode checkout has no noun dictionary or inflectional XML rows for this locale group; term rendering should pass through known glossary text and keep only profile/pronoun metadata.",
+        "runtimeTermInflection": false
+      },
+      "sources": {
+        "dictionary": {
+          "byteSize": 0,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_ms.lst",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/inflectional_ms.xml"
+        },
+        "pronouns": {
+          "byteSize": 400,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_ms.csv",
+          "sha256": "fe259889f59853d7eafab8549de0cc18f992704679fb66663c3e4f435746f333"
+        }
+      }
+    },
+    {
+      "dataState": {
+        "dictionary": "empty-placeholder",
+        "inflectional": "missing",
+        "pronouns": "materialized"
+      },
+      "locale": "th",
+      "pronouns": {
+        "cases": {
+          "genitive": 8,
+          "nominative": 8
+        },
+        "features": {
+          "first": 6,
+          "genitive": 8,
+          "human": 6,
+          "nominative": 8,
+          "nonhuman": 6,
+          "plural": 12,
+          "reflexive": 8,
+          "second": 6,
+          "singular": 12,
+          "third": 12
+        },
+        "genders": {
+          "human": 6,
+          "nonhuman": 6
+        },
+        "numbers": {
+          "plural": 12,
+          "singular": 12
+        },
+        "persons": {
+          "first": 6,
+          "second": 6,
+          "third": 12
+        },
+        "registers": {},
+        "rows": 24,
+        "samples": [
+          {
+            "features": [
+              "third",
+              "singular",
+              "nominative",
+              "human"
+            ],
+            "line": 1,
+            "value": "เขา"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "nominative",
+              "nonhuman"
+            ],
+            "line": 2,
+            "value": "มัน"
+          },
+          {
+            "features": [
+              "third",
+              "plural",
+              "nominative",
+              "human"
+            ],
+            "line": 3,
+            "value": "พวกเขา"
+          },
+          {
+            "features": [
+              "third",
+              "plural",
+              "nominative",
+              "nonhuman"
+            ],
+            "line": 4,
+            "value": "พวกมัน"
+          },
+          {
+            "features": [
+              "second",
+              "singular",
+              "nominative"
+            ],
+            "line": 5,
+            "value": "คุณ"
+          },
+          {
+            "features": [
+              "second",
+              "plural",
+              "nominative"
+            ],
+            "line": 6,
+            "value": "พวกคุณ"
+          },
+          {
+            "features": [
+              "first",
+              "singular",
+              "nominative"
+            ],
+            "line": 7,
+            "value": "ฉัน"
+          },
+          {
+            "features": [
+              "first",
+              "plural",
+              "nominative"
+            ],
+            "line": 8,
+            "value": "พวกเรา"
+          }
+        ],
+        "uniqueValues": 23
+      },
+      "recommendation": {
+        "mode": "profile-only-noop",
+        "nextAction": "do-not-build-term-inflection-pack-until-source-data-or-product-need-exists",
+        "profileOnly": true,
+        "reason": "The Unicode checkout has no noun dictionary or inflectional XML rows for this locale group; term rendering should pass through known glossary text and keep only profile/pronoun metadata.",
+        "runtimeTermInflection": false
+      },
+      "sources": {
+        "dictionary": {
+          "byteSize": 0,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_th.lst",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/inflectional_th.xml"
+        },
+        "pronouns": {
+          "byteSize": 1154,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_th.csv",
+          "sha256": "771d4fb7146b6585fbf8bac335e3f1be8427399e20c817e83c3c9d5049c7555a"
+        }
+      }
+    },
+    {
+      "dataState": {
+        "dictionary": "empty-placeholder",
+        "inflectional": "missing",
+        "pronouns": "materialized"
+      },
+      "locale": "vi",
+      "pronouns": {
+        "cases": {},
+        "features": {
+          "exclusive": 1,
+          "feminine": 1,
+          "first": 5,
+          "formal": 4,
+          "gender": 1,
+          "inclusive": 2,
+          "intimate": 3,
+          "masculine": 1,
+          "neuter": 1,
+          "plural": 7,
+          "second": 2,
+          "singular": 7,
+          "third": 7
+        },
+        "genders": {
+          "feminine": 1,
+          "gender": 1,
+          "masculine": 1,
+          "neuter": 1
+        },
+        "numbers": {
+          "plural": 7,
+          "singular": 7
+        },
+        "persons": {
+          "first": 5,
+          "second": 2,
+          "third": 7
+        },
+        "registers": {
+          "formal": 4
+        },
+        "rows": 14,
+        "samples": [
+          {
+            "features": [
+              "third",
+              "singular",
+              "gender"
+            ],
+            "line": 1,
+            "value": "người đó"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "masculine"
+            ],
+            "line": 2,
+            "value": "anh ấy"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "feminine"
+            ],
+            "line": 3,
+            "value": "cô ấy"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "neuter"
+            ],
+            "line": 4,
+            "value": "nó"
+          },
+          {
+            "features": [
+              "third",
+              "plural"
+            ],
+            "line": 5,
+            "value": "họ"
+          },
+          {
+            "features": [
+              "third",
+              "plural",
+              "formal"
+            ],
+            "line": 6,
+            "value": "chúng"
+          },
+          {
+            "features": [
+              "third",
+              "plural",
+              "intimate"
+            ],
+            "line": 7,
+            "value": "chúng nó"
+          },
+          {
+            "features": [
+              "second",
+              "singular"
+            ],
+            "line": 8,
+            "value": "bạn"
+          }
+        ],
+        "uniqueValues": 14
+      },
+      "recommendation": {
+        "mode": "profile-only-noop",
+        "nextAction": "do-not-build-term-inflection-pack-until-source-data-or-product-need-exists",
+        "profileOnly": true,
+        "reason": "The Unicode checkout has no noun dictionary or inflectional XML rows for this locale group; term rendering should pass through known glossary text and keep only profile/pronoun metadata.",
+        "runtimeTermInflection": false
+      },
+      "sources": {
+        "dictionary": {
+          "byteSize": 0,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_vi.lst",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/inflectional_vi.xml"
+        },
+        "pronouns": {
+          "byteSize": 437,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_vi.csv",
+          "sha256": "60b00dacd186bf450c962ab86e8b29e8de9740e26b1473a009558953db232ad1"
+        }
+      }
+    },
+    {
+      "dataState": {
+        "dictionary": "empty-placeholder",
+        "inflectional": "missing",
+        "pronouns": "materialized"
+      },
+      "locale": "zh",
+      "pronouns": {
+        "cases": {},
+        "features": {
+          "feminine": 1,
+          "first": 1,
+          "masculine": 1,
+          "neuter": 1,
+          "second": 1,
+          "third": 3
+        },
+        "genders": {
+          "feminine": 1,
+          "masculine": 1,
+          "neuter": 1
+        },
+        "numbers": {},
+        "persons": {
+          "first": 1,
+          "second": 1,
+          "third": 3
+        },
+        "registers": {},
+        "rows": 5,
+        "samples": [
+          {
+            "features": [
+              "third",
+              "masculine"
+            ],
+            "line": 1,
+            "value": "他"
+          },
+          {
+            "features": [
+              "third",
+              "feminine"
+            ],
+            "line": 2,
+            "value": "她"
+          },
+          {
+            "features": [
+              "third",
+              "neuter"
+            ],
+            "line": 3,
+            "value": "它"
+          },
+          {
+            "features": [
+              "second"
+            ],
+            "line": 4,
+            "value": "你"
+          },
+          {
+            "features": [
+              "first"
+            ],
+            "line": 5,
+            "value": "我"
+          }
+        ],
+        "uniqueValues": 5
+      },
+      "recommendation": {
+        "mode": "profile-only-noop",
+        "nextAction": "do-not-build-term-inflection-pack-until-source-data-or-product-need-exists",
+        "profileOnly": true,
+        "reason": "The Unicode checkout has no noun dictionary or inflectional XML rows for this locale group; term rendering should pass through known glossary text and keep only profile/pronoun metadata.",
+        "runtimeTermInflection": false
+      },
+      "sources": {
+        "dictionary": {
+          "byteSize": 0,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_zh.lst",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/inflectional_zh.xml"
+        },
+        "pronouns": {
+          "byteSize": 76,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_zh.csv",
+          "sha256": "ee17ae96e81316f665ddcfdf9d0260e2f58926ac7756b096c57fae1750604fe7"
+        }
+      }
+    },
+    {
+      "dataState": {
+        "dictionary": "missing",
+        "inflectional": "missing",
+        "pronouns": "materialized"
+      },
+      "locale": "yue",
+      "pronouns": {
+        "cases": {},
+        "features": {
+          "first": 1,
+          "second": 1,
+          "third": 1
+        },
+        "genders": {},
+        "numbers": {},
+        "persons": {
+          "first": 1,
+          "second": 1,
+          "third": 1
+        },
+        "registers": {},
+        "rows": 3,
+        "samples": [
+          {
+            "features": [
+              "third"
+            ],
+            "line": 1,
+            "value": "佢"
+          },
+          {
+            "features": [
+              "second"
+            ],
+            "line": 2,
+            "value": "你"
+          },
+          {
+            "features": [
+              "first"
+            ],
+            "line": 3,
+            "value": "我"
+          }
+        ],
+        "uniqueValues": 3
+      },
+      "recommendation": {
+        "mode": "profile-only-noop",
+        "nextAction": "do-not-build-term-inflection-pack-until-source-data-or-product-need-exists",
+        "profileOnly": true,
+        "reason": "The Unicode checkout has no noun dictionary or inflectional XML rows for this locale group; term rendering should pass through known glossary text and keep only profile/pronoun metadata.",
+        "runtimeTermInflection": false
+      },
+      "sources": {
+        "dictionary": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_yue.lst"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/dictionary/inflectional_yue.xml"
+        },
+        "pronouns": {
+          "byteSize": 30,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_yue.csv",
+          "sha256": "a572a183d844204fd0eb7e1686f9959c9858648bca6a40e56a6706a48c8eeba4"
+        }
+      }
+    }
+  ],
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/low_inflection_locale_audit.py",
+    "license": "Unicode-3.0",
+    "unicodeRoot": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection"
+  },
+  "schema": "mojito-mf2-inflection/low-inflection-locale-audit/v0",
+  "summary": {
+    "dataMaterializationRequiredLocales": [
+      "en",
+      "ko"
+    ],
+    "localeCount": 9,
+    "locales": [
+      "en",
+      "id",
+      "ja",
+      "ko",
+      "ms",
+      "th",
+      "vi",
+      "zh",
+      "yue"
+    ],
+    "modeCounts": {
+      "data-materialization-required": 2,
+      "profile-only-noop": 7
+    },
+    "profileOnlyNoopLocales": [
+      "id",
+      "ja",
+      "ms",
+      "th",
+      "vi",
+      "zh",
+      "yue"
+    ],
+    "pronounInventoryLocales": [
+      "en",
+      "id",
+      "ja",
+      "ko",
+      "ms",
+      "th",
+      "vi",
+      "zh",
+      "yue"
+    ]
+  }
+}

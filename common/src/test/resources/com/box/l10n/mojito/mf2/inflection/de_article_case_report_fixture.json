@@ -1,0 +1,913 @@
+{
+  "articleForms": [
+    {
+      "article": "definite",
+      "case": "accusative",
+      "form": "die",
+      "gender": "*",
+      "number": "plural"
+    },
+    {
+      "article": "definite",
+      "case": "dative",
+      "form": "den",
+      "gender": "*",
+      "number": "plural"
+    },
+    {
+      "article": "definite",
+      "case": "genitive",
+      "form": "der",
+      "gender": "*",
+      "number": "plural"
+    },
+    {
+      "article": "definite",
+      "case": "nominative",
+      "form": "die",
+      "gender": "*",
+      "number": "plural"
+    },
+    {
+      "article": "definite",
+      "case": "accusative",
+      "form": "die",
+      "gender": "feminine",
+      "number": "singular"
+    },
+    {
+      "article": "definite",
+      "case": "dative",
+      "form": "der",
+      "gender": "feminine",
+      "number": "singular"
+    },
+    {
+      "article": "definite",
+      "case": "genitive",
+      "form": "der",
+      "gender": "feminine",
+      "number": "singular"
+    },
+    {
+      "article": "definite",
+      "case": "nominative",
+      "form": "die",
+      "gender": "feminine",
+      "number": "singular"
+    },
+    {
+      "article": "definite",
+      "case": "accusative",
+      "form": "den",
+      "gender": "masculine",
+      "number": "singular"
+    },
+    {
+      "article": "definite",
+      "case": "dative",
+      "form": "dem",
+      "gender": "masculine",
+      "number": "singular"
+    },
+    {
+      "article": "definite",
+      "case": "genitive",
+      "form": "des",
+      "gender": "masculine",
+      "number": "singular"
+    },
+    {
+      "article": "definite",
+      "case": "nominative",
+      "form": "der",
+      "gender": "masculine",
+      "number": "singular"
+    },
+    {
+      "article": "definite",
+      "case": "accusative",
+      "form": "das",
+      "gender": "neuter",
+      "number": "singular"
+    },
+    {
+      "article": "definite",
+      "case": "dative",
+      "form": "dem",
+      "gender": "neuter",
+      "number": "singular"
+    },
+    {
+      "article": "definite",
+      "case": "genitive",
+      "form": "des",
+      "gender": "neuter",
+      "number": "singular"
+    },
+    {
+      "article": "definite",
+      "case": "nominative",
+      "form": "das",
+      "gender": "neuter",
+      "number": "singular"
+    },
+    {
+      "article": "indefinite",
+      "case": "accusative",
+      "form": "",
+      "gender": "*",
+      "number": "plural"
+    },
+    {
+      "article": "indefinite",
+      "case": "dative",
+      "form": "",
+      "gender": "*",
+      "number": "plural"
+    },
+    {
+      "article": "indefinite",
+      "case": "genitive",
+      "form": "",
+      "gender": "*",
+      "number": "plural"
+    },
+    {
+      "article": "indefinite",
+      "case": "nominative",
+      "form": "",
+      "gender": "*",
+      "number": "plural"
+    },
+    {
+      "article": "indefinite",
+      "case": "accusative",
+      "form": "eine",
+      "gender": "feminine",
+      "number": "singular"
+    },
+    {
+      "article": "indefinite",
+      "case": "dative",
+      "form": "einer",
+      "gender": "feminine",
+      "number": "singular"
+    },
+    {
+      "article": "indefinite",
+      "case": "genitive",
+      "form": "einer",
+      "gender": "feminine",
+      "number": "singular"
+    },
+    {
+      "article": "indefinite",
+      "case": "nominative",
+      "form": "eine",
+      "gender": "feminine",
+      "number": "singular"
+    },
+    {
+      "article": "indefinite",
+      "case": "accusative",
+      "form": "einen",
+      "gender": "masculine",
+      "number": "singular"
+    },
+    {
+      "article": "indefinite",
+      "case": "dative",
+      "form": "einem",
+      "gender": "masculine",
+      "number": "singular"
+    },
+    {
+      "article": "indefinite",
+      "case": "genitive",
+      "form": "eines",
+      "gender": "masculine",
+      "number": "singular"
+    },
+    {
+      "article": "indefinite",
+      "case": "nominative",
+      "form": "ein",
+      "gender": "masculine",
+      "number": "singular"
+    },
+    {
+      "article": "indefinite",
+      "case": "accusative",
+      "form": "ein",
+      "gender": "neuter",
+      "number": "singular"
+    },
+    {
+      "article": "indefinite",
+      "case": "dative",
+      "form": "einem",
+      "gender": "neuter",
+      "number": "singular"
+    },
+    {
+      "article": "indefinite",
+      "case": "genitive",
+      "form": "eines",
+      "gender": "neuter",
+      "number": "singular"
+    },
+    {
+      "article": "indefinite",
+      "case": "nominative",
+      "form": "ein",
+      "gender": "neuter",
+      "number": "singular"
+    }
+  ],
+  "counts": {
+    "ambiguousSupportedSurfaces": 104487,
+    "articleCaseCandidateTerms": 41363,
+    "dictionaryEntries": 206419,
+    "dictionaryInflectionPatterns": 1207,
+    "inflectionalPatterns": 1308,
+    "missingInflectionPatterns": 0,
+    "nounInflectionalPatterns": 1201,
+    "skippedLines": 99,
+    "supportedEntries": 161665,
+    "uniqueSupportedSurfaces": 161651,
+    "usedInflectionalPatterns": 1207
+  },
+  "features": {
+    "ambiguityReasons": {
+      "multiple-analyses": 1,
+      "multiple-cases": 104251,
+      "multiple-genders": 605,
+      "multiple-inflections": 1081,
+      "multiple-numbers": 12376,
+      "multiple-parts-of-speech": 134
+    },
+    "candidateSkipReasons": {
+      "conflicting-noun-form-key": 3373,
+      "duplicate-term-id": 2,
+      "missing-noun-case-forms": 7289,
+      "missing-or-ambiguous-gender": 1613,
+      "missing-or-ambiguous-inflection": 229,
+      "not-nominative": 55676,
+      "not-singular": 40965,
+      "singular-plural-surface-not-invariant": 11062,
+      "suffix-mismatch": 85,
+      "unsupported-part-of-speech": 44754,
+      "unsupported-pattern-part-of-speech": 8
+    },
+    "case": {
+      "<missing>": 144,
+      "accusative": 104204,
+      "dative": 111170,
+      "genitive": 113738,
+      "nominative": 105989
+    },
+    "gender": {
+      "<missing>": 3349,
+      "feminine": 50066,
+      "masculine": 69541,
+      "neuter": 39330
+    },
+    "number": {
+      "<missing>": 148,
+      "plural": 76096,
+      "singular": 97803
+    },
+    "partOfSpeech": {
+      "adjective": 27,
+      "noun": 159946,
+      "numeral": 2,
+      "proper-noun": 1824,
+      "verb": 1
+    },
+    "patternSlotCases": {
+      "<missing>": 25,
+      "accusative": 2338,
+      "dative": 2438,
+      "genitive": 2634,
+      "nominative": 2388
+    },
+    "patternSlotGenders": {
+      "<missing>": 1178,
+      "feminine": 1203,
+      "masculine": 4988,
+      "neuter": 2454
+    },
+    "patternSlotNumbers": {
+      "<missing>": 46,
+      "plural": 4585,
+      "singular": 5192
+    }
+  },
+  "locale": "de",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/de_article_case_report.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_de.lst",
+      "inflection/resources/org/unicode/inflection/dictionary/inflectional_de.xml"
+    ],
+    "sources": [
+      {
+        "byteSize": 15082193,
+        "gitLfsPointer": false,
+        "path": "dictionary_de.lst",
+        "sha256": "889018ad62df6258da38973ecd8737e21d98d53b3469530f4870e014d6a3280b"
+      },
+      {
+        "byteSize": 1359627,
+        "gitLfsPointer": false,
+        "path": "inflectional_de.xml",
+        "sha256": "eed569d40af669d27e140646e9b706de44d8cb2946e1a97cce537833bd61f2ac"
+      }
+    ]
+  },
+  "reviewPolicy": {
+    "automaticExportTerms": 41363,
+    "blockedDictionaryEntries": 165056,
+    "blockedReasons": {
+      "conflicting-noun-form-key": 3373,
+      "duplicate-term-id": 2,
+      "missing-noun-case-forms": 7289,
+      "missing-or-ambiguous-gender": 1613,
+      "missing-or-ambiguous-inflection": 229,
+      "not-nominative": 55676,
+      "not-singular": 40965,
+      "singular-plural-surface-not-invariant": 11062,
+      "suffix-mismatch": 85,
+      "unsupported-part-of-speech": 44754,
+      "unsupported-pattern-part-of-speech": 8
+    },
+    "reviewRequiredReasons": {
+      "multiple-analyses": 1,
+      "multiple-cases": 104251,
+      "multiple-genders": 605,
+      "multiple-inflections": 1081,
+      "multiple-numbers": 12376,
+      "multiple-parts-of-speech": 134
+    },
+    "reviewRequiredSurfaces": 104487,
+    "runtimeExport": "closed-world-article-case-forms"
+  },
+  "samples": {
+    "ambiguousSurfaces": [
+      {
+        "entries": [
+          {
+            "case": [
+              "accusative",
+              "dative",
+              "genitive",
+              "nominative"
+            ],
+            "gender": [
+              "feminine"
+            ],
+            "inflections": [
+              "1"
+            ],
+            "line": 8,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "1-Cent-Münze"
+          }
+        ],
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "1-cent-münze"
+      },
+      {
+        "entries": [
+          {
+            "case": [
+              "accusative",
+              "dative",
+              "genitive",
+              "nominative"
+            ],
+            "gender": [
+              "feminine"
+            ],
+            "inflections": [
+              "1"
+            ],
+            "line": 9,
+            "number": [
+              "plural"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "1-Cent-Münzen"
+          }
+        ],
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "1-cent-münzen"
+      },
+      {
+        "entries": [
+          {
+            "case": [
+              "accusative",
+              "dative",
+              "nominative"
+            ],
+            "gender": [
+              "neuter"
+            ],
+            "inflections": [
+              "a"
+            ],
+            "line": 10,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "1-Cent-Stück"
+          }
+        ],
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "1-cent-stück"
+      },
+      {
+        "entries": [
+          {
+            "case": [
+              "accusative",
+              "genitive",
+              "nominative"
+            ],
+            "gender": [
+              "neuter"
+            ],
+            "inflections": [
+              "a"
+            ],
+            "line": 11,
+            "number": [
+              "plural"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "1-Cent-Stücke"
+          }
+        ],
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "1-cent-stücke"
+      },
+      {
+        "entries": [
+          {
+            "case": [
+              "accusative",
+              "dative",
+              "nominative"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "f"
+            ],
+            "line": 14,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "1-Euro-Job"
+          }
+        ],
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "1-euro-job"
+      },
+      {
+        "entries": [
+          {
+            "case": [
+              "accusative",
+              "dative",
+              "genitive",
+              "nominative"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "f"
+            ],
+            "line": 15,
+            "number": [
+              "singular",
+              "plural"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "1-Euro-Jobs"
+          }
+        ],
+        "reasons": [
+          "multiple-cases",
+          "multiple-numbers"
+        ],
+        "surface": "1-euro-jobs"
+      },
+      {
+        "entries": [
+          {
+            "case": [
+              "accusative",
+              "dative",
+              "genitive",
+              "nominative"
+            ],
+            "gender": [
+              "feminine"
+            ],
+            "inflections": [
+              "1"
+            ],
+            "line": 16,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "1-Euro-Münze"
+          }
+        ],
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "1-euro-münze"
+      },
+      {
+        "entries": [
+          {
+            "case": [
+              "accusative",
+              "dative",
+              "genitive",
+              "nominative"
+            ],
+            "gender": [
+              "feminine"
+            ],
+            "inflections": [
+              "1"
+            ],
+            "line": 17,
+            "number": [
+              "plural"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "1-Euro-Münzen"
+          }
+        ],
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "1-euro-münzen"
+      }
+    ],
+    "articleCaseCandidates": [
+      {
+        "gender": "feminine",
+        "inflectionPattern": "1",
+        "nounForms": {
+          "accusative.plural": "1-Cent-Münzen",
+          "accusative.singular": "1-Cent-Münze",
+          "dative.plural": "1-Cent-Münzen",
+          "dative.singular": "1-Cent-Münze",
+          "genitive.plural": "1-Cent-Münzen",
+          "genitive.singular": "1-Cent-Münze",
+          "nominative.plural": "1-Cent-Münzen",
+          "nominative.singular": "1-Cent-Münze"
+        },
+        "partOfSpeech": "noun",
+        "phraseForms": {
+          "definite.accusative.plural": "die 1-Cent-Münzen",
+          "definite.accusative.singular": "die 1-Cent-Münze",
+          "definite.dative.plural": "den 1-Cent-Münzen",
+          "definite.dative.singular": "der 1-Cent-Münze",
+          "definite.genitive.plural": "der 1-Cent-Münzen",
+          "definite.genitive.singular": "der 1-Cent-Münze",
+          "definite.nominative.plural": "die 1-Cent-Münzen",
+          "definite.nominative.singular": "die 1-Cent-Münze",
+          "indefinite.accusative.plural": "1-Cent-Münzen",
+          "indefinite.accusative.singular": "eine 1-Cent-Münze",
+          "indefinite.dative.plural": "1-Cent-Münzen",
+          "indefinite.dative.singular": "einer 1-Cent-Münze",
+          "indefinite.genitive.plural": "1-Cent-Münzen",
+          "indefinite.genitive.singular": "einer 1-Cent-Münze",
+          "indefinite.nominative.plural": "1-Cent-Münzen",
+          "indefinite.nominative.singular": "eine 1-Cent-Münze"
+        },
+        "stem": "1-Cent-Münze",
+        "termId": "de.article-case.1-cent-münze",
+        "text": "1-Cent-Münze"
+      },
+      {
+        "gender": "neuter",
+        "inflectionPattern": "a",
+        "nounForms": {
+          "accusative.plural": "1-Cent-Stücke",
+          "accusative.singular": "1-Cent-Stück",
+          "dative.plural": "1-Cent-Stücken",
+          "dative.singular": "1-Cent-Stück",
+          "genitive.plural": "1-Cent-Stücke",
+          "genitive.singular": "1-Cent-Stückes",
+          "nominative.plural": "1-Cent-Stücke",
+          "nominative.singular": "1-Cent-Stück"
+        },
+        "partOfSpeech": "noun",
+        "phraseForms": {
+          "definite.accusative.plural": "die 1-Cent-Stücke",
+          "definite.accusative.singular": "das 1-Cent-Stück",
+          "definite.dative.plural": "den 1-Cent-Stücken",
+          "definite.dative.singular": "dem 1-Cent-Stück",
+          "definite.genitive.plural": "der 1-Cent-Stücke",
+          "definite.genitive.singular": "des 1-Cent-Stückes",
+          "definite.nominative.plural": "die 1-Cent-Stücke",
+          "definite.nominative.singular": "das 1-Cent-Stück",
+          "indefinite.accusative.plural": "1-Cent-Stücke",
+          "indefinite.accusative.singular": "ein 1-Cent-Stück",
+          "indefinite.dative.plural": "1-Cent-Stücken",
+          "indefinite.dative.singular": "einem 1-Cent-Stück",
+          "indefinite.genitive.plural": "1-Cent-Stücke",
+          "indefinite.genitive.singular": "eines 1-Cent-Stückes",
+          "indefinite.nominative.plural": "1-Cent-Stücke",
+          "indefinite.nominative.singular": "ein 1-Cent-Stück"
+        },
+        "stem": "1-Cent-Stück",
+        "termId": "de.article-case.1-cent-stück",
+        "text": "1-Cent-Stück"
+      },
+      {
+        "gender": "masculine",
+        "inflectionPattern": "f",
+        "nounForms": {
+          "accusative.plural": "1-Euro-Jobs",
+          "accusative.singular": "1-Euro-Job",
+          "dative.plural": "1-Euro-Jobs",
+          "dative.singular": "1-Euro-Job",
+          "genitive.plural": "1-Euro-Jobs",
+          "genitive.singular": "1-Euro-Jobs",
+          "nominative.plural": "1-Euro-Jobs",
+          "nominative.singular": "1-Euro-Job"
+        },
+        "partOfSpeech": "noun",
+        "phraseForms": {
+          "definite.accusative.plural": "die 1-Euro-Jobs",
+          "definite.accusative.singular": "den 1-Euro-Job",
+          "definite.dative.plural": "den 1-Euro-Jobs",
+          "definite.dative.singular": "dem 1-Euro-Job",
+          "definite.genitive.plural": "der 1-Euro-Jobs",
+          "definite.genitive.singular": "des 1-Euro-Jobs",
+          "definite.nominative.plural": "die 1-Euro-Jobs",
+          "definite.nominative.singular": "der 1-Euro-Job",
+          "indefinite.accusative.plural": "1-Euro-Jobs",
+          "indefinite.accusative.singular": "einen 1-Euro-Job",
+          "indefinite.dative.plural": "1-Euro-Jobs",
+          "indefinite.dative.singular": "einem 1-Euro-Job",
+          "indefinite.genitive.plural": "1-Euro-Jobs",
+          "indefinite.genitive.singular": "eines 1-Euro-Jobs",
+          "indefinite.nominative.plural": "1-Euro-Jobs",
+          "indefinite.nominative.singular": "ein 1-Euro-Job"
+        },
+        "stem": "1-Euro-Job",
+        "termId": "de.article-case.1-euro-job",
+        "text": "1-Euro-Job"
+      },
+      {
+        "gender": "feminine",
+        "inflectionPattern": "1",
+        "nounForms": {
+          "accusative.plural": "1-Euro-Münzen",
+          "accusative.singular": "1-Euro-Münze",
+          "dative.plural": "1-Euro-Münzen",
+          "dative.singular": "1-Euro-Münze",
+          "genitive.plural": "1-Euro-Münzen",
+          "genitive.singular": "1-Euro-Münze",
+          "nominative.plural": "1-Euro-Münzen",
+          "nominative.singular": "1-Euro-Münze"
+        },
+        "partOfSpeech": "noun",
+        "phraseForms": {
+          "definite.accusative.plural": "die 1-Euro-Münzen",
+          "definite.accusative.singular": "die 1-Euro-Münze",
+          "definite.dative.plural": "den 1-Euro-Münzen",
+          "definite.dative.singular": "der 1-Euro-Münze",
+          "definite.genitive.plural": "der 1-Euro-Münzen",
+          "definite.genitive.singular": "der 1-Euro-Münze",
+          "definite.nominative.plural": "die 1-Euro-Münzen",
+          "definite.nominative.singular": "die 1-Euro-Münze",
+          "indefinite.accusative.plural": "1-Euro-Münzen",
+          "indefinite.accusative.singular": "eine 1-Euro-Münze",
+          "indefinite.dative.plural": "1-Euro-Münzen",
+          "indefinite.dative.singular": "einer 1-Euro-Münze",
+          "indefinite.genitive.plural": "1-Euro-Münzen",
+          "indefinite.genitive.singular": "einer 1-Euro-Münze",
+          "indefinite.nominative.plural": "1-Euro-Münzen",
+          "indefinite.nominative.singular": "eine 1-Euro-Münze"
+        },
+        "stem": "1-Euro-Münze",
+        "termId": "de.article-case.1-euro-münze",
+        "text": "1-Euro-Münze"
+      },
+      {
+        "gender": "neuter",
+        "inflectionPattern": "a",
+        "nounForms": {
+          "accusative.plural": "1-Euro-Stücke",
+          "accusative.singular": "1-Euro-Stück",
+          "dative.plural": "1-Euro-Stücken",
+          "dative.singular": "1-Euro-Stück",
+          "genitive.plural": "1-Euro-Stücke",
+          "genitive.singular": "1-Euro-Stückes",
+          "nominative.plural": "1-Euro-Stücke",
+          "nominative.singular": "1-Euro-Stück"
+        },
+        "partOfSpeech": "noun",
+        "phraseForms": {
+          "definite.accusative.plural": "die 1-Euro-Stücke",
+          "definite.accusative.singular": "das 1-Euro-Stück",
+          "definite.dative.plural": "den 1-Euro-Stücken",
+          "definite.dative.singular": "dem 1-Euro-Stück",
+          "definite.genitive.plural": "der 1-Euro-Stücke",
+          "definite.genitive.singular": "des 1-Euro-Stückes",
+          "definite.nominative.plural": "die 1-Euro-Stücke",
+          "definite.nominative.singular": "das 1-Euro-Stück",
+          "indefinite.accusative.plural": "1-Euro-Stücke",
+          "indefinite.accusative.singular": "ein 1-Euro-Stück",
+          "indefinite.dative.plural": "1-Euro-Stücken",
+          "indefinite.dative.singular": "einem 1-Euro-Stück",
+          "indefinite.genitive.plural": "1-Euro-Stücke",
+          "indefinite.genitive.singular": "eines 1-Euro-Stückes",
+          "indefinite.nominative.plural": "1-Euro-Stücke",
+          "indefinite.nominative.singular": "ein 1-Euro-Stück"
+        },
+        "stem": "1-Euro-Stück",
+        "termId": "de.article-case.1-euro-stück",
+        "text": "1-Euro-Stück"
+      },
+      {
+        "gender": "neuter",
+        "inflectionPattern": "a",
+        "nounForms": {
+          "accusative.plural": "10-Pfennig-Stücke",
+          "accusative.singular": "10-Pfennig-Stück",
+          "dative.plural": "10-Pfennig-Stücken",
+          "dative.singular": "10-Pfennig-Stück",
+          "genitive.plural": "10-Pfennig-Stücke",
+          "genitive.singular": "10-Pfennig-Stückes",
+          "nominative.plural": "10-Pfennig-Stücke",
+          "nominative.singular": "10-Pfennig-Stück"
+        },
+        "partOfSpeech": "noun",
+        "phraseForms": {
+          "definite.accusative.plural": "die 10-Pfennig-Stücke",
+          "definite.accusative.singular": "das 10-Pfennig-Stück",
+          "definite.dative.plural": "den 10-Pfennig-Stücken",
+          "definite.dative.singular": "dem 10-Pfennig-Stück",
+          "definite.genitive.plural": "der 10-Pfennig-Stücke",
+          "definite.genitive.singular": "des 10-Pfennig-Stückes",
+          "definite.nominative.plural": "die 10-Pfennig-Stücke",
+          "definite.nominative.singular": "das 10-Pfennig-Stück",
+          "indefinite.accusative.plural": "10-Pfennig-Stücke",
+          "indefinite.accusative.singular": "ein 10-Pfennig-Stück",
+          "indefinite.dative.plural": "10-Pfennig-Stücken",
+          "indefinite.dative.singular": "einem 10-Pfennig-Stück",
+          "indefinite.genitive.plural": "10-Pfennig-Stücke",
+          "indefinite.genitive.singular": "eines 10-Pfennig-Stückes",
+          "indefinite.nominative.plural": "10-Pfennig-Stücke",
+          "indefinite.nominative.singular": "ein 10-Pfennig-Stück"
+        },
+        "stem": "10-Pfennig-Stück",
+        "termId": "de.article-case.10-pfennig-stück",
+        "text": "10-Pfennig-Stück"
+      },
+      {
+        "gender": "masculine",
+        "inflectionPattern": "5",
+        "nounForms": {
+          "accusative.plural": "100-Mark-Scheine",
+          "accusative.singular": "100-Mark-Schein",
+          "dative.plural": "100-Mark-Scheinen",
+          "dative.singular": "100-Mark-Schein",
+          "genitive.plural": "100-Mark-Scheine",
+          "genitive.singular": "100-Mark-Scheines",
+          "nominative.plural": "100-Mark-Scheine",
+          "nominative.singular": "100-Mark-Schein"
+        },
+        "partOfSpeech": "noun",
+        "phraseForms": {
+          "definite.accusative.plural": "die 100-Mark-Scheine",
+          "definite.accusative.singular": "den 100-Mark-Schein",
+          "definite.dative.plural": "den 100-Mark-Scheinen",
+          "definite.dative.singular": "dem 100-Mark-Schein",
+          "definite.genitive.plural": "der 100-Mark-Scheine",
+          "definite.genitive.singular": "des 100-Mark-Scheines",
+          "definite.nominative.plural": "die 100-Mark-Scheine",
+          "definite.nominative.singular": "der 100-Mark-Schein",
+          "indefinite.accusative.plural": "100-Mark-Scheine",
+          "indefinite.accusative.singular": "einen 100-Mark-Schein",
+          "indefinite.dative.plural": "100-Mark-Scheinen",
+          "indefinite.dative.singular": "einem 100-Mark-Schein",
+          "indefinite.genitive.plural": "100-Mark-Scheine",
+          "indefinite.genitive.singular": "eines 100-Mark-Scheines",
+          "indefinite.nominative.plural": "100-Mark-Scheine",
+          "indefinite.nominative.singular": "ein 100-Mark-Schein"
+        },
+        "stem": "100-Mark-Schein",
+        "termId": "de.article-case.100-mark-schein",
+        "text": "100-Mark-Schein"
+      },
+      {
+        "gender": "masculine",
+        "inflectionPattern": "6d",
+        "nounForms": {
+          "accusative.plural": "100-Meter-Läufe",
+          "accusative.singular": "100-Meter-Lauf",
+          "dative.plural": "100-Meter-Läufen",
+          "dative.singular": "100-Meter-Lauf",
+          "genitive.plural": "100-Meter-Läufe",
+          "genitive.singular": "100-Meter-Laufs",
+          "nominative.plural": "100-Meter-Läufe",
+          "nominative.singular": "100-Meter-Lauf"
+        },
+        "partOfSpeech": "noun",
+        "phraseForms": {
+          "definite.accusative.plural": "die 100-Meter-Läufe",
+          "definite.accusative.singular": "den 100-Meter-Lauf",
+          "definite.dative.plural": "den 100-Meter-Läufen",
+          "definite.dative.singular": "dem 100-Meter-Lauf",
+          "definite.genitive.plural": "der 100-Meter-Läufe",
+          "definite.genitive.singular": "des 100-Meter-Laufs",
+          "definite.nominative.plural": "die 100-Meter-Läufe",
+          "definite.nominative.singular": "der 100-Meter-Lauf",
+          "indefinite.accusative.plural": "100-Meter-Läufe",
+          "indefinite.accusative.singular": "einen 100-Meter-Lauf",
+          "indefinite.dative.plural": "100-Meter-Läufen",
+          "indefinite.dative.singular": "einem 100-Meter-Lauf",
+          "indefinite.genitive.plural": "100-Meter-Läufe",
+          "indefinite.genitive.singular": "eines 100-Meter-Laufs",
+          "indefinite.nominative.plural": "100-Meter-Läufe",
+          "indefinite.nominative.singular": "ein 100-Meter-Lauf"
+        },
+        "stem": "100-Meter-L",
+        "termId": "de.article-case.100-meter-lauf",
+        "text": "100-Meter-Lauf"
+      }
+    ],
+    "missingInflectionPatterns": []
+  },
+  "schema": "mojito-mf2-inflection/de-article-case-pack-report/v0",
+  "sizeEstimates": {
+    "binaryLowerBoundBytes": 17390735,
+    "formRowBytes": 7941696,
+    "formRows": 661808,
+    "stringPoolBytes": 8621779,
+    "termRowBytes": 827260
+  },
+  "sources": [
+    {
+      "byteSize": 15082193,
+      "gitLfsPointer": false,
+      "path": "dictionary_de.lst",
+      "sha256": "889018ad62df6258da38973ecd8737e21d98d53b3469530f4870e014d6a3280b"
+    },
+    {
+      "byteSize": 1359627,
+      "gitLfsPointer": false,
+      "path": "inflectional_de.xml",
+      "sha256": "eed569d40af669d27e140646e9b706de44d8cb2946e1a97cce537833bd61f2ac"
+    }
+  ]
+}

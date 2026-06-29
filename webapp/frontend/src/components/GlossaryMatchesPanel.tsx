@@ -216,6 +216,7 @@ function GlossaryMatchDetailsModal({
     : [];
   const matchDetailRows = match
     ? [
+        { label: 'Term ID', value: match.termKey },
         { label: 'Matched source text', value: match.matchedText },
         { label: 'Match type', value: match.matchType },
         { label: 'Evidence summary', value: evidenceSummary },

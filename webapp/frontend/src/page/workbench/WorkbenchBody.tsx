@@ -2,7 +2,15 @@ import { useQuery } from '@tanstack/react-query';
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { fetchGlossaries } from '../../api/glossaries';
+import {
+  type ApiInflectionBindingRenderResponse,
+  type ApiInflectionBindingReport,
+  type ApiMatchedGlossaryTerm,
+  fetchGlossaries,
+  matchGlossaryTerms,
+  renderInflectionBindingManifest,
+  reportInflectionBindingManifest,
+} from '../../api/glossaries';
 import type { ApiRepository } from '../../api/repositories';
 import type { TextUnitSearchRequest } from '../../api/text-units';
 import { LocalePill } from '../../components/LocalePill';
@@ -23,9 +31,18 @@ import type {
 import { VisibleTextRenderer } from '../../components/VisibleTextRenderer';
 import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
 import { formatLocalDateTime, getLocalAndUtcDateTimeTooltip } from '../../utils/dateTime';
+import { filterSelfGlossaryMatches, sortGlossaryMatches } from '../../utils/glossary-matches';
 import type { GlossaryWorkbenchContext } from '../../utils/glossaryWorkbench';
 import { isPrimaryActionShortcut } from '../../utils/keyboardShortcuts';
 import { isRtlLocale } from '../../utils/localeDirection';
+import {
+  buildMf2TermBindingManifest,
+  extractMf2TermRequirements,
+  mf2RuntimeVariableNamesForUsage,
+  type Mf2TermBindingManifestGroup,
+  type Mf2TermUsageRequirement,
+  uniqueMf2TermArguments,
+} from '../../utils/mf2TermRequirements';
 import { getNonRootRepositoryLocaleTags } from '../../utils/repositoryLocales';
 import { saveWorkbenchSessionSearch, WORKBENCH_SESSION_QUERY_KEY } from './workbench-session-state';
 import type { WorkbenchDiffModalData, WorkbenchRow } from './workbench-types';
@@ -504,6 +521,11 @@ export function WorkbenchBody({
               const useAssistedTranslationPreview = isVisibleTextEditorEnabled && !isEditing;
               const useAssistedSourcePreview = isVisibleTextEditorEnabled;
               const translationValue = isEditing ? editingValue : (row.translation ?? '');
+              const mf2TermRequirementPreview = buildMf2TermRequirementPreview(
+                row.source ?? '',
+                translationValue,
+                row.locale,
+              );
               const translationDirection = isRtlLocale(row.locale) ? 'rtl' : 'ltr';
               const translationLocale = row.locale;
               const translationProtectedTokens = useAssistedTranslationEditor
@@ -699,6 +721,15 @@ export function WorkbenchBody({
                           validateNextValue={validateTranslationValue}
                         />
                       )}
+                      <WorkbenchMf2TermRequirementPreview
+                        glossaryTarget={glossaryTarget}
+                        locale={row.locale}
+                        messageId={row.textUnitName}
+                        preview={mf2TermRequirementPreview}
+                        repositoryName={row.repositoryName}
+                        sourceText={row.source}
+                        tmTextUnitId={row.tmTextUnitId}
+                      />
                       <div className="workbench-page__translation-footer">
                         {isEdited ? (
                           <button
@@ -802,6 +833,723 @@ export function WorkbenchBody({
       </div>
     </div>
   );
+}
+
+type Mf2TermRequirementPreviewGroup = Mf2TermBindingManifestGroup;
+
+type Mf2TermRequirementPreview =
+  | {
+      groups: Mf2TermRequirementPreviewGroup[];
+      kind: 'success';
+    }
+  | {
+      error: string;
+      kind: 'error';
+    }
+  | null;
+
+function buildMf2TermRequirementPreview(
+  source: string,
+  target: string,
+  locale: string,
+): Mf2TermRequirementPreview {
+  try {
+    const sourceUsages = extractMf2TermRequirements(source, locale);
+    const targetUsages = extractMf2TermRequirements(target, locale);
+    const possibleGroups: Array<Mf2TermRequirementPreviewGroup | null> = [
+      sourceUsages.length > 0 ? { label: 'Source', message: source, usages: sourceUsages } : null,
+      targetUsages.length > 0 ? { label: 'Target', message: target, usages: targetUsages } : null,
+    ];
+    const groups = possibleGroups.filter(
+      (group): group is Mf2TermRequirementPreviewGroup => group !== null,
+    );
+
+    return groups.length > 0 ? { kind: 'success', groups } : null;
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Could not inspect MF2 term requirements.',
+      kind: 'error',
+    };
+  }
+}
+
+function WorkbenchMf2TermRequirementPreview({
+  glossaryTarget,
+  locale,
+  messageId,
+  preview,
+  repositoryName,
+  sourceText,
+  tmTextUnitId,
+}: {
+  glossaryTarget: GlossaryWorkbenchTarget | undefined;
+  locale: string;
+  messageId: string;
+  preview: Mf2TermRequirementPreview;
+  repositoryName: string;
+  sourceText: string;
+  tmTextUnitId: number;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedTermIdsByArgument, setSelectedTermIdsByArgument] = useState<
+    Record<string, string>
+  >({});
+  const [touchedTermBindingArguments, setTouchedTermBindingArguments] = useState<
+    Record<string, true>
+  >({});
+  const [runtimeVariables, setRuntimeVariables] = useState<Record<string, string>>({});
+  useEffect(() => {
+    setSelectedTermIdsByArgument((current) => (Object.keys(current).length === 0 ? current : {}));
+    setTouchedTermBindingArguments((current) => (Object.keys(current).length === 0 ? current : {}));
+    setRuntimeVariables((current) => (Object.keys(current).length === 0 ? current : {}));
+  }, [glossaryTarget?.glossaryId, locale, messageId, repositoryName, tmTextUnitId]);
+  const argumentNames = useMemo(
+    () => (preview?.kind === 'success' ? uniqueMf2TermArgumentsForGroups(preview.groups) : []),
+    [preview],
+  );
+  const runtimeVariableNames = useMemo(
+    () =>
+      preview?.kind === 'success' ? uniqueMf2TermRuntimeVariablesForGroups(preview.groups) : [],
+    [preview],
+  );
+  useEffect(() => {
+    setSelectedTermIdsByArgument((current) => pruneRecordToKeys(current, argumentNames));
+  }, [argumentNames]);
+  useEffect(() => {
+    setTouchedTermBindingArguments((current) => pruneRecordToKeys(current, argumentNames));
+  }, [argumentNames]);
+  useEffect(() => {
+    setRuntimeVariables((current) => pruneRecordToKeys(current, runtimeVariableNames));
+  }, [runtimeVariableNames]);
+  const manifestTermIdsByArgument = useMemo(() => {
+    const termIdsByArgument: Record<string, string[]> = {};
+    for (const argument of argumentNames) {
+      const termId = selectedTermIdsByArgument[argument];
+      termIdsByArgument[argument] = termId ? [termId] : [];
+    }
+    return termIdsByArgument;
+  }, [argumentNames, selectedTermIdsByArgument]);
+  const bindingManifest = useMemo(
+    () =>
+      preview?.kind === 'success'
+        ? buildMf2TermBindingManifest(messageId, locale, preview.groups, {
+            termIdsByArgument: manifestTermIdsByArgument,
+          })
+        : null,
+    [locale, manifestTermIdsByArgument, messageId, preview],
+  );
+  const glossaryMatchesQuery = useQuery({
+    queryKey: [
+      'workbench-mf2-term-binding-candidates',
+      glossaryTarget?.glossaryId,
+      repositoryName,
+      locale,
+      sourceText,
+      tmTextUnitId,
+    ],
+    queryFn: async () => {
+      const response = await matchGlossaryTerms({
+        repositoryName,
+        localeTag: locale,
+        sourceText,
+        excludeTmTextUnitId: tmTextUnitId,
+      });
+      return sortGlossaryMatches(filterSelfGlossaryMatches(response.matchedTerms, tmTextUnitId));
+    },
+    enabled:
+      isOpen &&
+      Boolean(glossaryTarget) &&
+      preview?.kind === 'success' &&
+      Boolean(repositoryName.trim()) &&
+      Boolean(sourceText.trim()),
+    staleTime: 30_000,
+  });
+  const bindingCandidates = useMemo(
+    () => mf2TermBindingCandidates(glossaryMatchesQuery.data ?? []),
+    [glossaryMatchesQuery.data],
+  );
+  useEffect(() => {
+    setSelectedTermIdsByArgument((current) =>
+      applyDefaultMf2TermBindings(
+        argumentNames,
+        bindingCandidates,
+        current,
+        touchedTermBindingArguments,
+      ),
+    );
+  }, [argumentNames, bindingCandidates, touchedTermBindingArguments]);
+  const handleTermIdChange = useCallback((argument: string, termId: string) => {
+    setTouchedTermBindingArguments((current) =>
+      current[argument] ? current : { ...current, [argument]: true },
+    );
+    setSelectedTermIdsByArgument((current) => {
+      const next = { ...current };
+      if (termId) {
+        next[argument] = termId;
+      } else {
+        delete next[argument];
+      }
+      return next;
+    });
+  }, []);
+  const handleRuntimeVariableChange = useCallback((name: string, value: string) => {
+    setRuntimeVariables((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  }, []);
+  const bindingReportQuery = useQuery({
+    queryKey: [
+      'workbench-mf2-term-binding-report',
+      glossaryTarget?.glossaryId,
+      locale,
+      bindingManifest,
+    ],
+    queryFn: () => {
+      if (!glossaryTarget || !bindingManifest) {
+        throw new Error('Missing glossary binding report input.');
+      }
+      return reportInflectionBindingManifest(glossaryTarget.glossaryId, locale, bindingManifest);
+    },
+    enabled: Boolean(glossaryTarget && bindingManifest),
+    staleTime: 30_000,
+  });
+  const missingRuntimeVariableNames = useMemo(
+    () => missingMf2RuntimeVariables(runtimeVariableNames, runtimeVariables),
+    [runtimeVariableNames, runtimeVariables],
+  );
+  const renderVariables = useMemo(
+    () => buildMf2RenderVariables(runtimeVariableNames, runtimeVariables),
+    [runtimeVariableNames, runtimeVariables],
+  );
+  const hasBoundAllArguments = areMf2TermArgumentsBound(argumentNames, selectedTermIdsByArgument);
+  const renderPreviewQuery = useQuery({
+    queryKey: [
+      'workbench-mf2-term-binding-render',
+      glossaryTarget?.glossaryId,
+      locale,
+      bindingManifest,
+      renderVariables,
+    ],
+    queryFn: () => {
+      if (!glossaryTarget || !bindingManifest) {
+        throw new Error('Missing glossary binding render input.');
+      }
+      return renderInflectionBindingManifest(
+        glossaryTarget.glossaryId,
+        locale,
+        bindingManifest,
+        renderVariables,
+      );
+    },
+    enabled:
+      isOpen &&
+      Boolean(glossaryTarget && bindingManifest) &&
+      hasBoundAllArguments &&
+      bindingReportQuery.data?.summary.diagnostics === 0 &&
+      missingRuntimeVariableNames.length === 0,
+    staleTime: 30_000,
+  });
+
+  if (!preview) {
+    return null;
+  }
+
+  if (preview.kind === 'error') {
+    return (
+      <div className="workbench-page__mf2-term-preview is-error" role="status">
+        MF2 term requirements: {preview.error}
+      </div>
+    );
+  }
+
+  return (
+    <details
+      className="workbench-page__mf2-term-preview"
+      onToggle={(event) => setIsOpen(event.currentTarget.open)}
+    >
+      <summary>{formatMf2TermRequirementPreviewSummary(preview.groups)}</summary>
+      <div className="workbench-page__mf2-term-preview-body">
+        {preview.groups.map((group) => (
+          <div key={group.label} className="workbench-page__mf2-term-preview-group">
+            <div className="workbench-page__mf2-term-preview-label">{group.label}</div>
+            <ul className="workbench-page__mf2-term-preview-list">
+              {group.usages.map((usage) => (
+                <li key={`${group.label}:${usage.start}:${usage.end}`}>
+                  <span className="workbench-page__mf2-term-preview-argument">
+                    ${usage.argument}
+                  </span>
+                  {formatMf2TermOptions(usage.options) ? (
+                    <span> {formatMf2TermOptions(usage.options)}</span>
+                  ) : null}
+                  <span>: {usage.requirements.join(', ')}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      {glossaryTarget ? (
+        <>
+          <WorkbenchMf2TermBindingResolver
+            argumentNames={argumentNames}
+            candidates={bindingCandidates}
+            error={glossaryMatchesQuery.error}
+            isLoading={glossaryMatchesQuery.isLoading}
+            selectedTermIdsByArgument={selectedTermIdsByArgument}
+            onChange={handleTermIdChange}
+          />
+          <WorkbenchMf2TermBindingReportStatus
+            glossaryName={glossaryTarget.glossaryName}
+            report={bindingReportQuery.data}
+            isLoading={bindingReportQuery.isLoading}
+            error={bindingReportQuery.error}
+          />
+          <WorkbenchMf2TermRuntimeVariables
+            onChange={handleRuntimeVariableChange}
+            runtimeVariables={runtimeVariables}
+            variableNames={runtimeVariableNames}
+          />
+          <WorkbenchMf2TermRenderPreview
+            error={renderPreviewQuery.error}
+            isLoading={renderPreviewQuery.isLoading}
+            missingVariableNames={missingRuntimeVariableNames}
+            render={renderPreviewQuery.data}
+            report={bindingReportQuery.data}
+          />
+        </>
+      ) : null}
+    </details>
+  );
+}
+
+type Mf2TermBindingCandidate = {
+  label: string;
+  termId: string;
+};
+
+function WorkbenchMf2TermBindingResolver({
+  argumentNames,
+  candidates,
+  error,
+  isLoading,
+  onChange,
+  selectedTermIdsByArgument,
+}: {
+  argumentNames: string[];
+  candidates: Mf2TermBindingCandidate[];
+  error: Error | null;
+  isLoading: boolean;
+  onChange: (argument: string, termId: string) => void;
+  selectedTermIdsByArgument: Record<string, string>;
+}) {
+  if (argumentNames.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="workbench-page__mf2-term-binding-resolver">
+      <div className="workbench-page__mf2-term-binding-resolver-title">
+        Bind MF2 arguments to glossary term IDs
+      </div>
+      {isLoading ? (
+        <div className="workbench-page__mf2-term-binding-resolver-state">
+          Loading glossary term candidates…
+        </div>
+      ) : error ? (
+        <div className="workbench-page__mf2-term-binding-resolver-state is-error">
+          {error.message}
+        </div>
+      ) : candidates.length === 0 ? (
+        <div className="workbench-page__mf2-term-binding-resolver-state">
+          No matched glossary term IDs found for this source.
+        </div>
+      ) : null}
+      <div className="workbench-page__mf2-term-binding-rows">
+        {argumentNames.map((argument) => (
+          <label key={argument} className="workbench-page__mf2-term-binding-row">
+            <span>${argument}</span>
+            <select
+              aria-label={`Glossary term ID for ${argument}`}
+              className="workbench-page__mf2-term-binding-select"
+              value={selectedTermIdsByArgument[argument] ?? ''}
+              onChange={(event) => onChange(argument, event.target.value)}
+            >
+              <option value="">Unbound</option>
+              {candidates.map((candidate) => (
+                <option key={candidate.termId} value={candidate.termId}>
+                  {candidate.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WorkbenchMf2TermRuntimeVariables({
+  onChange,
+  runtimeVariables,
+  variableNames,
+}: {
+  onChange: (name: string, value: string) => void;
+  runtimeVariables: Record<string, string>;
+  variableNames: string[];
+}) {
+  if (variableNames.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="workbench-page__mf2-term-runtime">
+      <div className="workbench-page__mf2-term-runtime-title">Runtime variables</div>
+      <div className="workbench-page__mf2-term-runtime-rows">
+        {variableNames.map((name) => (
+          <label key={name} className="workbench-page__mf2-term-runtime-row">
+            <span>${name}</span>
+            <input
+              aria-label={`Runtime value for ${name}`}
+              className="workbench-page__mf2-term-runtime-input"
+              value={runtimeVariables[name] ?? ''}
+              onChange={(event) => onChange(name, event.target.value)}
+              placeholder="value"
+            />
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WorkbenchMf2TermRenderPreview({
+  error,
+  isLoading,
+  missingVariableNames,
+  render,
+  report,
+}: {
+  error: Error | null;
+  isLoading: boolean;
+  missingVariableNames: string[];
+  render: ApiInflectionBindingRenderResponse | undefined;
+  report: ApiInflectionBindingReport | undefined;
+}) {
+  if (!report || report.summary.diagnostics > 0) {
+    return null;
+  }
+  if (missingVariableNames.length > 0) {
+    return (
+      <div className="workbench-page__mf2-term-render-preview">
+        MF2 render preview: enter runtime values for{' '}
+        {formatMf2RuntimeVariableNames(missingVariableNames)}.
+      </div>
+    );
+  }
+  if (isLoading) {
+    return (
+      <div className="workbench-page__mf2-term-render-preview">MF2 render preview: rendering…</div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="workbench-page__mf2-term-render-preview is-error">
+        MF2 render preview: {error.message}
+      </div>
+    );
+  }
+  if (!render) {
+    return null;
+  }
+
+  return (
+    <div className="workbench-page__mf2-term-render-preview">
+      <div className="workbench-page__mf2-term-render-preview-title">MF2 render preview</div>
+      <div className="workbench-page__mf2-term-render-preview-messages">
+        {Object.entries(render.messages).map(([messageId, value]) => (
+          <div key={messageId} className="workbench-page__mf2-term-render-preview-message">
+            <span className="workbench-page__mf2-term-render-preview-label">
+              {formatMf2RenderMessageLabel(messageId)}
+            </span>
+            <span>{value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function uniqueMf2TermArgumentsForGroups(groups: readonly Mf2TermRequirementPreviewGroup[]) {
+  const argumentsInOrder: string[] = [];
+  const seen = new Set<string>();
+  for (const group of groups) {
+    for (const argument of uniqueMf2TermArguments(group.usages)) {
+      if (!seen.has(argument)) {
+        seen.add(argument);
+        argumentsInOrder.push(argument);
+      }
+    }
+  }
+  return argumentsInOrder;
+}
+
+function uniqueMf2TermRuntimeVariablesForGroups(groups: readonly Mf2TermRequirementPreviewGroup[]) {
+  const variablesInOrder: string[] = [];
+  const seen = new Set<string>();
+  for (const group of groups) {
+    for (const usage of group.usages) {
+      for (const variableName of mf2RuntimeVariableNamesForUsage(usage)) {
+        if (!seen.has(variableName)) {
+          seen.add(variableName);
+          variablesInOrder.push(variableName);
+        }
+      }
+    }
+  }
+  return variablesInOrder;
+}
+
+function missingMf2RuntimeVariables(
+  variableNames: string[],
+  runtimeVariables: Record<string, string>,
+) {
+  return variableNames.filter((name) => !(runtimeVariables[name] ?? '').trim());
+}
+
+function buildMf2RenderVariables(
+  variableNames: string[],
+  runtimeVariables: Record<string, string>,
+) {
+  const variables: Record<string, string> = {};
+  for (const name of variableNames) {
+    const value = (runtimeVariables[name] ?? '').trim();
+    if (value) {
+      variables[name] = value;
+    }
+  }
+  return variables;
+}
+
+function areMf2TermArgumentsBound(
+  argumentNames: string[],
+  selectedTermIdsByArgument: Record<string, string>,
+) {
+  return argumentNames.every((argument) => Boolean(selectedTermIdsByArgument[argument]?.trim()));
+}
+
+function pruneRecordToKeys<T>(current: Record<string, T>, keysToKeep: readonly string[]) {
+  const allowedKeys = new Set(keysToKeep);
+  let changed = false;
+  const next: Record<string, T> = {};
+  for (const [key, value] of Object.entries(current)) {
+    if (allowedKeys.has(key)) {
+      next[key] = value;
+    } else {
+      changed = true;
+    }
+  }
+  return changed ? next : current;
+}
+
+function mf2TermBindingCandidates(matches: readonly ApiMatchedGlossaryTerm[]) {
+  const candidates: Mf2TermBindingCandidate[] = [];
+  const seen = new Set<string>();
+  for (const match of matches) {
+    const termId = match.termKey?.trim();
+    if (!termId || seen.has(termId)) {
+      continue;
+    }
+    seen.add(termId);
+    candidates.push({
+      termId,
+      label: formatMf2TermBindingCandidateLabel(termId, match),
+    });
+  }
+  return candidates;
+}
+
+function applyDefaultMf2TermBindings(
+  argumentNames: readonly string[],
+  candidates: readonly Mf2TermBindingCandidate[],
+  selectedTermIdsByArgument: Record<string, string>,
+  touchedTermBindingArguments: Record<string, true>,
+) {
+  if (argumentNames.length !== 1 || candidates.length !== 1) {
+    return selectedTermIdsByArgument;
+  }
+
+  const argument = argumentNames[0];
+  if (
+    !argument ||
+    selectedTermIdsByArgument[argument]?.trim() ||
+    touchedTermBindingArguments[argument]
+  ) {
+    return selectedTermIdsByArgument;
+  }
+
+  return {
+    ...selectedTermIdsByArgument,
+    [argument]: candidates[0].termId,
+  };
+}
+
+function formatMf2TermBindingCandidateLabel(termId: string, match: ApiMatchedGlossaryTerm) {
+  const source = match.source.trim();
+  const target = match.target?.trim();
+  if (source && target) {
+    return `${termId} — ${source} → ${target}`;
+  }
+  if (source) {
+    return `${termId} — ${source}`;
+  }
+  return termId;
+}
+
+function WorkbenchMf2TermBindingReportStatus({
+  error,
+  glossaryName,
+  isLoading,
+  report,
+}: {
+  error: Error | null;
+  glossaryName: string;
+  isLoading: boolean;
+  report: ApiInflectionBindingReport | undefined;
+}) {
+  if (isLoading) {
+    return (
+      <div className="workbench-page__mf2-term-binding-report">
+        MF2 term bindings: checking {glossaryName}…
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="workbench-page__mf2-term-binding-report is-error">
+        MF2 term bindings: {error.message}
+      </div>
+    );
+  }
+  if (!report) {
+    return null;
+  }
+
+  if (report.summary.diagnostics === 0) {
+    return (
+      <div className="workbench-page__mf2-term-binding-report">
+        MF2 term bindings: renderable for {glossaryName}.
+      </div>
+    );
+  }
+
+  return (
+    <div className="workbench-page__mf2-term-binding-report is-warning">
+      MF2 term bindings: {formatMf2BindingDiagnostics(report)}.
+    </div>
+  );
+}
+
+function formatMf2TermRequirementPreviewSummary(groups: Mf2TermRequirementPreviewGroup[]) {
+  return `MF2 term requirements: ${groups
+    .map((group) => `${group.label.toLowerCase()} ${formatMf2TermArguments(group.usages)}`)
+    .join(' · ')}`;
+}
+
+function formatMf2TermArguments(usages: readonly Mf2TermUsageRequirement[]) {
+  return uniqueMf2TermArguments(usages)
+    .map((argument) => `$${argument}`)
+    .join(', ');
+}
+
+function formatMf2TermOptions(options: Record<string, string>) {
+  const entries = Object.entries(options);
+  if (entries.length === 0) {
+    return '';
+  }
+  return `(${entries.map(([key, value]) => `${key}=${value}`).join(', ')})`;
+}
+
+function formatMf2BindingDiagnostics(report: ApiInflectionBindingReport) {
+  const counts = report.diagnostics.reduce(
+    (acc, diagnostic) => {
+      acc[diagnostic.status] = (acc[diagnostic.status] ?? 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+  const summary = Object.entries(counts)
+    .map(([status, count]) => `${count} ${formatMf2BindingStatus(status)}`)
+    .join(', ');
+  const unsupportedRuntimeArguments = uniqueMf2BindingDiagnosticArguments(report, [
+    'unsupported-locale-runtime-term-inflection',
+  ]);
+  const unboundArguments = uniqueMf2BindingDiagnosticArguments(report, [
+    'missing',
+    'ambiguous',
+    'unknown',
+  ]);
+  if (unsupportedRuntimeArguments.length > 0) {
+    const details = [
+      `remove MF2 :term options for ${formatMf2BindingArgumentNames(
+        unsupportedRuntimeArguments,
+      )} or use a locale with a checked V0 runtime term-form pack`,
+    ];
+    if (unboundArguments.length > 0) {
+      details.push(
+        `bind MF2 arguments ${formatMf2BindingArgumentNames(
+          unboundArguments,
+        )} to valid glossary term IDs before rendering`,
+      );
+    }
+    return `${summary}; ${details.join('; ')}`;
+  }
+  if (unboundArguments.length === 0) {
+    return summary;
+  }
+  return `${summary} for ${formatMf2BindingArgumentNames(unboundArguments)}; bind MF2 arguments to valid glossary term IDs before rendering`;
+}
+
+function formatMf2BindingStatus(status: string) {
+  if (status === 'unsupported-locale-runtime-term-inflection') {
+    return 'unsupported by current V0 locale runtime';
+  }
+  return status;
+}
+
+function uniqueMf2BindingDiagnosticArguments(
+  report: ApiInflectionBindingReport,
+  statuses: ApiInflectionBindingReport['diagnostics'][number]['status'][],
+) {
+  const wantedStatuses = new Set(statuses);
+  const argumentsInOrder: string[] = [];
+  const seen = new Set<string>();
+  for (const diagnostic of report.diagnostics) {
+    if (!wantedStatuses.has(diagnostic.status) || seen.has(diagnostic.argument)) {
+      continue;
+    }
+    seen.add(diagnostic.argument);
+    argumentsInOrder.push(diagnostic.argument);
+  }
+  return argumentsInOrder;
+}
+
+function formatMf2BindingArgumentNames(argumentsInOrder: string[]) {
+  return argumentsInOrder.map((argument) => `$${argument}`).join(', ');
+}
+
+function formatMf2RuntimeVariableNames(variableNames: string[]) {
+  return variableNames.map((name) => `$${name}`).join(', ');
+}
+
+function formatMf2RenderMessageLabel(messageId: string) {
+  if (messageId.endsWith('.source')) {
+    return 'Source';
+  }
+  if (messageId.endsWith('.target')) {
+    return 'Target';
+  }
+  return messageId;
 }
 
 function WorkbenchDateMetadata({ row }: { row: WorkbenchRow }) {

@@ -40,6 +40,14 @@ for `:string`, `:offset`, unlocalized numeric formatting for `:number`,
 Unsupported functions recover with visible MF2 fallback output and collected
 diagnostics.
 
+Inflection is intentionally not a public Rust runtime surface yet. The crate
+does not export compiled term-pack, M2IF, or inflection modules; the
+package-boundary integration test pins that root exports stay parser/formatter
+only until a product-backed Rust API is approved. Keep Rust on its existing
+package tests and M2IF byte-fixture checks; validate inflection release
+artifacts through the repo-level shared gate rather than adding Rust inflection
+APIs or a package-local wrapper without a caller.
+
 For locale-pretty formatting, enable the optional ICU4X adapter:
 
 ```toml

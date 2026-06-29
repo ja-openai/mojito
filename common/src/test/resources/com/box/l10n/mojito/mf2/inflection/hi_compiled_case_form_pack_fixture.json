@@ -1,0 +1,189 @@
+{
+  "diagnostics": [],
+  "formSets": [
+    {
+      "forms": [
+        {
+          "key": 1,
+          "kind": "literal",
+          "value": 2
+        },
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 4
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 6
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 2
+        },
+        {
+          "key": 8,
+          "kind": "literal",
+          "value": 9
+        },
+        {
+          "key": 10,
+          "kind": "literal",
+          "value": 2
+        }
+      ],
+      "term": 0
+    },
+    {
+      "forms": [
+        {
+          "key": 1,
+          "kind": "literal",
+          "value": 12
+        },
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 13
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 14
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 13
+        },
+        {
+          "key": 8,
+          "kind": "literal",
+          "value": 15
+        },
+        {
+          "key": 10,
+          "kind": "literal",
+          "value": 13
+        }
+      ],
+      "term": 11
+    },
+    {
+      "forms": [
+        {
+          "key": 1,
+          "kind": "literal",
+          "value": 17
+        },
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 17
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 18
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 17
+        },
+        {
+          "key": 8,
+          "kind": "literal",
+          "value": 19
+        },
+        {
+          "key": 10,
+          "kind": "literal",
+          "value": 17
+        }
+      ],
+      "term": 16
+    }
+  ],
+  "locale": "hi",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/hi_pack_survey.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_hi.lst",
+      "inflection/resources/org/unicode/inflection/dictionary/inflectional_hi.xml"
+    ],
+    "sources": [
+      {
+        "byteSize": 592562,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_hi.lst",
+        "sha256": "c5b051852706d4c73188d532a072b4f6642b43ddd2efd506394f234428d93398"
+      },
+      {
+        "byteSize": 635966,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/inflectional_hi.xml",
+        "sha256": "20b67cea017333ce11a041c9150268bb14643fb5185a7a4228f4e1079f1d4f0b"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/compiled-term-pack/v0",
+  "sizeEstimates": {
+    "binaryLowerBoundBytes": {
+      "bindingReferenceBytes": 0,
+      "formRowBytes": 216,
+      "stringPoolBytes": 350,
+      "termRowBytes": 60,
+      "totalBytes": 626
+    },
+    "compactJsonBytes": 3888
+  },
+  "strings": [
+    "hi.case.अंगारा",
+    "direct.plural",
+    "अंगारे",
+    "direct.singular",
+    "अंगारा",
+    "oblique.plural",
+    "अंगारों",
+    "oblique.singular",
+    "vocative.plural",
+    "अंगारो",
+    "vocative.singular",
+    "hi.case.आँख",
+    "आँखें",
+    "आँख",
+    "आँखों",
+    "आँखो",
+    "hi.case.आदमी",
+    "आदमी",
+    "आदमियों",
+    "आदमियो"
+  ],
+  "terms": [
+    {
+      "featureBits": 273,
+      "formSet": 0,
+      "id": 0,
+      "sense": null,
+      "text": 4
+    },
+    {
+      "featureBits": 289,
+      "formSet": 1,
+      "id": 11,
+      "sense": null,
+      "text": 13
+    },
+    {
+      "featureBits": 273,
+      "formSet": 2,
+      "id": 16,
+      "sense": null,
+      "text": 17
+    }
+  ]
+}

@@ -1,0 +1,912 @@
+{
+  "counts": {
+    "ambiguousSupportedSurfaces": 212141,
+    "completeCaseFormCandidates": 68171,
+    "dictionaryEntries": 914690,
+    "dictionaryInflectionPatterns": 749,
+    "inflectionalPatterns": 808,
+    "missingInflectionPatterns": 0,
+    "nominativeSingularCandidates": 150023,
+    "nounInflectionalPatterns": 727,
+    "skippedLines": 104,
+    "supportedEntries": 911004,
+    "uniqueSupportedSurfaces": 910896,
+    "usedInflectionalPatterns": 749
+  },
+  "features": {
+    "ambiguityReasons": {
+      "multiple-analyses": 98,
+      "multiple-animacy": 9881,
+      "multiple-cases": 198758,
+      "multiple-genders": 7869,
+      "multiple-inflections": 19079,
+      "multiple-numbers": 57026,
+      "multiple-parts-of-speech": 307
+    },
+    "animacy": {
+      "<missing>": 698,
+      "animate": 215358,
+      "inanimate": 704819
+    },
+    "case": {
+      "<missing>": 47,
+      "accusative": 196158,
+      "dative": 194524,
+      "genitive": 193323,
+      "instrumental": 222824,
+      "nominative": 194578,
+      "prepositional": 193515
+    },
+    "caseFormCandidateSkipReasons": {
+      "conflicting-form-key": 26995,
+      "missing-case-form-keys": 85,
+      "missing-or-ambiguous-gender": 1050,
+      "missing-or-ambiguous-inflection": 4165,
+      "suffix-mismatch": 49554,
+      "unsupported-pattern-part-of-speech": 3
+    },
+    "caseFormKeyCounts": {
+      "0": 50604,
+      "1": 18,
+      "10": 1,
+      "11": 1,
+      "12": 68187,
+      "2": 1,
+      "3": 1,
+      "4": 26499,
+      "5": 2,
+      "6": 531,
+      "7": 6,
+      "9": 4
+    },
+    "conflictingFormKeys": {
+      "accusative.plural": 6,
+      "accusative.singular": 721,
+      "dative.plural": 3,
+      "dative.singular": 722,
+      "genitive.plural": 9,
+      "genitive.singular": 721,
+      "instrumental.plural": 5,
+      "instrumental.singular": 26981,
+      "nominative.plural": 6,
+      "nominative.singular": 722,
+      "prepositional.plural": 3,
+      "prepositional.singular": 482
+    },
+    "conflictingKeysPerTerm": {
+      "1": 26264,
+      "2": 5,
+      "3": 3,
+      "5": 240,
+      "6": 483
+    },
+    "duplicateSlotRows": 1046,
+    "gender": {
+      "<missing>": 5290,
+      "feminine": 324508,
+      "masculine": 456645,
+      "neuter": 132472
+    },
+    "maxSlotsPerPattern": 31,
+    "number": {
+      "<missing>": 31,
+      "plural": 480262,
+      "singular": 487740
+    },
+    "partOfSpeech": {
+      "adjective": 139,
+      "adverb": 12,
+      "noun": 910635,
+      "numeral": 22,
+      "proper-noun": 419,
+      "verb": 5
+    },
+    "patternSlotAnimacy": {
+      "<missing>": 1128,
+      "animate": 3083,
+      "human": 12,
+      "inanimate": 5393
+    },
+    "patternSlotCases": {
+      "<missing>": 76,
+      "accusative": 1560,
+      "dative": 1526,
+      "genitive": 1536,
+      "instrumental": 1774,
+      "locative": 25,
+      "nominative": 1537,
+      "partitive": 38,
+      "prepositional": 1526,
+      "vocative": 18
+    },
+    "patternSlotGenders": {
+      "<missing>": 320,
+      "common": 420,
+      "feminine": 3655,
+      "masculine": 4131,
+      "neuter": 1090
+    },
+    "patternSlotNumbers": {
+      "<missing>": 23,
+      "plural": 4248,
+      "singular": 5345
+    },
+    "patternsWithDuplicateSlots": 300
+  },
+  "locale": "ru",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/ru_case_pack_audit.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_ru.lst",
+      "inflection/resources/org/unicode/inflection/dictionary/inflectional_ru.xml"
+    ]
+  },
+  "reviewPolicy": {
+    "automaticExportTerms": 68169,
+    "blockedDictionaryEntries": 846521,
+    "blockedReasons": {
+      "conflicting-form-key": 26995,
+      "duplicate-term-id": 2,
+      "missing-case-form-keys": 85,
+      "missing-or-ambiguous-gender": 1050,
+      "missing-or-ambiguous-inflection": 19322,
+      "not-nominative": 702128,
+      "not-singular": 43985,
+      "suffix-mismatch": 49554,
+      "unsupported-part-of-speech": 3397,
+      "unsupported-pattern-part-of-speech": 3
+    },
+    "reviewRequiredReasons": {
+      "multiple-analyses": 98,
+      "multiple-animacy": 9881,
+      "multiple-cases": 198758,
+      "multiple-genders": 7869,
+      "multiple-inflections": 19079,
+      "multiple-numbers": 57026,
+      "multiple-parts-of-speech": 307
+    },
+    "reviewRequiredSurfaces": 212141,
+    "runtimeExport": "closed-world-case-forms"
+  },
+  "samples": {
+    "ambiguousSurfaces": [
+      {
+        "entries": [
+          {
+            "animacy": [
+              "inanimate"
+            ],
+            "case": [
+              "accusative",
+              "dative",
+              "genitive",
+              "instrumental",
+              "nominative",
+              "prepositional"
+            ],
+            "gender": [
+              "neuter"
+            ],
+            "inflections": [
+              "12"
+            ],
+            "line": 482,
+            "number": [
+              "singular",
+              "plural"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "а"
+          }
+        ],
+        "reasons": [
+          "multiple-cases",
+          "multiple-numbers"
+        ],
+        "surface": "а"
+      },
+      {
+        "entries": [
+          {
+            "animacy": [
+              "animate"
+            ],
+            "case": [
+              "accusative",
+              "genitive"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "17a"
+            ],
+            "line": 517,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "а́иста"
+          }
+        ],
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "а́иста"
+      },
+      {
+        "entries": [
+          {
+            "animacy": [
+              "animate"
+            ],
+            "case": [
+              "accusative",
+              "genitive"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "17a"
+            ],
+            "line": 522,
+            "number": [
+              "plural"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "а́истов"
+          }
+        ],
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "а́истов"
+      },
+      {
+        "entries": [
+          {
+            "animacy": [],
+            "case": [
+              "accusative",
+              "nominative",
+              "prepositional"
+            ],
+            "gender": [
+              "neuter"
+            ],
+            "inflections": [
+              "170"
+            ],
+            "line": 527,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "а́канье"
+          }
+        ],
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "а́канье"
+      },
+      {
+        "entries": [
+          {
+            "animacy": [],
+            "case": [
+              "accusative",
+              "genitive",
+              "nominative"
+            ],
+            "gender": [
+              "neuter"
+            ],
+            "inflections": [
+              "170"
+            ],
+            "line": 530,
+            "number": [
+              "singular",
+              "plural"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "а́канья"
+          }
+        ],
+        "reasons": [
+          "multiple-cases",
+          "multiple-numbers"
+        ],
+        "surface": "а́канья"
+      },
+      {
+        "entries": [
+          {
+            "animacy": [
+              "inanimate"
+            ],
+            "case": [
+              "accusative",
+              "dative",
+              "genitive",
+              "instrumental",
+              "nominative",
+              "prepositional"
+            ],
+            "gender": [
+              "neuter"
+            ],
+            "inflections": [
+              "12"
+            ],
+            "line": 534,
+            "number": [
+              "singular",
+              "plural"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "аа"
+          }
+        ],
+        "reasons": [
+          "multiple-cases",
+          "multiple-numbers"
+        ],
+        "surface": "аа"
+      },
+      {
+        "entries": [
+          {
+            "animacy": [
+              "inanimate"
+            ],
+            "case": [
+              "accusative",
+              "nominative"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "9"
+            ],
+            "line": 535,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "аак"
+          }
+        ],
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "аак"
+      },
+      {
+        "entries": [
+          {
+            "animacy": [
+              "inanimate"
+            ],
+            "case": [
+              "accusative",
+              "nominative"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "9"
+            ],
+            "line": 541,
+            "number": [
+              "plural"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "ааки"
+          }
+        ],
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "ааки"
+      }
+    ],
+    "conflictingCaseFormCandidates": [
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "conflicts": [
+          {
+            "firstValue": "Аляской",
+            "formKey": "instrumental.singular",
+            "variantTemplate": "{stem}кою",
+            "variantValue": "Аляскою"
+          }
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflectionPattern": "1e0",
+        "inflections": [
+          "1e0"
+        ],
+        "line": 14,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Аляска"
+      },
+      {
+        "animacy": [
+          "animate"
+        ],
+        "case": [
+          "nominative"
+        ],
+        "conflicts": [
+          {
+            "firstValue": "Анатолича",
+            "formKey": "accusative.singular",
+            "variantTemplate": "{stem}я",
+            "variantValue": "Анатолия"
+          },
+          {
+            "firstValue": "Анатоличу",
+            "formKey": "dative.singular",
+            "variantTemplate": "{stem}ю",
+            "variantValue": "Анатолию"
+          },
+          {
+            "firstValue": "Анатолича",
+            "formKey": "genitive.singular",
+            "variantTemplate": "{stem}я",
+            "variantValue": "Анатолия"
+          },
+          {
+            "firstValue": "Анатоличем",
+            "formKey": "instrumental.singular",
+            "variantTemplate": "{stem}ем",
+            "variantValue": "Анатолием"
+          },
+          {
+            "firstValue": "Анатолич",
+            "formKey": "nominative.singular",
+            "variantTemplate": "{stem}й",
+            "variantValue": "Анатолий"
+          },
+          {
+            "firstValue": "Анатоличе",
+            "formKey": "prepositional.singular",
+            "variantTemplate": "{stem}и",
+            "variantValue": "Анатолии"
+          }
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflectionPattern": "220",
+        "inflections": [
+          "220"
+        ],
+        "line": 27,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Анатолий"
+      },
+      {
+        "animacy": [
+          "inanimate"
+        ],
+        "case": [
+          "nominative"
+        ],
+        "conflicts": [
+          {
+            "firstValue": "Антарктидой",
+            "formKey": "instrumental.singular",
+            "variantTemplate": "{stem}ою",
+            "variantValue": "Антарктидою"
+          }
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflectionPattern": "12e",
+        "inflections": [
+          "12e"
+        ],
+        "line": 63,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Антарктида"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "conflicts": [
+          {
+            "firstValue": "Антарктикой",
+            "formKey": "instrumental.singular",
+            "variantTemplate": "{stem}ою",
+            "variantValue": "Антарктикою"
+          }
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflectionPattern": "19c",
+        "inflections": [
+          "19c"
+        ],
+        "line": 73,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Антарктика"
+      },
+      {
+        "animacy": [
+          "inanimate"
+        ],
+        "case": [
+          "nominative"
+        ],
+        "conflicts": [
+          {
+            "firstValue": "Арктикой",
+            "formKey": "instrumental.singular",
+            "variantTemplate": "{stem}ою",
+            "variantValue": "Арктикою"
+          }
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflectionPattern": "253",
+        "inflections": [
+          "253"
+        ],
+        "line": 93,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Арктика"
+      },
+      {
+        "animacy": [
+          "inanimate"
+        ],
+        "case": [
+          "nominative"
+        ],
+        "conflicts": [
+          {
+            "firstValue": "Блювайной",
+            "formKey": "instrumental.singular",
+            "variantTemplate": "{stem}ою",
+            "variantValue": "Блювайною"
+          }
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflectionPattern": "2a1",
+        "inflections": [
+          "2a1"
+        ],
+        "line": 103,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "Блювайна"
+      },
+      {
+        "animacy": [
+          "inanimate"
+        ],
+        "case": [
+          "nominative"
+        ],
+        "conflicts": [
+          {
+            "firstValue": "Википедией",
+            "formKey": "instrumental.singular",
+            "variantTemplate": "{stem}ею",
+            "variantValue": "Википедиею"
+          }
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflectionPattern": "4",
+        "inflections": [
+          "4"
+        ],
+        "line": 132,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "Википедия"
+      },
+      {
+        "animacy": [
+          "inanimate"
+        ],
+        "case": [
+          "nominative"
+        ],
+        "conflicts": [
+          {
+            "firstValue": "Гренландией",
+            "formKey": "instrumental.singular",
+            "variantTemplate": "{stem}ею",
+            "variantValue": "Гренландиею"
+          }
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflectionPattern": "172",
+        "inflections": [
+          "172"
+        ],
+        "line": 160,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Гренландия"
+      }
+    ],
+    "missingInflectionPatterns": [],
+    "nominativeSingularCandidates": [
+      {
+        "animacy": [
+          "animate"
+        ],
+        "case": [
+          "nominative"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "76"
+        ],
+        "line": 4,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "Аллах"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "1e0"
+        ],
+        "line": 14,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Аляска"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "accusative",
+          "genitive",
+          "nominative"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "1e0"
+        ],
+        "line": 19,
+        "number": [
+          "singular",
+          "plural"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Аляски"
+      },
+      {
+        "animacy": [
+          "animate"
+        ],
+        "case": [
+          "nominative",
+          "prepositional"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "220"
+        ],
+        "line": 26,
+        "number": [
+          "singular",
+          "plural"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Анатолии"
+      },
+      {
+        "animacy": [
+          "animate"
+        ],
+        "case": [
+          "nominative"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "220"
+        ],
+        "line": 27,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Анатолий"
+      },
+      {
+        "animacy": [
+          "animate"
+        ],
+        "case": [
+          "nominative"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "220"
+        ],
+        "line": 28,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Анатолич"
+      },
+      {
+        "animacy": [
+          "animate"
+        ],
+        "case": [
+          "nominative"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "150"
+        ],
+        "line": 43,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Анатольевич"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "ca"
+        ],
+        "line": 54,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "Антанта"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/ru-case-pack-audit/v0",
+  "sizeEstimates": {
+    "caseFormRowBytesIfEager": 9816624,
+    "caseFormRowsIfEager": 818052,
+    "metadataLowerBoundBytes": 4958721,
+    "metadataRowBytes": 1800276,
+    "metadataStringPoolBytes": 3158445
+  },
+  "sources": [
+    {
+      "byteSize": 76320564,
+      "gitLfsPointer": false,
+      "path": "dictionary_ru.lst",
+      "sha256": "0cec5900694f7a7e1361ab95b3e47bca9114079b6ab8b48531c355eb8862bfeb"
+    },
+    {
+      "byteSize": 1500300,
+      "gitLfsPointer": false,
+      "path": "inflectional_ru.xml",
+      "sha256": "8fade258e582840840daa29bd6971a61a090feb33268b303582c10bd4b08b00a"
+    }
+  ]
+}

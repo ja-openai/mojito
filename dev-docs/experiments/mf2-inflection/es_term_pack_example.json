@@ -1,0 +1,74 @@
+{
+  "schema": "mojito-mf2-term-pack/example-v0",
+  "locale": "es",
+  "source": {
+    "messageCatalog": "es_term_usage_example.json",
+    "termCatalog": "es_term_pack_example.json"
+  },
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/mf2_term_pack_compile.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "unicode-org/inflection dictionary_es.lst",
+      "unicode-org/inflection inflectional_es.xml"
+    ],
+    "sources": [
+      {
+        "path": "dictionary_es.lst",
+        "byteSize": 37232751,
+        "sha256": "c027bc481306bbdae35aae1bce50c683c6e1c41e91643e68c9efda4e041d6389",
+        "gitLfsPointer": false
+      },
+      {
+        "path": "inflectional_es.xml",
+        "byteSize": 4112171,
+        "sha256": "1ed54f3e48d32ac020d22fcb02a52ab05e72e8b73914891429798ebd09a98541",
+        "gitLfsPointer": false
+      }
+    ]
+  },
+  "terms": {
+    "item.bee": {
+      "text": "abeja",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "feminine",
+        "number": "singular",
+        "stressed": false,
+        "sense": "bee"
+      },
+      "forms": {
+        "bare.singular": "abeja",
+        "bare.plural": "abejas"
+      }
+    },
+    "item.poppy": {
+      "text": "ababol",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "masculine",
+        "number": "singular",
+        "stressed": false,
+        "sense": "poppy"
+      },
+      "forms": {
+        "bare.singular": "ababol",
+        "bare.plural": "ababoles"
+      }
+    },
+    "item.water": {
+      "text": "agua",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "feminine",
+        "number": "singular",
+        "stressed": true,
+        "sense": "water"
+      },
+      "forms": {
+        "bare.singular": "agua",
+        "bare.plural": "aguas"
+      }
+    }
+  }
+}

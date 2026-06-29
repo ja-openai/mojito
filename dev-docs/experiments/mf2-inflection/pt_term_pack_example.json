@@ -1,0 +1,58 @@
+{
+  "schema": "mojito-mf2-term-pack/example-v0",
+  "locale": "pt",
+  "source": {
+    "messageCatalog": "pt_term_usage_example.json",
+    "termCatalog": "pt_term_pack_example.json"
+  },
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/mf2_term_pack_compile.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "unicode-org/inflection dictionary_pt.lst",
+      "unicode-org/inflection inflectional_pt.xml"
+    ],
+    "sources": [
+      {
+        "path": "dictionary_pt.lst",
+        "byteSize": 2345650,
+        "sha256": "00a2c13c4b5c437cc8677e7115a7e8ad3ec62dcba2115698fb283541cdabee70",
+        "gitLfsPointer": false
+      },
+      {
+        "path": "inflectional_pt.xml",
+        "byteSize": 637727,
+        "sha256": "b223e087bd3ea5470fabebb6277e500561d24a7c7fbd5f867a1d115d2f3d3aef",
+        "gitLfsPointer": false
+      }
+    ]
+  },
+  "terms": {
+    "item.field": {
+      "text": "campo",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "masculine",
+        "number": "singular",
+        "sense": "field"
+      },
+      "forms": {
+        "bare.singular": "campo",
+        "bare.plural": "campos"
+      }
+    },
+    "item.house": {
+      "text": "casa",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "feminine",
+        "number": "singular",
+        "sense": "house"
+      },
+      "forms": {
+        "bare.singular": "casa",
+        "bare.plural": "casas"
+      }
+    }
+  }
+}

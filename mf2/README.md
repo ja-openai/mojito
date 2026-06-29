@@ -347,6 +347,82 @@ Run only the shared conformance suite across all current language runtimes:
 sh conformance/check_all_languages.sh
 ```
 
+Validate the MF2 inflection release-bundle shape without adding inflection APIs
+to the core MF2 runtimes:
+
+```sh
+(cd conformance && python3 validate_inflection_release_fixture.py)
+(cd python && sh run.sh inflection-release)
+(cd javascript && npm run inflection-release)
+```
+
+The same release-shape 35-artifact check is wired into `sh check.sh`, the
+Python package gate, and the JavaScript package check. It materializes compiled
+JSON packs, binary M2IF packs, and the Hindi pronoun-agreement sidecar from
+checked fixtures, then validates manifest/report schema, artifact count,
+artifact ID/kind/path pinning, source fixture filename mapping, report pass
+status, JSON object/array shapes, artifact presence, and path containment,
+including symlink paths that would resolve outside the bundle.
+Bundle source kind/path/source drift diagnostics name the artifact ID and
+include expected and actual values before manifest/report validation.
+Bundle source artifact specs must contain exactly `artifact_id`, `kind`,
+`source`, and `path`, and each spec must be object-shaped.
+The manifest top-level keys must be exactly `schema` and `artifacts`; the
+report top-level keys must be exactly `schema`, `summary`, and `artifacts`; the
+report summary keys must be exactly `artifacts`, `passed`, and `failed`.
+Manifest/report object and array shape diagnostics name the release fixture
+file.
+Manifest/report artifact count and artifact ID/order drift diagnostics name the
+release fixture file.
+Manifest/report schema, artifact kind/path, materialization, and report status
+diagnostics name the release fixture file.
+Bundle source and manifest/report required-text diagnostics name the source
+inventory row or release fixture artifact row.
+Bundle source and manifest/report row-level unexpected-key diagnostics name the
+source inventory row or release fixture artifact row when an artifact ID is
+available.
+Manifest artifact rows must contain exactly `artifactId`, `kind`, and `path`;
+passed report rows must contain exactly `artifactId`, `kind`, and `status`.
+Artifact-row failure codes are limited to `invalid-release-artifact-path`,
+`unreadable-release-artifact`, `invalid-compiled-term-pack-json`,
+`invalid-compiled-term-pack-m2if`, and
+`invalid-hindi-pronoun-agreement-pack-json`. Malformed manifest/report JSON,
+invalid manifest/report UTF-8, manifest schema, manifest shape, duplicate
+artifact ID, and report invariant failures are pre-row validation errors, not
+additional artifact-row codes.
+The generated `release-validation-report.json` is an all-pass fixture contract:
+every artifact row must have `status: "passed"`, and passed rows must not
+include stale `code` or `message` fields.
+The 35 artifacts are a fixed release-fixture inventory from selected V0 grammar
+slices: 17 compiled JSON packs, 17 M2IF packs, and the Hindi sidecar. Passing
+this gate does not mean every locale has runtime inflection coverage or that
+standalone runtime packages expose public inflection APIs; it is not complete
+locale or grammar coverage.
+The selected release artifact locales are `ar`, `da`, `de`, `es`, `he`, `hi`,
+`it`, `ml`, `pt`, `ru`, `sr`, `sv`, and `tr`. Metadata/profile-only or
+unavailable locales such as `en`, `id`, `ja`, `ko`, `ms`, `nb`, `nl`, `pl`,
+`th`, `vi`, `yue`, and `zh` are intentionally excluded from release artifacts
+until a product-backed runtime promotion changes the V0 scope.
+`sh check.sh` runs this gate before runtime package checks, and the Python
+package tests pin that ordering so release artifact drift fails fast without
+implying new runtime coverage.
+
+The shared conformance command is the default release-fixture surface.
+Package-local `inflection-release` wrappers currently exist only for Python
+(`sh run.sh inflection-release`) and JavaScript (`npm run inflection-release`).
+Those entries are wrapper command surfaces only: they are included in the first
+review slice for release-fixture validation, delegate back to the shared wrapper
+instead of package-local runtime code, and are not package-local runtime APIs.
+Java/common exposes release validation as API only, with no published CLI/main
+entry point. Standalone Java/Kotlin use Maven-backed shell runners, Swift and
+Rust use native package commands, Go uses `go test`, and PHP uses local PHP
+scripts; those packages should keep their existing commands and avoid
+package-local inflection wrappers or public APIs until a product-backed
+inflection renderer justifies them. The standalone Java and Kotlin conformance
+runners also scan their public parser/formatter declarations so compiled
+term-pack, M2IF, and inflection APIs cannot leak into those packages
+accidentally.
+
 Run the vendored Unicode MessageFormat WG suite directly:
 
 ```sh

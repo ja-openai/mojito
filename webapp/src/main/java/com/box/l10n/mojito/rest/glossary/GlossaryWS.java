@@ -2,15 +2,28 @@ package com.box.l10n.mojito.rest.glossary;
 
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.json.ObjectMapper;
+import com.box.l10n.mojito.mf2.inflection.CompiledTermPack;
+import com.box.l10n.mojito.mf2.inflection.CompiledTermPack.TermRow;
+import com.box.l10n.mojito.mf2.inflection.Mf2TermRenderer;
+import com.box.l10n.mojito.mf2.inflection.TermBindingManifestReportJsonWriter;
+import com.box.l10n.mojito.mf2.inflection.TermBindingManifestValidator;
+import com.box.l10n.mojito.mf2.inflection.TermBindingManifestValidator.TermBindingReport;
+import com.box.l10n.mojito.mf2.inflection.TermInflectionDiagnostics;
+import com.box.l10n.mojito.mf2.inflection.TermInflectionDiagnostics.DiagnosticSummary;
+import com.box.l10n.mojito.mf2.inflection.TermRequirementJsonLoader;
+import com.box.l10n.mojito.mf2.inflection.TermRequirementJsonLoader.TermUsageCatalog;
 import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.glossary.GlossaryImportExportService;
 import com.box.l10n.mojito.service.glossary.GlossaryManagementService;
 import com.box.l10n.mojito.service.glossary.GlossaryTermIndexCurationService;
+import com.box.l10n.mojito.service.glossary.GlossaryTermInflectionProfileService;
 import com.box.l10n.mojito.service.glossary.GlossaryTermService;
 import com.box.l10n.mojito.service.oaitranslate.GlossaryService;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.security.user.UserService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.UncheckedExecutionException;
@@ -19,17 +32,21 @@ import io.micrometer.core.instrument.Tags;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.ZonedDateTime;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -60,12 +77,20 @@ public class GlossaryWS {
   private static final String GLOSSARY_WORKSPACE_CANDIDATE_SOURCE_NAME = "glossary-workspace";
   private static final String GLOSSARY_WORKSPACE_CANDIDATE_SOURCE_TYPE = "HUMAN";
   static final String MATCH_DURATION_METRIC = "GlossaryWS.matchDuration";
+  static final String INFLECTION_APPROVED_PROFILE_COUNT_HEADER =
+      "X-Mojito-Inflection-Approved-Profiles";
+  static final String INFLECTION_SKIPPED_PROFILE_COUNT_HEADER =
+      "X-Mojito-Inflection-Skipped-Profiles";
+  static final String INFLECTION_RUNTIME_EXPORT_HEADER = "X-Mojito-Inflection-Runtime-Export";
+  static final String INFLECTION_COMPOSITION_MODE_HEADER = "X-Mojito-Inflection-Composition-Mode";
   private static final long MATCH_SLOW_LOG_THRESHOLD_MS = 250;
+  private static final Pattern RUNTIME_VARIABLE_NAME_PATTERN = Pattern.compile("[A-Za-z_][\\w.-]*");
 
   private final GlossaryManagementService glossaryManagementService;
   private final GlossaryImportExportService glossaryImportExportService;
   private final GlossaryTermService glossaryTermService;
   private final GlossaryTermIndexCurationService glossaryTermIndexCurationService;
+  private final GlossaryTermInflectionProfileService glossaryTermInflectionProfileService;
   private final GlossaryService glossaryService;
   private final StructuredBlobStorage structuredBlobStorage;
   private final ObjectMapper objectMapper;
@@ -73,12 +98,16 @@ public class GlossaryWS {
   private final AsyncTaskExecutor termIndexEntriesHybridExecutor;
   private final UserService userService;
   private final MeterRegistry meterRegistry;
+  private final TermRequirementJsonLoader termRequirementJsonLoader;
+  private final TermBindingManifestValidator termBindingManifestValidator;
+  private final TermBindingManifestReportJsonWriter termBindingManifestReportJsonWriter;
 
   public GlossaryWS(
       GlossaryManagementService glossaryManagementService,
       GlossaryImportExportService glossaryImportExportService,
       GlossaryTermService glossaryTermService,
       GlossaryTermIndexCurationService glossaryTermIndexCurationService,
+      GlossaryTermInflectionProfileService glossaryTermInflectionProfileService,
       GlossaryService glossaryService,
       StructuredBlobStorage structuredBlobStorage,
       @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper,
@@ -90,6 +119,7 @@ public class GlossaryWS {
     this.glossaryImportExportService = glossaryImportExportService;
     this.glossaryTermService = glossaryTermService;
     this.glossaryTermIndexCurationService = glossaryTermIndexCurationService;
+    this.glossaryTermInflectionProfileService = glossaryTermInflectionProfileService;
     this.glossaryService = glossaryService;
     this.structuredBlobStorage = Objects.requireNonNull(structuredBlobStorage);
     this.objectMapper = Objects.requireNonNull(objectMapper);
@@ -98,6 +128,10 @@ public class GlossaryWS {
     this.termIndexEntriesHybridExecutor = Objects.requireNonNull(termIndexEntriesHybridExecutor);
     this.userService = Objects.requireNonNull(userService);
     this.meterRegistry = Objects.requireNonNull(meterRegistry);
+    this.termRequirementJsonLoader = new TermRequirementJsonLoader(this.objectMapper);
+    this.termBindingManifestValidator = new TermBindingManifestValidator();
+    this.termBindingManifestReportJsonWriter =
+        new TermBindingManifestReportJsonWriter(this.objectMapper);
   }
 
   public record SearchGlossariesResponse(List<GlossarySummary> glossaries, long totalCount) {
@@ -359,6 +393,57 @@ public class GlossaryWS {
       Integer cropHeight,
       Integer sortOrder) {}
 
+  public record SearchInflectionProfilesResponse(List<InflectionProfileResponse> profiles) {}
+
+  public record InflectionProfileResponse(
+      Long id,
+      ZonedDateTime createdDate,
+      ZonedDateTime lastModifiedDate,
+      Long glossaryTermMetadataId,
+      Long tmTextUnitId,
+      String termId,
+      String source,
+      String localeTag,
+      String schema,
+      String status,
+      String morphologyJson,
+      String formsJson,
+      String diagnosticsJson,
+      List<DiagnosticSummary> diagnosticSummaries,
+      List<String> missingFormKeys,
+      String provenanceJson) {}
+
+  public record UpsertInflectionProfileRequest(
+      String status,
+      String morphologyJson,
+      String formsJson,
+      String diagnosticsJson,
+      String provenanceJson) {}
+
+  public record ReviewInflectionProfileRequest(
+      String status,
+      String morphologyJson,
+      String formsJson,
+      String diagnosticsJson,
+      String provenanceJson) {}
+
+  public record ImportInflectionProfilesRequest(String content) {}
+
+  public record ImportInflectionProfilesResponse(
+      String localeTag,
+      int profileCount,
+      int createdProfileCount,
+      int updatedProfileCount,
+      List<InflectionProfileResponse> profiles) {}
+
+  public record InflectionBindingManifestReportRequest(String content) {}
+
+  public record InflectionBindingManifestRenderRequest(
+      String content, Map<String, String> variables) {}
+
+  public record InflectionBindingManifestRenderResponse(
+      String locale, Map<String, String> messages) {}
+
   public record UpsertGlossaryTermRequest(
       String termKey,
       String source,
@@ -468,6 +553,7 @@ public class GlossaryWS {
         Long glossaryId,
         String glossaryName,
         Long tmTextUnitId,
+        String termKey,
         String source,
         String comment,
         String definition,
@@ -648,6 +734,84 @@ public class GlossaryWS {
 
   private boolean hasText(String value) {
     return value != null && !value.isBlank();
+  }
+
+  private String requireText(String value, String field) {
+    if (!hasText(value)) {
+      throw new IllegalArgumentException(field + " is required");
+    }
+    return value;
+  }
+
+  private JsonNode bindingManifestJsonForLocale(String localeTag, String content) {
+    JsonNode root;
+    try {
+      root = objectMapper.readTreeUnchecked(content);
+    } catch (RuntimeException ex) {
+      throw new IllegalArgumentException("Binding manifest content must be valid JSON", ex);
+    }
+    if (!root.isObject()) {
+      throw new IllegalArgumentException("Expected object binding manifest");
+    }
+    ObjectNode objectRoot = (ObjectNode) root;
+    if (!objectRoot.has("locale") || objectRoot.get("locale").isNull()) {
+      objectRoot.put("locale", localeTag);
+    }
+    return objectRoot;
+  }
+
+  private TermUsageCatalog bindingCatalogForLocale(
+      String localeTag, TermUsageCatalog usageCatalog) {
+    String requiredLocaleTag = requireText(localeTag, "locale");
+    if (usageCatalog.locale() == null) {
+      return new TermUsageCatalog(
+          usageCatalog.schema(),
+          requiredLocaleTag,
+          usageCatalog.messages(),
+          usageCatalog.argumentTerms());
+    }
+    if (!requiredLocaleTag.equals(usageCatalog.locale())) {
+      throw new IllegalArgumentException(
+          "Binding manifest locale "
+              + usageCatalog.locale()
+              + " does not match requested locale "
+              + requiredLocaleTag);
+    }
+    return usageCatalog;
+  }
+
+  private Set<String> compiledTermIds(CompiledTermPack compiledPack) {
+    Set<String> termIds = new LinkedHashSet<>();
+    for (TermRow term : compiledPack.terms()) {
+      termIds.add(compiledPack.strings().get(term.id()));
+    }
+    return Collections.unmodifiableSet(termIds);
+  }
+
+  private Map<String, String> renderVariables(InflectionBindingManifestRenderRequest request) {
+    Map<String, String> rawVariables = request.variables();
+    if (rawVariables == null || rawVariables.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
+    Map<String, String> variables = new LinkedHashMap<>();
+    for (Map.Entry<String, String> variable : rawVariables.entrySet()) {
+      String name = requireRuntimeVariableName(variable.getKey());
+      String value = variable.getValue();
+      if (value == null) {
+        throw new IllegalArgumentException("Runtime variable " + name + " must not be null");
+      }
+      variables.put(name, value);
+    }
+    return Collections.unmodifiableMap(variables);
+  }
+
+  private String requireRuntimeVariableName(String name) {
+    String requiredName = requireText(name, "runtime variable name");
+    if (!RUNTIME_VARIABLE_NAME_PATTERN.matcher(requiredName).matches()) {
+      throw new IllegalArgumentException("Invalid runtime variable name: " + requiredName);
+    }
+    return requiredName;
   }
 
   @GetMapping("/{glossaryId}/export")
@@ -1049,6 +1213,198 @@ public class GlossaryWS {
           ex.getMessage() != null
                   && (ex.getMessage().startsWith("Glossary not found:")
                       || ex.getMessage().startsWith("Glossary term not found:"))
+              ? HttpStatus.NOT_FOUND
+              : HttpStatus.BAD_REQUEST;
+      throw new ResponseStatusException(status, ex.getMessage());
+    }
+  }
+
+  @GetMapping("/{glossaryId}/inflection-profiles")
+  public SearchInflectionProfilesResponse getInflectionProfiles(
+      @PathVariable Long glossaryId, @RequestParam(name = "locale") String localeTag) {
+    try {
+      return new SearchInflectionProfilesResponse(
+          glossaryTermInflectionProfileService.getProfiles(glossaryId, localeTag).stream()
+              .map(this::toInflectionProfileResponse)
+              .toList());
+    } catch (IllegalArgumentException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+  }
+
+  @GetMapping("/{glossaryId}/inflection-profiles/compiled")
+  public ResponseEntity<byte[]> exportCompiledInflectionProfilePack(
+      @PathVariable Long glossaryId, @RequestParam(name = "locale") String localeTag) {
+    try {
+      GlossaryTermInflectionProfileService.CompiledInflectionProfilePackExport export =
+          glossaryTermInflectionProfileService.compileProfilePackExport(glossaryId, localeTag);
+      String content = objectMapper.writeValueAsStringUnchecked(export.pack());
+      ResponseEntity.BodyBuilder response =
+          ResponseEntity.ok()
+              .contentType(MediaType.APPLICATION_JSON)
+              .header(
+                  INFLECTION_APPROVED_PROFILE_COUNT_HEADER,
+                  String.valueOf(export.approvedProfileCount()))
+              .header(
+                  INFLECTION_SKIPPED_PROFILE_COUNT_HEADER,
+                  String.valueOf(export.skippedProfileCount()))
+              .header(
+                  HttpHeaders.CONTENT_DISPOSITION,
+                  "attachment; filename=\""
+                      + compiledInflectionProfilePackFilename(glossaryId, localeTag)
+                      + "\"");
+      if (export.exportPolicy().present()) {
+        response
+            .header(INFLECTION_RUNTIME_EXPORT_HEADER, export.exportPolicy().runtimeExport())
+            .header(INFLECTION_COMPOSITION_MODE_HEADER, export.exportPolicy().compositionMode());
+      }
+      return response.body(content.getBytes(StandardCharsets.UTF_8));
+    } catch (IllegalArgumentException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+  }
+
+  @PostMapping("/{glossaryId}/inflection-profiles/bindings/report")
+  public ResponseEntity<byte[]> reportInflectionBindingManifest(
+      @PathVariable Long glossaryId,
+      @RequestParam(name = "locale") String localeTag,
+      @RequestBody InflectionBindingManifestReportRequest request) {
+    try {
+      var profilePack = glossaryTermInflectionProfileService.profilePack(glossaryId, localeTag);
+      String requiredLocaleTag = requireText(localeTag, "locale");
+      String manifestContent = requireText(request != null ? request.content() : null, "content");
+      JsonNode manifestRoot = bindingManifestJsonForLocale(requiredLocaleTag, manifestContent);
+      TermUsageCatalog usageCatalog = termRequirementJsonLoader.loadUsageCatalog(manifestRoot);
+      TermUsageCatalog localizedCatalog = bindingCatalogForLocale(requiredLocaleTag, usageCatalog);
+      TermBindingReport report =
+          termBindingManifestValidator.validate(
+              localizedCatalog, profilePack.toRequirementTerms().keySet());
+      String content = termBindingManifestReportJsonWriter.write(localizedCatalog.locale(), report);
+      return ResponseEntity.ok()
+          .contentType(MediaType.APPLICATION_JSON)
+          .body(content.getBytes(StandardCharsets.UTF_8));
+    } catch (IllegalArgumentException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+  }
+
+  @PostMapping("/{glossaryId}/inflection-profiles/bindings/render")
+  public InflectionBindingManifestRenderResponse renderInflectionBindingManifest(
+      @PathVariable Long glossaryId,
+      @RequestParam(name = "locale") String localeTag,
+      @RequestBody InflectionBindingManifestRenderRequest request) {
+    try {
+      String requiredLocaleTag = requireText(localeTag, "locale");
+      String manifestContent = requireText(request != null ? request.content() : null, "content");
+      JsonNode manifestRoot = bindingManifestJsonForLocale(requiredLocaleTag, manifestContent);
+      TermUsageCatalog usageCatalog = termRequirementJsonLoader.loadUsageCatalog(manifestRoot);
+      TermUsageCatalog localizedCatalog = bindingCatalogForLocale(requiredLocaleTag, usageCatalog);
+      CompiledTermPack compiledPack =
+          glossaryTermInflectionProfileService.compileProfilePack(glossaryId, requiredLocaleTag);
+      TermBindingReport report =
+          termBindingManifestValidator.validate(localizedCatalog, compiledTermIds(compiledPack));
+      TermBindingManifestValidator.requireRenderable(report);
+
+      Mf2TermRenderer renderer = Mf2TermRenderer.forCompiledTerms(compiledPack);
+      Map<String, String> variables = renderVariables(request);
+      Map<String, String> renderedMessages = new LinkedHashMap<>();
+      for (String messageId : localizedCatalog.messages().keySet()) {
+        renderedMessages.put(
+            messageId, renderer.renderBoundMessage(localizedCatalog, messageId, variables));
+      }
+      return new InflectionBindingManifestRenderResponse(
+          localizedCatalog.locale(), Collections.unmodifiableMap(renderedMessages));
+    } catch (IllegalArgumentException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+  }
+
+  @GetMapping("/{glossaryId}/inflection-profiles/export")
+  public ResponseEntity<byte[]> exportInflectionProfilePack(
+      @PathVariable Long glossaryId, @RequestParam(name = "locale") String localeTag) {
+    try {
+      String content =
+          objectMapper.writeValueAsStringUnchecked(
+              glossaryTermInflectionProfileService.profilePack(glossaryId, localeTag));
+      return ResponseEntity.ok()
+          .contentType(MediaType.APPLICATION_JSON)
+          .header(
+              HttpHeaders.CONTENT_DISPOSITION,
+              "attachment; filename=\""
+                  + inflectionProfilePackFilename(glossaryId, localeTag)
+                  + "\"")
+          .body(content.getBytes(StandardCharsets.UTF_8));
+    } catch (IllegalArgumentException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+  }
+
+  @PostMapping("/{glossaryId}/inflection-profiles/import")
+  public ImportInflectionProfilesResponse importInflectionProfiles(
+      @PathVariable Long glossaryId, @RequestBody ImportInflectionProfilesRequest request) {
+    try {
+      GlossaryTermInflectionProfileService.InflectionProfileImportResult result =
+          glossaryTermInflectionProfileService.importProfilePack(
+              glossaryId, request != null ? request.content() : null);
+      return new ImportInflectionProfilesResponse(
+          result.localeTag(),
+          result.profileCount(),
+          result.createdProfileCount(),
+          result.updatedProfileCount(),
+          result.profiles().stream().map(this::toInflectionProfileResponse).toList());
+    } catch (IllegalArgumentException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+  }
+
+  @PutMapping("/{glossaryId}/terms/{tmTextUnitId}/inflection-profiles/{localeTag}")
+  public InflectionProfileResponse upsertInflectionProfile(
+      @PathVariable Long glossaryId,
+      @PathVariable Long tmTextUnitId,
+      @PathVariable String localeTag,
+      @RequestBody UpsertInflectionProfileRequest request) {
+    try {
+      GlossaryTermInflectionProfileService.InflectionProfileInput input =
+          new GlossaryTermInflectionProfileService.InflectionProfileInput(
+              localeTag,
+              request != null ? request.status() : null,
+              request != null ? request.morphologyJson() : null,
+              request != null ? request.formsJson() : null,
+              request != null ? request.diagnosticsJson() : null,
+              request != null ? request.provenanceJson() : null);
+      return toInflectionProfileResponse(
+          glossaryTermInflectionProfileService.upsertProfile(glossaryId, tmTextUnitId, input));
+    } catch (IllegalArgumentException ex) {
+      HttpStatus status =
+          ex.getMessage() != null && ex.getMessage().startsWith("Glossary term metadata not found:")
+              ? HttpStatus.NOT_FOUND
+              : HttpStatus.BAD_REQUEST;
+      throw new ResponseStatusException(status, ex.getMessage());
+    }
+  }
+
+  @PostMapping("/{glossaryId}/terms/{tmTextUnitId}/inflection-profiles/{localeTag}/review")
+  public InflectionProfileResponse reviewInflectionProfile(
+      @PathVariable Long glossaryId,
+      @PathVariable Long tmTextUnitId,
+      @PathVariable String localeTag,
+      @RequestBody ReviewInflectionProfileRequest request) {
+    try {
+      GlossaryTermInflectionProfileService.InflectionProfileReviewInput input =
+          new GlossaryTermInflectionProfileService.InflectionProfileReviewInput(
+              localeTag,
+              request != null ? request.status() : null,
+              request != null ? request.morphologyJson() : null,
+              request != null ? request.formsJson() : null,
+              request != null ? request.diagnosticsJson() : null,
+              request != null ? request.provenanceJson() : null);
+      return toInflectionProfileResponse(
+          glossaryTermInflectionProfileService.reviewProfile(glossaryId, tmTextUnitId, input));
+    } catch (IllegalArgumentException ex) {
+      HttpStatus status =
+          ex.getMessage() != null
+                  && (ex.getMessage().startsWith("Glossary term metadata not found:")
+                      || ex.getMessage().startsWith("Inflection profile not found:"))
               ? HttpStatus.NOT_FOUND
               : HttpStatus.BAD_REQUEST;
       throw new ResponseStatusException(status, ex.getMessage());
@@ -1508,6 +1864,47 @@ public class GlossaryWS {
         term.evidence().stream().map(this::toGlossaryTermEvidenceResponse).toList());
   }
 
+  private InflectionProfileResponse toInflectionProfileResponse(
+      GlossaryTermInflectionProfileService.InflectionProfileView profile) {
+    JsonNode diagnostics = diagnosticsNode(profile.diagnosticsJson());
+    return new InflectionProfileResponse(
+        profile.id(),
+        profile.createdDate(),
+        profile.lastModifiedDate(),
+        profile.glossaryTermMetadataId(),
+        profile.tmTextUnitId(),
+        profile.termId(),
+        profile.source(),
+        profile.localeTag(),
+        profile.schema(),
+        profile.status(),
+        profile.morphologyJson(),
+        profile.formsJson(),
+        profile.diagnosticsJson(),
+        TermInflectionDiagnostics.diagnosticSummaries(diagnostics),
+        TermInflectionDiagnostics.missingFormKeys(diagnostics),
+        profile.provenanceJson());
+  }
+
+  private JsonNode diagnosticsNode(String diagnosticsJson) {
+    if (diagnosticsJson == null || diagnosticsJson.isBlank()) {
+      return objectMapper.createArrayNode();
+    }
+    return objectMapper.readTreeUnchecked(diagnosticsJson);
+  }
+
+  private String compiledInflectionProfilePackFilename(Long glossaryId, String localeTag) {
+    return inflectionProfilePackFilename(glossaryId, localeTag).replace(".json", "-compiled.json");
+  }
+
+  private String inflectionProfilePackFilename(Long glossaryId, String localeTag) {
+    String safeLocaleTag =
+        localeTag == null || localeTag.isBlank()
+            ? "unknown"
+            : localeTag.replaceAll("[^A-Za-z0-9_.-]", "_");
+    return "glossary-" + glossaryId + "-inflection-" + safeLocaleTag + ".json";
+  }
+
   private GlossaryTermTranslationResponse toGlossaryTermTranslationResponse(
       GlossaryTermService.TermTranslationView translation) {
     return new GlossaryTermTranslationResponse(
@@ -1555,6 +1952,7 @@ public class GlossaryWS {
         glossaryTerm.glossaryId(),
         glossaryTerm.glossaryName(),
         glossaryTerm.tmTextUnitId(),
+        glossaryTerm.name(),
         glossaryTerm.source(),
         glossaryTerm.comment(),
         glossaryTerm.definition(),

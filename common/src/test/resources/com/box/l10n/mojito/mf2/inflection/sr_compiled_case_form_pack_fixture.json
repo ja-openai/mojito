@@ -1,0 +1,818 @@
+{
+  "diagnostics": [],
+  "formSets": [
+    {
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 4
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 6
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 8
+        },
+        {
+          "key": 9,
+          "kind": "literal",
+          "value": 10
+        },
+        {
+          "key": 11,
+          "kind": "literal",
+          "value": 6
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 13,
+          "kind": "literal",
+          "value": 14
+        }
+      ],
+      "term": 0
+    },
+    {
+      "forms": [
+        {
+          "key": 18,
+          "kind": "literal",
+          "value": 19
+        },
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 16
+        },
+        {
+          "key": 20,
+          "kind": "literal",
+          "value": 21
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 22
+        },
+        {
+          "key": 23,
+          "kind": "literal",
+          "value": 24
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 25
+        },
+        {
+          "key": 26,
+          "kind": "literal",
+          "value": 21
+        },
+        {
+          "key": 9,
+          "kind": "literal",
+          "value": 27
+        },
+        {
+          "key": 28,
+          "kind": "literal",
+          "value": 21
+        },
+        {
+          "key": 11,
+          "kind": "literal",
+          "value": 22
+        },
+        {
+          "key": 29,
+          "kind": "literal",
+          "value": 30
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 16
+        },
+        {
+          "key": 31,
+          "kind": "literal",
+          "value": 30
+        },
+        {
+          "key": 13,
+          "kind": "literal",
+          "value": 22
+        }
+      ],
+      "term": 15
+    },
+    {
+      "forms": [
+        {
+          "key": 18,
+          "kind": "literal",
+          "value": 35
+        },
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 36
+        },
+        {
+          "key": 20,
+          "kind": "literal",
+          "value": 37
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 38
+        },
+        {
+          "key": 23,
+          "kind": "literal",
+          "value": 39
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 35
+        },
+        {
+          "key": 26,
+          "kind": "literal",
+          "value": 37
+        },
+        {
+          "key": 9,
+          "kind": "literal",
+          "value": 40
+        },
+        {
+          "key": 28,
+          "kind": "literal",
+          "value": 37
+        },
+        {
+          "key": 11,
+          "kind": "literal",
+          "value": 38
+        },
+        {
+          "key": 29,
+          "kind": "literal",
+          "value": 35
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 33
+        },
+        {
+          "key": 31,
+          "kind": "literal",
+          "value": 35
+        },
+        {
+          "key": 13,
+          "kind": "literal",
+          "value": 41
+        }
+      ],
+      "term": 32
+    },
+    {
+      "forms": [
+        {
+          "key": 18,
+          "kind": "literal",
+          "value": 45
+        },
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 46
+        },
+        {
+          "key": 20,
+          "kind": "literal",
+          "value": 47
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 48
+        },
+        {
+          "key": 23,
+          "kind": "literal",
+          "value": 43
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 45
+        },
+        {
+          "key": 26,
+          "kind": "literal",
+          "value": 47
+        },
+        {
+          "key": 9,
+          "kind": "literal",
+          "value": 49
+        },
+        {
+          "key": 28,
+          "kind": "literal",
+          "value": 47
+        },
+        {
+          "key": 11,
+          "kind": "literal",
+          "value": 48
+        },
+        {
+          "key": 29,
+          "kind": "literal",
+          "value": 45
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 43
+        },
+        {
+          "key": 31,
+          "kind": "literal",
+          "value": 45
+        },
+        {
+          "key": 13,
+          "kind": "literal",
+          "value": 50
+        }
+      ],
+      "term": 42
+    },
+    {
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 54
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 55
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 56
+        },
+        {
+          "key": 9,
+          "kind": "literal",
+          "value": 57
+        },
+        {
+          "key": 11,
+          "kind": "literal",
+          "value": 55
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 52
+        },
+        {
+          "key": 13,
+          "kind": "literal",
+          "value": 52
+        }
+      ],
+      "term": 51
+    },
+    {
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 61
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 62
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 63
+        },
+        {
+          "key": 9,
+          "kind": "literal",
+          "value": 64
+        },
+        {
+          "key": 11,
+          "kind": "literal",
+          "value": 62
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 59
+        },
+        {
+          "key": 13,
+          "kind": "literal",
+          "value": 63
+        }
+      ],
+      "term": 58
+    },
+    {
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 68
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 69
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 70
+        },
+        {
+          "key": 9,
+          "kind": "literal",
+          "value": 71
+        },
+        {
+          "key": 11,
+          "kind": "literal",
+          "value": 69
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 66
+        },
+        {
+          "key": 13,
+          "kind": "literal",
+          "value": 66
+        }
+      ],
+      "term": 65
+    },
+    {
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 75
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 76
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 77
+        },
+        {
+          "key": 9,
+          "kind": "literal",
+          "value": 78
+        },
+        {
+          "key": 11,
+          "kind": "literal",
+          "value": 76
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 73
+        },
+        {
+          "key": 13,
+          "kind": "literal",
+          "value": 73
+        }
+      ],
+      "term": 72
+    },
+    {
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 82
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 83
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 84
+        },
+        {
+          "key": 9,
+          "kind": "literal",
+          "value": 85
+        },
+        {
+          "key": 11,
+          "kind": "literal",
+          "value": 83
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 80
+        },
+        {
+          "key": 13,
+          "kind": "literal",
+          "value": 80
+        }
+      ],
+      "term": 79
+    },
+    {
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 89
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 90
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 91
+        },
+        {
+          "key": 9,
+          "kind": "literal",
+          "value": 92
+        },
+        {
+          "key": 11,
+          "kind": "literal",
+          "value": 90
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 87
+        },
+        {
+          "key": 13,
+          "kind": "literal",
+          "value": 87
+        }
+      ],
+      "term": 86
+    },
+    {
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 96
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 97
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 98
+        },
+        {
+          "key": 9,
+          "kind": "literal",
+          "value": 99
+        },
+        {
+          "key": 11,
+          "kind": "literal",
+          "value": 97
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 94
+        },
+        {
+          "key": 13,
+          "kind": "literal",
+          "value": 94
+        }
+      ],
+      "term": 93
+    },
+    {
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 102
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 103
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 102
+        },
+        {
+          "key": 9,
+          "kind": "literal",
+          "value": 104
+        },
+        {
+          "key": 11,
+          "kind": "literal",
+          "value": 103
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 101
+        },
+        {
+          "key": 13,
+          "kind": "literal",
+          "value": 105
+        }
+      ],
+      "term": 100
+    }
+  ],
+  "locale": "sr",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/sr_case_pack_report.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_sr.lst",
+      "inflection/resources/org/unicode/inflection/dictionary/inflectional_sr.xml"
+    ],
+    "sources": [
+      {
+        "byteSize": 81741,
+        "gitLfsPointer": false,
+        "path": "dictionary_sr.lst",
+        "sha256": "12d5c2e0becdf55bbdd33b14fd816d5f5b78c1f8a60bb0596914be3a34a6f282"
+      },
+      {
+        "byteSize": 122329,
+        "gitLfsPointer": false,
+        "path": "inflectional_sr.xml",
+        "sha256": "2da11bc75a7220c871f19313609a76607249340a8dcc9e17d22f3e0469690d62"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/compiled-term-pack/v0",
+  "sizeEstimates": {
+    "binaryLowerBoundBytes": {
+      "bindingReferenceBytes": 0,
+      "formRowBytes": 1260,
+      "stringPoolBytes": 1399,
+      "termRowBytes": 240,
+      "totalBytes": 2899
+    },
+    "compactJsonBytes": 15021
+  },
+  "strings": [
+    "sr.case.srbija",
+    "Srbija",
+    "Srbij",
+    "accusative.singular",
+    "Srbiju",
+    "dative.singular",
+    "Srbiji",
+    "genitive.singular",
+    "Srbije",
+    "instrumental.singular",
+    "Srbijom",
+    "locative.singular",
+    "nominative.singular",
+    "vocative.singular",
+    "Srbijo",
+    "sr.case.izuzetak",
+    "izuzetak",
+    "izuze",
+    "accusative.plural",
+    "izuzetke",
+    "dative.plural",
+    "izuzecima",
+    "izuzetku",
+    "genitive.plural",
+    "izuzetaka",
+    "izuzetka",
+    "instrumental.plural",
+    "izuzetkom",
+    "locative.plural",
+    "nominative.plural",
+    "izuzeci",
+    "vocative.plural",
+    "sr.case.mačka",
+    "mačka",
+    "mač",
+    "mačke",
+    "mačku",
+    "mačkama",
+    "mački",
+    "mačaka",
+    "mačkom",
+    "mačko",
+    "sr.case.životinja",
+    "životinja",
+    "životinj",
+    "životinje",
+    "životinju",
+    "životinjama",
+    "životinji",
+    "životinjom",
+    "životinjo",
+    "sr.case.јелена",
+    "Јелена",
+    "Јелен",
+    "Јелену",
+    "Јелени",
+    "Јелене",
+    "Јеленом",
+    "sr.case.љубица",
+    "Љубица",
+    "Љубиц",
+    "Љубицу",
+    "Љубици",
+    "Љубице",
+    "Љубицом",
+    "sr.case.љубиша",
+    "Љубиша",
+    "Љубиш",
+    "Љубишу",
+    "Љубиши",
+    "Љубише",
+    "Љубишом",
+    "sr.case.ана",
+    "Ана",
+    "Ан",
+    "Ану",
+    "Ани",
+    "Ане",
+    "Аном",
+    "sr.case.ангелина",
+    "Ангелина",
+    "Ангелин",
+    "Ангелину",
+    "Ангелини",
+    "Ангелине",
+    "Ангелином",
+    "sr.case.биљана",
+    "Биљана",
+    "Биљан",
+    "Биљану",
+    "Биљани",
+    "Биљане",
+    "Биљаном",
+    "sr.case.бојана",
+    "Бојана",
+    "Бојан",
+    "Бојану",
+    "Бојани",
+    "Бојане",
+    "Бојаном",
+    "sr.case.бранимир",
+    "Бранимир",
+    "Бранимира",
+    "Бранимиру",
+    "Бранимиром",
+    "Бранимире"
+  ],
+  "terms": [
+    {
+      "featureBits": 289,
+      "formSet": 0,
+      "id": 0,
+      "sense": null,
+      "text": 1
+    },
+    {
+      "featureBits": 273,
+      "formSet": 1,
+      "id": 15,
+      "sense": null,
+      "text": 16
+    },
+    {
+      "featureBits": 289,
+      "formSet": 2,
+      "id": 32,
+      "sense": null,
+      "text": 33
+    },
+    {
+      "featureBits": 289,
+      "formSet": 3,
+      "id": 42,
+      "sense": null,
+      "text": 43
+    },
+    {
+      "featureBits": 290,
+      "formSet": 4,
+      "id": 51,
+      "sense": null,
+      "text": 52
+    },
+    {
+      "featureBits": 290,
+      "formSet": 5,
+      "id": 58,
+      "sense": null,
+      "text": 59
+    },
+    {
+      "featureBits": 274,
+      "formSet": 6,
+      "id": 65,
+      "sense": null,
+      "text": 66
+    },
+    {
+      "featureBits": 290,
+      "formSet": 7,
+      "id": 72,
+      "sense": null,
+      "text": 73
+    },
+    {
+      "featureBits": 290,
+      "formSet": 8,
+      "id": 79,
+      "sense": null,
+      "text": 80
+    },
+    {
+      "featureBits": 290,
+      "formSet": 9,
+      "id": 86,
+      "sense": null,
+      "text": 87
+    },
+    {
+      "featureBits": 290,
+      "formSet": 10,
+      "id": 93,
+      "sense": null,
+      "text": 94
+    },
+    {
+      "featureBits": 274,
+      "formSet": 11,
+      "id": 100,
+      "sense": null,
+      "text": 101
+    }
+  ]
+}

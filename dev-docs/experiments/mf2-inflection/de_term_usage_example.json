@@ -1,0 +1,32 @@
+{
+  "schema": "mojito-mf2-inflection/message-term-binding-manifest/v0",
+  "locale": "de",
+  "messages": {
+    "inventory.deleted": "Gel\u00f6scht: {$item :term article=definite case=accusative count=$count}.",
+    "inventory.with": "Mit {$item :term article=definite case=dative count=$count}.",
+    "inventory.created": "Erstellt: {$item :term article=indefinite case=nominative count=$count}."
+  },
+  "argumentTerms": {
+    "inventory.deleted": {
+      "item": [
+        "de.article_case.1_euro_job",
+        "de.article_case.katze",
+        "de.article_case.maedchen"
+      ]
+    },
+    "inventory.with": {
+      "item": [
+        "de.article_case.1_euro_job",
+        "de.article_case.katze",
+        "de.article_case.maedchen"
+      ]
+    },
+    "inventory.created": {
+      "item": [
+        "de.article_case.1_euro_job",
+        "de.article_case.katze",
+        "de.article_case.maedchen"
+      ]
+    }
+  }
+}

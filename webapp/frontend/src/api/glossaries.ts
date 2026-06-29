@@ -90,6 +90,142 @@ export type ApiGlossaryTermsResponse = {
   localeTags: string[];
 };
 
+export type ApiInflectionProfileStatus =
+  | 'APPROVED'
+  | 'DISABLED'
+  | 'GENERATED'
+  | 'REVIEW_NEEDED'
+  | (string & {});
+
+export type ApiInflectionProfileDiagnosticSummary = {
+  code?: string | null;
+  reason?: string | null;
+  message?: string | null;
+  formKey?: string | null;
+  termId?: string | null;
+  messageId?: string | null;
+  argument?: string | null;
+  relatedArgument?: string | null;
+  missing: string[];
+  span: number[];
+};
+
+export type ApiInflectionProfile = {
+  id?: number | null;
+  createdDate?: string | null;
+  lastModifiedDate?: string | null;
+  glossaryTermMetadataId: number;
+  tmTextUnitId: number;
+  termId: string;
+  source: string;
+  localeTag: string;
+  schema: string;
+  status: ApiInflectionProfileStatus;
+  morphologyJson: string;
+  formsJson: string;
+  diagnosticsJson: string;
+  diagnosticSummaries?: ApiInflectionProfileDiagnosticSummary[];
+  missingFormKeys?: string[];
+  provenanceJson: string;
+};
+
+export type ApiInflectionProfilesResponse = {
+  profiles: ApiInflectionProfile[];
+};
+
+export type ApiInflectionProfilePackExport = {
+  profileCount: number;
+  content: string;
+  filename: string | null;
+  pack: unknown;
+};
+
+export type ApiImportInflectionProfilesResponse = {
+  localeTag: string;
+  profileCount: number;
+  createdProfileCount: number;
+  updatedProfileCount: number;
+  profiles: ApiInflectionProfile[];
+};
+
+export type ApiCompiledInflectionProfilePackPreview = {
+  approvedProfileCount: number;
+  skippedProfileCount: number;
+  runtimeExport: string | null;
+  compositionMode: string | null;
+  profileCount: number;
+  formCount: number;
+  content: string;
+  pack: unknown;
+};
+
+export type ApiInflectionBindingStatus =
+  | 'ok'
+  | 'missing'
+  | 'ambiguous'
+  | 'unknown'
+  | 'unused'
+  | 'unsupported-locale-runtime-term-inflection'
+  | (string & {});
+
+export type ApiInflectionBindingManifest = {
+  schema: 'mojito-mf2-inflection/message-term-binding-manifest/v0';
+  locale?: string | null;
+  messages: Record<string, string>;
+  argumentTerms: Record<string, Record<string, string[]>>;
+};
+
+export type ApiInflectionBindingReport = {
+  schema: 'mojito-mf2-inflection/term-binding-report/v0';
+  locale?: string | null;
+  summary: {
+    messages: number;
+    requiredArguments: number;
+    diagnostics: number;
+  };
+  diagnostics: Array<{
+    messageId: string;
+    argument: string;
+    status: ApiInflectionBindingStatus;
+    termIds: string[];
+  }>;
+  messages: Record<
+    string,
+    {
+      source: string;
+      requiredArguments: string[];
+      arguments: Record<
+        string,
+        {
+          status: ApiInflectionBindingStatus;
+          termIds: string[];
+        }
+      >;
+    }
+  >;
+};
+
+export type ApiInflectionBindingRenderResponse = {
+  locale?: string | null;
+  messages: Record<string, string>;
+};
+
+export type ApiUpsertInflectionProfileRequest = {
+  status: ApiInflectionProfileStatus;
+  morphologyJson: string;
+  formsJson: string;
+  diagnosticsJson: string;
+  provenanceJson: string;
+};
+
+export type ApiReviewInflectionProfileRequest = {
+  status: ApiInflectionProfileStatus;
+  morphologyJson?: string | null;
+  formsJson?: string | null;
+  diagnosticsJson?: string | null;
+  provenanceJson?: string | null;
+};
+
 export type ApiGlossaryTermSearchField = 'SOURCE' | 'DEFINITION' | 'TARGET' | 'REFERENCES' | 'ALL';
 
 export type ApiGlossaryWorkspaceSummary = {
@@ -116,6 +252,7 @@ export type ApiMatchedGlossaryTerm = {
   glossaryId?: number | null;
   glossaryName?: string | null;
   tmTextUnitId: number;
+  termKey?: string | null;
   source: string;
   comment?: string | null;
   definition?: string | null;
@@ -570,6 +707,387 @@ export async function fetchGlossaryTerm(
   }
 
   return (await response.json()) as ApiGlossaryTerm;
+}
+
+export async function fetchInflectionProfiles(
+  glossaryId: number,
+  localeTag: string,
+): Promise<ApiInflectionProfilesResponse> {
+  const params = new URLSearchParams({ locale: localeTag });
+  const response = await fetch(`/api/glossaries/${glossaryId}/inflection-profiles?${params}`, {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load inflection profiles');
+  }
+
+  return (await response.json()) as ApiInflectionProfilesResponse;
+}
+
+export async function exportInflectionProfilePack(
+  glossaryId: number,
+  localeTag: string,
+): Promise<ApiInflectionProfilePackExport> {
+  const params = new URLSearchParams({ locale: localeTag });
+  const response = await fetch(
+    `/api/glossaries/${glossaryId}/inflection-profiles/export?${params}`,
+    {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getGlossaryApiErrorMessage(response, 'Failed to export inflection profile pack'),
+    );
+  }
+
+  const content = await response.text().catch(() => '');
+  let pack: unknown;
+  try {
+    pack = JSON.parse(content) as unknown;
+  } catch {
+    throw new Error('Inflection profile pack response was not valid JSON');
+  }
+
+  return {
+    ...summarizeAuthoringInflectionPack(pack),
+    content,
+    filename: parseContentDispositionFilename(response.headers.get('Content-Disposition')),
+    pack,
+  };
+}
+
+export async function importInflectionProfiles(
+  glossaryId: number,
+  content: string,
+): Promise<ApiImportInflectionProfilesResponse> {
+  const response = await fetch(`/api/glossaries/${glossaryId}/inflection-profiles/import`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({ content }),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      await getGlossaryApiErrorMessage(response, 'Failed to import inflection profiles'),
+    );
+  }
+
+  return (await response.json()) as ApiImportInflectionProfilesResponse;
+}
+
+export async function fetchCompiledInflectionProfilePack(
+  glossaryId: number,
+  localeTag: string,
+): Promise<ApiCompiledInflectionProfilePackPreview> {
+  const params = new URLSearchParams({ locale: localeTag });
+  const response = await fetch(
+    `/api/glossaries/${glossaryId}/inflection-profiles/compiled?${params}`,
+    {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getGlossaryApiErrorMessage(response, 'Failed to preview compiled inflection pack'),
+    );
+  }
+
+  const content = await response.text().catch(() => '');
+  let pack: unknown;
+  try {
+    pack = JSON.parse(content) as unknown;
+  } catch {
+    throw new Error('Compiled inflection pack response was not valid JSON');
+  }
+
+  return {
+    approvedProfileCount: parseIntegerHeader(
+      response.headers.get('X-Mojito-Inflection-Approved-Profiles'),
+    ),
+    skippedProfileCount: parseIntegerHeader(
+      response.headers.get('X-Mojito-Inflection-Skipped-Profiles'),
+    ),
+    runtimeExport: parseTextHeader(response.headers.get('X-Mojito-Inflection-Runtime-Export')),
+    compositionMode: parseTextHeader(response.headers.get('X-Mojito-Inflection-Composition-Mode')),
+    ...summarizeCompiledInflectionPack(pack),
+    content,
+    pack,
+  };
+}
+
+async function getGlossaryApiErrorMessage(response: Response, fallbackMessage: string) {
+  const text = await response.text().catch(() => '');
+  if (!text.trim()) {
+    return fallbackMessage;
+  }
+
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    if (isApiErrorRecord(parsed)) {
+      const parsedMessage =
+        normalizedApiErrorField(parsed.message) ??
+        normalizedApiErrorField(parsed.reason) ??
+        normalizedApiErrorField(parsed.detail) ??
+        normalizedApiErrorField(parsed.error, { allowGenericHttpStatus: false });
+      if (parsedMessage) {
+        return parsedMessage;
+      }
+      return fallbackMessage;
+    }
+  } catch {
+    // Fall through to raw text for non-JSON errors.
+  }
+
+  return text;
+}
+
+function isApiErrorRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizedApiErrorField(
+  value: unknown,
+  options: { allowGenericHttpStatus?: boolean } = {},
+) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const quotedReason = trimmed.match(/^(?:\d{3}\s+)?[A-Z_ ]+\s+"(.+)"$/u);
+  if (quotedReason?.[1]) {
+    return quotedReason[1];
+  }
+
+  if (!options.allowGenericHttpStatus && isGenericHttpStatusMessage(trimmed)) {
+    return null;
+  }
+
+  return trimmed;
+}
+
+function isGenericHttpStatusMessage(message: string) {
+  return (
+    message === 'Bad Request' ||
+    message === 'Unauthorized' ||
+    message === 'Forbidden' ||
+    message === 'Not Found' ||
+    message === 'Internal Server Error'
+  );
+}
+
+export async function reportInflectionBindingManifest(
+  glossaryId: number,
+  localeTag: string,
+  manifest: ApiInflectionBindingManifest,
+): Promise<ApiInflectionBindingReport> {
+  const params = new URLSearchParams({ locale: localeTag });
+  const response = await fetch(
+    `/api/glossaries/${glossaryId}/inflection-profiles/bindings/report?${params}`,
+    {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        content: JSON.stringify(manifest),
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getGlossaryApiErrorMessage(response, 'Failed to inspect inflection bindings'),
+    );
+  }
+
+  return (await response.json()) as ApiInflectionBindingReport;
+}
+
+export async function renderInflectionBindingManifest(
+  glossaryId: number,
+  localeTag: string,
+  manifest: ApiInflectionBindingManifest,
+  variables: Record<string, string> = {},
+): Promise<ApiInflectionBindingRenderResponse> {
+  const params = new URLSearchParams({ locale: localeTag });
+  const response = await fetch(
+    `/api/glossaries/${glossaryId}/inflection-profiles/bindings/render?${params}`,
+    {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        content: JSON.stringify(manifest),
+        variables,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getGlossaryApiErrorMessage(response, 'Failed to render inflection bindings'),
+    );
+  }
+
+  return (await response.json()) as ApiInflectionBindingRenderResponse;
+}
+
+export async function reviewInflectionProfile(
+  glossaryId: number,
+  tmTextUnitId: number,
+  localeTag: string,
+  request: ApiReviewInflectionProfileRequest,
+): Promise<ApiInflectionProfile> {
+  const response = await fetch(
+    `/api/glossaries/${glossaryId}/terms/${tmTextUnitId}/inflection-profiles/${encodeURIComponent(
+      localeTag,
+    )}/review`,
+    {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(request),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getGlossaryApiErrorMessage(response, 'Failed to review inflection profile'),
+    );
+  }
+
+  return (await response.json()) as ApiInflectionProfile;
+}
+
+export async function upsertInflectionProfile(
+  glossaryId: number,
+  tmTextUnitId: number,
+  localeTag: string,
+  request: ApiUpsertInflectionProfileRequest,
+): Promise<ApiInflectionProfile> {
+  const response = await fetch(
+    `/api/glossaries/${glossaryId}/terms/${tmTextUnitId}/inflection-profiles/${encodeURIComponent(
+      localeTag,
+    )}`,
+    {
+      method: 'PUT',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(request),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getGlossaryApiErrorMessage(response, 'Failed to save inflection profile'),
+    );
+  }
+
+  return (await response.json()) as ApiInflectionProfile;
+}
+
+function parseIntegerHeader(value: string | null): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : 0;
+}
+
+function parseTextHeader(value: string | null): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function parseContentDispositionFilename(value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const encodedFilename = value.match(/(?:^|;)\s*filename\*=UTF-8''([^;]+)/iu);
+  if (encodedFilename?.[1]) {
+    return decodeContentDispositionFilename(encodedFilename[1]);
+  }
+
+  const filename = value.match(/(?:^|;)\s*filename="?([^";]+)"?/iu);
+  if (filename?.[1]) {
+    return filename[1].trim() || null;
+  }
+
+  return null;
+}
+
+function decodeContentDispositionFilename(value: string): string {
+  const trimmed = value.trim().replace(/^"|"$/gu, '');
+  try {
+    return decodeURIComponent(trimmed);
+  } catch {
+    return trimmed;
+  }
+}
+
+function summarizeAuthoringInflectionPack(pack: unknown): {
+  profileCount: number;
+} {
+  if (pack == null || typeof pack !== 'object' || Array.isArray(pack)) {
+    return { profileCount: 0 };
+  }
+
+  const profiles = (pack as { profiles?: unknown }).profiles;
+  return { profileCount: Array.isArray(profiles) ? profiles.length : 0 };
+}
+
+function summarizeCompiledInflectionPack(pack: unknown): {
+  profileCount: number;
+  formCount: number;
+} {
+  if (pack == null || typeof pack !== 'object' || Array.isArray(pack)) {
+    return { profileCount: 0, formCount: 0 };
+  }
+
+  const formSetsValue = (pack as { formSets?: unknown }).formSets;
+  if (!Array.isArray(formSetsValue)) {
+    return { profileCount: 0, formCount: 0 };
+  }
+  const formSets = formSetsValue as unknown[];
+
+  let formCount = 0;
+  for (const formSet of formSets) {
+    if (formSet == null || typeof formSet !== 'object' || Array.isArray(formSet)) {
+      continue;
+    }
+    const formsValue = (formSet as { forms?: unknown }).forms;
+    if (Array.isArray(formsValue)) {
+      formCount += (formsValue as unknown[]).length;
+    }
+  }
+
+  return { profileCount: formSets.length, formCount };
 }
 
 export async function fetchGlossaryWorkspaceSummary(

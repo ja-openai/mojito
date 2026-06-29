@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import * as core from "@mojito-mf2/core";
 import {
@@ -12,6 +13,26 @@ import { formatMessage as formatMessageFromFormatter } from "@mojito-mf2/core/fo
 import { createIntlFunctionRegistry } from "@mojito-mf2/core/intl";
 import { parseToModel as parseToModelFromParser } from "@mojito-mf2/core/parser";
 import { createPortableFunctionRegistry } from "@mojito-mf2/core/portable";
+
+const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+const packageReadme = readFileSync(new URL("../README.md", import.meta.url), "utf8").replace(/\s+/g, " ");
+const forbiddenInflectionExportFragments = ["compiled", "inflection", "m2if"];
+
+assert.equal(
+  packageJson.scripts["inflection-release"],
+  "python3 ../conformance/validate_inflection_release_fixture.py",
+);
+assert.match(packageJson.scripts.check, /npm run inflection-release/);
+assert.match(packageReadme, /does not add inflection exports to `@mojito-mf2\/core`/);
+assert.match(packageReadme, /selected V0 release-fixture artifacts only/);
+assert.match(packageReadme, /not complete locale or grammar coverage/);
+assert.match(packageReadme, /rather than package-local runtime code/);
+assert.deepEqual(
+  Object.keys(packageJson.exports).filter((subpath) =>
+    forbiddenInflectionExportFragments.some((fragment) => subpath.toLowerCase().includes(fragment)),
+  ),
+  [],
+);
 
 const parsed = parseToModel("Hello {$name}");
 assert.equal(parsed.diagnostics.length, 0);
@@ -82,5 +103,14 @@ assert.equal("canonicalLocaleKey" in core, false);
 assert.equal("selectCardinal" in core, false);
 assert.equal("localeLookupChain" in core, false);
 assert.equal("createIntlFunctionRegistry" in core, false);
+assert.equal(
+  Object.keys(core).some((name) =>
+    forbiddenInflectionExportFragments.some((fragment) => name.toLowerCase().includes(fragment)),
+  ),
+  false,
+);
+for (const subpath of ["compiled-term-pack", "inflection", "m2if"]) {
+  await assert.rejects(() => import(`@mojito-mf2/core/${subpath}`));
+}
 
 console.log("MF2 JavaScript package boundary test passed");

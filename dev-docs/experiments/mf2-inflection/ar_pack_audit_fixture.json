@@ -1,0 +1,1927 @@
+{
+  "counts": {
+    "agreementEntries": 6080,
+    "ambiguousAgreementSurfaces": 1222,
+    "baseCandidateEntries": 130,
+    "constructAgreementEntries": 412,
+    "dictionaryEntries": 11023,
+    "dualAgreementEntries": 1601,
+    "fullySpecifiedAgreementEntries": 3841,
+    "inflectionPatterns": 604,
+    "missingAgreementPatterns": 0,
+    "skippedDictionaryLines": 84,
+    "termEntries": 1629,
+    "usedAgreementPatterns": 492,
+    "usedTermPatterns": 372
+  },
+  "description": "Generator-side audit for Arabic Unicode Inflection data before choosing a runtime pack family.",
+  "features": {
+    "agreementInflections": {
+      "1": 57,
+      "103": 2,
+      "104": 20,
+      "105": 20,
+      "106": 21,
+      "107": 12,
+      "108": 20,
+      "109": 10,
+      "10a": 14,
+      "10b": 29,
+      "10c": 17,
+      "10e": 2,
+      "10f": 3,
+      "11": 120,
+      "110": 12,
+      "112": 7,
+      "113": 1,
+      "114": 2,
+      "115": 2,
+      "116": 1,
+      "117": 1,
+      "119": 2,
+      "11a": 1,
+      "11b": 1,
+      "11c": 1,
+      "11d": 1,
+      "11e": 7,
+      "11f": 3,
+      "12": 42,
+      "120": 1,
+      "121": 1,
+      "122": 1,
+      "123": 6,
+      "124": 2,
+      "125": 6,
+      "126": 3,
+      "127": 2,
+      "128": 2,
+      "129": 2,
+      "12a": 3,
+      "12b": 6,
+      "12c": 1,
+      "12d": 2,
+      "12e": 2,
+      "12f": 2,
+      "13": 6,
+      "130": 2,
+      "131": 1,
+      "132": 2,
+      "133": 2,
+      "134": 2,
+      "135": 3,
+      "136": 2,
+      "138": 9,
+      "13a": 3,
+      "13b": 2,
+      "13c": 6,
+      "13d": 7,
+      "14": 10,
+      "142": 17,
+      "143": 10,
+      "144": 12,
+      "145": 16,
+      "146": 13,
+      "147": 17,
+      "148": 18,
+      "149": 20,
+      "14a": 16,
+      "14b": 16,
+      "14c": 16,
+      "14d": 14,
+      "14e": 21,
+      "15": 70,
+      "150": 3,
+      "151": 8,
+      "155": 2,
+      "156": 19,
+      "157": 1,
+      "158": 1,
+      "159": 5,
+      "15a": 3,
+      "15b": 1,
+      "15c": 4,
+      "15d": 6,
+      "15e": 3,
+      "15f": 6,
+      "16": 100,
+      "160": 1,
+      "161": 1,
+      "162": 1,
+      "163": 1,
+      "164": 2,
+      "165": 4,
+      "166": 6,
+      "167": 2,
+      "168": 1,
+      "169": 3,
+      "16a": 4,
+      "16c": 7,
+      "16d": 2,
+      "17": 4,
+      "170": 2,
+      "172": 2,
+      "173": 2,
+      "174": 2,
+      "175": 2,
+      "176": 2,
+      "177": 2,
+      "178": 3,
+      "179": 2,
+      "17a": 6,
+      "17b": 1,
+      "17f": 2,
+      "18": 120,
+      "180": 1,
+      "181": 1,
+      "183": 7,
+      "184": 1,
+      "188": 21,
+      "189": 4,
+      "18c": 17,
+      "18d": 16,
+      "18e": 21,
+      "18f": 9,
+      "19": 8,
+      "190": 20,
+      "191": 12,
+      "192": 4,
+      "193": 20,
+      "194": 14,
+      "195": 32,
+      "197": 8,
+      "199": 2,
+      "19a": 2,
+      "19b": 2,
+      "19c": 4,
+      "19d": 2,
+      "19e": 2,
+      "19f": 4,
+      "1a": 3,
+      "1a0": 4,
+      "1a1": 1,
+      "1a2": 3,
+      "1a3": 2,
+      "1a4": 5,
+      "1a5": 2,
+      "1a6": 2,
+      "1a7": 1,
+      "1a8": 1,
+      "1a9": 2,
+      "1ab": 1,
+      "1ac": 6,
+      "1b": 6,
+      "1b8": 7,
+      "1b9": 4,
+      "1ba": 16,
+      "1bb": 21,
+      "1bc": 20,
+      "1bd": 18,
+      "1be": 21,
+      "1bf": 10,
+      "1c": 3,
+      "1c0": 3,
+      "1c1": 17,
+      "1c2": 2,
+      "1c4": 6,
+      "1c5": 5,
+      "1c6": 1,
+      "1c7": 2,
+      "1c8": 2,
+      "1c9": 2,
+      "1cb": 3,
+      "1cc": 2,
+      "1cd": 1,
+      "1ce": 4,
+      "1cf": 3,
+      "1d": 60,
+      "1d0": 3,
+      "1d1": 6,
+      "1d2": 2,
+      "1d3": 1,
+      "1d4": 1,
+      "1d5": 1,
+      "1d6": 4,
+      "1d7": 4,
+      "1d8": 17,
+      "1d9": 1,
+      "1da": 14,
+      "1db": 5,
+      "1dc": 2,
+      "1dd": 6,
+      "1de": 4,
+      "1df": 3,
+      "1e": 3,
+      "1e0": 3,
+      "1e1": 1,
+      "1e2": 2,
+      "1e3": 3,
+      "1e4": 2,
+      "1e5": 2,
+      "1e6": 2,
+      "1e7": 2,
+      "1e9": 2,
+      "1ea": 2,
+      "1eb": 5,
+      "1ec": 2,
+      "1ed": 2,
+      "1ee": 3,
+      "1ef": 6,
+      "1f": 8,
+      "1f1": 2,
+      "1f3": 21,
+      "1f4": 22,
+      "1fe": 14,
+      "2": 960,
+      "20": 6,
+      "202": 1,
+      "203": 16,
+      "204": 13,
+      "205": 18,
+      "206": 9,
+      "207": 12,
+      "208": 12,
+      "209": 6,
+      "20a": 18,
+      "20b": 18,
+      "20c": 12,
+      "20d": 14,
+      "20e": 11,
+      "20f": 17,
+      "21": 6,
+      "210": 15,
+      "211": 2,
+      "212": 3,
+      "213": 1,
+      "215": 2,
+      "216": 3,
+      "217": 2,
+      "218": 1,
+      "219": 4,
+      "21a": 10,
+      "21b": 5,
+      "21c": 2,
+      "21d": 2,
+      "22": 38,
+      "220": 2,
+      "221": 7,
+      "222": 1,
+      "223": 2,
+      "224": 1,
+      "225": 2,
+      "227": 3,
+      "228": 2,
+      "229": 3,
+      "22a": 3,
+      "22b": 4,
+      "22c": 2,
+      "22d": 2,
+      "22e": 2,
+      "22f": 3,
+      "23": 2,
+      "230": 3,
+      "231": 2,
+      "232": 3,
+      "233": 3,
+      "235": 1,
+      "236": 1,
+      "237": 2,
+      "238": 2,
+      "239": 3,
+      "23a": 3,
+      "23b": 3,
+      "23c": 2,
+      "23d": 14,
+      "23e": 2,
+      "23f": 1,
+      "24": 4,
+      "240": 7,
+      "241": 2,
+      "242": 1,
+      "243": 2,
+      "248": 19,
+      "249": 2,
+      "24a": 2,
+      "24f": 1,
+      "251": 17,
+      "252": 12,
+      "253": 11,
+      "254": 16,
+      "255": 21,
+      "256": 20,
+      "257": 9,
+      "258": 14,
+      "259": 5,
+      "25a": 1,
+      "25b": 1,
+      "25c": 9,
+      "26": 18,
+      "27": 60,
+      "28": 2,
+      "29": 2,
+      "2a": 4,
+      "2b": 34,
+      "2c": 6,
+      "2d": 4,
+      "2e": 2,
+      "2f": 1,
+      "3": 780,
+      "30": 1,
+      "31": 2,
+      "32": 1,
+      "33": 3,
+      "34": 2,
+      "35": 2,
+      "36": 6,
+      "37": 1,
+      "38": 3,
+      "39": 2,
+      "3a": 2,
+      "3b": 3,
+      "3c": 6,
+      "3d": 3,
+      "3e": 6,
+      "3f": 1,
+      "40": 2,
+      "41": 4,
+      "42": 1,
+      "43": 3,
+      "44": 2,
+      "45": 1,
+      "46": 3,
+      "47": 3,
+      "49": 7,
+      "4a": 3,
+      "4b": 19,
+      "4c": 3,
+      "4d": 1,
+      "4e": 4,
+      "4f": 1,
+      "5": 33,
+      "50": 3,
+      "51": 4,
+      "52": 3,
+      "53": 2,
+      "54": 3,
+      "55": 8,
+      "56": 3,
+      "58": 2,
+      "59": 1,
+      "5a": 2,
+      "5b": 2,
+      "5c": 10,
+      "5d": 2,
+      "5e": 2,
+      "5f": 2,
+      "6": 459,
+      "60": 2,
+      "62": 2,
+      "66": 2,
+      "69": 2,
+      "6f": 1,
+      "7": 22,
+      "72": 12,
+      "73": 11,
+      "74": 21,
+      "75": 16,
+      "76": 12,
+      "77": 7,
+      "78": 9,
+      "79": 7,
+      "7a": 2,
+      "7b": 4,
+      "7c": 2,
+      "7d": 1,
+      "7e": 3,
+      "7f": 2,
+      "8": 180,
+      "80": 2,
+      "81": 5,
+      "82": 2,
+      "83": 2,
+      "84": 3,
+      "85": 1,
+      "86": 1,
+      "87": 1,
+      "88": 1,
+      "89": 2,
+      "8a": 2,
+      "8b": 2,
+      "8c": 1,
+      "8d": 2,
+      "8e": 1,
+      "8f": 1,
+      "9": 44,
+      "91": 2,
+      "92": 2,
+      "93": 3,
+      "94": 3,
+      "95": 2,
+      "96": 3,
+      "97": 3,
+      "98": 2,
+      "99": 3,
+      "9b": 3,
+      "9c": 1,
+      "9d": 3,
+      "9e": 2,
+      "9f": 2,
+      "<missing>": 59,
+      "a": 120,
+      "a0": 2,
+      "a1": 2,
+      "a2": 2,
+      "a3": 1,
+      "a6": 7,
+      "a7": 6,
+      "a8": 2,
+      "a9": 2,
+      "aa": 1,
+      "af": 1,
+      "b": 12,
+      "b3": 30,
+      "b4": 20,
+      "b5": 16,
+      "b6": 18,
+      "b7": 7,
+      "b8": 15,
+      "b9": 3,
+      "ba": 2,
+      "bb": 5,
+      "bc": 2,
+      "bd": 1,
+      "bf": 1,
+      "c": 11,
+      "c1": 1,
+      "c2": 14,
+      "c3": 4,
+      "c4": 1,
+      "c5": 1,
+      "c6": 3,
+      "c7": 2,
+      "c8": 1,
+      "c9": 5,
+      "ca": 9,
+      "cb": 1,
+      "cc": 1,
+      "cd": 1,
+      "ce": 2,
+      "cf": 4,
+      "d": 22,
+      "d0": 1,
+      "d1": 4,
+      "d2": 1,
+      "d3": 1,
+      "d4": 2,
+      "d5": 1,
+      "d6": 1,
+      "d8": 2,
+      "d9": 2,
+      "da": 4,
+      "db": 2,
+      "dc": 6,
+      "dd": 6,
+      "de": 2,
+      "df": 3,
+      "e": 160,
+      "e0": 1,
+      "e2": 2,
+      "e3": 2,
+      "e4": 2,
+      "e5": 2,
+      "e6": 2,
+      "e7": 2,
+      "e8": 2,
+      "e9": 2,
+      "ea": 2,
+      "eb": 2,
+      "ec": 5,
+      "ed": 2,
+      "ee": 2,
+      "ef": 2,
+      "f": 48,
+      "f0": 2,
+      "f1": 2,
+      "f2": 2,
+      "f3": 6,
+      "f4": 2,
+      "f5": 7,
+      "f6": 2,
+      "f7": 6,
+      "fa": 40,
+      "fc": 1,
+      "fd": 1
+    },
+    "ambiguityReasons": {
+      "multiple-cases": 1016,
+      "multiple-definiteness": 108,
+      "multiple-genders": 122,
+      "multiple-inflections": 16,
+      "multiple-numbers": 50,
+      "multiple-parts-of-speech": 23
+    },
+    "animacy": {
+      "<missing>": 6052,
+      "animate": 10,
+      "inanimate": 18
+    },
+    "case": {
+      "<missing>": 1899,
+      "accusative": 1609,
+      "genitive": 1537,
+      "nominative": 2135
+    },
+    "definiteness": {
+      "<missing>": 389,
+      "construct": 412,
+      "indefinite": 5387
+    },
+    "gender": {
+      "<missing>": 769,
+      "feminine": 2633,
+      "masculine": 2800
+    },
+    "number": {
+      "<missing>": 89,
+      "dual": 1601,
+      "plural": 1794,
+      "singular": 2646
+    },
+    "partOfSpeech": {
+      "<missing>": 65,
+      "adjective": 4455,
+      "adverb": 7,
+      "noun": 1570,
+      "proper-noun": 63,
+      "verb": 4886
+    },
+    "termPartOfSpeech": {
+      "adjective": 4,
+      "noun": 1570,
+      "proper-noun": 63,
+      "verb": 6
+    },
+    "unknownGrammemes": {
+      "adposition": 18,
+      "conjunction": 7,
+      "determiner": 17,
+      "gerund": 66,
+      "indicative": 36,
+      "informal": 1,
+      "interjection": 1,
+      "jussive": 1265,
+      "numeral": 30,
+      "participle": 149,
+      "particle": 4,
+      "present": 1275,
+      "pronoun": 9,
+      "subjunctive": 1295,
+      "uncountable": 18
+    }
+  },
+  "locale": "ar",
+  "packPolicy": {
+    "adjectiveAgreementPolicy": "out-of-scope-for-v0",
+    "ambiguousSurfaceRows": 1222,
+    "baseCandidateEntries": 130,
+    "caseMode": "explicit-form-key",
+    "constructMode": "explicit-form-key",
+    "countMode": "no-implicit-count-to-dual",
+    "explicitFormCandidateRows": 3841,
+    "metadataBits": [
+      "gender",
+      "animacy",
+      "partOfSpeech"
+    ],
+    "numberMode": "explicit-number-option",
+    "openWorldGeneration": false,
+    "pronounAttachmentPolicy": "separate-arabic-attachment-profile-later",
+    "pronounScope": "inventory-only-v0",
+    "reason": "Arabic audit has high surface ambiguity, low nominative base coverage, construct-state rows, dual forms, and pronoun attachment questions; V0 should validate and ship product-approved forms instead of generating open-world stems.",
+    "recommendation": "closed-world explicit-form pack",
+    "reviewRequiredReasons": [
+      "ambiguous-surface",
+      "construct-state",
+      "dual-number",
+      "verb-bearing-pattern-slot",
+      "missing-or-ambiguous-gender",
+      "pronoun-attachment"
+    ],
+    "runtimeOptions": [
+      "case",
+      "number",
+      "definiteness"
+    ],
+    "termScope": [
+      "noun",
+      "proper-noun"
+    ],
+    "verbBearingTermPatternSlots": 18
+  },
+  "patterns": {
+    "all": {
+      "constructSlots": 455,
+      "dualSlots": 2320,
+      "duplicateSlotRows": 197,
+      "fullySpecifiedCaseNumberGenderDefinitenessSlots": 1886,
+      "patternsWithDuplicateSlots": 110,
+      "slotAttributes": {
+        "animacy": {
+          "animate": 18,
+          "inanimate": 47
+        },
+        "aspect": {
+          "imperfect": 1492,
+          "perfect": 1734
+        },
+        "case": {
+          "accusative": 713,
+          "genitive": 685,
+          "nominative": 879
+        },
+        "count": {
+          "countable": 18,
+          "uncountable": 16
+        },
+        "definiteness": {
+          "construct": 455,
+          "indefinite": 2698
+        },
+        "gender": {
+          "feminine": 3796,
+          "masculine": 4042
+        },
+        "mood": {
+          "imperative": 360,
+          "indicative": 42,
+          "jussive": 1494,
+          "subjunctive": 1523
+        },
+        "number": {
+          "dual": 2320,
+          "plural": 3782,
+          "singular": 3988
+        },
+        "person": {
+          "first": 987,
+          "second": 2759,
+          "third": 2896
+        },
+        "register": {
+          "informal": 1
+        },
+        "tense": {
+          "past": 1755,
+          "present": 1536
+        },
+        "verb-type": {
+          "gerund": 66,
+          "participle": 165
+        },
+        "voice": {
+          "active": 4344,
+          "passive": 2444
+        }
+      },
+      "slotsPerPattern": {
+        "0": 3,
+        "1": 101,
+        "109": 2,
+        "11": 1,
+        "110": 11,
+        "111": 18,
+        "112": 11,
+        "12": 8,
+        "13": 1,
+        "14": 3,
+        "15": 1,
+        "16": 20,
+        "17": 4,
+        "18": 20,
+        "19": 5,
+        "2": 159,
+        "20": 15,
+        "21": 5,
+        "22": 6,
+        "24": 18,
+        "25": 11,
+        "26": 11,
+        "29": 2,
+        "3": 65,
+        "30": 3,
+        "33": 1,
+        "4": 24,
+        "40": 5,
+        "42": 1,
+        "5": 8,
+        "57": 1,
+        "58": 5,
+        "59": 3,
+        "6": 15,
+        "60": 11,
+        "63": 4,
+        "64": 1,
+        "7": 5,
+        "78": 1,
+        "8": 8,
+        "80": 1,
+        "81": 1,
+        "9": 5
+      }
+    },
+    "usedAgreement": {
+      "constructSlots": 455,
+      "dualSlots": 961,
+      "duplicateSlotRows": 194,
+      "fullySpecifiedCaseNumberGenderDefinitenessSlots": 1886,
+      "patternsWithDuplicateSlots": 107,
+      "slotAttributes": {
+        "animacy": {
+          "animate": 18,
+          "inanimate": 47
+        },
+        "aspect": {
+          "imperfect": 143,
+          "perfect": 195
+        },
+        "case": {
+          "accusative": 709,
+          "genitive": 681,
+          "nominative": 875
+        },
+        "count": {
+          "countable": 18,
+          "uncountable": 16
+        },
+        "definiteness": {
+          "construct": 455,
+          "indefinite": 2697
+        },
+        "gender": {
+          "feminine": 1541,
+          "masculine": 1678
+        },
+        "mood": {
+          "imperative": 35,
+          "jussive": 143,
+          "subjunctive": 143
+        },
+        "number": {
+          "dual": 961,
+          "plural": 1528,
+          "singular": 1592
+        },
+        "person": {
+          "first": 96,
+          "second": 275,
+          "third": 288
+        },
+        "register": {
+          "informal": 1
+        },
+        "tense": {
+          "past": 197,
+          "present": 144
+        },
+        "verb-type": {
+          "gerund": 19,
+          "participle": 22
+        },
+        "voice": {
+          "active": 463,
+          "passive": 218
+        }
+      },
+      "slotsPerPattern": {
+        "0": 2,
+        "1": 86,
+        "11": 1,
+        "111": 3,
+        "112": 1,
+        "12": 7,
+        "13": 1,
+        "14": 2,
+        "15": 1,
+        "16": 11,
+        "17": 4,
+        "18": 20,
+        "19": 5,
+        "2": 153,
+        "20": 15,
+        "21": 5,
+        "22": 4,
+        "24": 18,
+        "25": 11,
+        "26": 11,
+        "3": 59,
+        "30": 1,
+        "4": 23,
+        "40": 5,
+        "42": 1,
+        "5": 8,
+        "59": 2,
+        "6": 14,
+        "60": 1,
+        "7": 5,
+        "8": 8,
+        "9": 4
+      }
+    },
+    "usedTerms": {
+      "constructSlots": 393,
+      "dualSlots": 310,
+      "duplicateSlotRows": 53,
+      "fullySpecifiedCaseNumberGenderDefinitenessSlots": 507,
+      "patternsWithDuplicateSlots": 30,
+      "slotAttributes": {
+        "animacy": {
+          "animate": 18,
+          "inanimate": 47
+        },
+        "aspect": {
+          "imperfect": 39,
+          "perfect": 39
+        },
+        "case": {
+          "accusative": 275,
+          "genitive": 260,
+          "nominative": 285
+        },
+        "count": {
+          "countable": 18,
+          "uncountable": 16
+        },
+        "definiteness": {
+          "construct": 393,
+          "indefinite": 1042
+        },
+        "gender": {
+          "feminine": 500,
+          "masculine": 557
+        },
+        "mood": {
+          "imperative": 10,
+          "jussive": 39,
+          "subjunctive": 39
+        },
+        "number": {
+          "dual": 310,
+          "plural": 677,
+          "singular": 764
+        },
+        "person": {
+          "first": 24,
+          "second": 70,
+          "third": 72
+        },
+        "register": {
+          "informal": 1
+        },
+        "tense": {
+          "past": 41,
+          "present": 40
+        },
+        "verb-type": {
+          "gerund": 13,
+          "participle": 5
+        },
+        "voice": {
+          "active": 117,
+          "passive": 54
+        }
+      },
+      "slotsPerPattern": {
+        "0": 1,
+        "1": 80,
+        "11": 1,
+        "112": 1,
+        "12": 3,
+        "14": 2,
+        "18": 14,
+        "19": 4,
+        "2": 146,
+        "20": 9,
+        "21": 4,
+        "3": 56,
+        "4": 19,
+        "40": 4,
+        "5": 6,
+        "59": 1,
+        "6": 8,
+        "7": 5,
+        "8": 5,
+        "9": 3
+      }
+    }
+  },
+  "policyQuestions": [
+    "Should Arabic product V0 render explicit case endings, or should fully vocalized case be authoring/prefill only?",
+    "Should construct state be modeled as a first-class MF2 term option or only as explicit term forms?",
+    "Should dual be selected from count categories, an explicit number option, or product-specific term forms?",
+    "Should attached/object pronouns share Hindi's dependency-aware renderer or use a separate Arabic attachment profile?",
+    "Should adjective agreement be in scope for V0, or should Arabic V0 stay noun/proper-noun only?"
+  ],
+  "pronouns": {
+    "cases": {
+      "accusative": 13,
+      "genitive": 13,
+      "nominative": 13,
+      "reflexive": 13
+    },
+    "features": {
+      "accusative": 13,
+      "dual": 12,
+      "feminine": 16,
+      "first": 12,
+      "genitive": 13,
+      "masculine": 16,
+      "nominative": 13,
+      "plural": 20,
+      "reflexive": 13,
+      "second": 20,
+      "singular": 20,
+      "third": 20
+    },
+    "genders": {
+      "feminine": 16,
+      "masculine": 16
+    },
+    "numbers": {
+      "dual": 12,
+      "plural": 20,
+      "singular": 20
+    },
+    "persons": {
+      "first": 12,
+      "second": 20,
+      "third": 20
+    },
+    "rows": 52,
+    "uniqueValues": 35
+  },
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/ar_pack_audit.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_ar.lst",
+      "inflection/resources/org/unicode/inflection/dictionary/inflectional_ar.xml",
+      "inflection/resources/org/unicode/inflection/inflection/pronoun_ar.csv"
+    ],
+    "sources": [
+      {
+        "byteSize": 893500,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_ar.lst",
+        "sha256": "7d3ce5339d95517edbdc9c824f002e076351e6ced9bb67c7109ad3d486e3a77e"
+      },
+      {
+        "byteSize": 1599608,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/inflectional_ar.xml",
+        "sha256": "80329a41580409b839a8c768923a80c9e16d20a58dce505beddfa814fe18a3df"
+      },
+      {
+        "byteSize": 2054,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_ar.csv",
+        "sha256": "78f84891865d460b9c89a5dcc1a5ef00705bfbe1f627d3d419c1add533d9bc1d"
+      }
+    ]
+  },
+  "samples": {
+    "ambiguousAgreementSurfaces": [
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-cases",
+          "multiple-definiteness"
+        ],
+        "sampleEntries": [
+          {
+            "animacy": [
+              "animate"
+            ],
+            "case": [
+              "accusative",
+              "genitive",
+              "nominative"
+            ],
+            "definiteness": [
+              "indefinite",
+              "construct"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "21a"
+            ],
+            "line": 1,
+            "number": [
+              "plural"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "آباء"
+          }
+        ],
+        "surface": "آباء"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-cases"
+        ],
+        "sampleEntries": [
+          {
+            "animacy": [],
+            "case": [
+              "genitive",
+              "nominative"
+            ],
+            "definiteness": [
+              "indefinite"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "11"
+            ],
+            "line": 2,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "adjective"
+            ],
+            "surface": "آتٍ"
+          }
+        ],
+        "surface": "آتٍ"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-cases"
+        ],
+        "sampleEntries": [
+          {
+            "animacy": [],
+            "case": [
+              "accusative",
+              "genitive"
+            ],
+            "definiteness": [
+              "indefinite"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "11"
+            ],
+            "line": 7,
+            "number": [
+              "plural"
+            ],
+            "partOfSpeech": [
+              "adjective"
+            ],
+            "surface": "آتِينَ"
+          }
+        ],
+        "surface": "آتِينَ"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-cases"
+        ],
+        "sampleEntries": [
+          {
+            "animacy": [],
+            "case": [
+              "accusative",
+              "genitive"
+            ],
+            "definiteness": [
+              "indefinite"
+            ],
+            "gender": [
+              "feminine"
+            ],
+            "inflections": [
+              "11"
+            ],
+            "line": 11,
+            "number": [
+              "plural"
+            ],
+            "partOfSpeech": [
+              "adjective"
+            ],
+            "surface": "آتِيَاتٍ"
+          }
+        ],
+        "surface": "آتِيَاتٍ"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-cases"
+        ],
+        "sampleEntries": [
+          {
+            "animacy": [],
+            "case": [
+              "accusative",
+              "genitive"
+            ],
+            "definiteness": [
+              "indefinite"
+            ],
+            "gender": [
+              "feminine"
+            ],
+            "inflections": [
+              "11"
+            ],
+            "line": 19,
+            "number": [
+              "dual"
+            ],
+            "partOfSpeech": [
+              "adjective"
+            ],
+            "surface": "آتِيَتَيْنِ"
+          }
+        ],
+        "surface": "آتِيَتَيْنِ"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-cases"
+        ],
+        "sampleEntries": [
+          {
+            "animacy": [],
+            "case": [
+              "accusative",
+              "genitive"
+            ],
+            "definiteness": [
+              "indefinite"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "11"
+            ],
+            "line": 21,
+            "number": [
+              "dual"
+            ],
+            "partOfSpeech": [
+              "adjective"
+            ],
+            "surface": "آتِيَيْنِ"
+          }
+        ],
+        "surface": "آتِيَيْنِ"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-inflections",
+          "multiple-parts-of-speech"
+        ],
+        "sampleEntries": [
+          {
+            "animacy": [],
+            "case": [
+              "nominative"
+            ],
+            "definiteness": [
+              "indefinite"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "19",
+              "50"
+            ],
+            "line": 75,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "adjective",
+              "noun"
+            ],
+            "surface": "آخِر"
+          }
+        ],
+        "surface": "آخِر"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-inflections",
+          "multiple-parts-of-speech"
+        ],
+        "sampleEntries": [
+          {
+            "animacy": [],
+            "case": [
+              "nominative"
+            ],
+            "definiteness": [
+              "indefinite"
+            ],
+            "gender": [
+              "feminine"
+            ],
+            "inflections": [
+              "19",
+              "50"
+            ],
+            "line": 76,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "adjective",
+              "noun"
+            ],
+            "surface": "آخِرَة"
+          }
+        ],
+        "surface": "آخِرَة"
+      }
+    ],
+    "baseCandidates": [
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "definiteness": [
+          "indefinite"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "19",
+          "50"
+        ],
+        "line": 75,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "adjective",
+          "noun"
+        ],
+        "surface": "آخِر"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "definiteness": [
+          "indefinite"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "19",
+          "50"
+        ],
+        "line": 76,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "adjective",
+          "noun"
+        ],
+        "surface": "آخِرَة"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "definiteness": [],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [],
+        "line": 83,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "آدَمُ"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "definiteness": [],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [],
+        "line": 125,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "آزَرُ"
+      },
+      {
+        "animacy": [
+          "animate"
+        ],
+        "case": [
+          "nominative"
+        ],
+        "definiteness": [
+          "indefinite"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "21a"
+        ],
+        "line": 336,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "أَب"
+      },
+      {
+        "animacy": [
+          "animate"
+        ],
+        "case": [
+          "nominative"
+        ],
+        "definiteness": [
+          "construct"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "21a"
+        ],
+        "line": 342,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "أَبُو"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "definiteness": [
+          "indefinite"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "c2"
+        ],
+        "line": 1295,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "أُمٌّ"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "definiteness": [
+          "construct"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "c2"
+        ],
+        "line": 1309,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "أُمُّ"
+      }
+    ],
+    "constructAgreementEntries": [
+      {
+        "animacy": [
+          "animate"
+        ],
+        "case": [
+          "accusative",
+          "genitive",
+          "nominative"
+        ],
+        "definiteness": [
+          "indefinite",
+          "construct"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "21a"
+        ],
+        "line": 1,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "آباء"
+      },
+      {
+        "animacy": [
+          "animate"
+        ],
+        "case": [
+          "accusative"
+        ],
+        "definiteness": [
+          "indefinite",
+          "construct"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "21a"
+        ],
+        "line": 191,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "أبا"
+      },
+      {
+        "animacy": [
+          "animate"
+        ],
+        "case": [
+          "nominative"
+        ],
+        "definiteness": [
+          "construct"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "21a"
+        ],
+        "line": 192,
+        "number": [
+          "dual"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "أبوا"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "accusative",
+          "genitive",
+          "nominative"
+        ],
+        "definiteness": [
+          "indefinite",
+          "construct"
+        ],
+        "gender": [],
+        "inflections": [
+          "240"
+        ],
+        "line": 193,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "أبواب"
+      },
+      {
+        "animacy": [
+          "animate"
+        ],
+        "case": [
+          "accusative",
+          "genitive"
+        ],
+        "definiteness": [
+          "construct"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "21a"
+        ],
+        "line": 196,
+        "number": [
+          "dual"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "أبوي"
+      },
+      {
+        "animacy": [
+          "animate"
+        ],
+        "case": [
+          "genitive"
+        ],
+        "definiteness": [
+          "construct"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "21a"
+        ],
+        "line": 198,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "أبي"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "accusative",
+          "genitive",
+          "nominative"
+        ],
+        "definiteness": [
+          "indefinite",
+          "construct"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "3e"
+        ],
+        "line": 315,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "أقباء"
+      },
+      {
+        "animacy": [
+          "animate"
+        ],
+        "case": [
+          "nominative"
+        ],
+        "definiteness": [
+          "construct"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "21a"
+        ],
+        "line": 342,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "أَبُو"
+      }
+    ],
+    "dualAgreementEntries": [
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "definiteness": [
+          "indefinite"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "11"
+        ],
+        "line": 12,
+        "number": [
+          "dual"
+        ],
+        "partOfSpeech": [
+          "adjective"
+        ],
+        "surface": "آتِيَانِ"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "definiteness": [
+          "indefinite"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "11"
+        ],
+        "line": 17,
+        "number": [
+          "dual"
+        ],
+        "partOfSpeech": [
+          "adjective"
+        ],
+        "surface": "آتِيَتَانِ"
+      },
+      {
+        "animacy": [],
+        "case": [],
+        "definiteness": [
+          "indefinite"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "11"
+        ],
+        "line": 18,
+        "number": [
+          "dual"
+        ],
+        "partOfSpeech": [
+          "adjective"
+        ],
+        "surface": "آتِيَتَيْن"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "accusative",
+          "genitive"
+        ],
+        "definiteness": [
+          "indefinite"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "11"
+        ],
+        "line": 19,
+        "number": [
+          "dual"
+        ],
+        "partOfSpeech": [
+          "adjective"
+        ],
+        "surface": "آتِيَتَيْنِ"
+      },
+      {
+        "animacy": [],
+        "case": [],
+        "definiteness": [
+          "indefinite"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "11"
+        ],
+        "line": 20,
+        "number": [
+          "dual"
+        ],
+        "partOfSpeech": [
+          "adjective"
+        ],
+        "surface": "آتِيَيْن"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "accusative",
+          "genitive"
+        ],
+        "definiteness": [
+          "indefinite"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "11"
+        ],
+        "line": 21,
+        "number": [
+          "dual"
+        ],
+        "partOfSpeech": [
+          "adjective"
+        ],
+        "surface": "آتِيَيْنِ"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "definiteness": [
+          "indefinite"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "3"
+        ],
+        "line": 91,
+        "number": [
+          "dual"
+        ],
+        "partOfSpeech": [
+          "adjective"
+        ],
+        "surface": "آدَمِيَّانِ"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "definiteness": [
+          "indefinite"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "3"
+        ],
+        "line": 96,
+        "number": [
+          "dual"
+        ],
+        "partOfSpeech": [
+          "adjective"
+        ],
+        "surface": "آدَمِيَّتَانِ"
+      }
+    ],
+    "missingAgreementPatterns": [],
+    "pronouns": [
+      {
+        "features": [
+          "third",
+          "plural",
+          "masculine",
+          "nominative"
+        ],
+        "line": 1,
+        "value": "هُم"
+      },
+      {
+        "features": [
+          "third",
+          "plural",
+          "feminine",
+          "nominative"
+        ],
+        "line": 2,
+        "value": "هنَّ"
+      },
+      {
+        "features": [
+          "third",
+          "singular",
+          "masculine",
+          "nominative"
+        ],
+        "line": 3,
+        "value": "هو"
+      },
+      {
+        "features": [
+          "third",
+          "singular",
+          "feminine",
+          "nominative"
+        ],
+        "line": 4,
+        "value": "هي"
+      },
+      {
+        "features": [
+          "third",
+          "dual",
+          "nominative"
+        ],
+        "line": 5,
+        "value": "هُمَا"
+      },
+      {
+        "features": [
+          "second",
+          "plural",
+          "masculine",
+          "nominative"
+        ],
+        "line": 6,
+        "value": "أنتم"
+      },
+      {
+        "features": [
+          "second",
+          "plural",
+          "feminine",
+          "nominative"
+        ],
+        "line": 7,
+        "value": "أنتن"
+      },
+      {
+        "features": [
+          "second",
+          "singular",
+          "masculine",
+          "nominative"
+        ],
+        "line": 8,
+        "value": "أنتَ"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/ar-pack-audit/v0"
+}

@@ -1,0 +1,1437 @@
+{
+  "blockedSourceData": [
+    {
+      "cache": {
+        "dictionary": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_pl.lst"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_pl.xml"
+        }
+      },
+      "expected": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_pl.csv"
+        },
+        "dictionary": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_pl.lst"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_pl.xml"
+        },
+        "pronounCsv": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_pl.csv"
+        },
+        "supportedLocalesKey": "locale.group.pl"
+      },
+      "localeGroup": "pl",
+      "locales": [],
+      "reason": "No locale.group.pl, dictionary_pl.lst, inflectional_pl.xml, or cached Polish data exists in the pinned local Unicode Inflection checkout used for this survey.",
+      "status": "source-data-acquisition-required",
+      "supportedLocaleGroup": false
+    }
+  ],
+  "cacheDir": "/Users/ja/.cache/mf2-inflection-data",
+  "locales": [
+    {
+      "cache": {
+        "dictionary": {
+          "byteSize": 893500,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_ar.lst",
+          "sha256": "7d3ce5339d95517edbdc9c824f002e076351e6ced9bb67c7109ad3d486e3a77e"
+        },
+        "inflectional": {
+          "byteSize": 1599608,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_ar.xml",
+          "sha256": "80329a41580409b839a8c768923a80c9e16d20a58dce505beddfa814fe18a3df"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_ar.csv"
+        },
+        "dictionary": {
+          "byteSize": 131,
+          "exists": true,
+          "gitLfsObjectSize": 893500,
+          "gitLfsOidSha256": "7d3ce5339d95517edbdc9c824f002e076351e6ced9bb67c7109ad3d486e3a77e",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_ar.lst",
+          "sha256": "e8670069b8c1eb9676702dde54f41a049c1f64ad5de68f247fdf389264ab4163"
+        },
+        "inflectional": {
+          "byteSize": 132,
+          "exists": true,
+          "gitLfsObjectSize": 1599608,
+          "gitLfsOidSha256": "80329a41580409b839a8c768923a80c9e16d20a58dce505beddfa814fe18a3df",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_ar.xml",
+          "sha256": "1cd5768308c5915e65807295cb0f954fb52c51472319c7e50bc42041fa6a82ab"
+        },
+        "pronounCsv": {
+          "byteSize": 2054,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_ar.csv",
+          "sha256": "78f84891865d460b9c89a5dcc1a5ef00705bfbe1f627d3d419c1add533d9bc1d"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "ar",
+      "locales": [
+        "ar_SA"
+      ],
+      "materializedState": "cache-materialized",
+      "runtimeStatus": "runtime-prototype"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "byteSize": 38557469,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_da.lst",
+          "sha256": "6226384ce104886c32e6a90432f8b41d96be0f9925eb10896095250d048b6c8b"
+        },
+        "inflectional": {
+          "byteSize": 2149623,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_da.xml",
+          "sha256": "795f73dcbc1eea9db20fe77063952a023ed499c746d8ae3e003be001a8633851"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_da.csv"
+        },
+        "dictionary": {
+          "byteSize": 133,
+          "exists": true,
+          "gitLfsObjectSize": 38557469,
+          "gitLfsOidSha256": "6226384ce104886c32e6a90432f8b41d96be0f9925eb10896095250d048b6c8b",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_da.lst",
+          "sha256": "3fa7cc5061551793d72753a0089bb9796d1cebaabe526f7b130f2b21002dc00f"
+        },
+        "inflectional": {
+          "byteSize": 132,
+          "exists": true,
+          "gitLfsObjectSize": 2149623,
+          "gitLfsOidSha256": "795f73dcbc1eea9db20fe77063952a023ed499c746d8ae3e003be001a8633851",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_da.xml",
+          "sha256": "8e9ea428e9ff883bcf2b2dac430a7ceff381c90468949a440236c518bb096abc"
+        },
+        "pronounCsv": {
+          "byteSize": 1562,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_da.csv",
+          "sha256": "f92077f94747e3a9aca5db1da6d44e11dc5ac8e85a8f45b85e9c9e4d6d92a714"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "da",
+      "locales": [
+        "da_DK"
+      ],
+      "materializedState": "cache-materialized",
+      "runtimeStatus": "runtime-prototype"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "byteSize": 15082193,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_de.lst",
+          "sha256": "889018ad62df6258da38973ecd8737e21d98d53b3469530f4870e014d6a3280b"
+        },
+        "inflectional": {
+          "byteSize": 1359627,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_de.xml",
+          "sha256": "eed569d40af669d27e140646e9b706de44d8cb2946e1a97cce537833bd61f2ac"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "byteSize": 276,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_de.csv",
+          "sha256": "0b6dbd01cdcdc93f2672c9539b7790e764e7897de2fd312ec6419bc4e2bc7de6"
+        },
+        "dictionary": {
+          "byteSize": 133,
+          "exists": true,
+          "gitLfsObjectSize": 15082193,
+          "gitLfsOidSha256": "889018ad62df6258da38973ecd8737e21d98d53b3469530f4870e014d6a3280b",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_de.lst",
+          "sha256": "aabb2f2e98f484ef4d1bf04f0791be6edac62b7bad343fae2a62c60b110f7629"
+        },
+        "inflectional": {
+          "byteSize": 132,
+          "exists": true,
+          "gitLfsObjectSize": 1359627,
+          "gitLfsOidSha256": "eed569d40af669d27e140646e9b706de44d8cb2946e1a97cce537833bd61f2ac",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_de.xml",
+          "sha256": "e209edc49dbdba07c6e8522953fcff0ab04d2aad02d6807157e3c084b8dfab7d"
+        },
+        "pronounCsv": {
+          "byteSize": 22892,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_de.csv",
+          "sha256": "eb37c9646fb8419fb5e388fa080651b1fbf60c15fce00ccde9d4cc78cd64b681"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "de",
+      "locales": [
+        "de_DE",
+        "de_AT",
+        "de_CH"
+      ],
+      "materializedState": "cache-materialized",
+      "runtimeStatus": "runtime-prototype"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_en.lst"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_en.xml"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "byteSize": 2058,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_en.csv",
+          "sha256": "83975fb75632097a3e25c2789f0978242fc9b4f1223bc3e9bf657be3e9ef6a98"
+        },
+        "dictionary": {
+          "byteSize": 132,
+          "exists": true,
+          "gitLfsObjectSize": 5091040,
+          "gitLfsOidSha256": "c66d69e97eefa5046d1127d8c35365f72d619fe8d5a2b208bddc83483d5aecaf",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_en.lst",
+          "sha256": "1517e0562f778d76e78faaf83baf8c393d28a5c8d2197b49685b725bfccdbe17"
+        },
+        "inflectional": {
+          "byteSize": 131,
+          "exists": true,
+          "gitLfsObjectSize": 635020,
+          "gitLfsOidSha256": "000bf3346f4c24a85d05fb1d65fd95a875c239e0c3bc46b75ba6b6cc63728ebb",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_en.xml",
+          "sha256": "fc53ac48f2478b4d343845169756a735d8b66a9566677989534d3bad5fc0b761"
+        },
+        "pronounCsv": {
+          "byteSize": 1518,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_en.csv",
+          "sha256": "fa5b5b5a7d414e14582a856ba80520143d880ff6539f53e6f7e472603b02cd6f"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "en",
+      "locales": [
+        "en_US",
+        "en_AU",
+        "en_CA",
+        "en_GB",
+        "en_IE",
+        "en_IN",
+        "en_NZ",
+        "en_SG",
+        "en_ZA"
+      ],
+      "materializedState": "checkout-lfs-pointer",
+      "runtimeStatus": "not-started"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "byteSize": 37232751,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_es.lst",
+          "sha256": "c027bc481306bbdae35aae1bce50c683c6e1c41e91643e68c9efda4e041d6389"
+        },
+        "inflectional": {
+          "byteSize": 4112171,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_es.xml",
+          "sha256": "1ed54f3e48d32ac020d22fcb02a52ab05e72e8b73914891429798ebd09a98541"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "byteSize": 17,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_es.csv",
+          "sha256": "36cd34741e92cbe46ea8759c16b1d086d3cd7202f6f977dd1452a039dea60054"
+        },
+        "dictionary": {
+          "byteSize": 133,
+          "exists": true,
+          "gitLfsObjectSize": 37232751,
+          "gitLfsOidSha256": "c027bc481306bbdae35aae1bce50c683c6e1c41e91643e68c9efda4e041d6389",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_es.lst",
+          "sha256": "29a8ca0d51384dd7b549620bcd21ba0d9e93b7c3fcefecda793e0f66ac64b5c7"
+        },
+        "inflectional": {
+          "byteSize": 132,
+          "exists": true,
+          "gitLfsObjectSize": 4112171,
+          "gitLfsOidSha256": "1ed54f3e48d32ac020d22fcb02a52ab05e72e8b73914891429798ebd09a98541",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_es.xml",
+          "sha256": "4ead4c1c6766cb557e242e98fd32f0a2503c60ffdf1a22c4de25222fbcdb157d"
+        },
+        "pronounCsv": {
+          "byteSize": 4377,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_es.csv",
+          "sha256": "71c26152e495f890fc407b347bc218cf1524f31bccca730728c41ba6ee484cda"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "es",
+      "locales": [
+        "es_ES",
+        "es_CL",
+        "es_MX",
+        "es_US"
+      ],
+      "materializedState": "cache-materialized",
+      "runtimeStatus": "runtime-prototype"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_fr.lst"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_fr.xml"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "byteSize": 39,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_fr.csv",
+          "sha256": "da68e9683c41cb629e884efd2cbf847c40fc99b27688ecef143e73f9fd60b16c"
+        },
+        "dictionary": {
+          "byteSize": 133,
+          "exists": true,
+          "gitLfsObjectSize": 17255961,
+          "gitLfsOidSha256": "21e1a3d385db927d10d175a322ad72f55cac455ab6c960564c90fe6ac23fc53b",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_fr.lst",
+          "sha256": "871692fe204c66f3346ee4a5b494901bfb9466265a06590eed985499499e5f4f"
+        },
+        "inflectional": {
+          "byteSize": 132,
+          "exists": true,
+          "gitLfsObjectSize": 1246581,
+          "gitLfsOidSha256": "35f467e2474c4eb2a53cccd098f4051eaaf4d09171fd5f60edb87df2dee8bea3",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_fr.xml",
+          "sha256": "3979650eaf788abcabf56cc35c1d0f3b5a410e80c08849cb1b37f3775e735bbc"
+        },
+        "pronounCsv": {
+          "byteSize": 2782,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_fr.csv",
+          "sha256": "d5b88462dde9b43f5b2ccc2e043ad122765d8a95a648edc05215720f380baa97"
+        },
+        "supplemental": [
+          {
+            "byteSize": 781,
+            "exists": true,
+            "gitLfsPointer": false,
+            "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/supplemental_fr.lst",
+            "sha256": "467b42b616096fb7d1ce25ea64a7451f39901e0e76ee594fe40b41fd54908571"
+          }
+        ]
+      },
+      "localeGroup": "fr",
+      "locales": [
+        "fr_FR",
+        "fr_BE",
+        "fr_CA",
+        "fr_CH"
+      ],
+      "materializedState": "checkout-lfs-pointer",
+      "runtimeStatus": "runtime-prototype"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "byteSize": 9728222,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_he.lst",
+          "sha256": "abece63d2c0f688d156e79860c9a3c97c51a30e07268616be67e4c7dc2d557cd"
+        },
+        "inflectional": {
+          "byteSize": 19306220,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_he.xml",
+          "sha256": "991f04b14eda1986ad7521dc76d9ade201fd01989d8c66c50944608d5c19c037"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_he.csv"
+        },
+        "dictionary": {
+          "byteSize": 132,
+          "exists": true,
+          "gitLfsObjectSize": 9728222,
+          "gitLfsOidSha256": "abece63d2c0f688d156e79860c9a3c97c51a30e07268616be67e4c7dc2d557cd",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_he.lst",
+          "sha256": "b389c5fac523e8319ed1f7c2c6cf3c4bf0886366221f15ecb7cbbae0d2914e46"
+        },
+        "inflectional": {
+          "byteSize": 133,
+          "exists": true,
+          "gitLfsObjectSize": 19306220,
+          "gitLfsOidSha256": "991f04b14eda1986ad7521dc76d9ade201fd01989d8c66c50944608d5c19c037",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_he.xml",
+          "sha256": "7a0d09cdeef63cbeedb67658ac49fc73342aebf0b92afef43b10a85aeb7a487b"
+        },
+        "pronounCsv": {
+          "byteSize": 1230,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_he.csv",
+          "sha256": "d2ebdc0e7004e8b20ab15bc6421dac53fe4e9e5aad967994af45855c10f108b3"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "he",
+      "locales": [
+        "he_IL"
+      ],
+      "materializedState": "cache-materialized",
+      "runtimeStatus": "runtime-prototype"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "byteSize": 592562,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_hi.lst",
+          "sha256": "c5b051852706d4c73188d532a072b4f6642b43ddd2efd506394f234428d93398"
+        },
+        "inflectional": {
+          "byteSize": 635966,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_hi.xml",
+          "sha256": "20b67cea017333ce11a041c9150268bb14643fb5185a7a4228f4e1079f1d4f0b"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_hi.csv"
+        },
+        "dictionary": {
+          "byteSize": 131,
+          "exists": true,
+          "gitLfsObjectSize": 592562,
+          "gitLfsOidSha256": "c5b051852706d4c73188d532a072b4f6642b43ddd2efd506394f234428d93398",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_hi.lst",
+          "sha256": "216b7ef54f085ba6679e708f52d4e56c04ea366870f7ef685d4c8839fbb8d533"
+        },
+        "inflectional": {
+          "byteSize": 131,
+          "exists": true,
+          "gitLfsObjectSize": 635966,
+          "gitLfsOidSha256": "20b67cea017333ce11a041c9150268bb14643fb5185a7a4228f4e1079f1d4f0b",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_hi.xml",
+          "sha256": "7c9a99769c375ead893872571afe6b773ca19d8f22e03937bb01b1483b5ce49a"
+        },
+        "pronounCsv": {
+          "byteSize": 2433,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_hi.csv",
+          "sha256": "586446abbbdc6d8466912941ac2609d7bdac072af5c3422bf575a8715b1bf810"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "hi",
+      "locales": [
+        "hi_IN"
+      ],
+      "materializedState": "cache-materialized",
+      "runtimeStatus": "runtime-prototype"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_id.lst"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_id.xml"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_id.csv"
+        },
+        "dictionary": {
+          "byteSize": 0,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_id.lst",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_id.xml"
+        },
+        "pronounCsv": {
+          "byteSize": 447,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_id.csv",
+          "sha256": "3b3a46bc27e2fb318ceae015af49307725e3972388b6741db655e01a10ccf97f"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "id",
+      "locales": [
+        "id_ID"
+      ],
+      "materializedState": "partial-materialized",
+      "runtimeStatus": "not-started"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "byteSize": 27327567,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_it.lst",
+          "sha256": "c5836997d872f7e5833fe0c338109591235b91f0306fa3e317f1e7aabbfe42a9"
+        },
+        "inflectional": {
+          "byteSize": 1394074,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_it.xml",
+          "sha256": "70ad7ba37f88b96607ba367549cc2260453ff774eebb3533d728da0b7c072653"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "byteSize": 297,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_it.csv",
+          "sha256": "19a1bca1a2ca6220768a290f77211e5fdb184f385ffed0a9eaf74dc1d871e95c"
+        },
+        "dictionary": {
+          "byteSize": 133,
+          "exists": true,
+          "gitLfsObjectSize": 27327567,
+          "gitLfsOidSha256": "c5836997d872f7e5833fe0c338109591235b91f0306fa3e317f1e7aabbfe42a9",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_it.lst",
+          "sha256": "4d55a053e8ba1ddbd6ecd82e81a30fd8e4272103bc719d49f8d3a542f470ee05"
+        },
+        "inflectional": {
+          "byteSize": 132,
+          "exists": true,
+          "gitLfsObjectSize": 1394074,
+          "gitLfsOidSha256": "70ad7ba37f88b96607ba367549cc2260453ff774eebb3533d728da0b7c072653",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_it.xml",
+          "sha256": "06f33f61c9814fd24ea7acbd1c367e8bcf13df690fb54a1faa24df6131891c18"
+        },
+        "pronounCsv": {
+          "byteSize": 5504,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_it.csv",
+          "sha256": "a9f215bf26e5341dd1926611e8cbd69e2057c99d099946612886e43a0c8415a7"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "it",
+      "locales": [
+        "it_IT",
+        "it_CH"
+      ],
+      "materializedState": "cache-materialized",
+      "runtimeStatus": "runtime-prototype"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_ja.lst"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_ja.xml"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_ja.csv"
+        },
+        "dictionary": {
+          "byteSize": 0,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_ja.lst",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_ja.xml"
+        },
+        "pronounCsv": {
+          "byteSize": 88,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_ja.csv",
+          "sha256": "cd6619a7249b415b6d640f98a1f953191647b667d5c65e1368439dabee825a4e"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "ja",
+      "locales": [
+        "ja_JP"
+      ],
+      "materializedState": "partial-materialized",
+      "runtimeStatus": "not-started"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_ko.lst"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_ko.xml"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_ko.csv"
+        },
+        "dictionary": {
+          "byteSize": 130,
+          "exists": true,
+          "gitLfsObjectSize": 19262,
+          "gitLfsOidSha256": "e8e70ff4dc767ddc5302865aa3371e809b50b8b8c84d52fe13bd672c0af3c244",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_ko.lst",
+          "sha256": "bd94c72b7d1c3566a04953d29602043370ebe59422eb12fe838928265e0e2c07"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_ko.xml"
+        },
+        "pronounCsv": {
+          "byteSize": 2221,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_ko.csv",
+          "sha256": "a7ca8f57240148ac6d758970a4b6a4fc8443b57e145fb07abcdb97ff116ea6e9"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "ko",
+      "locales": [
+        "ko_KR"
+      ],
+      "materializedState": "checkout-lfs-pointer",
+      "runtimeStatus": "not-started"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "byteSize": 53958746,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_ml.lst",
+          "sha256": "6bda9371a2aa17c08328381e678b77e769269f4ee74749dd4f9e0bd5890cf59c"
+        },
+        "inflectional": {
+          "byteSize": 613479,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_ml.xml",
+          "sha256": "1868dab352ff2648c2ba495bc08a3877409eadf177f573817fd03ae07174b12f"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_ml.csv"
+        },
+        "dictionary": {
+          "byteSize": 133,
+          "exists": true,
+          "gitLfsObjectSize": 53958746,
+          "gitLfsOidSha256": "6bda9371a2aa17c08328381e678b77e769269f4ee74749dd4f9e0bd5890cf59c",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_ml.lst",
+          "sha256": "21f34fee31fb4445d8e781bd19e713cd020b3ddaf98b87f6e6cfc72ff81bac6a"
+        },
+        "inflectional": {
+          "byteSize": 131,
+          "exists": true,
+          "gitLfsObjectSize": 613479,
+          "gitLfsOidSha256": "1868dab352ff2648c2ba495bc08a3877409eadf177f573817fd03ae07174b12f",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_ml.xml",
+          "sha256": "33c5168905d83a339135f611b116cc6e8ca701507dd0cbe8209c626adc8af575"
+        },
+        "pronounCsv": {
+          "byteSize": 4450,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_ml.csv",
+          "sha256": "6806fdc7db0c9e944e7e4e68b607cc5eaff843ead9c29798f1ae3b2832d7e41b"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "ml",
+      "locales": [
+        "ml_IN"
+      ],
+      "materializedState": "cache-materialized",
+      "runtimeStatus": "runtime-prototype"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_ms.lst"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_ms.xml"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_ms.csv"
+        },
+        "dictionary": {
+          "byteSize": 0,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_ms.lst",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_ms.xml"
+        },
+        "pronounCsv": {
+          "byteSize": 400,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_ms.csv",
+          "sha256": "fe259889f59853d7eafab8549de0cc18f992704679fb66663c3e4f435746f333"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "ms",
+      "locales": [
+        "ms_MY"
+      ],
+      "materializedState": "partial-materialized",
+      "runtimeStatus": "not-started"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "byteSize": 9470180,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_nb.lst",
+          "sha256": "a65316f4458ace28fe0959047590bae0e130bf8eaf973ed492bb3d955aff4d5b"
+        },
+        "inflectional": {
+          "byteSize": 249252,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_nb.xml",
+          "sha256": "e0b4331f6a9b1069058594173f37a226df4825fe487878f00fc73e38db98b401"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_nb.csv"
+        },
+        "dictionary": {
+          "byteSize": 132,
+          "exists": true,
+          "gitLfsObjectSize": 9470180,
+          "gitLfsOidSha256": "a65316f4458ace28fe0959047590bae0e130bf8eaf973ed492bb3d955aff4d5b",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_nb.lst",
+          "sha256": "d2a24807349347f2577ee951b39c70e341d32b7763d3197b403010f8525c97c6"
+        },
+        "inflectional": {
+          "byteSize": 131,
+          "exists": true,
+          "gitLfsObjectSize": 249252,
+          "gitLfsOidSha256": "e0b4331f6a9b1069058594173f37a226df4825fe487878f00fc73e38db98b401",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_nb.xml",
+          "sha256": "37bd95af218bc1c9fcc8120078f7e8359a181d0e8e0a75d4b1daf24171112eb7"
+        },
+        "pronounCsv": {
+          "byteSize": 2904,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_nb.csv",
+          "sha256": "298df38d00083e6a45a6a0d2997a295953eeda856242ff4ce8203a611f18337e"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "nb",
+      "locales": [
+        "nb_NO"
+      ],
+      "materializedState": "cache-materialized",
+      "runtimeStatus": "not-started"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "byteSize": 780817,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_nl.lst",
+          "sha256": "9ccee2f7e50685c4239432b8d59ea5ba362f5bd5e3f529993a2ea7db5e2fa8c7"
+        },
+        "inflectional": {
+          "byteSize": 2381180,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_nl.xml",
+          "sha256": "18a274c965f2d182248fc51171cf266458f91789ff29d65de6a277fb9a876d96"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_nl.csv"
+        },
+        "dictionary": {
+          "byteSize": 131,
+          "exists": true,
+          "gitLfsObjectSize": 780817,
+          "gitLfsOidSha256": "9ccee2f7e50685c4239432b8d59ea5ba362f5bd5e3f529993a2ea7db5e2fa8c7",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_nl.lst",
+          "sha256": "edb002a5f8c5dcd06fe522c9c8c7c1a3b0fe4b13158e9e0ac366586b5e70212b"
+        },
+        "inflectional": {
+          "byteSize": 132,
+          "exists": true,
+          "gitLfsObjectSize": 2381180,
+          "gitLfsOidSha256": "18a274c965f2d182248fc51171cf266458f91789ff29d65de6a277fb9a876d96",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_nl.xml",
+          "sha256": "c0d7540d0c73c8981267e7c862dbcd68696077e7d1801a081363742d6f408664"
+        },
+        "pronounCsv": {
+          "byteSize": 2772,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_nl.csv",
+          "sha256": "62f08ae6a6184a5a8443018364873b62e3d8459b813a40bbc5e20f84a130f055"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "nl",
+      "locales": [
+        "nl_NL",
+        "nl_BE"
+      ],
+      "materializedState": "cache-materialized",
+      "runtimeStatus": "not-started"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "byteSize": 2345650,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_pt.lst",
+          "sha256": "00a2c13c4b5c437cc8677e7115a7e8ad3ec62dcba2115698fb283541cdabee70"
+        },
+        "inflectional": {
+          "byteSize": 637727,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_pt.xml",
+          "sha256": "b223e087bd3ea5470fabebb6277e500561d24a7c7fbd5f867a1d115d2f3d3aef"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_pt.csv"
+        },
+        "dictionary": {
+          "byteSize": 132,
+          "exists": true,
+          "gitLfsObjectSize": 2345650,
+          "gitLfsOidSha256": "00a2c13c4b5c437cc8677e7115a7e8ad3ec62dcba2115698fb283541cdabee70",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_pt.lst",
+          "sha256": "efc1351b3b116ca122cfe6af6401308bde74cd6ee32f3c53dc85e9803a43c59f"
+        },
+        "inflectional": {
+          "byteSize": 131,
+          "exists": true,
+          "gitLfsObjectSize": 637727,
+          "gitLfsOidSha256": "b223e087bd3ea5470fabebb6277e500561d24a7c7fbd5f867a1d115d2f3d3aef",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_pt.xml",
+          "sha256": "4c01fab85aaabcc9cf616af6728ebb580784034bc19742b903358e564ad0e7cd"
+        },
+        "pronounCsv": {
+          "byteSize": 2641,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_pt.csv",
+          "sha256": "41536994a77733183c9189bb852c318d950eee40282af768e43ce39874d05004"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "pt",
+      "locales": [
+        "pt_BR",
+        "pt_PT"
+      ],
+      "materializedState": "cache-materialized",
+      "runtimeStatus": "runtime-prototype"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "byteSize": 76320564,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_ru.lst",
+          "sha256": "0cec5900694f7a7e1361ab95b3e47bca9114079b6ab8b48531c355eb8862bfeb"
+        },
+        "inflectional": {
+          "byteSize": 1500300,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_ru.xml",
+          "sha256": "8fade258e582840840daa29bd6971a61a090feb33268b303582c10bd4b08b00a"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_ru.csv"
+        },
+        "dictionary": {
+          "byteSize": 133,
+          "exists": true,
+          "gitLfsObjectSize": 76320564,
+          "gitLfsOidSha256": "0cec5900694f7a7e1361ab95b3e47bca9114079b6ab8b48531c355eb8862bfeb",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_ru.lst",
+          "sha256": "f5bf05fcaaf774f94237652b375c26decb5a21af0c500dad80f357156b20ff1f"
+        },
+        "inflectional": {
+          "byteSize": 132,
+          "exists": true,
+          "gitLfsObjectSize": 1500300,
+          "gitLfsOidSha256": "8fade258e582840840daa29bd6971a61a090feb33268b303582c10bd4b08b00a",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_ru.xml",
+          "sha256": "a6a669e369a5558a046dd00805aab20e246a60409c3992278c305fe8a522beb9"
+        },
+        "pronounCsv": {
+          "byteSize": 13972,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_ru.csv",
+          "sha256": "500a6a3e33a5f0b63d0cac9afbc26266444997d6f72976d1b8442236da8ce9a2"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "ru",
+      "locales": [
+        "ru_RU"
+      ],
+      "materializedState": "cache-materialized",
+      "runtimeStatus": "runtime-prototype"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_sr.lst"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_sr.xml"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_sr.csv"
+        },
+        "dictionary": {
+          "byteSize": 81741,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_sr.lst",
+          "sha256": "12d5c2e0becdf55bbdd33b14fd816d5f5b78c1f8a60bb0596914be3a34a6f282"
+        },
+        "inflectional": {
+          "byteSize": 122329,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_sr.xml",
+          "sha256": "2da11bc75a7220c871f19313609a76607249340a8dcc9e17d22f3e0469690d62"
+        },
+        "pronounCsv": {
+          "byteSize": 3354,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_sr.csv",
+          "sha256": "c158064c2a4092a6828736bcfc9ba6f35d3361103e9c940cae19bd78d9e93461"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "sr",
+      "locales": [
+        "sr_RS"
+      ],
+      "materializedState": "checkout-materialized",
+      "runtimeStatus": "runtime-prototype"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "byteSize": 19379822,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_sv.lst",
+          "sha256": "d986dc58f0ccf03c38abfb2d0af55b962bcf6131591831ab26373bb02986eeb8"
+        },
+        "inflectional": {
+          "byteSize": 855601,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_sv.xml",
+          "sha256": "46aea692f4c14586f44e7de7a796a1331685393fcb716c3cb7d8df50bf2048da"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_sv.csv"
+        },
+        "dictionary": {
+          "byteSize": 133,
+          "exists": true,
+          "gitLfsObjectSize": 19379822,
+          "gitLfsOidSha256": "d986dc58f0ccf03c38abfb2d0af55b962bcf6131591831ab26373bb02986eeb8",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_sv.lst",
+          "sha256": "853e3f090d36ba1e0db8b21ccb9dea544a1854f95b622de05fb139e4e0840be9"
+        },
+        "inflectional": {
+          "byteSize": 131,
+          "exists": true,
+          "gitLfsObjectSize": 855601,
+          "gitLfsOidSha256": "46aea692f4c14586f44e7de7a796a1331685393fcb716c3cb7d8df50bf2048da",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_sv.xml",
+          "sha256": "9b509bd5a60c31c11bf09d9fea5944be7d3003348f3f4ddc474f097a59da0378"
+        },
+        "pronounCsv": {
+          "byteSize": 2234,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_sv.csv",
+          "sha256": "712afff5c2c0c6321c4fbe99f9180c274581df8ae4c5a598a508e413c12c27de"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "sv",
+      "locales": [
+        "sv_SE"
+      ],
+      "materializedState": "cache-materialized",
+      "runtimeStatus": "runtime-prototype"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_th.lst"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_th.xml"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_th.csv"
+        },
+        "dictionary": {
+          "byteSize": 0,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_th.lst",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_th.xml"
+        },
+        "pronounCsv": {
+          "byteSize": 1154,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_th.csv",
+          "sha256": "771d4fb7146b6585fbf8bac335e3f1be8427399e20c817e83c3c9d5049c7555a"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "th",
+      "locales": [
+        "th_TH"
+      ],
+      "materializedState": "partial-materialized",
+      "runtimeStatus": "not-started"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "byteSize": 57207,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_tr.lst",
+          "sha256": "32097e8a123c591d4470a51e883b8afb6cebf9b5b60c0857cffd07a7c513e391"
+        },
+        "inflectional": {
+          "byteSize": 21129,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_tr.xml",
+          "sha256": "810637ded03292c0d48511dcfa1e293d63e044ae312293245a590585640c1445"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_tr.csv"
+        },
+        "dictionary": {
+          "byteSize": 130,
+          "exists": true,
+          "gitLfsObjectSize": 57207,
+          "gitLfsOidSha256": "32097e8a123c591d4470a51e883b8afb6cebf9b5b60c0857cffd07a7c513e391",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_tr.lst",
+          "sha256": "19d9892d75b2dac4d5d1ab31bbcfb95d226daf385954424f9c3610a498f4bfc4"
+        },
+        "inflectional": {
+          "byteSize": 130,
+          "exists": true,
+          "gitLfsObjectSize": 21129,
+          "gitLfsOidSha256": "810637ded03292c0d48511dcfa1e293d63e044ae312293245a590585640c1445",
+          "gitLfsPointer": true,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_tr.xml",
+          "sha256": "894509813973cd19204db97a7c3d45c1e33fb3968e30abff18955f6c31c4e34d"
+        },
+        "pronounCsv": {
+          "byteSize": 1252,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_tr.csv",
+          "sha256": "378ed520c8fd10f9fe4403aaf93be9c58699bca1399e6e1e8a408b9f4c43504f"
+        },
+        "supplemental": [
+          {
+            "byteSize": 43876,
+            "exists": true,
+            "gitLfsPointer": false,
+            "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/supplemental_tr.lst",
+            "sha256": "17fc7f47aea713943bdedf5c25a1cca909120b96b266653f46b817c4ab0c10d5"
+          }
+        ]
+      },
+      "localeGroup": "tr",
+      "locales": [
+        "tr_TR"
+      ],
+      "materializedState": "cache-materialized",
+      "runtimeStatus": "runtime-prototype"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_vi.lst"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_vi.xml"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_vi.csv"
+        },
+        "dictionary": {
+          "byteSize": 0,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_vi.lst",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_vi.xml"
+        },
+        "pronounCsv": {
+          "byteSize": 437,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_vi.csv",
+          "sha256": "60b00dacd186bf450c962ab86e8b29e8de9740e26b1473a009558953db232ad1"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "vi",
+      "locales": [
+        "vi_VN"
+      ],
+      "materializedState": "partial-materialized",
+      "runtimeStatus": "not-started"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_yue.lst"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_yue.xml"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_yue.csv"
+        },
+        "dictionary": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_yue.lst"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_yue.xml"
+        },
+        "pronounCsv": {
+          "byteSize": 30,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_yue.csv",
+          "sha256": "a572a183d844204fd0eb7e1686f9959c9858648bca6a40e56a6706a48c8eeba4"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "yue",
+      "locales": [
+        "yue_CN"
+      ],
+      "materializedState": "missing",
+      "runtimeStatus": "not-started"
+    },
+    {
+      "cache": {
+        "dictionary": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/dictionary_zh.lst"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/.cache/mf2-inflection-data/inflectional_zh.xml"
+        }
+      },
+      "checkout": {
+        "contractionTable": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/contraction/contractionExpandingTable_zh.csv"
+        },
+        "dictionary": {
+          "byteSize": 0,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_zh.lst",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "inflectional": {
+          "exists": false,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_zh.xml"
+        },
+        "pronounCsv": {
+          "byteSize": 76,
+          "exists": true,
+          "gitLfsPointer": false,
+          "path": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_zh.csv",
+          "sha256": "ee17ae96e81316f665ddcfdf9d0260e2f58926ac7756b096c57fae1750604fe7"
+        },
+        "supplemental": []
+      },
+      "localeGroup": "zh",
+      "locales": [
+        "zh_CN",
+        "zh_TW",
+        "zh_HK"
+      ],
+      "materializedState": "partial-materialized",
+      "runtimeStatus": "not-started"
+    }
+  ],
+  "schema": "mojito-mf2-inflection/locale-data-survey/v0",
+  "summary": {
+    "blockedSourceDataLocaleCount": 1,
+    "cacheMaterializedLocaleCount": 14,
+    "checkoutMaterializedLocaleCount": 1,
+    "dictionaryLocaleCount": 24,
+    "inflectionalLocaleCount": 17,
+    "localeGroupCount": 25,
+    "pronounCsvLocaleCount": 25,
+    "runtimePrototypeLocaleCount": 14
+  },
+  "unicodeRoot": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection"
+}

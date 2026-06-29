@@ -1,0 +1,89 @@
+{
+  "schema": "mojito-mf2-term-pack/example-v0",
+  "locale": "de",
+  "source": {
+    "messageCatalog": "de_term_usage_example.json",
+    "termCatalog": "de_term_pack_example.json"
+  },
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/mf2_term_pack_compile.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "unicode-org/inflection dictionary_de.lst",
+      "unicode-org/inflection inflectional_de.xml"
+    ],
+    "sources": [
+      {
+        "path": "dictionary_de.lst",
+        "byteSize": 15082193,
+        "sha256": "889018ad62df6258da38973ecd8737e21d98d53b3469530f4870e014d6a3280b",
+        "gitLfsPointer": false
+      },
+      {
+        "path": "inflectional_de.xml",
+        "byteSize": 1359627,
+        "sha256": "eed569d40af669d27e140646e9b706de44d8cb2946e1a97cce537833bd61f2ac",
+        "gitLfsPointer": false
+      }
+    ]
+  },
+  "terms": {
+    "de.article_case.1_euro_job": {
+      "text": "1-Euro-Job",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "masculine",
+        "number": "singular",
+        "startsWithVowelSound": false
+      },
+      "forms": {
+        "count.one": "1 1-Euro-Job",
+        "count.other": "{$count} 1-Euro-Jobs",
+        "definite.accusative.singular": "den 1-Euro-Job",
+        "definite.accusative.plural": "die 1-Euro-Jobs",
+        "definite.dative.singular": "dem 1-Euro-Job",
+        "definite.dative.plural": "den 1-Euro-Jobs",
+        "indefinite.nominative.singular": "ein 1-Euro-Job",
+        "indefinite.nominative.plural": "1-Euro-Jobs"
+      }
+    },
+    "de.article_case.katze": {
+      "text": "Katze",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "feminine",
+        "number": "singular",
+        "startsWithVowelSound": false
+      },
+      "forms": {
+        "count.one": "1 Katze",
+        "count.other": "{$count} Katzen",
+        "definite.accusative.singular": "die Katze",
+        "definite.accusative.plural": "die Katzen",
+        "definite.dative.singular": "der Katze",
+        "definite.dative.plural": "den Katzen",
+        "indefinite.nominative.singular": "eine Katze",
+        "indefinite.nominative.plural": "Katzen"
+      }
+    },
+    "de.article_case.maedchen": {
+      "text": "M\u00e4dchen",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "neuter",
+        "number": "singular",
+        "startsWithVowelSound": false
+      },
+      "forms": {
+        "count.one": "1 M\u00e4dchen",
+        "count.other": "{$count} M\u00e4dchen",
+        "definite.accusative.singular": "das M\u00e4dchen",
+        "definite.accusative.plural": "die M\u00e4dchen",
+        "definite.dative.singular": "dem M\u00e4dchen",
+        "definite.dative.plural": "den M\u00e4dchen",
+        "indefinite.nominative.singular": "ein M\u00e4dchen",
+        "indefinite.nominative.plural": "M\u00e4dchen"
+      }
+    }
+  }
+}

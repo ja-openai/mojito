@@ -1,0 +1,414 @@
+{
+  "locale": "hi",
+  "packShape": "dependency-pronoun-agreement-rows-v0",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/hi_pack_survey.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/inflection/pronoun_hi.csv"
+    ],
+    "sources": [
+      {
+        "byteSize": 2433,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_hi.csv",
+        "sha256": "586446abbbdc6d8466912941ac2609d7bdac072af5c3422bf575a8715b1bf810"
+      }
+    ]
+  },
+  "rows": [
+    {
+      "case": "direct",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 1,
+      "number": "singular",
+      "person": "first",
+      "register": null,
+      "value": "मैं"
+    },
+    {
+      "case": "ergative",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 2,
+      "number": "singular",
+      "person": "first",
+      "register": null,
+      "value": "मैंने"
+    },
+    {
+      "case": "accusative",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 3,
+      "number": "singular",
+      "person": "first",
+      "register": null,
+      "value": "मुझे"
+    },
+    {
+      "case": "direct",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 4,
+      "number": "plural",
+      "person": "first",
+      "register": null,
+      "value": "हम"
+    },
+    {
+      "case": "ergative",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 5,
+      "number": "plural",
+      "person": "first",
+      "register": null,
+      "value": "हमने"
+    },
+    {
+      "case": "accusative",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 6,
+      "number": "plural",
+      "person": "first",
+      "register": null,
+      "value": "हमें"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "masculine",
+      "dependencyNumber": "singular",
+      "line": 7,
+      "number": "singular",
+      "person": "first",
+      "register": null,
+      "value": "मेरा"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "masculine",
+      "dependencyNumber": "plural",
+      "line": 8,
+      "number": "singular",
+      "person": "first",
+      "register": null,
+      "value": "मेरे"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "feminine",
+      "dependencyNumber": "singular",
+      "line": 9,
+      "number": "singular",
+      "person": "first",
+      "register": null,
+      "value": "मेरी"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "feminine",
+      "dependencyNumber": "plural",
+      "line": 10,
+      "number": "singular",
+      "person": "first",
+      "register": null,
+      "value": "मेरी"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "masculine",
+      "dependencyNumber": "singular",
+      "line": 11,
+      "number": "plural",
+      "person": "first",
+      "register": null,
+      "value": "हमारा"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "masculine",
+      "dependencyNumber": "plural",
+      "line": 12,
+      "number": "plural",
+      "person": "first",
+      "register": null,
+      "value": "हमारे"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "feminine",
+      "dependencyNumber": "singular",
+      "line": 13,
+      "number": "plural",
+      "person": "first",
+      "register": null,
+      "value": "हमारी"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "feminine",
+      "dependencyNumber": "plural",
+      "line": 14,
+      "number": "plural",
+      "person": "first",
+      "register": null,
+      "value": "हमारी"
+    },
+    {
+      "case": "direct",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 15,
+      "number": "singular",
+      "person": "second",
+      "register": "intimate",
+      "value": "तू"
+    },
+    {
+      "case": "ergative",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 16,
+      "number": "singular",
+      "person": "second",
+      "register": "intimate",
+      "value": "तूने"
+    },
+    {
+      "case": "accusative",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 17,
+      "number": "singular",
+      "person": "second",
+      "register": "intimate",
+      "value": "तुझे"
+    },
+    {
+      "case": "direct",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 18,
+      "number": "any",
+      "person": "second",
+      "register": "informal",
+      "value": "तुम"
+    },
+    {
+      "case": "direct",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 19,
+      "number": "plural",
+      "person": "second",
+      "register": "intimate",
+      "value": "तुम"
+    },
+    {
+      "case": "ergative",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 20,
+      "number": "any",
+      "person": "second",
+      "register": "informal",
+      "value": "तुमने"
+    },
+    {
+      "case": "ergative",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 21,
+      "number": "plural",
+      "person": "second",
+      "register": "intimate",
+      "value": "तुमने"
+    },
+    {
+      "case": "accusative",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 22,
+      "number": "any",
+      "person": "second",
+      "register": "informal",
+      "value": "तुम्हें"
+    },
+    {
+      "case": "accusative",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 23,
+      "number": "plural",
+      "person": "second",
+      "register": "intimate",
+      "value": "तुम्हें"
+    },
+    {
+      "case": "direct",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 24,
+      "number": "any",
+      "person": "second",
+      "register": "formal",
+      "value": "आप"
+    },
+    {
+      "case": "ergative",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 25,
+      "number": "any",
+      "person": "second",
+      "register": "formal",
+      "value": "आपने"
+    },
+    {
+      "case": "accusative",
+      "dependencyGender": null,
+      "dependencyNumber": null,
+      "line": 26,
+      "number": "any",
+      "person": "second",
+      "register": "formal",
+      "value": "आपको"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "masculine",
+      "dependencyNumber": "singular",
+      "line": 27,
+      "number": "singular",
+      "person": "second",
+      "register": "intimate",
+      "value": "तेरा"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "masculine",
+      "dependencyNumber": "plural",
+      "line": 28,
+      "number": "singular",
+      "person": "second",
+      "register": "intimate",
+      "value": "तेरे"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "feminine",
+      "dependencyNumber": "singular",
+      "line": 29,
+      "number": "singular",
+      "person": "second",
+      "register": "intimate",
+      "value": "तेरी"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "feminine",
+      "dependencyNumber": "plural",
+      "line": 30,
+      "number": "singular",
+      "person": "second",
+      "register": "intimate",
+      "value": "तेरी"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "masculine",
+      "dependencyNumber": "singular",
+      "line": 31,
+      "number": "any",
+      "person": "second",
+      "register": "informal",
+      "value": "तुम्हारा"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "masculine",
+      "dependencyNumber": "plural",
+      "line": 32,
+      "number": "any",
+      "person": "second",
+      "register": "informal",
+      "value": "तुम्हारे"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "feminine",
+      "dependencyNumber": "singular",
+      "line": 33,
+      "number": "any",
+      "person": "second",
+      "register": "informal",
+      "value": "तुम्हारी"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "feminine",
+      "dependencyNumber": "plural",
+      "line": 34,
+      "number": "any",
+      "person": "second",
+      "register": "informal",
+      "value": "तुम्हारी"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "masculine",
+      "dependencyNumber": "singular",
+      "line": 35,
+      "number": "any",
+      "person": "second",
+      "register": "formal",
+      "value": "आपका"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "masculine",
+      "dependencyNumber": "plural",
+      "line": 36,
+      "number": "any",
+      "person": "second",
+      "register": "formal",
+      "value": "आपके"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "feminine",
+      "dependencyNumber": "singular",
+      "line": 37,
+      "number": "any",
+      "person": "second",
+      "register": "formal",
+      "value": "आपकी"
+    },
+    {
+      "case": "genitive",
+      "dependencyGender": "feminine",
+      "dependencyNumber": "plural",
+      "line": 38,
+      "number": "any",
+      "person": "second",
+      "register": "formal",
+      "value": "आपकी"
+    }
+  ],
+  "schema": "mojito-mf2-inflection/hi-pronoun-agreement-pack/v0",
+  "summary": {
+    "binaryLowerBoundBytes": {
+      "rowBytes": 304,
+      "stringPoolBytes": 426,
+      "totalBytes": 730
+    },
+    "dependencyRows": 20,
+    "genitiveRows": 20,
+    "invariantNumberRows": 14,
+    "rows": 38,
+    "uniqueValues": 30
+  }
+}

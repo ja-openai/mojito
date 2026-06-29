@@ -51,6 +51,14 @@ local/current Intl extension exposes `NumberFormatter` and `IntlDateFormatter`
 but not `IntlRelativeTimeFormatter`. Add a dedicated CLDR or future Intl
 adapter instead of faking relative-time output in portable/default registries.
 
+Inflection is intentionally not a public PHP runtime surface yet. The Composer
+autoload boundary exposes parser/formatter functions and registries only; the
+conformance test asserts that no public inflection, M2IF, or compiled term-pack
+function/class is present until a concrete PHP caller justifies a reviewed
+product API. Keep PHP on its existing conformance script; validate inflection
+release artifacts through the repo-level shared gate rather than adding PHP
+inflection exports or a package-local wrapper without that caller.
+
 Regenerate the vendored plural rules:
 
 ```sh

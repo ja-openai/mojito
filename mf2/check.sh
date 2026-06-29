@@ -8,6 +8,8 @@ sh static_check.sh
 (cd cldr && sh validate_number_data.sh)
 (cd cldr && sh validate_relative_time_data.sh)
 (cd conformance && python3 validate_relative_time_fixture.py)
+# Fail fast on inflection release artifacts; package checks may also gate their own boundary.
+(cd python && sh run.sh inflection-release)
 (cd rust/mojito-mf2 && cargo test)
 (cd rust/mojito-mf2 && cargo run -- conformance ../../conformance/fixtures/source-to-model)
 (cd rust/mojito-mf2 && cargo run -- unicode-tests)

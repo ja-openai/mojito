@@ -1,0 +1,167 @@
+{
+  "bindings": {
+    "inventory.deleted": {
+      "item": [
+        "item.gnome",
+        "item.book",
+        "item.water",
+        "item.bee"
+      ]
+    },
+    "inventory.found": {
+      "item": [
+        "item.gnome",
+        "item.book",
+        "item.water",
+        "item.bee"
+      ]
+    }
+  },
+  "diagnostics": [],
+  "formSets": [
+    {
+      "forms": [
+        {
+          "key": 0,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 2,
+          "kind": "literal",
+          "value": 3
+        }
+      ],
+      "term": 4
+    },
+    {
+      "forms": [
+        {
+          "key": 0,
+          "kind": "literal",
+          "value": 6
+        },
+        {
+          "key": 2,
+          "kind": "literal",
+          "value": 7
+        }
+      ],
+      "term": 8
+    },
+    {
+      "forms": [
+        {
+          "key": 0,
+          "kind": "literal",
+          "value": 10
+        },
+        {
+          "key": 2,
+          "kind": "literal",
+          "value": 11
+        }
+      ],
+      "term": 12
+    },
+    {
+      "forms": [
+        {
+          "key": 0,
+          "kind": "literal",
+          "value": 14
+        },
+        {
+          "key": 2,
+          "kind": "literal",
+          "value": 15
+        }
+      ],
+      "term": 16
+    }
+  ],
+  "locale": "it",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/mf2_term_pack_compile.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "unicode-org/inflection dictionary_it.lst",
+      "unicode-org/inflection inflectional_it.xml"
+    ],
+    "sources": [
+      {
+        "byteSize": 27327567,
+        "gitLfsPointer": false,
+        "path": "dictionary_it.lst",
+        "sha256": "c5836997d872f7e5833fe0c338109591235b91f0306fa3e317f1e7aabbfe42a9"
+      },
+      {
+        "byteSize": 1394074,
+        "gitLfsPointer": false,
+        "path": "inflectional_it.xml",
+        "sha256": "70ad7ba37f88b96607ba367549cc2260453ff774eebb3533d728da0b7c072653"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/compiled-term-pack/v0",
+  "sizeEstimates": {
+    "binaryLowerBoundBytes": {
+      "bindingReferenceBytes": 0,
+      "formRowBytes": 96,
+      "stringPoolBytes": 132,
+      "termRowBytes": 80,
+      "totalBytes": 308
+    },
+    "compactJsonBytes": 1622
+  },
+  "strings": [
+    "bare.plural",
+    "api",
+    "bare.singular",
+    "ape",
+    "item.bee",
+    "bee",
+    "libri",
+    "libro",
+    "item.book",
+    "book",
+    "gnomi",
+    "gnomo",
+    "item.gnome",
+    "gnome",
+    "acque",
+    "acqua",
+    "item.water",
+    "water"
+  ],
+  "terms": [
+    {
+      "featureBits": 196897,
+      "formSet": 0,
+      "id": 4,
+      "sense": 5,
+      "text": 3
+    },
+    {
+      "featureBits": 65809,
+      "formSet": 1,
+      "id": 8,
+      "sense": 9,
+      "text": 7
+    },
+    {
+      "featureBits": 131345,
+      "formSet": 2,
+      "id": 12,
+      "sense": 13,
+      "text": 11
+    },
+    {
+      "featureBits": 196897,
+      "formSet": 3,
+      "id": 16,
+      "sense": 17,
+      "text": 15
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "schema": "mojito-mf2-term-pack/example-v0",
+  "locale": "fr",
+  "source": {
+    "messageCatalog": "inventory.mf2",
+    "termCatalog": "inventory-terms.json"
+  },
+  "requirements": {
+    "inventory.deleted": {
+      "item": [
+        "partOfSpeech=noun",
+        "gender",
+        "number",
+        "elision",
+        "forms.definite.singular",
+        "forms.definite.plural",
+        "forms.count.one",
+        "forms.count.other"
+      ]
+    },
+    "inventory.found": {
+      "item": [
+        "partOfSpeech=noun",
+        "gender",
+        "number",
+        "elision",
+        "forms.indefinite.singular",
+        "forms.indefinite.plural"
+      ]
+    },
+    "inventory.weighed": {
+      "item": [
+        "partOfSpeech=noun",
+        "gender",
+        "number",
+        "forms.count.one",
+        "forms.count.other"
+      ]
+    }
+  },
+  "terms": {
+    "item.iron_sword": {
+      "text": "épée de fer",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "feminine",
+        "number": "singular",
+        "startsWithVowelSound": true
+      },
+      "forms": {
+        "bare.singular": "épée de fer",
+        "bare.plural": "épées de fer",
+        "definite.singular": "l'épée de fer",
+        "definite.plural": "les épées de fer",
+        "indefinite.singular": "une épée de fer",
+        "indefinite.plural": "des épées de fer",
+        "count.one": "1 épée de fer",
+        "count.other": "{$count} épées de fer"
+      }
+    },
+    "concept.book": {
+      "text": "livre",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "masculine",
+        "number": "singular",
+        "startsWithVowelSound": false,
+        "sense": "book"
+      },
+      "forms": {
+        "bare.singular": "livre",
+        "bare.plural": "livres",
+        "definite.singular": "le livre",
+        "definite.plural": "les livres",
+        "count.one": "1 livre",
+        "count.other": "{$count} livres"
+      }
+    },
+    "unit.pound": {
+      "text": "livre",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "feminine",
+        "number": "singular",
+        "startsWithVowelSound": false,
+        "sense": "unit-pound"
+      },
+      "forms": {
+        "bare.singular": "livre",
+        "bare.plural": "livres",
+        "definite.singular": "la livre",
+        "definite.plural": "les livres",
+        "count.one": "1 livre",
+        "count.other": "{$count} livres"
+      }
+    }
+  }
+}

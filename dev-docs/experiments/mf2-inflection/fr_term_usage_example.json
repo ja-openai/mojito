@@ -1,0 +1,28 @@
+{
+  "schema": "mojito-mf2-inflection/message-term-binding-manifest/v0",
+  "locale": "fr",
+  "messages": {
+    "inventory.deleted": "Vous avez supprimé {$item :term article=definite count=$count}.",
+    "inventory.found": "Vous avez trouvé {$item :term article=indefinite}.",
+    "inventory.weighed": "Le poids est de {$item :term count=$count}."
+  },
+  "argumentTerms": {
+    "inventory.deleted": {
+      "item": [
+        "item.iron_sword",
+        "concept.book",
+        "unit.pound"
+      ]
+    },
+    "inventory.found": {
+      "item": [
+        "item.iron_sword"
+      ]
+    },
+    "inventory.weighed": {
+      "item": [
+        "unit.pound"
+      ]
+    }
+  }
+}

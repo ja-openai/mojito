@@ -1,0 +1,312 @@
+{
+  "description": "Generated unambiguous sample from Unicode Russian noun case patterns; variant-bearing rows are intentionally skipped for V0.",
+  "locale": "ru",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/ru_case_pack_audit.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_ru.lst",
+      "inflection/resources/org/unicode/inflection/dictionary/inflectional_ru.xml"
+    ],
+    "sources": [
+      {
+        "byteSize": 76320564,
+        "gitLfsPointer": false,
+        "path": "dictionary_ru.lst",
+        "sha256": "0cec5900694f7a7e1361ab95b3e47bca9114079b6ab8b48531c355eb8862bfeb"
+      },
+      {
+        "byteSize": 1500300,
+        "gitLfsPointer": false,
+        "path": "inflectional_ru.xml",
+        "sha256": "8fade258e582840840daa29bd6971a61a090feb33268b303582c10bd4b08b00a"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/ru-case-form-sample-pack/v0",
+  "strings": [
+    "ru.case.кошка",
+    "кошка",
+    "кош",
+    "accusative.plural",
+    "кошек",
+    "accusative.singular",
+    "кошку",
+    "dative.plural",
+    "кошкам",
+    "dative.singular",
+    "кошке",
+    "genitive.plural",
+    "genitive.singular",
+    "кошки",
+    "instrumental.plural",
+    "кошками",
+    "instrumental.singular",
+    "кошкой",
+    "nominative.plural",
+    "nominative.singular",
+    "prepositional.plural",
+    "кошках",
+    "prepositional.singular",
+    "ru.case.ресторан",
+    "ресторан",
+    "рестораны",
+    "ресторанам",
+    "ресторану",
+    "ресторанов",
+    "ресторана",
+    "ресторанами",
+    "рестораном",
+    "ресторанах",
+    "ресторане",
+    "ru.case.аббатство",
+    "аббатство",
+    "аббатств",
+    "аббатства",
+    "аббатствам",
+    "аббатству",
+    "аббатствами",
+    "аббатством",
+    "аббатствах",
+    "аббатстве"
+  ],
+  "summary": {
+    "binaryLowerBoundBytes": 1284,
+    "candidateTerms": 68169,
+    "exportedTerms": 3,
+    "formRows": 36,
+    "jsonBytes": 6756,
+    "skippedTerms": {
+      "conflicting-form-key": 26995,
+      "duplicate-term-id": 2,
+      "missing-case-form-keys": 85,
+      "missing-or-ambiguous-gender": 1050,
+      "missing-or-ambiguous-inflection": 19322,
+      "not-nominative": 702128,
+      "not-singular": 43985,
+      "suffix-mismatch": 49554,
+      "unsupported-part-of-speech": 3397,
+      "unsupported-pattern-part-of-speech": 3
+    },
+    "stringPoolBytes": 792,
+    "strings": 44
+  },
+  "terms": [
+    {
+      "animacy": "animate",
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 4
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 6
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 8
+        },
+        {
+          "key": 9,
+          "kind": "literal",
+          "value": 10
+        },
+        {
+          "key": 11,
+          "kind": "literal",
+          "value": 4
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 13
+        },
+        {
+          "key": 14,
+          "kind": "literal",
+          "value": 15
+        },
+        {
+          "key": 16,
+          "kind": "literal",
+          "value": 17
+        },
+        {
+          "key": 18,
+          "kind": "literal",
+          "value": 13
+        },
+        {
+          "key": 19,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 20,
+          "kind": "literal",
+          "value": 21
+        },
+        {
+          "key": 22,
+          "kind": "literal",
+          "value": 10
+        }
+      ],
+      "gender": "feminine",
+      "id": 0,
+      "inflectionPattern": "268",
+      "number": "singular",
+      "partOfSpeech": "noun",
+      "stem": 2,
+      "text": 1
+    },
+    {
+      "animacy": "inanimate",
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 25
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 24
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 26
+        },
+        {
+          "key": 9,
+          "kind": "literal",
+          "value": 27
+        },
+        {
+          "key": 11,
+          "kind": "literal",
+          "value": 28
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 29
+        },
+        {
+          "key": 14,
+          "kind": "literal",
+          "value": 30
+        },
+        {
+          "key": 16,
+          "kind": "literal",
+          "value": 31
+        },
+        {
+          "key": 18,
+          "kind": "literal",
+          "value": 25
+        },
+        {
+          "key": 19,
+          "kind": "literal",
+          "value": 24
+        },
+        {
+          "key": 20,
+          "kind": "literal",
+          "value": 32
+        },
+        {
+          "key": 22,
+          "kind": "literal",
+          "value": 33
+        }
+      ],
+      "gender": "masculine",
+      "id": 23,
+      "inflectionPattern": "1",
+      "number": "singular",
+      "partOfSpeech": "noun",
+      "stem": 24,
+      "text": 24
+    },
+    {
+      "animacy": "inanimate",
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 37
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 35
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 38
+        },
+        {
+          "key": 9,
+          "kind": "literal",
+          "value": 39
+        },
+        {
+          "key": 11,
+          "kind": "literal",
+          "value": 36
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 37
+        },
+        {
+          "key": 14,
+          "kind": "literal",
+          "value": 40
+        },
+        {
+          "key": 16,
+          "kind": "literal",
+          "value": 41
+        },
+        {
+          "key": 18,
+          "kind": "literal",
+          "value": 37
+        },
+        {
+          "key": 19,
+          "kind": "literal",
+          "value": 35
+        },
+        {
+          "key": 20,
+          "kind": "literal",
+          "value": 42
+        },
+        {
+          "key": 22,
+          "kind": "literal",
+          "value": 43
+        }
+      ],
+      "gender": "neuter",
+      "id": 34,
+      "inflectionPattern": "b",
+      "number": "singular",
+      "partOfSpeech": "noun",
+      "stem": 36,
+      "text": 35
+    }
+  ]
+}
