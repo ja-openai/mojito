@@ -22,6 +22,7 @@ We use `mojito-cli` to configure integrity checkers in a repository.  Integrity 
 |:---------------------------------------|:------------------------------- ---------------|:-------------------------------------|
 | COMPOSITE_FORMAT                       | resw, resx                                     | RESW, RESX                           |
 | MESSAGE_FORMAT                         | properties                                     | Java Properties                      |
+| FORMATJS_RICH_TEXT                     | json                                           | FormatJS rich-text messages          |
 | PRINTF_LIKE                            | xml, strings,                                  | Android Strings, iOS/Mac Strings,    |
 | SIMPLE_PRINTF_LIKE                     |                                                |                                      |
 | WHITESPACE                             |                                                |                                      |
@@ -58,6 +59,20 @@ Missing curly braces or translating elements within the curly braces also cause 
 | <small>{numFiles, plural, one{one file} other{# files}}</small> | <small>{numFiles, plural, one{un fichier} other{# fichiers}</small>  | <small>FAIL missing closing curly braces</small>  |
 | <small>{numFiles, plural, one{one file} other{# files}}</small> | <small>{numFiles, plural, un{un fichier} autre{# fichiers}}</small>  | <small>FAIL translating quantity elements</small> |
 
+
+### FormatJS Rich-Text Integrity Checker
+
+FormatJS rich-text integrity checker rejects translations containing a single ASCII apostrophe
+immediately before an opening rich-text tag. Configure it alongside any existing JSON integrity
+checkers using the standard repository integrity-checker option:
+
+```bash
+    mojito repo-update -n MyFormatJsRepo -it "json:MESSAGE_FORMAT,json:HTML_TAG,json:FORMATJS_RICH_TEXT"
+```
+
+For example, `l'<privacyLink>...</privacyLink>` is rejected while
+`l''<privacyLink>...</privacyLink>` is accepted. The checker does not modify translations or
+generated files.
 
 
 
@@ -134,5 +149,3 @@ While importing offline translations, the integrity checker catches errors and r
 Clicking on the number of rejected translations loads the Workbench with rejected translation.  You can correct the translation and change its status to `Needs Review` or `Accepted`.
 
 ![Workbench with Rejected Translation](./images/workbench-warning.png)
-
-

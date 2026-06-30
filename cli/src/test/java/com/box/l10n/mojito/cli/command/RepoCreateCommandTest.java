@@ -129,6 +129,27 @@ public class RepoCreateCommandTest extends CLITestBase {
   }
 
   @Test
+  public void testCreateRepoWithFormatJsRichTextIntegrityCheck() throws Exception {
+    String testRepoName = testIdWatcher.getEntityName("repository");
+
+    getL10nJCommander()
+        .run(
+            "repo-create",
+            Param.REPOSITORY_NAME_SHORT,
+            testRepoName,
+            Param.REPOSITORY_LOCALES_SHORT,
+            "it-IT",
+            RepoCreateCommand.INTEGRITY_CHECK_SHORT_PARAM,
+            "json:FORMATJS_RICH_TEXT");
+
+    Repository repository = repositoryRepository.findByName(testRepoName);
+    assertEquals(1, repository.getAssetIntegrityCheckers().size());
+    AssetIntegrityChecker checker = repository.getAssetIntegrityCheckers().iterator().next();
+    assertEquals("json", checker.getAssetExtension());
+    assertEquals(IntegrityCheckerType.FORMATJS_RICH_TEXT, checker.getIntegrityCheckerType());
+  }
+
+  @Test
   public void testCreateTestRepoWithWebAppLocalesCorrectlyCreated() throws Exception {
     String testRepoName = testIdWatcher.getEntityName("repository");
     String testDescription = testRepoName + " description";

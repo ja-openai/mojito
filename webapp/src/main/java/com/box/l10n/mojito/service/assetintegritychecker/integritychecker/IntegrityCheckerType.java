@@ -20,6 +20,7 @@ public enum IntegrityCheckerType {
   WHITESPACE(WhitespaceIntegrityChecker.class.getName()),
   TRAILING_WHITESPACE(TrailingWhitespaceIntegrityChecker.class.getName()),
   HTML_TAG(HtmlTagIntegrityChecker.class.getName()),
+  FORMATJS_RICH_TEXT(FormatJsRichTextIntegrityChecker.class.getName()),
   ELLIPSIS(EllipsisIntegrityChecker.class.getName()),
   BACKQUOTE(BackquoteIntegrityChecker.class.getName()),
   EMPTY_TARGET_NOT_EMPTY_SOURCE(EmptyTargetNotEmptySourceIntegrityChecker.class.getName()),
