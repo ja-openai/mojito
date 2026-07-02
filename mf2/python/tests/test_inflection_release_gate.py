@@ -1396,7 +1396,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Python package harness at 101 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "live status-to-staging-command audit currently sees 5 non-webapp files plus 0 webapp files covered by the pinned review-slice commands",
+            "live status-to-staging-command audit currently sees 3 non-webapp files plus 0 webapp files covered by the pinned review-slice commands",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
@@ -1654,8 +1654,6 @@ class InflectionReleaseGateTest(unittest.TestCase):
 
         self.assertEqual(
             (
-                "common/src/test/java/com/box/l10n/mojito/mf2/inflection/Mf2InflectionApiSurfaceTest.java",
-                "common/src/test/java/com/box/l10n/mojito/mf2/inflection/Mf2InflectionReleaseValidatorTest.java",
                 "dev-docs/design/022-mf2-native-inflection.md",
                 "dev-docs/tracker.md",
                 "mf2/python/tests/test_inflection_release_gate.py",
@@ -1674,7 +1672,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
 
         for snippet in (
             "Ninety-fourth current status-to-staging-command audit",
-            "5 current non-webapp status files",
+            "3 current non-webapp status files",
             "0 current webapp status files",
             "current dirty paths are covered by the pinned review-slice commands",
             "clean historical staging arguments are allowed",
@@ -1683,7 +1681,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             self.assertIn(snippet, normalized_design_note)
         for snippet in (
             "Latest current status-to-staging-command audit",
-            "5 current non-webapp status files",
+            "3 current non-webapp status files",
             "0 current webapp status files",
             "current dirty paths are covered by the pinned review-slice commands",
             "clean historical staging arguments are allowed",

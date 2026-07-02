@@ -3553,7 +3553,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
 - Ninety-fourth current status-to-staging-command audit: the release-gate
   harness now executes `git status --short --porcelain=v1 -uall` and compares the
   current dirty tree against the two documented `git add` commands. The current
-  dirty tree contains 5 current non-webapp status files and 0 current webapp
+  dirty tree contains 3 current non-webapp status files and 0 current webapp
   status files; the current dirty paths are covered by the pinned review-slice
   commands, and clean historical staging arguments are allowed because the
   first-slice and webapp commands remain reviewer-ready historical slice commands.
@@ -23836,10 +23836,21 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   `mvn spotless:apply` touched two Java/common test files, without changing
   locale coverage, claiming all inflection types, or promoting any package-local
   non-Java runtime API.
+- Two thousand one hundred second status-to-staging audit after the path-cleanup
+  backlog wording:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands InflectionReleaseGateTest.test_tracker_current_checkpoint_mentions_latest_release_slice_guards InflectionReleaseGateTest.test_docs_keep_bounded_inflection_claims InflectionReleaseGateTest.test_design_tracker_pin_first_review_slice_boundaries InflectionReleaseGateTest.test_design_tracker_pin_final_slice_readiness_summary InflectionReleaseGateTest.test_inflection_release_wrapper_documents_scope_boundary InflectionReleaseGateTest.test_package_local_inflection_release_scripts_delegate_only_to_shared_gate InflectionReleaseGateTest.test_non_java_package_manifests_do_not_publish_inflection_surfaces`
+  passes 8 focused release-gate tests from `mf2/python`. It rechecks the current
+  dirty tree after documenting the exact-path cleanup and separate
+  branch-local experiment/cache-path backlog: 3 non-webapp files and 0 webapp
+  files, with only the design/tracker/Python guard files covered by the pinned
+  review-slice commands. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
 - Next target: decide whether to normalize the broader branch-local experiment
-  and cache-path provenance before updating the origin branch, then implement a
-  real non-Java M2IF reader/renderer only for a product-needed native library,
-  or continue locale/runtime work only from product-backed requirements.
+  and cache-path provenance as a separate cleanup before another review refresh,
+  then implement a real non-Java M2IF reader/renderer only for a product-needed
+  native library, or continue locale/runtime work only from product-backed
+  requirements.
 - Production formatting uses term IDs or declared dictionaries, not unqualified
   bare words.
 - Build-time validation expands message usages and catches missing term
