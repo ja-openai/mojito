@@ -4,13 +4,42 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 
+def env_path(name: str, default: Path) -> Path:
+    return Path(os.environ.get(name, str(default))).expanduser()
+
+
 ROOT = Path(__file__).resolve().parent
+DEFAULT_CACHE_DIR = env_path(
+    "MF2_INFLECTION_DATA_CACHE", Path.home() / ".cache" / "mf2-inflection-data"
+)
+DEFAULT_UNICODE_ROOT = env_path(
+    "UNICODE_INFLECTION_ROOT",
+    Path.home()
+    / "code"
+    / "inflection"
+    / "inflection"
+    / "resources"
+    / "org"
+    / "unicode"
+    / "inflection",
+)
+
+
+def cached_data_file(name: str) -> Path:
+    return DEFAULT_CACHE_DIR / name
+
+
+def unicode_data_file(*parts: str) -> Path:
+    return DEFAULT_UNICODE_ROOT.joinpath(*parts)
+
+
 CATALOG = ROOT / "fr_term_usage_example.json"
 TERM_PACK = ROOT / "fr_term_pack_example.json"
 GERMAN_CATALOG = ROOT / "de_term_usage_example.json"
@@ -152,54 +181,38 @@ PORTUGUESE_NOUN_PACK_FIXTURE = (
     ROOT.parents[2]
     / "common/src/test/resources/com/box/l10n/mojito/mf2/inflection/pt_noun_pack_report_fixture.json"
 )
-SUPPLEMENTAL_DICTIONARY = Path(
-    "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/supplemental_fr.lst"
-)
-SERBIAN_DICTIONARY = Path(
-    "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_sr.lst"
-)
-SERBIAN_INFLECTIONAL = Path(
-    "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_sr.xml"
-)
-GERMAN_DICTIONARY = Path("/Users/ja/.cache/mf2-inflection-data/dictionary_de.lst")
-GERMAN_INFLECTIONAL = Path("/Users/ja/.cache/mf2-inflection-data/inflectional_de.xml")
-SPANISH_DICTIONARY = Path("/Users/ja/.cache/mf2-inflection-data/dictionary_es.lst")
-SPANISH_INFLECTIONAL = Path("/Users/ja/.cache/mf2-inflection-data/inflectional_es.xml")
-ITALIAN_DICTIONARY = Path("/Users/ja/.cache/mf2-inflection-data/dictionary_it.lst")
-ITALIAN_INFLECTIONAL = Path("/Users/ja/.cache/mf2-inflection-data/inflectional_it.xml")
-PORTUGUESE_DICTIONARY = Path("/Users/ja/.cache/mf2-inflection-data/dictionary_pt.lst")
-PORTUGUESE_INFLECTIONAL = Path("/Users/ja/.cache/mf2-inflection-data/inflectional_pt.xml")
-RUSSIAN_DICTIONARY = Path("/Users/ja/.cache/mf2-inflection-data/dictionary_ru.lst")
-RUSSIAN_INFLECTIONAL = Path("/Users/ja/.cache/mf2-inflection-data/inflectional_ru.xml")
-TURKISH_DICTIONARY = Path("/Users/ja/.cache/mf2-inflection-data/dictionary_tr.lst")
-TURKISH_INFLECTIONAL = Path("/Users/ja/.cache/mf2-inflection-data/inflectional_tr.xml")
-TURKISH_SUPPLEMENTAL = Path(
-    "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/supplemental_tr.lst"
-)
-HINDI_DICTIONARY = Path("/Users/ja/.cache/mf2-inflection-data/dictionary_hi.lst")
-HINDI_INFLECTIONAL = Path("/Users/ja/.cache/mf2-inflection-data/inflectional_hi.xml")
-HINDI_PRONOUNS = Path(
-    "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_hi.csv"
-)
-ARABIC_DICTIONARY = Path("/Users/ja/.cache/mf2-inflection-data/dictionary_ar.lst")
-ARABIC_INFLECTIONAL = Path("/Users/ja/.cache/mf2-inflection-data/inflectional_ar.xml")
-ARABIC_PRONOUNS = Path(
-    "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_ar.csv"
-)
-HEBREW_DICTIONARY = Path("/Users/ja/.cache/mf2-inflection-data/dictionary_he.lst")
-HEBREW_INFLECTIONAL = Path("/Users/ja/.cache/mf2-inflection-data/inflectional_he.xml")
-HEBREW_PRONOUNS = Path(
-    "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_he.csv"
-)
-MALAYALAM_DICTIONARY = Path("/Users/ja/.cache/mf2-inflection-data/dictionary_ml.lst")
-MALAYALAM_INFLECTIONAL = Path("/Users/ja/.cache/mf2-inflection-data/inflectional_ml.xml")
-MALAYALAM_PRONOUNS = Path(
-    "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_ml.csv"
-)
-SWEDISH_DICTIONARY = Path("/Users/ja/.cache/mf2-inflection-data/dictionary_sv.lst")
-DANISH_DICTIONARY = Path("/Users/ja/.cache/mf2-inflection-data/dictionary_da.lst")
-NORWEGIAN_BOKMAL_DICTIONARY = Path("/Users/ja/.cache/mf2-inflection-data/dictionary_nb.lst")
-DUTCH_DICTIONARY = Path("/Users/ja/.cache/mf2-inflection-data/dictionary_nl.lst")
+SUPPLEMENTAL_DICTIONARY = unicode_data_file("dictionary", "supplemental_fr.lst")
+SERBIAN_DICTIONARY = unicode_data_file("dictionary", "dictionary_sr.lst")
+SERBIAN_INFLECTIONAL = unicode_data_file("dictionary", "inflectional_sr.xml")
+GERMAN_DICTIONARY = cached_data_file("dictionary_de.lst")
+GERMAN_INFLECTIONAL = cached_data_file("inflectional_de.xml")
+SPANISH_DICTIONARY = cached_data_file("dictionary_es.lst")
+SPANISH_INFLECTIONAL = cached_data_file("inflectional_es.xml")
+ITALIAN_DICTIONARY = cached_data_file("dictionary_it.lst")
+ITALIAN_INFLECTIONAL = cached_data_file("inflectional_it.xml")
+PORTUGUESE_DICTIONARY = cached_data_file("dictionary_pt.lst")
+PORTUGUESE_INFLECTIONAL = cached_data_file("inflectional_pt.xml")
+RUSSIAN_DICTIONARY = cached_data_file("dictionary_ru.lst")
+RUSSIAN_INFLECTIONAL = cached_data_file("inflectional_ru.xml")
+TURKISH_DICTIONARY = cached_data_file("dictionary_tr.lst")
+TURKISH_INFLECTIONAL = cached_data_file("inflectional_tr.xml")
+TURKISH_SUPPLEMENTAL = unicode_data_file("dictionary", "supplemental_tr.lst")
+HINDI_DICTIONARY = cached_data_file("dictionary_hi.lst")
+HINDI_INFLECTIONAL = cached_data_file("inflectional_hi.xml")
+HINDI_PRONOUNS = unicode_data_file("inflection", "pronoun_hi.csv")
+ARABIC_DICTIONARY = cached_data_file("dictionary_ar.lst")
+ARABIC_INFLECTIONAL = cached_data_file("inflectional_ar.xml")
+ARABIC_PRONOUNS = unicode_data_file("inflection", "pronoun_ar.csv")
+HEBREW_DICTIONARY = cached_data_file("dictionary_he.lst")
+HEBREW_INFLECTIONAL = cached_data_file("inflectional_he.xml")
+HEBREW_PRONOUNS = unicode_data_file("inflection", "pronoun_he.csv")
+MALAYALAM_DICTIONARY = cached_data_file("dictionary_ml.lst")
+MALAYALAM_INFLECTIONAL = cached_data_file("inflectional_ml.xml")
+MALAYALAM_PRONOUNS = unicode_data_file("inflection", "pronoun_ml.csv")
+SWEDISH_DICTIONARY = cached_data_file("dictionary_sv.lst")
+DANISH_DICTIONARY = cached_data_file("dictionary_da.lst")
+NORWEGIAN_BOKMAL_DICTIONARY = cached_data_file("dictionary_nb.lst")
+DUTCH_DICTIONARY = cached_data_file("dictionary_nl.lst")
 
 
 def run(args: list[str]) -> subprocess.CompletedProcess[str]:

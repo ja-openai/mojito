@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
 from dataclasses import dataclass
@@ -21,11 +22,30 @@ from fr_noun_pack_report import (
 
 SCHEMA = "mojito-mf2-inflection/germanic-nordic-pack-audit/v0"
 DEFAULT_LOCALES = ("da", "nb", "nl", "sv")
-DEFAULT_CACHE_DIR = Path("/Users/ja/.cache/mf2-inflection-data")
+DEFAULT_CACHE_DIR = Path(
+    os.environ.get(
+        "MF2_INFLECTION_DATA_CACHE",
+        str(Path.home() / ".cache" / "mf2-inflection-data"),
+    )
+).expanduser()
 DEFAULT_UNICODE_ROOT = Path(
-    "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection"
-)
+    os.environ.get(
+        "UNICODE_INFLECTION_ROOT",
+        str(
+            Path.home()
+            / "code"
+            / "inflection"
+            / "inflection"
+            / "resources"
+            / "org"
+            / "unicode"
+            / "inflection"
+        ),
+    )
+).expanduser()
 INFLECTION_RESOURCE_PREFIX = "inflection/resources/org/unicode/inflection/inflection"
+DATA_CACHE_LABEL = "$MF2_INFLECTION_DATA_CACHE"
+UNICODE_ROOT_LABEL = "$UNICODE_INFLECTION_ROOT"
 
 TERM_POS = {"noun", "proper-noun"}
 AGREEMENT_POS = {"adjective", "noun", "proper-noun"}
@@ -68,6 +88,12 @@ OTHER_KNOWN_VALUES = {
     "unstressed",
 }
 PREFIXED_KNOWN_VALUES = ("dependency=", "determination=", "sizeness=")
+
+
+def root_label(path: Path, default_path: Path, label: str) -> str:
+    if path.expanduser().resolve() == default_path.expanduser().resolve():
+        return label
+    return str(path)
 
 
 @dataclass(frozen=True)
@@ -564,8 +590,8 @@ def build_report(
     return {
         "schema": SCHEMA,
         "description": "Cross-locale Germanic/Nordic data audit for Mojito MF2 native inflection planning.",
-        "cacheDir": str(cache_dir),
-        "unicodeRoot": str(unicode_root),
+        "cacheDir": root_label(cache_dir, DEFAULT_CACHE_DIR, DATA_CACHE_LABEL),
+        "unicodeRoot": root_label(unicode_root, DEFAULT_UNICODE_ROOT, UNICODE_ROOT_LABEL),
         "summary": {
             "localeCount": len(locale_reports),
             "locales": list(locales),

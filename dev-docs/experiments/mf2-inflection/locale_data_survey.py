@@ -6,14 +6,34 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
 
 DEFAULT_UNICODE_ROOT = Path(
-    "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection"
-)
-DEFAULT_CACHE_DIR = Path("/Users/ja/.cache/mf2-inflection-data")
+    os.environ.get(
+        "UNICODE_INFLECTION_ROOT",
+        str(
+            Path.home()
+            / "code"
+            / "inflection"
+            / "inflection"
+            / "resources"
+            / "org"
+            / "unicode"
+            / "inflection"
+        ),
+    )
+).expanduser()
+DEFAULT_CACHE_DIR = Path(
+    os.environ.get(
+        "MF2_INFLECTION_DATA_CACHE",
+        str(Path.home() / ".cache" / "mf2-inflection-data"),
+    )
+).expanduser()
+DATA_CACHE_LABEL = "$MF2_INFLECTION_DATA_CACHE"
+UNICODE_ROOT_LABEL = "$UNICODE_INFLECTION_ROOT"
 
 RUNTIME_PROTOTYPE_LOCALES = {
     "ar",
@@ -68,13 +88,32 @@ class FileMetadata:
         return data
 
 
-def file_metadata(path: Path) -> FileMetadata:
+def display_path(path: Path, unicode_root: Path, cache_dir: Path) -> str:
+    for root, label in (
+        (unicode_root, UNICODE_ROOT_LABEL),
+        (cache_dir, DATA_CACHE_LABEL),
+    ):
+        try:
+            return f"{label}/{path.relative_to(root).as_posix()}"
+        except ValueError:
+            continue
+    return str(path)
+
+
+def root_label(path: Path, default_path: Path, label: str) -> str:
+    if path.expanduser().resolve() == default_path.expanduser().resolve():
+        return label
+    return str(path)
+
+
+def file_metadata(path: Path, path_label: str | None = None) -> FileMetadata:
+    path_text = path_label if path_label is not None else str(path)
     if not path.exists():
-        return FileMetadata(path=str(path), exists=False)
+        return FileMetadata(path=path_text, exists=False)
 
     data = path.read_bytes()
     metadata = {
-        "path": str(path),
+        "path": path_text,
         "exists": True,
         "byte_size": len(data),
         "sha256": hashlib.sha256(data).hexdigest(),
@@ -146,10 +185,13 @@ def locale_report(
     inflection_dir = unicode_root / "inflection"
     contraction_dir = unicode_root / "contraction"
 
-    checkout_dictionary = file_metadata(dictionary_dir / f"dictionary_{group}.lst")
-    checkout_inflectional = file_metadata(dictionary_dir / f"inflectional_{group}.xml")
-    cache_dictionary = file_metadata(cache_dir / f"dictionary_{group}.lst")
-    cache_inflectional = file_metadata(cache_dir / f"inflectional_{group}.xml")
+    def metadata(path: Path) -> FileMetadata:
+        return file_metadata(path, display_path(path, unicode_root, cache_dir))
+
+    checkout_dictionary = metadata(dictionary_dir / f"dictionary_{group}.lst")
+    checkout_inflectional = metadata(dictionary_dir / f"inflectional_{group}.xml")
+    cache_dictionary = metadata(cache_dir / f"dictionary_{group}.lst")
+    cache_inflectional = metadata(cache_dir / f"inflectional_{group}.xml")
     supplemental = sorted(dictionary_dir.glob(f"supplemental_{group}.*"))
 
     runtime_status = (
@@ -169,9 +211,9 @@ def locale_report(
         "checkout": {
             "dictionary": checkout_dictionary.to_json(),
             "inflectional": checkout_inflectional.to_json(),
-            "pronounCsv": file_metadata(inflection_dir / f"pronoun_{group}.csv").to_json(),
-            "supplemental": [file_metadata(path).to_json() for path in supplemental],
-            "contractionTable": file_metadata(
+            "pronounCsv": metadata(inflection_dir / f"pronoun_{group}.csv").to_json(),
+            "supplemental": [metadata(path).to_json() for path in supplemental],
+            "contractionTable": metadata(
                 contraction_dir / f"contractionExpandingTable_{group}.csv"
             ).to_json(),
         },
@@ -190,6 +232,9 @@ def blocked_source_data_report(
     inflection_dir = unicode_root / "inflection"
     contraction_dir = unicode_root / "contraction"
 
+    def metadata(path: Path) -> FileMetadata:
+        return file_metadata(path, display_path(path, unicode_root, cache_dir))
+
     return {
         "localeGroup": group,
         "status": status,
@@ -198,16 +243,16 @@ def blocked_source_data_report(
         "locales": locale_groups.get(group, []),
         "expected": {
             "supportedLocalesKey": f"locale.group.{group}",
-            "dictionary": file_metadata(dictionary_dir / f"dictionary_{group}.lst").to_json(),
-            "inflectional": file_metadata(dictionary_dir / f"inflectional_{group}.xml").to_json(),
-            "pronounCsv": file_metadata(inflection_dir / f"pronoun_{group}.csv").to_json(),
-            "contractionTable": file_metadata(
+            "dictionary": metadata(dictionary_dir / f"dictionary_{group}.lst").to_json(),
+            "inflectional": metadata(dictionary_dir / f"inflectional_{group}.xml").to_json(),
+            "pronounCsv": metadata(inflection_dir / f"pronoun_{group}.csv").to_json(),
+            "contractionTable": metadata(
                 contraction_dir / f"contractionExpandingTable_{group}.csv"
             ).to_json(),
         },
         "cache": {
-            "dictionary": file_metadata(cache_dir / f"dictionary_{group}.lst").to_json(),
-            "inflectional": file_metadata(cache_dir / f"inflectional_{group}.xml").to_json(),
+            "dictionary": metadata(cache_dir / f"dictionary_{group}.lst").to_json(),
+            "inflectional": metadata(cache_dir / f"inflectional_{group}.xml").to_json(),
         },
     }
 
@@ -227,8 +272,8 @@ def build_report(unicode_root: Path, cache_dir: Path) -> dict:
 
     return {
         "schema": "mojito-mf2-inflection/locale-data-survey/v0",
-        "unicodeRoot": str(unicode_root),
-        "cacheDir": str(cache_dir),
+        "unicodeRoot": root_label(unicode_root, DEFAULT_UNICODE_ROOT, UNICODE_ROOT_LABEL),
+        "cacheDir": root_label(cache_dir, DEFAULT_CACHE_DIR, DATA_CACHE_LABEL),
         "summary": {
             "localeGroupCount": len(locales),
             "runtimePrototypeLocaleCount": sum(

@@ -1,5 +1,5 @@
 {
-  "cacheDir": "/Users/ja/.cache/mf2-inflection-data",
+  "cacheDir": "$MF2_INFLECTION_DATA_CACHE",
   "description": "Cross-locale Germanic/Nordic data audit for Mojito MF2 native inflection planning.",
   "locales": [
     {
@@ -8579,5 +8579,5 @@
       "nl"
     ]
   },
-  "unicodeRoot": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection"
+  "unicodeRoot": "$UNICODE_INFLECTION_ROOT"
 }

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 from collections import Counter
 from pathlib import Path
 
@@ -21,8 +22,21 @@ SCHEMA = "mojito-mf2-inflection/low-inflection-locale-audit/v0"
 GENERATOR = "dev-docs/experiments/mf2-inflection/low_inflection_locale_audit.py"
 DEFAULT_LOCALES = ("en", "id", "ja", "ko", "ms", "th", "vi", "zh", "yue")
 DEFAULT_UNICODE_ROOT = Path(
-    "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection"
-)
+    os.environ.get(
+        "UNICODE_INFLECTION_ROOT",
+        str(
+            Path.home()
+            / "code"
+            / "inflection"
+            / "inflection"
+            / "resources"
+            / "org"
+            / "unicode"
+            / "inflection"
+        ),
+    )
+).expanduser()
+UNICODE_ROOT_LABEL = "$UNICODE_INFLECTION_ROOT"
 INFLECTION_RESOURCE_PREFIX = "inflection/resources/org/unicode/inflection/inflection"
 
 CASE_VALUES = {"accusative", "dative", "genitive", "locative", "nominative", "oblique", "vocative"}
@@ -30,6 +44,12 @@ GENDER_VALUES = {"feminine", "gender", "human", "masculine", "neuter", "nonhuman
 NUMBER_VALUES = {"dual", "plural", "singular"}
 PERSON_VALUES = {"first", "second", "third"}
 REGISTER_VALUES = {"casual", "formal", "informal"}
+
+
+def root_label(path: Path, default_path: Path, label: str) -> str:
+    if path.expanduser().resolve() == default_path.expanduser().resolve():
+        return label
+    return str(path)
 
 
 def file_metadata(path: Path, resource_prefix: str) -> dict:
@@ -180,7 +200,9 @@ def build_report(locales: tuple[str, ...], unicode_root: Path) -> dict:
         "provenance": {
             "license": SOURCE_LICENSE,
             "generator": GENERATOR,
-            "unicodeRoot": str(unicode_root),
+            "unicodeRoot": root_label(
+                unicode_root, DEFAULT_UNICODE_ROOT, UNICODE_ROOT_LABEL
+            ),
         },
         "summary": {
             "localeCount": len(reports),

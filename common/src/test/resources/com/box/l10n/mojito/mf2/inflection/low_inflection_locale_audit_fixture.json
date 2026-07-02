@@ -1214,7 +1214,7 @@
   "provenance": {
     "generator": "dev-docs/experiments/mf2-inflection/low_inflection_locale_audit.py",
     "license": "Unicode-3.0",
-    "unicodeRoot": "/Users/ja/code/inflection/inflection/resources/org/unicode/inflection"
+    "unicodeRoot": "$UNICODE_INFLECTION_ROOT"
   },
   "schema": "mojito-mf2-inflection/low-inflection-locale-audit/v0",
   "summary": {

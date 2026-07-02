@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from collections import Counter
 from pathlib import Path
 
@@ -18,7 +19,15 @@ from fr_noun_pack_report import (
 
 GENERATOR = "dev-docs/experiments/mf2-inflection/nl_noun_metadata_pack.py"
 SCHEMA = "mojito-mf2-inflection/nl-noun-metadata-pack/v0"
-DEFAULT_DICTIONARY = Path("/Users/ja/.cache/mf2-inflection-data/dictionary_nl.lst")
+DEFAULT_DICTIONARY = (
+    Path(
+        os.environ.get(
+            "MF2_INFLECTION_DATA_CACHE",
+            str(Path.home() / ".cache" / "mf2-inflection-data"),
+        )
+    ).expanduser()
+    / "dictionary_nl.lst"
+)
 
 PART_OF_SPEECH_VALUES = {"noun", "proper-noun"}
 GENDER_VALUES = {"feminine", "masculine", "neuter"}

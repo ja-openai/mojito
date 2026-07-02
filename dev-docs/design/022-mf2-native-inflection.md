@@ -1255,7 +1255,7 @@ approved/review-required export decision into glossary review instead of keeping
 it as generator-only policy.
 
 German inputs are now materialized outside the Git checkout under
-`/Users/ja/.cache/mf2-inflection-data/` because `git-lfs` is not installed in
+`$MF2_INFLECTION_DATA_CACHE/` because `git-lfs` is not installed in
 the local environment. The downloaded files match the Unicode LFS pointer
 hashes:
 
@@ -1299,7 +1299,7 @@ codec's bindings section is still reserved and empty.
 
 Spanish was the first compact-article language target. The local checkout has LFS
 pointers for `dictionary_es.lst` and `inflectional_es.xml`; the real files are
-now cached under `/Users/ja/.cache/mf2-inflection-data/` with matching SHA-256
+now cached under `$MF2_INFLECTION_DATA_CACHE/` with matching SHA-256
 hashes (`c027bc481306bbdae35aae1bce50c683c6e1c41e91643e68c9efda4e041d6389`
 and `1ed54f3e48d32ac020d22fcb02a52ab05e72e8b73914891429798ebd09a98541`). The
 first Spanish noun/proper-noun report parses 556,656 dictionary entries, narrows
@@ -2671,7 +2671,7 @@ explicit auxiliary sidecar such as the Hindi pronoun agreement table.
 | Source class | Examples | Stored where | Release rule |
 | --- | --- | --- | --- |
 | Runtime generated packs | `compiled-term-pack/v0` JSON fixtures, M2IF byte fixtures, `hi-pronoun-agreement-pack/v0` JSON sidecar | Checked in with the Java/runtime test resources or later product pack artifact store | Release loads these directly and validates schema plus provenance before publishing. |
-| Large Unicode generator inputs | `dictionary_*.lst`, `inflectional_*.xml` for German, Romance, Slavic, Semitic, Indic, and Nordic surveys | Local materialization cache such as `/Users/ja/.cache/mf2-inflection-data` or a CI cache keyed by upstream object hash | Not shipped in runtime artifacts. Regeneration requires a pinned source manifest entry with byte size, SHA-256, upstream source label, Git LFS pointer status, upstream revision, and license. |
+| Large Unicode generator inputs | `dictionary_*.lst`, `inflectional_*.xml` for German, Romance, Slavic, Semitic, Indic, and Nordic surveys | Local materialization cache such as `$MF2_INFLECTION_DATA_CACHE` or a CI cache keyed by upstream object hash | Not shipped in runtime artifacts. Regeneration requires a pinned source manifest entry with byte size, SHA-256, upstream source label, Git LFS pointer status, upstream revision, and license. |
 | Small real supplemental inputs | French supplement, Turkish explicit-template/exception data, pronoun CSV files | Checked in upstream or cached as normal generator inputs | May feed generators when provenance records `gitLfsPointer=false`, byte size, SHA-256, source label, and license. They still compile into generated packs before runtime use. |
 | Generator-only audits and reports | Locale-data survey, low-inflection audit, report fixtures, skipped-row/review-policy diagnostics | `dev-docs/experiments` and Java test fixtures | Test and design evidence only. They must not become runtime payloads unless promoted through an explicit pack schema. |
 
@@ -23846,11 +23846,30 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   review-slice commands. This remains review-boundary evidence, not
   package-local runtime promotion, all-language coverage, or proof that
   Java/common V0 covers every inflection type.
-- Next target: decide whether to normalize the broader branch-local experiment
-  and cache-path provenance as a separate cleanup before another review refresh,
-  then implement a real non-Java M2IF reader/renderer only for a product-needed
-  native library, or continue locale/runtime work only from product-backed
-  requirements.
+- Two thousand one hundred third status-to-staging audit after path-provenance
+  cleanup:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands InflectionReleaseGateTest.test_tracker_current_checkpoint_mentions_latest_release_slice_guards InflectionReleaseGateTest.test_docs_keep_bounded_inflection_claims InflectionReleaseGateTest.test_design_tracker_pin_first_review_slice_boundaries InflectionReleaseGateTest.test_design_tracker_pin_final_slice_readiness_summary InflectionReleaseGateTest.test_inflection_release_wrapper_documents_scope_boundary InflectionReleaseGateTest.test_package_local_inflection_release_scripts_delegate_only_to_shared_gate InflectionReleaseGateTest.test_non_java_package_manifests_do_not_publish_inflection_surfaces`
+  passes 8 focused release-gate tests from `mf2/python`. It rechecks the current
+  dirty tree after replacing branch-local experiment/cache absolute roots with
+  `$MF2_INFLECTION_DATA_CACHE` and `$UNICODE_INFLECTION_ROOT` provenance labels:
+  15 current non-webapp status files and 0 current webapp status files, with the
+  current dirty paths covered by the pinned review-slice commands and clean
+  historical staging arguments allowed. The Python package harness now passes
+  101 tests. This remains review-boundary evidence, not package-local runtime
+  promotion, all-language coverage, or proof that Java/common V0 covers every
+  inflection type.
+- Two thousand one hundred fourth Java/common fixture-loader rerun after
+  path-provenance cleanup:
+  `mvn -pl common -Dtest=GermanicNordicPackAuditJsonLoaderTest,LowInflectionLocaleAuditJsonLoaderTest,GeneratedInflectionFixtureProvenanceTest test`
+  passes 29 tests: 14 Germanic/Nordic audit loader, 14 low-inflection locale
+  audit loader, and 1 generated-fixture provenance guard. This confirms the
+  `$MF2_INFLECTION_DATA_CACHE` and `$UNICODE_INFLECTION_ROOT` labels remain
+  accepted provenance in checked Java/common fixtures without changing locale
+  coverage, claiming all inflection types, or promoting any package-local
+  non-Java runtime API.
+- Next target: push the portable path-provenance cleanup, then implement a real
+  non-Java M2IF reader/renderer only for a product-needed native library or
+  continue locale/runtime work only from product-backed requirements.
 - Production formatting uses term IDs or declared dictionaries, not unqualified
   bare words.
 - Build-time validation expands message usages and catches missing term

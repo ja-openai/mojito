@@ -116,7 +116,7 @@ python3 dev-docs/experiments/mf2-inflection/locale_data_survey.py \
 The current survey covers 25 locale groups. Fourteen already have runtime
 prototypes (`ar`, `da`, `de`, `es`, `fr`, `he`, `hi`, `it`, `ml`, `pt`, `ru`, `sr`, `sv`, `tr`),
 fourteen have dictionary/XML data materialized in
-`/Users/ja/.cache/mf2-inflection-data`, one has dictionary/XML materialized
+`$MF2_INFLECTION_DATA_CACHE`, one has dictionary/XML materialized
 directly in the checkout (`sr`), and all 25 have pronoun CSV files. Arabic is
 now materialized in the local cache and has the first explicit-form fixture for
 its new grammar family; its cached dictionary and XML hashes match the Unicode
@@ -272,7 +272,7 @@ byte-comparing generated JSON/M2IF output. Unicode-derived packs use
 data; Unicode-3.0 repository packaging`.
 
 Keep large materialized Unicode files in the local or CI cache, for example
-`/Users/ja/.cache/mf2-inflection-data`, and keep `/private/tmp` reports as
+`$MF2_INFLECTION_DATA_CACHE`, and keep `/private/tmp` reports as
 scratch outputs. The checked Java fixtures and experiment fixtures are the
 auditable artifacts. English and Korean dictionary LFS inputs should not be
 materialized without a concrete product need, and Polish remains a separate
@@ -295,7 +295,7 @@ Run it against the small checked-in Unicode French supplement:
 
 ```bash
 python3 dev-docs/experiments/mf2-inflection/fr_dictionary_report.py \
-  --dictionary /Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/supplemental_fr.lst \
+  --dictionary $UNICODE_INFLECTION_ROOT/dictionary/supplemental_fr.lst \
   --out /private/tmp/fr-dictionary-report.json
 ```
 
@@ -317,7 +317,7 @@ Then run the full report:
 ```bash
 python3 dev-docs/experiments/mf2-inflection/fr_dictionary_report.py \
   --dictionary /private/tmp/inflection-dictionary-fr.lst \
-  --dictionary /Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/supplemental_fr.lst \
+  --dictionary $UNICODE_INFLECTION_ROOT/dictionary/supplemental_fr.lst \
   --out /private/tmp/fr-dictionary-report-full.json
 ```
 
@@ -333,7 +333,7 @@ rough compact lookup sizes for an MF2 French article/gender pack.
 ```bash
 python3 dev-docs/experiments/mf2-inflection/fr_noun_pack_report.py \
   --dictionary /private/tmp/inflection-dictionary-fr.lst \
-  --dictionary /Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/supplemental_fr.lst \
+  --dictionary $UNICODE_INFLECTION_ROOT/dictionary/supplemental_fr.lst \
   --out /private/tmp/fr-noun-pack-report-full.json \
   --sample-pack-out /private/tmp/fr-noun-metadata-sample-pack-full.json \
   --sample-pack-limit 0 \
@@ -395,7 +395,7 @@ Refresh those checked-in Java fixtures with:
 ```bash
 python3 dev-docs/experiments/mf2-inflection/fr_noun_pack_report.py \
   --dictionary /private/tmp/inflection-dictionary-fr.lst \
-  --dictionary /Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/supplemental_fr.lst \
+  --dictionary $UNICODE_INFLECTION_ROOT/dictionary/supplemental_fr.lst \
   --out /private/tmp/fr-noun-pack-report-fixture.json \
   --sample-pack-out common/src/test/resources/com/box/l10n/mojito/mf2/inflection/fr_noun_metadata_pack_fixture.json \
   --sample-pack-limit 12 \
@@ -443,8 +443,8 @@ materialized.
 
 ```bash
 python3 dev-docs/experiments/mf2-inflection/sr_case_pack_report.py \
-  --dictionary /Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_sr.lst \
-  --inflectional /Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_sr.xml \
+  --dictionary $UNICODE_INFLECTION_ROOT/dictionary/dictionary_sr.lst \
+  --inflectional $UNICODE_INFLECTION_ROOT/dictionary/inflectional_sr.xml \
   --out /private/tmp/sr-case-pack-report.json \
   --case-form-pack-out /private/tmp/sr-case-form-pack.json \
   --compiled-case-form-pack-out /private/tmp/sr-compiled-case-form-pack.json \
@@ -514,8 +514,8 @@ Refresh the checked-in Java fixture with:
 
 ```bash
 python3 dev-docs/experiments/mf2-inflection/sr_case_pack_report.py \
-  --dictionary /Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/dictionary_sr.lst \
-  --inflectional /Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/inflectional_sr.xml \
+  --dictionary $UNICODE_INFLECTION_ROOT/dictionary/dictionary_sr.lst \
+  --inflectional $UNICODE_INFLECTION_ROOT/dictionary/inflectional_sr.xml \
   --out common/src/test/resources/com/box/l10n/mojito/mf2/inflection/sr_case_pack_report_fixture.json \
   --case-form-pack-out common/src/test/resources/com/box/l10n/mojito/mf2/inflection/sr_case_form_pack_fixture.json \
   --compiled-case-form-pack-out common/src/test/resources/com/box/l10n/mojito/mf2/inflection/sr_compiled_case_form_pack_fixture.json \
@@ -543,8 +543,8 @@ checkout:
 
 ```bash
 python3 dev-docs/experiments/mf2-inflection/de_article_case_report.py \
-  --dictionary /Users/ja/.cache/mf2-inflection-data/dictionary_de.lst \
-  --inflectional /Users/ja/.cache/mf2-inflection-data/inflectional_de.xml \
+  --dictionary $MF2_INFLECTION_DATA_CACHE/dictionary_de.lst \
+  --inflectional $MF2_INFLECTION_DATA_CACHE/inflectional_de.xml \
   --out /private/tmp/de-article-case-report.json \
   --max-samples 8
 ```
@@ -777,8 +777,8 @@ rough lower-bound pack sizes:
 
 ```bash
 python3 dev-docs/experiments/mf2-inflection/ru_case_pack_audit.py \
-  --dictionary /Users/ja/.cache/mf2-inflection-data/dictionary_ru.lst \
-  --inflectional /Users/ja/.cache/mf2-inflection-data/inflectional_ru.xml \
+  --dictionary $MF2_INFLECTION_DATA_CACHE/dictionary_ru.lst \
+  --inflectional $MF2_INFLECTION_DATA_CACHE/inflectional_ru.xml \
   --out /private/tmp/ru-case-pack-audit.json \
   --max-samples 8
 ```
@@ -835,8 +835,8 @@ surfaces from the Unicode tests: `кошка`, `ресторан`, and `абба
 
 ```bash
 python3 dev-docs/experiments/mf2-inflection/ru_case_pack_audit.py \
-  --dictionary /Users/ja/.cache/mf2-inflection-data/dictionary_ru.lst \
-  --inflectional /Users/ja/.cache/mf2-inflection-data/inflectional_ru.xml \
+  --dictionary $MF2_INFLECTION_DATA_CACHE/dictionary_ru.lst \
+  --inflectional $MF2_INFLECTION_DATA_CACHE/inflectional_ru.xml \
   --out common/src/test/resources/com/box/l10n/mojito/mf2/inflection/ru_case_pack_audit_fixture.json \
   --case-form-pack-out common/src/test/resources/com/box/l10n/mojito/mf2/inflection/ru_case_form_pack_fixture.json \
   --compiled-case-form-pack-out common/src/test/resources/com/box/l10n/mojito/mf2/inflection/ru_compiled_case_form_pack_fixture.json \
@@ -872,9 +872,9 @@ supplemental Turkish metadata:
 
 ```bash
 python3 dev-docs/experiments/mf2-inflection/tr_suffix_pack_survey.py \
-  --dictionary /Users/ja/.cache/mf2-inflection-data/dictionary_tr.lst \
-  --inflectional /Users/ja/.cache/mf2-inflection-data/inflectional_tr.xml \
-  --supplemental /Users/ja/code/inflection/inflection/resources/org/unicode/inflection/dictionary/supplemental_tr.lst \
+  --dictionary $MF2_INFLECTION_DATA_CACHE/dictionary_tr.lst \
+  --inflectional $MF2_INFLECTION_DATA_CACHE/inflectional_tr.xml \
+  --supplemental $UNICODE_INFLECTION_ROOT/dictionary/supplemental_tr.lst \
   --out common/src/test/resources/com/box/l10n/mojito/mf2/inflection/tr_suffix_pack_survey_fixture.json \
   --explicit-template-pack-out common/src/test/resources/com/box/l10n/mojito/mf2/inflection/tr_compiled_explicit_template_pack_fixture.json \
   --explicit-template-surface çakmak \
@@ -985,9 +985,9 @@ table:
 
 ```bash
 python3 dev-docs/experiments/mf2-inflection/hi_pack_survey.py \
-  --dictionary /Users/ja/.cache/mf2-inflection-data/dictionary_hi.lst \
-  --inflectional /Users/ja/.cache/mf2-inflection-data/inflectional_hi.xml \
-  --pronouns /Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_hi.csv \
+  --dictionary $MF2_INFLECTION_DATA_CACHE/dictionary_hi.lst \
+  --inflectional $MF2_INFLECTION_DATA_CACHE/inflectional_hi.xml \
+  --pronouns $UNICODE_INFLECTION_ROOT/inflection/pronoun_hi.csv \
   --out common/src/test/resources/com/box/l10n/mojito/mf2/inflection/hi_pack_survey_fixture.json \
   --max-samples 8
 ```
@@ -1015,9 +1015,9 @@ The same script can now emit a renderer-ready noun case-form fixture:
 
 ```bash
 python3 dev-docs/experiments/mf2-inflection/hi_pack_survey.py \
-  --dictionary /Users/ja/.cache/mf2-inflection-data/dictionary_hi.lst \
-  --inflectional /Users/ja/.cache/mf2-inflection-data/inflectional_hi.xml \
-  --pronouns /Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_hi.csv \
+  --dictionary $MF2_INFLECTION_DATA_CACHE/dictionary_hi.lst \
+  --inflectional $MF2_INFLECTION_DATA_CACHE/inflectional_hi.xml \
+  --pronouns $UNICODE_INFLECTION_ROOT/inflection/pronoun_hi.csv \
   --out /private/tmp/hi-pack-survey.json \
   --compiled-case-form-pack-out common/src/test/resources/com/box/l10n/mojito/mf2/inflection/hi_compiled_case_form_pack_fixture.json \
   --case-form-pack-limit 3 \
@@ -1037,9 +1037,9 @@ The script also emits the renderer-ready Hindi pronoun agreement table:
 
 ```bash
 python3 dev-docs/experiments/mf2-inflection/hi_pack_survey.py \
-  --dictionary /Users/ja/.cache/mf2-inflection-data/dictionary_hi.lst \
-  --inflectional /Users/ja/.cache/mf2-inflection-data/inflectional_hi.xml \
-  --pronouns /Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_hi.csv \
+  --dictionary $MF2_INFLECTION_DATA_CACHE/dictionary_hi.lst \
+  --inflectional $MF2_INFLECTION_DATA_CACHE/inflectional_hi.xml \
+  --pronouns $UNICODE_INFLECTION_ROOT/inflection/pronoun_hi.csv \
   --out /private/tmp/hi-pack-survey.json \
   --pronoun-agreement-pack-out common/src/test/resources/com/box/l10n/mojito/mf2/inflection/hi_pronoun_agreement_pack_fixture.json \
   --max-samples 8
@@ -1187,9 +1187,9 @@ Arabic is now the first materialized Unicode Inflection Semitic-family locale
 after the French/German/Spanish/Italian/Portuguese/Russian/Turkish/Hindi pass:
 
 ```text
-/Users/ja/.cache/mf2-inflection-data/dictionary_ar.lst
-/Users/ja/.cache/mf2-inflection-data/inflectional_ar.xml
-/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_ar.csv
+$MF2_INFLECTION_DATA_CACHE/dictionary_ar.lst
+$MF2_INFLECTION_DATA_CACHE/inflectional_ar.xml
+$UNICODE_INFLECTION_ROOT/inflection/pronoun_ar.csv
 ```
 
 The cached files match the checkout Git LFS pointers:
@@ -1208,9 +1208,9 @@ nominative/accusative/genitive/reflexive rows.
 
 ```bash
 python3 dev-docs/experiments/mf2-inflection/ar_pack_audit.py \
-  --dictionary /Users/ja/.cache/mf2-inflection-data/dictionary_ar.lst \
-  --inflectional /Users/ja/.cache/mf2-inflection-data/inflectional_ar.xml \
-  --pronouns /Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_ar.csv \
+  --dictionary $MF2_INFLECTION_DATA_CACHE/dictionary_ar.lst \
+  --inflectional $MF2_INFLECTION_DATA_CACHE/inflectional_ar.xml \
+  --pronouns $UNICODE_INFLECTION_ROOT/inflection/pronoun_ar.csv \
   --out dev-docs/experiments/mf2-inflection/ar_pack_audit_fixture.json
 ```
 
@@ -1260,9 +1260,9 @@ with SHA-256
 Hebrew is now materialized in the local cache:
 
 ```text
-/Users/ja/.cache/mf2-inflection-data/dictionary_he.lst
-/Users/ja/.cache/mf2-inflection-data/inflectional_he.xml
-/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_he.csv
+$MF2_INFLECTION_DATA_CACHE/dictionary_he.lst
+$MF2_INFLECTION_DATA_CACHE/inflectional_he.xml
+$UNICODE_INFLECTION_ROOT/inflection/pronoun_he.csv
 ```
 
 The cached files match the checkout Git LFS pointers:
@@ -1276,9 +1276,9 @@ The cached files match the checkout Git LFS pointers:
 
 ```bash
 python3 dev-docs/experiments/mf2-inflection/he_pack_audit.py \
-  --dictionary /Users/ja/.cache/mf2-inflection-data/dictionary_he.lst \
-  --inflectional /Users/ja/.cache/mf2-inflection-data/inflectional_he.xml \
-  --pronouns /Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_he.csv \
+  --dictionary $MF2_INFLECTION_DATA_CACHE/dictionary_he.lst \
+  --inflectional $MF2_INFLECTION_DATA_CACHE/inflectional_he.xml \
+  --pronouns $UNICODE_INFLECTION_ROOT/inflection/pronoun_he.csv \
   --out dev-docs/experiments/mf2-inflection/he_pack_audit_fixture.json
 ```
 
@@ -1341,9 +1341,9 @@ missing cell as a deterministic render failure.
 Malayalam is now materialized in the local cache:
 
 ```text
-/Users/ja/.cache/mf2-inflection-data/dictionary_ml.lst
-/Users/ja/.cache/mf2-inflection-data/inflectional_ml.xml
-/Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_ml.csv
+$MF2_INFLECTION_DATA_CACHE/dictionary_ml.lst
+$MF2_INFLECTION_DATA_CACHE/inflectional_ml.xml
+$UNICODE_INFLECTION_ROOT/inflection/pronoun_ml.csv
 ```
 
 The cached files match the checkout Git LFS pointers:
@@ -1357,9 +1357,9 @@ The cached files match the checkout Git LFS pointers:
 
 ```bash
 python3 dev-docs/experiments/mf2-inflection/ml_pack_audit.py \
-  --dictionary /Users/ja/.cache/mf2-inflection-data/dictionary_ml.lst \
-  --inflectional /Users/ja/.cache/mf2-inflection-data/inflectional_ml.xml \
-  --pronouns /Users/ja/code/inflection/inflection/resources/org/unicode/inflection/inflection/pronoun_ml.csv \
+  --dictionary $MF2_INFLECTION_DATA_CACHE/dictionary_ml.lst \
+  --inflectional $MF2_INFLECTION_DATA_CACHE/inflectional_ml.xml \
+  --pronouns $UNICODE_INFLECTION_ROOT/inflection/pronoun_ml.csv \
   --out dev-docs/experiments/mf2-inflection/ml_pack_audit_fixture.json
 ```
 
@@ -1407,14 +1407,14 @@ Danish, Norwegian Bokmål, Dutch, and Swedish are now materialized in the local
 cache:
 
 ```text
-/Users/ja/.cache/mf2-inflection-data/dictionary_da.lst
-/Users/ja/.cache/mf2-inflection-data/inflectional_da.xml
-/Users/ja/.cache/mf2-inflection-data/dictionary_nb.lst
-/Users/ja/.cache/mf2-inflection-data/inflectional_nb.xml
-/Users/ja/.cache/mf2-inflection-data/dictionary_nl.lst
-/Users/ja/.cache/mf2-inflection-data/inflectional_nl.xml
-/Users/ja/.cache/mf2-inflection-data/dictionary_sv.lst
-/Users/ja/.cache/mf2-inflection-data/inflectional_sv.xml
+$MF2_INFLECTION_DATA_CACHE/dictionary_da.lst
+$MF2_INFLECTION_DATA_CACHE/inflectional_da.xml
+$MF2_INFLECTION_DATA_CACHE/dictionary_nb.lst
+$MF2_INFLECTION_DATA_CACHE/inflectional_nb.xml
+$MF2_INFLECTION_DATA_CACHE/dictionary_nl.lst
+$MF2_INFLECTION_DATA_CACHE/inflectional_nl.xml
+$MF2_INFLECTION_DATA_CACHE/dictionary_sv.lst
+$MF2_INFLECTION_DATA_CACHE/inflectional_sv.xml
 ```
 
 The cached files match the checkout Git LFS pointers:
@@ -1464,7 +1464,7 @@ from dictionary-observed `bostad` and `chassi` rows:
 
 ```bash
 python3 dev-docs/experiments/mf2-inflection/sv_genitive_definiteness_pack.py \
-  --dictionary /Users/ja/.cache/mf2-inflection-data/dictionary_sv.lst \
+  --dictionary $MF2_INFLECTION_DATA_CACHE/dictionary_sv.lst \
   --out dev-docs/experiments/mf2-inflection/sv_compiled_genitive_definiteness_pack_fixture.json
 ```
 
@@ -1483,7 +1483,7 @@ fixture from dictionary-observed `franskmand` and `barnebarn` rows:
 
 ```bash
 python3 dev-docs/experiments/mf2-inflection/da_genitive_definiteness_pack.py \
-  --dictionary /Users/ja/.cache/mf2-inflection-data/dictionary_da.lst \
+  --dictionary $MF2_INFLECTION_DATA_CACHE/dictionary_da.lst \
   --out dev-docs/experiments/mf2-inflection/da_compiled_genitive_definiteness_pack_fixture.json
 ```
 
@@ -1509,7 +1509,7 @@ fixture:
 
 ```bash
 python3 dev-docs/experiments/mf2-inflection/nb_noun_metadata_pack.py \
-  --dictionary /Users/ja/.cache/mf2-inflection-data/dictionary_nb.lst \
+  --dictionary $MF2_INFLECTION_DATA_CACHE/dictionary_nb.lst \
   --out dev-docs/experiments/mf2-inflection/nb_noun_metadata_pack_fixture.json
 ```
 
@@ -1527,7 +1527,7 @@ authoring can require review instead of guessing.
 
 ```bash
 python3 dev-docs/experiments/mf2-inflection/nl_noun_metadata_pack.py \
-  --dictionary /Users/ja/.cache/mf2-inflection-data/dictionary_nl.lst \
+  --dictionary $MF2_INFLECTION_DATA_CACHE/dictionary_nl.lst \
   --out dev-docs/experiments/mf2-inflection/nl_noun_metadata_pack_fixture.json
 ```
 

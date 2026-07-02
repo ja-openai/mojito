@@ -1396,7 +1396,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Python package harness at 101 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "live status-to-staging-command audit currently sees 3 non-webapp files plus 0 webapp files covered by the pinned review-slice commands",
+            "live status-to-staging-command audit currently sees 15 non-webapp files plus 0 webapp files covered by the pinned review-slice commands",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
@@ -1654,7 +1654,19 @@ class InflectionReleaseGateTest(unittest.TestCase):
 
         self.assertEqual(
             (
+                "common/src/test/resources/com/box/l10n/mojito/mf2/inflection/germanic_nordic_pack_audit_fixture.json",
+                "common/src/test/resources/com/box/l10n/mojito/mf2/inflection/low_inflection_locale_audit_fixture.json",
                 "dev-docs/design/022-mf2-native-inflection.md",
+                "dev-docs/experiments/mf2-inflection/README.md",
+                "dev-docs/experiments/mf2-inflection/germanic_nordic_pack_audit.py",
+                "dev-docs/experiments/mf2-inflection/germanic_nordic_pack_audit_fixture.json",
+                "dev-docs/experiments/mf2-inflection/locale_data_survey.py",
+                "dev-docs/experiments/mf2-inflection/locale_data_survey_fixture.json",
+                "dev-docs/experiments/mf2-inflection/low_inflection_locale_audit.py",
+                "dev-docs/experiments/mf2-inflection/low_inflection_locale_audit_fixture.json",
+                "dev-docs/experiments/mf2-inflection/nb_noun_metadata_pack.py",
+                "dev-docs/experiments/mf2-inflection/nl_noun_metadata_pack.py",
+                "dev-docs/experiments/mf2-inflection/run_smoke.py",
                 "dev-docs/tracker.md",
                 "mf2/python/tests/test_inflection_release_gate.py",
             ),
@@ -1671,21 +1683,21 @@ class InflectionReleaseGateTest(unittest.TestCase):
         self.assertFalse(set(non_webapp_status_paths).intersection(webapp_status_paths))
 
         for snippet in (
-            "Ninety-fourth current status-to-staging-command audit",
-            "3 current non-webapp status files",
+            "Two thousand one hundred third status-to-staging audit after path-provenance cleanup",
+            "15 current non-webapp status files",
             "0 current webapp status files",
             "current dirty paths are covered by the pinned review-slice commands",
             "clean historical staging arguments are allowed",
-            "Python package harness now passes 91 tests",
+            "Python package harness now passes 101 tests",
         ):
             self.assertIn(snippet, normalized_design_note)
         for snippet in (
-            "Latest current status-to-staging-command audit",
-            "3 current non-webapp status files",
+            "Latest status-to-staging audit after path-provenance cleanup",
+            "15 current non-webapp status files",
             "0 current webapp status files",
             "current dirty paths are covered by the pinned review-slice commands",
             "clean historical staging arguments are allowed",
-            "Python package harness now passes 91 tests",
+            "Python package harness now passes 101 tests",
         ):
             self.assertIn(snippet, normalized_tracker)
 
