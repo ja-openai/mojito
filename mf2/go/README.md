@@ -34,6 +34,14 @@ date, time, currency, and relative-time formatter surface needed for an honest
 MF2 platform registry. Keep future locale-data or ICU adapters explicit rather
 than adding partial behavior to the portable registry.
 
+Inflection is intentionally not a public Go runtime surface yet. The package
+does not export compiled term-pack, M2IF, or inflection APIs; the conformance
+test scans exported Go names to keep that boundary pinned until a concrete Go
+caller justifies a reviewed product API. Keep Go on its existing package tests;
+validate inflection release artifacts through the repo-level shared gate rather
+than adding Go inflection exports or a package-local wrapper without that
+caller.
+
 Run:
 
 ```sh

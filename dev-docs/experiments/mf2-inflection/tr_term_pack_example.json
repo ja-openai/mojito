@@ -1,0 +1,124 @@
+{
+  "schema": "mojito-mf2-term-pack/example-v0",
+  "locale": "tr",
+  "source": {
+    "messageCatalog": "tr_term_usage_example.json",
+    "termCatalog": "tr_term_pack_example.json"
+  },
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/mf2_term_pack_compile.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "unicode-org/inflection dictionary_tr.lst",
+      "unicode-org/inflection inflectional_tr.xml",
+      "unicode-org/inflection supplemental_tr.lst"
+    ],
+    "sources": [
+      {
+        "path": "dictionary_tr.lst",
+        "byteSize": 57207,
+        "sha256": "32097e8a123c591d4470a51e883b8afb6cebf9b5b60c0857cffd07a7c513e391",
+        "gitLfsPointer": false
+      },
+      {
+        "path": "inflectional_tr.xml",
+        "byteSize": 21129,
+        "sha256": "810637ded03292c0d48511dcfa1e293d63e044ae312293245a590585640c1445",
+        "gitLfsPointer": false
+      },
+      {
+        "path": "supplemental_tr.lst",
+        "byteSize": 43876,
+        "sha256": "17fc7f47aea713943bdedf5c25a1cca909120b96b266653f46b817c4ab0c10d5",
+        "gitLfsPointer": false
+      }
+    ]
+  },
+  "terms": {
+    "item.house": {
+      "text": "ev",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "number": "singular",
+        "sense": "house",
+        "turkishSuffix": {
+          "vowelEnd": false,
+          "frontVowel": true,
+          "roundedVowel": false,
+          "hardConsonant": false
+        }
+      },
+      "forms": {
+        "bare.singular": "ev"
+      }
+    },
+    "item.school": {
+      "text": "okul",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "number": "singular",
+        "sense": "school",
+        "turkishSuffix": {
+          "vowelEnd": false,
+          "frontVowel": false,
+          "roundedVowel": true,
+          "hardConsonant": false
+        }
+      },
+      "forms": {
+        "bare.singular": "okul"
+      }
+    },
+    "item.car": {
+      "text": "araba",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "number": "singular",
+        "sense": "car",
+        "turkishSuffix": {
+          "vowelEnd": true,
+          "frontVowel": false,
+          "roundedVowel": false,
+          "hardConsonant": false
+        }
+      },
+      "forms": {
+        "bare.singular": "araba"
+      }
+    },
+    "item.park": {
+      "text": "park",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "number": "singular",
+        "sense": "park",
+        "turkishSuffix": {
+          "vowelEnd": false,
+          "frontVowel": false,
+          "roundedVowel": false,
+          "hardConsonant": true
+        }
+      },
+      "forms": {
+        "bare.singular": "park"
+      }
+    },
+    "item.rose": {
+      "text": "gül",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "number": "singular",
+        "sense": "rose",
+        "turkishSuffix": {
+          "vowelEnd": false,
+          "frontVowel": true,
+          "roundedVowel": true,
+          "hardConsonant": false
+        }
+      },
+      "forms": {
+        "bare.singular": "gül"
+      }
+    }
+  }
+}

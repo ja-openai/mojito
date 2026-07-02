@@ -46,11 +46,12 @@
     "bench:format": "node tools/benchmark.js",
     "bench:parse": "node tools/parse-benchmark.js",
     "bench:plural": "node --expose-gc tools/plural-benchmark.js",
-    "check": "node tests/package-boundary-test.js && npm run check:types && node tools/conformance.js ../conformance/fixtures/source-to-model",
+    "check": "node tests/package-boundary-test.js && npm run inflection-release && npm run check:types && node tools/conformance.js ../conformance/fixtures/source-to-model",
     "check:types": "tsc -p tsconfig.types.json",
     "demo": "node examples/demo.js",
     "demo:intl": "node examples/intl-demo.js",
     "generate:plurals": "sh ../cldr/update_generated.sh",
+    "inflection-release": "python3 ../conformance/validate_inflection_release_fixture.py",
     "unicode-tests": "node tools/unicode-tests.js ../third_party/message-format-wg/test ../conformance/unicode-official-baseline.json"
   },
   "devDependencies": {

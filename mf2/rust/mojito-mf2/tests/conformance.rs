@@ -93,6 +93,32 @@ fn public_runtime_api_exposes_result_and_parts() {
 }
 
 #[test]
+fn public_runtime_api_does_not_export_inflection_runtime() {
+    let public_export_lines: Vec<&str> = include_str!("../src/lib.rs")
+        .lines()
+        .filter(|line| line.trim_start().starts_with("pub "))
+        .collect();
+
+    assert!(
+        !public_export_lines.iter().any(|line| {
+            let normalized = normalize_public_name(line);
+            normalized.contains("inflection")
+                || normalized.contains("m2if")
+                || normalized.contains("compiledtermpack")
+                || normalized.contains("termpack")
+        }),
+        "inflection runtime exports must stay out of mojito-mf2 until a product API is approved: {public_export_lines:?}"
+    );
+}
+
+fn normalize_public_name(name: &str) -> String {
+    name.chars()
+        .filter(|character| character.is_ascii_alphanumeric())
+        .map(|character| character.to_ascii_lowercase())
+        .collect()
+}
+
+#[test]
 fn format_options_can_recover_missing_argument_values() {
     let result = parse_to_model("Hello {$name}");
     assert_diagnostics_empty(Path::new("public-api"), &result.diagnostics);

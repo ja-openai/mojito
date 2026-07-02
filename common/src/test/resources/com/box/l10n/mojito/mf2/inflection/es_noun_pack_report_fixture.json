@@ -1,0 +1,824 @@
+{
+  "articleStrategy": {
+    "articleForms": [
+      {
+        "article": "definite",
+        "form": "las",
+        "gender": "feminine",
+        "number": "plural",
+        "stressed": false
+      },
+      {
+        "article": "definite",
+        "form": "la",
+        "gender": "feminine",
+        "number": "singular",
+        "stressed": false
+      },
+      {
+        "article": "definite",
+        "form": "los",
+        "gender": "masculine",
+        "number": "plural",
+        "stressed": false
+      },
+      {
+        "article": "definite",
+        "form": "el",
+        "gender": "masculine",
+        "number": "singular",
+        "stressed": false
+      },
+      {
+        "article": "indefinite",
+        "form": "unas",
+        "gender": "feminine",
+        "number": "plural",
+        "stressed": false
+      },
+      {
+        "article": "indefinite",
+        "form": "una",
+        "gender": "feminine",
+        "number": "singular",
+        "stressed": false
+      },
+      {
+        "article": "indefinite",
+        "form": "unos",
+        "gender": "masculine",
+        "number": "plural",
+        "stressed": false
+      },
+      {
+        "article": "indefinite",
+        "form": "un",
+        "gender": "masculine",
+        "number": "singular",
+        "stressed": false
+      },
+      {
+        "article": "definite",
+        "form": "el",
+        "gender": "feminine",
+        "number": "singular",
+        "stressed": true
+      },
+      {
+        "article": "indefinite",
+        "form": "un",
+        "gender": "feminine",
+        "number": "singular",
+        "stressed": true
+      }
+    ],
+    "counts": {
+      "articleCandidateSurfaces": 63698,
+      "stressedFeminineSingularOverrides": 38
+    },
+    "samples": {
+      "articleCandidates": [
+        {
+          "gender": "feminine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "la a",
+            "indefinite": "una a"
+          },
+          "stressed": false,
+          "surface": "a"
+        },
+        {
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "el ababol",
+            "indefinite": "un ababol"
+          },
+          "stressed": false,
+          "surface": "ababol"
+        },
+        {
+          "gender": "masculine",
+          "number": "plural",
+          "phraseForms": {
+            "definite": "los ababoles",
+            "indefinite": "unos ababoles"
+          },
+          "stressed": false,
+          "surface": "ababoles"
+        },
+        {
+          "gender": "feminine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "la abacería",
+            "indefinite": "una abacería"
+          },
+          "stressed": false,
+          "surface": "abacería"
+        },
+        {
+          "gender": "feminine",
+          "number": "plural",
+          "phraseForms": {
+            "definite": "las abacerías",
+            "indefinite": "unas abacerías"
+          },
+          "stressed": false,
+          "surface": "abacerías"
+        },
+        {
+          "gender": "feminine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "la abacora",
+            "indefinite": "una abacora"
+          },
+          "stressed": false,
+          "surface": "abacora"
+        },
+        {
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "el abad",
+            "indefinite": "un abad"
+          },
+          "stressed": false,
+          "surface": "abad"
+        },
+        {
+          "gender": "feminine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "la abada",
+            "indefinite": "una abada"
+          },
+          "stressed": false,
+          "surface": "abada"
+        }
+      ],
+      "stressedFeminineSingularOverrides": [
+        {
+          "phraseForms": {
+            "definite": "el abra",
+            "indefinite": "un abra"
+          },
+          "surface": "abra"
+        },
+        {
+          "phraseForms": {
+            "definite": "el acta",
+            "indefinite": "un acta"
+          },
+          "surface": "acta"
+        },
+        {
+          "phraseForms": {
+            "definite": "el afta",
+            "indefinite": "un afta"
+          },
+          "surface": "afta"
+        },
+        {
+          "phraseForms": {
+            "definite": "el agua",
+            "indefinite": "un agua"
+          },
+          "surface": "agua"
+        },
+        {
+          "phraseForms": {
+            "definite": "el ala",
+            "indefinite": "un ala"
+          },
+          "surface": "ala"
+        },
+        {
+          "phraseForms": {
+            "definite": "el alba",
+            "indefinite": "un alba"
+          },
+          "surface": "alba"
+        },
+        {
+          "phraseForms": {
+            "definite": "el alca",
+            "indefinite": "un alca"
+          },
+          "surface": "alca"
+        },
+        {
+          "phraseForms": {
+            "definite": "el alga",
+            "indefinite": "un alga"
+          },
+          "surface": "alga"
+        }
+      ]
+    },
+    "sizeEstimates": {
+      "eagerPhrasePack": {
+        "binaryLowerBoundBytes": 3431548,
+        "phraseRowBytes": 1528752,
+        "phraseRows": 127396,
+        "stringPoolBytes": 1902796
+      }
+    }
+  },
+  "counts": {
+    "ambiguousSupportedSurfaces": 17053,
+    "dictionaryEntries": 556656,
+    "dictionaryInflectionPatterns": 809,
+    "exactGenderNumberSurfaces": 52190,
+    "genderNumberCandidateSurfaces": 63698,
+    "inflectionalPatterns": 1129,
+    "missingInflectionPatterns": 0,
+    "nounInflectionalPatterns": 521,
+    "skippedLines": 98,
+    "supportedEntries": 69315,
+    "uniqueSupportedSurfaces": 69243,
+    "usedInflectionalPatterns": 809
+  },
+  "features": {
+    "ambiguityReasons": {
+      "missing-gender": 228,
+      "missing-number": 35,
+      "multiple-analyses": 72,
+      "multiple-genders": 3276,
+      "multiple-inflections": 15023,
+      "multiple-numbers": 2197,
+      "multiple-parts-of-speech": 14677
+    },
+    "gender": {
+      "<missing>": 237,
+      "feminine": 37518,
+      "masculine": 34829
+    },
+    "number": {
+      "<missing>": 38,
+      "plural": 34916,
+      "singular": 36557
+    },
+    "partOfSpeech": {
+      "adjective": 10740,
+      "adverb": 58,
+      "noun": 68577,
+      "numeral": 8,
+      "proper-noun": 742,
+      "verb": 4788
+    },
+    "patternPartOfSpeech": {
+      "abbreviation": 1,
+      "adjective": 216,
+      "article": 2,
+      "noun": 521,
+      "verb": 389
+    },
+    "patternSlotGenders": {
+      "<missing>": 27104,
+      "feminine": 2040,
+      "masculine": 2338,
+      "neuter": 3
+    },
+    "patternSlotNumbers": {
+      "<missing>": 946,
+      "plural": 14936,
+      "singular": 15603
+    }
+  },
+  "locale": "es",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/es_noun_pack_report.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_es.lst",
+      "inflection/resources/org/unicode/inflection/dictionary/inflectional_es.xml"
+    ],
+    "sources": [
+      {
+        "byteSize": 37232751,
+        "gitLfsPointer": false,
+        "path": "dictionary_es.lst",
+        "sha256": "c027bc481306bbdae35aae1bce50c683c6e1c41e91643e68c9efda4e041d6389"
+      },
+      {
+        "byteSize": 4112171,
+        "gitLfsPointer": false,
+        "path": "inflectional_es.xml",
+        "sha256": "1ed54f3e48d32ac020d22fcb02a52ab05e72e8b73914891429798ebd09a98541"
+      }
+    ]
+  },
+  "reviewPolicy": {
+    "automaticExportSurfaces": 52190,
+    "blockedReasons": {
+      "missing-gender": 228,
+      "missing-number": 35,
+      "multiple-analyses": 19,
+      "multiple-genders": 3276,
+      "multiple-inflections": 3581,
+      "multiple-numbers": 2197,
+      "multiple-parts-of-speech": 3426
+    },
+    "blockedSurfaces": 5545,
+    "compactRuntime": "article-shell-composition",
+    "reviewRequiredReasons": {
+      "multiple-analyses": 53,
+      "multiple-inflections": 11442,
+      "multiple-parts-of-speech": 11251
+    },
+    "reviewRequiredSurfaces": 11508
+  },
+  "samples": {
+    "blockingAmbiguities": [
+      {
+        "entries": 1,
+        "genders": [
+          "feminine"
+        ],
+        "inflections": [
+          "2",
+          "4"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abacora"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "feminine"
+        ],
+        "inflections": [
+          "2",
+          "4"
+        ],
+        "numbers": [
+          "plural",
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-numbers",
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abacoras"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "feminine"
+        ],
+        "inflections": [
+          "4",
+          "8"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abanderada"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "feminine"
+        ],
+        "inflections": [
+          "4",
+          "8"
+        ],
+        "numbers": [
+          "plural"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abanderadas"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "4",
+          "8"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abanderado"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "4",
+          "8"
+        ],
+        "numbers": [
+          "plural"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abanderados"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "feminine",
+          "masculine"
+        ],
+        "inflections": [
+          "6",
+          "b"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "adjective",
+          "noun"
+        ],
+        "reasons": [
+          "multiple-genders",
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abandonista"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "feminine",
+          "masculine"
+        ],
+        "inflections": [
+          "6",
+          "b"
+        ],
+        "numbers": [
+          "plural"
+        ],
+        "partsOfSpeech": [
+          "adjective",
+          "noun"
+        ],
+        "reasons": [
+          "multiple-genders",
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abandonistas"
+      }
+    ],
+    "entries": [
+      {
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "16"
+        ],
+        "line": 3,
+        "number": [
+          "singular",
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "ABS"
+      },
+      {
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "16"
+        ],
+        "line": 4,
+        "number": [
+          "singular",
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "ADN"
+      },
+      {
+        "gender": [],
+        "inflections": [],
+        "line": 5,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Abiyán"
+      },
+      {
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [],
+        "line": 6,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Abuya"
+      },
+      {
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [],
+        "line": 7,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Abuyas"
+      },
+      {
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [],
+        "line": 8,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Adolfo"
+      },
+      {
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "1"
+        ],
+        "line": 9,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "Adviento"
+      },
+      {
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "1"
+        ],
+        "line": 10,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "Advientos"
+      }
+    ],
+    "genderNumberCandidates": [
+      {
+        "entries": 1,
+        "genders": [
+          "feminine"
+        ],
+        "inflections": [
+          "7"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "a"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "9"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "ababol"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "9"
+        ],
+        "numbers": [
+          "plural"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "ababoles"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "feminine"
+        ],
+        "inflections": [
+          "2"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abacería"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "feminine"
+        ],
+        "inflections": [
+          "2"
+        ],
+        "numbers": [
+          "plural"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abacerías"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "feminine"
+        ],
+        "inflections": [
+          "2",
+          "4"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abacora"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "9"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abad"
+      },
+      {
+        "entries": 1,
+        "genders": [
+          "feminine"
+        ],
+        "inflections": [
+          "2"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abada"
+      }
+    ],
+    "missingInflectionPatterns": []
+  },
+  "schema": "mojito-mf2-inflection/es-noun-pack-report/v0",
+  "sizeEstimates": {
+    "genderNumberMetadataPack": {
+      "binaryLowerBoundBytes": 1214799,
+      "rowBytes": 509584,
+      "stringPoolBytes": 705215
+    }
+  },
+  "sources": [
+    {
+      "byteSize": 37232751,
+      "gitLfsPointer": false,
+      "path": "dictionary_es.lst",
+      "sha256": "c027bc481306bbdae35aae1bce50c683c6e1c41e91643e68c9efda4e041d6389"
+    },
+    {
+      "byteSize": 4112171,
+      "gitLfsPointer": false,
+      "path": "inflectional_es.xml",
+      "sha256": "1ed54f3e48d32ac020d22fcb02a52ab05e72e8b73914891429798ebd09a98541"
+    }
+  ]
+}

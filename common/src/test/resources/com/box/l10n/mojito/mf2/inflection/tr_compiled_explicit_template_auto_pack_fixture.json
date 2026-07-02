@@ -1,0 +1,345 @@
+{
+  "diagnostics": [],
+  "formSets": [
+    {
+      "forms": [
+        {
+          "key": 1,
+          "kind": "literal",
+          "value": 2
+        },
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 4
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 4
+        },
+        {
+          "key": 6,
+          "kind": "literal",
+          "value": 2
+        }
+      ],
+      "term": 0
+    },
+    {
+      "forms": [
+        {
+          "key": 1,
+          "kind": "literal",
+          "value": 9
+        },
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 10
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 10
+        },
+        {
+          "key": 6,
+          "kind": "literal",
+          "value": 9
+        }
+      ],
+      "term": 8
+    },
+    {
+      "forms": [
+        {
+          "key": 1,
+          "kind": "literal",
+          "value": 13
+        },
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 14
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 14
+        },
+        {
+          "key": 6,
+          "kind": "literal",
+          "value": 13
+        }
+      ],
+      "term": 12
+    },
+    {
+      "forms": [
+        {
+          "key": 1,
+          "kind": "literal",
+          "value": 17
+        },
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 18
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 18
+        },
+        {
+          "key": 6,
+          "kind": "literal",
+          "value": 17
+        }
+      ],
+      "term": 16
+    },
+    {
+      "forms": [
+        {
+          "key": 1,
+          "kind": "literal",
+          "value": 21
+        },
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 22
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 22
+        },
+        {
+          "key": 6,
+          "kind": "literal",
+          "value": 21
+        }
+      ],
+      "term": 20
+    },
+    {
+      "forms": [
+        {
+          "key": 25,
+          "kind": "literal",
+          "value": 26
+        },
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 27
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 27
+        }
+      ],
+      "term": 24
+    },
+    {
+      "forms": [
+        {
+          "key": 1,
+          "kind": "literal",
+          "value": 30
+        },
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 31
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 31
+        },
+        {
+          "key": 6,
+          "kind": "literal",
+          "value": 30
+        }
+      ],
+      "term": 29
+    },
+    {
+      "forms": [
+        {
+          "key": 1,
+          "kind": "literal",
+          "value": 34
+        },
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 35
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 35
+        },
+        {
+          "key": 6,
+          "kind": "literal",
+          "value": 34
+        }
+      ],
+      "term": 33
+    }
+  ],
+  "generationSummary": {
+    "candidateTerms": 71,
+    "exportedTerms": 8,
+    "formRows": 31,
+    "skippedTerms": {
+      "conflicting-form-key": 1,
+      "missing-bare-singular-form": 1092,
+      "missing-or-ambiguous-inflection": 39,
+      "non-base-case-dictionary-surface": 108,
+      "non-singular-dictionary-surface": 71,
+      "suffix-mismatch": 2,
+      "unsupported-part-of-speech": 733
+    }
+  },
+  "locale": "tr",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/tr_suffix_pack_survey.py",
+    "license": "CC0-1.0 dictionary data; Unicode-3.0 repository packaging",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_tr.lst",
+      "inflection/resources/org/unicode/inflection/dictionary/inflectional_tr.xml"
+    ],
+    "sources": [
+      {
+        "byteSize": 57207,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_tr.lst",
+        "sha256": "32097e8a123c591d4470a51e883b8afb6cebf9b5b60c0857cffd07a7c513e391"
+      },
+      {
+        "byteSize": 21129,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/inflectional_tr.xml",
+        "sha256": "810637ded03292c0d48511dcfa1e293d63e044ae312293245a590585640c1445"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/compiled-term-pack/v0",
+  "sizeEstimates": {
+    "binaryLowerBoundBytes": {
+      "bindingReferenceBytes": 0,
+      "formRowBytes": 372,
+      "stringPoolBytes": 451,
+      "termRowBytes": 160,
+      "totalBytes": 983
+    },
+    "compactJsonBytes": 6583
+  },
+  "strings": [
+    "tr.explicit.amel",
+    "bare.plural",
+    "aʼmal",
+    "bare.singular",
+    "amel",
+    "count.one",
+    "count.other",
+    "inflection=44",
+    "tr.explicit.anahtar",
+    "anahtarlar",
+    "anahtar",
+    "inflection=47",
+    "tr.explicit.arı",
+    "arılar",
+    "arı",
+    "inflection=15",
+    "tr.explicit.bahar",
+    "bahâran",
+    "bahar",
+    "inflection=35",
+    "tr.explicit.bahis",
+    "ebhâs",
+    "bahis",
+    "inflection=1a",
+    "tr.explicit.baklava",
+    "accusative.singular",
+    "baklavayı",
+    "baklava",
+    "inflection=e",
+    "tr.explicit.cerrah",
+    "cerrâhin",
+    "cerrah",
+    "inflection=22",
+    "tr.explicit.cetvel",
+    "cedâvil",
+    "cetvel",
+    "inflection=13"
+  ],
+  "terms": [
+    {
+      "featureBits": 257,
+      "formSet": 0,
+      "id": 0,
+      "sense": 7,
+      "text": 4
+    },
+    {
+      "featureBits": 257,
+      "formSet": 1,
+      "id": 8,
+      "sense": 11,
+      "text": 10
+    },
+    {
+      "featureBits": 257,
+      "formSet": 2,
+      "id": 12,
+      "sense": 15,
+      "text": 14
+    },
+    {
+      "featureBits": 257,
+      "formSet": 3,
+      "id": 16,
+      "sense": 19,
+      "text": 18
+    },
+    {
+      "featureBits": 257,
+      "formSet": 4,
+      "id": 20,
+      "sense": 23,
+      "text": 22
+    },
+    {
+      "featureBits": 257,
+      "formSet": 5,
+      "id": 24,
+      "sense": 28,
+      "text": 27
+    },
+    {
+      "featureBits": 257,
+      "formSet": 6,
+      "id": 29,
+      "sense": 32,
+      "text": 31
+    },
+    {
+      "featureBits": 257,
+      "formSet": 7,
+      "id": 33,
+      "sense": 36,
+      "text": 35
+    }
+  ]
+}

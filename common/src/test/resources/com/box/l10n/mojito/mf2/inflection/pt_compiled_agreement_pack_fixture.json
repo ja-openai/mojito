@@ -1,0 +1,135 @@
+{
+  "bindings": {
+    "inventory.by": {
+      "item": [
+        "item.field",
+        "item.house"
+      ]
+    },
+    "inventory.deleted": {
+      "item": [
+        "item.field",
+        "item.house"
+      ]
+    },
+    "inventory.found": {
+      "item": [
+        "item.field",
+        "item.house"
+      ]
+    },
+    "inventory.from": {
+      "item": [
+        "item.field",
+        "item.house"
+      ]
+    },
+    "inventory.in": {
+      "item": [
+        "item.field",
+        "item.house"
+      ]
+    },
+    "inventory.in_one": {
+      "item": [
+        "item.field",
+        "item.house"
+      ]
+    }
+  },
+  "diagnostics": [],
+  "formSets": [
+    {
+      "forms": [
+        {
+          "key": 0,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 2,
+          "kind": "literal",
+          "value": 3
+        }
+      ],
+      "term": 4
+    },
+    {
+      "forms": [
+        {
+          "key": 0,
+          "kind": "literal",
+          "value": 6
+        },
+        {
+          "key": 2,
+          "kind": "literal",
+          "value": 7
+        }
+      ],
+      "term": 8
+    }
+  ],
+  "locale": "pt",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/mf2_term_pack_compile.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "unicode-org/inflection dictionary_pt.lst",
+      "unicode-org/inflection inflectional_pt.xml"
+    ],
+    "sources": [
+      {
+        "byteSize": 2345650,
+        "gitLfsPointer": false,
+        "path": "dictionary_pt.lst",
+        "sha256": "00a2c13c4b5c437cc8677e7115a7e8ad3ec62dcba2115698fb283541cdabee70"
+      },
+      {
+        "byteSize": 637727,
+        "gitLfsPointer": false,
+        "path": "inflectional_pt.xml",
+        "sha256": "b223e087bd3ea5470fabebb6277e500561d24a7c7fbd5f867a1d115d2f3d3aef"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/compiled-term-pack/v0",
+  "sizeEstimates": {
+    "binaryLowerBoundBytes": {
+      "bindingReferenceBytes": 0,
+      "formRowBytes": 48,
+      "stringPoolBytes": 84,
+      "termRowBytes": 40,
+      "totalBytes": 172
+    },
+    "compactJsonBytes": 1395
+  },
+  "strings": [
+    "bare.plural",
+    "campos",
+    "bare.singular",
+    "campo",
+    "item.field",
+    "field",
+    "casas",
+    "casa",
+    "item.house",
+    "house"
+  ],
+  "terms": [
+    {
+      "featureBits": 273,
+      "formSet": 0,
+      "id": 4,
+      "sense": 5,
+      "text": 3
+    },
+    {
+      "featureBits": 289,
+      "formSet": 1,
+      "id": 8,
+      "sense": 9,
+      "text": 7
+    }
+  ]
+}

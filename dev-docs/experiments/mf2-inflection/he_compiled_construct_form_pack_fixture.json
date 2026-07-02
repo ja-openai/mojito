@@ -1,0 +1,112 @@
+{
+  "diagnostics": [],
+  "formSets": [
+    {
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 4,
+          "kind": "literal",
+          "value": 5
+        },
+        {
+          "key": 6,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 8
+        }
+      ],
+      "term": 0
+    }
+  ],
+  "generationSummary": {
+    "candidateTerms": 1,
+    "exportedFormKeys": [
+      "bare.singular",
+      "bare.plural",
+      "construct.singular",
+      "construct.plural"
+    ],
+    "exportedTerms": 1,
+    "formRows": 4,
+    "missingFormKeys": [
+      "construct.dual"
+    ],
+    "policy": "closed-world construct-state explicit-form pack",
+    "requiredFormRows": 5,
+    "reviewDiagnostics": [
+      {
+        "formKey": "construct.dual",
+        "reason": "missing-form-cell",
+        "termId": "he.construct.house"
+      }
+    ],
+    "sourceRows": [
+      12417,
+      13483,
+      12417,
+      13478
+    ],
+    "sourceRowsByFormKey": {
+      "bare.plural": 13483,
+      "bare.singular": 12417,
+      "construct.plural": 13478,
+      "construct.singular": 12417
+    }
+  },
+  "locale": "he",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/he_construct_form_pack.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_he.lst"
+    ],
+    "sources": [
+      {
+        "byteSize": 9728222,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_he.lst",
+        "sha256": "abece63d2c0f688d156e79860c9a3c97c51a30e07268616be67e4c7dc2d557cd"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/compiled-term-pack/v0",
+  "sizeEstimates": {
+    "binaryLowerBoundBytes": {
+      "bindingReferenceBytes": 0,
+      "formRowBytes": 48,
+      "stringPoolBytes": 118,
+      "termRowBytes": 20,
+      "totalBytes": 186
+    },
+    "compactJsonBytes": 2394
+  },
+  "strings": [
+    "he.construct.house",
+    "בית",
+    "inflection=95",
+    "bare.singular",
+    "bare.plural",
+    "בתים",
+    "construct.singular",
+    "construct.plural",
+    "בתי"
+  ],
+  "terms": [
+    {
+      "featureBits": 273,
+      "formSet": 0,
+      "id": 0,
+      "sense": 2,
+      "text": 1
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "schema": "mojito-mf2-inflection/message-term-binding-manifest/v0",
+  "locale": "tr",
+  "messages": {
+    "inventory.deleted": "Silindi {$item :term case=accusative count=$count}.",
+    "inventory.to": "Gönderildi {$item :term case=dative count=$count}.",
+    "inventory.in": "Bulundu {$item :term case=locative count=$count}.",
+    "inventory.from": "Alındı {$item :term case=ablative count=$count}.",
+    "inventory.listed": "Listelendi {$item :term count=$count}."
+  },
+  "argumentTerms": {
+    "inventory.deleted": {
+      "item": [
+        "item.house",
+        "item.school",
+        "item.car",
+        "item.park",
+        "item.rose"
+      ]
+    },
+    "inventory.to": {
+      "item": [
+        "item.house",
+        "item.school",
+        "item.car",
+        "item.park",
+        "item.rose"
+      ]
+    },
+    "inventory.in": {
+      "item": [
+        "item.house",
+        "item.school",
+        "item.car",
+        "item.park",
+        "item.rose"
+      ]
+    },
+    "inventory.from": {
+      "item": [
+        "item.house",
+        "item.school",
+        "item.car",
+        "item.park",
+        "item.rose"
+      ]
+    },
+    "inventory.listed": {
+      "item": [
+        "item.house",
+        "item.school",
+        "item.car",
+        "item.park",
+        "item.rose"
+      ]
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "articles": [
+    "definite",
+    "indefinite"
+  ],
+  "cases": [
+    "ablative",
+    "accusative",
+    "dative",
+    "direct",
+    "genitive",
+    "instrumental",
+    "locative",
+    "nominative",
+    "oblique",
+    "prepositional",
+    "sociative",
+    "vocative"
+  ],
+  "definiteness": [
+    "construct",
+    "definite",
+    "indefinite"
+  ],
+  "numbers": [
+    "dual",
+    "plural",
+    "singular"
+  ],
+  "options": [
+    "article",
+    "case",
+    "count",
+    "definiteness",
+    "number",
+    "preposition"
+  ],
+  "prepositionArticleCombinations": {
+    "articleOnly": [
+      "definite",
+      "indefinite"
+    ],
+    "de": [
+      "definite"
+    ],
+    "em": [
+      "definite",
+      "indefinite"
+    ],
+    "por": [
+      "definite"
+    ]
+  },
+  "prepositions": [
+    "de",
+    "em",
+    "por"
+  ],
+  "schema": "mojito-mf2-inflection/term-usage-option-contract/v0"
+}

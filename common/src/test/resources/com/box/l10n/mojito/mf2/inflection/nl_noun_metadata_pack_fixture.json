@@ -1,0 +1,472 @@
+{
+  "description": "Generated Dutch noun metadata fixture for gender, number, and diminutive validation; not a case or definiteness renderer.",
+  "features": {
+    "diminutive": {
+      "false": 2900,
+      "true": 2412
+    },
+    "gender": {
+      "feminine": 1141,
+      "masculine": 1962,
+      "neuter": 2550
+    },
+    "number": {
+      "plural": 2537,
+      "singular": 3012
+    },
+    "partOfSpeech": {
+      "noun": 5259,
+      "proper-noun": 63
+    }
+  },
+  "generationSummary": {
+    "caseTaggedTermRows": 80,
+    "definitenessTaggedTermRows": 12,
+    "dictionaryEntries": 13093,
+    "diminutiveRows": 2782,
+    "exportedDiminutiveRows": 10,
+    "exportedRows": 20,
+    "metadataCandidateRows": 5312,
+    "metadataCandidateSurfaces": 5308,
+    "metadataDiminutiveRows": 2412,
+    "multiGenderRows": 277,
+    "multiNumberRows": 237,
+    "reviewDiagnosticRows": 0,
+    "skippedDictionaryLines": 94,
+    "termRows": 6317
+  },
+  "locale": "nl",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/nl_noun_metadata_pack.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_nl.lst"
+    ],
+    "sources": [
+      {
+        "byteSize": 780817,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_nl.lst",
+        "sha256": "9ccee2f7e50685c4239432b8d59ea5ba362f5bd5e3f529993a2ea7db5e2fa8c7"
+      }
+    ]
+  },
+  "rows": [
+    {
+      "diminutive": false,
+      "featureBits": 321,
+      "gender": [
+        "neuter"
+      ],
+      "inflectionPatterns": [
+        "2"
+      ],
+      "number": [
+        "singular"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 1495,
+      "surface": 0
+    },
+    {
+      "diminutive": false,
+      "featureBits": 577,
+      "gender": [
+        "neuter"
+      ],
+      "inflectionPatterns": [
+        "2"
+      ],
+      "number": [
+        "plural"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 1496,
+      "surface": 1
+    },
+    {
+      "diminutive": true,
+      "featureBits": 4417,
+      "gender": [
+        "neuter"
+      ],
+      "inflectionPatterns": [
+        "2"
+      ],
+      "number": [
+        "singular"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 1501,
+      "surface": 2
+    },
+    {
+      "diminutive": true,
+      "featureBits": 4673,
+      "gender": [
+        "neuter"
+      ],
+      "inflectionPatterns": [
+        "2"
+      ],
+      "number": [
+        "plural"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 1502,
+      "surface": 3
+    },
+    {
+      "diminutive": false,
+      "featureBits": 321,
+      "gender": [
+        "neuter"
+      ],
+      "inflectionPatterns": [
+        "43c"
+      ],
+      "number": [
+        "singular"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 4720,
+      "surface": 4
+    },
+    {
+      "diminutive": false,
+      "featureBits": 577,
+      "gender": [
+        "neuter"
+      ],
+      "inflectionPatterns": [
+        "43c"
+      ],
+      "number": [
+        "plural"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 4739,
+      "surface": 5
+    },
+    {
+      "diminutive": true,
+      "featureBits": 4417,
+      "gender": [
+        "neuter"
+      ],
+      "inflectionPatterns": [
+        "43c"
+      ],
+      "number": [
+        "singular"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 4732,
+      "surface": 6
+    },
+    {
+      "diminutive": true,
+      "featureBits": 4673,
+      "gender": [
+        "neuter"
+      ],
+      "inflectionPatterns": [
+        "43c"
+      ],
+      "number": [
+        "plural"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 4733,
+      "surface": 7
+    },
+    {
+      "diminutive": false,
+      "featureBits": 273,
+      "gender": [
+        "masculine"
+      ],
+      "inflectionPatterns": [
+        "23b"
+      ],
+      "number": [
+        "singular"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 6478,
+      "surface": 8
+    },
+    {
+      "diminutive": false,
+      "featureBits": 529,
+      "gender": [
+        "masculine"
+      ],
+      "inflectionPatterns": [
+        "23b"
+      ],
+      "number": [
+        "plural"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 6499,
+      "surface": 9
+    },
+    {
+      "diminutive": true,
+      "featureBits": 4417,
+      "gender": [
+        "neuter"
+      ],
+      "inflectionPatterns": [
+        "23b"
+      ],
+      "number": [
+        "singular"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 6500,
+      "surface": 10
+    },
+    {
+      "diminutive": true,
+      "featureBits": 4625,
+      "gender": [
+        "masculine"
+      ],
+      "inflectionPatterns": [
+        "23b"
+      ],
+      "number": [
+        "plural"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 6501,
+      "surface": 11
+    },
+    {
+      "diminutive": false,
+      "featureBits": 321,
+      "gender": [
+        "neuter"
+      ],
+      "inflectionPatterns": [
+        "2c6"
+      ],
+      "number": [
+        "singular"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 5395,
+      "surface": 12
+    },
+    {
+      "diminutive": false,
+      "featureBits": 577,
+      "gender": [
+        "neuter"
+      ],
+      "inflectionPatterns": [
+        "2c6"
+      ],
+      "number": [
+        "plural"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 5396,
+      "surface": 13
+    },
+    {
+      "diminutive": true,
+      "featureBits": 4417,
+      "gender": [
+        "neuter"
+      ],
+      "inflectionPatterns": [
+        "2c6"
+      ],
+      "number": [
+        "singular"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 5399,
+      "surface": 14
+    },
+    {
+      "diminutive": true,
+      "featureBits": 4673,
+      "gender": [
+        "neuter"
+      ],
+      "inflectionPatterns": [
+        "2c6"
+      ],
+      "number": [
+        "plural"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 5400,
+      "surface": 15
+    },
+    {
+      "diminutive": false,
+      "featureBits": 289,
+      "gender": [
+        "feminine"
+      ],
+      "inflectionPatterns": [
+        "374"
+      ],
+      "number": [
+        "singular"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 12135,
+      "surface": 16
+    },
+    {
+      "diminutive": false,
+      "featureBits": 545,
+      "gender": [
+        "feminine"
+      ],
+      "inflectionPatterns": [
+        "374"
+      ],
+      "number": [
+        "plural"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 12137,
+      "surface": 17
+    },
+    {
+      "diminutive": true,
+      "featureBits": 4417,
+      "gender": [
+        "neuter"
+      ],
+      "inflectionPatterns": [
+        "374"
+      ],
+      "number": [
+        "singular"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 12142,
+      "surface": 18
+    },
+    {
+      "diminutive": true,
+      "featureBits": 4641,
+      "gender": [
+        "feminine"
+      ],
+      "inflectionPatterns": [
+        "374"
+      ],
+      "number": [
+        "plural"
+      ],
+      "partOfSpeech": [
+        "noun"
+      ],
+      "reviewDiagnostics": [],
+      "sourceRow": 12143,
+      "surface": 19
+    }
+  ],
+  "schema": "mojito-mf2-inflection/nl-noun-metadata-pack/v0",
+  "sizeEstimates": {
+    "fullMetadataPack": {
+      "binaryLowerBoundBytes": 114496,
+      "rowBytes": 63744,
+      "stringPoolBytes": 50752
+    },
+    "sampleMetadataPack": {
+      "binaryLowerBoundBytes": 386,
+      "jsonBytes": 8797,
+      "rowBytes": 240,
+      "stringPoolBytes": 146
+    }
+  },
+  "strings": [
+    "boek",
+    "boeken",
+    "boekje",
+    "boekjes",
+    "huis",
+    "huizen",
+    "huisje",
+    "huisjes",
+    "man",
+    "mannen",
+    "mannetje",
+    "mannetjes",
+    "kind",
+    "kinderen",
+    "kindje",
+    "kindjes",
+    "vrouw",
+    "vrouwen",
+    "vrouwtje",
+    "vrouwtjes"
+  ]
+}

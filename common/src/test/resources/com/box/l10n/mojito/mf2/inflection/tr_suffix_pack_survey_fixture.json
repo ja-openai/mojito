@@ -1,0 +1,1070 @@
+{
+  "compositionPolicy": {
+    "caseTemplatePatterns": 23,
+    "caseTemplateRowBytes": 720,
+    "caseTemplateRows": 60,
+    "consonantMutationPatterns": 5,
+    "consonantMutationTemplateRowBytes": 108,
+    "consonantMutationTemplateRows": 9,
+    "emptySuffixCaseTemplateRows": 41,
+    "mutationStrategy": "explicit-template-forms",
+    "mutationStrategyReason": "Only a small set of non-default XML templates requires stem mutation; explicit templates are safer than extending the compact renderer with under-specified Turkish mutation classes.",
+    "pluralTemplateRowBytes": 672,
+    "pluralTemplateRows": 56,
+    "rendererScope": [
+      "plural",
+      "nominative",
+      "accusative",
+      "dative",
+      "locative",
+      "ablative"
+    ],
+    "requiresExplicitFormFlags": [
+      "exception",
+      "foreign",
+      "soft-consonant"
+    ],
+    "ruleSafeInflection": "1",
+    "suffixPreservingCaseTemplateRows": 10,
+    "supplementalRowsRequiringExplicitReview": 968
+  },
+  "counts": {
+    "defaultInflectionEntries": 1091,
+    "defaultInflectionEntriesCoveredBySupplemental": 9,
+    "dictionaryEntries": 2117,
+    "dictionaryInflectionPatterns": 72,
+    "dictionarySkippedLines": 81,
+    "explicitInflectionEntries": 256,
+    "inflectionalPatterns": 72,
+    "missingInflectionPatterns": 0,
+    "nounInflectionalPatterns": 72,
+    "supplementalEntries": 970,
+    "supplementalOnlySurfaces": 958,
+    "supplementalSkippedLines": 3,
+    "supportedEntries": 1384,
+    "supportedSurfacesCoveredBySupplemental": 12,
+    "supportedWithoutInflection": 38,
+    "uniqueSupportedSurfaces": 1383,
+    "usedInflectionalPatterns": 72
+  },
+  "features": {
+    "case": {
+      "<missing>": 1271,
+      "ablative": 25,
+      "absolutive": 3,
+      "accusative": 31,
+      "dative": 26,
+      "genitive": 1,
+      "locative": 25,
+      "nominative": 2
+    },
+    "inflectionPatterns": {
+      "1": 1091,
+      "10": 2,
+      "11": 3,
+      "12": 1,
+      "13": 2,
+      "14": 5,
+      "15": 2,
+      "16": 2,
+      "17": 1,
+      "18": 2,
+      "19": 2,
+      "1a": 2,
+      "1b": 2,
+      "1c": 3,
+      "1d": 2,
+      "1e": 2,
+      "1f": 2,
+      "2": 34,
+      "20": 2,
+      "21": 2,
+      "22": 2,
+      "23": 5,
+      "24": 4,
+      "25": 2,
+      "26": 3,
+      "27": 2,
+      "28": 2,
+      "29": 2,
+      "2a": 1,
+      "2b": 2,
+      "2c": 1,
+      "2d": 2,
+      "2e": 2,
+      "2f": 2,
+      "3": 36,
+      "30": 2,
+      "31": 2,
+      "32": 4,
+      "33": 4,
+      "34": 2,
+      "35": 2,
+      "36": 2,
+      "37": 5,
+      "38": 2,
+      "39": 4,
+      "3a": 2,
+      "3b": 1,
+      "3c": 2,
+      "3d": 2,
+      "3e": 2,
+      "3f": 2,
+      "4": 16,
+      "40": 2,
+      "41": 1,
+      "42": 1,
+      "43": 2,
+      "44": 2,
+      "45": 2,
+      "46": 1,
+      "47": 2,
+      "48": 2,
+      "5": 8,
+      "6": 12,
+      "7": 2,
+      "8": 4,
+      "9": 2,
+      "a": 4,
+      "b": 4,
+      "c": 2,
+      "d": 2,
+      "e": 2,
+      "f": 2
+    },
+    "number": {
+      "<missing>": 1307,
+      "dual": 2,
+      "plural": 69,
+      "singular": 6
+    },
+    "partOfSpeech": {
+      "adjective": 13,
+      "adverb": 3,
+      "noun": 1346,
+      "numeral": 2,
+      "proper-noun": 38,
+      "verb": 22
+    },
+    "patternSlotCases": {
+      "<missing>": 102,
+      "ablative": 12,
+      "absolutive": 3,
+      "accusative": 18,
+      "dative": 13,
+      "genitive": 1,
+      "locative": 11,
+      "nominative": 2
+    },
+    "patternSlotNumbers": {
+      "<missing>": 106,
+      "dual": 2,
+      "plural": 49,
+      "singular": 5
+    },
+    "patternSlotOtherAttributes": {
+      "animacy=animate": 1,
+      "count=uncountable": 1,
+      "definiteness=definite": 1
+    },
+    "slotsPerPattern": {
+      "0": 2,
+      "1": 8,
+      "2": 47,
+      "3": 3,
+      "4": 9,
+      "5": 3
+    },
+    "supplementalCombinations": {
+      "exception consonant-end back-round": 8,
+      "exception consonant-end back-round hard-consonant": 3,
+      "exception consonant-end back-unround": 10,
+      "exception consonant-end front-round": 4,
+      "exception consonant-end front-unround": 64,
+      "exception consonant-end front-unround hard-consonant": 4,
+      "exception vowel-end back-round compound": 4,
+      "exception vowel-end back-unround": 3,
+      "exception vowel-end back-unround compound": 4,
+      "exception vowel-end front-unround compound": 3,
+      "foreign consonant-end back-round": 117,
+      "foreign consonant-end back-round soft-consonant": 3,
+      "foreign consonant-end back-unround": 249,
+      "foreign consonant-end back-unround hard-consonant": 4,
+      "foreign consonant-end front-round": 14,
+      "foreign consonant-end front-unround": 232,
+      "foreign consonant-end front-unround hard-consonant": 16,
+      "foreign vowel-end back-round": 38,
+      "foreign vowel-end back-unround": 47,
+      "foreign vowel-end front-unround": 129
+    },
+    "supplementalFlags": {
+      "adjective": 1,
+      "back-round": 174,
+      "back-unround": 321,
+      "compound": 12,
+      "consonant-end": 736,
+      "exception": 113,
+      "foreign": 855,
+      "front-round": 22,
+      "front-unround": 451,
+      "hard-consonant": 32,
+      "noun": 1,
+      "proper-noun": 1,
+      "soft-consonant": 6,
+      "vowel-end": 232
+    },
+    "templateRows": 162
+  },
+  "locale": "tr",
+  "packShape": {
+    "explicitTemplateBaseCandidateTerms": 71,
+    "explicitTemplateCompiledFormRowBytes": 3348,
+    "explicitTemplateCompiledFormRows": 279,
+    "explicitTemplateCompiledJsonBytes": 44990,
+    "explicitTemplateCompiledLowerBoundBytes": 8199,
+    "explicitTemplateCompiledStringPoolBytes": 3431,
+    "explicitTemplateCompiledTermRowBytes": 1420,
+    "explicitTemplateRowBytes": 1944,
+    "explicitTemplateRows": 162,
+    "metadataBits": [
+      "vowelEnd",
+      "frontVowel",
+      "roundedVowel",
+      "foreign",
+      "exception",
+      "hardConsonant",
+      "softConsonant",
+      "compound"
+    ],
+    "reason": "Turkish default noun pattern has no explicit XML rows; suffix rendering needs vowel harmony and consonant alternation metadata, with supplemental rows mostly covering foreign/exception surfaces.",
+    "recommendation": "rule-plus-exception suffix pack",
+    "supplementalExceptionRows": 970,
+    "supplementalMetadataLowerBoundBytes": 14355,
+    "supplementalRowBytes": 7760,
+    "supplementalStringPoolBytes": 6595
+  },
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/tr_suffix_pack_survey.py",
+    "license": "CC0-1.0 dictionary data; Unicode-3.0 repository packaging",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_tr.lst",
+      "inflection/resources/org/unicode/inflection/dictionary/inflectional_tr.xml",
+      "inflection/resources/org/unicode/inflection/dictionary/supplemental_tr.lst"
+    ]
+  },
+  "samples": {
+    "consonantMutationTemplates": [
+      {
+        "attrs": {
+          "case": "accusative"
+        },
+        "pattern": "14",
+        "suffix": "k",
+        "surfaces": [
+          "çakmak",
+          "çakmakta",
+          "çakmaktan",
+          "çakmağa",
+          "çakmağı"
+        ],
+        "template": "{stem}ğı"
+      },
+      {
+        "attrs": {
+          "case": "dative"
+        },
+        "pattern": "14",
+        "suffix": "k",
+        "surfaces": [
+          "çakmak",
+          "çakmakta",
+          "çakmaktan",
+          "çakmağa",
+          "çakmağı"
+        ],
+        "template": "{stem}ğa"
+      },
+      {
+        "attrs": {
+          "case": "accusative"
+        },
+        "pattern": "26",
+        "suffix": "k",
+        "surfaces": [
+          "gök",
+          "göğe",
+          "göğü"
+        ],
+        "template": "{stem}ğü"
+      },
+      {
+        "attrs": {
+          "case": "dative"
+        },
+        "pattern": "26",
+        "suffix": "k",
+        "surfaces": [
+          "gök",
+          "göğe",
+          "göğü"
+        ],
+        "template": "{stem}ğe"
+      },
+      {
+        "attrs": {
+          "case": "accusative"
+        },
+        "pattern": "4",
+        "suffix": "k",
+        "surfaces": [
+          "çalılıkta",
+          "çalılıktan",
+          "çalılığa",
+          "çalılığı",
+          "çapakta",
+          "çapaktan",
+          "çapağa",
+          "çapağı"
+        ],
+        "template": "{stem}ğı"
+      },
+      {
+        "attrs": {
+          "case": "dative"
+        },
+        "pattern": "4",
+        "suffix": "k",
+        "surfaces": [
+          "çalılıkta",
+          "çalılıktan",
+          "çalılığa",
+          "çalılığı",
+          "çapakta",
+          "çapaktan",
+          "çapağa",
+          "çapağı"
+        ],
+        "template": "{stem}ğa"
+      },
+      {
+        "attrs": {
+          "case": "accusative"
+        },
+        "pattern": "41",
+        "suffix": "k",
+        "surfaces": [
+          "şakağı"
+        ],
+        "template": "{stem}ğı"
+      },
+      {
+        "attrs": {
+          "case": "accusative"
+        },
+        "pattern": "a",
+        "suffix": "k",
+        "surfaces": [
+          "çanakta",
+          "çanaktanaa",
+          "çanağa",
+          "çanağı"
+        ],
+        "template": "{stem}ğı"
+      }
+    ],
+    "defaultInflectionCoveredBySupplemental": [
+      {
+        "case": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 226,
+        "number": [],
+        "partOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "supplementalFlags": [
+          "foreign",
+          "vowel-end",
+          "front-unround"
+        ],
+        "surface": "aş"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 359,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "supplementalFlags": [
+          "exception",
+          "consonant-end",
+          "back-round"
+        ],
+        "surface": "bulut"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 414,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "supplementalFlags": [
+          "exception",
+          "consonant-end",
+          "front-unround",
+          "hard-consonant"
+        ],
+        "surface": "cep"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 649,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "supplementalFlags": [
+          "exception",
+          "consonant-end",
+          "front-unround"
+        ],
+        "surface": "general"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 669,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "supplementalFlags": [
+          "exception",
+          "consonant-end",
+          "front-round"
+        ],
+        "surface": "gol"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 770,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "supplementalFlags": [
+          "exception",
+          "consonant-end",
+          "front-unround"
+        ],
+        "surface": "hürriyet"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 880,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "supplementalFlags": [
+          "exception",
+          "consonant-end",
+          "back-unround",
+          "hard-consonant"
+        ],
+        "surface": "kap"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 1001,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "supplementalFlags": [
+          "exception",
+          "consonant-end",
+          "back-round",
+          "hard-consonant"
+        ],
+        "surface": "kurt"
+      }
+    ],
+    "defaultInflectionMissingSupplemental": [
+      {
+        "case": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 5,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "Alzheimer"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 16,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "Ejiptoloji"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 18,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "Eosen"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 22,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "Güneş"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 23,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "Hakkâri"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 32,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "Müslüman"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 33,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "Mısırbilim"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 34,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "Mısıroloji"
+      }
+    ],
+    "explicitInflectionEntries": [
+      {
+        "case": [],
+        "inflections": [
+          "44"
+        ],
+        "line": 125,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "amel"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "47"
+        ],
+        "line": 131,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "anahtar"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "47"
+        ],
+        "line": 132,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "anahtarlar"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "15"
+        ],
+        "line": 163,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "adjective",
+          "noun"
+        ],
+        "surface": "arı"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "15"
+        ],
+        "line": 164,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "arılar"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "39"
+        ],
+        "line": 181,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "avâlim"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "44"
+        ],
+        "line": 241,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "aʼmal"
+      },
+      {
+        "case": [],
+        "inflections": [
+          "35"
+        ],
+        "line": 248,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "bahar"
+      }
+    ],
+    "inflectionPatterns": [
+      {
+        "name": "1",
+        "partOfSpeech": [
+          "noun"
+        ],
+        "slots": [],
+        "suffix": "",
+        "words": 1098
+      },
+      {
+        "name": "10",
+        "partOfSpeech": [
+          "noun"
+        ],
+        "slots": [
+          {
+            "attrs": {},
+            "template": "{stem}arf"
+          },
+          {
+            "attrs": {
+              "number": "plural"
+            },
+            "template": "{stem}uruf"
+          }
+        ],
+        "suffix": "arf",
+        "words": 1
+      },
+      {
+        "name": "11",
+        "partOfSpeech": [
+          "noun"
+        ],
+        "slots": [
+          {
+            "attrs": {
+              "number": "plural"
+            },
+            "template": "{stem}ler"
+          },
+          {
+            "attrs": {
+              "case": "dative"
+            },
+            "template": "{stem}e"
+          },
+          {
+            "attrs": {},
+            "template": "{stem}"
+          }
+        ],
+        "suffix": "",
+        "words": 1
+      },
+      {
+        "name": "12",
+        "partOfSpeech": [
+          "noun"
+        ],
+        "slots": [
+          {
+            "attrs": {
+              "number": "plural"
+            },
+            "template": "{stem}lar"
+          }
+        ],
+        "suffix": "",
+        "words": 1
+      },
+      {
+        "name": "13",
+        "partOfSpeech": [
+          "noun"
+        ],
+        "slots": [
+          {
+            "attrs": {},
+            "template": "{stem}tvel"
+          },
+          {
+            "attrs": {
+              "number": "plural"
+            },
+            "template": "{stem}dâvil"
+          }
+        ],
+        "suffix": "tvel",
+        "words": 1
+      },
+      {
+        "name": "14",
+        "partOfSpeech": [
+          "noun"
+        ],
+        "slots": [
+          {
+            "attrs": {
+              "case": "ablative"
+            },
+            "template": "{stem}ktan"
+          },
+          {
+            "attrs": {
+              "case": "absolutive"
+            },
+            "template": "{stem}k"
+          },
+          {
+            "attrs": {
+              "case": "accusative"
+            },
+            "template": "{stem}ğı"
+          },
+          {
+            "attrs": {
+              "case": "dative"
+            },
+            "template": "{stem}ğa"
+          },
+          {
+            "attrs": {
+              "case": "locative"
+            },
+            "template": "{stem}kta"
+          }
+        ],
+        "suffix": "k",
+        "words": 1
+      },
+      {
+        "name": "15",
+        "partOfSpeech": [
+          "noun"
+        ],
+        "slots": [
+          {
+            "attrs": {
+              "number": "singular"
+            },
+            "template": "{stem}"
+          },
+          {
+            "attrs": {
+              "number": "plural"
+            },
+            "template": "{stem}lar"
+          }
+        ],
+        "suffix": "",
+        "words": 1
+      },
+      {
+        "name": "16",
+        "partOfSpeech": [
+          "noun"
+        ],
+        "slots": [
+          {
+            "attrs": {},
+            "template": "{stem}şey"
+          },
+          {
+            "attrs": {
+              "number": "plural"
+            },
+            "template": "{stem}eşyâ"
+          }
+        ],
+        "suffix": "şey",
+        "words": 1
+      }
+    ],
+    "missingInflectionPatterns": [],
+    "supplementalOnlySurfaces": [
+      {
+        "flags": [
+          "foreign",
+          "vowel-end",
+          "front-unround"
+        ],
+        "surface": "3g"
+      },
+      {
+        "flags": [
+          "foreign",
+          "vowel-end",
+          "front-unround"
+        ],
+        "surface": "3gs"
+      },
+      {
+        "flags": [
+          "foreign",
+          "vowel-end",
+          "front-unround"
+        ],
+        "surface": "4g"
+      },
+      {
+        "flags": [
+          "foreign",
+          "vowel-end",
+          "back-unround"
+        ],
+        "surface": "4k"
+      },
+      {
+        "flags": [
+          "foreign",
+          "vowel-end",
+          "front-unround"
+        ],
+        "surface": "4s"
+      },
+      {
+        "flags": [
+          "foreign",
+          "vowel-end",
+          "front-unround"
+        ],
+        "surface": "5c"
+      },
+      {
+        "flags": [
+          "foreign",
+          "vowel-end",
+          "front-unround"
+        ],
+        "surface": "5g"
+      },
+      {
+        "flags": [
+          "foreign",
+          "vowel-end",
+          "front-unround"
+        ],
+        "surface": "5s"
+      }
+    ],
+    "supportedWithoutInflection": [
+      {
+        "case": [],
+        "inflections": [],
+        "line": 1,
+        "number": [],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Adalar Denizi"
+      },
+      {
+        "case": [],
+        "inflections": [],
+        "line": 2,
+        "number": [],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Akdeniz"
+      },
+      {
+        "case": [],
+        "inflections": [],
+        "line": 3,
+        "number": [],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Allah"
+      },
+      {
+        "case": [],
+        "inflections": [],
+        "line": 4,
+        "number": [],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Altın Boynuz"
+      },
+      {
+        "case": [],
+        "inflections": [],
+        "line": 6,
+        "number": [],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Anadolu"
+      },
+      {
+        "case": [],
+        "inflections": [],
+        "line": 7,
+        "number": [],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Ankara"
+      },
+      {
+        "case": [],
+        "inflections": [],
+        "line": 8,
+        "number": [],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Arkeopteriks"
+      },
+      {
+        "case": [],
+        "inflections": [],
+        "line": 9,
+        "number": [],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Avcı Takımyıldızı"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/tr-suffix-pack-survey/v0",
+  "sources": [
+    {
+      "byteSize": 57207,
+      "gitLfsPointer": false,
+      "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_tr.lst",
+      "sha256": "32097e8a123c591d4470a51e883b8afb6cebf9b5b60c0857cffd07a7c513e391"
+    },
+    {
+      "byteSize": 21129,
+      "gitLfsPointer": false,
+      "path": "inflection/resources/org/unicode/inflection/dictionary/inflectional_tr.xml",
+      "sha256": "810637ded03292c0d48511dcfa1e293d63e044ae312293245a590585640c1445"
+    },
+    {
+      "byteSize": 43876,
+      "gitLfsPointer": false,
+      "path": "inflection/resources/org/unicode/inflection/dictionary/supplemental_tr.lst",
+      "sha256": "17fc7f47aea713943bdedf5c25a1cca909120b96b266653f46b817c4ab0c10d5"
+    }
+  ]
+}

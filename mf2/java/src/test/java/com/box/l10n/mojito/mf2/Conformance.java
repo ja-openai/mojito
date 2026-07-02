@@ -4,6 +4,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public final class Conformance {
@@ -17,6 +18,7 @@ public final class Conformance {
         Path fixtureDir = args.length > 0
                 ? Path.of(args[0])
                 : Path.of("../conformance/fixtures/source-to-model");
+        checkPublicApiBoundary();
 
         int checkedCases = 0;
         int checkedPartsCases = 0;
@@ -146,6 +148,50 @@ public final class Conformance {
                 checkedErrorCases,
                 checkedLocaleKeyCases);
         return 0;
+    }
+
+    private static void checkPublicApiBoundary() throws Exception {
+        Path sourceDir = Path.of("src/main/java/com/box/l10n/mojito/mf2");
+        if (!Files.isDirectory(sourceDir)) {
+            return;
+        }
+        try (var paths = Files.walk(sourceDir)) {
+            for (Path sourcePath : paths
+                    .filter(path -> path.getFileName().toString().endsWith(".java"))
+                    .toList()) {
+                int lineNumber = 0;
+                for (String line : Files.readAllLines(sourcePath)) {
+                    lineNumber++;
+                    String trimmed = line.trim();
+                    if (!trimmed.startsWith("public ")) {
+                        continue;
+                    }
+                    String normalized = normalizePublicApiName(trimmed);
+                    if (containsInflectionApiName(normalized)) {
+                        throw new ConformanceFailure(String.format(
+                                "%s:%d: standalone Java MF2 must not expose public inflection/M2IF/term-pack APIs before a product API is approved: %s",
+                                sourcePath, lineNumber, trimmed));
+                    }
+                }
+            }
+        }
+    }
+
+    private static boolean containsInflectionApiName(String normalized) {
+        return normalized.contains("inflection")
+                || normalized.contains("m2if")
+                || normalized.contains("compiledtermpack")
+                || normalized.contains("termpack");
+    }
+
+    private static String normalizePublicApiName(String value) {
+        StringBuilder normalized = new StringBuilder();
+        for (char character : value.toLowerCase(Locale.ROOT).toCharArray()) {
+            if (Character.isLetterOrDigit(character)) {
+                normalized.append(character);
+            }
+        }
+        return normalized.toString();
     }
 
     private static int checkInvalidSourceFixtures(Path fixtureRoot) throws Exception {
