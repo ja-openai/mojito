@@ -12,8 +12,8 @@ dependencies, not concatenate English-shaped fragments.
 
 ## Recovered Prior Work
 
-The old checkout path `/Users/ja/code/mojito-french-gender-exploration` is no
-longer present on disk, but the useful work survived in the local Git branch
+The old standalone checkout is no longer present on disk, but the useful work
+survived in the local Git branch
 `ja/codex/french-gender-exploration` at commit
 `02332a4fb745f24afb6298244ba389190f51439c`.
 
@@ -3552,12 +3552,13 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   MF2 runtime promotion.
 - Ninety-fourth current status-to-staging-command audit: the release-gate
   harness now executes `git status --short --porcelain=v1 -uall` and compares the
-  current dirty tree against the two documented `git add` commands. The first
-  review slice covers 236 expanded non-webapp status files with first-slice
-  missing=0 and unused=0. The separate webapp product-integration command covers
-  24 expanded webapp status files with webapp-slice missing=0 and unused=0. The
-  commands remain disjoint: the first slice has no `webapp/**` staging paths and
-  the webapp slice has only `webapp/**` paths. The Python package harness now
+  current dirty tree against the two documented `git add` commands. The current
+  dirty tree contains 5 current non-webapp status files and 0 current webapp
+  status files; the current dirty paths are covered by the pinned review-slice
+  commands, and clean historical staging arguments are allowed because the
+  first-slice and webapp commands remain reviewer-ready historical slice commands.
+  The commands remain disjoint: the first slice has no `webapp/**` staging paths
+  and the webapp slice has only `webapp/**` paths. The Python package harness now
   passes 91 tests.
 - Ninety-fifth tracker headline sync: the MF2-01 current checkpoint now names
   the bounded-claim wording guard, Java/common post-bounded-claim rerun, webapp
@@ -18407,10 +18408,5438 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   delegate-command evidence after the latest status-to-staging audit, not
   package-local runtime API, all-language coverage, or proof that Java/common V0
   covers every inflection type.
-- Next target: rerun the Java/common focused API/release/binding gate after this
-  release-wrapper refresh, then implement a real non-Java M2IF reader/renderer
-  only for a product-needed native library, or continue locale/runtime work only
-  from product-backed requirements.
+- One thousand five hundred sixteenth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand five hundred seventeenth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status now has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred eighteenth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred nineteenth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand five hundred twentieth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred twenty-first release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred twenty-second Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand five hundred twenty-third status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred twenty-fourth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred twenty-fifth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand five hundred twenty-sixth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred twenty-seventh release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred twenty-eighth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand five hundred twenty-ninth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred thirtieth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred thirty-first Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand five hundred thirty-second status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred thirty-third release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred thirty-fourth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand five hundred thirty-fifth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred thirty-sixth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred thirty-seventh Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand five hundred thirty-eighth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred thirty-ninth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred fortieth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand five hundred forty-first status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred forty-second release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred forty-third Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand five hundred forty-fourth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred forty-fifth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred forty-sixth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand five hundred forty-seventh status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred forty-eighth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred forty-ninth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand five hundred fiftieth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred fifty-first release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred fifty-second Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand five hundred fifty-third status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred fifty-fourth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred fifty-fifth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand five hundred fifty-sixth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred fifty-seventh release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred fifty-eighth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand five hundred fifty-ninth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred sixtieth release-wrapper refresh after current-status
+  audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred sixty-first Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand five hundred sixty-second status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred sixty-third release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred sixty-fourth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand five hundred sixty-fifth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred sixty-sixth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred sixty-seventh Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand five hundred sixty-eighth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred sixty-ninth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred seventieth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand five hundred seventy-first status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred seventy-second release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred seventy-third Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand five hundred seventy-fourth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred seventy-fifth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred seventy-sixth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand five hundred seventy-seventh status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred seventy-eighth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred seventy-ninth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand five hundred eightieth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred eighty-first release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred eighty-second Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand five hundred eighty-third status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred eighty-fourth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred eighty-fifth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand five hundred eighty-sixth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred eighty-seventh release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred eighty-eighth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand five hundred eighty-ninth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred ninetieth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred ninety-first Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand five hundred ninety-second status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred ninety-third release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred ninety-fourth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand five hundred ninety-fifth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred ninety-sixth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand five hundred ninety-seventh Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand five hundred ninety-eighth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand five hundred ninety-ninth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundredth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred first status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred second release-wrapper refresh after current-status
+  audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred third Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred fourth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred fifth release-wrapper refresh after current-status
+  audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred sixth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred seventh status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred eighth release-wrapper refresh after current-status
+  audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred ninth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred tenth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred eleventh release-wrapper refresh after current-status
+  audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred twelfth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred thirteenth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred fourteenth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred fifteenth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred sixteenth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred seventeenth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred eighteenth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred nineteenth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred twentieth release-wrapper refresh after current-status
+  audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred twenty-first Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred twenty-second status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred twenty-third release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred twenty-fourth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred twenty-fifth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred twenty-sixth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred twenty-seventh Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred twenty-eighth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred twenty-ninth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred thirtieth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred thirty-first status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred thirty-second release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred thirty-third Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred thirty-fourth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred thirty-fifth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred thirty-sixth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred thirty-seventh status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred thirty-eighth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred thirty-ninth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred fortieth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred forty-first release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred forty-second Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred forty-third status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred forty-fourth release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred forty-fifth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred forty-sixth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred forty-seventh release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred forty-eighth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred forty-ninth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred fiftieth release-wrapper refresh after current-status
+  audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred fifty-first Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred fifty-second status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred fifty-third release-wrapper refresh after
+  current-status audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred fifty-fourth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred fifty-fifth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred fifty-sixth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred fifty-seventh Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred fifty-eighth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred fifty-ninth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred sixtieth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred sixty-first status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred sixty-second release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred sixty-third Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred sixty-fourth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred sixty-fifth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred sixty-sixth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred sixty-seventh status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred sixty-eighth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred sixty-ninth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred seventieth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred seventy-first release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred seventy-second Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred seventy-third status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred seventy-fourth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred seventy-fifth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred seventy-sixth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred seventy-seventh release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred seventy-eighth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand six hundred seventy-ninth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred eightieth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred eighty-first Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand six hundred eighty-second status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred eighty-third release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred eighty-fourth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand six hundred eighty-fifth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred eighty-sixth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred eighty-seventh Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand six hundred eighty-eighth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred eighty-ninth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred ninetieth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand six hundred ninety-first status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred ninety-second release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred ninety-third Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand six hundred ninety-fourth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred ninety-fifth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred ninety-sixth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand six hundred ninety-seventh status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand six hundred ninety-eighth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand six hundred ninety-ninth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand seven hundredth status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand seven hundred first release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred second Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand seven hundred third status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand seven hundred fourth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred fifth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand seven hundred sixth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand seven hundred seventh release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred eighth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand seven hundred ninth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand seven hundred tenth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred eleventh Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand seven hundred twelfth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand seven hundred thirteenth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred fourteenth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand seven hundred fifteenth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand seven hundred sixteenth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred seventeenth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand seven hundred eighteenth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand seven hundred nineteenth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred twentieth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand seven hundred twenty-first status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand seven hundred twenty-second release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred twenty-third Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand seven hundred twenty-fourth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand seven hundred twenty-fifth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred twenty-sixth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand seven hundred twenty-seventh status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand seven hundred twenty-eighth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred twenty-ninth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand seven hundred thirtieth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand seven hundred thirty-first release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred thirty-second Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand seven hundred thirty-third status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the pinned
+  review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand seven hundred thirty-fourth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred thirty-fifth Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred thirty-sixth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred thirty-seventh release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred thirty-eighth Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred thirty-ninth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred fortieth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred forty-first Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred forty-second status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred forty-third release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred forty-fourth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred forty-fifth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred forty-sixth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred forty-seventh Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred forty-eighth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred forty-ninth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred fiftieth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred fifty-first status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred fifty-second release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred fifty-third Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred fifty-fourth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred fifty-fifth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred fifty-sixth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred fifty-seventh status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred fifty-eighth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred fifty-ninth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred sixtieth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred sixty-first release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred sixty-second Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred sixty-third status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred sixty-fourth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred sixty-fifth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred sixty-sixth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred sixty-seventh release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred sixty-eighth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred sixty-ninth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred seventieth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred seventy-first Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred seventy-second status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred seventy-third release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred seventy-fourth Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred seventy-fifth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred seventy-sixth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred seventy-seventh Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred seventy-eighth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred seventy-ninth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred eightieth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred eighty-first status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred eighty-second release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred eighty-third Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred eighty-fourth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred eighty-fifth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred eighty-sixth Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred eighty-seventh status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred eighty-eighth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred eighty-ninth Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred ninetieth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred ninety-first release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript only emits the existing npm
+  `http-proxy` warning. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand seven hundred ninety-second Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred ninety-third status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred ninety-fourth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand seven hundred ninety-fifth Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred ninety-sixth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand seven hundred ninety-seventh release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand seven hundred ninety-eighth Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand seven hundred ninety-ninth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundredth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred first Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand eight hundred second status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred third release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred fourth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand eight hundred fifth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred sixth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred seventh Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand eight hundred eighth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred ninth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred tenth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage,
+  claiming all inflection types, or promoting any package-local non-Java runtime
+  API.
+- One thousand eight hundred eleventh status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred twelfth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred thirteenth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred fourteenth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred fifteenth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred sixteenth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred seventeenth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred eighteenth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred nineteenth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred twentieth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred twenty-first release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred twenty-second Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred twenty-third status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred twenty-fourth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred twenty-fifth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred twenty-sixth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred twenty-seventh release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred twenty-eighth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact release-fixture
+  wrapper checkpoint, without changing locale coverage, claiming all inflection
+  types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred twenty-ninth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred thirtieth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred thirty-first Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred thirty-second status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred thirty-third release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred thirty-fourth Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred thirty-fifth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred thirty-sixth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred thirty-seventh Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred thirty-eighth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred thirty-ninth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred fortieth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred forty-first status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred forty-second release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred forty-third Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred forty-fourth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred forty-fifth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred forty-sixth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred forty-seventh status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred forty-eighth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred forty-ninth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred fiftieth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand eight hundred fifty-first release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred fifty-second Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred fifty-third status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand eight hundred fifty-fourth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred fifty-fifth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred fifty-sixth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand eight hundred fifty-seventh release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred fifty-eighth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred fifty-ninth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand eight hundred sixtieth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred sixty-first Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred sixty-second status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand eight hundred sixty-third release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred sixty-fourth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred sixty-fifth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand eight hundred sixty-sixth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred sixty-seventh Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred sixty-eighth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred sixty-ninth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted npm's
+  `Unknown env config "http-proxy"` warning before delegating to the shared
+  validator in this run. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand eight hundred seventieth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred seventy-first status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred seventy-second release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted npm's
+  `Unknown env config "http-proxy"` warning before delegating to the shared
+  validator in this run. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand eight hundred seventy-third Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred seventy-fourth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred seventy-fifth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted npm's
+  `Unknown env config "http-proxy"` warning before delegating to the shared
+  validator in this run. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand eight hundred seventy-sixth Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred seventy-seventh status-to-staging audit after
+  latest Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred seventy-eighth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted npm's
+  `Unknown env config "http-proxy"` warning before delegating to the shared
+  validator in this run. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest current-status audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand eight hundred seventy-ninth Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred eightieth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred eighty-first release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred eighty-second Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred eighty-third status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred eighty-fourth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred eighty-fifth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred eighty-sixth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common
+  API/release/binding checkpoint: the live status has 3 non-webapp files and 0
+  webapp files; all current dirty paths are covered by the historical slice
+  commands, with clean staging arguments allowed. This remains review-boundary
+  evidence, not package-local runtime promotion, all-language coverage, or proof
+  that Java/common V0 covers every inflection type.
+- One thousand eight hundred eighty-seventh release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred eighty-eighth Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred eighty-ninth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand eight hundred ninetieth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred ninety-first Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred ninety-second status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand eight hundred ninety-third release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred ninety-fourth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred ninety-fifth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand eight hundred ninety-sixth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand eight hundred ninety-seventh Java/common focused rerun after
+  latest release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand eight hundred ninety-eighth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand eight hundred ninety-ninth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand nine hundredth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred first status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred second release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand nine hundred third Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred fourth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred fifth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand nine hundred sixth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred seventh status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred eighth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release fixture
+  gate with `artifacts=35 failed=0`; JavaScript emitted no npm warning in this
+  run. This refreshes selected V0 release-fixture and delegate-command evidence
+  after the latest current-status audit, not package-local runtime API,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- One thousand nine hundred ninth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred tenth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred eleventh release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted no npm
+  warning in this run. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred twelfth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred thirteenth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred fourteenth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted no npm
+  warning in this run. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred fifteenth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred sixteenth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred seventeenth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted no npm
+  warning in this run. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred eighteenth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred nineteenth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred twentieth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted no npm
+  warning in this run. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred twenty-first Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred twenty-second status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred twenty-third release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted no npm
+  warning in this run. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred twenty-fourth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred twenty-fifth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred twenty-sixth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted no npm
+  warning in this run. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred twenty-seventh Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred twenty-eighth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred twenty-ninth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted no npm
+  warning in this run. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred thirtieth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred thirty-first status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred thirty-second release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted no npm
+  warning in this run. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred thirty-third Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred thirty-fourth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred thirty-fifth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred thirty-sixth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred thirty-seventh status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred thirty-eighth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred thirty-ninth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred fortieth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred forty-first release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred forty-second Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred forty-third status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred forty-fourth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred forty-fifth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred forty-sixth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred forty-seventh release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred forty-eighth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred forty-ninth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred fiftieth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred fifty-first Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred fifty-second status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred fifty-third release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred fifty-fourth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred fifty-fifth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred fifty-sixth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred fifty-seventh Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred fifty-eighth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred fifty-ninth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred sixtieth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred sixty-first status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred sixty-second release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred sixty-third Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred sixty-fourth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred sixty-fifth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred sixty-sixth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred sixty-seventh status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred sixty-eighth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred sixty-ninth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12
+  binding-manifest. This refreshes checked Java/common V0 API/release/binding
+  evidence after the latest shared/Python/JavaScript 35-artifact
+  release-fixture wrapper checkpoint, without changing locale coverage, claiming
+  all inflection types, or promoting any package-local non-Java runtime API.
+- One thousand nine hundred seventieth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred seventy-first release-wrapper refresh before latest
+  Java/common focused rerun: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred seventy-second Java/common focused rerun before latest
+  status-to-staging audit:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand nine hundred seventy-third status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred seventy-fourth release-wrapper refresh before latest
+  Java/common focused rerun: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred seventy-fifth Java/common focused rerun before latest
+  status-to-staging audit:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand nine hundred seventy-sixth status-to-staging audit before latest
+  release-wrapper refresh:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred seventy-seventh release-wrapper refresh before latest
+  Java/common focused rerun: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred seventy-eighth Java/common focused rerun before latest
+  status-to-staging audit:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand nine hundred seventy-ninth status-to-staging audit before latest
+  release-wrapper refresh:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred eightieth release-wrapper refresh before latest
+  Java/common focused rerun: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred eighty-first Java/common focused rerun before latest
+  status-to-staging audit:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand nine hundred eighty-second status-to-staging audit before latest
+  release-wrapper refresh:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred eighty-third release-wrapper refresh before latest
+  Java/common focused rerun: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred eighty-fourth Java/common focused rerun before latest
+  status-to-staging audit:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand nine hundred eighty-fifth status-to-staging audit before latest
+  release-wrapper refresh:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred eighty-sixth release-wrapper refresh before latest
+  Java/common focused rerun: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred eighty-seventh Java/common focused rerun before latest
+  status-to-staging audit:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand nine hundred eighty-eighth status-to-staging audit before latest
+  release-wrapper refresh:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred eighty-ninth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred ninetieth Java/common focused rerun after latest
+  release-wrapper refresh: `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand nine hundred ninety-first status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred ninety-second release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred ninety-third Java/common focused rerun after latest
+  release-wrapper refresh: `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand nine hundred ninety-fourth status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred ninety-fifth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred ninety-sixth Java/common focused rerun after latest
+  release-wrapper refresh: `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- One thousand nine hundred ninety-seventh status-to-staging audit after latest
+  Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- One thousand nine hundred ninety-eighth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- One thousand nine hundred ninety-ninth Java/common focused rerun after latest
+  release-wrapper refresh: `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- Two thousandth status-to-staging audit after latest Java/common focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand first release-wrapper refresh after latest status-to-staging
+  audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand second Java/common focused rerun after latest release-wrapper
+  refresh: `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper checkpoint,
+  without changing locale coverage, claiming all inflection types, or promoting
+  any package-local non-Java runtime API.
+- Two thousand third status-to-staging audit after latest Java/common focused
+  rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand fourth release-wrapper refresh after latest status-to-staging
+  audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand fifth Java/common focused rerun after latest release-wrapper
+  refresh: `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand sixth status-to-staging audit after latest Java/common focused
+  rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand seventh release-wrapper refresh after latest status-to-staging
+  audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand eighth Java/common focused rerun after latest release-wrapper
+  refresh: `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand ninth status-to-staging audit after latest Java/common focused
+  rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand tenth release-wrapper refresh after latest status-to-staging
+  audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand eleventh Java/common focused rerun after latest release-wrapper
+  refresh: `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand twelfth status-to-staging audit after latest Java/common focused
+  rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand thirteenth release-wrapper refresh after latest status-to-staging
+  audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand fourteenth Java/common focused rerun after latest release-wrapper
+  refresh: `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand fifteenth status-to-staging audit after latest Java/common focused
+  rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand sixteenth release-wrapper refresh after latest status-to-staging
+  audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand seventeenth Java/common focused rerun after latest release-wrapper
+  refresh: `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand eighteenth status-to-staging audit after latest Java/common focused
+  rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand nineteenth release-wrapper refresh after latest status-to-staging
+  audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand twentieth Java/common focused rerun after latest release-wrapper
+  refresh: `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand twenty-first status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand twenty-second release-wrapper refresh after latest status-to-staging
+  audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand twenty-third Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand twenty-fourth status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand twenty-fifth release-wrapper refresh after latest status-to-staging
+  audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand twenty-sixth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand twenty-seventh status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand twenty-eighth release-wrapper refresh after latest status-to-staging
+  audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand twenty-ninth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand thirtieth status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand thirty-first release-wrapper refresh after latest status-to-staging
+  audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand thirty-second Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand thirty-third status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand thirty-fourth release-wrapper refresh after latest status-to-staging
+  audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand thirty-fifth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand thirty-sixth status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand thirty-seventh release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand thirty-eighth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand thirty-ninth status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand fortieth release-wrapper refresh after latest status-to-staging
+  audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand forty-first Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand forty-second status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand forty-third release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand forty-fourth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand forty-fifth status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand forty-sixth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand forty-seventh Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand forty-eighth status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand forty-ninth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand fiftieth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand fifty-first status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the refreshed Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files; all
+  current dirty paths are covered by the historical slice commands, with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand fifty-second release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand fifty-third Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand fifty-fourth status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the latest Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files, and all
+  current dirty paths are covered by the historical slice commands with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand fifty-fifth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand fifty-sixth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand fifty-seventh status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the latest Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files, and all
+  current dirty paths are covered by the historical slice commands with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand fifty-eighth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand fifty-ninth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand sixtieth status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the latest Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files, and all
+  current dirty paths are covered by the historical slice commands with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand sixty-first release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand sixty-second Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand sixty-third status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the latest Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files, and all
+  current dirty paths are covered by the historical slice commands with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand sixty-fourth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand sixty-fifth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand sixty-sixth status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the latest Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files, and all
+  current dirty paths are covered by the historical slice commands with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand sixty-seventh release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand sixty-eighth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand sixty-ninth status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the latest Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files, and all
+  current dirty paths are covered by the historical slice commands with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand seventieth release-wrapper refresh after latest status-to-staging
+  audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  normal npm script header only. This refreshes selected V0 release-fixture and
+  delegate-command evidence after the latest status-to-staging audit, not
+  package-local runtime API, all-language coverage, or proof that Java/common V0
+  covers every inflection type.
+- Two thousand seventy-first Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand seventy-second status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the latest Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files, and all
+  current dirty paths are covered by the historical slice commands with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand seventy-third release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  existing npm `http-proxy` warning before the normal npm script header. This
+  refreshes selected V0 release-fixture and delegate-command evidence after the
+  latest status-to-staging audit, not package-local runtime API, all-language
+  coverage, or proof that Java/common V0 covers every inflection type.
+- Two thousand seventy-fourth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand seventy-fifth status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the latest Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files, and all
+  current dirty paths are covered by the historical slice commands with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand seventy-sixth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  existing npm `http-proxy` warning before the normal npm script header. This
+  refreshes selected V0 release-fixture and delegate-command evidence after the
+  latest status-to-staging audit, not package-local runtime API, all-language
+  coverage, or proof that Java/common V0 covers every inflection type.
+- Two thousand seventy-seventh Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand seventy-eighth status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the latest Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files, and all
+  current dirty paths are covered by the historical slice commands with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand seventy-ninth release-wrapper refresh after latest
+  status-to-staging audit: `python3 mf2/conformance/validate_inflection_release_fixture.py`,
+  Python package-local `sh run.sh inflection-release`, and JavaScript
+  package-local `npm run inflection-release` all pass the fixed 35-artifact V0
+  release fixture gate with `artifacts=35 failed=0`; JavaScript emitted the
+  existing npm `http-proxy` warning before the normal npm script header. This
+  refreshes selected V0 release-fixture and delegate-command evidence after the
+  latest status-to-staging audit, not package-local runtime API, all-language
+  coverage, or proof that Java/common V0 covers every inflection type.
+- Two thousand eightieth Java/common focused rerun after latest release-wrapper
+  refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand eighty-first status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the latest Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files, and all
+  current dirty paths are covered by the historical slice commands with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand eighty-second release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release
+  fixture gate with `artifacts=35 failed=0`; JavaScript emitted the existing
+  npm `http-proxy` warning before the normal npm script header. This refreshes
+  selected V0 release-fixture and delegate-command evidence after the latest
+  status-to-staging audit, not package-local runtime API, all-language
+  coverage, or proof that Java/common V0 covers every inflection type.
+- Two thousand eighty-third Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand eighty-fourth status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the latest Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files, and all
+  current dirty paths are covered by the historical slice commands with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand eighty-fifth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release
+  fixture gate with `artifacts=35 failed=0`; JavaScript emitted the existing
+  npm `http-proxy` warning before the normal npm script header. This refreshes
+  selected V0 release-fixture and delegate-command evidence after the latest
+  status-to-staging audit, not package-local runtime API, all-language
+  coverage, or proof that Java/common V0 covers every inflection type.
+- Two thousand eighty-sixth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand eighty-seventh status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the latest Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files, and all
+  current dirty paths are covered by the historical slice commands with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand eighty-eighth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release
+  fixture gate with `artifacts=35 failed=0`; JavaScript emitted the existing
+  npm `http-proxy` warning before the normal npm script header. This refreshes
+  selected V0 release-fixture and delegate-command evidence after the latest
+  status-to-staging audit, not package-local runtime API, all-language
+  coverage, or proof that Java/common V0 covers every inflection type.
+- Two thousand eighty-ninth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand ninetieth status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the latest Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files, and all
+  current dirty paths are covered by the historical slice commands with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand ninety-first release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release
+  fixture gate with `artifacts=35 failed=0`; JavaScript emitted the existing
+  npm `http-proxy` warning before the normal npm script header. This refreshes
+  selected V0 release-fixture and delegate-command evidence after the latest
+  status-to-staging audit, not package-local runtime API, all-language
+  coverage, or proof that Java/common V0 covers every inflection type.
+- Two thousand ninety-second Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand ninety-third status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the latest Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files, and all
+  current dirty paths are covered by the historical slice commands with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand ninety-fourth release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release
+  fixture gate with `artifacts=35 failed=0`; JavaScript emitted the existing
+  npm `http-proxy` warning before the normal npm script header. This refreshes
+  selected V0 release-fixture and delegate-command evidence after the latest
+  status-to-staging audit, not package-local runtime API, all-language
+  coverage, or proof that Java/common V0 covers every inflection type.
+- Two thousand ninety-fifth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand ninety-sixth status-to-staging audit after latest Java/common
+  focused rerun:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands`
+  passes from `mf2/python`. It rechecks the current dirty tree against the
+  pinned review-slice commands after the latest Java/common API/release/binding
+  checkpoint: the live status has 3 non-webapp files and 0 webapp files, and all
+  current dirty paths are covered by the historical slice commands with clean
+  staging arguments allowed. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
+- Two thousand ninety-seventh release-wrapper refresh after latest
+  status-to-staging audit:
+  `python3 mf2/conformance/validate_inflection_release_fixture.py`, Python
+  package-local `sh run.sh inflection-release`, and JavaScript package-local
+  `npm run inflection-release` all pass the fixed 35-artifact V0 release
+  fixture gate with `artifacts=35 failed=0`; JavaScript emitted the existing
+  npm `http-proxy` warning before the normal npm script header. This refreshes
+  selected V0 release-fixture and delegate-command evidence after the latest
+  status-to-staging audit, not package-local runtime API, all-language
+  coverage, or proof that Java/common V0 covers every inflection type.
+- Two thousand ninety-eighth Java/common focused rerun after latest
+  release-wrapper refresh:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  latest shared/Python/JavaScript 35-artifact release-fixture wrapper
+  checkpoint, without changing locale coverage, claiming all inflection types,
+  or promoting any package-local non-Java runtime API.
+- Two thousand ninety-ninth Java/common focused rerun after checkout-path
+  wording cleanup:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after the
+  old standalone-checkout wording cleanup and latest shared/Python/JavaScript
+  35-artifact release-fixture wrapper checkpoint, without changing locale
+  coverage, claiming all inflection types, or promoting any package-local
+  non-Java runtime API.
+- Two thousand one hundredth status-to-staging audit after the formatter-expanded
+  dirty tree:
+  `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands InflectionReleaseGateTest.test_tracker_current_checkpoint_mentions_latest_release_slice_guards InflectionReleaseGateTest.test_docs_keep_bounded_inflection_claims InflectionReleaseGateTest.test_design_tracker_pin_first_review_slice_boundaries InflectionReleaseGateTest.test_design_tracker_pin_final_slice_readiness_summary InflectionReleaseGateTest.test_inflection_release_wrapper_documents_scope_boundary InflectionReleaseGateTest.test_package_local_inflection_release_scripts_delegate_only_to_shared_gate InflectionReleaseGateTest.test_non_java_package_manifests_do_not_publish_inflection_surfaces`
+  passes 8 focused release-gate tests from `mf2/python`. It rechecks the current
+  dirty tree after `mvn spotless:apply`: 5 non-webapp files and 0 webapp files,
+  with the two formatter-touched Java/common release/API tests plus the
+  design/tracker/Python guard files covered by the pinned review-slice commands.
+  This remains review-boundary evidence, not package-local runtime promotion,
+  all-language coverage, or proof that Java/common V0 covers every inflection
+  type.
+- Two thousand one hundred first Java/common focused rerun after the
+  formatter-expanded status audit:
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 43 tests: 7 API-surface, 24 release-validator, and 12 binding-manifest.
+  This refreshes checked Java/common V0 API/release/binding evidence after
+  `mvn spotless:apply` touched two Java/common test files, without changing
+  locale coverage, claiming all inflection types, or promoting any package-local
+  non-Java runtime API.
+- Next target: decide whether to normalize the broader branch-local experiment
+  and cache-path provenance before updating the origin branch, then implement a
+  real non-Java M2IF reader/renderer only for a product-needed native library,
+  or continue locale/runtime work only from product-backed requirements.
 - Production formatting uses term IDs or declared dictionaries, not unqualified
   bare words.
 - Build-time validation expands message usages and catches missing term

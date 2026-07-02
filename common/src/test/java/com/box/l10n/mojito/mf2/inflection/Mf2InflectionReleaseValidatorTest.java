@@ -123,9 +123,7 @@ public class Mf2InflectionReleaseValidatorTest {
   public void reportsBinaryProvenanceFailureWithoutThrowing() {
     byte[] invalidM2if =
         replaceFirstAscii(
-            m2ifFixture("es_compiled_article_pack_fixture.m2if.hex"),
-            "\"license\"",
-            "\"xicense\"");
+            m2ifFixture("es_compiled_article_pack_fixture.m2if.hex"), "\"license\"", "\"xicense\"");
 
     ReleaseValidationReport report =
         validator.validate(List.of(ReleaseArtifact.compiledTermPackM2if("es-terms", invalidM2if)));

@@ -256,10 +256,10 @@ public class Mf2InflectionApiSurfaceTest {
 
   private Set<String> topLevelMainClassNames() throws IOException {
     return mainPackageJavaSources().stream()
-          .map(path -> path.getFileName().toString())
-          .filter(fileName -> !"package-info.java".equals(fileName))
-          .map(fileName -> fileName.substring(0, fileName.length() - ".java".length()))
-          .collect(Collectors.toCollection(TreeSet::new));
+        .map(path -> path.getFileName().toString())
+        .filter(fileName -> !"package-info.java".equals(fileName))
+        .map(fileName -> fileName.substring(0, fileName.length() - ".java".length()))
+        .collect(Collectors.toCollection(TreeSet::new));
   }
 
   private List<Path> mainPackageJavaSources() throws IOException {

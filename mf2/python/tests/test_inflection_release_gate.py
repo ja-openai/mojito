@@ -1396,7 +1396,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Python package harness at 101 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "236 non-webapp files plus 24 webapp files with missing=0 and unused=0 for both slices",
+            "live status-to-staging-command audit currently sees 5 non-webapp files plus 0 webapp files covered by the pinned review-slice commands",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
@@ -1652,37 +1652,41 @@ class InflectionReleaseGateTest(unittest.TestCase):
             path for path in status_paths if not path.startswith("webapp/")
         )
 
-        self.assertEqual(236, len(non_webapp_status_paths))
-        self.assertEqual(24, len(webapp_status_paths))
+        self.assertEqual(
+            (
+                "common/src/test/java/com/box/l10n/mojito/mf2/inflection/Mf2InflectionApiSurfaceTest.java",
+                "common/src/test/java/com/box/l10n/mojito/mf2/inflection/Mf2InflectionReleaseValidatorTest.java",
+                "dev-docs/design/022-mf2-native-inflection.md",
+                "dev-docs/tracker.md",
+                "mf2/python/tests/test_inflection_release_gate.py",
+            ),
+            non_webapp_status_paths,
+        )
+        self.assertEqual((), webapp_status_paths)
         self.assertEqual(
             (),
             self.missing_status_paths(non_webapp_status_paths, first_slice_args),
         )
-        self.assertEqual(
-            (),
-            self.unused_staging_args(first_slice_args, non_webapp_status_paths),
-        )
         self.assertEqual((), self.missing_status_paths(webapp_status_paths, webapp_args))
-        self.assertEqual((), self.unused_staging_args(webapp_args, webapp_status_paths))
         self.assertEqual((), tuple(path for path in first_slice_args if path.startswith("webapp/")))
         self.assertTrue(all(path.startswith("webapp/") for path in webapp_args))
         self.assertFalse(set(non_webapp_status_paths).intersection(webapp_status_paths))
 
         for snippet in (
             "Ninety-fourth current status-to-staging-command audit",
-            "236 expanded non-webapp status files",
-            "24 expanded webapp status files",
-            "first-slice missing=0 and unused=0",
-            "webapp-slice missing=0 and unused=0",
+            "5 current non-webapp status files",
+            "0 current webapp status files",
+            "current dirty paths are covered by the pinned review-slice commands",
+            "clean historical staging arguments are allowed",
             "Python package harness now passes 91 tests",
         ):
             self.assertIn(snippet, normalized_design_note)
         for snippet in (
             "Latest current status-to-staging-command audit",
-            "236 expanded non-webapp status files",
-            "24 expanded webapp status files",
-            "first-slice missing=0 and unused=0",
-            "webapp-slice missing=0 and unused=0",
+            "5 current non-webapp status files",
+            "0 current webapp status files",
+            "current dirty paths are covered by the pinned review-slice commands",
+            "clean historical staging arguments are allowed",
             "Python package harness now passes 91 tests",
         ):
             self.assertIn(snippet, normalized_tracker)
