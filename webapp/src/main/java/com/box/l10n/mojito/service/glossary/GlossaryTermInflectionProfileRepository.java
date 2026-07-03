@@ -31,6 +31,16 @@ public interface GlossaryTermInflectionProfileRepository
   List<GlossaryTermInflectionProfile> findByGlossaryIdAndLocaleTag(
       @Param("glossaryId") Long glossaryId, @Param("localeTag") String localeTag);
 
+  @Query(
+      """
+      select count(profile)
+      from GlossaryTermInflectionProfile profile
+      where profile.glossaryTermMetadata.glossary.id = :glossaryId
+        and profile.localeTag = :localeTag
+      """)
+  long countByGlossaryIdAndLocaleTag(
+      @Param("glossaryId") Long glossaryId, @Param("localeTag") String localeTag);
+
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
       """

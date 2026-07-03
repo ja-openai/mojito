@@ -38,6 +38,7 @@ public class GlossaryTermInflectionProfileService {
       "closed-world-glossary-approved-profile-forms";
   private static final String COMPILED_PROFILE_PACK_COMPOSITION_MODE = "explicit-form-rows-v0";
   private static final String COMPILED_PROFILE_PACK_DISABLED_REASON = "disabled-profile";
+  private static final int INFLECTION_PROFILE_PACK_MAX_PROFILE_COUNT = 10_000;
   private static final Pattern SHA256_HEX_PATTERN = Pattern.compile("[0-9a-f]{64}");
 
   private final GlossaryTermInflectionProfileRepository profileRepository;
@@ -67,6 +68,7 @@ public class GlossaryTermInflectionProfileService {
   @Transactional(readOnly = true)
   public List<InflectionProfileView> getProfilesForSystem(Long glossaryId, String localeTag) {
     String normalizedLocaleTag = normalizeLocaleTag(localeTag);
+    requireStoredProfilePackWithinLimit(glossaryId, normalizedLocaleTag);
     return profileRepository.findByGlossaryIdAndLocaleTag(glossaryId, normalizedLocaleTag).stream()
         .map(this::toView)
         .toList();
@@ -167,6 +169,7 @@ public class GlossaryTermInflectionProfileService {
   @Transactional(readOnly = true)
   public TermInflectionProfilePack profilePackForSystem(Long glossaryId, String localeTag) {
     String normalizedLocaleTag = normalizeLocaleTag(localeTag);
+    requireStoredProfilePackWithinLimit(glossaryId, normalizedLocaleTag);
     return profilePack(
         normalizedLocaleTag,
         profileRepository.findByGlossaryIdAndLocaleTag(glossaryId, normalizedLocaleTag));
@@ -212,6 +215,7 @@ public class GlossaryTermInflectionProfileService {
   @Transactional
   public InflectionProfileImportResult importProfilePackForSystem(Long glossaryId, String content) {
     TermInflectionProfilePack pack = profilePackJsonLoader.load(requireText(content, "content"));
+    requireProfilePackCountWithinLimit(pack.profiles().size(), "import content");
     Map<String, GlossaryTermMetadata> metadataByTermId = metadataByTermId(glossaryId);
     String localeTag = normalizeLocaleTag(pack.locale());
     List<InflectionProfileImportCandidate> importCandidates = new ArrayList<>();
@@ -259,6 +263,7 @@ public class GlossaryTermInflectionProfileService {
 
   private TermInflectionProfilePack profilePack(
       String localeTag, List<GlossaryTermInflectionProfile> profiles) {
+    requireProfilePackCountWithinLimit(profiles.size(), "stored locale " + localeTag);
     Map<String, Object> root = new LinkedHashMap<>();
     root.put("schema", TermInflectionProfilePackJsonLoader.EXPECTED_SCHEMA);
     root.put("locale", localeTag);
@@ -557,6 +562,24 @@ public class GlossaryTermInflectionProfileService {
 
   private String normalizeLocaleTag(String localeTag) {
     return requireText(localeTag, "localeTag");
+  }
+
+  private void requireStoredProfilePackWithinLimit(Long glossaryId, String localeTag) {
+    requireProfilePackCountWithinLimit(
+        profileRepository.countByGlossaryIdAndLocaleTag(glossaryId, localeTag),
+        "stored locale " + localeTag);
+  }
+
+  private static void requireProfilePackCountWithinLimit(long profileCount, String context) {
+    if (profileCount > INFLECTION_PROFILE_PACK_MAX_PROFILE_COUNT) {
+      throw new IllegalArgumentException(
+          "Inflection profile pack must include at most "
+              + INFLECTION_PROFILE_PACK_MAX_PROFILE_COUNT
+              + " profiles for current V0 admin/review/export flows: "
+              + context
+              + " has "
+              + profileCount);
+    }
   }
 
   private String normalizeStatus(String status) {

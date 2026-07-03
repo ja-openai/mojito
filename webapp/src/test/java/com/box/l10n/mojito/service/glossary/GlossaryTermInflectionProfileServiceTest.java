@@ -611,6 +611,30 @@ public class GlossaryTermInflectionProfileServiceTest {
   }
 
   @Test
+  public void getProfilesForSystemRejectsOversizedStoredProfilePackBeforeLoadingRows() {
+    when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(10_001L);
+
+    assertThatThrownBy(() -> service.getProfilesForSystem(GLOSSARY_ID, "fr"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("at most 10000 profiles")
+        .hasMessageContaining("stored locale fr has 10001");
+
+    verify(profileRepository, never()).findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr");
+  }
+
+  @Test
+  public void profilePackForSystemRejectsOversizedStoredProfilePackBeforeLoadingRows() {
+    when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(10_001L);
+
+    assertThatThrownBy(() -> service.profilePackForSystem(GLOSSARY_ID, "fr"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("at most 10000 profiles")
+        .hasMessageContaining("stored locale fr has 10001");
+
+    verify(profileRepository, never()).findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr");
+  }
+
+  @Test
   public void profilePackForSystemPreservesProfileProvenanceAndRollsUpSources() {
     GlossaryTermMetadata metadata = metadata("item.iron_sword", "iron sword");
     GlossaryTermInflectionProfile profile =
@@ -999,6 +1023,20 @@ public class GlossaryTermInflectionProfileServiceTest {
     verify(profileRepository, never()).save(any(GlossaryTermInflectionProfile.class));
   }
 
+  @Test
+  public void importProfilePackForSystemRejectsOversizedPackBeforeMetadataLookup() {
+    assertThatThrownBy(
+            () ->
+                service.importProfilePackForSystem(
+                    GLOSSARY_ID, profilePackJsonWithProfiles(10_001)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("at most 10000 profiles")
+        .hasMessageContaining("import content has 10001");
+
+    verify(glossaryTermMetadataRepository, never()).findByGlossaryId(GLOSSARY_ID);
+    verify(profileRepository, never()).save(any(GlossaryTermInflectionProfile.class));
+  }
+
   private GlossaryTermMetadata metadata(String termId, String source) {
     TMTextUnit tmTextUnit = new TMTextUnit();
     tmTextUnit.setId(TM_TEXT_UNIT_ID);
@@ -1052,5 +1090,34 @@ public class GlossaryTermInflectionProfileServiceTest {
     profile.setDiagnosticsJson(diagnosticsJson);
     profile.setProvenanceJson(provenanceJson);
     return profile;
+  }
+
+  private String profilePackJsonWithProfiles(int profileCount) {
+    StringBuilder profiles = new StringBuilder();
+    for (int i = 0; i < profileCount; i++) {
+      if (i > 0) {
+        profiles.append(',');
+      }
+      profiles
+          .append("{\"termId\":\"item.")
+          .append(i)
+          .append("\",\"source\":\"item ")
+          .append(i)
+          .append(
+              "\",\"status\":\"GENERATED\",\"morphology\":{\"partOfSpeech\":\"noun\"},"
+                  + "\"forms\":{},\"diagnostics\":[]}");
+    }
+    return """
+        {
+          "schema": "mojito-mf2-inflection/term-inflection-profile-pack/v0",
+          "locale": "fr",
+          "provenance": {"sourceLabels": [], "sources": []},
+          "profiles": [
+        """
+        + profiles
+        + """
+          ]
+        }
+        """;
   }
 }
