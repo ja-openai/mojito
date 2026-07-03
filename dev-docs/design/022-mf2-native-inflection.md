@@ -2284,7 +2284,9 @@ controller-level request bounds before profile service lookup or render work:
 binding manifests are capped at 1,000,000 characters and 500 messages, profile
 pack imports at 5,000,000 characters, profile JSON fields at 256,000
 characters, render variables at 100 entries, and each render variable value at
-4,096 characters. These limits are current admin/review/export V0 guardrails;
+4,096 characters. The MCP review tool applies the same 256,000-character cap to
+replacement morphology/forms/diagnostics/provenance JSON before it calls the
+profile service. These limits are current admin/review/export V0 guardrails;
 they are not a high-QPS runtime API contract.
 The frontend API now has typed helpers for authoring profile-pack export/import:
 export returns the JSON content, parsed pack, profile count, and attachment
@@ -3486,7 +3488,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   The focused backend gate must build Java/common in the same reactor because
   the webapp imports the untracked common MF2 package:
   `mvn -pl webapp -am -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest -Dsurefire.failIfNoSpecifiedTests=false test`.
-  That gate passes 73 backend REST/service/MCP tests. The focused frontend gate
+  That gate passes 74 backend REST/service/MCP tests. The focused frontend gate
   also passes 81 frontend API/admin/Workbench/private-utility tests:
   `source webapp/use_local_npm.sh && npm --prefix webapp/frontend run test -- src/api/glossaries.test.ts src/page/settings/AdminGlossaryDetailPage.test.tsx src/page/workbench/WorkbenchBody.test.tsx src/components/GlossaryMatchesPanel.test.tsx src/utils/inflectionProfileForms.test.ts src/utils/mf2TermRenderer.test.ts src/utils/mf2TermRequirements.test.ts`.
 - Eighty-ninth webapp helper boundary guard: the Python release-gate docs
@@ -3555,7 +3557,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   product-integration slice still passes its focused gates. Backend
   `mvn -pl webapp -am
   -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest
-  -Dsurefire.failIfNoSpecifiedTests=false test` passes 73 REST/service/MCP
+  -Dsurefire.failIfNoSpecifiedTests=false test` passes 74 REST/service/MCP
   tests, and frontend `source webapp/use_local_npm.sh && npm --prefix
   webapp/frontend run test -- src/api/glossaries.test.ts
   src/page/settings/AdminGlossaryDetailPage.test.tsx
@@ -3614,7 +3616,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   Java/common post-scope focused rerun, the separate Mojito webapp integration
   gates still pass. Backend `mvn -pl webapp -am
   -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest
-  -Dsurefire.failIfNoSpecifiedTests=false test` passes 73 REST/service/MCP
+  -Dsurefire.failIfNoSpecifiedTests=false test` passes 74 REST/service/MCP
   tests, and frontend `source webapp/use_local_npm.sh && npm --prefix
   webapp/frontend run test -- src/api/glossaries.test.ts
   src/page/settings/AdminGlossaryDetailPage.test.tsx
@@ -3631,7 +3633,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   covers 24 expanded status files with missing=0 and unused=0 for both slices.
   The current reviewer checklist is: Java/common 43-test API/release/binding
   gate, Python 101-test release/docs harness, shared/Python/JavaScript
-  `inflection-release` 35-artifact gate, webapp backend 73-test product
+  `inflection-release` 35-artifact gate, webapp backend 74-test product
   integration gate, and webapp frontend 81-test product-integration gate. Do not
   stage both commands together unless the reviewer asks for one larger product
   PR; this is checked V0 release/public-boundary and product-integration
@@ -23895,8 +23897,28 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   larger packs or a high-QPS runtime rendering claim. The focused backend gate
   `mvn -pl webapp -am
   -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest
-  -Dsurefire.failIfNoSpecifiedTests=false test` now passes 73
+  -Dsurefire.failIfNoSpecifiedTests=false test` now passes 74
   REST/service/MCP tests.
+- Two thousand one hundred sixth MCP review payload boundary guard: the glossary
+  inflection review MCP tool now rejects replacement morphology, forms,
+  diagnostics, and provenance JSON above 256,000 characters before calling the
+  profile service. This aligns the MCP write boundary with the REST
+  upsert/review cap and limits accidental service-side parse/materialization
+  work in the current admin/review V0 path. It is not a streaming profile-edit
+  API or a high-QPS runtime rendering claim.
+- Two thousand one hundred seventh current status-to-staging-command audit after
+  the MCP review payload boundary guard: the release-gate harness rechecks the
+  current dirty tree against the two documented `git add` commands. The current
+  dirty tree contains 3 current non-webapp status files and 2 current webapp
+  status files; the current dirty paths are covered by the pinned review-slice
+  commands, and clean historical staging arguments are allowed because the
+  first-slice and webapp commands remain reviewer-ready historical slice
+  commands. The same guard also accepts the clean assembly states needed for
+  review publication: the full clean-PR staging state has 236 non-webapp status
+  files and 24 webapp status files, and a clean committed checkout has 0 current
+  status files. The Python package harness now passes 101 tests. This remains
+  review-boundary evidence, not package-local runtime promotion, all-language
+  coverage, or proof that Java/common V0 covers every inflection type.
 - Next target: triage the remaining full-repo CLI CI failure and design
   paginated/streamed profile-pack handling only if a concrete product caller
   needs locale packs beyond the current 10,000-profile V0 admin/review/export

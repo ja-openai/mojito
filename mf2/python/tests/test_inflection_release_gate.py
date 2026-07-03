@@ -1394,9 +1394,9 @@ class InflectionReleaseGateTest(unittest.TestCase):
         for snippet in (
             "Verification snapshot: current focused gates pass",
             "the Python package harness at 101 tests",
-            "webapp backend product integration at 73 REST/service/MCP tests",
+            "webapp backend product integration at 74 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "live status-to-staging-command audit currently sees 15 non-webapp files plus 0 webapp files covered by the pinned review-slice commands",
+            "live status-to-staging-command audit currently sees 3 non-webapp files plus 2 webapp files covered by the pinned review-slice commands",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
@@ -1475,8 +1475,8 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "24 expanded `webapp` status files",
             "9 backend files and 15 frontend files",
             "`mvn -pl webapp -am -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest -Dsurefire.failIfNoSpecifiedTests=false test`",
-            "73 backend REST/service/MCP tests",
-            "73 REST/service/MCP tests",
+            "74 backend REST/service/MCP tests",
+            "74 REST/service/MCP tests",
             "`source webapp/use_local_npm.sh && npm --prefix webapp/frontend run test -- src/api/glossaries.test.ts src/page/settings/AdminGlossaryDetailPage.test.tsx src/page/workbench/WorkbenchBody.test.tsx src/components/GlossaryMatchesPanel.test.tsx src/utils/inflectionProfileForms.test.ts src/utils/mf2TermRenderer.test.ts src/utils/mf2TermRequirements.test.ts`",
             "81 frontend API/admin/Workbench/private-utility tests",
             "81 API/admin/Workbench/private-utility tests",
@@ -1598,7 +1598,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "Java/common 43-test API/release/binding gate",
             "Python 101-test release/docs harness",
             "shared/Python/JavaScript `inflection-release` 35-artifact gate",
-            "webapp backend 73-test product integration gate",
+            "webapp backend 74-test product integration gate",
             "webapp frontend 81-test product-integration gate",
             "not all-language coverage or public non-Java runtime promotion",
         ):
@@ -1669,17 +1669,40 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "dev-docs/tracker.md",
             "mf2/python/tests/test_inflection_release_gate.py",
         )
+        mcp_payload_boundary_paths = (
+            "dev-docs/design/022-mf2-native-inflection.md",
+            "dev-docs/tracker.md",
+            "mf2/python/tests/test_inflection_release_gate.py",
+            "webapp/src/main/java/com/box/l10n/mojito/service/mcp/glossary/ReviewGlossaryTermInflectionProfilesMcpTool.java",
+            "webapp/src/test/java/com/box/l10n/mojito/service/mcp/glossary/ReviewGlossaryTermInflectionProfilesMcpToolTest.java",
+        )
+        mcp_payload_boundary_non_webapp_paths = tuple(
+            path for path in mcp_payload_boundary_paths if not path.startswith("webapp/")
+        )
+        mcp_payload_boundary_webapp_paths = tuple(
+            path for path in mcp_payload_boundary_paths if path.startswith("webapp/")
+        )
         status_shape = (len(non_webapp_status_paths), len(webapp_status_paths))
         self.assertIn(
             status_shape,
             (
                 (0, 0),
                 (len(path_provenance_cleanup_paths), 0),
+                (
+                    len(mcp_payload_boundary_non_webapp_paths),
+                    len(mcp_payload_boundary_webapp_paths),
+                ),
                 (236, 24),
             ),
         )
         if status_shape == (len(path_provenance_cleanup_paths), 0):
             self.assertEqual(path_provenance_cleanup_paths, non_webapp_status_paths)
+        if status_shape == (
+            len(mcp_payload_boundary_non_webapp_paths),
+            len(mcp_payload_boundary_webapp_paths),
+        ):
+            self.assertEqual(mcp_payload_boundary_non_webapp_paths, non_webapp_status_paths)
+            self.assertEqual(mcp_payload_boundary_webapp_paths, webapp_status_paths)
         if status_shape == (236, 24):
             self.assertEqual(
                 (),
@@ -1699,9 +1722,9 @@ class InflectionReleaseGateTest(unittest.TestCase):
         self.assertFalse(set(non_webapp_status_paths).intersection(webapp_status_paths))
 
         for snippet in (
-            "Two thousand one hundred third status-to-staging audit after path-provenance cleanup",
-            "15 current non-webapp status files",
-            "0 current webapp status files",
+            "Two thousand one hundred seventh current status-to-staging-command audit after the MCP review payload boundary guard",
+            "3 current non-webapp status files",
+            "2 current webapp status files",
             "full clean-PR staging state has 236 non-webapp status files and 24 webapp status files",
             "clean committed checkout has 0 current status files",
             "current dirty paths are covered by the pinned review-slice commands",
@@ -1710,9 +1733,9 @@ class InflectionReleaseGateTest(unittest.TestCase):
         ):
             self.assertIn(snippet, normalized_design_note)
         for snippet in (
-            "Latest status-to-staging audit after path-provenance cleanup",
-            "15 current non-webapp status files",
-            "0 current webapp status files",
+            "Latest current status-to-staging-command audit",
+            "3 current non-webapp status files",
+            "2 current webapp status files",
             "full clean-PR staging state has 236 non-webapp status files and 24 webapp status files",
             "clean committed checkout has 0 current status files",
             "current dirty paths are covered by the pinned review-slice commands",

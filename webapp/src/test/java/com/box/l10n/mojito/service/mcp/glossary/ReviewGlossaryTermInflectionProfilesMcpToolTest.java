@@ -238,6 +238,56 @@ public class ReviewGlossaryTermInflectionProfilesMcpToolTest {
         .hasMessageContaining("tmTextUnitId is required");
   }
 
+  @Test
+  public void executeRejectsOversizedReviewJsonFieldsBeforeServiceBoundary() {
+    inflectionProfileService.profiles =
+        List.of(
+            profile(
+                21L,
+                "ar.explicit.mother",
+                TermInflectionProfilePackJsonLoader.STATUS_REVIEW_NEEDED,
+                "[]"));
+
+    assertRejectsOversizedReviewJsonField("diagnosticsJson");
+    assertRejectsOversizedReviewJsonField("morphologyJson");
+    assertRejectsOversizedReviewJsonField("formsJson");
+    assertRejectsOversizedReviewJsonField("provenanceJson");
+
+    assertThat(inflectionProfileService.lastInput).isNull();
+  }
+
+  private void assertRejectsOversizedReviewJsonField(String fieldName) {
+    String oversizedJson = "\"" + "x".repeat(256_000) + "\"";
+    ReviewGlossaryTermInflectionProfilesMcpTool.Input oversizedInput =
+        switch (fieldName) {
+          case "diagnosticsJson" -> reviewInputWithJsonFields(oversizedJson, null, null, null);
+          case "morphologyJson" -> reviewInputWithJsonFields(null, oversizedJson, null, null);
+          case "formsJson" -> reviewInputWithJsonFields(null, null, oversizedJson, null);
+          case "provenanceJson" -> reviewInputWithJsonFields(null, null, null, oversizedJson);
+          default -> throw new IllegalArgumentException("Unexpected field: " + fieldName);
+        };
+
+    assertThatThrownBy(() -> tool.execute(oversizedInput))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(fieldName + " must be at most 256000 characters");
+  }
+
+  private ReviewGlossaryTermInflectionProfilesMcpTool.Input reviewInputWithJsonFields(
+      String diagnosticsJson, String morphologyJson, String formsJson, String provenanceJson) {
+    return new ReviewGlossaryTermInflectionProfilesMcpTool.Input(
+        null,
+        "target",
+        "ar",
+        21L,
+        "APPROVE",
+        diagnosticsJson,
+        morphologyJson,
+        formsJson,
+        provenanceJson,
+        true,
+        10);
+  }
+
   private static final class FakeGlossaryManagementService extends GlossaryManagementService {
     private FakeGlossaryManagementService() {
       super(null, null, null, null, null, null, null);

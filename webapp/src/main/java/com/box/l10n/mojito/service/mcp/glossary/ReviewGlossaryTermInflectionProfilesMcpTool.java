@@ -31,6 +31,7 @@ public class ReviewGlossaryTermInflectionProfilesMcpTool
       Set.of(ACTION_LIST, ACTION_APPROVE, ACTION_DISABLE, ACTION_MARK_REVIEW_NEEDED);
   private static final int DEFAULT_LIMIT = 100;
   private static final int MAX_LIMIT = 500;
+  private static final int PROFILE_JSON_FIELD_MAX_CHARS = 256_000;
 
   private static final McpToolDescriptor DESCRIPTOR =
       new McpToolDescriptor(
@@ -196,10 +197,11 @@ public class ReviewGlossaryTermInflectionProfilesMcpTool
         localeTag,
         input.tmTextUnitId(),
         action,
-        input.diagnosticsJson(),
-        input.morphologyJson(),
-        input.formsJson(),
-        input.provenanceJson(),
+        optionalTextWithin(
+            input.diagnosticsJson(), "diagnosticsJson", PROFILE_JSON_FIELD_MAX_CHARS),
+        optionalTextWithin(input.morphologyJson(), "morphologyJson", PROFILE_JSON_FIELD_MAX_CHARS),
+        optionalTextWithin(input.formsJson(), "formsJson", PROFILE_JSON_FIELD_MAX_CHARS),
+        optionalTextWithin(input.provenanceJson(), "provenanceJson", PROFILE_JSON_FIELD_MAX_CHARS),
         input.includeApproved() != null && input.includeApproved(),
         limit);
   }
@@ -254,6 +256,17 @@ public class ReviewGlossaryTermInflectionProfilesMcpTool
       throw new IllegalArgumentException(fieldName + " is required");
     }
     return value.trim();
+  }
+
+  private String optionalTextWithin(String value, String fieldName, int maxChars) {
+    if (value == null) {
+      return null;
+    }
+    if (value.length() > maxChars) {
+      throw new IllegalArgumentException(
+          fieldName + " must be at most " + maxChars + " characters");
+    }
+    return value;
   }
 
   private static Map<String, Object> enumSchema(String description, Set<String> values) {
