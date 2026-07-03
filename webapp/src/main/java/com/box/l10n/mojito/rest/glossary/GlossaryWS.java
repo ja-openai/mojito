@@ -86,6 +86,12 @@ public class GlossaryWS {
   static final String INFLECTION_COMPOSITION_MODE_HEADER = "X-Mojito-Inflection-Composition-Mode";
   private static final long MATCH_SLOW_LOG_THRESHOLD_MS = 250;
   private static final Pattern RUNTIME_VARIABLE_NAME_PATTERN = Pattern.compile("[A-Za-z_][\\w.-]*");
+  private static final int INFLECTION_BINDING_MANIFEST_CONTENT_MAX_CHARS = 1_000_000;
+  private static final int INFLECTION_PROFILE_PACK_IMPORT_CONTENT_MAX_CHARS = 5_000_000;
+  private static final int INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS = 256_000;
+  private static final int INFLECTION_BINDING_MANIFEST_MESSAGE_MAX_COUNT = 500;
+  private static final int INFLECTION_RENDER_VARIABLE_MAX_COUNT = 100;
+  private static final int INFLECTION_RENDER_VARIABLE_VALUE_MAX_CHARS = 4_096;
 
   private final GlossaryManagementService glossaryManagementService;
   private final GlossaryImportExportService glossaryImportExportService;
@@ -746,6 +752,24 @@ public class GlossaryWS {
     return value;
   }
 
+  private String requireTextWithin(String value, String field, int maxChars) {
+    return requireMaxCharacters(requireText(value, field), field, maxChars);
+  }
+
+  private String optionalTextWithin(String value, String field, int maxChars) {
+    if (value == null) {
+      return null;
+    }
+    return requireMaxCharacters(value, field, maxChars);
+  }
+
+  private String requireMaxCharacters(String value, String field, int maxChars) {
+    if (value.length() > maxChars) {
+      throw new IllegalArgumentException(field + " must be at most " + maxChars + " characters");
+    }
+    return value;
+  }
+
   private JsonNode bindingManifestJsonForLocale(String localeTag, String content) {
     JsonNode root;
     try {
@@ -783,6 +807,16 @@ public class GlossaryWS {
     return usageCatalog;
   }
 
+  private TermUsageCatalog requireBoundedBindingCatalog(TermUsageCatalog usageCatalog) {
+    if (usageCatalog.messages().size() > INFLECTION_BINDING_MANIFEST_MESSAGE_MAX_COUNT) {
+      throw new IllegalArgumentException(
+          "Binding manifest must include at most "
+              + INFLECTION_BINDING_MANIFEST_MESSAGE_MAX_COUNT
+              + " messages");
+    }
+    return usageCatalog;
+  }
+
   private Set<String> compiledTermIds(CompiledTermPack compiledPack) {
     Set<String> termIds = new LinkedHashSet<>();
     for (TermRow term : compiledPack.terms()) {
@@ -796,6 +830,12 @@ public class GlossaryWS {
     if (rawVariables == null || rawVariables.isEmpty()) {
       return Collections.emptyMap();
     }
+    if (rawVariables.size() > INFLECTION_RENDER_VARIABLE_MAX_COUNT) {
+      throw new IllegalArgumentException(
+          "Runtime variables must include at most "
+              + INFLECTION_RENDER_VARIABLE_MAX_COUNT
+              + " entries");
+    }
 
     Map<String, String> variables = new LinkedHashMap<>();
     for (Map.Entry<String, String> variable : rawVariables.entrySet()) {
@@ -804,6 +844,8 @@ public class GlossaryWS {
       if (value == null) {
         throw new IllegalArgumentException("Runtime variable " + name + " must not be null");
       }
+      requireMaxCharacters(
+          value, "Runtime variable " + name, INFLECTION_RENDER_VARIABLE_VALUE_MAX_CHARS);
       variables.put(name, value);
     }
     return Collections.unmodifiableMap(variables);
@@ -815,6 +857,38 @@ public class GlossaryWS {
       throw new IllegalArgumentException("Invalid runtime variable name: " + requiredName);
     }
     return requiredName;
+  }
+
+  private GlossaryTermInflectionProfileService.InflectionProfileInput inflectionProfileInput(
+      String localeTag, UpsertInflectionProfileRequest request) {
+    return new GlossaryTermInflectionProfileService.InflectionProfileInput(
+        localeTag,
+        request != null ? request.status() : null,
+        boundedProfileJsonField(
+            request != null ? request.morphologyJson() : null, "morphologyJson"),
+        boundedProfileJsonField(request != null ? request.formsJson() : null, "formsJson"),
+        boundedProfileJsonField(
+            request != null ? request.diagnosticsJson() : null, "diagnosticsJson"),
+        boundedProfileJsonField(
+            request != null ? request.provenanceJson() : null, "provenanceJson"));
+  }
+
+  private GlossaryTermInflectionProfileService.InflectionProfileReviewInput
+      inflectionProfileReviewInput(String localeTag, ReviewInflectionProfileRequest request) {
+    return new GlossaryTermInflectionProfileService.InflectionProfileReviewInput(
+        localeTag,
+        request != null ? request.status() : null,
+        boundedProfileJsonField(
+            request != null ? request.morphologyJson() : null, "morphologyJson"),
+        boundedProfileJsonField(request != null ? request.formsJson() : null, "formsJson"),
+        boundedProfileJsonField(
+            request != null ? request.diagnosticsJson() : null, "diagnosticsJson"),
+        boundedProfileJsonField(
+            request != null ? request.provenanceJson() : null, "provenanceJson"));
+  }
+
+  private String boundedProfileJsonField(String value, String field) {
+    return optionalTextWithin(value, field, INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS);
   }
 
   @GetMapping("/{glossaryId}/export")
@@ -1273,12 +1347,18 @@ public class GlossaryWS {
       @RequestParam(name = "locale") String localeTag,
       @RequestBody InflectionBindingManifestReportRequest request) {
     try {
-      var profilePack = glossaryTermInflectionProfileService.profilePack(glossaryId, localeTag);
       String requiredLocaleTag = requireText(localeTag, "locale");
-      String manifestContent = requireText(request != null ? request.content() : null, "content");
+      String manifestContent =
+          requireTextWithin(
+              request != null ? request.content() : null,
+              "content",
+              INFLECTION_BINDING_MANIFEST_CONTENT_MAX_CHARS);
       JsonNode manifestRoot = bindingManifestJsonForLocale(requiredLocaleTag, manifestContent);
       TermUsageCatalog usageCatalog = termRequirementJsonLoader.loadUsageCatalog(manifestRoot);
-      TermUsageCatalog localizedCatalog = bindingCatalogForLocale(requiredLocaleTag, usageCatalog);
+      TermUsageCatalog localizedCatalog =
+          requireBoundedBindingCatalog(bindingCatalogForLocale(requiredLocaleTag, usageCatalog));
+      var profilePack =
+          glossaryTermInflectionProfileService.profilePack(glossaryId, requiredLocaleTag);
       TermBindingReport report =
           termBindingManifestValidator.validate(
               localizedCatalog, profilePack.toRequirementTerms().keySet());
@@ -1298,10 +1378,16 @@ public class GlossaryWS {
       @RequestBody InflectionBindingManifestRenderRequest request) {
     try {
       String requiredLocaleTag = requireText(localeTag, "locale");
-      String manifestContent = requireText(request != null ? request.content() : null, "content");
+      String manifestContent =
+          requireTextWithin(
+              request != null ? request.content() : null,
+              "content",
+              INFLECTION_BINDING_MANIFEST_CONTENT_MAX_CHARS);
+      Map<String, String> variables = renderVariables(request);
       JsonNode manifestRoot = bindingManifestJsonForLocale(requiredLocaleTag, manifestContent);
       TermUsageCatalog usageCatalog = termRequirementJsonLoader.loadUsageCatalog(manifestRoot);
-      TermUsageCatalog localizedCatalog = bindingCatalogForLocale(requiredLocaleTag, usageCatalog);
+      TermUsageCatalog localizedCatalog =
+          requireBoundedBindingCatalog(bindingCatalogForLocale(requiredLocaleTag, usageCatalog));
       CompiledTermPack compiledPack =
           glossaryTermInflectionProfileService.compileProfilePack(glossaryId, requiredLocaleTag);
       TermBindingReport report =
@@ -1309,7 +1395,6 @@ public class GlossaryWS {
       TermBindingManifestValidator.requireRenderable(report);
 
       Mf2TermRenderer renderer = Mf2TermRenderer.forCompiledTerms(compiledPack);
-      Map<String, String> variables = renderVariables(request);
       Map<String, String> renderedMessages = new LinkedHashMap<>();
       for (String messageId : localizedCatalog.messages().keySet()) {
         renderedMessages.put(
@@ -1346,9 +1431,13 @@ public class GlossaryWS {
   public ImportInflectionProfilesResponse importInflectionProfiles(
       @PathVariable Long glossaryId, @RequestBody ImportInflectionProfilesRequest request) {
     try {
+      String content =
+          requireTextWithin(
+              request != null ? request.content() : null,
+              "content",
+              INFLECTION_PROFILE_PACK_IMPORT_CONTENT_MAX_CHARS);
       GlossaryTermInflectionProfileService.InflectionProfileImportResult result =
-          glossaryTermInflectionProfileService.importProfilePack(
-              glossaryId, request != null ? request.content() : null);
+          glossaryTermInflectionProfileService.importProfilePack(glossaryId, content);
       return new ImportInflectionProfilesResponse(
           result.localeTag(),
           result.profileCount(),
@@ -1368,13 +1457,7 @@ public class GlossaryWS {
       @RequestBody UpsertInflectionProfileRequest request) {
     try {
       GlossaryTermInflectionProfileService.InflectionProfileInput input =
-          new GlossaryTermInflectionProfileService.InflectionProfileInput(
-              localeTag,
-              request != null ? request.status() : null,
-              request != null ? request.morphologyJson() : null,
-              request != null ? request.formsJson() : null,
-              request != null ? request.diagnosticsJson() : null,
-              request != null ? request.provenanceJson() : null);
+          inflectionProfileInput(localeTag, request);
       return toInflectionProfileResponse(
           glossaryTermInflectionProfileService.upsertProfile(glossaryId, tmTextUnitId, input));
     } catch (IllegalArgumentException ex) {
@@ -1394,13 +1477,7 @@ public class GlossaryWS {
       @RequestBody ReviewInflectionProfileRequest request) {
     try {
       GlossaryTermInflectionProfileService.InflectionProfileReviewInput input =
-          new GlossaryTermInflectionProfileService.InflectionProfileReviewInput(
-              localeTag,
-              request != null ? request.status() : null,
-              request != null ? request.morphologyJson() : null,
-              request != null ? request.formsJson() : null,
-              request != null ? request.diagnosticsJson() : null,
-              request != null ? request.provenanceJson() : null);
+          inflectionProfileReviewInput(localeTag, request);
       return toInflectionProfileResponse(
           glossaryTermInflectionProfileService.reviewProfile(glossaryId, tmTextUnitId, input));
     } catch (IllegalArgumentException ex) {

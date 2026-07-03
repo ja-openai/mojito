@@ -283,6 +283,23 @@ public class GlossaryWSTest {
   }
 
   @Test
+  public void upsertInflectionProfileRejectsLargeProfileJsonFields() {
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                glossaryWS.upsertInflectionProfile(
+                    1L,
+                    2L,
+                    "fr",
+                    new GlossaryWS.UpsertInflectionProfileRequest(
+                        "approved", "x".repeat(256_001), "{}", null, null)));
+
+    assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    assertEquals("morphologyJson must be at most 256000 characters", exception.getReason());
+  }
+
+  @Test
   public void reviewInflectionProfileUsesPathLocaleAndPartialReviewInput() {
     when(glossaryTermInflectionProfileService.reviewProfile(
             eq(1L), eq(2L), org.mockito.ArgumentMatchers.any()))
@@ -315,6 +332,23 @@ public class GlossaryWSTest {
     assertEquals("[]", input.diagnosticsJson());
     assertEquals("{\"reviewedBy\":\"translator\"}", input.provenanceJson());
     assertEquals("item.iron_sword", response.termId());
+  }
+
+  @Test
+  public void reviewInflectionProfileRejectsLargeProfileJsonFields() {
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                glossaryWS.reviewInflectionProfile(
+                    1L,
+                    2L,
+                    "fr",
+                    new GlossaryWS.ReviewInflectionProfileRequest(
+                        "approved", "{}", "{}", "x".repeat(256_001), null)));
+
+    assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    assertEquals("diagnosticsJson must be at most 256000 characters", exception.getReason());
   }
 
   @Test
@@ -583,6 +617,37 @@ public class GlossaryWSTest {
   }
 
   @Test
+  public void reportInflectionBindingManifestRejectsLargeContentBeforeServiceLookup() {
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                glossaryWS.reportInflectionBindingManifest(
+                    1L,
+                    "fr",
+                    new GlossaryWS.InflectionBindingManifestReportRequest("x".repeat(1_000_001))));
+
+    assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    assertEquals("content must be at most 1000000 characters", exception.getReason());
+  }
+
+  @Test
+  public void reportInflectionBindingManifestRejectsLargeMessageSetBeforeServiceLookup() {
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                glossaryWS.reportInflectionBindingManifest(
+                    1L,
+                    "fr",
+                    new GlossaryWS.InflectionBindingManifestReportRequest(
+                        bindingManifestWithMessageCount(501))));
+
+    assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    assertEquals("Binding manifest must include at most 500 messages", exception.getReason());
+  }
+
+  @Test
   public void reportInflectionBindingManifestRejectsBlankMessageIdWithStableReason() {
     assertReportInflectionBindingManifestRejected(
         bindingManifestWithBlankMessageId(), "Expected non-blank message id");
@@ -808,9 +873,6 @@ public class GlossaryWSTest {
 
   @Test
   public void renderInflectionBindingManifestRejectsInvalidRuntimeVariableName() {
-    when(glossaryTermInflectionProfileService.compileProfilePack(1L, "fr"))
-        .thenReturn(compiledProfilePack("fr", "item.file", "\"bare.singular\":\"file\""));
-
     ResponseStatusException exception =
         assertThrows(
             ResponseStatusException.class,
@@ -840,8 +902,6 @@ public class GlossaryWSTest {
 
   @Test
   public void renderInflectionBindingManifestRejectsNullRuntimeVariableValues() {
-    when(glossaryTermInflectionProfileService.compileProfilePack(1L, "fr"))
-        .thenReturn(compiledProfilePack("fr", "item.file", "\"bare.singular\":\"file\""));
     Map<String, String> variables = new LinkedHashMap<>();
     variables.put("count", null);
 
@@ -870,6 +930,38 @@ public class GlossaryWSTest {
 
     assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
     assertTrue(exception.getReason().contains("Runtime variable count must not be null"));
+  }
+
+  @Test
+  public void renderInflectionBindingManifestRejectsLargeRuntimeVariableSet() {
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                glossaryWS.renderInflectionBindingManifest(
+                    1L,
+                    "fr",
+                    new GlossaryWS.InflectionBindingManifestRenderRequest(
+                        bindingManifestWithMessageCount(1), variablesWithCount(101))));
+
+    assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    assertEquals("Runtime variables must include at most 100 entries", exception.getReason());
+  }
+
+  @Test
+  public void renderInflectionBindingManifestRejectsLargeRuntimeVariableValue() {
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                glossaryWS.renderInflectionBindingManifest(
+                    1L,
+                    "fr",
+                    new GlossaryWS.InflectionBindingManifestRenderRequest(
+                        bindingManifestWithMessageCount(1), Map.of("count", "x".repeat(4_097)))));
+
+    assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    assertEquals("Runtime variable count must be at most 4096 characters", exception.getReason());
   }
 
   @Test
@@ -953,6 +1045,19 @@ public class GlossaryWSTest {
 
     assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
     assertEquals("Source-backed provenance requires generator", exception.getReason());
+  }
+
+  @Test
+  public void importInflectionProfilesRejectsLargeContentBeforeServiceLookup() {
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                glossaryWS.importInflectionProfiles(
+                    1L, new GlossaryWS.ImportInflectionProfilesRequest("x".repeat(5_000_001))));
+
+    assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    assertEquals("content must be at most 5000000 characters", exception.getReason());
   }
 
   private double matchDurationCount(String result, String scope) {
@@ -1054,9 +1159,6 @@ public class GlossaryWSTest {
   }
 
   private void assertReportInflectionBindingManifestRejected(String manifest, String reason) {
-    when(glossaryTermInflectionProfileService.profilePack(1L, "fr"))
-        .thenReturn(profilePack("fr", "item.water"));
-
     ResponseStatusException exception =
         assertThrows(
             ResponseStatusException.class,
@@ -1080,6 +1182,35 @@ public class GlossaryWSTest {
 
     assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
     assertEquals(reason, exception.getReason());
+  }
+
+  private Map<String, String> variablesWithCount(int count) {
+    Map<String, String> variables = new LinkedHashMap<>();
+    for (int i = 0; i < count; i++) {
+      variables.put("v" + i, Integer.toString(i));
+    }
+    return variables;
+  }
+
+  private String bindingManifestWithMessageCount(int count) {
+    StringBuilder messages = new StringBuilder();
+    for (int i = 0; i < count; i++) {
+      if (i > 0) {
+        messages.append(",\n");
+      }
+      messages.append("\"message.").append(i).append("\": \"Message ").append(i).append("\"");
+    }
+    return """
+        {
+          "schema": "mojito-mf2-inflection/message-term-binding-manifest/v0",
+          "locale": "fr",
+          "messages": {
+        %s
+          },
+          "argumentTerms": {}
+        }
+        """
+        .formatted(messages);
   }
 
   private String bindingManifestWithBlankMessageId() {
