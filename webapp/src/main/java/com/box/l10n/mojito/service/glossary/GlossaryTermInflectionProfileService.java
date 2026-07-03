@@ -69,9 +69,10 @@ public class GlossaryTermInflectionProfileService {
   public List<InflectionProfileView> getProfilesForSystem(Long glossaryId, String localeTag) {
     String normalizedLocaleTag = normalizeLocaleTag(localeTag);
     requireStoredProfilePackWithinLimit(glossaryId, normalizedLocaleTag);
-    return profileRepository.findByGlossaryIdAndLocaleTag(glossaryId, normalizedLocaleTag).stream()
-        .map(this::toView)
-        .toList();
+    List<GlossaryTermInflectionProfile> profiles =
+        profileRepository.findByGlossaryIdAndLocaleTag(glossaryId, normalizedLocaleTag);
+    requireProfilePackCountWithinLimit(profiles.size(), "stored locale " + normalizedLocaleTag);
+    return profiles.stream().map(this::toView).toList();
   }
 
   @Transactional

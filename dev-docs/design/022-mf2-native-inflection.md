@@ -3486,7 +3486,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   The focused backend gate must build Java/common in the same reactor because
   the webapp imports the untracked common MF2 package:
   `mvn -pl webapp -am -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest -Dsurefire.failIfNoSpecifiedTests=false test`.
-  That gate passes 71 backend REST/service/MCP tests. The focused frontend gate
+  That gate passes 73 backend REST/service/MCP tests. The focused frontend gate
   also passes 81 frontend API/admin/Workbench/private-utility tests:
   `source webapp/use_local_npm.sh && npm --prefix webapp/frontend run test -- src/api/glossaries.test.ts src/page/settings/AdminGlossaryDetailPage.test.tsx src/page/workbench/WorkbenchBody.test.tsx src/components/GlossaryMatchesPanel.test.tsx src/utils/inflectionProfileForms.test.ts src/utils/mf2TermRenderer.test.ts src/utils/mf2TermRequirements.test.ts`.
 - Eighty-ninth webapp helper boundary guard: the Python release-gate docs
@@ -3555,7 +3555,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   product-integration slice still passes its focused gates. Backend
   `mvn -pl webapp -am
   -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest
-  -Dsurefire.failIfNoSpecifiedTests=false test` passes 71 REST/service/MCP
+  -Dsurefire.failIfNoSpecifiedTests=false test` passes 73 REST/service/MCP
   tests, and frontend `source webapp/use_local_npm.sh && npm --prefix
   webapp/frontend run test -- src/api/glossaries.test.ts
   src/page/settings/AdminGlossaryDetailPage.test.tsx
@@ -3614,7 +3614,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   Java/common post-scope focused rerun, the separate Mojito webapp integration
   gates still pass. Backend `mvn -pl webapp -am
   -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest
-  -Dsurefire.failIfNoSpecifiedTests=false test` passes 71 REST/service/MCP
+  -Dsurefire.failIfNoSpecifiedTests=false test` passes 73 REST/service/MCP
   tests, and frontend `source webapp/use_local_npm.sh && npm --prefix
   webapp/frontend run test -- src/api/glossaries.test.ts
   src/page/settings/AdminGlossaryDetailPage.test.tsx
@@ -3631,7 +3631,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   covers 24 expanded status files with missing=0 and unused=0 for both slices.
   The current reviewer checklist is: Java/common 43-test API/release/binding
   gate, Python 101-test release/docs harness, shared/Python/JavaScript
-  `inflection-release` 35-artifact gate, webapp backend 71-test product
+  `inflection-release` 35-artifact gate, webapp backend 73-test product
   integration gate, and webapp frontend 81-test product-integration gate. Do not
   stage both commands together unless the reviewer asks for one larger product
   PR; this is checked V0 release/public-boundary and product-integration
@@ -23895,7 +23895,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   larger packs or a high-QPS runtime rendering claim. The focused backend gate
   `mvn -pl webapp -am
   -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest
-  -Dsurefire.failIfNoSpecifiedTests=false test` now passes 71
+  -Dsurefire.failIfNoSpecifiedTests=false test` now passes 73
   REST/service/MCP tests.
 - Next target: triage the remaining full-repo CLI CI failure and design
   paginated/streamed profile-pack handling only if a concrete product caller

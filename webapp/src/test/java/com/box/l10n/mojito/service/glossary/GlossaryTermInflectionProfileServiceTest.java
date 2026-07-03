@@ -16,6 +16,7 @@ import com.box.l10n.mojito.mf2.inflection.TermInflectionProfilePackJsonLoader;
 import com.box.l10n.mojito.mf2.inflection.TermInflectionProfilePackJsonLoader.TermInflectionProfilePack;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.fasterxml.jackson.databind.JsonNode;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -623,6 +624,18 @@ public class GlossaryTermInflectionProfileServiceTest {
   }
 
   @Test
+  public void getProfilesForSystemRejectsOversizedStoredProfilePackAfterLoadingRows() {
+    when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(10_000L);
+    when(profileRepository.findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr"))
+        .thenReturn(Collections.nCopies(10_001, null));
+
+    assertThatThrownBy(() -> service.getProfilesForSystem(GLOSSARY_ID, "fr"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("at most 10000 profiles")
+        .hasMessageContaining("stored locale fr has 10001");
+  }
+
+  @Test
   public void profilePackForSystemRejectsOversizedStoredProfilePackBeforeLoadingRows() {
     when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(10_001L);
 
@@ -632,6 +645,18 @@ public class GlossaryTermInflectionProfileServiceTest {
         .hasMessageContaining("stored locale fr has 10001");
 
     verify(profileRepository, never()).findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr");
+  }
+
+  @Test
+  public void profilePackForSystemRejectsOversizedStoredProfilePackAfterLoadingRows() {
+    when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(10_000L);
+    when(profileRepository.findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr"))
+        .thenReturn(Collections.nCopies(10_001, null));
+
+    assertThatThrownBy(() -> service.profilePackForSystem(GLOSSARY_ID, "fr"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("at most 10000 profiles")
+        .hasMessageContaining("stored locale fr has 10001");
   }
 
   @Test

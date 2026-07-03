@@ -1394,7 +1394,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
         for snippet in (
             "Verification snapshot: current focused gates pass",
             "the Python package harness at 101 tests",
-            "webapp backend product integration at 71 REST/service/MCP tests",
+            "webapp backend product integration at 73 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
             "live status-to-staging-command audit currently sees 15 non-webapp files plus 0 webapp files covered by the pinned review-slice commands",
             "not package-local inflection runtime promotion",
@@ -1475,8 +1475,8 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "24 expanded `webapp` status files",
             "9 backend files and 15 frontend files",
             "`mvn -pl webapp -am -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest -Dsurefire.failIfNoSpecifiedTests=false test`",
-            "71 backend REST/service/MCP tests",
-            "71 REST/service/MCP tests",
+            "73 backend REST/service/MCP tests",
+            "73 REST/service/MCP tests",
             "`source webapp/use_local_npm.sh && npm --prefix webapp/frontend run test -- src/api/glossaries.test.ts src/page/settings/AdminGlossaryDetailPage.test.tsx src/page/workbench/WorkbenchBody.test.tsx src/components/GlossaryMatchesPanel.test.tsx src/utils/inflectionProfileForms.test.ts src/utils/mf2TermRenderer.test.ts src/utils/mf2TermRequirements.test.ts`",
             "81 frontend API/admin/Workbench/private-utility tests",
             "81 API/admin/Workbench/private-utility tests",
@@ -1598,7 +1598,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "Java/common 43-test API/release/binding gate",
             "Python 101-test release/docs harness",
             "shared/Python/JavaScript `inflection-release` 35-artifact gate",
-            "webapp backend 71-test product integration gate",
+            "webapp backend 73-test product integration gate",
             "webapp frontend 81-test product-integration gate",
             "not all-language coverage or public non-Java runtime promotion",
         ):
