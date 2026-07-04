@@ -41,6 +41,42 @@ public interface GlossaryTermInflectionProfileRepository
   long countByGlossaryIdAndLocaleTag(
       @Param("glossaryId") Long glossaryId, @Param("localeTag") String localeTag);
 
+  @Query(
+      """
+      select count(profile)
+      from GlossaryTermInflectionProfile profile
+      where profile.glossaryTermMetadata.glossary.id = :glossaryId
+        and profile.localeTag = :localeTag
+        and (
+          length(profile.morphologyJson) > :maxCharacters
+          or length(profile.formsJson) > :maxCharacters
+          or length(profile.diagnosticsJson) > :maxCharacters
+          or length(profile.provenanceJson) > :maxCharacters
+        )
+      """)
+  long countByGlossaryIdAndLocaleTagWithJsonFieldOverLimit(
+      @Param("glossaryId") Long glossaryId,
+      @Param("localeTag") String localeTag,
+      @Param("maxCharacters") int maxCharacters);
+
+  @Query(
+      """
+      select coalesce(
+        sum(
+          coalesce(length(profile.morphologyJson), 0)
+          + coalesce(length(profile.formsJson), 0)
+          + coalesce(length(profile.diagnosticsJson), 0)
+          + coalesce(length(profile.provenanceJson), 0)
+        ),
+        0
+      )
+      from GlossaryTermInflectionProfile profile
+      where profile.glossaryTermMetadata.glossary.id = :glossaryId
+        and profile.localeTag = :localeTag
+      """)
+  long sumJsonFieldLengthsByGlossaryIdAndLocaleTag(
+      @Param("glossaryId") Long glossaryId, @Param("localeTag") String localeTag);
+
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
       """

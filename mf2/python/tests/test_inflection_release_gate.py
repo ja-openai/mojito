@@ -1394,12 +1394,12 @@ class InflectionReleaseGateTest(unittest.TestCase):
         for snippet in (
             "Verification snapshot: current focused gates pass",
             "the Python package harness at 101 tests",
-            "webapp backend product integration at 87 REST/service/MCP tests",
+            "webapp backend product integration at 89 REST/service/MCP tests",
             "webapp frontend product integration at 85 API/admin/Workbench/private-utility tests",
-            "rejects aggregate stored profile JSON fields above the 5,000,000-character import budget",
+            "pre-checks oversized stored fields and aggregate stored profile JSON fields above the 5,000,000-character import budget before loading stored profile rows",
             "normalizes malformed profile-field and imported profile-pack JSON parser failures",
             "rejects wrong-shaped stored morphology/forms/provenance or diagnostics JSON",
-            "live status-to-staging-command audit currently sees 3 non-webapp files plus 2 webapp files covered by the pinned review-slice commands",
+            "live status-to-staging-command audit currently sees 3 non-webapp files plus 3 webapp files covered by the pinned review-slice commands",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
@@ -1676,6 +1676,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "dev-docs/design/022-mf2-native-inflection.md",
             "dev-docs/tracker.md",
             "mf2/python/tests/test_inflection_release_gate.py",
+            "webapp/src/main/java/com/box/l10n/mojito/service/glossary/GlossaryTermInflectionProfileRepository.java",
             "webapp/src/main/java/com/box/l10n/mojito/service/glossary/GlossaryTermInflectionProfileService.java",
             "webapp/src/test/java/com/box/l10n/mojito/service/glossary/GlossaryTermInflectionProfileServiceTest.java",
         )

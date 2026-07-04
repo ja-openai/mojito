@@ -626,9 +626,16 @@ public class GlossaryTermInflectionProfileService {
   }
 
   private void requireStoredProfilePackWithinLimit(Long glossaryId, String localeTag) {
+    String context = "stored locale " + localeTag;
     requireProfilePackCountWithinLimit(
-        profileRepository.countByGlossaryIdAndLocaleTag(glossaryId, localeTag),
-        "stored locale " + localeTag);
+        profileRepository.countByGlossaryIdAndLocaleTag(glossaryId, localeTag), context);
+    requireStoredProfileJsonFieldsWithinFetchLimit(
+        profileRepository.countByGlossaryIdAndLocaleTagWithJsonFieldOverLimit(
+            glossaryId, localeTag, INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS),
+        context);
+    requireStoredProfileJsonTotalWithinFetchLimit(
+        profileRepository.sumJsonFieldLengthsByGlossaryIdAndLocaleTag(glossaryId, localeTag),
+        context);
   }
 
   private TermInflectionProfilePack loadProfilePackContent(String content) {
@@ -660,6 +667,37 @@ public class GlossaryTermInflectionProfileService {
           requireStoredProfileJsonFieldWithinLimit(
               profile.getProvenanceJson(), "provenanceJson", context, totalJsonFieldChars);
       requireStoredProfileJsonObject(profile.getProvenanceJson(), "provenanceJson", context);
+    }
+  }
+
+  private void requireStoredProfileJsonFieldsWithinFetchLimit(
+      long oversizedProfileCount, String context) {
+    if (oversizedProfileCount > 0) {
+      throw new IllegalArgumentException(
+          "Stored inflection profile JSON fields for "
+              + context
+              + " must each be at most "
+              + INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS
+              + " characters before loading profile rows: "
+              + context
+              + " has "
+              + oversizedProfileCount
+              + " profile(s) with oversized JSON fields");
+    }
+  }
+
+  private void requireStoredProfileJsonTotalWithinFetchLimit(
+      long totalJsonFieldChars, String context) {
+    if (totalJsonFieldChars > INFLECTION_PROFILE_PACK_STORED_JSON_FIELDS_MAX_CHARS) {
+      throw new IllegalArgumentException(
+          "Stored inflection profile JSON fields for "
+              + context
+              + " must total at most "
+              + INFLECTION_PROFILE_PACK_STORED_JSON_FIELDS_MAX_CHARS
+              + " characters before loading profile rows: "
+              + context
+              + " has "
+              + totalJsonFieldChars);
     }
   }
 

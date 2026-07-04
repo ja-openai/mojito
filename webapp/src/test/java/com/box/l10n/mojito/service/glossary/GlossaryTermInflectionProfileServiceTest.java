@@ -689,6 +689,23 @@ public class GlossaryTermInflectionProfileServiceTest {
   }
 
   @Test
+  public void getProfilesForSystemRejectsOversizedStoredProfileJsonBeforeLoadingRows() {
+    when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(10_000L);
+    when(profileRepository.countByGlossaryIdAndLocaleTagWithJsonFieldOverLimit(
+            GLOSSARY_ID, "fr", 256_000))
+        .thenReturn(1L);
+
+    assertThatThrownBy(() -> service.getProfilesForSystem(GLOSSARY_ID, "fr"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Stored inflection profile JSON fields")
+        .hasMessageContaining("stored locale fr")
+        .hasMessageContaining("must each be at most 256000 characters before loading profile rows")
+        .hasMessageContaining("has 1 profile(s) with oversized JSON fields");
+
+    verify(profileRepository, never()).findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr");
+  }
+
+  @Test
   public void getProfilesForSystemRejectsOversizedStoredProfilePackAfterLoadingRows() {
     when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(10_000L);
     when(profileRepository.findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr"))
@@ -765,6 +782,22 @@ public class GlossaryTermInflectionProfileServiceTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("at most 10000 profiles")
         .hasMessageContaining("stored locale fr has 10001");
+
+    verify(profileRepository, never()).findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr");
+  }
+
+  @Test
+  public void profilePackForSystemRejectsAggregateStoredProfileJsonBeforeLoadingRows() {
+    when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(10_000L);
+    when(profileRepository.sumJsonFieldLengthsByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr"))
+        .thenReturn(5_000_001L);
+
+    assertThatThrownBy(() -> service.profilePackForSystem(GLOSSARY_ID, "fr"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Stored inflection profile JSON fields")
+        .hasMessageContaining("stored locale fr")
+        .hasMessageContaining("must total at most 5000000 characters before loading profile rows")
+        .hasMessageContaining("stored locale fr has 5000001");
 
     verify(profileRepository, never()).findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr");
   }
