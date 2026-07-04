@@ -74,6 +74,7 @@ public class GlossaryTermInflectionProfileService {
     List<GlossaryTermInflectionProfile> profiles =
         profileRepository.findByGlossaryIdAndLocaleTag(glossaryId, normalizedLocaleTag);
     requireProfilePackCountWithinLimit(profiles.size(), "stored locale " + normalizedLocaleTag);
+    requireStoredProfileJsonFieldsWithinLimit(profiles, "stored locale " + normalizedLocaleTag);
     return profiles.stream().map(this::toView).toList();
   }
 
@@ -272,6 +273,7 @@ public class GlossaryTermInflectionProfileService {
   private TermInflectionProfilePack profilePack(
       String localeTag, List<GlossaryTermInflectionProfile> profiles) {
     requireProfilePackCountWithinLimit(profiles.size(), "stored locale " + localeTag);
+    requireStoredProfileJsonFieldsWithinLimit(profiles, "stored locale " + localeTag);
     Map<String, Object> root = new LinkedHashMap<>();
     root.put("schema", TermInflectionProfilePackJsonLoader.EXPECTED_SCHEMA);
     root.put("locale", localeTag);
@@ -581,6 +583,27 @@ public class GlossaryTermInflectionProfileService {
     requireProfilePackCountWithinLimit(
         profileRepository.countByGlossaryIdAndLocaleTag(glossaryId, localeTag),
         "stored locale " + localeTag);
+  }
+
+  private void requireStoredProfileJsonFieldsWithinLimit(
+      List<GlossaryTermInflectionProfile> profiles, String context) {
+    for (GlossaryTermInflectionProfile profile : profiles) {
+      requireStoredProfileJsonFieldWithinLimit(
+          profile.getMorphologyJson(), "morphologyJson", context);
+      requireStoredProfileJsonFieldWithinLimit(profile.getFormsJson(), "formsJson", context);
+      requireStoredProfileJsonFieldWithinLimit(
+          profile.getDiagnosticsJson(), "diagnosticsJson", context);
+      requireStoredProfileJsonFieldWithinLimit(
+          profile.getProvenanceJson(), "provenanceJson", context);
+    }
+  }
+
+  private void requireStoredProfileJsonFieldWithinLimit(
+      String value, String field, String context) {
+    requireMaxCharacters(
+        value,
+        "Stored inflection profile " + field + " for " + context,
+        INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS);
   }
 
   private static void requireProfilePackCountWithinLimit(long profileCount, String context) {

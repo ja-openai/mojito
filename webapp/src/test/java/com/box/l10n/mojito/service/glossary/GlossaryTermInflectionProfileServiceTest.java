@@ -673,6 +673,29 @@ public class GlossaryTermInflectionProfileServiceTest {
   }
 
   @Test
+  public void getProfilesForSystemRejectsOversizedStoredProfileJsonBeforeViewMaterialization() {
+    GlossaryTermMetadata metadata = metadata("item.iron_sword", "iron sword");
+    GlossaryTermInflectionProfile profile =
+        profile(
+            metadata,
+            TermInflectionProfilePackJsonLoader.STATUS_APPROVED,
+            "x".repeat(256_001),
+            """
+            {"bare.singular": "epee de fer"}
+            """,
+            "[]",
+            "{\"source\":\"manual\"}");
+    when(profileRepository.findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr"))
+        .thenReturn(List.of(profile));
+
+    assertThatThrownBy(() -> service.getProfilesForSystem(GLOSSARY_ID, "fr"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Stored inflection profile morphologyJson")
+        .hasMessageContaining("stored locale fr")
+        .hasMessageContaining("at most 256000 characters");
+  }
+
+  @Test
   public void profilePackForSystemRejectsOversizedStoredProfilePackBeforeLoadingRows() {
     when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(10_001L);
 
@@ -694,6 +717,31 @@ public class GlossaryTermInflectionProfileServiceTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("at most 10000 profiles")
         .hasMessageContaining("stored locale fr has 10001");
+  }
+
+  @Test
+  public void profilePackForSystemRejectsOversizedStoredProfileJsonBeforePackMaterialization() {
+    GlossaryTermMetadata metadata = metadata("item.iron_sword", "iron sword");
+    GlossaryTermInflectionProfile profile =
+        profile(
+            metadata,
+            TermInflectionProfilePackJsonLoader.STATUS_APPROVED,
+            """
+            {"partOfSpeech": "noun"}
+            """,
+            """
+            {"bare.singular": "epee de fer"}
+            """,
+            "[]",
+            "x".repeat(256_001));
+    when(profileRepository.findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr"))
+        .thenReturn(List.of(profile));
+
+    assertThatThrownBy(() -> service.profilePackForSystem(GLOSSARY_ID, "fr"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Stored inflection profile provenanceJson")
+        .hasMessageContaining("stored locale fr")
+        .hasMessageContaining("at most 256000 characters");
   }
 
   @Test
