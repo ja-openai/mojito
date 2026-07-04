@@ -1157,6 +1157,21 @@ public class GlossaryTermInflectionProfileServiceTest {
     verify(profileRepository, never()).save(any(GlossaryTermInflectionProfile.class));
   }
 
+  @Test
+  public void importProfilePackForSystemRejectsLargeProfileJsonBeforeMetadataLookup() {
+    assertThatThrownBy(
+            () ->
+                service.importProfilePackForSystem(
+                    GLOSSARY_ID, profilePackJsonWithLargeMorphologyField()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Imported inflection profile morphologyJson")
+        .hasMessageContaining("item.iron_sword")
+        .hasMessageContaining("at most 256000 characters");
+
+    verify(glossaryTermMetadataRepository, never()).findByGlossaryId(GLOSSARY_ID);
+    verify(profileRepository, never()).save(any(GlossaryTermInflectionProfile.class));
+  }
+
   private GlossaryTermMetadata metadata(String termId, String source) {
     TMTextUnit tmTextUnit = new TMTextUnit();
     tmTextUnit.setId(TM_TEXT_UNIT_ID);
@@ -1239,5 +1254,24 @@ public class GlossaryTermInflectionProfileServiceTest {
           ]
         }
         """;
+  }
+
+  private String profilePackJsonWithLargeMorphologyField() {
+    return """
+        {
+          "schema": "mojito-mf2-inflection/term-inflection-profile-pack/v0",
+          "locale": "fr",
+          "provenance": {"sourceLabels": [], "sources": []},
+          "profiles": [{
+            "termId": "item.iron_sword",
+            "source": "iron sword",
+            "status": "APPROVED",
+            "morphology": {"partOfSpeech": "%s"},
+            "forms": {"bare.singular": "epee de fer"},
+            "diagnostics": []
+          }]
+        }
+        """
+        .formatted("x".repeat(256_001));
   }
 }

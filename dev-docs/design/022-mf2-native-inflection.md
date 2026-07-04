@@ -2287,7 +2287,8 @@ fields at 256,000 characters at both the controller and profile-service
 boundaries, while binding manifests are capped at 1,000,000 characters and 500
 messages, render variables at 100 entries, and each render variable value at
 4,096 characters at the controller boundary. The service also rejects oversized
-stored morphology/forms/diagnostics/provenance JSON fields before list,
+serialized imported morphology/forms/diagnostics/provenance JSON fields before
+metadata resolution or saves, and rejects oversized stored fields before list,
 export, or compile materialization parses those rows. The MCP review tool
 applies the same 256,000-character cap to replacement
 morphology/forms/diagnostics/provenance JSON before it calls the profile
@@ -3493,7 +3494,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   The focused backend gate must build Java/common in the same reactor because
   the webapp imports the untracked common MF2 package:
   `mvn -pl webapp -am -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest -Dsurefire.failIfNoSpecifiedTests=false test`.
-  That gate passes 79 backend REST/service/MCP tests. The focused frontend gate
+  That gate passes 80 backend REST/service/MCP tests. The focused frontend gate
   also passes 85 frontend API/admin/Workbench/private-utility tests:
   `source webapp/use_local_npm.sh && npm --prefix webapp/frontend run test -- src/api/glossaries.test.ts src/page/settings/AdminGlossaryDetailPage.test.tsx src/page/workbench/WorkbenchBody.test.tsx src/components/GlossaryMatchesPanel.test.tsx src/utils/inflectionProfileForms.test.ts src/utils/mf2TermRenderer.test.ts src/utils/mf2TermRequirements.test.ts`.
 - Eighty-ninth webapp helper boundary guard: the Python release-gate docs
@@ -3562,7 +3563,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   product-integration slice still passes its focused gates. Backend
   `mvn -pl webapp -am
   -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest
-  -Dsurefire.failIfNoSpecifiedTests=false test` passes 79 REST/service/MCP
+  -Dsurefire.failIfNoSpecifiedTests=false test` passes 80 REST/service/MCP
   tests, and frontend `source webapp/use_local_npm.sh && npm --prefix
   webapp/frontend run test -- src/api/glossaries.test.ts
   src/page/settings/AdminGlossaryDetailPage.test.tsx
@@ -3621,7 +3622,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   Java/common post-scope focused rerun, the separate Mojito webapp integration
   gates still pass. Backend `mvn -pl webapp -am
   -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest
-  -Dsurefire.failIfNoSpecifiedTests=false test` passes 79 REST/service/MCP
+  -Dsurefire.failIfNoSpecifiedTests=false test` passes 80 REST/service/MCP
   tests, and frontend `source webapp/use_local_npm.sh && npm --prefix
   webapp/frontend run test -- src/api/glossaries.test.ts
   src/page/settings/AdminGlossaryDetailPage.test.tsx
@@ -3638,7 +3639,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   covers 24 expanded status files with missing=0 and unused=0 for both slices.
   The current reviewer checklist is: Java/common 43-test API/release/binding
   gate, Python 101-test release/docs harness, shared/Python/JavaScript
-  `inflection-release` 35-artifact gate, webapp backend 79-test product
+  `inflection-release` 35-artifact gate, webapp backend 80-test product
   integration gate, and webapp frontend 85-test product-integration gate. Do not
   stage both commands together unless the reviewer asks for one larger product
   PR; this is checked V0 release/public-boundary and product-integration
@@ -23896,16 +23897,17 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
 - Two thousand one hundred fifth webapp profile-pack materialization guard: the
   glossary profile service now caps current V0 admin/review/export locale packs
   at 10,000 profiles. Stored profile list/export/compile paths check the locale
-  profile count before fetching rows, and import checks the parsed pack size
-  before glossary metadata resolution or saves. Stored profile list/export/compile
-  paths also reject oversized stored morphology/forms/diagnostics/provenance JSON
-  fields before view/export/compile materialization parses those rows. This is a
-  bounded service guard for the current product integration path, not
-  streaming/pagination support for larger packs or a high-QPS runtime rendering
-  claim. The focused backend gate
+  profile count before fetching rows, and import checks the parsed pack size plus
+  serialized morphology/forms/diagnostics/provenance field sizes before glossary
+  metadata resolution or saves. Stored profile list/export/compile paths also
+  reject oversized stored morphology/forms/diagnostics/provenance JSON fields
+  before view/export/compile materialization parses those rows. This is a bounded
+  service guard for the current product integration path, not streaming/pagination
+  support for larger packs or a high-QPS runtime rendering claim. The focused
+  backend gate
   `mvn -pl webapp -am
   -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest
-  -Dsurefire.failIfNoSpecifiedTests=false test` now passes 79
+  -Dsurefire.failIfNoSpecifiedTests=false test` now passes 80
   REST/service/MCP tests.
 - Two thousand one hundred sixth MCP review payload boundary guard: the glossary
   inflection review MCP tool now rejects replacement morphology, forms,

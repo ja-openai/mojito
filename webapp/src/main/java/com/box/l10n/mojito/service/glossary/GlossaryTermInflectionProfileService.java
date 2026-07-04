@@ -225,17 +225,21 @@ public class GlossaryTermInflectionProfileService {
             requireTextWithin(
                 content, "content", INFLECTION_PROFILE_PACK_IMPORT_CONTENT_MAX_CHARS));
     requireProfilePackCountWithinLimit(pack.profiles().size(), "import content");
+    List<InflectionProfileImportJsonFields> importJsonFields = importJsonFields(pack);
     Map<String, GlossaryTermMetadata> metadataByTermId = metadataByTermId(glossaryId);
     String localeTag = normalizeLocaleTag(pack.locale());
     List<InflectionProfileImportCandidate> importCandidates = new ArrayList<>();
-    for (TermInflectionProfilePackJsonLoader.Profile importedProfile : pack.profiles()) {
+    for (InflectionProfileImportJsonFields importedProfileJsonFields : importJsonFields) {
+      TermInflectionProfilePackJsonLoader.Profile importedProfile =
+          importedProfileJsonFields.importedProfile();
       GlossaryTermMetadata metadata = metadataForProfile(metadataByTermId, importedProfile);
       GlossaryTermInflectionProfile existingProfile =
           profileRepository
               .findByGlossaryTermMetadataIdAndLocaleTag(metadata.getId(), localeTag)
               .orElse(null);
       importCandidates.add(
-          new InflectionProfileImportCandidate(importedProfile, metadata, existingProfile));
+          new InflectionProfileImportCandidate(
+              importedProfileJsonFields, metadata, existingProfile));
     }
 
     List<InflectionProfileView> profiles = new ArrayList<>();
@@ -243,7 +247,10 @@ public class GlossaryTermInflectionProfileService {
     int updatedCount = 0;
 
     for (InflectionProfileImportCandidate candidate : importCandidates) {
-      TermInflectionProfilePackJsonLoader.Profile importedProfile = candidate.importedProfile();
+      InflectionProfileImportJsonFields importedProfileJsonFields =
+          candidate.importedProfileJsonFields();
+      TermInflectionProfilePackJsonLoader.Profile importedProfile =
+          importedProfileJsonFields.importedProfile();
       GlossaryTermInflectionProfile profile = candidate.existingProfile();
       boolean created = profile == null;
       if (created) {
@@ -257,12 +264,10 @@ public class GlossaryTermInflectionProfileService {
       profile.setLocaleTag(localeTag);
       profile.setSchema(TermInflectionProfilePackJsonLoader.EXPECTED_SCHEMA);
       profile.setStatus(importedProfile.status());
-      profile.setMorphologyJson(
-          objectMapper.writeValueAsStringUnchecked(importedProfile.morphology()));
-      profile.setFormsJson(objectMapper.writeValueAsStringUnchecked(importedProfile.forms()));
-      profile.setDiagnosticsJson(
-          objectMapper.writeValueAsStringUnchecked(importedProfile.diagnostics()));
-      profile.setProvenanceJson(profileProvenanceJson(pack, importedProfile));
+      profile.setMorphologyJson(importedProfileJsonFields.morphologyJson());
+      profile.setFormsJson(importedProfileJsonFields.formsJson());
+      profile.setDiagnosticsJson(importedProfileJsonFields.diagnosticsJson());
+      profile.setProvenanceJson(importedProfileJsonFields.provenanceJson());
       profiles.add(toView(profileRepository.save(profile)));
     }
 
@@ -429,6 +434,42 @@ public class GlossaryTermInflectionProfileService {
       return objectMapper.writeValueAsStringUnchecked(importedProfile.provenance());
     }
     return objectMapper.writeValueAsStringUnchecked(pack.provenance());
+  }
+
+  private List<InflectionProfileImportJsonFields> importJsonFields(TermInflectionProfilePack pack) {
+    List<InflectionProfileImportJsonFields> importJsonFields = new ArrayList<>();
+    for (TermInflectionProfilePackJsonLoader.Profile importedProfile : pack.profiles()) {
+      importJsonFields.add(importJsonFields(pack, importedProfile));
+    }
+    return importJsonFields;
+  }
+
+  private InflectionProfileImportJsonFields importJsonFields(
+      TermInflectionProfilePack pack, TermInflectionProfilePackJsonLoader.Profile importedProfile) {
+    return new InflectionProfileImportJsonFields(
+        importedProfile,
+        importedProfileJsonField(
+            objectMapper.writeValueAsStringUnchecked(importedProfile.morphology()),
+            "morphologyJson",
+            importedProfile),
+        importedProfileJsonField(
+            objectMapper.writeValueAsStringUnchecked(importedProfile.forms()),
+            "formsJson",
+            importedProfile),
+        importedProfileJsonField(
+            objectMapper.writeValueAsStringUnchecked(importedProfile.diagnostics()),
+            "diagnosticsJson",
+            importedProfile),
+        importedProfileJsonField(
+            profileProvenanceJson(pack, importedProfile), "provenanceJson", importedProfile));
+  }
+
+  private String importedProfileJsonField(
+      String value, String field, TermInflectionProfilePackJsonLoader.Profile importedProfile) {
+    return requireMaxCharacters(
+        value,
+        "Imported inflection profile " + field + " for term " + importedProfile.termId(),
+        INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS);
   }
 
   private ProvenanceSources provenanceSources(List<GlossaryTermInflectionProfile> profiles) {
@@ -758,9 +799,16 @@ public class GlossaryTermInflectionProfileService {
   private record ProvenanceSources(List<String> sourceLabels, List<Map<String, Object>> sources) {}
 
   private record InflectionProfileImportCandidate(
-      TermInflectionProfilePackJsonLoader.Profile importedProfile,
+      InflectionProfileImportJsonFields importedProfileJsonFields,
       GlossaryTermMetadata metadata,
       GlossaryTermInflectionProfile existingProfile) {}
+
+  private record InflectionProfileImportJsonFields(
+      TermInflectionProfilePackJsonLoader.Profile importedProfile,
+      String morphologyJson,
+      String formsJson,
+      String diagnosticsJson,
+      String provenanceJson) {}
 
   public record InflectionProfileView(
       Long id,
