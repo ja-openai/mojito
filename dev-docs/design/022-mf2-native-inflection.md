@@ -3489,7 +3489,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   the webapp imports the untracked common MF2 package:
   `mvn -pl webapp -am -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest -Dsurefire.failIfNoSpecifiedTests=false test`.
   That gate passes 74 backend REST/service/MCP tests. The focused frontend gate
-  also passes 81 frontend API/admin/Workbench/private-utility tests:
+  also passes 85 frontend API/admin/Workbench/private-utility tests:
   `source webapp/use_local_npm.sh && npm --prefix webapp/frontend run test -- src/api/glossaries.test.ts src/page/settings/AdminGlossaryDetailPage.test.tsx src/page/workbench/WorkbenchBody.test.tsx src/components/GlossaryMatchesPanel.test.tsx src/utils/inflectionProfileForms.test.ts src/utils/mf2TermRenderer.test.ts src/utils/mf2TermRequirements.test.ts`.
 - Eighty-ninth webapp helper boundary guard: the Python release-gate docs
   harness now pins the private helper import boundary. The local TypeScript
@@ -3564,7 +3564,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   src/page/workbench/WorkbenchBody.test.tsx
   src/components/GlossaryMatchesPanel.test.tsx
   src/utils/inflectionProfileForms.test.ts src/utils/mf2TermRenderer.test.ts
-  src/utils/mf2TermRequirements.test.ts` passes 81
+  src/utils/mf2TermRequirements.test.ts` passes 85
   API/admin/Workbench/private-utility tests. This remains product integration
   around checked Java/common V0 and private webapp helpers, not public non-Java
   MF2 runtime promotion.
@@ -3623,7 +3623,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   src/page/workbench/WorkbenchBody.test.tsx
   src/components/GlossaryMatchesPanel.test.tsx
   src/utils/inflectionProfileForms.test.ts src/utils/mf2TermRenderer.test.ts
-  src/utils/mf2TermRequirements.test.ts` passes 81
+  src/utils/mf2TermRequirements.test.ts` passes 85
   API/admin/Workbench/private-utility tests. This remains Mojito product
   integration around checked Java/common V0 and private webapp helpers, not
   public non-Java MF2 runtime promotion.
@@ -3634,7 +3634,7 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   The current reviewer checklist is: Java/common 43-test API/release/binding
   gate, Python 101-test release/docs harness, shared/Python/JavaScript
   `inflection-release` 35-artifact gate, webapp backend 74-test product
-  integration gate, and webapp frontend 81-test product-integration gate. Do not
+  integration gate, and webapp frontend 85-test product-integration gate. Do not
   stage both commands together unless the reviewer asks for one larger product
   PR; this is checked V0 release/public-boundary and product-integration
   evidence, not all-language coverage or public non-Java runtime promotion.
