@@ -2290,11 +2290,11 @@ messages, render variables at 100 entries, and each render variable value at
 4,096 characters at the controller boundary. The service also rejects oversized
 serialized imported morphology/forms/diagnostics/provenance JSON fields before
 metadata resolution or saves, pre-checks stored row JSON field sizes and
-aggregate stored JSON totals before loading stored profile rows, and still
-validates stored field syntax and shape before list/export/compile
-materialization parses those rows. It rejects aggregate stored profile JSON
-fields above the 5,000,000-character import budget before loading rows. The MCP
-review tool applies the same
+aggregate stored JSON totals with one aggregate query before loading stored
+profile rows, and still validates stored field syntax and shape before
+list/export/compile materialization parses those rows. It rejects aggregate
+stored profile JSON fields above the 5,000,000-character import budget before
+loading rows. The MCP review tool applies the same
 256,000-character cap to replacement
 morphology/forms/diagnostics/provenance JSON before it calls the profile
 service. These limits are current admin/review/export V0 guardrails; they are
@@ -23906,13 +23906,13 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   serialized morphology/forms/diagnostics/provenance field sizes before glossary
   metadata resolution or saves. Stored profile list/export/compile paths also
   pre-check stored morphology/forms/diagnostics/provenance JSON field sizes and
-  aggregate stored JSON totals before loading stored profile rows, and still
-  validate stored field syntax and shape before view/export/compile
-  materialization parses those rows. The aggregate stored profile JSON guard is
-  capped at the 5,000,000-character import budget before loading rows. This is
-  a bounded service guard for the current product integration path, not
-  streaming/pagination support for larger packs or a high-QPS runtime rendering
-  claim. The focused
+  aggregate stored JSON totals with one aggregate query before loading stored
+  profile rows, and still validate stored field syntax and shape before
+  view/export/compile materialization parses those rows. The aggregate stored
+  profile JSON guard is capped at the 5,000,000-character import budget before
+  loading rows. This is a bounded service guard for the current product
+  integration path, not streaming/pagination support for larger packs or a
+  high-QPS runtime rendering claim. The focused
   backend gate
   `mvn -pl webapp -am
   -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest

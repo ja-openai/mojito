@@ -1396,7 +1396,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Python package harness at 101 tests",
             "webapp backend product integration at 89 REST/service/MCP tests",
             "webapp frontend product integration at 85 API/admin/Workbench/private-utility tests",
-            "pre-checks oversized stored fields and aggregate stored profile JSON fields above the 5,000,000-character import budget before loading stored profile rows",
+            "pre-checks oversized stored fields and aggregate stored profile JSON fields above the 5,000,000-character import budget with one aggregate query before loading stored profile rows",
             "normalizes malformed profile-field and imported profile-pack JSON parser failures",
             "rejects wrong-shaped stored morphology/forms/provenance or diagnostics JSON",
             "live status-to-staging-command audit currently sees 3 non-webapp files plus 3 webapp files covered by the pinned review-slice commands",

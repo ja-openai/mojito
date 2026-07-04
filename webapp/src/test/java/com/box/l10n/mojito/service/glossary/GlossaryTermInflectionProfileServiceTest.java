@@ -678,7 +678,8 @@ public class GlossaryTermInflectionProfileServiceTest {
 
   @Test
   public void getProfilesForSystemRejectsOversizedStoredProfilePackBeforeLoadingRows() {
-    when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(10_001L);
+    when(profileRepository.findStorageBoundsByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr", 256_000))
+        .thenReturn(storageBounds(10_001, 0, 0));
 
     assertThatThrownBy(() -> service.getProfilesForSystem(GLOSSARY_ID, "fr"))
         .isInstanceOf(IllegalArgumentException.class)
@@ -690,10 +691,8 @@ public class GlossaryTermInflectionProfileServiceTest {
 
   @Test
   public void getProfilesForSystemRejectsOversizedStoredProfileJsonBeforeLoadingRows() {
-    when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(10_000L);
-    when(profileRepository.countByGlossaryIdAndLocaleTagWithJsonFieldOverLimit(
-            GLOSSARY_ID, "fr", 256_000))
-        .thenReturn(1L);
+    when(profileRepository.findStorageBoundsByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr", 256_000))
+        .thenReturn(storageBounds(10_000, 1, 0));
 
     assertThatThrownBy(() -> service.getProfilesForSystem(GLOSSARY_ID, "fr"))
         .isInstanceOf(IllegalArgumentException.class)
@@ -707,7 +706,8 @@ public class GlossaryTermInflectionProfileServiceTest {
 
   @Test
   public void getProfilesForSystemRejectsOversizedStoredProfilePackAfterLoadingRows() {
-    when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(10_000L);
+    when(profileRepository.findStorageBoundsByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr", 256_000))
+        .thenReturn(storageBounds(10_000, 0, 0));
     when(profileRepository.findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr"))
         .thenReturn(Collections.nCopies(10_001, null));
 
@@ -776,7 +776,8 @@ public class GlossaryTermInflectionProfileServiceTest {
 
   @Test
   public void profilePackForSystemRejectsOversizedStoredProfilePackBeforeLoadingRows() {
-    when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(10_001L);
+    when(profileRepository.findStorageBoundsByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr", 256_000))
+        .thenReturn(storageBounds(10_001, 0, 0));
 
     assertThatThrownBy(() -> service.profilePackForSystem(GLOSSARY_ID, "fr"))
         .isInstanceOf(IllegalArgumentException.class)
@@ -788,9 +789,8 @@ public class GlossaryTermInflectionProfileServiceTest {
 
   @Test
   public void profilePackForSystemRejectsAggregateStoredProfileJsonBeforeLoadingRows() {
-    when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(10_000L);
-    when(profileRepository.sumJsonFieldLengthsByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr"))
-        .thenReturn(5_000_001L);
+    when(profileRepository.findStorageBoundsByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr", 256_000))
+        .thenReturn(storageBounds(10_000, 0, 5_000_001));
 
     assertThatThrownBy(() -> service.profilePackForSystem(GLOSSARY_ID, "fr"))
         .isInstanceOf(IllegalArgumentException.class)
@@ -804,7 +804,8 @@ public class GlossaryTermInflectionProfileServiceTest {
 
   @Test
   public void profilePackForSystemRejectsOversizedStoredProfilePackAfterLoadingRows() {
-    when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(10_000L);
+    when(profileRepository.findStorageBoundsByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr", 256_000))
+        .thenReturn(storageBounds(10_000, 0, 0));
     when(profileRepository.findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr"))
         .thenReturn(Collections.nCopies(10_001, null));
 
@@ -1366,6 +1367,26 @@ public class GlossaryTermInflectionProfileServiceTest {
     profile.setDiagnosticsJson(diagnosticsJson);
     profile.setProvenanceJson(provenanceJson);
     return profile;
+  }
+
+  private GlossaryTermInflectionProfileRepository.ProfilePackStorageBounds storageBounds(
+      long profileCount, long oversizedJsonFieldProfileCount, long totalJsonFieldCharacters) {
+    return new GlossaryTermInflectionProfileRepository.ProfilePackStorageBounds() {
+      @Override
+      public Long getProfileCount() {
+        return profileCount;
+      }
+
+      @Override
+      public Long getOversizedJsonFieldProfileCount() {
+        return oversizedJsonFieldProfileCount;
+      }
+
+      @Override
+      public Long getTotalJsonFieldCharacters() {
+        return totalJsonFieldCharacters;
+      }
+    };
   }
 
   private String profilePackJsonWithProfiles(int profileCount) {

@@ -627,15 +627,20 @@ public class GlossaryTermInflectionProfileService {
 
   private void requireStoredProfilePackWithinLimit(Long glossaryId, String localeTag) {
     String context = "stored locale " + localeTag;
-    requireProfilePackCountWithinLimit(
-        profileRepository.countByGlossaryIdAndLocaleTag(glossaryId, localeTag), context);
-    requireStoredProfileJsonFieldsWithinFetchLimit(
-        profileRepository.countByGlossaryIdAndLocaleTagWithJsonFieldOverLimit(
-            glossaryId, localeTag, INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS),
-        context);
-    requireStoredProfileJsonTotalWithinFetchLimit(
-        profileRepository.sumJsonFieldLengthsByGlossaryIdAndLocaleTag(glossaryId, localeTag),
-        context);
+    GlossaryTermInflectionProfileRepository.ProfilePackStorageBounds storageBounds =
+        profileRepository.findStorageBoundsByGlossaryIdAndLocaleTag(
+            glossaryId, localeTag, INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS);
+    long profileCount =
+        storageBounds == null ? 0 : storageBoundValue(storageBounds.getProfileCount());
+    long oversizedProfileCount =
+        storageBounds == null
+            ? 0
+            : storageBoundValue(storageBounds.getOversizedJsonFieldProfileCount());
+    long totalJsonFieldChars =
+        storageBounds == null ? 0 : storageBoundValue(storageBounds.getTotalJsonFieldCharacters());
+    requireProfilePackCountWithinLimit(profileCount, context);
+    requireStoredProfileJsonFieldsWithinFetchLimit(oversizedProfileCount, context);
+    requireStoredProfileJsonTotalWithinFetchLimit(totalJsonFieldChars, context);
   }
 
   private TermInflectionProfilePack loadProfilePackContent(String content) {
@@ -699,6 +704,10 @@ public class GlossaryTermInflectionProfileService {
               + " has "
               + totalJsonFieldChars);
     }
+  }
+
+  private static long storageBoundValue(Long value) {
+    return value == null ? 0 : value;
   }
 
   private void requireStoredProfileJsonObject(String value, String field, String context) {

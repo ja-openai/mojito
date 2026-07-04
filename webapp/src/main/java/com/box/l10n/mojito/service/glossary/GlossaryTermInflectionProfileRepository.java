@@ -33,49 +33,43 @@ public interface GlossaryTermInflectionProfileRepository
 
   @Query(
       """
-      select count(profile)
-      from GlossaryTermInflectionProfile profile
-      where profile.glossaryTermMetadata.glossary.id = :glossaryId
-        and profile.localeTag = :localeTag
-      """)
-  long countByGlossaryIdAndLocaleTag(
-      @Param("glossaryId") Long glossaryId, @Param("localeTag") String localeTag);
-
-  @Query(
-      """
-      select count(profile)
-      from GlossaryTermInflectionProfile profile
-      where profile.glossaryTermMetadata.glossary.id = :glossaryId
-        and profile.localeTag = :localeTag
-        and (
-          length(profile.morphologyJson) > :maxCharacters
-          or length(profile.formsJson) > :maxCharacters
-          or length(profile.diagnosticsJson) > :maxCharacters
-          or length(profile.provenanceJson) > :maxCharacters
-        )
-      """)
-  long countByGlossaryIdAndLocaleTagWithJsonFieldOverLimit(
-      @Param("glossaryId") Long glossaryId,
-      @Param("localeTag") String localeTag,
-      @Param("maxCharacters") int maxCharacters);
-
-  @Query(
-      """
-      select coalesce(
-        sum(
+      select
+        count(profile) as profileCount,
+        coalesce(
+          sum(
+            case
+              when length(profile.morphologyJson) > :maxCharacters
+                or length(profile.formsJson) > :maxCharacters
+                or length(profile.diagnosticsJson) > :maxCharacters
+                or length(profile.provenanceJson) > :maxCharacters
+              then 1
+              else 0
+            end
+          ),
+          0
+        ) as oversizedJsonFieldProfileCount,
+        coalesce(sum(
           coalesce(length(profile.morphologyJson), 0)
           + coalesce(length(profile.formsJson), 0)
           + coalesce(length(profile.diagnosticsJson), 0)
           + coalesce(length(profile.provenanceJson), 0)
-        ),
-        0
-      )
+        ), 0) as totalJsonFieldCharacters
       from GlossaryTermInflectionProfile profile
       where profile.glossaryTermMetadata.glossary.id = :glossaryId
         and profile.localeTag = :localeTag
       """)
-  long sumJsonFieldLengthsByGlossaryIdAndLocaleTag(
-      @Param("glossaryId") Long glossaryId, @Param("localeTag") String localeTag);
+  ProfilePackStorageBounds findStorageBoundsByGlossaryIdAndLocaleTag(
+      @Param("glossaryId") Long glossaryId,
+      @Param("localeTag") String localeTag,
+      @Param("maxCharacters") int maxCharacters);
+
+  interface ProfilePackStorageBounds {
+    Long getProfileCount();
+
+    Long getOversizedJsonFieldProfileCount();
+
+    Long getTotalJsonFieldCharacters();
+  }
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
