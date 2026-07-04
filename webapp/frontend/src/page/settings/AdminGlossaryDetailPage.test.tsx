@@ -170,6 +170,20 @@ describe('AdminGlossaryDetailPage inflection profile packs', () => {
     ).toBeVisible();
   });
 
+  it('shows stored profile validation errors from the profile list query', async () => {
+    mocks.fetchInflectionProfiles.mockRejectedValue(
+      new Error('Stored inflection profile formsJson for stored locale fr-FR must be valid JSON'),
+    );
+
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        'Stored inflection profile formsJson for stored locale fr-FR must be valid JSON',
+      ),
+    ).toBeVisible();
+  });
+
   it('shows missing form keys from inflection profile review responses', async () => {
     mocks.fetchInflectionProfiles.mockResolvedValue({
       profiles: [
