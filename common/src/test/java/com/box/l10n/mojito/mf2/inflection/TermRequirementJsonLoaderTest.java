@@ -387,6 +387,29 @@ public class TermRequirementJsonLoaderTest {
   }
 
   @Test
+  public void rejectsMalformedMf2InBindingManifestMessages() {
+    String json =
+        """
+        {
+          "schema": "mojito-mf2-inflection/message-term-binding-manifest/v0",
+          "locale": "es",
+          "messages": {
+            "inventory.deleted": "Has eliminado {$item :term article=definite."
+          },
+          "argumentTerms": {
+            "inventory.deleted": {
+              "item": ["item.water"]
+            }
+          }
+        }
+        """;
+
+    assertThatThrownBy(() -> loader.loadUsageCatalog(json))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Invalid MF2 message");
+  }
+
+  @Test
   public void rejectsArgumentTermsForUnknownTermArgument() {
     String json =
         """

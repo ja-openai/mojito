@@ -165,6 +165,55 @@ public class Mf2TermRendererTest {
   }
 
   @Test
+  public void rejectsInvalidTermOptionsAtBoundFacadeBoundary() {
+    Mf2TermRenderer renderer = Mf2TermRenderer.forCompiledTerms(spanishTermPack());
+
+    assertThatThrownBy(
+            () ->
+                renderer.requireRenderableBoundMessage(
+                    usageCatalog(
+                        """
+                        {
+                          "schema": "mojito-mf2-inflection/message-term-binding-manifest/v0",
+                          "locale": "es",
+                          "messages": {
+                            "inventory.deleted": "Has eliminado {$item :term role=source}."
+                          },
+                          "argumentTerms": {
+                            "inventory.deleted": {
+                              "item": ["item.water"]
+                            }
+                          }
+                        }
+                        """),
+                    "inventory.deleted"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Unsupported term option: role");
+
+    assertThatThrownBy(
+            () ->
+                renderer.requireRenderableBoundMessage(
+                    usageCatalog(
+                        """
+                        {
+                          "schema": "mojito-mf2-inflection/message-term-binding-manifest/v0",
+                          "locale": "es",
+                          "messages": {
+                            "inventory.deleted": "Has eliminado {$item :term article=definite count=one}."
+                          },
+                          "argumentTerms": {
+                            "inventory.deleted": {
+                              "item": ["item.water"]
+                            }
+                          }
+                        }
+                        """),
+                    "inventory.deleted"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Count option must reference a variable: one");
+  }
+
+  @Test
   public void rendersSingletonBindingManifestThroughFacade() {
     Mf2TermRenderer renderer = Mf2TermRenderer.forCompiledTerms(spanishTermPack());
 
