@@ -40,6 +40,8 @@ public class GlossaryTermInflectionProfileService {
   private static final String COMPILED_PROFILE_PACK_DISABLED_REASON = "disabled-profile";
   private static final int INFLECTION_PROFILE_PACK_IMPORT_CONTENT_MAX_CHARS = 5_000_000;
   private static final int INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS = 256_000;
+  private static final int INFLECTION_PROFILE_PACK_STORED_JSON_FIELDS_MAX_CHARS =
+      INFLECTION_PROFILE_PACK_IMPORT_CONTENT_MAX_CHARS;
   private static final int INFLECTION_PROFILE_PACK_MAX_PROFILE_COUNT = 10_000;
   private static final Pattern SHA256_HEX_PATTERN = Pattern.compile("[0-9a-f]{64}");
 
@@ -628,23 +630,46 @@ public class GlossaryTermInflectionProfileService {
 
   private void requireStoredProfileJsonFieldsWithinLimit(
       List<GlossaryTermInflectionProfile> profiles, String context) {
+    long totalJsonFieldChars = 0;
     for (GlossaryTermInflectionProfile profile : profiles) {
-      requireStoredProfileJsonFieldWithinLimit(
-          profile.getMorphologyJson(), "morphologyJson", context);
-      requireStoredProfileJsonFieldWithinLimit(profile.getFormsJson(), "formsJson", context);
-      requireStoredProfileJsonFieldWithinLimit(
-          profile.getDiagnosticsJson(), "diagnosticsJson", context);
-      requireStoredProfileJsonFieldWithinLimit(
-          profile.getProvenanceJson(), "provenanceJson", context);
+      totalJsonFieldChars =
+          requireStoredProfileJsonFieldWithinLimit(
+              profile.getMorphologyJson(), "morphologyJson", context, totalJsonFieldChars);
+      totalJsonFieldChars =
+          requireStoredProfileJsonFieldWithinLimit(
+              profile.getFormsJson(), "formsJson", context, totalJsonFieldChars);
+      totalJsonFieldChars =
+          requireStoredProfileJsonFieldWithinLimit(
+              profile.getDiagnosticsJson(), "diagnosticsJson", context, totalJsonFieldChars);
+      totalJsonFieldChars =
+          requireStoredProfileJsonFieldWithinLimit(
+              profile.getProvenanceJson(), "provenanceJson", context, totalJsonFieldChars);
     }
   }
 
-  private void requireStoredProfileJsonFieldWithinLimit(
-      String value, String field, String context) {
+  private long requireStoredProfileJsonFieldWithinLimit(
+      String value, String field, String context, long totalJsonFieldChars) {
     requireMaxCharacters(
         value,
         "Stored inflection profile " + field + " for " + context,
         INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS);
+    long nextTotalJsonFieldChars = totalJsonFieldChars + textLength(value);
+    if (nextTotalJsonFieldChars > INFLECTION_PROFILE_PACK_STORED_JSON_FIELDS_MAX_CHARS) {
+      throw new IllegalArgumentException(
+          "Stored inflection profile JSON fields for "
+              + context
+              + " must total at most "
+              + INFLECTION_PROFILE_PACK_STORED_JSON_FIELDS_MAX_CHARS
+              + " characters: "
+              + context
+              + " has "
+              + nextTotalJsonFieldChars);
+    }
+    return nextTotalJsonFieldChars;
+  }
+
+  private static int textLength(String value) {
+    return value == null ? 0 : value.length();
   }
 
   private static void requireProfilePackCountWithinLimit(long profileCount, String context) {

@@ -696,6 +696,18 @@ public class GlossaryTermInflectionProfileServiceTest {
   }
 
   @Test
+  public void getProfilesForSystemRejectsAggregateStoredProfileJsonBeforeViewMaterialization() {
+    when(profileRepository.findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr"))
+        .thenReturn(profilesWithAggregateJsonOverLimit());
+
+    assertThatThrownBy(() -> service.getProfilesForSystem(GLOSSARY_ID, "fr"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Stored inflection profile JSON fields")
+        .hasMessageContaining("stored locale fr")
+        .hasMessageContaining("must total at most 5000000 characters");
+  }
+
+  @Test
   public void profilePackForSystemRejectsOversizedStoredProfilePackBeforeLoadingRows() {
     when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(10_001L);
 
@@ -742,6 +754,18 @@ public class GlossaryTermInflectionProfileServiceTest {
         .hasMessageContaining("Stored inflection profile provenanceJson")
         .hasMessageContaining("stored locale fr")
         .hasMessageContaining("at most 256000 characters");
+  }
+
+  @Test
+  public void profilePackForSystemRejectsAggregateStoredProfileJsonBeforePackMaterialization() {
+    when(profileRepository.findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr"))
+        .thenReturn(profilesWithAggregateJsonOverLimit());
+
+    assertThatThrownBy(() -> service.profilePackForSystem(GLOSSARY_ID, "fr"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Stored inflection profile JSON fields")
+        .hasMessageContaining("stored locale fr")
+        .hasMessageContaining("must total at most 5000000 characters");
   }
 
   @Test
@@ -1273,5 +1297,22 @@ public class GlossaryTermInflectionProfileServiceTest {
         }
         """
         .formatted("x".repeat(256_001));
+  }
+
+  private List<GlossaryTermInflectionProfile> profilesWithAggregateJsonOverLimit() {
+    GlossaryTermMetadata metadata = metadata("item.iron_sword", "iron sword");
+    String largeFormsJson = "{\"bare.singular\":\"" + "x".repeat(255_950) + "\"}";
+    assertThat(largeFormsJson.length()).isLessThanOrEqualTo(256_000);
+    return Collections.nCopies(
+        20,
+        profile(
+            metadata,
+            TermInflectionProfilePackJsonLoader.STATUS_APPROVED,
+            """
+            {"partOfSpeech": "noun"}
+            """,
+            largeFormsJson,
+            "[]",
+            "{\"source\":\"manual\"}"));
   }
 }
