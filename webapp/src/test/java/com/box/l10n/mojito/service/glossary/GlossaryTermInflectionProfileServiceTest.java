@@ -159,6 +159,34 @@ public class GlossaryTermInflectionProfileServiceTest {
   }
 
   @Test
+  public void upsertProfileForSystemRejectsMalformedProfileJsonBeforeSave() {
+    GlossaryTermMetadata metadata = metadata("item.iron_sword", "iron sword");
+    when(glossaryTermMetadataRepository.findByGlossaryIdAndTmTextUnitId(
+            GLOSSARY_ID, TM_TEXT_UNIT_ID))
+        .thenReturn(Optional.of(metadata));
+    when(profileRepository.findByGlossaryTermMetadataIdAndLocaleTag(
+            GLOSSARY_TERM_METADATA_ID, "fr"))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+            () ->
+                service.upsertProfileForSystem(
+                    GLOSSARY_ID,
+                    TM_TEXT_UNIT_ID,
+                    new GlossaryTermInflectionProfileService.InflectionProfileInput(
+                        "fr",
+                        "APPROVED",
+                        "{",
+                        "{\"bare.singular\":\"epee de fer\"}",
+                        "[]",
+                        "{\"source\":\"manual\"}")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("morphologyJson must be valid JSON");
+
+    verify(profileRepository, never()).save(any(GlossaryTermInflectionProfile.class));
+  }
+
+  @Test
   public void reviewProfileForSystemApprovesGeneratedProfileWithoutRepostingForms() {
     GlossaryTermMetadata metadata = metadata("item.iron_sword", "iron sword");
     GlossaryTermInflectionProfile profile =
@@ -708,6 +736,28 @@ public class GlossaryTermInflectionProfileServiceTest {
   }
 
   @Test
+  public void getProfilesForSystemRejectsMalformedStoredProfileJsonBeforeViewMaterialization() {
+    GlossaryTermMetadata metadata = metadata("item.iron_sword", "iron sword");
+    GlossaryTermInflectionProfile profile =
+        profile(
+            metadata,
+            TermInflectionProfilePackJsonLoader.STATUS_APPROVED,
+            """
+            {"partOfSpeech": "noun"}
+            """,
+            "{",
+            "[]",
+            "{\"source\":\"manual\"}");
+    when(profileRepository.findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr"))
+        .thenReturn(List.of(profile));
+
+    assertThatThrownBy(() -> service.getProfilesForSystem(GLOSSARY_ID, "fr"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(
+            "Stored inflection profile formsJson for stored locale fr must be valid JSON");
+  }
+
+  @Test
   public void profilePackForSystemRejectsOversizedStoredProfilePackBeforeLoadingRows() {
     when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(10_001L);
 
@@ -766,6 +816,30 @@ public class GlossaryTermInflectionProfileServiceTest {
         .hasMessageContaining("Stored inflection profile JSON fields")
         .hasMessageContaining("stored locale fr")
         .hasMessageContaining("must total at most 5000000 characters");
+  }
+
+  @Test
+  public void profilePackForSystemRejectsStoredProfileJsonShapeBeforePackMaterialization() {
+    GlossaryTermMetadata metadata = metadata("item.iron_sword", "iron sword");
+    GlossaryTermInflectionProfile profile =
+        profile(
+            metadata,
+            TermInflectionProfilePackJsonLoader.STATUS_APPROVED,
+            """
+            {"partOfSpeech": "noun"}
+            """,
+            """
+            {"bare.singular": "epee de fer"}
+            """,
+            "{}",
+            "{\"source\":\"manual\"}");
+    when(profileRepository.findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr"))
+        .thenReturn(List.of(profile));
+
+    assertThatThrownBy(() -> service.profilePackForSystem(GLOSSARY_ID, "fr"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(
+            "Stored inflection profile diagnosticsJson for stored locale fr must be a JSON array");
   }
 
   @Test
@@ -1176,6 +1250,16 @@ public class GlossaryTermInflectionProfileServiceTest {
     assertThatThrownBy(() -> service.importProfilePackForSystem(GLOSSARY_ID, "x".repeat(5_000_001)))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("content must be at most 5000000 characters");
+
+    verify(glossaryTermMetadataRepository, never()).findByGlossaryId(GLOSSARY_ID);
+    verify(profileRepository, never()).save(any(GlossaryTermInflectionProfile.class));
+  }
+
+  @Test
+  public void importProfilePackForSystemRejectsMalformedJsonBeforeMetadataLookup() {
+    assertThatThrownBy(() -> service.importProfilePackForSystem(GLOSSARY_ID, "{"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("content must be valid inflection profile pack JSON");
 
     verify(glossaryTermMetadataRepository, never()).findByGlossaryId(GLOSSARY_ID);
     verify(profileRepository, never()).save(any(GlossaryTermInflectionProfile.class));

@@ -13,6 +13,7 @@ import com.box.l10n.mojito.mf2.inflection.TermInflectionProfilePackJsonLoader.Di
 import com.box.l10n.mojito.mf2.inflection.TermInflectionProfilePackJsonLoader.TermInflectionProfilePack;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.fasterxml.jackson.databind.JsonNode;
+import java.io.UncheckedIOException;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -76,7 +77,8 @@ public class GlossaryTermInflectionProfileService {
     List<GlossaryTermInflectionProfile> profiles =
         profileRepository.findByGlossaryIdAndLocaleTag(glossaryId, normalizedLocaleTag);
     requireProfilePackCountWithinLimit(profiles.size(), "stored locale " + normalizedLocaleTag);
-    requireStoredProfileJsonFieldsWithinLimit(profiles, "stored locale " + normalizedLocaleTag);
+    requireStoredProfileJsonFieldsValidAndWithinLimit(
+        profiles, "stored locale " + normalizedLocaleTag);
     return profiles.stream().map(this::toView).toList();
   }
 
@@ -222,10 +224,7 @@ public class GlossaryTermInflectionProfileService {
 
   @Transactional
   public InflectionProfileImportResult importProfilePackForSystem(Long glossaryId, String content) {
-    TermInflectionProfilePack pack =
-        profilePackJsonLoader.load(
-            requireTextWithin(
-                content, "content", INFLECTION_PROFILE_PACK_IMPORT_CONTENT_MAX_CHARS));
+    TermInflectionProfilePack pack = loadProfilePackContent(content);
     requireProfilePackCountWithinLimit(pack.profiles().size(), "import content");
     List<InflectionProfileImportJsonFields> importJsonFields = importJsonFields(pack);
     Map<String, GlossaryTermMetadata> metadataByTermId = metadataByTermId(glossaryId);
@@ -280,7 +279,7 @@ public class GlossaryTermInflectionProfileService {
   private TermInflectionProfilePack profilePack(
       String localeTag, List<GlossaryTermInflectionProfile> profiles) {
     requireProfilePackCountWithinLimit(profiles.size(), "stored locale " + localeTag);
-    requireStoredProfileJsonFieldsWithinLimit(profiles, "stored locale " + localeTag);
+    requireStoredProfileJsonFieldsValidAndWithinLimit(profiles, "stored locale " + localeTag);
     Map<String, Object> root = new LinkedHashMap<>();
     root.put("schema", TermInflectionProfilePackJsonLoader.EXPECTED_SCHEMA);
     root.put("locale", localeTag);
@@ -615,7 +614,11 @@ public class GlossaryTermInflectionProfileService {
     if (json == null || json.isBlank()) {
       throw new IllegalArgumentException(field + " is required");
     }
-    return objectMapper.readTreeUnchecked(json);
+    try {
+      return objectMapper.readTreeUnchecked(json);
+    } catch (UncheckedIOException e) {
+      throw new IllegalArgumentException(field + " must be valid JSON", e);
+    }
   }
 
   private String normalizeLocaleTag(String localeTag) {
@@ -628,23 +631,56 @@ public class GlossaryTermInflectionProfileService {
         "stored locale " + localeTag);
   }
 
-  private void requireStoredProfileJsonFieldsWithinLimit(
+  private TermInflectionProfilePack loadProfilePackContent(String content) {
+    try {
+      return profilePackJsonLoader.load(
+          requireTextWithin(content, "content", INFLECTION_PROFILE_PACK_IMPORT_CONTENT_MAX_CHARS));
+    } catch (UncheckedIOException e) {
+      throw new IllegalArgumentException("content must be valid inflection profile pack JSON", e);
+    }
+  }
+
+  private void requireStoredProfileJsonFieldsValidAndWithinLimit(
       List<GlossaryTermInflectionProfile> profiles, String context) {
     long totalJsonFieldChars = 0;
     for (GlossaryTermInflectionProfile profile : profiles) {
       totalJsonFieldChars =
           requireStoredProfileJsonFieldWithinLimit(
               profile.getMorphologyJson(), "morphologyJson", context, totalJsonFieldChars);
+      requireStoredProfileJsonObject(profile.getMorphologyJson(), "morphologyJson", context);
       totalJsonFieldChars =
           requireStoredProfileJsonFieldWithinLimit(
               profile.getFormsJson(), "formsJson", context, totalJsonFieldChars);
+      requireStoredProfileJsonObject(profile.getFormsJson(), "formsJson", context);
       totalJsonFieldChars =
           requireStoredProfileJsonFieldWithinLimit(
               profile.getDiagnosticsJson(), "diagnosticsJson", context, totalJsonFieldChars);
+      requireStoredProfileJsonArray(profile.getDiagnosticsJson(), "diagnosticsJson", context);
       totalJsonFieldChars =
           requireStoredProfileJsonFieldWithinLimit(
               profile.getProvenanceJson(), "provenanceJson", context, totalJsonFieldChars);
+      requireStoredProfileJsonObject(profile.getProvenanceJson(), "provenanceJson", context);
     }
+  }
+
+  private void requireStoredProfileJsonObject(String value, String field, String context) {
+    String label = storedProfileJsonFieldLabel(field, context);
+    JsonNode node = requiredJson(value, label);
+    if (!node.isObject()) {
+      throw new IllegalArgumentException(label + " must be a JSON object");
+    }
+  }
+
+  private void requireStoredProfileJsonArray(String value, String field, String context) {
+    String label = storedProfileJsonFieldLabel(field, context);
+    JsonNode node = requiredJson(value, label);
+    if (!node.isArray()) {
+      throw new IllegalArgumentException(label + " must be a JSON array");
+    }
+  }
+
+  private String storedProfileJsonFieldLabel(String field, String context) {
+    return "Stored inflection profile " + field + " for " + context;
   }
 
   private long requireStoredProfileJsonFieldWithinLimit(

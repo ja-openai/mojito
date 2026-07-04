@@ -1394,9 +1394,11 @@ class InflectionReleaseGateTest(unittest.TestCase):
         for snippet in (
             "Verification snapshot: current focused gates pass",
             "the Python package harness at 101 tests",
-            "webapp backend product integration at 83 REST/service/MCP tests",
+            "webapp backend product integration at 87 REST/service/MCP tests",
             "webapp frontend product integration at 85 API/admin/Workbench/private-utility tests",
             "rejects aggregate stored profile JSON fields above the 5,000,000-character import budget",
+            "normalizes malformed profile-field and imported profile-pack JSON parser failures",
+            "rejects wrong-shaped stored morphology/forms/provenance or diagnostics JSON",
             "live status-to-staging-command audit currently sees 3 non-webapp files plus 2 webapp files covered by the pinned review-slice commands",
             "not package-local inflection runtime promotion",
         ):
@@ -1725,7 +1727,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
         self.assertFalse(set(non_webapp_status_paths).intersection(webapp_status_paths))
 
         for snippet in (
-            "Two thousand one hundred seventh current status-to-staging-command audit after the stored aggregate profile-pack budget guard",
+            "Two thousand one hundred eighth malformed JSON API-boundary guard",
             "3 current non-webapp status files",
             "2 current webapp status files",
             "full clean-PR staging state has 236 non-webapp status files and 24 webapp status files",

@@ -23934,6 +23934,25 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   current status files. The Python package harness now passes 101 tests. This remains
   review-boundary evidence, not package-local runtime promotion, all-language
   coverage, or proof that Java/common V0 covers every inflection type.
+- Two thousand one hundred eighth malformed JSON API-boundary guard: the
+  glossary profile service now normalizes `readTreeUnchecked` parser failures
+  into `IllegalArgumentException` for profile JSON fields and imported
+  profile-pack content, rejects malformed imported content before metadata
+  lookup, and validates stored morphology/forms/provenance objects plus
+  diagnostics arrays before list/export/compile materialization. This closes a
+  REST/MCP 500-risk from malformed input or corrupted stored rows while keeping
+  the current 10,000-profile, 5,000,000-character pack, and 256,000-character
+  field budgets. The focused service gate
+  `mvn -pl webapp -am
+  -Dtest=GlossaryTermInflectionProfileServiceTest
+  -Dsurefire.failIfNoSpecifiedTests=false test` now passes 38 tests, and the
+  broader backend product-integration gate
+  `mvn -pl webapp -am
+  -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest
+  -Dsurefire.failIfNoSpecifiedTests=false test` now passes 87 REST/service/MCP
+  tests. This is current admin/review/export V0 hardening, not larger-pack
+  streaming support, a high-QPS runtime rendering claim, all-language coverage,
+  or a public non-Java runtime API.
 - Next target: triage the remaining full-repo CLI CI failure and design
   paginated/streamed profile-pack handling only if a concrete product caller
   needs locale packs beyond the current 10,000-profile V0 admin/review/export
