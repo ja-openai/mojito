@@ -1644,6 +1644,26 @@ class InflectionReleaseGateTest(unittest.TestCase):
         self.assertEqual(first_slice_args, tracker_first_slice_args)
         self.assertEqual(webapp_args, tracker_webapp_args)
 
+        path_provenance_slice_paths = (
+            "common/src/test/resources/com/box/l10n/mojito/mf2/inflection/germanic_nordic_pack_audit_fixture.json",
+            "common/src/test/resources/com/box/l10n/mojito/mf2/inflection/low_inflection_locale_audit_fixture.json",
+            "dev-docs/design/022-mf2-native-inflection.md",
+            "dev-docs/experiments/mf2-inflection/README.md",
+            "dev-docs/experiments/mf2-inflection/germanic_nordic_pack_audit.py",
+            "dev-docs/experiments/mf2-inflection/germanic_nordic_pack_audit_fixture.json",
+            "dev-docs/experiments/mf2-inflection/locale_data_survey.py",
+            "dev-docs/experiments/mf2-inflection/locale_data_survey_fixture.json",
+            "dev-docs/experiments/mf2-inflection/low_inflection_locale_audit.py",
+            "dev-docs/experiments/mf2-inflection/low_inflection_locale_audit_fixture.json",
+            "dev-docs/experiments/mf2-inflection/nb_noun_metadata_pack.py",
+            "dev-docs/experiments/mf2-inflection/nl_noun_metadata_pack.py",
+            "dev-docs/experiments/mf2-inflection/run_smoke.py",
+            "dev-docs/tracker.md",
+            "mf2/python/tests/test_inflection_release_gate.py",
+        )
+        for path in path_provenance_slice_paths:
+            self.assertTrue((REPO_ROOT / path).exists(), path)
+
         status_paths = self.git_status_paths()
         webapp_status_paths = tuple(
             path for path in status_paths if path.startswith("webapp/")
@@ -1653,24 +1673,8 @@ class InflectionReleaseGateTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            (
-                "common/src/test/resources/com/box/l10n/mojito/mf2/inflection/germanic_nordic_pack_audit_fixture.json",
-                "common/src/test/resources/com/box/l10n/mojito/mf2/inflection/low_inflection_locale_audit_fixture.json",
-                "dev-docs/design/022-mf2-native-inflection.md",
-                "dev-docs/experiments/mf2-inflection/README.md",
-                "dev-docs/experiments/mf2-inflection/germanic_nordic_pack_audit.py",
-                "dev-docs/experiments/mf2-inflection/germanic_nordic_pack_audit_fixture.json",
-                "dev-docs/experiments/mf2-inflection/locale_data_survey.py",
-                "dev-docs/experiments/mf2-inflection/locale_data_survey_fixture.json",
-                "dev-docs/experiments/mf2-inflection/low_inflection_locale_audit.py",
-                "dev-docs/experiments/mf2-inflection/low_inflection_locale_audit_fixture.json",
-                "dev-docs/experiments/mf2-inflection/nb_noun_metadata_pack.py",
-                "dev-docs/experiments/mf2-inflection/nl_noun_metadata_pack.py",
-                "dev-docs/experiments/mf2-inflection/run_smoke.py",
-                "dev-docs/tracker.md",
-                "mf2/python/tests/test_inflection_release_gate.py",
-            ),
-            non_webapp_status_paths,
+            (),
+            self.missing_status_paths(path_provenance_slice_paths, first_slice_args),
         )
         self.assertEqual((), webapp_status_paths)
         self.assertEqual(
@@ -1684,18 +1688,18 @@ class InflectionReleaseGateTest(unittest.TestCase):
 
         for snippet in (
             "Two thousand one hundred third status-to-staging audit after path-provenance cleanup",
-            "15 current non-webapp status files",
-            "0 current webapp status files",
-            "current dirty paths are covered by the pinned review-slice commands",
+            "15 path-provenance slice files",
+            "0 path-provenance webapp slice files",
+            "live dirty paths are covered by the pinned review-slice commands",
             "clean historical staging arguments are allowed",
             "Python package harness now passes 101 tests",
         ):
             self.assertIn(snippet, normalized_design_note)
         for snippet in (
             "Latest status-to-staging audit after path-provenance cleanup",
-            "15 current non-webapp status files",
-            "0 current webapp status files",
-            "current dirty paths are covered by the pinned review-slice commands",
+            "15 path-provenance slice files",
+            "0 path-provenance webapp slice files",
+            "live dirty paths are covered by the pinned review-slice commands",
             "clean historical staging arguments are allowed",
             "Python package harness now passes 101 tests",
         ):

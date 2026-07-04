@@ -23849,15 +23849,15 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
 - Two thousand one hundred third status-to-staging audit after path-provenance
   cleanup:
   `env PYTHONPATH=src python3 tests/test_inflection_release_gate.py InflectionReleaseGateTest.test_current_status_matches_documented_review_slice_commands InflectionReleaseGateTest.test_tracker_current_checkpoint_mentions_latest_release_slice_guards InflectionReleaseGateTest.test_docs_keep_bounded_inflection_claims InflectionReleaseGateTest.test_design_tracker_pin_first_review_slice_boundaries InflectionReleaseGateTest.test_design_tracker_pin_final_slice_readiness_summary InflectionReleaseGateTest.test_inflection_release_wrapper_documents_scope_boundary InflectionReleaseGateTest.test_package_local_inflection_release_scripts_delegate_only_to_shared_gate InflectionReleaseGateTest.test_non_java_package_manifests_do_not_publish_inflection_surfaces`
-  passes 8 focused release-gate tests from `mf2/python`. It rechecks the current
-  dirty tree after replacing branch-local experiment/cache absolute roots with
-  `$MF2_INFLECTION_DATA_CACHE` and `$UNICODE_INFLECTION_ROOT` provenance labels:
-  15 current non-webapp status files and 0 current webapp status files, with the
-  current dirty paths covered by the pinned review-slice commands and clean
-  historical staging arguments allowed. The Python package harness now passes
-  101 tests. This remains review-boundary evidence, not package-local runtime
-  promotion, all-language coverage, or proof that Java/common V0 covers every
-  inflection type.
+  passes 8 focused release-gate tests from `mf2/python`. It pins the
+  path-provenance cleanup after replacing branch-local experiment/cache absolute
+  roots with `$MF2_INFLECTION_DATA_CACHE` and `$UNICODE_INFLECTION_ROOT`
+  provenance labels: 15 path-provenance slice files and 0 path-provenance webapp
+  slice files, and live dirty paths are covered by the pinned review-slice
+  commands with clean historical staging arguments allowed. The Python package
+  harness now passes 101 tests. This remains review-boundary evidence, not
+  package-local runtime promotion, all-language coverage, or proof that
+  Java/common V0 covers every inflection type.
 - Two thousand one hundred fourth Java/common fixture-loader rerun after
   path-provenance cleanup:
   `mvn -pl common -Dtest=GermanicNordicPackAuditJsonLoaderTest,LowInflectionLocaleAuditJsonLoaderTest,GeneratedInflectionFixtureProvenanceTest test`
