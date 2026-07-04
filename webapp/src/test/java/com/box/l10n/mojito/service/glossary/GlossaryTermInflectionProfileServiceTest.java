@@ -138,6 +138,27 @@ public class GlossaryTermInflectionProfileServiceTest {
   }
 
   @Test
+  public void upsertProfileForSystemRejectsLargeProfileJsonBeforeMetadataLookup() {
+    assertThatThrownBy(
+            () ->
+                service.upsertProfileForSystem(
+                    GLOSSARY_ID,
+                    TM_TEXT_UNIT_ID,
+                    new GlossaryTermInflectionProfileService.InflectionProfileInput(
+                        "fr",
+                        "APPROVED",
+                        "x".repeat(256_001),
+                        "{\"bare.singular\":\"warning\"}",
+                        "[]",
+                        "{\"source\":\"manual\"}")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("morphologyJson must be at most 256000 characters");
+
+    verify(glossaryTermMetadataRepository, never()).findByGlossaryIdAndTmTextUnitId(any(), any());
+    verify(profileRepository, never()).save(any(GlossaryTermInflectionProfile.class));
+  }
+
+  @Test
   public void reviewProfileForSystemApprovesGeneratedProfileWithoutRepostingForms() {
     GlossaryTermMetadata metadata = metadata("item.iron_sword", "iron sword");
     GlossaryTermInflectionProfile profile =
@@ -177,6 +198,22 @@ public class GlossaryTermInflectionProfileServiceTest {
     assertThat(profileCaptor.getValue().getStatus())
         .isEqualTo(TermInflectionProfilePackJsonLoader.STATUS_APPROVED);
     assertThat(profileCaptor.getValue().getProvenanceJson()).contains("dictionary-prefill");
+  }
+
+  @Test
+  public void reviewProfileForSystemRejectsLargeProfileJsonBeforeMetadataLookup() {
+    assertThatThrownBy(
+            () ->
+                service.reviewProfileForSystem(
+                    GLOSSARY_ID,
+                    TM_TEXT_UNIT_ID,
+                    new GlossaryTermInflectionProfileService.InflectionProfileReviewInput(
+                        "fr", "APPROVED", null, "x".repeat(256_001), null, null)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("formsJson must be at most 256000 characters");
+
+    verify(glossaryTermMetadataRepository, never()).findByGlossaryIdAndTmTextUnitId(any(), any());
+    verify(profileRepository, never()).save(any(GlossaryTermInflectionProfile.class));
   }
 
   @Test
@@ -1057,6 +1094,16 @@ public class GlossaryTermInflectionProfileServiceTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("at most 10000 profiles")
         .hasMessageContaining("import content has 10001");
+
+    verify(glossaryTermMetadataRepository, never()).findByGlossaryId(GLOSSARY_ID);
+    verify(profileRepository, never()).save(any(GlossaryTermInflectionProfile.class));
+  }
+
+  @Test
+  public void importProfilePackForSystemRejectsLargeContentBeforeMetadataLookup() {
+    assertThatThrownBy(() -> service.importProfilePackForSystem(GLOSSARY_ID, "x".repeat(5_000_001)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("content must be at most 5000000 characters");
 
     verify(glossaryTermMetadataRepository, never()).findByGlossaryId(GLOSSARY_ID);
     verify(profileRepository, never()).save(any(GlossaryTermInflectionProfile.class));

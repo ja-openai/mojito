@@ -38,6 +38,8 @@ public class GlossaryTermInflectionProfileService {
       "closed-world-glossary-approved-profile-forms";
   private static final String COMPILED_PROFILE_PACK_COMPOSITION_MODE = "explicit-form-rows-v0";
   private static final String COMPILED_PROFILE_PACK_DISABLED_REASON = "disabled-profile";
+  private static final int INFLECTION_PROFILE_PACK_IMPORT_CONTENT_MAX_CHARS = 5_000_000;
+  private static final int INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS = 256_000;
   private static final int INFLECTION_PROFILE_PACK_MAX_PROFILE_COUNT = 10_000;
   private static final Pattern SHA256_HEX_PATTERN = Pattern.compile("[0-9a-f]{64}");
 
@@ -88,6 +90,7 @@ public class GlossaryTermInflectionProfileService {
     if (input == null) {
       throw new IllegalArgumentException("Inflection profile input is required");
     }
+    requireProfileJsonFieldsWithinLimit(input);
 
     GlossaryTermMetadata metadata =
         glossaryTermMetadataRepository
@@ -127,6 +130,7 @@ public class GlossaryTermInflectionProfileService {
     if (input == null) {
       throw new IllegalArgumentException("Inflection profile review input is required");
     }
+    requireProfileJsonFieldsWithinLimit(input);
 
     GlossaryTermMetadata metadata =
         glossaryTermMetadataRepository
@@ -215,7 +219,10 @@ public class GlossaryTermInflectionProfileService {
 
   @Transactional
   public InflectionProfileImportResult importProfilePackForSystem(Long glossaryId, String content) {
-    TermInflectionProfilePack pack = profilePackJsonLoader.load(requireText(content, "content"));
+    TermInflectionProfilePack pack =
+        profilePackJsonLoader.load(
+            requireTextWithin(
+                content, "content", INFLECTION_PROFILE_PACK_IMPORT_CONTENT_MAX_CHARS));
     requireProfilePackCountWithinLimit(pack.profiles().size(), "import content");
     Map<String, GlossaryTermMetadata> metadataByTermId = metadataByTermId(glossaryId);
     String localeTag = normalizeLocaleTag(pack.locale());
@@ -538,7 +545,9 @@ public class GlossaryTermInflectionProfileService {
   }
 
   private String canonicalJsonObject(String json, String field) {
-    JsonNode node = requiredJson(json, field);
+    JsonNode node =
+        requiredJson(
+            requireMaxCharacters(json, field, INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS), field);
     if (!node.isObject()) {
       throw new IllegalArgumentException(field + " must be a JSON object");
     }
@@ -547,7 +556,10 @@ public class GlossaryTermInflectionProfileService {
 
   private String canonicalJsonArray(String json, String field) {
     JsonNode node =
-        json == null || json.isBlank() ? objectMapper.createArrayNode() : requiredJson(json, field);
+        json == null || json.isBlank()
+            ? objectMapper.createArrayNode()
+            : requiredJson(
+                requireMaxCharacters(json, field, INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS), field);
     if (!node.isArray()) {
       throw new IllegalArgumentException(field + " must be a JSON array");
     }
@@ -601,6 +613,44 @@ public class GlossaryTermInflectionProfileService {
       throw new IllegalArgumentException(field + " is required");
     }
     return value.trim();
+  }
+
+  private void requireProfileJsonFieldsWithinLimit(InflectionProfileInput input) {
+    optionalTextWithin(
+        input.morphologyJson(), "morphologyJson", INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS);
+    optionalTextWithin(input.formsJson(), "formsJson", INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS);
+    optionalTextWithin(
+        input.diagnosticsJson(), "diagnosticsJson", INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS);
+    optionalTextWithin(
+        input.provenanceJson(), "provenanceJson", INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS);
+  }
+
+  private void requireProfileJsonFieldsWithinLimit(InflectionProfileReviewInput input) {
+    optionalTextWithin(
+        input.morphologyJson(), "morphologyJson", INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS);
+    optionalTextWithin(input.formsJson(), "formsJson", INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS);
+    optionalTextWithin(
+        input.diagnosticsJson(), "diagnosticsJson", INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS);
+    optionalTextWithin(
+        input.provenanceJson(), "provenanceJson", INFLECTION_PROFILE_JSON_FIELD_MAX_CHARS);
+  }
+
+  private static String requireTextWithin(String value, String field, int maxChars) {
+    return requireMaxCharacters(requireText(value, field), field, maxChars);
+  }
+
+  private static String optionalTextWithin(String value, String field, int maxChars) {
+    if (value == null) {
+      return null;
+    }
+    return requireMaxCharacters(value, field, maxChars);
+  }
+
+  private static String requireMaxCharacters(String value, String field, int maxChars) {
+    if (value != null && value.length() > maxChars) {
+      throw new IllegalArgumentException(field + " must be at most " + maxChars + " characters");
+    }
+    return value;
   }
 
   private void requireGlossaryReader() {
