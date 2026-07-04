@@ -728,8 +728,9 @@ export async function fetchInflectionProfiles(
   });
 
   if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || 'Failed to load inflection profiles');
+    throw new Error(
+      await getGlossaryApiErrorMessage(response, 'Failed to load inflection profiles'),
+    );
   }
 
   return (await response.json()) as ApiInflectionProfilesResponse;

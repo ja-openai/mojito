@@ -6,6 +6,7 @@ import {
   type ApiInflectionBindingManifest,
   exportInflectionProfilePack,
   fetchCompiledInflectionProfilePack,
+  fetchInflectionProfiles,
   importInflectionProfiles,
   renderInflectionBindingManifest,
   reportInflectionBindingManifest,
@@ -28,6 +29,30 @@ const manifest: ApiInflectionBindingManifest = {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe('fetchInflectionProfiles', () => {
+  it('surfaces stored profile validation messages from Spring JSON error bodies', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        text: () =>
+          Promise.resolve(
+            JSON.stringify({
+              error: 'Bad Request',
+              message:
+                '400 BAD_REQUEST "Stored inflection profile formsJson for stored locale fr must be valid JSON"',
+              status: 400,
+            }),
+          ),
+      }),
+    );
+
+    await expect(fetchInflectionProfiles(42, 'fr')).rejects.toThrow(
+      'Stored inflection profile formsJson for stored locale fr must be valid JSON',
+    );
+  });
 });
 
 describe('reportInflectionBindingManifest', () => {
