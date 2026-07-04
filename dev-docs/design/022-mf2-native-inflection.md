@@ -1094,12 +1094,13 @@ legacy, or JVM caller is named.
 
 Java/common runtime performance evidence is intentionally opt-in rather than a
 default CI threshold: `Mf2InflectionPerformanceSmokeTest` exercises the public
-`Mf2TermRenderer` facade with generated compiled-pack fixtures, reports warmed
-render throughput plus retained heap delta, and fails only when explicitly
-enabled with `-Dmojito.test.mf2InflectionPerfSmoke=true` and the configurable
-retained-heap ceiling is exceeded. This is a smoke/leak-risk check for the
-current admin/review/export V0 path, not a proof that per-request runtime
-rendering is ready for high-QPS product hot paths.
+`Mf2TermRenderer.renderBoundMessage` facade with a schema-gated binding manifest
+and generated compiled-pack fixture, reports warmed render throughput plus
+retained heap delta, and fails only when explicitly enabled with
+`-Dmojito.test.mf2InflectionPerfSmoke=true` and the configurable retained-heap
+ceiling is exceeded. This is a smoke/leak-risk check for the current
+admin/review/export V0 path, not a proof that per-request runtime rendering is
+ready for high-QPS product hot paths.
 
 Scope boundary: this is not "all inflection types" and not all Unicode/CLDR
 languages. The production-quality claim is limited to the checked Java/common

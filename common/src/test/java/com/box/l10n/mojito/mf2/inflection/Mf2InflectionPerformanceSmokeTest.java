@@ -40,27 +40,36 @@ public class Mf2InflectionPerformanceSmokeTest {
                 .load(
                     readResource(
                         "com/box/l10n/mojito/mf2/inflection/es_compiled_article_pack_fixture.json")));
+    TermRequirementJsonLoader.TermUsageCatalog usageCatalog =
+        new TermRequirementJsonLoader.TermUsageCatalog(
+            TermRequirementJsonLoader.MESSAGE_TERM_BINDING_MANIFEST_SCHEMA,
+            "es",
+            Map.of(
+                "definite-one",
+                "Has eliminado {$item :term article=definite count=$count}.",
+                "definite-other",
+                "Has eliminado {$item :term article=definite count=$count}.",
+                "indefinite-one",
+                "Has encontrado {$item :term article=indefinite count=$count}."),
+            Map.of(
+                "definite-one",
+                Map.of("item", List.of("item.water")),
+                "definite-other",
+                Map.of("item", List.of("item.bee")),
+                "indefinite-one",
+                Map.of("item", List.of("item.poppy"))));
     List<RenderCase> cases =
         List.of(
-            new RenderCase(
-                "Has eliminado {$item :term article=definite count=$count}.",
-                Map.of("item", "item.water"),
-                Map.of("count", "1")),
-            new RenderCase(
-                "Has eliminado {$item :term article=definite count=$count}.",
-                Map.of("item", "item.bee"),
-                Map.of("count", "2")),
-            new RenderCase(
-                "Has encontrado {$item :term article=indefinite count=$count}.",
-                Map.of("item", "item.poppy"),
-                Map.of("count", "1")));
+            new RenderCase("definite-one", Map.of("count", "1")),
+            new RenderCase("definite-other", Map.of("count", "2")),
+            new RenderCase("indefinite-one", Map.of("count", "1")));
 
-    int checksum = renderLoop(renderer, cases, warmupIterations);
+    int checksum = renderLoop(renderer, usageCatalog, cases, warmupIterations);
     gcAndPause();
     long heapBeforeBytes = usedHeapBytes();
     long startedNanos = System.nanoTime();
 
-    checksum += renderLoop(renderer, cases, iterations);
+    checksum += renderLoop(renderer, usageCatalog, cases, iterations);
 
     long elapsedNanos = System.nanoTime() - startedNanos;
     gcAndPause();
@@ -83,14 +92,17 @@ public class Mf2InflectionPerformanceSmokeTest {
     assertThat(retainedHeapDeltaKb).isLessThanOrEqualTo(maxRetainedHeapKb);
   }
 
-  private int renderLoop(Mf2TermRenderer renderer, List<RenderCase> cases, int iterations) {
+  private int renderLoop(
+      Mf2TermRenderer renderer,
+      TermRequirementJsonLoader.TermUsageCatalog usageCatalog,
+      List<RenderCase> cases,
+      int iterations) {
     int checksum = 0;
     for (int i = 0; i < iterations; i++) {
       RenderCase renderCase = cases.get(i % cases.size());
       checksum +=
           renderer
-              .renderMessage(
-                  renderCase.message(), renderCase.termArguments(), renderCase.variables())
+              .renderBoundMessage(usageCatalog, renderCase.messageId(), renderCase.variables())
               .length();
     }
     return checksum;
@@ -117,6 +129,5 @@ public class Mf2InflectionPerformanceSmokeTest {
     }
   }
 
-  private record RenderCase(
-      String message, Map<String, String> termArguments, Map<String, String> variables) {}
+  private record RenderCase(String messageId, Map<String, String> variables) {}
 }
