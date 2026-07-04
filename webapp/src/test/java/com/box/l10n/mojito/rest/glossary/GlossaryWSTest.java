@@ -1048,6 +1048,28 @@ public class GlossaryWSTest {
   }
 
   @Test
+  public void importInflectionProfilesMapsImportedProfileFieldCap() {
+    when(glossaryTermInflectionProfileService.importProfilePack(1L, "{\"schema\":\"pack\"}"))
+        .thenThrow(
+            new IllegalArgumentException(
+                "Imported inflection profile morphologyJson for term item.iron_sword must be at"
+                    + " most 256000 characters"));
+
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                glossaryWS.importInflectionProfiles(
+                    1L, new GlossaryWS.ImportInflectionProfilesRequest("{\"schema\":\"pack\"}")));
+
+    assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    assertEquals(
+        "Imported inflection profile morphologyJson for term item.iron_sword must be at most"
+            + " 256000 characters",
+        exception.getReason());
+  }
+
+  @Test
   public void importInflectionProfilesRejectsLargeContentBeforeServiceLookup() {
     ResponseStatusException exception =
         assertThrows(
