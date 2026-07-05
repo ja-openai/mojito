@@ -2422,8 +2422,9 @@ chooses a binding. The backend now also exposes a render-preview endpoint for
 the same manifest shape at
 `POST /api/glossaries/{glossaryId}/inflection-profiles/bindings/render`: it
 loads the approved compiled profile pack, reuses the pack-aware binding
-validator, and returns rendered messages only when every required argument has a
-single known term ID. Runtime variables are validated at the REST boundary:
+validator, binds each message with `bindRenderableBoundMessage(...)`, and
+returns rendered messages only when every required argument has a single known
+term ID. Runtime variables are validated at the REST boundary:
 names must be MF2-style identifiers and values must be non-null before the
 renderer resolves placeholders or count references. Workbench now collects
 runtime variable values referenced by term options, such as `count=$count`, and
@@ -23954,11 +23955,23 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   public renderer hot path only; it is not a profiler-backed benchmark, a soak
   test, a memory-leak certification, all-locale coverage, or non-Java runtime
   support.
-- Next target: review whether the webapp binding-render endpoint should pre-bind
-  each message before repeated previews or leave the convenience method because
-  it currently renders each message once per request, then implement a real
-  non-Java M2IF reader/renderer only for a product-needed native library or
-  continue locale/runtime work only from product-backed requirements.
+- Two thousand one hundred seventeenth webapp binding-render endpoint review:
+  `POST /api/glossaries/{glossaryId}/inflection-profiles/bindings/render` now
+  binds each message through `bindRenderableBoundMessage(...)` before rendering
+  with the reusable `BoundMessage` handle. This aligns the product preview path
+  with the Java/common public hot-path boundary while still rendering each
+  message once per request and without adding a process-wide cache, new locale
+  coverage, or package-local non-Java runtime APIs.
+- Two thousand one hundred eighteenth webapp binding-render controller refresh:
+  `mvn -pl webapp -am -Dtest=GlossaryWSTest -Dsurefire.failIfNoSpecifiedTests=false test`
+  passes 33 focused controller tests after the endpoint switched to explicit
+  `BoundMessage` rendering. This is product-integration evidence for the
+  Java/common V0 preview path only; it is not all-locale coverage or
+  package-local non-Java runtime promotion.
+- Next target: review release-fixture/API-boundary evidence after the webapp
+  bound-render alignment, then implement a real non-Java M2IF reader/renderer
+  only for a product-needed native library or continue locale/runtime work only
+  from product-backed requirements.
 - Production formatting uses term IDs or declared dictionaries, not unqualified
   bare words.
 - Build-time validation expands message usages and catches missing term

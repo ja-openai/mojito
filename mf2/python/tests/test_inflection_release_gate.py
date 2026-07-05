@@ -1396,7 +1396,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Python package harness at 101 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current bound-render hot-path slice touches 10 non-webapp files plus 0 webapp files covered by the focused 24-test Java/common suite",
+            "current webapp binding-render endpoint slice touches 3 non-webapp files plus 1 webapp file covered by the focused 33-test `GlossaryWSTest` controller suite",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
@@ -1671,12 +1671,15 @@ class InflectionReleaseGateTest(unittest.TestCase):
         non_webapp_status_paths = tuple(
             path for path in status_paths if not path.startswith("webapp/")
         )
+        current_webapp_endpoint_slice_paths = (
+            "webapp/src/main/java/com/box/l10n/mojito/rest/glossary/GlossaryWS.java",
+        )
 
         self.assertEqual(
             (),
             self.missing_status_paths(path_provenance_slice_paths, first_slice_args),
         )
-        self.assertEqual((), webapp_status_paths)
+        self.assertIn(webapp_status_paths, ((), current_webapp_endpoint_slice_paths))
         self.assertEqual(
             (),
             self.missing_status_paths(non_webapp_status_paths, first_slice_args),

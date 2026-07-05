@@ -1309,8 +1309,9 @@ public class GlossaryWS {
       Map<String, String> variables = renderVariables(request);
       Map<String, String> renderedMessages = new LinkedHashMap<>();
       for (String messageId : localizedCatalog.messages().keySet()) {
-        renderedMessages.put(
-            messageId, renderer.renderBoundMessage(localizedCatalog, messageId, variables));
+        Mf2TermRenderer.BoundMessage boundMessage =
+            renderer.bindRenderableBoundMessage(localizedCatalog, messageId);
+        renderedMessages.put(messageId, renderer.renderBoundMessage(boundMessage, variables));
       }
       return new InflectionBindingManifestRenderResponse(
           localizedCatalog.locale(), Collections.unmodifiableMap(renderedMessages));
