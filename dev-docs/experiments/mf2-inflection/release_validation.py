@@ -827,7 +827,12 @@ def validate_artifact(artifact: dict[str, Any], base_dir: Path) -> dict[str, str
 
 
 def load_manifest(path: Path) -> dict[str, Any]:
-    manifest = load_json(path)
+    try:
+        manifest = load_json(path)
+    except OSError as error:
+        raise ReleaseValidationError(
+            f"Release validation manifest is unreadable: {path.name}"
+        ) from error
     manifest_label = path.name
     require_exact_keys(manifest, {"artifacts", "schema"}, manifest_label)
     schema = require_text(manifest.get("schema"), f"{manifest_label}.schema")
