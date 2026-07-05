@@ -880,6 +880,16 @@ def validate_manifest(manifest_path: Path, base_dir: Path) -> dict[str, Any]:
     }
 
 
+def write_report(path: Path, payload: str) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(payload, encoding="utf-8")
+    except OSError as error:
+        raise ReleaseValidationError(
+            f"Release validation report is unwritable: {path.name or '.'}"
+        ) from error
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", required=True, type=Path)
@@ -904,8 +914,11 @@ def main() -> int:
 
     payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     if args.out:
-        args.out.parent.mkdir(parents=True, exist_ok=True)
-        args.out.write_text(payload, encoding="utf-8")
+        try:
+            write_report(args.out, payload)
+        except ReleaseValidationError as error:
+            print(f"Release validation failed: {error}", file=sys.stderr)
+            return 1
     else:
         print(payload, end="")
 

@@ -24174,6 +24174,17 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   harness now passes 116 tests. This tightens release-fixture failure-mode
   coverage only; it does not add locale coverage, certify memory leaks, or
   promote package-local non-Java runtime APIs.
+- Two thousand one hundred thirty-ninth release-validator report-write
+  diagnostic guard: `release_validation.py` now wraps `--out` parent creation
+  and report writes as `Release validation report is unwritable: <filename>`,
+  avoiding raw `OSError` tracebacks and temp-directory leakage when validation
+  succeeds but the report destination is invalid.
+  `test_release_validator_rejects_unwritable_report_without_traceback` pins that
+  CLI failure with a directory-valued `--out` target, no stdout, no traceback,
+  and no broad coverage/API claims in stderr. The Python package harness now
+  passes 117 tests. This tightens release-report output diagnostics only; it
+  does not add locale coverage, certify memory leaks, or promote package-local
+  non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.
