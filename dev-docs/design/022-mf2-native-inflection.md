@@ -24000,9 +24000,25 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   API/release/binding slice passes 50 tests after adding this guard. This locks
   the Java/common release validator boundary without adding locale coverage or
   package-local non-Java runtime APIs.
+- Two thousand one hundred twenty-second Java/common Hindi bound-render
+  performance smoke: `Mf2InflectionPerformanceSmokeTest` now has opt-in smoke
+  scenarios for both the Spanish compiled-term binding path and the Hindi
+  pronoun-dependency binding path. The default focused renderer/API/performance
+  gate
+  `mvn -pl common -Dtest=Mf2TermRendererTest,Mf2InflectionPerformanceSmokeTest,Mf2InflectionApiSurfaceTest test`
+  passes 27 tests with the two smoke scenarios skipped by default, and the
+  enabled smoke
+  `mvn -pl common -Dtest=Mf2InflectionPerformanceSmokeTest -Dmojito.test.mf2InflectionPerfSmoke=true test`
+  rendered 20,000 post-warmup Spanish compiled messages at about 941,627
+  renders/sec with a 75 KB retained heap delta and 20,000 Hindi pronoun
+  messages at about 424,998 renders/sec with a 60 KB retained heap delta. This
+  is bounded
+  Java/common V0 smoke evidence only; it is not a profiler-backed benchmark, a
+  soak test, memory-leak certification, all-locale coverage, or non-Java runtime
+  support.
 - Next target: continue release-fixture and failure-mode review inside checked
-  V0 scope, especially malformed manifest/report diagnostics plus
-  performance/memory risk evidence that remains bounded to Java/common V0.
+  V0 scope, especially malformed manifest/report diagnostics and release-wrapper
+  failure-mode coverage.
 - Production formatting uses term IDs or declared dictionaries, not unqualified
   bare words.
 - Build-time validation expands message usages and catches missing term

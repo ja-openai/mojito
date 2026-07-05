@@ -25,16 +25,8 @@ public class Mf2InflectionPerformanceSmokeTest {
   private static final long DEFAULT_MAX_RETAINED_HEAP_KB = 16 * 1024;
 
   @Test
-  public void rendersBoundMessagesWithoutExcessiveRetainedHeapGrowth() {
-    assumeTrue(
-        "Set -D" + ENABLED_PROPERTY + "=true to run the MF2 inflection performance smoke.",
-        Boolean.getBoolean(ENABLED_PROPERTY));
-
-    int iterations = positiveIntProperty(ITERATIONS_PROPERTY, DEFAULT_ITERATIONS);
-    int warmupIterations =
-        positiveIntProperty(WARMUP_ITERATIONS_PROPERTY, DEFAULT_WARMUP_ITERATIONS);
-    long maxRetainedHeapKb =
-        positiveLongProperty(MAX_RETAINED_HEAP_KB_PROPERTY, DEFAULT_MAX_RETAINED_HEAP_KB);
+  public void rendersCompiledBoundMessagesWithoutExcessiveRetainedHeapGrowth() {
+    SmokeOptions options = smokeOptions();
     Mf2TermRenderer renderer =
         Mf2TermRenderer.forCompiledTerms(
             compiledTermPack(
@@ -58,28 +50,89 @@ public class Mf2InflectionPerformanceSmokeTest {
     Map<String, String> singular = Map.of("count", "1");
     Map<String, String> plural = Map.of("count", "2");
 
+    renderSmoke(
+        "compiled-es", renderer, usageCatalog, "inventory.deleted", options, singular, plural);
+  }
+
+  @Test
+  public void rendersHindiBoundMessagesWithoutExcessiveRetainedHeapGrowth() {
+    SmokeOptions options = smokeOptions();
+    Mf2TermRenderer renderer =
+        Mf2TermRenderer.forHindi(
+            compiledTermPack(
+                "com/box/l10n/mojito/mf2/inflection/hi_compiled_case_form_pack_fixture.json"),
+            hindiPronounAgreementPack());
+    TermUsageCatalog usageCatalog =
+        usageCatalog(
+            """
+            {
+              "schema": "mojito-mf2-inflection/message-term-binding-manifest/v0",
+              "locale": "hi",
+              "messages": {
+                "inventory.owner": "{$owner :term person=first case=genitive count=$ownerCount agreeWith=$item agreeWithCount=$itemCount} {$item :term case=direct count=$itemCount}."
+              },
+              "argumentTerms": {
+                "inventory.owner": {
+                  "item": ["hi.case.\\u0905\\u0902\\u0917\\u093E\\u0930\\u093E"]
+                }
+              }
+            }
+            """);
+    Map<String, String> singularOwnerPluralItem = Map.of("ownerCount", "1", "itemCount", "2");
+    Map<String, String> pluralOwnerSingularItem = Map.of("ownerCount", "2", "itemCount", "1");
+
+    renderSmoke(
+        "hindi-pronoun",
+        renderer,
+        usageCatalog,
+        "inventory.owner",
+        options,
+        singularOwnerPluralItem,
+        pluralOwnerSingularItem);
+  }
+
+  private static SmokeOptions smokeOptions() {
+    assumeTrue(
+        "Set -D" + ENABLED_PROPERTY + "=true to run the MF2 inflection performance smoke.",
+        Boolean.getBoolean(ENABLED_PROPERTY));
+    return new SmokeOptions(
+        positiveIntProperty(ITERATIONS_PROPERTY, DEFAULT_ITERATIONS),
+        positiveIntProperty(WARMUP_ITERATIONS_PROPERTY, DEFAULT_WARMUP_ITERATIONS),
+        positiveLongProperty(MAX_RETAINED_HEAP_KB_PROPERTY, DEFAULT_MAX_RETAINED_HEAP_KB));
+  }
+
+  private static void renderSmoke(
+      String scenario,
+      Mf2TermRenderer renderer,
+      TermUsageCatalog usageCatalog,
+      String messageId,
+      SmokeOptions options,
+      Map<String, String> variablesA,
+      Map<String, String> variablesB) {
     Mf2TermRenderer.BoundMessage boundMessage =
-        renderer.bindRenderableBoundMessage(usageCatalog, "inventory.deleted");
-    renderLoop(renderer, boundMessage, warmupIterations, singular, plural);
+        renderer.bindRenderableBoundMessage(usageCatalog, messageId);
+    renderLoop(renderer, boundMessage, options.warmupIterations(), variablesA, variablesB);
     long beforeHeapBytes = usedHeapAfterGc();
     long startedAtNanos = System.nanoTime();
-    long checksum = renderLoop(renderer, boundMessage, iterations, singular, plural);
+    long checksum =
+        renderLoop(renderer, boundMessage, options.iterations(), variablesA, variablesB);
     long elapsedNanos = System.nanoTime() - startedAtNanos;
     long retainedHeapDeltaKb = Math.max(0, (usedHeapAfterGc() - beforeHeapBytes) / 1024);
-    double rendersPerSecond = iterations / Math.max(1.0e-9, elapsedNanos / 1.0e9);
+    double rendersPerSecond = options.iterations() / Math.max(1.0e-9, elapsedNanos / 1.0e9);
 
     System.out.printf(
         Locale.ROOT,
-        "MF2 inflection renderer smoke iterations=%d warmup=%d rendersPerSecond=%.1f"
-            + " elapsedMs=%d retainedHeapDeltaKb=%d checksum=%d%n",
-        iterations,
-        warmupIterations,
+        "MF2 inflection renderer smoke scenario=%s iterations=%d warmup=%d"
+            + " rendersPerSecond=%.1f elapsedMs=%d retainedHeapDeltaKb=%d checksum=%d%n",
+        scenario,
+        options.iterations(),
+        options.warmupIterations(),
         rendersPerSecond,
         elapsedNanos / 1_000_000,
         retainedHeapDeltaKb,
         checksum);
     assertThat(checksum).isGreaterThan(0);
-    assertThat(retainedHeapDeltaKb).isLessThanOrEqualTo(maxRetainedHeapKb);
+    assertThat(retainedHeapDeltaKb).isLessThanOrEqualTo(options.maxRetainedHeapKb());
   }
 
   private static long renderLoop(
@@ -137,6 +190,16 @@ public class Mf2InflectionPerformanceSmokeTest {
   private static TermUsageCatalog usageCatalog(String json) {
     return new TermRequirementJsonLoader().loadUsageCatalog(json);
   }
+
+  private static HindiPronounAgreementPackJsonLoader.HindiPronounAgreementPack
+      hindiPronounAgreementPack() {
+    return new HindiPronounAgreementPackJsonLoader()
+        .load(
+            readResource(
+                "com/box/l10n/mojito/mf2/inflection/hi_pronoun_agreement_pack_fixture.json"));
+  }
+
+  private record SmokeOptions(int iterations, int warmupIterations, long maxRetainedHeapKb) {}
 
   private static String readResource(String path) {
     try (InputStream inputStream =
