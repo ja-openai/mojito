@@ -24016,6 +24016,16 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   Java/common V0 smoke evidence only; it is not a profiler-backed benchmark, a
   soak test, memory-leak certification, all-locale coverage, or non-Java runtime
   support.
+- Two thousand one hundred twenty-third release-wrapper report-summary integer
+  guard: `validate_inflection_release_fixture.py` now rejects non-integer
+  `release-validation-report.json` summary counts before comparing all-pass
+  totals, so JSON floats and booleans cannot satisfy the fixture contract
+  through Python equality.
+  `test_inflection_release_wrapper_rejects_non_integer_report_summary_counts`
+  covers `artifacts`, `passed`, and `failed` summary rows. The Python package
+  harness now passes 102 tests. This tightens release-fixture failure-mode
+  coverage only; it does not add locale coverage, certify memory leaks, or
+  promote package-local non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.

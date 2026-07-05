@@ -177,6 +177,12 @@ def require_text(value: Any, label: str) -> str:
     return value
 
 
+def require_non_negative_int(value: Any, label: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ValueError(f"Expected non-negative integer: {label}")
+    return value
+
+
 def reject_unexpected_keys(item: dict[str, Any], expected_keys: frozenset[str], label: str) -> None:
     unexpected_keys = sorted(set(item) - expected_keys)
     if unexpected_keys:
@@ -467,12 +473,24 @@ def validate_materialized_bundle(out_dir: Path) -> dict[str, Any]:
         EXPECTED_REPORT_SUMMARY_KEYS,
         f"{REPORT_FILE}.summary",
     )
-    if summary.get("artifacts") != EXPECTED_ARTIFACTS:
+    summary_artifacts = require_non_negative_int(
+        summary.get("artifacts"),
+        f"{REPORT_FILE}.summary.artifacts",
+    )
+    summary_passed = require_non_negative_int(
+        summary.get("passed"),
+        f"{REPORT_FILE}.summary.passed",
+    )
+    summary_failed = require_non_negative_int(
+        summary.get("failed"),
+        f"{REPORT_FILE}.summary.failed",
+    )
+    if summary_artifacts != EXPECTED_ARTIFACTS:
         raise ValueError(
             f"Expected {EXPECTED_ARTIFACTS} {REPORT_FILE} summary artifacts, "
-            f"got {summary.get('artifacts')!r}"
+            f"got {summary_artifacts!r}"
         )
-    if summary.get("passed") != EXPECTED_ARTIFACTS or summary.get("failed") != 0:
+    if summary_passed != EXPECTED_ARTIFACTS or summary_failed != 0:
         raise ValueError(
             f"Expected all {REPORT_FILE} artifacts to pass, got {summary!r}"
         )

@@ -13,6 +13,7 @@ import tomllib
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import mojito_mf2
 
@@ -1161,7 +1162,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 101 tests",
+            "the Python package harness at 102 tests",
             normalized_tracker,
         )
 
@@ -1214,7 +1215,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 101 tests",
+            "the Python package harness at 102 tests",
             normalized_tracker,
         )
 
@@ -1300,7 +1301,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
         self.assertNotIn("webapp/", design_command)
         self.assertNotIn("webapp/", tracker_command)
         self.assertIn(
-            "the Python package harness at 101 tests",
+            "the Python package harness at 102 tests",
             normalized_tracker,
         )
 
@@ -1393,6 +1394,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "first-slice readiness release-boundary wording guard",
             "release-validator nested API-surface guard",
             "Hindi bound-render performance smoke",
+            "release-wrapper report-summary integer guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -1410,10 +1412,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             self.assertIn(snippet, normalized_tracker)
         for snippet in (
             "Verification snapshot: current focused gates pass",
-            "the Python package harness at 101 tests",
+            "the Python package harness at 102 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current Hindi bound-render performance smoke slice touches 4 non-webapp files plus 0 webapp files covered by the focused 27-test Java/common renderer/API/performance suite",
+            "current release-wrapper report-summary integer guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused release-wrapper summary-count regression",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
@@ -2587,6 +2589,32 @@ class InflectionReleaseGateTest(unittest.TestCase):
             ):
                 wrapper.validate_materialized_bundle(base_dir)
 
+    def test_inflection_release_wrapper_rejects_non_integer_report_summary_counts(self) -> None:
+        wrapper = self.load_release_fixture_wrapper()
+        cases = (
+            ("artifacts", float(wrapper.EXPECTED_ARTIFACTS)),
+            ("passed", float(wrapper.EXPECTED_ARTIFACTS)),
+            ("failed", False),
+        )
+        with tempfile.TemporaryDirectory(prefix="mojito-mf2-inflection-wrapper-test-") as tmp:
+            root_dir = Path(tmp)
+            for field, value in cases:
+                with self.subTest(field=field):
+                    base_dir = root_dir / field
+                    base_dir.mkdir()
+                    self.write_release_wrapper_bundle(
+                        base_dir,
+                        wrapper,
+                        report_summary_overrides={field: value},
+                    )
+
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        rf"Expected non-negative integer: release-validation-report"
+                        rf"\.json\.summary\.{field}",
+                    ):
+                        wrapper.validate_materialized_bundle(base_dir)
+
     def test_inflection_release_wrapper_rejects_report_summary_shape(self) -> None:
         wrapper = self.load_release_fixture_wrapper()
         with tempfile.TemporaryDirectory(prefix="mojito-mf2-inflection-wrapper-test-") as tmp:
@@ -3008,7 +3036,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
         wrapper,
         manifest_overrides: dict[str, dict[str, str]] | None = None,
         report_overrides: dict[str, dict[str, str]] | None = None,
-        report_summary_overrides: dict[str, int] | None = None,
+        report_summary_overrides: dict[str, Any] | None = None,
         manifest_schema: str | None = None,
         report_schema: str | None = None,
         omitted_manifest_artifact_ids: set[str] | None = None,
