@@ -24063,6 +24063,15 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   This tightens malformed report-row failure-mode diagnostics only; it does not
   add locale coverage, certify memory leaks, or promote package-local non-Java
   runtime APIs.
+- Two thousand one hundred twenty-eighth release-wrapper summary-count
+  consistency guard: `validate_inflection_release_fixture.py` now rejects
+  `release-validation-report.json` summaries whose `passed + failed` total does
+  not equal `artifacts` before applying the all-pass fixture assertion.
+  `test_inflection_release_wrapper_rejects_report_summary_count_mismatch` pins
+  the direct summary-count diagnostic, and the Python package harness now passes
+  106 tests. This tightens release-report failure-mode diagnostics only; it does
+  not add locale coverage, certify memory leaks, or promote package-local
+  non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.

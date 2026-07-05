@@ -487,6 +487,13 @@ def validate_materialized_bundle(out_dir: Path) -> dict[str, Any]:
         summary.get("failed"),
         f"{REPORT_FILE}.summary.failed",
     )
+    if summary_passed + summary_failed != summary_artifacts:
+        raise ValueError(
+            f"{REPORT_FILE} summary counts must add up: "
+            f"artifacts={summary_artifacts!r} "
+            f"passed={summary_passed!r} "
+            f"failed={summary_failed!r}"
+        )
     if summary_artifacts != EXPECTED_ARTIFACTS:
         raise ValueError(
             f"Expected {EXPECTED_ARTIFACTS} {REPORT_FILE} summary artifacts, "

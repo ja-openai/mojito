@@ -1162,7 +1162,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 105 tests",
+            "the Python package harness at 106 tests",
             normalized_tracker,
         )
 
@@ -1215,7 +1215,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 105 tests",
+            "the Python package harness at 106 tests",
             normalized_tracker,
         )
 
@@ -1301,7 +1301,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
         self.assertNotIn("webapp/", design_command)
         self.assertNotIn("webapp/", tracker_command)
         self.assertIn(
-            "the Python package harness at 105 tests",
+            "the Python package harness at 106 tests",
             normalized_tracker,
         )
 
@@ -1399,6 +1399,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-wrapper schema field-type guard",
             "release-wrapper required-field omission guard",
             "release-wrapper report-status precedence guard",
+            "release-wrapper summary-count consistency guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -1416,10 +1417,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             self.assertIn(snippet, normalized_tracker)
         for snippet in (
             "Verification snapshot: current focused gates pass",
-            "the Python package harness at 105 tests",
+            "the Python package harness at 106 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-wrapper report-status precedence guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused failed-report-row status precedence regression",
+            "current release-wrapper summary-count consistency guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused report-summary arithmetic regression",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
@@ -2609,6 +2610,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
                 wrapper,
                 report_summary_overrides={
                     "artifacts": wrapper.EXPECTED_ARTIFACTS - 1,
+                    "passed": wrapper.EXPECTED_ARTIFACTS - 1,
                 },
             )
 
@@ -2643,6 +2645,26 @@ class InflectionReleaseGateTest(unittest.TestCase):
                         rf"\.json\.summary\.{field}",
                     ):
                         wrapper.validate_materialized_bundle(base_dir)
+
+    def test_inflection_release_wrapper_rejects_report_summary_count_mismatch(self) -> None:
+        wrapper = self.load_release_fixture_wrapper()
+        with tempfile.TemporaryDirectory(prefix="mojito-mf2-inflection-wrapper-test-") as tmp:
+            base_dir = Path(tmp)
+            self.write_release_wrapper_bundle(
+                base_dir,
+                wrapper,
+                report_summary_overrides={
+                    "passed": wrapper.EXPECTED_ARTIFACTS,
+                    "failed": 1,
+                },
+            )
+
+            with self.assertRaisesRegex(
+                ValueError,
+                r"release-validation-report\.json summary counts must add up: "
+                r"artifacts=35 passed=35 failed=1",
+            ):
+                wrapper.validate_materialized_bundle(base_dir)
 
     def test_inflection_release_wrapper_rejects_report_summary_shape(self) -> None:
         wrapper = self.load_release_fixture_wrapper()
