@@ -23991,9 +23991,18 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   the artifact row shape `artifactId`, `kind`, `status`, `code`, and `message`.
   This tightens diagnostic hygiene for the shared release wrapper without
   changing release artifacts, locale coverage, or non-Java runtime APIs.
+- Two thousand one hundred twenty-first Java/common release-validator nested
+  API-surface guard: `Mf2InflectionApiSurfaceTest` now pins
+  `Mf2InflectionReleaseValidator` public methods, public nested DTO/enums, enum
+  constants, record components, `ReleaseArtifact` public factories, and keeps
+  `ArtifactResult` row factories package-private. The focused Java/common
+  API-surface gate passes 9 tests, and the current combined Java/common
+  API/release/binding slice passes 50 tests after adding this guard. This locks
+  the Java/common release validator boundary without adding locale coverage or
+  package-local non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
-  V0 scope, especially malformed manifest/report diagnostics and Java/common
-  public API boundaries.
+  V0 scope, especially malformed manifest/report diagnostics plus
+  performance/memory risk evidence that remains bounded to Java/common V0.
 - Production formatting uses term IDs or declared dictionaries, not unqualified
   bare words.
 - Build-time validation expands message usages and catches missing term

@@ -150,6 +150,70 @@ public class Mf2InflectionApiSurfaceTest {
   }
 
   @Test
+  public void releaseValidatorNestedApiSurfaceStaysNarrow() {
+    Set<String> publicNestedTypes =
+        Stream.of(Mf2InflectionReleaseValidator.class.getClasses())
+            .filter(type -> Mf2InflectionReleaseValidator.class.equals(type.getDeclaringClass()))
+            .map(Class::getSimpleName)
+            .collect(Collectors.toCollection(TreeSet::new));
+    assertThat(publicNestedTypes)
+        .containsExactly(
+            "ArtifactKind",
+            "ArtifactResult",
+            "ArtifactStatus",
+            "ReleaseArtifact",
+            "ReleaseValidationReport",
+            "Summary");
+
+    assertThat(publicMethodSignatures(Mf2InflectionReleaseValidator.class))
+        .containsExactly(
+            "validate(java.util.List):"
+                + Mf2InflectionReleaseValidator.ReleaseValidationReport.class.getName(),
+            "validateManifest(java.lang.String,java.nio.file.Path):"
+                + Mf2InflectionReleaseValidator.ReleaseValidationReport.class.getName(),
+            "writeJson("
+                + Mf2InflectionReleaseValidator.ReleaseValidationReport.class.getName()
+                + "):java.lang.String");
+    assertThat(Stream.of(Mf2InflectionReleaseValidator.ArtifactKind.values()).map(Enum::name))
+        .containsExactly(
+            "COMPILED_TERM_PACK_JSON",
+            "COMPILED_TERM_PACK_M2IF",
+            "HINDI_PRONOUN_AGREEMENT_PACK_JSON");
+    assertThat(Stream.of(Mf2InflectionReleaseValidator.ArtifactStatus.values()).map(Enum::name))
+        .containsExactly("PASSED", "FAILED");
+
+    assertRecordComponents(
+        Mf2InflectionReleaseValidator.ReleaseArtifact.class,
+        "artifactId:java.lang.String",
+        "kind:" + Mf2InflectionReleaseValidator.ArtifactKind.class.getName(),
+        "json:java.lang.String",
+        "bytes:[B");
+    assertRecordComponents(
+        Mf2InflectionReleaseValidator.ReleaseValidationReport.class,
+        "artifacts:java.util.List",
+        "summary:" + Mf2InflectionReleaseValidator.Summary.class.getName());
+    assertRecordComponents(
+        Mf2InflectionReleaseValidator.ArtifactResult.class,
+        "artifactId:java.lang.String",
+        "kind:" + Mf2InflectionReleaseValidator.ArtifactKind.class.getName(),
+        "status:" + Mf2InflectionReleaseValidator.ArtifactStatus.class.getName(),
+        "code:java.lang.String",
+        "message:java.lang.String");
+    assertRecordComponents(
+        Mf2InflectionReleaseValidator.Summary.class, "artifacts:int", "passed:int", "failed:int");
+    assertThat(publicStaticMethodSignatures(Mf2InflectionReleaseValidator.ReleaseArtifact.class))
+        .containsExactly(
+            "compiledTermPackJson(java.lang.String,java.lang.String):"
+                + Mf2InflectionReleaseValidator.ReleaseArtifact.class.getName(),
+            "compiledTermPackM2if(java.lang.String,[B):"
+                + Mf2InflectionReleaseValidator.ReleaseArtifact.class.getName(),
+            "hindiPronounAgreementPackJson(java.lang.String,java.lang.String):"
+                + Mf2InflectionReleaseValidator.ReleaseArtifact.class.getName());
+    assertThat(publicStaticMethodSignatures(Mf2InflectionReleaseValidator.ArtifactResult.class))
+        .isEmpty();
+  }
+
+  @Test
   public void generatorSupportClassesRemainPackagePrivateAndExplicitlyMarked() throws Exception {
     Set<String> markedClasses = new TreeSet<>();
     for (String className : topLevelMainClassNames()) {
@@ -309,6 +373,37 @@ public class Mf2InflectionApiSurfaceTest {
       return moduleRelative;
     }
     return Path.of("common/src/main/java", PACKAGE_NAME.replace('.', '/'));
+  }
+
+  private void assertRecordComponents(Class<?> recordType, String... expectedComponents) {
+    assertThat(recordType.isRecord()).as(recordType.getName() + " must stay a record").isTrue();
+    assertThat(
+            Stream.of(recordType.getRecordComponents())
+                .map(component -> component.getName() + ":" + component.getType().getName()))
+        .containsExactly(expectedComponents);
+  }
+
+  private List<String> publicMethodSignatures(Class<?> type) {
+    return Stream.of(type.getDeclaredMethods())
+        .filter(method -> Modifier.isPublic(method.getModifiers()))
+        .map(this::methodSignature)
+        .sorted()
+        .toList();
+  }
+
+  private List<String> publicStaticMethodSignatures(Class<?> type) {
+    return Stream.of(type.getDeclaredMethods())
+        .filter(method -> Modifier.isPublic(method.getModifiers()))
+        .filter(method -> Modifier.isStatic(method.getModifiers()))
+        .map(this::methodSignature)
+        .sorted()
+        .toList();
+  }
+
+  private String methodSignature(Method method) {
+    String parameterTypes =
+        Stream.of(method.getParameterTypes()).map(Class::getName).collect(Collectors.joining(","));
+    return method.getName() + "(" + parameterTypes + "):" + method.getReturnType().getName();
   }
 
   private boolean hasPublicMain(Class<?> type) {

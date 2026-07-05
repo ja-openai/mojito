@@ -1391,6 +1391,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "public README command-surface wording guard",
             "bundle source-map expected/actual diagnostic guard",
             "first-slice readiness release-boundary wording guard",
+            "release-validator nested API-surface guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -1411,7 +1412,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Python package harness at 101 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-wrapper failure-message path hygiene slice touches 4 non-webapp files plus 0 webapp files covered by the failed-row Python release test",
+            "current release-validator nested API-surface guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused 9-test Java/common API-surface suite",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
