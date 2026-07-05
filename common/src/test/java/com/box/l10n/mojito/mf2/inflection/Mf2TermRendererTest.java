@@ -165,6 +165,39 @@ public class Mf2TermRendererTest {
   }
 
   @Test
+  public void rejectsUnsupportedBoundMessageTermOptionsAtFacadeBoundary() {
+    Mf2TermRenderer renderer = Mf2TermRenderer.forCompiledTerms(spanishTermPack());
+    TermUsageCatalog usageCatalog =
+        usageCatalog(
+            """
+            {
+              "schema": "mojito-mf2-inflection/message-term-binding-manifest/v0",
+              "locale": "es",
+              "messages": {
+                "inventory.deleted": "Has eliminado {$item :term role=source}."
+              },
+              "argumentTerms": {
+                "inventory.deleted": {
+                  "item": ["item.water"]
+                }
+              }
+            }
+            """);
+
+    assertThatThrownBy(
+            () ->
+                renderer.renderBoundMessage(
+                    usageCatalog, "inventory.deleted", Map.of("count", "1")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Unsupported term option: role");
+
+    assertThatThrownBy(
+            () -> renderer.requireRenderableBoundMessage(usageCatalog, "inventory.deleted"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Unsupported term option: role");
+  }
+
+  @Test
   public void rendersSingletonBindingManifestThroughFacade() {
     Mf2TermRenderer renderer = Mf2TermRenderer.forCompiledTerms(spanishTermPack());
 

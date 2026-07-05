@@ -23877,6 +23877,12 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   heap delta after warmup. This is bounded smoke evidence for the Java/common V0
   public renderer only; it is not a profiler-backed benchmark, a soak test, a
   memory-leak certification, all-locale coverage, or non-Java runtime support.
+- Two thousand one hundred sixth Java/common facade failure-mode guard:
+  `Mf2TermRendererTest` now checks that schema-gated `renderBoundMessage` and
+  `requireRenderableBoundMessage` reject an unsupported `:term` option with the
+  stable `Unsupported term option: role` diagnostic at the public API boundary.
+  This tightens failure-mode evidence without widening V0 locale coverage or
+  promoting package-local non-Java runtime APIs.
 - Next target: push the portable path-provenance cleanup, then implement a real
   non-Java M2IF reader/renderer only for a product-needed native library or
   continue locale/runtime work only from product-backed requirements.
