@@ -3085,9 +3085,10 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   experiment scripts, design docs, Python wrapper tests, frontend utilities, and
   glossary-profile backend files from this branch's inflection work. A
   whole-tree tracked `git diff --check` and an explicit untracked-file
-  `git diff --no-index --check` loop both produced no whitespace findings, and
-  generated Python `__pycache__` directories remain cleaned after the combined
-  smoke.
+  `git diff --no-index --check` loop both produced no whitespace findings.
+  Ignored Python `__pycache__` directories are local test/build artifacts outside
+  the tracked release boundary and should be cleaned before any export workflow
+  that includes ignored files.
 - Forty-first product-surface boundary checkpoint: the admin glossary
   inflection-review header now says checked V0 compiled export, and the
   `AdminGlossaryDetailPage` product-surface test pins that wording beside the
