@@ -157,13 +157,13 @@ public class Mf2InflectionReleaseValidator {
           manifestArtifact.artifactId(),
           manifestArtifact.kind(),
           "unreadable-release-artifact",
-          errorMessage(e));
+          unreadableArtifactMessage(manifestArtifact));
     } catch (SecurityException e) {
       return ArtifactResult.failed(
           manifestArtifact.artifactId(),
           manifestArtifact.kind(),
           "unreadable-release-artifact",
-          errorMessage(e));
+          unreadableArtifactMessage(manifestArtifact));
     } catch (RuntimeException e) {
       return ArtifactResult.failed(
           manifestArtifact.artifactId(),
@@ -185,6 +185,10 @@ public class Mf2InflectionReleaseValidator {
       throw new IllegalArgumentException(
           "Release validation baseDirectory must be readable: " + baseDirectory, e);
     }
+  }
+
+  private String unreadableArtifactMessage(ReleaseManifestArtifact manifestArtifact) {
+    return "Release artifact is unreadable: " + manifestArtifact.path();
   }
 
   private Path resolveManifestPath(Path basePath, String manifestPath) throws IOException {

@@ -705,7 +705,8 @@ public class Mf2InflectionReleaseValidatorTest {
         .containsExactly(
             tuple("missing-json", "unreadable-release-artifact"),
             tuple("escaped-json", "invalid-release-artifact-path"));
-    assertThat(report.artifacts().getFirst().message()).contains("missing.json");
+    assertThat(report.artifacts().getFirst().message())
+        .isEqualTo("Release artifact is unreadable: missing.json");
     assertThat(report.artifacts().getLast().message())
         .isEqualTo("Release artifact path must stay under baseDirectory: ../outside.json");
   }
