@@ -2075,6 +2075,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-validator report-write allow-failures guard",
             "release-validator report immutability guard",
             "release-wrapper absolute manifest-path hygiene guard",
+            "Java/common invalid manifest-path syntax guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -2095,11 +2096,12 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Python package harness at 118 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-wrapper absolute manifest-path hygiene guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused wrapper absolute-path regression, shared 35-artifact release wrapper, and Python release/doc guard",
-            "Latest absolute-path hygiene refresh",
+            "current absolute/invalid manifest-path hygiene guard slice touches 6 non-webapp files plus 0 webapp files covered by the focused Java release-validator absolute/invalid-path regressions, focused wrapper absolute-path regression, shared 35-artifact release wrapper, and Python release/doc guard",
+            "Latest absolute/invalid-path hygiene refresh",
             "POSIX absolute and Windows-style qualified/rooted manifest artifact paths",
             "including drive-relative paths such as `C:artifact.json`",
             "Java/common release validation now applies the same POSIX/Windows-style qualified/rooted manifest-path rejection",
+            "also routes invalid manifest path syntax to `invalid-release-artifact-path`",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
