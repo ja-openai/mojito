@@ -53,6 +53,12 @@ def require_object(value: Any, label: str) -> dict[str, Any]:
     return value
 
 
+def require_exact_keys(value: dict[str, Any], expected_keys: set[str], label: str) -> None:
+    unexpected_keys = sorted(set(value) - expected_keys)
+    if unexpected_keys:
+        raise ReleaseValidationError(f"Unexpected keys in {label}: {unexpected_keys}")
+
+
 def require_array(value: Any, label: str) -> list[Any]:
     if not isinstance(value, list):
         raise ReleaseValidationError(f"Expected array: {label}")
@@ -823,6 +829,7 @@ def validate_artifact(artifact: dict[str, Any], base_dir: Path) -> dict[str, str
 def load_manifest(path: Path) -> dict[str, Any]:
     manifest = load_json(path)
     manifest_label = path.name
+    require_exact_keys(manifest, {"artifacts", "schema"}, manifest_label)
     schema = require_text(manifest.get("schema"), f"{manifest_label}.schema")
     if schema != MANIFEST_SCHEMA:
         raise ReleaseValidationError(f"Unsupported release validation manifest schema: {schema}")
@@ -833,6 +840,7 @@ def load_manifest(path: Path) -> dict[str, Any]:
     ):
         artifact_label = f"{manifest_label}.artifacts[{index}]"
         item = require_object(artifact, artifact_label)
+        require_exact_keys(item, {"artifactId", "kind", "path"}, artifact_label)
         artifact_id = require_text(item.get("artifactId"), f"{artifact_label}.artifactId")
         if artifact_id in seen_artifact_ids:
             raise ReleaseValidationError(f"Duplicate release manifest artifact ID: {artifact_id}")

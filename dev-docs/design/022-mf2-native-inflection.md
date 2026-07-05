@@ -24134,6 +24134,16 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   harness now passes 112 tests. This tightens generator manifest failure-mode
   diagnostics only; it does not add locale coverage, certify memory leaks, or
   promote package-local non-Java runtime APIs.
+- Two thousand one hundred thirty-fifth release-validator exact-key diagnostic
+  guard: `release_validation.py` now rejects unexpected top-level manifest keys
+  and unexpected manifest artifact-row keys before artifact validation.
+  `test_release_validator_rejects_unexpected_manifest_keys_without_report` pins
+  file- and row-qualified one-line CLI diagnostics for extra `generatedAt` and
+  `checksum` fields, with no traceback and no partially written `--out` report
+  even with `--allow-failures`. The Python package harness now passes 113 tests.
+  This tightens generator manifest failure-mode diagnostics only; it does not
+  add locale coverage, certify memory leaks, or promote package-local non-Java
+  runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.
