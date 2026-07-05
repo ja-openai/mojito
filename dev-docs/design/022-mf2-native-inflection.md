@@ -24072,6 +24072,15 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   106 tests. This tightens release-report failure-mode diagnostics only; it does
   not add locale coverage, certify memory leaks, or promote package-local
   non-Java runtime APIs.
+- Two thousand one hundred twenty-ninth release-validator mixed-summary
+  derivation guard:
+  `test_release_report_summary_is_derived_from_mixed_artifact_rows` now runs the
+  shared `release_validation.py` generator with one valid compiled JSON pack and
+  one invalid compiled JSON pack, then pins the emitted report summary to
+  `artifacts=2`, `passed=1`, and `failed=1` with rows sorted as failed then
+  passed. The Python package harness now passes 107 tests. This tightens
+  generated release-report summary derivation only; it does not add locale
+  coverage, certify memory leaks, or promote package-local non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.

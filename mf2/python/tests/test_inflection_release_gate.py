@@ -918,6 +918,74 @@ class InflectionReleaseGateTest(unittest.TestCase):
                 for phrase in forbidden_claim_phrases:
                     self.assertNotIn(phrase, normalized_row)
 
+    def test_release_report_summary_is_derived_from_mixed_artifact_rows(self) -> None:
+        valid_fixture = (
+            REPO_ROOT
+            / "common/src/test/resources/com/box/l10n/mojito/mf2/inflection"
+            / "es_compiled_article_pack_fixture.json"
+        )
+        with tempfile.TemporaryDirectory(prefix="mojito-mf2-inflection-release-test-") as tmp:
+            base_dir = Path(tmp)
+            (base_dir / "valid.json").write_text(
+                valid_fixture.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            (base_dir / "invalid.json").write_text("{}\n", encoding="utf-8")
+            manifest_path = base_dir / "release-validation-manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "schema": "mojito-mf2-inflection/release-validation-manifest/v0",
+                        "artifacts": [
+                            {
+                                "artifactId": "valid-json",
+                                "kind": "compiled-term-pack-json",
+                                "path": "valid.json",
+                            },
+                            {
+                                "artifactId": "invalid-json",
+                                "kind": "compiled-term-pack-json",
+                                "path": "invalid.json",
+                            },
+                        ],
+                    },
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    "python3",
+                    str(RELEASE_VALIDATION),
+                    "--manifest",
+                    str(manifest_path),
+                    "--base-dir",
+                    str(base_dir),
+                    "--allow-failures",
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+        self.assertEqual("", result.stderr)
+        self.assertEqual(0, result.returncode, result.stdout)
+        report = json.loads(result.stdout)
+        self.assertEqual({"artifacts", "passed", "failed"}, set(report["summary"]))
+        self.assertEqual(2, report["summary"]["artifacts"])
+        self.assertEqual(1, report["summary"]["passed"])
+        self.assertEqual(1, report["summary"]["failed"])
+        self.assertEqual(
+            ["invalid-json", "valid-json"],
+            [row["artifactId"] for row in report["artifacts"]],
+        )
+        self.assertEqual(
+            ["failed", "passed"],
+            [row["status"] for row in report["artifacts"]],
+        )
+
     def test_inflection_release_wrapper_documents_scope_boundary(self) -> None:
         wrapper_source = RELEASE_FIXTURE_WRAPPER.read_text(encoding="utf-8")
         root_readme = (REPO_ROOT / "mf2/README.md").read_text(encoding="utf-8")
@@ -1162,7 +1230,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 106 tests",
+            "the Python package harness at 107 tests",
             normalized_tracker,
         )
 
@@ -1215,7 +1283,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 106 tests",
+            "the Python package harness at 107 tests",
             normalized_tracker,
         )
 
@@ -1301,7 +1369,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
         self.assertNotIn("webapp/", design_command)
         self.assertNotIn("webapp/", tracker_command)
         self.assertIn(
-            "the Python package harness at 106 tests",
+            "the Python package harness at 107 tests",
             normalized_tracker,
         )
 
@@ -1400,6 +1468,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-wrapper required-field omission guard",
             "release-wrapper report-status precedence guard",
             "release-wrapper summary-count consistency guard",
+            "release-validator mixed-summary derivation guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -1417,10 +1486,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             self.assertIn(snippet, normalized_tracker)
         for snippet in (
             "Verification snapshot: current focused gates pass",
-            "the Python package harness at 106 tests",
+            "the Python package harness at 107 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-wrapper summary-count consistency guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused report-summary arithmetic regression",
+            "current release-validator mixed-summary derivation guard slice touches 3 non-webapp files plus 0 webapp files covered by the focused mixed pass/fail report summary regression",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
