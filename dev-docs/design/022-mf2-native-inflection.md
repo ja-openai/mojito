@@ -23890,7 +23890,13 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   without reading the outside artifact. This tightens release-fixture containment
   evidence only; it does not expand runtime locale coverage or non-Java API
   support.
-- Next target: continue release-validation diagnostic/report invariant review,
+- Two thousand one hundred eighth Java/common report-invariant guard:
+  `Mf2InflectionReleaseValidatorTest` now checks that direct
+  `ReleaseValidationReport` construction rejects duplicate artifact IDs before a
+  report can be serialized. This pins the public in-memory report boundary
+  independently of manifest validation and does not expand locale, grammar, or
+  non-Java runtime coverage.
+- Next target: continue malformed-manifest and base-directory diagnostic review,
   then implement a real non-Java M2IF reader/renderer only for a product-needed
   native library or continue locale/runtime work only from product-backed
   requirements.

@@ -346,6 +346,16 @@ public class Mf2InflectionReleaseValidatorTest {
   }
 
   @Test
+  public void rejectsDuplicateReleaseReportArtifactRows() {
+    ArtifactResult json = ArtifactResult.passed("terms", ArtifactKind.COMPILED_TERM_PACK_JSON);
+    ArtifactResult m2if = ArtifactResult.passed("terms", ArtifactKind.COMPILED_TERM_PACK_M2IF);
+
+    assertThatThrownBy(() -> new ReleaseValidationReport(List.of(json, m2if)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Duplicate release artifact IDs: [terms]");
+  }
+
+  @Test
   public void rejectsNullReleaseReportArtifactRows() {
     assertThatThrownBy(() -> new ReleaseValidationReport(Collections.singletonList(null)))
         .isInstanceOf(NullPointerException.class)
