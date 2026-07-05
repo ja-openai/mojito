@@ -529,6 +529,16 @@ public class Mf2InflectionReleaseValidatorTest {
   }
 
   @Test
+  public void rejectsMalformedReleaseValidationManifestJson() throws Exception {
+    Path baseDirectory = temporaryFolder.newFolder("release").toPath();
+
+    assertThatThrownBy(() -> validator.validateManifest("{", baseDirectory))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Invalid release validation manifest JSON")
+        .hasCauseInstanceOf(UncheckedIOException.class);
+  }
+
+  @Test
   public void rejectsNonTextReleaseValidationManifestFields() throws Exception {
     Path baseDirectory = temporaryFolder.newFolder("release").toPath();
 

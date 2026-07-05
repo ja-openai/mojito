@@ -23908,7 +23908,13 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   `Expected nonblank text field` diagnostics. This pins malformed-manifest API
   boundary behavior only; it does not expand locale, grammar, or non-Java
   runtime coverage.
-- Next target: continue malformed JSON parse and unreadable-manifest diagnostics,
+- Two thousand one hundred eleventh Java/common malformed-manifest JSON guard:
+  `Mf2InflectionReleaseValidator` now wraps invalid manifest JSON with stable
+  `Invalid release validation manifest JSON` diagnostics at the string-based
+  Java API boundary. File-based missing/invalid UTF-8 manifest checks remain in
+  the shared release wrapper; this guard does not widen runtime locale coverage
+  or publish package-local non-Java APIs.
+- Next target: continue unreadable artifact and release report JSON diagnostics,
   then implement a real non-Java M2IF reader/renderer only for a product-needed
   native library or continue locale/runtime work only from product-backed
   requirements.

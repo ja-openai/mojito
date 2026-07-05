@@ -3,6 +3,7 @@ package com.box.l10n.mojito.mf2.inflection;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -86,9 +87,7 @@ public class Mf2InflectionReleaseValidator {
   public ReleaseValidationReport validateManifest(String manifestJson, Path baseDirectory) {
     Objects.requireNonNull(manifestJson, "manifestJson");
     Objects.requireNonNull(baseDirectory, "baseDirectory");
-    JsonNode root =
-        InflectionJsonFields.requiredObjectRoot(
-            objectMapper.readTreeUnchecked(manifestJson), "release validation manifest");
+    JsonNode root = readManifestRoot(manifestJson);
     String schema = InflectionJsonFields.requiredText(root, "schema");
     if (!MANIFEST_SCHEMA.equals(schema)) {
       throw new IllegalArgumentException(
@@ -107,6 +106,15 @@ public class Mf2InflectionReleaseValidator {
       results.add(validateManifestArtifact(manifestArtifact, basePath));
     }
     return new ReleaseValidationReport(results);
+  }
+
+  private JsonNode readManifestRoot(String manifestJson) {
+    try {
+      return InflectionJsonFields.requiredObjectRoot(
+          objectMapper.readTreeUnchecked(manifestJson), "release validation manifest");
+    } catch (UncheckedIOException e) {
+      throw new IllegalArgumentException("Invalid release validation manifest JSON", e);
+    }
   }
 
   public String writeJson(ReleaseValidationReport report) {
