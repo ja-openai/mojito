@@ -1040,6 +1040,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
                     str(base_dir),
                     "--out",
                     str(report_path),
+                    "--allow-failures",
                 ],
                 text=True,
                 capture_output=True,
@@ -2071,6 +2072,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-validator shape diagnostic guard",
             "release-validator missing-manifest diagnostic guard",
             "release-validator report-write diagnostic guard",
+            "release-validator report-write allow-failures guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -2091,7 +2093,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Python package harness at 117 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-validator report-write diagnostic guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused unwritable report CLI diagnostic regression",
+            "current release-validator report-write allow-failures guard slice touches 3 non-webapp files plus 0 webapp files covered by the focused unwritable report allow-failures CLI regression",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
