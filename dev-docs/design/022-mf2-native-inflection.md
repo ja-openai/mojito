@@ -24034,6 +24034,15 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   from stderr. This tightens wrapper CLI diagnostics only; it does not add
   locale coverage, certify memory leaks, or promote package-local non-Java
   runtime APIs.
+- Two thousand one hundred twenty-fifth release-wrapper schema field-type guard:
+  `validate_inflection_release_fixture.py` now checks manifest and report
+  `schema` fields with the same non-empty text validator used for row fields
+  before comparing schema IDs.
+  `test_inflection_release_wrapper_rejects_non_text_manifest_report_schema`
+  pins non-text manifest and report schema diagnostics, and the Python package
+  harness now passes 103 tests. This tightens malformed manifest/report
+  failure-mode coverage only; it does not add locale coverage, certify memory
+  leaks, or promote package-local non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.

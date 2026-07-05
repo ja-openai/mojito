@@ -395,10 +395,9 @@ def validate_bundle_script_artifact_specs() -> None:
 def validate_materialized_bundle(out_dir: Path) -> dict[str, Any]:
     manifest = load_json(out_dir / MANIFEST_FILE)
     reject_unexpected_keys(manifest, EXPECTED_MANIFEST_KEYS, MANIFEST_FILE)
-    if manifest.get("schema") != EXPECTED_MANIFEST_SCHEMA:
-        raise ValueError(
-            f"Unexpected {MANIFEST_FILE} schema: {manifest.get('schema')!r}"
-        )
+    manifest_schema = require_text(manifest.get("schema"), f"{MANIFEST_FILE}.schema")
+    if manifest_schema != EXPECTED_MANIFEST_SCHEMA:
+        raise ValueError(f"Unexpected {MANIFEST_FILE} schema: {manifest_schema!r}")
 
     manifest_artifacts = require_array(manifest.get("artifacts"), f"{MANIFEST_FILE}.artifacts")
     if len(manifest_artifacts) != EXPECTED_ARTIFACTS:
@@ -466,10 +465,9 @@ def validate_materialized_bundle(out_dir: Path) -> dict[str, Any]:
 
     report = load_json(out_dir / REPORT_FILE)
     reject_unexpected_keys(report, EXPECTED_REPORT_KEYS, REPORT_FILE)
-    if report.get("schema") != EXPECTED_REPORT_SCHEMA:
-        raise ValueError(
-            f"Unexpected {REPORT_FILE} schema: {report.get('schema')!r}"
-        )
+    report_schema = require_text(report.get("schema"), f"{REPORT_FILE}.schema")
+    if report_schema != EXPECTED_REPORT_SCHEMA:
+        raise ValueError(f"Unexpected {REPORT_FILE} schema: {report_schema!r}")
 
     summary = require_object(report.get("summary"), f"{REPORT_FILE}.summary")
     reject_unexpected_keys(

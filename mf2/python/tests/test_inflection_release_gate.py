@@ -1162,7 +1162,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 102 tests",
+            "the Python package harness at 103 tests",
             normalized_tracker,
         )
 
@@ -1215,7 +1215,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 102 tests",
+            "the Python package harness at 103 tests",
             normalized_tracker,
         )
 
@@ -1301,7 +1301,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
         self.assertNotIn("webapp/", design_command)
         self.assertNotIn("webapp/", tracker_command)
         self.assertIn(
-            "the Python package harness at 102 tests",
+            "the Python package harness at 103 tests",
             normalized_tracker,
         )
 
@@ -1396,6 +1396,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "Hindi bound-render performance smoke",
             "release-wrapper report-summary integer guard",
             "release-wrapper missing-script path hygiene guard",
+            "release-wrapper schema field-type guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -1413,10 +1414,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             self.assertIn(snippet, normalized_tracker)
         for snippet in (
             "Verification snapshot: current focused gates pass",
-            "the Python package harness at 102 tests",
+            "the Python package harness at 103 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-wrapper missing-script path hygiene guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused wrapper-main missing-script regression",
+            "current release-wrapper schema field-type guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused manifest/report schema type regression",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
@@ -2192,6 +2193,26 @@ class InflectionReleaseGateTest(unittest.TestCase):
                 "Unexpected release-validation-manifest.json schema",
             ):
                 wrapper.validate_materialized_bundle(base_dir)
+
+    def test_inflection_release_wrapper_rejects_non_text_manifest_report_schema(self) -> None:
+        wrapper = self.load_release_fixture_wrapper()
+        cases = (
+            ("manifest", {"manifest_schema": 7}, "release-validation-manifest.json.schema"),
+            ("report", {"report_schema": 7}, "release-validation-report.json.schema"),
+        )
+        with tempfile.TemporaryDirectory(prefix="mojito-mf2-inflection-wrapper-test-") as tmp:
+            root_dir = Path(tmp)
+            for label, overrides, expected_field in cases:
+                with self.subTest(label=label):
+                    base_dir = root_dir / label
+                    base_dir.mkdir()
+                    self.write_release_wrapper_bundle(base_dir, wrapper, **overrides)
+
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        rf"Expected non-empty text: {re.escape(expected_field)}",
+                    ):
+                        wrapper.validate_materialized_bundle(base_dir)
 
     def test_inflection_release_wrapper_rejects_manifest_artifact_count_drift(self) -> None:
         wrapper = self.load_release_fixture_wrapper()
@@ -3043,8 +3064,8 @@ class InflectionReleaseGateTest(unittest.TestCase):
         manifest_overrides: dict[str, dict[str, str]] | None = None,
         report_overrides: dict[str, dict[str, str]] | None = None,
         report_summary_overrides: dict[str, Any] | None = None,
-        manifest_schema: str | None = None,
-        report_schema: str | None = None,
+        manifest_schema: Any | None = None,
+        report_schema: Any | None = None,
         omitted_manifest_artifact_ids: set[str] | None = None,
         omitted_report_artifact_ids: set[str] | None = None,
         omitted_materialized_artifact_ids: set[str] | None = None,
