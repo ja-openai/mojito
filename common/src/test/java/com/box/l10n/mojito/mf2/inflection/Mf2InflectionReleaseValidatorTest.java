@@ -529,6 +529,72 @@ public class Mf2InflectionReleaseValidatorTest {
   }
 
   @Test
+  public void rejectsNonTextReleaseValidationManifestFields() throws Exception {
+    Path baseDirectory = temporaryFolder.newFolder("release").toPath();
+
+    assertThatThrownBy(
+            () ->
+                validator.validateManifest(
+                    """
+                    {
+                      "schema" : 1,
+                      "artifacts" : []
+                    }
+                    """,
+                    baseDirectory))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Expected nonblank text field: schema");
+    assertThatThrownBy(
+            () ->
+                validator.validateManifest(
+                    """
+                    {
+                      "schema" : "mojito-mf2-inflection/release-validation-manifest/v0",
+                      "artifacts" : [ {
+                        "artifactId" : {},
+                        "kind" : "compiled-term-pack-json",
+                        "path" : "terms.json"
+                      } ]
+                    }
+                    """,
+                    baseDirectory))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Expected nonblank text field: artifactId");
+    assertThatThrownBy(
+            () ->
+                validator.validateManifest(
+                    """
+                    {
+                      "schema" : "mojito-mf2-inflection/release-validation-manifest/v0",
+                      "artifacts" : [ {
+                        "artifactId" : "terms",
+                        "kind" : 1,
+                        "path" : "terms.json"
+                      } ]
+                    }
+                    """,
+                    baseDirectory))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Expected nonblank text field: kind");
+    assertThatThrownBy(
+            () ->
+                validator.validateManifest(
+                    """
+                    {
+                      "schema" : "mojito-mf2-inflection/release-validation-manifest/v0",
+                      "artifacts" : [ {
+                        "artifactId" : "terms",
+                        "kind" : "compiled-term-pack-json",
+                        "path" : []
+                      } ]
+                    }
+                    """,
+                    baseDirectory))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Expected nonblank text field: path");
+  }
+
+  @Test
   public void rejectsBlankManifestArtifactFields() throws Exception {
     Path baseDirectory = temporaryFolder.newFolder("release").toPath();
 

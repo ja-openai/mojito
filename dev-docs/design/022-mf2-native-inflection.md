@@ -23902,7 +23902,13 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   before an empty manifest can produce a passing report. This tightens release
   fixture API-boundary diagnostics only; it does not widen V0 runtime locale
   coverage or publish package-local non-Java APIs.
-- Next target: continue malformed-manifest field-type diagnostic review,
+- Two thousand one hundred tenth Java/common manifest field-type diagnostic
+  guard: `Mf2InflectionReleaseValidatorTest` now checks that non-text
+  `schema`, `artifactId`, `kind`, and `path` manifest fields fail with stable
+  `Expected nonblank text field` diagnostics. This pins malformed-manifest API
+  boundary behavior only; it does not expand locale, grammar, or non-Java
+  runtime coverage.
+- Next target: continue malformed JSON parse and unreadable-manifest diagnostics,
   then implement a real non-Java M2IF reader/renderer only for a product-needed
   native library or continue locale/runtime work only from product-backed
   requirements.
