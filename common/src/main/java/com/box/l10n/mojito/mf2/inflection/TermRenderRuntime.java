@@ -31,8 +31,8 @@ final class TermRenderRuntime {
       throw new IllegalArgumentException("Unknown bound message: " + messageId);
     }
 
-    Set<String> bindingArguments =
-        termBindingArguments(usageCatalog.locale(), message, termUsageExtractor);
+    List<TermUsageExtractor.TermUsage> termUsages = termUsageExtractor.extract(message);
+    Set<String> bindingArguments = termBindingArguments(usageCatalog.locale(), termUsages);
     Map<String, List<String>> manifestBindings =
         usageCatalog.argumentTerms().getOrDefault(messageId, Map.of());
     Map<String, String> termArguments = new LinkedHashMap<>();
@@ -61,7 +61,7 @@ final class TermRenderRuntime {
       }
     }
 
-    return new BoundMessage(message, termArguments);
+    return new BoundMessage(message, termArguments, termUsages);
   }
 
   static TermRequirementJsonLoader.TermUsageCatalog singleMessageCatalog(
@@ -89,18 +89,36 @@ final class TermRenderRuntime {
 
     Set<String> arguments = new LinkedHashSet<>();
     for (TermUsageExtractor.TermUsage usage : termUsageExtractor.extract(message)) {
-      if (HindiPronounTermOptions.isPronounUsage(locale, usage.options())) {
-        String agreeWith = usage.options().get(HindiPronounTermOptions.AGREE_WITH);
-        if (agreeWith != null) {
-          arguments.add(
-              HindiPronounTermOptions.variableReferenceName(
-                  agreeWith, HindiPronounTermOptions.AGREE_WITH));
-        }
-      } else {
-        arguments.add(usage.argument());
+      String bindingArgument = termBindingArgument(locale, usage);
+      if (bindingArgument != null) {
+        arguments.add(bindingArgument);
       }
     }
     return Collections.unmodifiableSet(new LinkedHashSet<>(arguments));
+  }
+
+  private static Set<String> termBindingArguments(
+      String locale, List<TermUsageExtractor.TermUsage> usages) {
+    Set<String> arguments = new LinkedHashSet<>();
+    for (TermUsageExtractor.TermUsage usage : usages) {
+      String bindingArgument = termBindingArgument(locale, usage);
+      if (bindingArgument != null) {
+        arguments.add(bindingArgument);
+      }
+    }
+    return Collections.unmodifiableSet(new LinkedHashSet<>(arguments));
+  }
+
+  private static String termBindingArgument(String locale, TermUsageExtractor.TermUsage usage) {
+    if (HindiPronounTermOptions.isPronounUsage(locale, usage.options())) {
+      String agreeWith = usage.options().get(HindiPronounTermOptions.AGREE_WITH);
+      if (agreeWith != null) {
+        return HindiPronounTermOptions.variableReferenceName(
+            agreeWith, HindiPronounTermOptions.AGREE_WITH);
+      }
+      return null;
+    }
+    return usage.argument();
   }
 
   static String renderPattern(String value, Map<String, String> variables) {
@@ -145,13 +163,17 @@ final class TermRenderRuntime {
     }
   }
 
-  record BoundMessage(String message, Map<String, String> termArguments) {
+  record BoundMessage(
+      String message,
+      Map<String, String> termArguments,
+      List<TermUsageExtractor.TermUsage> termUsages) {
 
     BoundMessage {
       message = Objects.requireNonNull(message, "message");
       termArguments =
           Collections.unmodifiableMap(
               new LinkedHashMap<>(Objects.requireNonNull(termArguments, "termArguments")));
+      termUsages = List.copyOf(Objects.requireNonNull(termUsages, "termUsages"));
     }
   }
 }

@@ -23936,11 +23936,29 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   `npm run inflection-release` all pass with `artifacts=35 failed=0`. This
   refreshes release-boundary evidence only; it does not promote package-local
   non-Java runtime APIs or claim complete locale/grammar coverage.
-- Next target: review performance, memory, and leak-risk evidence after the
-  release-boundary refresh,
-  then implement a real non-Java M2IF reader/renderer only for a product-needed
-  native library or continue locale/runtime work only from product-backed
-  requirements.
+- Two thousand one hundred fifteenth Java/common bound-render hot-path guard:
+  `Mf2TermRenderer` now exposes a reusable `BoundMessage` handle from
+  `bindRenderableBoundMessage(...)`, and `Mf2TermRendererTest` asserts repeated
+  `renderBoundMessage(boundMessage, variables)` calls do not re-extract MF2 term
+  usages and reject a bound message from another renderer. This gives product
+  callers an explicit no-reparse path without adding a process-wide cache or
+  widening package-local non-Java runtime APIs.
+- Two thousand one hundred sixteenth Java/common bound-render performance smoke:
+  `mvn -pl common -Dtest=Mf2TermRendererTest,Mf2InflectionPerformanceSmokeTest,Mf2InflectionApiSurfaceTest test`
+  passes 24 tests with the opt-in smoke skipped by default, and
+  `mvn -pl common -Dtest=Mf2InflectionPerformanceSmokeTest -Dmojito.test.mf2InflectionPerfSmoke=true test`
+  passes the enabled public bound-message render smoke against the Spanish
+  singleton binding manifest fixture. The local enabled run rendered 20,000
+  post-warmup messages at about 1,104,548 renders/sec with a 0 KB retained heap
+  delta after warmup. This is bounded smoke evidence for the Java/common V0
+  public renderer hot path only; it is not a profiler-backed benchmark, a soak
+  test, a memory-leak certification, all-locale coverage, or non-Java runtime
+  support.
+- Next target: review whether the webapp binding-render endpoint should pre-bind
+  each message before repeated previews or leave the convenience method because
+  it currently renders each message once per request, then implement a real
+  non-Java M2IF reader/renderer only for a product-needed native library or
+  continue locale/runtime work only from product-backed requirements.
 - Production formatting uses term IDs or declared dictionaries, not unqualified
   bare words.
 - Build-time validation expands message usages and catches missing term
@@ -23951,7 +23969,11 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   and fallback behavior.
 - Imported data has recorded source, license, version, and generator command.
 - Data is locale-packaged so clients do not ship every language.
-- Hot paths use compiled term matchers, not raw MF2 parsing per render.
+- Repeated production renders should bind once via
+  `Mf2TermRenderer.bindRenderableBoundMessage(...)` and render with
+  `renderBoundMessage(BoundMessage, variables)`, avoiding per-render MF2 term
+  extraction and process-wide caches. Raw-message and convenience methods remain
+  validation/preview helpers.
 
 ## Open Questions
 

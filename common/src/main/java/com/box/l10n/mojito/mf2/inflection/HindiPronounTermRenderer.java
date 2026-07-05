@@ -3,6 +3,7 @@ package com.box.l10n.mojito.mf2.inflection;
 import com.box.l10n.mojito.mf2.inflection.CompiledTermMetadataIndex.TermMetadata;
 import com.box.l10n.mojito.mf2.inflection.HindiPronounAgreementPackJsonLoader.HindiPronounAgreementPack;
 import com.box.l10n.mojito.mf2.inflection.HindiPronounAgreementPackJsonLoader.Request;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -36,10 +37,25 @@ class HindiPronounTermRenderer {
     Objects.requireNonNull(message, "message");
     Objects.requireNonNull(termArguments, "termArguments");
     Objects.requireNonNull(variables, "variables");
+    return renderMessage(message, termArguments, termUsageExtractor.extract(message), variables);
+  }
 
+  String renderBoundMessage(
+      TermRenderRuntime.BoundMessage boundMessage, Map<String, String> variables) {
+    Objects.requireNonNull(boundMessage, "boundMessage");
+    Objects.requireNonNull(variables, "variables");
+    return renderMessage(
+        boundMessage.message(), boundMessage.termArguments(), boundMessage.termUsages(), variables);
+  }
+
+  private String renderMessage(
+      String message,
+      Map<String, String> termArguments,
+      List<TermUsageExtractor.TermUsage> termUsages,
+      Map<String, String> variables) {
     StringBuilder rendered = new StringBuilder();
     int cursor = 0;
-    for (TermUsageExtractor.TermUsage usage : termUsageExtractor.extract(message)) {
+    for (TermUsageExtractor.TermUsage usage : termUsages) {
       rendered.append(message, cursor, usage.start());
       try {
         rendered.append(renderUsage(usage, termArguments, variables));

@@ -84,10 +84,25 @@ class CompiledTermPackRenderer {
     Objects.requireNonNull(message, "message");
     Objects.requireNonNull(termArguments, "termArguments");
     Objects.requireNonNull(variables, "variables");
+    return renderMessage(message, termArguments, termUsageExtractor.extract(message), variables);
+  }
 
+  String renderBoundMessage(
+      TermRenderRuntime.BoundMessage boundMessage, Map<String, String> variables) {
+    Objects.requireNonNull(boundMessage, "boundMessage");
+    Objects.requireNonNull(variables, "variables");
+    return renderMessage(
+        boundMessage.message(), boundMessage.termArguments(), boundMessage.termUsages(), variables);
+  }
+
+  private String renderMessage(
+      String message,
+      Map<String, String> termArguments,
+      List<TermUsageExtractor.TermUsage> termUsages,
+      Map<String, String> variables) {
     StringBuilder rendered = new StringBuilder();
     int cursor = 0;
-    for (TermUsageExtractor.TermUsage usage : termUsageExtractor.extract(message)) {
+    for (TermUsageExtractor.TermUsage usage : termUsages) {
       rendered.append(message, cursor, usage.start());
       String termId = termArguments.get(usage.argument());
       String replacement;
@@ -113,12 +128,24 @@ class CompiledTermPackRenderer {
     requireRenderableMessageWithOptionalMessageId(messageId, message, termArguments);
   }
 
+  void requireRenderableMessage(String messageId, TermRenderRuntime.BoundMessage boundMessage) {
+    Objects.requireNonNull(messageId, "messageId");
+    Objects.requireNonNull(boundMessage, "boundMessage");
+    requireRenderableMessage(messageId, boundMessage.termArguments(), boundMessage.termUsages());
+  }
+
   private void requireRenderableMessageWithOptionalMessageId(
       String messageId, String message, Map<String, String> termArguments) {
     Objects.requireNonNull(message, "message");
     Objects.requireNonNull(termArguments, "termArguments");
+    requireRenderableMessage(messageId, termArguments, termUsageExtractor.extract(message));
+  }
 
-    for (TermUsageExtractor.TermUsage usage : termUsageExtractor.extract(message)) {
+  private void requireRenderableMessage(
+      String messageId,
+      Map<String, String> termArguments,
+      List<TermUsageExtractor.TermUsage> termUsages) {
+    for (TermUsageExtractor.TermUsage usage : termUsages) {
       if (HindiPronounTermOptions.isPronounUsage(locale, usage.options())) {
         continue;
       }

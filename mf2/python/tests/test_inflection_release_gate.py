@@ -1396,7 +1396,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Python package harness at 101 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "live status-to-staging-command audit currently sees 15 non-webapp files plus 0 webapp files covered by the pinned review-slice commands",
+            "current bound-render hot-path slice touches 10 non-webapp files plus 0 webapp files covered by the focused 24-test Java/common suite",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)

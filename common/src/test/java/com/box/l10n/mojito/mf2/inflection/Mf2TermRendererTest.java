@@ -88,12 +88,24 @@ public class Mf2TermRendererTest {
     assertThatThrownBy(() -> renderer.requireRenderableBoundMessage(usageCatalog, null))
         .isInstanceOf(NullPointerException.class)
         .hasMessageContaining("messageId");
+    assertThatThrownBy(() -> renderer.bindRenderableBoundMessage(null, "inventory.deleted"))
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("usageCatalog");
+    assertThatThrownBy(() -> renderer.bindRenderableBoundMessage(usageCatalog, null))
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("messageId");
     assertThatThrownBy(
             () ->
                 renderer.renderBoundMessage(
                     usageCatalog, "inventory.deleted", (Map<String, String>) null))
         .isInstanceOf(NullPointerException.class)
         .hasMessageContaining("variables");
+    assertThatThrownBy(
+            () ->
+                renderer.renderBoundMessage(
+                    (Mf2TermRenderer.BoundMessage) null, Map.of("count", "1")))
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("boundMessage");
     assertThatThrownBy(() -> renderer.renderMessage(null, Map.of(), Map.of()))
         .isInstanceOf(NullPointerException.class)
         .hasMessageContaining("message");
@@ -221,6 +233,76 @@ public class Mf2TermRendererTest {
                 "inventory.deleted",
                 Map.of("count", "1")))
         .isEqualTo("Has eliminado el agua.");
+  }
+
+  @Test
+  public void rendersReusableBoundMessageThroughFacadeHotPath() {
+    CountingTermUsageExtractor extractor =
+        new CountingTermUsageExtractor(new IcuMessage2TermUsageExtractor());
+    Mf2TermRenderer renderer = Mf2TermRenderer.forCompiledTerms(spanishTermPack(), extractor);
+    TermUsageCatalog usageCatalog =
+        usageCatalog(
+            """
+            {
+              "schema": "mojito-mf2-inflection/message-term-binding-manifest/v0",
+              "locale": "es",
+              "messages": {
+                "inventory.deleted": "Has eliminado {$item :term article=definite count=$count}."
+              },
+              "argumentTerms": {
+                "inventory.deleted": {
+                  "item": ["item.water"]
+                }
+              }
+            }
+            """);
+
+    Mf2TermRenderer.BoundMessage boundMessage =
+        renderer.bindRenderableBoundMessage(usageCatalog, "inventory.deleted");
+    int extractorCallsAfterBind = extractor.calls();
+
+    assertThat(boundMessage.messageId()).isEqualTo("inventory.deleted");
+    assertThat(boundMessage.message())
+        .isEqualTo("Has eliminado {$item :term article=definite count=$count}.");
+    assertThat(boundMessage.termArguments()).containsEntry("item", "item.water");
+    assertThat(renderer.renderBoundMessage(boundMessage, Map.of("count", "1")))
+        .isEqualTo("Has eliminado el agua.");
+    assertThat(renderer.renderBoundMessage(boundMessage, Map.of("count", "2")))
+        .isEqualTo("Has eliminado las aguas.");
+    assertThat(extractor.calls()).isEqualTo(extractorCallsAfterBind);
+    assertThatThrownBy(() -> renderer.renderBoundMessage(boundMessage, null))
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("variables");
+    assertThatThrownBy(() -> boundMessage.termArguments().put("item", "item.unknown"))
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void rejectsBoundMessageFromAnotherRenderer() {
+    Mf2TermRenderer renderer = Mf2TermRenderer.forCompiledTerms(spanishTermPack());
+    Mf2TermRenderer otherRenderer = Mf2TermRenderer.forCompiledTerms(spanishTermPack());
+    Mf2TermRenderer.BoundMessage boundMessage =
+        renderer.bindRenderableBoundMessage(
+            usageCatalog(
+                """
+                {
+                  "schema": "mojito-mf2-inflection/message-term-binding-manifest/v0",
+                  "locale": "es",
+                  "messages": {
+                    "inventory.deleted": "Has eliminado {$item :term article=definite count=$count}."
+                  },
+                  "argumentTerms": {
+                    "inventory.deleted": {
+                      "item": ["item.water"]
+                    }
+                  }
+                }
+                """),
+            "inventory.deleted");
+
+    assertThatThrownBy(() -> otherRenderer.renderBoundMessage(boundMessage, Map.of("count", "1")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Bound message was created by a different Mf2TermRenderer");
   }
 
   @Test
@@ -424,6 +506,26 @@ public class Mf2TermRendererTest {
 
   private static TermUsageCatalog usageCatalog(String json) {
     return new TermRequirementJsonLoader().loadUsageCatalog(json);
+  }
+
+  private static final class CountingTermUsageExtractor implements TermUsageExtractor {
+
+    private final TermUsageExtractor delegate;
+    private int calls;
+
+    private CountingTermUsageExtractor(TermUsageExtractor delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public List<TermUsage> extract(String message) {
+      calls++;
+      return delegate.extract(message);
+    }
+
+    private int calls() {
+      return calls;
+    }
   }
 
   private static HindiPronounAgreementPack hindiPronounAgreementPack() {

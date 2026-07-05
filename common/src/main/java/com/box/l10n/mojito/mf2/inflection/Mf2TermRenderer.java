@@ -13,10 +13,11 @@ import java.util.Set;
  * Locale-aware MF2 term renderer facade.
  *
  * <p>Product and REST integrations should prefer the schema-gated {@link
- * #requireRenderableBoundMessage(TermUsageCatalog, String)} and {@link
- * #renderBoundMessage(TermUsageCatalog, String, Map)} methods. The raw message and term rendering
- * methods remain available for focused pack tests, generator validation, and callers that already
- * own a validated closed-world binding boundary.
+ * #bindRenderableBoundMessage(TermUsageCatalog, String)} and {@link
+ * #renderBoundMessage(BoundMessage, Map)} methods for repeated renders. The convenience {@link
+ * #renderBoundMessage(TermUsageCatalog, String, Map)} method validates and binds before each
+ * render. The raw message and term rendering methods remain available for focused pack tests,
+ * generator validation, and callers that already own a validated closed-world binding boundary.
  */
 public class Mf2TermRenderer {
 
@@ -25,6 +26,7 @@ public class Mf2TermRenderer {
   private final Set<String> knownTermIds;
   private final TermUsageExtractor termUsageExtractor;
   private final TermBindingManifestValidator termBindingManifestValidator;
+  private final Object bindingOwnerToken = new Object();
 
   private Mf2TermRenderer(
       CompiledTermPackRenderer compiledTermRenderer,
@@ -84,7 +86,22 @@ public class Mf2TermRenderer {
   public void requireRenderableBoundMessage(TermUsageCatalog usageCatalog, String messageId) {
     Objects.requireNonNull(usageCatalog, "usageCatalog");
     Objects.requireNonNull(messageId, "messageId");
-    bindRenderableMessage(usageCatalog, messageId);
+    bindRenderableBoundMessage(usageCatalog, messageId);
+  }
+
+  /**
+   * Validates and binds one schema-gated message manifest entry for repeated rendering.
+   *
+   * <p>The returned handle owns the already extracted MF2 term usages and narrowed singleton term
+   * IDs, so repeated {@link #renderBoundMessage(BoundMessage, Map)} calls do not re-parse or
+   * revalidate the manifest. Callers should rebuild the handle whenever the message source,
+   * manifest, or compiled term pack changes.
+   */
+  public BoundMessage bindRenderableBoundMessage(TermUsageCatalog usageCatalog, String messageId) {
+    Objects.requireNonNull(usageCatalog, "usageCatalog");
+    Objects.requireNonNull(messageId, "messageId");
+    return new BoundMessage(
+        bindingOwnerToken, messageId, bindRenderableMessage(usageCatalog, messageId));
   }
 
   /**
@@ -101,8 +118,25 @@ public class Mf2TermRenderer {
     Objects.requireNonNull(messageId, "messageId");
     Objects.requireNonNull(variables, "variables");
     validateVariableMap(variables);
-    TermRenderRuntime.BoundMessage boundMessage = bindRenderableMessage(usageCatalog, messageId);
-    return renderMessage(boundMessage.message(), boundMessage.termArguments(), variables);
+    return renderBoundMessage(bindRenderableBoundMessage(usageCatalog, messageId), variables);
+  }
+
+  /**
+   * Renders a prevalidated bound message.
+   *
+   * <p>This is the preferred hot path for repeated renders of the same message because binding and
+   * MF2 term extraction already happened in {@link #bindRenderableBoundMessage(TermUsageCatalog,
+   * String)}.
+   */
+  public String renderBoundMessage(BoundMessage boundMessage, Map<String, String> variables) {
+    Objects.requireNonNull(boundMessage, "boundMessage");
+    Objects.requireNonNull(variables, "variables");
+    validateVariableMap(variables);
+    boundMessage.requireOwner(bindingOwnerToken);
+    if (hindiPronounRenderer != null) {
+      return hindiPronounRenderer.renderBoundMessage(boundMessage.runtimeMessage(), variables);
+    }
+    return compiledTermRenderer.renderBoundMessage(boundMessage.runtimeMessage(), variables);
   }
 
   private TermRenderRuntime.BoundMessage bindRenderableMessage(
@@ -113,8 +147,7 @@ public class Mf2TermRenderer {
         termBindingManifestValidator.validate(messageCatalog, knownTermIds));
     TermRenderRuntime.BoundMessage boundMessage =
         TermRenderRuntime.bindMessage(messageCatalog, messageId, termUsageExtractor);
-    compiledTermRenderer.requireRenderableMessage(
-        messageId, boundMessage.message(), boundMessage.termArguments());
+    compiledTermRenderer.requireRenderableMessage(messageId, boundMessage);
     return boundMessage;
   }
 
@@ -181,5 +214,44 @@ public class Mf2TermRenderer {
       termIds.add(termPack.strings().get(term.id()));
     }
     return Collections.unmodifiableSet(termIds);
+  }
+
+  /** Reusable schema-gated binding for one MF2 message and a closed-world compiled term pack. */
+  public static final class BoundMessage {
+
+    private final Object ownerToken;
+    private final String messageId;
+    private final TermRenderRuntime.BoundMessage runtimeMessage;
+
+    private BoundMessage(
+        Object ownerToken, String messageId, TermRenderRuntime.BoundMessage runtimeMessage) {
+      this.ownerToken = Objects.requireNonNull(ownerToken, "ownerToken");
+      requireNonBlank(messageId, "messageId");
+      this.messageId = messageId;
+      this.runtimeMessage = Objects.requireNonNull(runtimeMessage, "runtimeMessage");
+    }
+
+    public String messageId() {
+      return messageId;
+    }
+
+    public String message() {
+      return runtimeMessage.message();
+    }
+
+    public Map<String, String> termArguments() {
+      return runtimeMessage.termArguments();
+    }
+
+    private TermRenderRuntime.BoundMessage runtimeMessage() {
+      return runtimeMessage;
+    }
+
+    private void requireOwner(Object ownerToken) {
+      if (this.ownerToken != ownerToken) {
+        throw new IllegalArgumentException(
+            "Bound message was created by a different Mf2TermRenderer");
+      }
+    }
   }
 }

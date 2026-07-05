@@ -58,11 +58,12 @@ public class Mf2InflectionPerformanceSmokeTest {
     Map<String, String> singular = Map.of("count", "1");
     Map<String, String> plural = Map.of("count", "2");
 
-    renderer.requireRenderableBoundMessage(usageCatalog, "inventory.deleted");
-    renderLoop(renderer, usageCatalog, warmupIterations, singular, plural);
+    Mf2TermRenderer.BoundMessage boundMessage =
+        renderer.bindRenderableBoundMessage(usageCatalog, "inventory.deleted");
+    renderLoop(renderer, boundMessage, warmupIterations, singular, plural);
     long beforeHeapBytes = usedHeapAfterGc();
     long startedAtNanos = System.nanoTime();
-    long checksum = renderLoop(renderer, usageCatalog, iterations, singular, plural);
+    long checksum = renderLoop(renderer, boundMessage, iterations, singular, plural);
     long elapsedNanos = System.nanoTime() - startedAtNanos;
     long retainedHeapDeltaKb = Math.max(0, (usedHeapAfterGc() - beforeHeapBytes) / 1024);
     double rendersPerSecond = iterations / Math.max(1.0e-9, elapsedNanos / 1.0e9);
@@ -83,15 +84,13 @@ public class Mf2InflectionPerformanceSmokeTest {
 
   private static long renderLoop(
       Mf2TermRenderer renderer,
-      TermUsageCatalog usageCatalog,
+      Mf2TermRenderer.BoundMessage boundMessage,
       int iterations,
       Map<String, String> singular,
       Map<String, String> plural) {
     long checksum = 0;
     for (int i = 0; i < iterations; i++) {
-      String rendered =
-          renderer.renderBoundMessage(
-              usageCatalog, "inventory.deleted", (i & 1) == 0 ? singular : plural);
+      String rendered = renderer.renderBoundMessage(boundMessage, (i & 1) == 0 ? singular : plural);
       checksum += rendered.length();
     }
     return checksum;
