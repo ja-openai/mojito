@@ -24193,6 +24193,13 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   remains at 117 tests. This tightens release-report output CLI semantics only;
   it does not add locale coverage, certify memory leaks, or promote
   package-local non-Java runtime APIs.
+- Two thousand one hundred forty-first release-validator report immutability
+  guard: `releaseValidationReportDefensivelyCopiesArtifactRows` now pins that
+  public Java/common release reports defensively copy caller-provided artifact
+  rows and expose an unmodifiable artifact list. The focused Java release
+  validator test now passes 30 tests. This tightens public API and memory-safety
+  behavior only; it does not add locale coverage, certify memory leaks, or
+  promote package-local non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.

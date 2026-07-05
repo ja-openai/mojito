@@ -16,6 +16,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HexFormat;
 import java.util.List;
@@ -285,6 +286,25 @@ public class Mf2InflectionReleaseValidatorTest {
     returnedBytes[0] = 'X';
 
     assertThat(validator.validate(List.of(artifact)).passed()).isTrue();
+  }
+
+  @Test
+  public void releaseValidationReportDefensivelyCopiesArtifactRows() {
+    List<ArtifactResult> rows = new ArrayList<>();
+    rows.add(ArtifactResult.passed("terms", ArtifactKind.COMPILED_TERM_PACK_JSON));
+
+    ReleaseValidationReport report = new ReleaseValidationReport(rows);
+    rows.add(
+        ArtifactResult.failed("later", ArtifactKind.COMPILED_TERM_PACK_M2IF, "code", "message"));
+
+    assertThat(report.artifacts()).extracting(ArtifactResult::artifactId).containsExactly("terms");
+    assertThat(report.summary()).isEqualTo(new Summary(1, 1, 0));
+    assertThatThrownBy(
+            () ->
+                report
+                    .artifacts()
+                    .add(ArtifactResult.passed("mutated", ArtifactKind.COMPILED_TERM_PACK_M2IF)))
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
