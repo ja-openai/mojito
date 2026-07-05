@@ -159,6 +159,10 @@ def fail(message: str) -> int:
     return 1
 
 
+def script_label(path: Path) -> str:
+    return path.name
+
+
 def require_object(value: Any, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"Expected object: {label}")
@@ -302,7 +306,7 @@ def load_bundle_script_artifacts() -> Any:
         BUNDLE_SCRIPT,
     )
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load bundle script: {BUNDLE_SCRIPT}")
+        raise RuntimeError(f"Cannot load bundle script: {script_label(BUNDLE_SCRIPT)}")
     module = importlib.util.module_from_spec(spec)
     previous_module = sys.modules.get(spec.name)
     previous_dont_write_bytecode = sys.dont_write_bytecode
@@ -561,7 +565,7 @@ def validate_materialized_bundle(out_dir: Path) -> dict[str, Any]:
 
 def main() -> int:
     if not BUNDLE_SCRIPT.is_file():
-        return fail(f"missing bundle script: {BUNDLE_SCRIPT}")
+        return fail(f"missing bundle script: {script_label(BUNDLE_SCRIPT)}")
 
     try:
         with tempfile.TemporaryDirectory(prefix="mojito-mf2-inflection-release-") as tmp:

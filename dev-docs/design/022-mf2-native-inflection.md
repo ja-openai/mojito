@@ -24026,6 +24026,14 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   harness now passes 102 tests. This tightens release-fixture failure-mode
   coverage only; it does not add locale coverage, certify memory leaks, or
   promote package-local non-Java runtime APIs.
+- Two thousand one hundred twenty-fourth release-wrapper missing-script path
+  hygiene guard: `validate_inflection_release_fixture.py` now reports missing
+  bundle-script failures with the script filename instead of the local absolute
+  path. `test_inflection_release_wrapper_main_rejects_missing_bundle_script`
+  pins the filename diagnostic and asserts the temporary directory is absent
+  from stderr. This tightens wrapper CLI diagnostics only; it does not add
+  locale coverage, certify memory leaks, or promote package-local non-Java
+  runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.

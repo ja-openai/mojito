@@ -1395,6 +1395,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-validator nested API-surface guard",
             "Hindi bound-render performance smoke",
             "release-wrapper report-summary integer guard",
+            "release-wrapper missing-script path hygiene guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -1415,7 +1416,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Python package harness at 102 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-wrapper report-summary integer guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused release-wrapper summary-count regression",
+            "current release-wrapper missing-script path hygiene guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused wrapper-main missing-script regression",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
@@ -1962,7 +1963,12 @@ class InflectionReleaseGateTest(unittest.TestCase):
             with contextlib.redirect_stderr(stderr):
                 self.assertEqual(1, wrapper.main())
 
-        self.assertIn("missing bundle script", stderr.getvalue())
+            failure_output = stderr.getvalue()
+            self.assertIn(
+                "missing bundle script: missing-release-fixture-bundle.py",
+                failure_output,
+            )
+            self.assertNotIn(str(Path(tmp)), failure_output)
 
     def test_inflection_release_wrapper_main_reports_bundle_script_failure(self) -> None:
         wrapper = self.load_release_fixture_wrapper()
