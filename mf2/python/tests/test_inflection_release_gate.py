@@ -894,6 +894,21 @@ class InflectionReleaseGateTest(unittest.TestCase):
                 self.assertEqual(expected_code, row["code"])
                 self.assertIn(row["code"], EXPECTED_RELEASE_ARTIFACT_FAILURE_CODES)
                 self.assertTrue(row["message"])
+                if expected_code == "unreadable-release-artifact":
+                    self.assertEqual(
+                        f"Release artifact is unreadable: {artifact_path}",
+                        row["message"],
+                    )
+                self.assertNotIn(
+                    str(base_dir),
+                    row["message"],
+                    "failed artifact diagnostics must not expose the bundle root",
+                )
+                self.assertNotIn(
+                    str(base_dir.parent),
+                    row["message"],
+                    "failed artifact diagnostics must not expose the temp root",
+                )
                 normalized_row = json.dumps(
                     row,
                     ensure_ascii=False,
@@ -1396,7 +1411,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Python package harness at 101 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current bound-message API-surface guard slice touches 5 non-webapp files plus 0 webapp files covered by the focused 8-test Java/common API-surface suite",
+            "current release-wrapper failure-message path hygiene slice touches 4 non-webapp files plus 0 webapp files covered by the failed-row Python release test",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)

@@ -23980,9 +23980,20 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   release-validator, and 12 binding-manifest. This tightens the Java/common
   public boundary only; it does not add locale coverage or package-local
   non-Java runtimes.
+- Two thousand one hundred twentieth release-wrapper failure-message path hygiene
+  guard: `release_validation.py` now reports unreadable artifacts with
+  `Release artifact is unreadable: <manifest path>`, matching the Java/common
+  validator instead of serializing `OSError` absolute paths.
+  `test_failed_release_report_rows_stay_diagnostic_only` covers all five failed
+  artifact-row codes, asserts missing artifacts use the manifest-relative
+  diagnostic, and checks failed artifact `message` fields do not include the
+  temporary bundle root or parent temp directory while still staying fixed to
+  the artifact row shape `artifactId`, `kind`, `status`, `code`, and `message`.
+  This tightens diagnostic hygiene for the shared release wrapper without
+  changing release artifacts, locale coverage, or non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
-  V0 scope, especially diagnostics that cross Java/common public APIs and the
-  shared release wrapper.
+  V0 scope, especially malformed manifest/report diagnostics and Java/common
+  public API boundaries.
 - Production formatting uses term IDs or declared dictionaries, not unqualified
   bare words.
 - Build-time validation expands message usages and catches missing term

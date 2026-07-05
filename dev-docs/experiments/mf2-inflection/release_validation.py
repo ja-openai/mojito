@@ -796,8 +796,12 @@ def validate_artifact(artifact: dict[str, Any], base_dir: Path) -> dict[str, str
         else:
             raise ReleaseValidationError(f"Unsupported release artifact kind: {kind}")
         return artifact_passed(artifact)
-    except OSError as error:
-        return artifact_failure(artifact, "unreadable-release-artifact", str(error))
+    except OSError:
+        return artifact_failure(
+            artifact,
+            "unreadable-release-artifact",
+            f"Release artifact is unreadable: {artifact['path']}",
+        )
     except Exception as error:
         return artifact_failure(artifact, INVALID_ARTIFACT_CODES[artifact["kind"]], str(error))
 
