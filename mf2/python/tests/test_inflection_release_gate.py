@@ -1823,7 +1823,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 117 tests",
+            "the Python package harness at 118 tests",
             normalized_tracker,
         )
 
@@ -1876,7 +1876,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 117 tests",
+            "the Python package harness at 118 tests",
             normalized_tracker,
         )
 
@@ -1962,7 +1962,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
         self.assertNotIn("webapp/", design_command)
         self.assertNotIn("webapp/", tracker_command)
         self.assertIn(
-            "the Python package harness at 117 tests",
+            "the Python package harness at 118 tests",
             normalized_tracker,
         )
 
@@ -2074,6 +2074,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-validator report-write diagnostic guard",
             "release-validator report-write allow-failures guard",
             "release-validator report immutability guard",
+            "release-wrapper absolute manifest-path hygiene guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -2091,10 +2092,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             self.assertIn(snippet, normalized_tracker)
         for snippet in (
             "Verification snapshot: current focused gates pass",
-            "the Python package harness at 117 tests",
+            "the Python package harness at 118 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-validator report immutability guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused Java/common release-validator regression and Python release/doc guard",
+            "current release-wrapper absolute manifest-path hygiene guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused wrapper absolute-path regression, shared 35-artifact release wrapper, and Python release/doc guard",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
@@ -3200,6 +3201,36 @@ class InflectionReleaseGateTest(unittest.TestCase):
         )
         self.assertIn("expected 'artifacts/ar-approved.json'", message)
         self.assertIn("got 'artifacts/ar-approved-swapped.json'", message)
+
+    def test_inflection_release_wrapper_rejects_absolute_manifest_path_without_leaking_root(
+        self,
+    ) -> None:
+        wrapper = self.load_release_fixture_wrapper()
+        with tempfile.TemporaryDirectory(prefix="mojito-mf2-inflection-wrapper-test-") as tmp:
+            root_dir = Path(tmp)
+            base_dir = root_dir / "bundle"
+            base_dir.mkdir()
+            absolute_path = root_dir / "outside.json"
+            absolute_path.write_text("{}", encoding="utf-8")
+            self.write_release_wrapper_bundle(
+                base_dir,
+                wrapper,
+                manifest_overrides={
+                    "ar-approved-json": {
+                        "path": str(absolute_path),
+                    }
+                },
+            )
+
+            with self.assertRaises(ValueError) as error:
+                wrapper.validate_materialized_bundle(base_dir)
+
+        message = str(error.exception)
+        self.assertIn(
+            "release-validation-manifest.json artifact path for ar-approved-json must be relative",
+            message,
+        )
+        self.assertNotIn(str(root_dir), message)
 
     def test_inflection_release_wrapper_rejects_missing_materialized_artifact(self) -> None:
         wrapper = self.load_release_fixture_wrapper()

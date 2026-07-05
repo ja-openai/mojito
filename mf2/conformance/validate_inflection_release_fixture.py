@@ -448,6 +448,10 @@ def validate_materialized_bundle(out_dir: Path) -> dict[str, Any]:
             item.get("path"),
             f"{MANIFEST_FILE}.artifacts[{artifact_id}].path",
         )
+        if Path(artifact_path).is_absolute():
+            raise ValueError(
+                f"{MANIFEST_FILE} artifact path for {artifact_id} must be relative"
+            )
         if artifact_path != expected_path:
             raise ValueError(
                 f"Unexpected {MANIFEST_FILE} artifact path for {artifact_id}: "
