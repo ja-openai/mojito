@@ -23920,7 +23920,16 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   files do not leak temp or developer-specific absolute paths. This tightens
   release-fixture diagnostics only; it does not expand locale, grammar, or
   non-Java runtime coverage.
-- Next target: continue release report JSON diagnostics,
+- Two thousand one hundred thirteenth release-report diagnostic boundary review:
+  Java/common exposes report construction and `writeJson(...)` serialization but
+  no public report-reader API; file-based `release-validation-report.json`
+  diagnostics stay in the shared release wrapper. The Python wrapper tests
+  already pin missing report files, malformed JSON, invalid UTF-8, top-level and
+  summary shape/key drift, schema drift, artifact count/order/ID drift, failed
+  statuses, and stale passed-row error fields. This keeps report-read
+  diagnostics explicit without adding package-local runtime APIs.
+- Next target: refresh the combined Java/common and shared/Python/JavaScript
+  release-boundary matrix after the diagnostic hardening,
   then implement a real non-Java M2IF reader/renderer only for a product-needed
   native library or continue locale/runtime work only from product-backed
   requirements.
