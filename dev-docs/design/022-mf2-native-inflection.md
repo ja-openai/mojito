@@ -24081,6 +24081,17 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   passed. The Python package harness now passes 107 tests. This tightens
   generated release-report summary derivation only; it does not add locale
   coverage, certify memory leaks, or promote package-local non-Java runtime APIs.
+- Two thousand one hundred thirtieth release-validator duplicate-manifest-ID
+  diagnostic guard: `release_validation.py` now rejects duplicate manifest
+  artifact IDs before artifact validation and catches expected manifest-load
+  failures in `main()` with a single `Release validation failed:` stderr line
+  instead of a traceback.
+  `test_release_validator_rejects_duplicate_manifest_ids_without_traceback`
+  pins that CLI diagnostic, including the fact that `--allow-failures` does not
+  hide malformed manifests. The Python package harness now passes 108 tests.
+  This tightens generator manifest failure-mode diagnostics only; it does not
+  add locale coverage, certify memory leaks, or promote package-local non-Java
+  runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.

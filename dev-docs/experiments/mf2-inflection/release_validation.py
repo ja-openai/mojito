@@ -812,9 +812,13 @@ def load_manifest(path: Path) -> dict[str, Any]:
     if schema != MANIFEST_SCHEMA:
         raise ReleaseValidationError(f"Unsupported release validation manifest schema: {schema}")
     artifacts = []
+    seen_artifact_ids = set()
     for artifact in require_array(manifest.get("artifacts"), "artifacts"):
         item = require_object(artifact, "artifacts[]")
         artifact_id = require_text(item.get("artifactId"), "artifactId")
+        if artifact_id in seen_artifact_ids:
+            raise ReleaseValidationError(f"Duplicate release manifest artifact ID: {artifact_id}")
+        seen_artifact_ids.add(artifact_id)
         kind = require_text(item.get("kind"), "kind")
         if kind not in INVALID_ARTIFACT_CODES:
             raise ReleaseValidationError(f"Unsupported release artifact kind: {kind}")
@@ -861,7 +865,12 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    report = validate_manifest(args.manifest, args.base_dir or args.manifest.parent)
+    try:
+        report = validate_manifest(args.manifest, args.base_dir or args.manifest.parent)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ReleaseValidationError) as error:
+        print(f"Release validation failed: {error}", file=sys.stderr)
+        return 1
+
     payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
