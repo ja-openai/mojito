@@ -23867,6 +23867,16 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   accepted provenance in checked Java/common fixtures without changing locale
   coverage, claiming all inflection types, or promoting any package-local
   non-Java runtime API.
+- Two thousand one hundred fifth Java/common public-render performance smoke:
+  `mvn -pl common -Dtest=Mf2InflectionPerformanceSmokeTest test` passes with
+  the new opt-in smoke skipped by default, and
+  `mvn -pl common -Dtest=Mf2InflectionPerformanceSmokeTest -Dmojito.test.mf2InflectionPerfSmoke=true test`
+  passes the enabled public `Mf2TermRenderer.renderBoundMessage` smoke against
+  the Spanish singleton binding manifest fixture. The local enabled run rendered
+  20,000 post-warmup messages at about 92,411 renders/sec with an 11 KB retained
+  heap delta after warmup. This is bounded smoke evidence for the Java/common V0
+  public renderer only; it is not a profiler-backed benchmark, a soak test, a
+  memory-leak certification, all-locale coverage, or non-Java runtime support.
 - Next target: push the portable path-provenance cleanup, then implement a real
   non-Java M2IF reader/renderer only for a product-needed native library or
   continue locale/runtime work only from product-backed requirements.
