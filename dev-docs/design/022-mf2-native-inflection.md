@@ -24052,6 +24052,17 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   package harness now passes 104 tests. This tightens malformed manifest/report
   failure-mode coverage only; it does not add locale coverage, certify memory
   leaks, or promote package-local non-Java runtime APIs.
+- Two thousand one hundred twenty-seventh release-wrapper report-status
+  precedence guard: `validate_inflection_release_fixture.py` now validates
+  passed report-row status before rejecting stale `code`/`message` diagnostic
+  fields, so a malformed row with `status: "failed"` plus failure metadata
+  reports `Expected passed ... got 'failed'` instead of the passed-row
+  stale-error-field message.
+  `test_inflection_release_wrapper_rejects_failed_report_status_before_error_fields`
+  pins that precedence, and the Python package harness now passes 105 tests.
+  This tightens malformed report-row failure-mode diagnostics only; it does not
+  add locale coverage, certify memory leaks, or promote package-local non-Java
+  runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.

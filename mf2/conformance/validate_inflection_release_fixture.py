@@ -527,18 +527,14 @@ def validate_materialized_bundle(out_dir: Path) -> dict[str, Any]:
             item.get("artifactId"),
             f"{REPORT_FILE}.artifacts[].artifactId",
         )
-        unexpected_error_fields = sorted(set(item).intersection({"code", "message"}))
-        if unexpected_error_fields:
-            raise ValueError(
-                f"Passed {REPORT_FILE} artifact {artifact_id} "
-                "must not carry error fields: "
-                f"{unexpected_error_fields!r}"
-            )
-        reject_unexpected_keys(
-            item,
-            EXPECTED_PASSED_REPORT_ARTIFACT_KEYS,
-            artifact_row_label(f"{REPORT_FILE}.artifacts", artifact_id),
+        unexpected_non_error_fields = sorted(
+            set(item) - EXPECTED_PASSED_REPORT_ARTIFACT_KEYS - {"code", "message"}
         )
+        if unexpected_non_error_fields:
+            raise ValueError(
+                f"Unexpected keys in {artifact_row_label(f'{REPORT_FILE}.artifacts', artifact_id)}: "
+                f"{unexpected_non_error_fields!r}"
+            )
         expected_kind, _expected_path = EXPECTED_ARTIFACTS_BY_ID[artifact_id]
         artifact_kind = require_text(
             item.get("kind"),
@@ -556,6 +552,13 @@ def validate_materialized_bundle(out_dir: Path) -> dict[str, Any]:
         if status != "passed":
             raise ValueError(
                 f"Expected passed {REPORT_FILE} artifact for {artifact_id}, got {status!r}"
+            )
+        unexpected_error_fields = sorted(set(item).intersection({"code", "message"}))
+        if unexpected_error_fields:
+            raise ValueError(
+                f"Passed {REPORT_FILE} artifact {artifact_id} "
+                "must not carry error fields: "
+                f"{unexpected_error_fields!r}"
             )
 
     return report
