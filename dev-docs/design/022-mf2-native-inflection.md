@@ -23883,9 +23883,17 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   stable `Unsupported term option: role` diagnostic at the public API boundary.
   This tightens failure-mode evidence without widening V0 locale coverage or
   promoting package-local non-Java runtime APIs.
-- Next target: push the portable path-provenance cleanup, then implement a real
-  non-Java M2IF reader/renderer only for a product-needed native library or
-  continue locale/runtime work only from product-backed requirements.
+- Two thousand one hundred seventh Java/common release-path failure-mode guard:
+  `Mf2InflectionReleaseValidatorTest` now checks that an absolute manifest path
+  pointing at a valid artifact outside the bundle is reported as
+  `invalid-release-artifact-path` with `Release artifact path must be relative`,
+  without reading the outside artifact. This tightens release-fixture containment
+  evidence only; it does not expand runtime locale coverage or non-Java API
+  support.
+- Next target: continue release-validation diagnostic/report invariant review,
+  then implement a real non-Java M2IF reader/renderer only for a product-needed
+  native library or continue locale/runtime work only from product-backed
+  requirements.
 - Production formatting uses term IDs or declared dictionaries, not unqualified
   bare words.
 - Build-time validation expands message usages and catches missing term

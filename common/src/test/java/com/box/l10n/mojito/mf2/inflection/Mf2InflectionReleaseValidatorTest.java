@@ -641,6 +641,39 @@ public class Mf2InflectionReleaseValidatorTest {
   }
 
   @Test
+  public void reportsAbsoluteManifestPathsWithoutReadingOutsideBundle() throws Exception {
+    Path rootDirectory = temporaryFolder.newFolder("release-absolute").toPath();
+    Path baseDirectory = rootDirectory.resolve("bundle");
+    Path outsideDirectory = rootDirectory.resolve("outside");
+    Files.createDirectories(baseDirectory);
+    Files.createDirectories(outsideDirectory);
+    Path outsideArtifact = outsideDirectory.resolve("terms.json");
+    writeString(outsideArtifact, compiledFixture("es_compiled_article_pack_fixture.json"));
+
+    ReleaseValidationReport report =
+        validator.validateManifest(
+            """
+            {
+              "schema" : "mojito-mf2-inflection/release-validation-manifest/v0",
+              "artifacts" : [ {
+                "artifactId" : "absolute-json",
+                "kind" : "compiled-term-pack-json",
+                "path" : "%s"
+              } ]
+            }
+            """
+                .formatted(outsideArtifact),
+            baseDirectory);
+
+    assertThat(report.passed()).isFalse();
+    assertThat(report.artifacts().getFirst())
+        .extracting(ArtifactResult::artifactId, ArtifactResult::code)
+        .containsExactly("absolute-json", "invalid-release-artifact-path");
+    assertThat(report.artifacts().getFirst().message())
+        .isEqualTo("Release artifact path must be relative: " + outsideArtifact);
+  }
+
+  @Test
   public void rejectsInvalidReleaseValidationManifest() throws Exception {
     Path baseDirectory = temporaryFolder.newFolder("release").toPath();
 
