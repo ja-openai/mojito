@@ -167,7 +167,12 @@ public class Mf2InflectionReleaseValidator {
 
   private Path realBaseDirectory(Path baseDirectory) {
     try {
-      return baseDirectory.toRealPath();
+      Path realPath = baseDirectory.toRealPath();
+      if (!Files.isDirectory(realPath)) {
+        throw new IllegalArgumentException(
+            "Release validation baseDirectory must be a directory: " + baseDirectory);
+      }
+      return realPath;
     } catch (IOException e) {
       throw new IllegalArgumentException(
           "Release validation baseDirectory must be readable: " + baseDirectory, e);

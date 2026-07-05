@@ -583,6 +583,24 @@ public class Mf2InflectionReleaseValidatorTest {
   }
 
   @Test
+  public void rejectsNonDirectoryReleaseValidationBaseDirectory() throws Exception {
+    Path baseDirectory = temporaryFolder.newFile("release-base-file").toPath();
+
+    assertThatThrownBy(
+            () ->
+                validator.validateManifest(
+                    """
+                    {
+                      "schema" : "mojito-mf2-inflection/release-validation-manifest/v0",
+                      "artifacts" : []
+                    }
+                    """,
+                    baseDirectory))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Release validation baseDirectory must be a directory: " + baseDirectory);
+  }
+
+  @Test
   public void reportsManifestFileFailuresWithoutThrowing() throws Exception {
     Path baseDirectory = temporaryFolder.newFolder("release").toPath();
 

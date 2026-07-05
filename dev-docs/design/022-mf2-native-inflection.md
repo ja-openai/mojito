@@ -23896,7 +23896,13 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   report can be serialized. This pins the public in-memory report boundary
   independently of manifest validation and does not expand locale, grammar, or
   non-Java runtime coverage.
-- Next target: continue malformed-manifest and base-directory diagnostic review,
+- Two thousand one hundred ninth Java/common base-directory diagnostic guard:
+  `Mf2InflectionReleaseValidator` now rejects a regular file passed as
+  `baseDirectory` with `Release validation baseDirectory must be a directory`
+  before an empty manifest can produce a passing report. This tightens release
+  fixture API-boundary diagnostics only; it does not widen V0 runtime locale
+  coverage or publish package-local non-Java APIs.
+- Next target: continue malformed-manifest field-type diagnostic review,
   then implement a real non-Java M2IF reader/renderer only for a product-needed
   native library or continue locale/runtime work only from product-backed
   requirements.
