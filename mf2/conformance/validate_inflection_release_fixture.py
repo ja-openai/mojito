@@ -200,7 +200,13 @@ def artifact_row_label(base_label: str, artifact_id: Any) -> str:
 
 
 def is_absolute_artifact_path(artifact_path: str) -> bool:
-    return Path(artifact_path).is_absolute() or PureWindowsPath(artifact_path).is_absolute()
+    windows_path = PureWindowsPath(artifact_path)
+    return (
+        Path(artifact_path).is_absolute()
+        or windows_path.is_absolute()
+        or bool(windows_path.drive)
+        or bool(windows_path.root)
+    )
 
 
 def require_bundle_artifact_fields(artifact: Any) -> dict[str, Any]:

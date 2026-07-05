@@ -193,9 +193,8 @@ public class Mf2InflectionReleaseValidator {
 
   private Path resolveManifestPath(Path basePath, String manifestPath) throws IOException {
     Path path = Path.of(manifestPath);
-    if (path.isAbsolute()) {
-      throw new InvalidReleaseArtifactPathException(
-          "Release artifact path must be relative: " + manifestPath);
+    if (isAbsoluteManifestPath(path, manifestPath)) {
+      throw new InvalidReleaseArtifactPathException("Release artifact path must be relative");
     }
     Path resolvedPath = basePath.resolve(path).normalize();
     if (!resolvedPath.startsWith(basePath)) {
@@ -208,6 +207,19 @@ public class Mf2InflectionReleaseValidator {
           "Release artifact path must stay under baseDirectory: " + manifestPath);
     }
     return realPath;
+  }
+
+  private boolean isAbsoluteManifestPath(Path path, String manifestPath) {
+    return path.isAbsolute() || isWindowsQualifiedOrRootedPath(manifestPath);
+  }
+
+  private boolean isWindowsQualifiedOrRootedPath(String manifestPath) {
+    if (manifestPath.startsWith("\\") || manifestPath.startsWith("/")) {
+      return true;
+    }
+    return manifestPath.length() >= 2
+        && Character.isLetter(manifestPath.charAt(0))
+        && manifestPath.charAt(1) == ':';
   }
 
   private ReleaseArtifact readReleaseArtifact(ReleaseManifestArtifact manifestArtifact, Path path)

@@ -2097,7 +2097,9 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
             "current release-wrapper absolute manifest-path hygiene guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused wrapper absolute-path regression, shared 35-artifact release wrapper, and Python release/doc guard",
             "Latest absolute-path hygiene refresh",
-            "both POSIX and Windows-style absolute manifest artifact paths",
+            "POSIX absolute and Windows-style qualified/rooted manifest artifact paths",
+            "including drive-relative paths such as `C:artifact.json`",
+            "Java/common release validation now applies the same POSIX/Windows-style qualified/rooted manifest-path rejection",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
@@ -3213,7 +3215,9 @@ class InflectionReleaseGateTest(unittest.TestCase):
             absolute_paths = [
                 str(root_dir / "outside.json"),
                 r"C:\Users\dev\outside.json",
+                r"C:Users\dev\outside.json",
                 r"\\server\share\outside.json",
+                r"\Users\dev\outside.json",
             ]
             for index, absolute_path in enumerate(absolute_paths):
                 with self.subTest(absolute_path=absolute_path):

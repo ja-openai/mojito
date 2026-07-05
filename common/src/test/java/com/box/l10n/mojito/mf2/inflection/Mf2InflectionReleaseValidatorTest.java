@@ -775,27 +775,38 @@ public class Mf2InflectionReleaseValidatorTest {
     Path outsideArtifact = outsideDirectory.resolve("terms.json");
     writeString(outsideArtifact, compiledFixture("es_compiled_article_pack_fixture.json"));
 
-    ReleaseValidationReport report =
-        validator.validateManifest(
-            """
-            {
-              "schema" : "mojito-mf2-inflection/release-validation-manifest/v0",
-              "artifacts" : [ {
-                "artifactId" : "absolute-json",
-                "kind" : "compiled-term-pack-json",
-                "path" : "%s"
-              } ]
-            }
-            """
-                .formatted(outsideArtifact),
-            baseDirectory);
+    List<String> absolutePaths =
+        List.of(
+            outsideArtifact.toString(),
+            "C:\\Users\\dev\\terms.json",
+            "C:Users\\dev\\terms.json",
+            "\\\\server\\share\\terms.json",
+            "\\Users\\dev\\terms.json");
+    for (String absolutePath : absolutePaths) {
+      ReleaseValidationReport report =
+          validator.validateManifest(
+              """
+              {
+                "schema" : "mojito-mf2-inflection/release-validation-manifest/v0",
+                "artifacts" : [ {
+                  "artifactId" : "absolute-json",
+                  "kind" : "compiled-term-pack-json",
+                  "path" : "%s"
+                } ]
+              }
+              """
+                  .formatted(absolutePath.replace("\\", "\\\\")),
+              baseDirectory);
 
-    assertThat(report.passed()).isFalse();
-    assertThat(report.artifacts().getFirst())
-        .extracting(ArtifactResult::artifactId, ArtifactResult::code)
-        .containsExactly("absolute-json", "invalid-release-artifact-path");
-    assertThat(report.artifacts().getFirst().message())
-        .isEqualTo("Release artifact path must be relative: " + outsideArtifact);
+      assertThat(report.passed()).isFalse();
+      assertThat(report.artifacts().getFirst())
+          .extracting(ArtifactResult::artifactId, ArtifactResult::code)
+          .containsExactly("absolute-json", "invalid-release-artifact-path");
+      assertThat(report.artifacts().getFirst().message())
+          .isEqualTo("Release artifact path must be relative")
+          .doesNotContain(absolutePath)
+          .doesNotContain(rootDirectory.toString());
+    }
   }
 
   @Test
