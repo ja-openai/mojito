@@ -72,7 +72,21 @@ def require_boolean(value: Any, label: str) -> bool:
 
 
 def load_json(path: Path) -> dict[str, Any]:
-    return require_object(json.loads(path.read_text(encoding="utf-8")), str(path))
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as error:
+        raise ReleaseValidationError(
+            f"Invalid UTF-8 in release validation file {path.name}: "
+            f"{error.reason} at byte {error.start}"
+        ) from error
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError as error:
+        raise ReleaseValidationError(
+            f"Invalid JSON in release validation file {path.name}: "
+            f"{error.msg} at line {error.lineno} column {error.colno}"
+        ) from error
+    return require_object(payload, path.name)
 
 
 def resolve_artifact_path(base_dir: Path, manifest_path: str) -> Path:

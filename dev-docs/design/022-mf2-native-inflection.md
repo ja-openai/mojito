@@ -24111,6 +24111,18 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   The Python package harness now passes 110 tests. This tightens generator
   manifest failure-mode diagnostics only; it does not add locale coverage,
   certify memory leaks, or promote package-local non-Java runtime APIs.
+- Two thousand one hundred thirty-third release-validator invalid-manifest-UTF-8
+  diagnostic guard: `release_validation.py` now wraps JSON load failures with
+  stable file-name diagnostics, including invalid UTF-8 byte offsets and invalid
+  JSON line/column locations.
+  `test_release_validator_rejects_invalid_manifest_utf8_without_report` pins
+  malformed manifest UTF-8 as a shared CLI manifest-load failure with one
+  `Release validation failed:` stderr line, no traceback, and no partially
+  written `--out` report even with `--allow-failures`; the prior
+  invalid-manifest-JSON guard now pins the stable file-name/line/column text.
+  The Python package harness now passes 111 tests. This tightens generator
+  manifest failure-mode diagnostics only; it does not add locale coverage,
+  certify memory leaks, or promote package-local non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.
