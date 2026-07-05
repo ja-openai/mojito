@@ -24165,6 +24165,15 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   tightens generator manifest failure-mode diagnostics only; it does not add
   locale coverage, certify memory leaks, or promote package-local non-Java
   runtime APIs.
+- Two thousand one hundred thirty-eighth release-wrapper top-level
+  required-field guard:
+  `test_inflection_release_wrapper_rejects_missing_top_level_manifest_report_fields`
+  now deletes top-level `schema`, `artifacts`, and `summary` fields from
+  materialized release manifest/report fixtures and pins the same
+  filename-qualified diagnostics used for malformed values. The Python package
+  harness now passes 116 tests. This tightens release-fixture failure-mode
+  coverage only; it does not add locale coverage, certify memory leaks, or
+  promote package-local non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.

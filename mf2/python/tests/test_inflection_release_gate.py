@@ -1746,7 +1746,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 115 tests",
+            "the Python package harness at 116 tests",
             normalized_tracker,
         )
 
@@ -1799,7 +1799,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 115 tests",
+            "the Python package harness at 116 tests",
             normalized_tracker,
         )
 
@@ -1885,7 +1885,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
         self.assertNotIn("webapp/", design_command)
         self.assertNotIn("webapp/", tracker_command)
         self.assertIn(
-            "the Python package harness at 115 tests",
+            "the Python package harness at 116 tests",
             normalized_tracker,
         )
 
@@ -1982,6 +1982,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-wrapper missing-script path hygiene guard",
             "release-wrapper schema field-type guard",
             "release-wrapper required-field omission guard",
+            "release-wrapper top-level required-field guard",
             "release-wrapper report-status precedence guard",
             "release-wrapper summary-count consistency guard",
             "release-validator mixed-summary derivation guard",
@@ -2010,10 +2011,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             self.assertIn(snippet, normalized_tracker)
         for snippet in (
             "Verification snapshot: current focused gates pass",
-            "the Python package harness at 115 tests",
+            "the Python package harness at 116 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-validator missing-manifest diagnostic guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused missing manifest file CLI diagnostic regression",
+            "current release-wrapper top-level required-field guard slice touches 3 non-webapp files plus 0 webapp files covered by the focused top-level release fixture required-field regression",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
@@ -2808,6 +2809,60 @@ class InflectionReleaseGateTest(unittest.TestCase):
                         ValueError,
                         rf"Expected non-empty text: {re.escape(expected_field)}",
                     ):
+                        wrapper.validate_materialized_bundle(base_dir)
+
+    def test_inflection_release_wrapper_rejects_missing_top_level_manifest_report_fields(
+        self,
+    ) -> None:
+        wrapper = self.load_release_fixture_wrapper()
+        cases = (
+            (
+                "manifest-schema",
+                "release-validation-manifest.json",
+                "schema",
+                r"Expected non-empty text: release-validation-manifest\.json\.schema",
+            ),
+            (
+                "manifest-artifacts",
+                "release-validation-manifest.json",
+                "artifacts",
+                r"Expected array: release-validation-manifest\.json\.artifacts",
+            ),
+            (
+                "report-schema",
+                "release-validation-report.json",
+                "schema",
+                r"Expected non-empty text: release-validation-report\.json\.schema",
+            ),
+            (
+                "report-summary",
+                "release-validation-report.json",
+                "summary",
+                r"Expected object: release-validation-report\.json\.summary",
+            ),
+            (
+                "report-artifacts",
+                "release-validation-report.json",
+                "artifacts",
+                r"Expected array: release-validation-report\.json\.artifacts",
+            ),
+        )
+        with tempfile.TemporaryDirectory(prefix="mojito-mf2-inflection-wrapper-test-") as tmp:
+            root_dir = Path(tmp)
+            for label, filename, field, expected_error in cases:
+                with self.subTest(label=label):
+                    base_dir = root_dir / label
+                    base_dir.mkdir()
+                    self.write_release_wrapper_bundle(base_dir, wrapper)
+                    fixture_path = base_dir / filename
+                    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+                    del fixture[field]
+                    fixture_path.write_text(
+                        json.dumps(fixture, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+
+                    with self.assertRaisesRegex(ValueError, expected_error):
                         wrapper.validate_materialized_bundle(base_dir)
 
     def test_inflection_release_wrapper_rejects_manifest_artifact_count_drift(self) -> None:
