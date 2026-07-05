@@ -1050,6 +1050,65 @@ class InflectionReleaseGateTest(unittest.TestCase):
         for phrase in forbidden_claim_phrases:
             self.assertNotIn(phrase, normalized_stderr)
 
+    def test_release_validator_rejects_unsupported_manifest_kind_without_traceback(
+        self,
+    ) -> None:
+        forbidden_claim_phrases = (
+            "complete locale",
+            "complete grammar",
+            "all languages",
+            "all inflection",
+            "public api",
+            "package-local runtime",
+        )
+        with tempfile.TemporaryDirectory(prefix="mojito-mf2-inflection-release-test-") as tmp:
+            base_dir = Path(tmp)
+            manifest_path = base_dir / "release-validation-manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "schema": "mojito-mf2-inflection/release-validation-manifest/v0",
+                        "artifacts": [
+                            {
+                                "artifactId": "unknown-kind",
+                                "kind": "compiled-term-pack-yaml",
+                                "path": "artifact.yaml",
+                            }
+                        ],
+                    },
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    "python3",
+                    str(RELEASE_VALIDATION),
+                    "--manifest",
+                    str(manifest_path),
+                    "--base-dir",
+                    str(base_dir),
+                    "--allow-failures",
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+        self.assertEqual("", result.stdout)
+        self.assertEqual(1, result.returncode, result.stderr)
+        self.assertEqual(
+            "Release validation failed: Unsupported release artifact kind: "
+            "compiled-term-pack-yaml\n",
+            result.stderr,
+        )
+        self.assertNotIn("Traceback", result.stderr)
+        normalized_stderr = result.stderr.lower()
+        for phrase in forbidden_claim_phrases:
+            self.assertNotIn(phrase, normalized_stderr)
+
     def test_inflection_release_wrapper_documents_scope_boundary(self) -> None:
         wrapper_source = RELEASE_FIXTURE_WRAPPER.read_text(encoding="utf-8")
         root_readme = (REPO_ROOT / "mf2/README.md").read_text(encoding="utf-8")
@@ -1294,7 +1353,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 108 tests",
+            "the Python package harness at 109 tests",
             normalized_tracker,
         )
 
@@ -1347,7 +1406,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 108 tests",
+            "the Python package harness at 109 tests",
             normalized_tracker,
         )
 
@@ -1433,7 +1492,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
         self.assertNotIn("webapp/", design_command)
         self.assertNotIn("webapp/", tracker_command)
         self.assertIn(
-            "the Python package harness at 108 tests",
+            "the Python package harness at 109 tests",
             normalized_tracker,
         )
 
@@ -1534,6 +1593,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-wrapper summary-count consistency guard",
             "release-validator mixed-summary derivation guard",
             "release-validator duplicate-manifest-ID diagnostic guard",
+            "release-validator unsupported-kind diagnostic guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -1551,10 +1611,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             self.assertIn(snippet, normalized_tracker)
         for snippet in (
             "Verification snapshot: current focused gates pass",
-            "the Python package harness at 108 tests",
+            "the Python package harness at 109 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-validator duplicate-manifest-ID diagnostic guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused duplicate manifest ID CLI diagnostic regression",
+            "current release-validator unsupported-kind diagnostic guard slice touches 3 non-webapp files plus 0 webapp files covered by the focused unsupported manifest kind CLI diagnostic regression",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
