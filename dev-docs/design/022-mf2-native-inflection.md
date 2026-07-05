@@ -23968,10 +23968,21 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   `BoundMessage` rendering. This is product-integration evidence for the
   Java/common V0 preview path only; it is not all-locale coverage or
   package-local non-Java runtime promotion.
-- Next target: review release-fixture/API-boundary evidence after the webapp
-  bound-render alignment, then implement a real non-Java M2IF reader/renderer
-  only for a product-needed native library or continue locale/runtime work only
-  from product-backed requirements.
+- Two thousand one hundred nineteenth Java/common bound-message API-surface
+  guard: `Mf2InflectionApiSurfaceTest` now pins
+  `Mf2TermRenderer.BoundMessage` as the only public nested renderer handle,
+  requires its constructor to stay private, and restricts its public methods to
+  `messageId()`, `message()`, and `termArguments()`. The package docs now link
+  the nested handle explicitly. The focused Java/common API-surface gate passes
+  8 tests, and
+  `mvn -pl common -Dtest=Mf2InflectionApiSurfaceTest,Mf2InflectionReleaseValidatorTest,TermBindingManifestValidatorTest test`
+  passes 49 combined Java/common API/release/binding tests: 8 API-surface, 29
+  release-validator, and 12 binding-manifest. This tightens the Java/common
+  public boundary only; it does not add locale coverage or package-local
+  non-Java runtimes.
+- Next target: continue release-fixture and failure-mode review inside checked
+  V0 scope, especially diagnostics that cross Java/common public APIs and the
+  shared release wrapper.
 - Production formatting uses term IDs or declared dictionaries, not unqualified
   bare words.
 - Build-time validation expands message usages and catches missing term

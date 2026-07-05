@@ -1396,7 +1396,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Python package harness at 101 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current webapp binding-render endpoint slice touches 3 non-webapp files plus 1 webapp file covered by the focused 33-test `GlossaryWSTest` controller suite",
+            "current bound-message API-surface guard slice touches 5 non-webapp files plus 0 webapp files covered by the focused 8-test Java/common API-surface suite",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)

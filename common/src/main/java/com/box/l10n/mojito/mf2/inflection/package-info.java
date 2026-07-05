@@ -12,9 +12,10 @@
  *   <li>{@link com.box.l10n.mojito.mf2.inflection.TermUsageExtractor}
  * </ul>
  *
- * <p>{@link com.box.l10n.mojito.mf2.inflection.Mf2TermRenderer} exposes a reusable bound-message
- * handle for repeated schema-gated renders, so callers can validate and extract MF2 term usages
- * once per message/manifest/pack combination without relying on a process-wide cache.
+ * <p>{@link com.box.l10n.mojito.mf2.inflection.Mf2TermRenderer} exposes a reusable {@link
+ * com.box.l10n.mojito.mf2.inflection.Mf2TermRenderer.BoundMessage} handle for repeated schema-gated
+ * renders, so callers can validate and extract MF2 term usages once per message/manifest/pack
+ * combination without relying on a process-wide cache.
  *
  * <p>The public authoring/tooling surface is schema-gated and supports build-time or REST
  * validation:

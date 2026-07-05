@@ -119,6 +119,37 @@ public class Mf2InflectionApiSurfaceTest {
   }
 
   @Test
+  public void rendererBoundMessageHandleStaysNarrowPublicApi() {
+    Set<String> publicRendererHandles =
+        Stream.of(Mf2TermRenderer.class.getClasses())
+            .filter(type -> Mf2TermRenderer.class.equals(type.getDeclaringClass()))
+            .map(Class::getSimpleName)
+            .collect(Collectors.toCollection(TreeSet::new));
+
+    assertThat(publicRendererHandles).containsExactly("BoundMessage");
+    Class<?> boundMessage = Mf2TermRenderer.BoundMessage.class;
+    assertThat(Modifier.isPublic(boundMessage.getModifiers())).isTrue();
+    assertThat(Modifier.isStatic(boundMessage.getModifiers())).isTrue();
+    assertThat(Modifier.isFinal(boundMessage.getModifiers())).isTrue();
+    assertThat(
+            Stream.of(boundMessage.getDeclaredConstructors())
+                .allMatch(constructor -> Modifier.isPrivate(constructor.getModifiers())))
+        .as("BoundMessage handles must be created only by Mf2TermRenderer")
+        .isTrue();
+
+    Set<String> publicMethods =
+        Stream.of(boundMessage.getDeclaredMethods())
+            .filter(method -> Modifier.isPublic(method.getModifiers()))
+            .map(method -> method.getName() + ":" + method.getReturnType().getName())
+            .collect(Collectors.toCollection(TreeSet::new));
+    assertThat(publicMethods)
+        .containsExactly(
+            "message:java.lang.String",
+            "messageId:java.lang.String",
+            "termArguments:java.util.Map");
+  }
+
+  @Test
   public void generatorSupportClassesRemainPackagePrivateAndExplicitlyMarked() throws Exception {
     Set<String> markedClasses = new TreeSet<>();
     for (String className : topLevelMainClassNames()) {
@@ -160,6 +191,7 @@ public class Mf2InflectionApiSurfaceTest {
             "validates release artifact payloads",
             "duplicate artifact IDs",
             "relative real-path containment",
+            "Mf2TermRenderer.BoundMessage",
             "shared MF2 conformance wrapper",
             "fixture-specific source filename pinning",
             "not complete locale or grammar coverage",
