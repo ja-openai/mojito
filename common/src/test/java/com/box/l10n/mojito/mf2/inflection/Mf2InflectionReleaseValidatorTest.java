@@ -810,6 +810,34 @@ public class Mf2InflectionReleaseValidatorTest {
   }
 
   @Test
+  public void reportsInvalidManifestPathSyntaxWithoutReadingArtifact() throws Exception {
+    Path baseDirectory = temporaryFolder.newFolder("release-invalid-path").toPath();
+
+    ReleaseValidationReport report =
+        validator.validateManifest(
+            """
+            {
+              "schema" : "mojito-mf2-inflection/release-validation-manifest/v0",
+              "artifacts" : [ {
+                "artifactId" : "invalid-path-json",
+                "kind" : "compiled-term-pack-json",
+                "path" : "bad\\u0000path.json"
+              } ]
+            }
+            """,
+            baseDirectory);
+
+    assertThat(report.passed()).isFalse();
+    assertThat(report.artifacts().getFirst())
+        .extracting(ArtifactResult::artifactId, ArtifactResult::code)
+        .containsExactly("invalid-path-json", "invalid-release-artifact-path");
+    assertThat(report.artifacts().getFirst().message())
+        .isEqualTo("Release artifact path is invalid")
+        .doesNotContain("bad")
+        .doesNotContain(baseDirectory.toString());
+  }
+
+  @Test
   public void rejectsInvalidReleaseValidationManifest() throws Exception {
     Path baseDirectory = temporaryFolder.newFolder("release").toPath();
 

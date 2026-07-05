@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -192,7 +193,12 @@ public class Mf2InflectionReleaseValidator {
   }
 
   private Path resolveManifestPath(Path basePath, String manifestPath) throws IOException {
-    Path path = Path.of(manifestPath);
+    Path path;
+    try {
+      path = Path.of(manifestPath);
+    } catch (InvalidPathException e) {
+      throw new InvalidReleaseArtifactPathException("Release artifact path is invalid", e);
+    }
     if (isAbsoluteManifestPath(path, manifestPath)) {
       throw new InvalidReleaseArtifactPathException("Release artifact path must be relative");
     }
@@ -400,6 +406,10 @@ public class Mf2InflectionReleaseValidator {
 
     InvalidReleaseArtifactPathException(String message) {
       super(message);
+    }
+
+    InvalidReleaseArtifactPathException(String message, Throwable cause) {
+      super(message, cause);
     }
   }
 

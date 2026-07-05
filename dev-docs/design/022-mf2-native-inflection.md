@@ -24212,15 +24212,19 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   message. The Python package harness now passes 118 tests. This tightens
   release-fixture diagnostic hygiene only; it does not add locale coverage,
   certify memory leaks, or promote package-local non-Java runtime APIs.
-- Two thousand one hundred forty-third Java/common absolute manifest-path
+- Two thousand one hundred forty-third Java/common absolute/invalid
+  manifest-path
   hygiene guard: `Mf2InflectionReleaseValidator` now rejects POSIX absolute and
   Windows-style qualified/rooted manifest artifact paths before resolving against
-  `baseDirectory`, and its relative-path diagnostic no longer echoes the
-  rejected absolute path. `reportsAbsoluteManifestPathsWithoutReadingOutsideBundle`
-  covers POSIX, drive-letter, drive-relative, UNC, and rooted Windows forms
-  while keeping the temporary root out of the artifact message. This tightens
-  release-fixture diagnostics only; it does not add locale coverage, certify
-  memory leaks, or promote package-local non-Java runtime APIs.
+  `baseDirectory`, routes invalid path syntax to `invalid-release-artifact-path`,
+  and its path diagnostics no longer echo the rejected path.
+  `reportsAbsoluteManifestPathsWithoutReadingOutsideBundle` covers POSIX,
+  drive-letter, drive-relative, UNC, and rooted Windows forms, and
+  `reportsInvalidManifestPathSyntaxWithoutReadingArtifact` covers a
+  JSON-escaped NUL path while keeping the temporary root out of the artifact
+  message. The focused Java release validator test now passes 31 tests. This
+  tightens release-fixture diagnostics only; it does not add locale coverage,
+  certify memory leaks, or promote package-local non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.
