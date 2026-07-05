@@ -822,25 +822,29 @@ def validate_artifact(artifact: dict[str, Any], base_dir: Path) -> dict[str, str
 
 def load_manifest(path: Path) -> dict[str, Any]:
     manifest = load_json(path)
-    schema = require_text(manifest.get("schema"), "schema")
+    manifest_label = path.name
+    schema = require_text(manifest.get("schema"), f"{manifest_label}.schema")
     if schema != MANIFEST_SCHEMA:
         raise ReleaseValidationError(f"Unsupported release validation manifest schema: {schema}")
     artifacts = []
     seen_artifact_ids = set()
-    for artifact in require_array(manifest.get("artifacts"), "artifacts"):
-        item = require_object(artifact, "artifacts[]")
-        artifact_id = require_text(item.get("artifactId"), "artifactId")
+    for index, artifact in enumerate(
+        require_array(manifest.get("artifacts"), f"{manifest_label}.artifacts")
+    ):
+        artifact_label = f"{manifest_label}.artifacts[{index}]"
+        item = require_object(artifact, artifact_label)
+        artifact_id = require_text(item.get("artifactId"), f"{artifact_label}.artifactId")
         if artifact_id in seen_artifact_ids:
             raise ReleaseValidationError(f"Duplicate release manifest artifact ID: {artifact_id}")
         seen_artifact_ids.add(artifact_id)
-        kind = require_text(item.get("kind"), "kind")
+        kind = require_text(item.get("kind"), f"{artifact_label}.kind")
         if kind not in INVALID_ARTIFACT_CODES:
             raise ReleaseValidationError(f"Unsupported release artifact kind: {kind}")
         artifacts.append(
             {
                 "artifactId": artifact_id,
                 "kind": kind,
-                "path": require_text(item.get("path"), "path"),
+                "path": require_text(item.get("path"), f"{artifact_label}.path"),
             }
         )
     return {"schema": schema, "artifacts": artifacts}

@@ -1109,6 +1109,85 @@ class InflectionReleaseGateTest(unittest.TestCase):
         for phrase in forbidden_claim_phrases:
             self.assertNotIn(phrase, normalized_stderr)
 
+    def test_release_validator_rejects_missing_manifest_artifact_fields_without_report(
+        self,
+    ) -> None:
+        forbidden_claim_phrases = (
+            "complete locale",
+            "complete grammar",
+            "all languages",
+            "all inflection",
+            "public api",
+            "package-local runtime",
+        )
+        cases = (
+            (
+                "artifactId",
+                {"kind": "compiled-term-pack-json", "path": "artifact.json"},
+                "release-validation-manifest.json.artifacts[0].artifactId",
+            ),
+            (
+                "kind",
+                {"artifactId": "missing-kind", "path": "artifact.json"},
+                "release-validation-manifest.json.artifacts[0].kind",
+            ),
+            (
+                "path",
+                {"artifactId": "missing-path", "kind": "compiled-term-pack-json"},
+                "release-validation-manifest.json.artifacts[0].path",
+            ),
+        )
+        for field, artifact, expected_label in cases:
+            with self.subTest(field=field):
+                with tempfile.TemporaryDirectory(
+                    prefix="mojito-mf2-inflection-release-test-"
+                ) as tmp:
+                    base_dir = Path(tmp)
+                    manifest_path = base_dir / "release-validation-manifest.json"
+                    report_path = base_dir / "release-validation-report.json"
+                    manifest_path.write_text(
+                        json.dumps(
+                            {
+                                "schema": "mojito-mf2-inflection/release-validation-manifest/v0",
+                                "artifacts": [artifact],
+                            },
+                            indent=2,
+                        )
+                        + "\n",
+                        encoding="utf-8",
+                    )
+
+                    result = subprocess.run(
+                        [
+                            "python3",
+                            str(RELEASE_VALIDATION),
+                            "--manifest",
+                            str(manifest_path),
+                            "--base-dir",
+                            str(base_dir),
+                            "--out",
+                            str(report_path),
+                            "--allow-failures",
+                        ],
+                        text=True,
+                        capture_output=True,
+                        check=False,
+                    )
+
+                    report_exists = report_path.exists()
+
+                self.assertEqual("", result.stdout)
+                self.assertEqual(1, result.returncode, result.stderr)
+                self.assertFalse(report_exists)
+                self.assertEqual(
+                    f"Release validation failed: Expected nonblank text: {expected_label}\n",
+                    result.stderr,
+                )
+                self.assertNotIn("Traceback", result.stderr)
+                normalized_stderr = result.stderr.lower()
+                for phrase in forbidden_claim_phrases:
+                    self.assertNotIn(phrase, normalized_stderr)
+
     def test_release_validator_rejects_invalid_manifest_json_without_report(
         self,
     ) -> None:
@@ -1452,7 +1531,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 111 tests",
+            "the Python package harness at 112 tests",
             normalized_tracker,
         )
 
@@ -1505,7 +1584,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 111 tests",
+            "the Python package harness at 112 tests",
             normalized_tracker,
         )
 
@@ -1591,7 +1670,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
         self.assertNotIn("webapp/", design_command)
         self.assertNotIn("webapp/", tracker_command)
         self.assertIn(
-            "the Python package harness at 111 tests",
+            "the Python package harness at 112 tests",
             normalized_tracker,
         )
 
@@ -1695,6 +1774,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-validator unsupported-kind diagnostic guard",
             "release-validator invalid-manifest-JSON diagnostic guard",
             "release-validator invalid-manifest-UTF-8 diagnostic guard",
+            "release-validator required-field diagnostic guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -1712,10 +1792,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             self.assertIn(snippet, normalized_tracker)
         for snippet in (
             "Verification snapshot: current focused gates pass",
-            "the Python package harness at 111 tests",
+            "the Python package harness at 112 tests",
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-validator invalid-manifest-UTF-8 diagnostic guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused invalid manifest UTF-8 CLI diagnostic regression",
+            "current release-validator required-field diagnostic guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused missing manifest artifact field CLI diagnostic regression",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
