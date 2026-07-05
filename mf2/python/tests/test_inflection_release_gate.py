@@ -2096,6 +2096,8 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "webapp backend product integration at 60 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
             "current release-wrapper absolute manifest-path hygiene guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused wrapper absolute-path regression, shared 35-artifact release wrapper, and Python release/doc guard",
+            "Latest absolute-path hygiene refresh",
+            "both POSIX and Windows-style absolute manifest artifact paths",
             "not package-local inflection runtime promotion",
         ):
             self.assertIn(snippet, normalized_tracker)
@@ -3208,29 +3210,35 @@ class InflectionReleaseGateTest(unittest.TestCase):
         wrapper = self.load_release_fixture_wrapper()
         with tempfile.TemporaryDirectory(prefix="mojito-mf2-inflection-wrapper-test-") as tmp:
             root_dir = Path(tmp)
-            base_dir = root_dir / "bundle"
-            base_dir.mkdir()
-            absolute_path = root_dir / "outside.json"
-            absolute_path.write_text("{}", encoding="utf-8")
-            self.write_release_wrapper_bundle(
-                base_dir,
-                wrapper,
-                manifest_overrides={
-                    "ar-approved-json": {
-                        "path": str(absolute_path),
-                    }
-                },
-            )
+            absolute_paths = [
+                str(root_dir / "outside.json"),
+                r"C:\Users\dev\outside.json",
+                r"\\server\share\outside.json",
+            ]
+            for index, absolute_path in enumerate(absolute_paths):
+                with self.subTest(absolute_path=absolute_path):
+                    base_dir = root_dir / f"bundle-{index}"
+                    base_dir.mkdir()
+                    self.write_release_wrapper_bundle(
+                        base_dir,
+                        wrapper,
+                        manifest_overrides={
+                            "ar-approved-json": {
+                                "path": absolute_path,
+                            }
+                        },
+                    )
 
-            with self.assertRaises(ValueError) as error:
-                wrapper.validate_materialized_bundle(base_dir)
+                    with self.assertRaises(ValueError) as error:
+                        wrapper.validate_materialized_bundle(base_dir)
 
-        message = str(error.exception)
-        self.assertIn(
-            "release-validation-manifest.json artifact path for ar-approved-json must be relative",
-            message,
-        )
-        self.assertNotIn(str(root_dir), message)
+                message = str(error.exception)
+                self.assertIn(
+                    "release-validation-manifest.json artifact path for ar-approved-json must be relative",
+                    message,
+                )
+                self.assertNotIn(str(root_dir), message)
+                self.assertNotIn(absolute_path, message)
 
     def test_inflection_release_wrapper_rejects_missing_materialized_artifact(self) -> None:
         wrapper = self.load_release_fixture_wrapper()

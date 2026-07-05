@@ -15,7 +15,7 @@ import subprocess
 import sys
 import tempfile
 from collections import Counter
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 
@@ -197,6 +197,10 @@ def artifact_row_label(base_label: str, artifact_id: Any) -> str:
     if isinstance(artifact_id, str) and artifact_id:
         return f"{base_label}[{artifact_id}]"
     return f"{base_label}[]"
+
+
+def is_absolute_artifact_path(artifact_path: str) -> bool:
+    return Path(artifact_path).is_absolute() or PureWindowsPath(artifact_path).is_absolute()
 
 
 def require_bundle_artifact_fields(artifact: Any) -> dict[str, Any]:
@@ -448,7 +452,7 @@ def validate_materialized_bundle(out_dir: Path) -> dict[str, Any]:
             item.get("path"),
             f"{MANIFEST_FILE}.artifacts[{artifact_id}].path",
         )
-        if Path(artifact_path).is_absolute():
+        if is_absolute_artifact_path(artifact_path):
             raise ValueError(
                 f"{MANIFEST_FILE} artifact path for {artifact_id} must be relative"
             )
