@@ -3217,6 +3217,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             absolute_paths = [
                 str(root_dir / "outside.json"),
                 r"C:\Users\dev\outside.json",
+                r"C:/Users/dev/outside.json",
                 r"C:Users\dev\outside.json",
                 r"\\server\share\outside.json",
                 r"\Users\dev\outside.json",

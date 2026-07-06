@@ -779,6 +779,7 @@ public class Mf2InflectionReleaseValidatorTest {
         List.of(
             outsideArtifact.toString(),
             "C:\\Users\\dev\\terms.json",
+            "C:/Users/dev/terms.json",
             "C:Users\\dev\\terms.json",
             "\\\\server\\share\\terms.json",
             "\\Users\\dev\\terms.json");
