@@ -2094,7 +2094,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
         for snippet in (
             "Verification snapshot: current focused gates pass",
             "the Python package harness at 118 tests",
-            "webapp backend product integration at 60 REST/service/MCP tests",
+            "webapp backend product integration at 63 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
             "current absolute/invalid manifest-path hygiene guard slice touches 6 non-webapp files plus 0 webapp files covered by the focused Java release-validator absolute/invalid-path regressions, focused wrapper absolute-path regression, shared 35-artifact release wrapper, and Python release/doc guard",
             "Latest absolute/invalid-path hygiene refresh",
@@ -2180,8 +2180,8 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "24 expanded `webapp` status files",
             "9 backend files and 15 frontend files",
             "`mvn -pl webapp -am -Dtest=GlossaryWSTest,GlossaryTermInflectionProfileServiceTest,ReviewGlossaryTermInflectionProfilesMcpToolTest -Dsurefire.failIfNoSpecifiedTests=false test`",
-            "60 backend REST/service/MCP tests",
-            "60 REST/service/MCP tests",
+            "63 backend REST/service/MCP tests",
+            "63 REST/service/MCP tests",
             "`source webapp/use_local_npm.sh && npm --prefix webapp/frontend run test -- src/api/glossaries.test.ts src/page/settings/AdminGlossaryDetailPage.test.tsx src/page/workbench/WorkbenchBody.test.tsx src/components/GlossaryMatchesPanel.test.tsx src/utils/inflectionProfileForms.test.ts src/utils/mf2TermRenderer.test.ts src/utils/mf2TermRequirements.test.ts`",
             "81 frontend API/admin/Workbench/private-utility tests",
             "81 API/admin/Workbench/private-utility tests",
@@ -2303,7 +2303,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "Java/common 43-test API/release/binding gate",
             "Python 101-test release/docs harness",
             "shared/Python/JavaScript `inflection-release` 35-artifact gate",
-            "webapp backend 60-test product integration gate",
+            "webapp backend 63-test product integration gate",
             "webapp frontend 81-test product-integration gate",
             "not all-language coverage or public non-Java runtime promotion",
         ):
