@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.TMTextUnit;
@@ -25,6 +26,7 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.security.access.AccessDeniedException;
 
 @RunWith(MockitoJUnitRunner.class)
 public class GlossaryTermInflectionProfileServiceTest {
@@ -46,6 +48,46 @@ public class GlossaryTermInflectionProfileServiceTest {
     service =
         new GlossaryTermInflectionProfileService(
             profileRepository, glossaryTermMetadataRepository, userService, objectMapper);
+  }
+
+  @Test
+  public void readProfileMethodsRequireTranslationRoleBeforeRepositoryAccess() {
+    assertThatThrownBy(() -> service.getProfiles(GLOSSARY_ID, "fr"))
+        .isInstanceOf(AccessDeniedException.class)
+        .hasMessageContaining("Translation role required");
+    assertThatThrownBy(() -> service.profilePack(GLOSSARY_ID, "fr"))
+        .isInstanceOf(AccessDeniedException.class)
+        .hasMessageContaining("Translation role required");
+    assertThatThrownBy(() -> service.compileProfilePack(GLOSSARY_ID, "fr"))
+        .isInstanceOf(AccessDeniedException.class)
+        .hasMessageContaining("Translation role required");
+    assertThatThrownBy(() -> service.compileProfilePackExport(GLOSSARY_ID, "fr"))
+        .isInstanceOf(AccessDeniedException.class)
+        .hasMessageContaining("Translation role required");
+
+    verifyNoInteractions(profileRepository, glossaryTermMetadataRepository);
+  }
+
+  @Test
+  public void writeProfileMethodsRequireTermManagerBeforeRepositoryAccess() {
+    GlossaryTermInflectionProfileService.InflectionProfileInput input =
+        new GlossaryTermInflectionProfileService.InflectionProfileInput(
+            "fr", "APPROVED", "{}", "{}", null, "{}");
+    GlossaryTermInflectionProfileService.InflectionProfileReviewInput reviewInput =
+        new GlossaryTermInflectionProfileService.InflectionProfileReviewInput(
+            "fr", "APPROVED", null, null, null, null);
+
+    assertThatThrownBy(() -> service.upsertProfile(GLOSSARY_ID, TM_TEXT_UNIT_ID, input))
+        .isInstanceOf(AccessDeniedException.class)
+        .hasMessageContaining("PM or admin access");
+    assertThatThrownBy(() -> service.reviewProfile(GLOSSARY_ID, TM_TEXT_UNIT_ID, reviewInput))
+        .isInstanceOf(AccessDeniedException.class)
+        .hasMessageContaining("PM or admin access");
+    assertThatThrownBy(() -> service.importProfilePack(GLOSSARY_ID, "{}"))
+        .isInstanceOf(AccessDeniedException.class)
+        .hasMessageContaining("PM or admin access");
+
+    verifyNoInteractions(profileRepository, glossaryTermMetadataRepository);
   }
 
   @Test
