@@ -13,36 +13,46 @@ function getStorage(): Storage | null {
   }
 }
 
-export function loadVisibleTextEditorEnabled(): boolean {
+export function getVisibleTextEditorEnabledKey(username: string): string {
+  return `${VISIBLE_TEXT_EDITOR_ENABLED_KEY}.${encodeURIComponent(username.trim())}`;
+}
+
+export function loadVisibleTextEditorEnabled(username: string): boolean {
   const storage = getStorage();
   if (!storage) {
     return false;
   }
-  return storage.getItem(VISIBLE_TEXT_EDITOR_ENABLED_KEY) === 'true';
+  return storage.getItem(getVisibleTextEditorEnabledKey(username)) === 'true';
 }
 
-export function saveVisibleTextEditorEnabled(enabled: boolean): void {
+export function saveVisibleTextEditorEnabled(enabled: boolean, username: string): void {
   const storage = getStorage();
   if (!storage) {
     return;
   }
 
+  const storageKey = getVisibleTextEditorEnabledKey(username);
   if (enabled) {
-    storage.setItem(VISIBLE_TEXT_EDITOR_ENABLED_KEY, 'true');
+    storage.setItem(storageKey, 'true');
   } else {
-    storage.removeItem(VISIBLE_TEXT_EDITOR_ENABLED_KEY);
+    storage.removeItem(storageKey);
   }
+  storage.removeItem(VISIBLE_TEXT_EDITOR_ENABLED_KEY);
 
   window.dispatchEvent(new Event(VISIBLE_TEXT_EDITOR_PREFERENCE_EVENT));
 }
 
-export function subscribeVisibleTextEditorPreference(listener: () => void): () => void {
+export function subscribeVisibleTextEditorPreference(
+  username: string,
+  listener: () => void,
+): () => void {
   if (typeof window === 'undefined') {
     return () => {};
   }
+  const storageKey = getVisibleTextEditorEnabledKey(username);
 
   const handleStorage = (event: StorageEvent) => {
-    if (event.key && event.key !== VISIBLE_TEXT_EDITOR_ENABLED_KEY) {
+    if (event.key && event.key !== storageKey) {
       return;
     }
     listener();

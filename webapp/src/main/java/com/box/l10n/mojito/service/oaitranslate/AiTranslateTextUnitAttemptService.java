@@ -44,6 +44,7 @@ public class AiTranslateTextUnitAttemptService {
   private final AiTranslateTextUnitAttemptRepository aiTranslateTextUnitAttemptRepository;
   private final AiTranslateRunRepository aiTranslateRunRepository;
   private final StructuredBlobStorage structuredBlobStorage;
+  private final AiTranslateConfigurationProperties aiTranslateConfigurationProperties;
   private final ObjectMapper objectMapper;
 
   public static final int DEFAULT_RECENT_LINEAGE_LIMIT = 50;
@@ -54,10 +55,12 @@ public class AiTranslateTextUnitAttemptService {
       AiTranslateTextUnitAttemptRepository aiTranslateTextUnitAttemptRepository,
       AiTranslateRunRepository aiTranslateRunRepository,
       StructuredBlobStorage structuredBlobStorage,
+      AiTranslateConfigurationProperties aiTranslateConfigurationProperties,
       @Qualifier("AiTranslate") ObjectMapper objectMapper) {
     this.aiTranslateTextUnitAttemptRepository = aiTranslateTextUnitAttemptRepository;
     this.aiTranslateRunRepository = aiTranslateRunRepository;
     this.structuredBlobStorage = structuredBlobStorage;
+    this.aiTranslateConfigurationProperties = aiTranslateConfigurationProperties;
     this.objectMapper = objectMapper;
   }
 
@@ -109,6 +112,10 @@ public class AiTranslateTextUnitAttemptService {
 
   public String putPayloadBlob(
       Long pollableTaskId, String requestGroupId, String fileName, String content) {
+    if (!aiTranslateConfigurationProperties.getLineage().isPayloadStorageEnabled()) {
+      return null;
+    }
+
     String blobName = "%d/%s/%s".formatted(pollableTaskId, requestGroupId, fileName);
     structuredBlobStorage.put(
         AI_TRANSLATE_LINEAGE,

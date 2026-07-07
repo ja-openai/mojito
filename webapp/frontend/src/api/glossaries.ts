@@ -248,6 +248,13 @@ export type ApiGlossariesResponse = {
   totalCount: number;
 };
 
+export type ApiMatchedGlossaryTermRange = {
+  matchType: string;
+  startIndex: number;
+  endIndex: number;
+  matchedText: string;
+};
+
 export type ApiMatchedGlossaryTerm = {
   glossaryId?: number | null;
   glossaryName?: string | null;
@@ -269,6 +276,7 @@ export type ApiMatchedGlossaryTerm = {
   startIndex: number;
   endIndex: number;
   matchedText: string;
+  ranges?: ApiMatchedGlossaryTermRange[] | null;
   evidence: ApiGlossaryTermEvidence[];
 };
 

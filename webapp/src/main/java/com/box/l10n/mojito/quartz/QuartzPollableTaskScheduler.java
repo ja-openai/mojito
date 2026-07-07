@@ -10,7 +10,9 @@ import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import com.ibm.icu.text.MessageFormat;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.quartz.JobBuilder;
@@ -32,6 +34,12 @@ public class QuartzPollableTaskScheduler {
   /** logger */
   static Logger logger = LoggerFactory.getLogger(QuartzPollableTaskScheduler.class);
 
+  static final String SCHEDULE_JOB_DURATION_METRIC =
+      "QuartzPollableTaskScheduler.scheduleJob.duration";
+
+  static final String SCHEDULE_JOB_STEP_DURATION_METRIC =
+      "QuartzPollableTaskScheduler.scheduleJob.stepDuration";
+
   @Autowired QuartzSchedulerManager schedulerManager;
 
   @Autowired PollableTaskService pollableTaskService;
@@ -46,6 +54,9 @@ public class QuartzPollableTaskScheduler {
 
   @Value("${l10n.quartz.pollableTask.cleanupOnUniqueIdReschedule:false}")
   boolean cleanupOnUniqueIdReschedule;
+
+  @Value("${l10n.quartz.pollableTask.scheduleJobSlowThresholdMs:5000}")
+  long scheduleJobSlowThresholdMs;
 
   public <I, O> PollableFuture<O> scheduleJob(
       Class<? extends QuartzPollableJob<I, O>> clazz, I input, String schedulerName) {
@@ -93,35 +104,58 @@ public class QuartzPollableTaskScheduler {
    * @return
    */
   public <I, O> PollableFuture<O> scheduleJob(QuartzJobInfo<I, O> quartzJobInfo) {
+    long scheduleJobStartNanos = System.nanoTime();
+    String result = "success";
+    String action = "unknown";
+    PollableTask pollableTask = null;
+    Tags metricTags =
+        Tags.of(
+            "jobClass",
+            quartzJobInfo.getClazz().getSimpleName(),
+            "schedulerName",
+            quartzJobInfo.getScheduler(),
+            "inlineInput",
+            Boolean.toString(quartzJobInfo.isInlineInput()));
 
-    logger.debug("Scheduling job on queue: {}", quartzJobInfo.getScheduler());
-
-    Scheduler scheduler = schedulerManager.getScheduler(quartzJobInfo.getScheduler());
-
-    String pollableTaskName = getPollableTaskName(quartzJobInfo.getClazz());
-
-    logger.debug("Create currentPollableTask with name: {}", pollableTaskName);
-    PollableTask pollableTask =
-        pollableTaskService.createPollableTask(
-            quartzJobInfo.getParentId(),
-            pollableTaskName,
-            quartzJobInfo.getMessage(),
-            quartzJobInfo.getExpectedSubTaskNumber(),
-            quartzJobInfo.getTimeout());
-
-    String uniqueId =
-        quartzJobInfo.getUniqueId() != null
-            ? quartzJobInfo.getUniqueId()
-            : pollableTask.getId().toString();
-
-    String keyName = getKeyName(quartzJobInfo.getClazz(), uniqueId);
-    Class<O> jobOutputType = getJobOutputType(quartzJobInfo);
-
+    String keyName = quartzJobInfo.getClazz().getSimpleName();
     try {
+      logger.debug("Scheduling job on queue: {}", quartzJobInfo.getScheduler());
+
+      Scheduler scheduler =
+          recordScheduleJobStep(
+              metricTags,
+              "getScheduler",
+              () -> schedulerManager.getScheduler(quartzJobInfo.getScheduler()));
+
+      String pollableTaskName = getPollableTaskName(quartzJobInfo.getClazz());
+
+      logger.debug("Create currentPollableTask with name: {}", pollableTaskName);
+      PollableTask createdPollableTask =
+          recordScheduleJobStep(
+              metricTags,
+              "createPollableTask",
+              () ->
+                  pollableTaskService.createPollableTask(
+                      quartzJobInfo.getParentId(),
+                      pollableTaskName,
+                      quartzJobInfo.getMessage(),
+                      quartzJobInfo.getExpectedSubTaskNumber(),
+                      quartzJobInfo.getTimeout()));
+      pollableTask = createdPollableTask;
+
+      String uniqueId =
+          quartzJobInfo.getUniqueId() != null
+              ? quartzJobInfo.getUniqueId()
+              : createdPollableTask.getId().toString();
+
+      keyName = getKeyName(quartzJobInfo.getClazz(), uniqueId);
+      Class<O> jobOutputType = getJobOutputType(quartzJobInfo);
+
       TriggerKey triggerKey = new TriggerKey(keyName, DYNAMIC_GROUP_NAME);
       JobKey jobKey = new JobKey(keyName, DYNAMIC_GROUP_NAME);
 
-      JobDetail jobDetail = scheduler.getJobDetail(jobKey);
+      JobDetail jobDetail =
+          recordScheduleJobStep(metricTags, "getJobDetail", () -> scheduler.getJobDetail(jobKey));
 
       if (jobDetail == null) {
         logger.debug("Job doesn't exist, create for key: {}", keyName);
@@ -144,36 +178,126 @@ public class QuartzPollableTaskScheduler {
 
       if (quartzJobInfo.isInlineInput()) {
         logger.debug("This job input is inlined into the quartz job");
-        triggerTriggerBuilder.usingJobData(
-            QuartzPollableJob.INPUT,
-            objectMapper.writeValueAsStringUnchecked(quartzJobInfo.getInput()));
+        recordScheduleJobStep(
+            metricTags,
+            "inlineInput",
+            () -> {
+              triggerTriggerBuilder.usingJobData(
+                  QuartzPollableJob.INPUT,
+                  objectMapper.writeValueAsStringUnchecked(quartzJobInfo.getInput()));
+              return null;
+            });
       } else {
         logger.debug("The input data is saved into the blob storage");
-        pollableTaskBlobStorage.saveInput(pollableTask.getId(), quartzJobInfo.getInput());
+        recordScheduleJobStep(
+            metricTags,
+            "saveInput",
+            () -> {
+              pollableTaskBlobStorage.saveInput(
+                  createdPollableTask.getId(), quartzJobInfo.getInput());
+              return null;
+            });
       }
 
       Trigger trigger = triggerTriggerBuilder.build();
 
-      if (!scheduler.checkExists(triggerKey)) {
+      boolean triggerExists =
+          recordScheduleJobStep(metricTags, "checkExists", () -> scheduler.checkExists(triggerKey));
+      if (!triggerExists) {
+        action = "schedule";
         logger.debug("Schedule QuartzPollableJob with key: {}", keyName);
-        scheduler.scheduleJob(jobDetail, trigger);
+        JobDetail jobDetailToSchedule = jobDetail;
+        recordScheduleJobStep(
+            metricTags,
+            "scheduleJob",
+            () -> {
+              scheduler.scheduleJob(jobDetailToSchedule, trigger);
+              return null;
+            });
       } else {
+        action = "reschedule";
         logger.debug("Job already scheduled for key: {}, reschedule", keyName);
         if (cleanupOnUniqueIdReschedule
             && dbUtils.isQuartzMysql()
             && quartzJobInfo.getUniqueId() != null) {
-          skipPendingPollablesWithMatchingId(scheduler, jobKey, trigger, pollableTask);
+          recordScheduleJobStep(
+              metricTags,
+              "cleanupPendingPollables",
+              () -> {
+                skipPendingPollablesWithMatchingId(scheduler, jobKey, trigger, createdPollableTask);
+                return null;
+              });
         }
-        scheduler.rescheduleJob(triggerKey, trigger);
+        recordScheduleJobStep(
+            metricTags,
+            "rescheduleJob",
+            () -> {
+              scheduler.rescheduleJob(triggerKey, trigger);
+              return null;
+            });
       }
+
+      return new QuartzPollableFutureTask<O>(createdPollableTask, jobOutputType);
     } catch (SchedulerException se) {
+      result = "failure";
       String msg =
           MessageFormat.format("Couldn't schedule QuartzPollableJob with key: {0}", keyName);
       logger.error(msg, se);
       throw new RuntimeException(msg, se);
+    } catch (RuntimeException | Error e) {
+      result = "failure";
+      throw e;
+    } finally {
+      long durationNanos = System.nanoTime() - scheduleJobStartNanos;
+      meterRegistry
+          .timer(
+              SCHEDULE_JOB_DURATION_METRIC, metricTags.and("result", result).and("action", action))
+          .record(durationNanos, TimeUnit.NANOSECONDS);
+      logSlowScheduleJob(quartzJobInfo, pollableTask, result, action, durationNanos);
     }
+  }
 
-    return new QuartzPollableFutureTask<O>(pollableTask, jobOutputType);
+  private <T> T recordScheduleJobStep(Tags metricTags, String step, ScheduleJobStep<T> stepAction)
+      throws SchedulerException {
+    long stepStartNanos = System.nanoTime();
+    String result = "success";
+    try {
+      return stepAction.run();
+    } catch (SchedulerException | RuntimeException | Error e) {
+      result = "failure";
+      throw e;
+    } finally {
+      meterRegistry
+          .timer(
+              SCHEDULE_JOB_STEP_DURATION_METRIC, metricTags.and("step", step).and("result", result))
+          .record(System.nanoTime() - stepStartNanos, TimeUnit.NANOSECONDS);
+    }
+  }
+
+  private void logSlowScheduleJob(
+      QuartzJobInfo<?, ?> quartzJobInfo,
+      PollableTask pollableTask,
+      String result,
+      String action,
+      long durationNanos) {
+    long durationMs = TimeUnit.NANOSECONDS.toMillis(durationNanos);
+    if (scheduleJobSlowThresholdMs > 0 && durationMs >= scheduleJobSlowThresholdMs) {
+      logger.warn(
+          "Slow Quartz job registration: durationMs={}, thresholdMs={}, jobClass={}, schedulerName={}, action={}, result={}, pollableTaskId={}, inlineInput={}",
+          durationMs,
+          scheduleJobSlowThresholdMs,
+          quartzJobInfo.getClazz().getSimpleName(),
+          quartzJobInfo.getScheduler(),
+          action,
+          result,
+          pollableTask == null ? null : pollableTask.getId(),
+          quartzJobInfo.isInlineInput());
+    }
+  }
+
+  @FunctionalInterface
+  private interface ScheduleJobStep<T> {
+    T run() throws SchedulerException;
   }
 
   private void skipPendingPollablesWithMatchingId(

@@ -2,9 +2,16 @@ import './visible-text-editor.css';
 
 import { baseKeymap } from 'prosemirror-commands';
 import { dropCursor } from 'prosemirror-dropcursor';
-import { history, redo, undo } from 'prosemirror-history';
+import { history, isHistoryTransaction, redo, undo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
-import { Fragment, type Node as ProseMirrorNode, Schema, Slice } from 'prosemirror-model';
+import {
+  type DOMOutputSpec,
+  Fragment,
+  type Mark,
+  type Node as ProseMirrorNode,
+  Schema,
+  Slice,
+} from 'prosemirror-model';
 import { EditorState, NodeSelection, Plugin, PluginKey, TextSelection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { Decoration, DecorationSet } from 'prosemirror-view';
@@ -20,11 +27,20 @@ import {
 
 import type {
   IcuFormInsertion,
+  IcuFormOption,
   ProtectedTextDiagnostic,
   ProtectedTextMovableRange,
   ProtectedTextToken,
 } from '../utils/protectedTextTokens';
 import { getVisibleTextMarker } from '../utils/textCharacters';
+import {
+  getVisibleTextIcuMessagesForValue,
+  getVisibleTextIcuMessagesFromControls,
+  visibleIcuSyntaxDisplay,
+  visibleProtectedTokenText,
+  type VisibleTextIcuMessage,
+  visibleTextIcuMessageKey,
+} from '../utils/visibleTextIcuDisplay';
 import {
   resolveVisibleTextMarksMode,
   shouldRenderVisibleTextWidget,
@@ -70,10 +86,12 @@ type Props = {
   ariaLabel?: string;
   className?: string;
   controlBar?: {
-    icuFormInsertions?: IcuFormInsertion[];
+    icuExactFormInsertions?: IcuFormInsertion[];
+    icuFormOptions?: IcuFormOption[];
     marksMode?: VisibleTextMarksMode;
     onAddIcuForm?: (insertionId: string, exactValue?: string) => AddIcuFormResult;
     onChangeMarksMode?: (mode: VisibleTextMarksMode) => void;
+    onToggleIcuForm?: (optionId: string, checked: boolean) => AddIcuFormResult;
     onToggleRawMode?: () => void;
     position?: 'bottom' | 'top';
     rawMode?: boolean;
@@ -102,6 +120,8 @@ type Props = {
 
 type VisibleTextPluginState = {
   diagnostics: ProtectedTextDiagnostic[];
+  icuFormGroups: IcuFormGroup[];
+  icuFormTriggersEnabled: boolean;
   marksMode: VisibleTextMarksMode;
 };
 
@@ -133,10 +153,18 @@ type ProtectedDragRange = {
   to: number;
 };
 
+type IcuFormGroup = VisibleTextIcuMessage;
+
+type IcuFormMenuPosition = {
+  left: number;
+  top: number;
+};
+
 const visibleTextPluginKey = new PluginKey<VisibleTextPluginState>('visible-text-editor');
 const externalValueMetaKey = 'visible-text-editor-external-value';
 const allowedProtectedDeletionMetaKey = 'visible-text-editor-allowed-protected-deletion';
 const allowedProtectedMoveMetaKey = 'visible-text-editor-allowed-protected-move';
+const allowedIcuFormInsertionMetaKey = 'visible-text-editor-allowed-icu-form-insertion';
 const DROP_ALLOWED_CLASS = 'visible-text-editor__editor--drop-allowed';
 const DROP_BLOCKED_CLASS = 'visible-text-editor__editor--drop-blocked';
 const TOKEN_DROP_BOUNDARY_CLASS = 'visible-text-editor__protected-token--drop-boundary';
@@ -149,25 +177,23 @@ const marksModeOptions: { value: VisibleTextMarksMode; label: string }[] = [
   { value: 'off', label: 'Off' },
 ];
 
-function getIcuFormInsertionMessageType(insertion: IcuFormInsertion): 'plural' | 'select' | null {
-  if (insertion.messageType) {
-    return insertion.messageType;
-  }
-  return insertion.kind === 'exact-value' ? 'plural' : null;
-}
-
-function getAddIcuFormLabel(insertions?: IcuFormInsertion[]): string {
-  const messageTypes = new Set(
-    insertions
-      ?.map(getIcuFormInsertionMessageType)
-      .filter((type): type is 'plural' | 'select' => type !== null) ?? [],
-  );
-
-  if (messageTypes.size === 1) {
-    return messageTypes.has('select') ? 'Add select form' : 'Add plural form';
+function visibleIcuSyntaxTokenContent(raw: string, fallbackText: string): string | DOMOutputSpec {
+  const display = visibleIcuSyntaxDisplay(raw);
+  if (display.kind === 'empty') {
+    return fallbackText;
   }
 
-  return 'Add ICU form';
+  if (display.kind === 'form') {
+    return ['span', { class: 'visible-text-editor__icu-syntax-form' }, display.form];
+  }
+
+  return [
+    'span',
+    { class: 'visible-text-editor__icu-syntax-label' },
+    ['span', { class: 'visible-text-editor__icu-syntax-argument' }, display.argument],
+    ' ',
+    ['span', { class: 'visible-text-editor__icu-syntax-form' }, display.form],
+  ];
 }
 
 const textEditorSchema = new Schema({
@@ -200,25 +226,154 @@ const textEditorSchema = new Schema({
       },
       toDOM(node) {
         const attrs = node.attrs as { kind: string; label: string; raw: string };
+        const displayText = visibleProtectedTokenText(attrs.kind, attrs.raw);
+        const emptySyntaxClass =
+          attrs.kind === 'icu-syntax' && !displayText
+            ? ' visible-text-editor__protected-token--empty-icu-syntax'
+            : '';
+        const content =
+          attrs.kind === 'icu-syntax'
+            ? visibleIcuSyntaxTokenContent(attrs.raw, displayText)
+            : displayText;
         return [
           'span',
           {
             'aria-label': attrs.label,
-            class: `visible-text-editor__protected-token visible-text-editor__protected-token--${attrs.kind}`,
+            class: `visible-text-editor__protected-token visible-text-editor__protected-token--${attrs.kind}${emptySyntaxClass}`,
             contenteditable: 'false',
             'data-raw': attrs.raw,
             draggable: 'true',
             title: attrs.label,
           },
-          attrs.raw,
+          content,
         ];
+      },
+    },
+  },
+  marks: {
+    icuMessage: {
+      attrs: {
+        key: { default: '' },
+      },
+      inclusive: false,
+      toDOM() {
+        return ['span', { class: 'visible-text-editor__icu-inline-message' }, 0];
+      },
+    },
+    icuFormBody: {
+      attrs: {
+        form: { default: '' },
+      },
+      inclusive: false,
+      toDOM() {
+        return ['span', { class: 'visible-text-editor__icu-form-body' }, 0];
+      },
+    },
+    icuEditableText: {
+      inclusive: false,
+      toDOM() {
+        return ['span', { class: 'visible-text-editor__icu-editable-text' }, 0];
       },
     },
   },
 });
 
-function nodesFromRawText(value: string): ProseMirrorNode[] {
+function icuMessageMarkForGroup(group: IcuFormGroup): Mark {
+  return textEditorSchema.marks.icuMessage.create({ key: group.key });
+}
+
+function icuFormBodyMarkForRange(body: { form: string }): Mark {
+  return textEditorSchema.marks.icuFormBody.create({ form: body.form });
+}
+
+function hasIcuMessageMark(marks?: readonly Mark[]): boolean {
+  return marks?.some((mark) => mark.type === textEditorSchema.marks.icuMessage) ?? false;
+}
+
+function hasIcuEditableTextMark(marks?: readonly Mark[]): boolean {
+  return marks?.some((mark) => mark.type === textEditorSchema.marks.icuEditableText) ?? false;
+}
+
+function icuMessageMarks(marks?: readonly Mark[]): Mark[] {
+  return marks?.filter((mark) => mark.type === textEditorSchema.marks.icuMessage) ?? [];
+}
+
+function icuFormBodyMarks(marks?: readonly Mark[]): Mark[] {
+  return marks?.filter((mark) => mark.type === textEditorSchema.marks.icuFormBody) ?? [];
+}
+
+function editableTextMarksForRawText(marks?: Mark[]): Mark[] | undefined {
+  if (!hasIcuMessageMark(marks)) {
+    return marks;
+  }
+
+  return [...(marks ?? []), textEditorSchema.marks.icuEditableText.create()];
+}
+
+function icuMessageGroupForRawRange(
+  groups: IcuFormGroup[],
+  rawStart: number,
+  rawEnd: number,
+): IcuFormGroup | null {
+  return (
+    groups.find((group) => rawStart >= group.messageStart && rawEnd <= group.messageEnd) ?? null
+  );
+}
+
+function icuFormBodyForRawRange(
+  group: IcuFormGroup | null,
+  rawStart: number,
+  rawEnd: number,
+): { end: number; form: string; start: number } | null {
+  return group?.formBodies.find((body) => rawStart >= body.start && rawEnd <= body.end) ?? null;
+}
+
+function marksForRawRange(
+  groups: IcuFormGroup[],
+  rawStart: number,
+  rawEnd: number,
+): Mark[] | undefined {
+  const group = icuMessageGroupForRawRange(groups, rawStart, rawEnd);
+  if (!group) {
+    return undefined;
+  }
+
+  const marks = [icuMessageMarkForGroup(group)];
+  const formBody = icuFormBodyForRawRange(group, rawStart, rawEnd);
+  if (formBody) {
+    marks.push(icuFormBodyMarkForRange(formBody));
+  }
+  return marks;
+}
+
+function splitRawTextByIcuBoundaries(
+  rawStart: number,
+  rawEnd: number,
+  groups: IcuFormGroup[],
+): number[] {
+  const boundaries = new Set([rawStart, rawEnd]);
+  groups.forEach((group) => {
+    if (group.messageStart > rawStart && group.messageStart < rawEnd) {
+      boundaries.add(group.messageStart);
+    }
+    if (group.messageEnd > rawStart && group.messageEnd < rawEnd) {
+      boundaries.add(group.messageEnd);
+    }
+    group.formBodies.forEach((body) => {
+      if (body.start > rawStart && body.start < rawEnd) {
+        boundaries.add(body.start);
+      }
+      if (body.end > rawStart && body.end < rawEnd) {
+        boundaries.add(body.end);
+      }
+    });
+  });
+  return [...boundaries].sort((first, second) => first - second);
+}
+
+function nodesFromRawTextSegment(value: string, marks?: Mark[]): ProseMirrorNode[] {
   const nodes: ProseMirrorNode[] = [];
+  const textMarks = editableTextMarksForRawText(marks);
   let textStart = 0;
   let index = 0;
 
@@ -230,20 +385,39 @@ function nodesFromRawText(value: string): ProseMirrorNode[] {
     }
 
     if (textStart < index) {
-      nodes.push(textEditorSchema.text(value.slice(textStart, index)));
+      nodes.push(textEditorSchema.text(value.slice(textStart, index), textMarks));
     }
 
     const raw = char === '\r' && value.charAt(index + 1) === '\n' ? '\r\n' : char;
-    nodes.push(textEditorSchema.nodes.hardBreak.create({ raw }));
+    nodes.push(textEditorSchema.nodes.hardBreak.create({ raw }, null, textMarks));
     index += raw.length;
     textStart = index;
   }
 
   if (textStart < value.length) {
-    nodes.push(textEditorSchema.text(value.slice(textStart)));
+    nodes.push(textEditorSchema.text(value.slice(textStart), textMarks));
   }
 
   return nodes;
+}
+
+function nodesFromRawText(
+  value: string,
+  rawStart = 0,
+  icuFormGroups: IcuFormGroup[] = [],
+): ProseMirrorNode[] {
+  const rawEnd = rawStart + value.length;
+  const boundaries = splitRawTextByIcuBoundaries(rawStart, rawEnd, icuFormGroups);
+
+  return boundaries.flatMap((start, index) => {
+    const end = boundaries[index + 1];
+    if (end === undefined || end <= start) {
+      return [];
+    }
+
+    const marks = marksForRawRange(icuFormGroups, start, end);
+    return nodesFromRawTextSegment(value.slice(start - rawStart, end - rawStart), marks);
+  });
 }
 
 function fragmentFromRawText(value: string): Fragment {
@@ -253,28 +427,119 @@ function fragmentFromRawText(value: string): Fragment {
 function docFromText(value: string, protectedTokens: ProtectedTextToken[] = []): ProseMirrorNode {
   const children: ProseMirrorNode[] = [];
   let cursor = 0;
+  const icuFormGroups = getVisibleTextIcuMessagesForValue(
+    value,
+    protectedTokens.some((token) => token.kind === 'icu-syntax'),
+  );
 
   normalizeProtectedTokens(value, protectedTokens).forEach((token) => {
     if (cursor < token.start) {
-      children.push(...nodesFromRawText(value.slice(cursor, token.start)));
+      children.push(...nodesFromRawText(value.slice(cursor, token.start), cursor, icuFormGroups));
     }
 
     const raw = value.slice(token.start, token.end);
     children.push(
-      textEditorSchema.nodes.protectedToken.create({
-        kind: token.kind,
-        label: token.label,
-        raw,
-      }),
+      textEditorSchema.nodes.protectedToken.create(
+        {
+          kind: token.kind,
+          label: token.label,
+          raw,
+        },
+        null,
+        marksForRawRange(icuFormGroups, token.start, token.end),
+      ),
     );
     cursor = token.end;
   });
 
   if (cursor < value.length) {
-    children.push(...nodesFromRawText(value.slice(cursor)));
+    children.push(...nodesFromRawText(value.slice(cursor), cursor, icuFormGroups));
   }
 
   return textEditorSchema.topNodeType.create(null, children.length > 0 ? children : null);
+}
+
+function appendIcuEditableTextMarkNormalization(state: EditorState): EditorState['tr'] | null {
+  const value = textFromDoc(state.doc);
+  let hasIcuSyntaxToken = false;
+  state.doc.descendants((node) => {
+    if (node.type.name === 'protectedToken' && node.attrs.kind === 'icu-syntax') {
+      hasIcuSyntaxToken = true;
+      return false;
+    }
+    return !hasIcuSyntaxToken;
+  });
+
+  const icuFormGroups = getVisibleTextIcuMessagesForValue(value, hasIcuSyntaxToken);
+  const transaction = state.tr;
+  let changed = false;
+  let rawOffset = 0;
+
+  state.doc.descendants((node, pos) => {
+    let raw = '';
+    if (node.isText) {
+      raw = node.text ?? '';
+    } else if (node.type.name === 'hardBreak') {
+      raw = String(node.attrs.raw ?? '\n');
+    } else if (node.type.name === 'protectedToken') {
+      raw = String(node.attrs.raw ?? '');
+    } else {
+      return true;
+    }
+
+    const rawStart = rawOffset;
+    const rawEnd = rawStart + raw.length;
+    rawOffset = rawEnd;
+    const group = icuMessageGroupForRawRange(icuFormGroups, rawStart, rawEnd);
+    const formBody = icuFormBodyForRawRange(group, rawStart, rawEnd);
+    const existingIcuMessageMarks = icuMessageMarks(node.marks);
+    const existingIcuFormBodyMarks = icuFormBodyMarks(node.marks);
+    const hasEditableTextMark = hasIcuEditableTextMark(node.marks);
+    const from = pos;
+    const to = pos + node.nodeSize;
+
+    if (group) {
+      const hasExpectedMessageMark =
+        existingIcuMessageMarks.length === 1 &&
+        String(existingIcuMessageMarks[0].attrs.key ?? '') === group.key;
+      if (!hasExpectedMessageMark) {
+        transaction.removeMark(from, to, textEditorSchema.marks.icuMessage);
+        transaction.addMark(from, to, icuMessageMarkForGroup(group));
+        changed = true;
+      }
+    } else if (existingIcuMessageMarks.length > 0) {
+      transaction.removeMark(from, to, textEditorSchema.marks.icuMessage);
+      changed = true;
+    }
+
+    if (formBody) {
+      const hasExpectedFormBodyMark =
+        existingIcuFormBodyMarks.length === 1 &&
+        String(existingIcuFormBodyMarks[0].attrs.form ?? '') === formBody.form;
+      if (!hasExpectedFormBodyMark) {
+        transaction.removeMark(from, to, textEditorSchema.marks.icuFormBody);
+        transaction.addMark(from, to, icuFormBodyMarkForRange(formBody));
+        changed = true;
+      }
+    } else if (existingIcuFormBodyMarks.length > 0) {
+      transaction.removeMark(from, to, textEditorSchema.marks.icuFormBody);
+      changed = true;
+    }
+
+    const shouldHaveEditableTextMark =
+      Boolean(group) && (node.isText || node.type.name === 'hardBreak');
+    if (shouldHaveEditableTextMark && !hasEditableTextMark) {
+      transaction.addMark(from, to, textEditorSchema.marks.icuEditableText.create());
+      changed = true;
+    } else if (!shouldHaveEditableTextMark && hasEditableTextMark) {
+      transaction.removeMark(from, to, textEditorSchema.marks.icuEditableText);
+      changed = true;
+    }
+
+    return false;
+  });
+
+  return changed ? transaction.setMeta('addToHistory', false) : null;
 }
 
 function textFromDoc(doc: ProseMirrorNode): string {
@@ -541,6 +806,89 @@ function selectedProtectedTokens(
   });
 
   return tokens;
+}
+
+function isEmptyIcuSyntaxToken(token: { kind: string; raw: string }): boolean {
+  return token.kind === 'icu-syntax' && !visibleProtectedTokenText(token.kind, token.raw);
+}
+
+function isIcuSyntaxNode(node: ProseMirrorNode | null | undefined): node is ProseMirrorNode {
+  return node?.type.name === 'protectedToken' && node.attrs.kind === 'icu-syntax';
+}
+
+function skipAdjacentIcuSyntaxTokens(
+  doc: ProseMirrorNode,
+  position: number,
+  direction: -1 | 1,
+): number | null {
+  let cursor = clampPosition(position, doc);
+  let skipped = false;
+
+  if (direction > 0) {
+    while (cursor < doc.content.size) {
+      const node = doc.nodeAt(cursor);
+      if (!node || !isIcuSyntaxNode(node)) {
+        break;
+      }
+      cursor += node.nodeSize;
+      skipped = true;
+    }
+  } else {
+    while (cursor > 0) {
+      const nodeBefore = doc.resolve(cursor).nodeBefore;
+      if (!nodeBefore || !isIcuSyntaxNode(nodeBefore)) {
+        break;
+      }
+      cursor -= nodeBefore.nodeSize;
+      skipped = true;
+    }
+  }
+
+  return skipped ? cursor : null;
+}
+
+function handleIcuSyntaxArrowNavigation(view: EditorView, event: KeyboardEvent): boolean {
+  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
+    return false;
+  }
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+    return false;
+  }
+
+  const direction = event.key === 'ArrowRight' ? 1 : -1;
+  const { doc, selection } = view.state;
+  let targetPosition: number | null = null;
+
+  if (selection instanceof NodeSelection && isIcuSyntaxNode(selection.node)) {
+    targetPosition = direction > 0 ? selection.from + selection.node.nodeSize : selection.from;
+  } else if (selection.empty) {
+    targetPosition = skipAdjacentIcuSyntaxTokens(doc, selection.from, direction);
+  }
+
+  if (targetPosition === null) {
+    return false;
+  }
+
+  event.preventDefault();
+  view.dispatch(
+    view.state.tr.setSelection(TextSelection.create(doc, clampPosition(targetPosition, doc))),
+  );
+  return true;
+}
+
+function selectionCoversOnlyEmptyIcuSyntaxTokens(
+  doc: ProseMirrorNode,
+  from: number,
+  to: number,
+): boolean {
+  if (from >= to) {
+    return false;
+  }
+
+  const tokens = selectedProtectedTokens(doc, from, to);
+  return (
+    tokens.length > 0 && tokens.every((token) => token.fullyCovered && isEmptyIcuSyntaxToken(token))
+  );
 }
 
 function selectionMatchesMovableProtectedRange(
@@ -901,7 +1249,14 @@ function createMarkerWidget(char: string, markerText: string, label: string): HT
 }
 
 function replaceSelectionWithRawText(view: EditorView, text: string) {
-  view.dispatch(view.state.tr.replaceSelection(new Slice(fragmentFromRawText(text), 0, 0)));
+  const { selection } = view.state;
+  const slice = new Slice(fragmentFromRawText(text), 0, 0);
+  if (selectionCoversOnlyEmptyIcuSyntaxTokens(view.state.doc, selection.from, selection.to)) {
+    view.dispatch(view.state.tr.replace(selection.from, selection.from, slice).scrollIntoView());
+    return;
+  }
+
+  view.dispatch(view.state.tr.replaceSelection(slice));
 }
 
 function replaceEditorValueWithRawText(
@@ -910,6 +1265,7 @@ function replaceEditorValueWithRawText(
   protectedTokens: ProtectedTextToken[],
   selectionStart = nextValue.length,
   selectionEnd = selectionStart,
+  allowIcuFormInsertion = false,
 ) {
   const nextDoc = docFromText(nextValue, protectedTokens);
   let transaction = view.state.tr.replaceWith(0, view.state.doc.content.size, nextDoc.content);
@@ -918,6 +1274,9 @@ function replaceEditorValueWithRawText(
   transaction = transaction
     .setSelection(TextSelection.create(transaction.doc, selectionFrom, selectionTo))
     .scrollIntoView();
+  if (allowIcuFormInsertion) {
+    transaction = transaction.setMeta(allowedIcuFormInsertionMetaKey, true);
+  }
   view.dispatch(transaction);
 }
 
@@ -925,6 +1284,8 @@ function buildVisibleDecorations(
   doc: ProseMirrorNode,
   marksMode: VisibleTextMarksMode,
   diagnostics: ProtectedTextDiagnostic[] = [],
+  icuFormGroups: IcuFormGroup[] = [],
+  icuFormTriggersEnabled = false,
 ): DecorationSet {
   const decorations: Decoration[] = [];
   const markerItems: VisibleMarkerItem[] = [];
@@ -933,7 +1294,23 @@ function buildVisibleDecorations(
 
   doc.descendants((node, pos) => {
     if (node.type.name === 'protectedToken') {
-      rawOffset += String(node.attrs.raw ?? '').length;
+      const raw = String(node.attrs.raw ?? '');
+      const kind = String(node.attrs.kind ?? '');
+      if (
+        icuFormTriggersEnabled &&
+        kind === 'icu-syntax' &&
+        visibleProtectedTokenText(kind, raw) &&
+        icuFormGroups.some(
+          (group) => rawOffset >= group.messageStart && rawOffset < group.messageEnd,
+        )
+      ) {
+        decorations.push(
+          Decoration.node(pos, pos + node.nodeSize, {
+            class: 'visible-text-editor__protected-token--icu-form-trigger',
+          }),
+        );
+      }
+      rawOffset += raw.length;
       return false;
     }
 
@@ -958,14 +1335,33 @@ function buildVisibleDecorations(
       return true;
     }
 
+    const text = node.text ?? '';
     let offset = 0;
-    for (const char of Array.from(node.text ?? '')) {
+    for (const char of Array.from(text)) {
       const marker = getVisibleTextMarker(char);
       const from = pos + offset;
       const to = from + char.length;
       const rawStart = rawOffset + offset;
       const rawEnd = rawStart + char.length;
+      const group = icuMessageGroupForRawRange(icuFormGroups, rawStart, rawEnd);
       offset += char.length;
+
+      if (char === '#' && group?.messageType === 'plural') {
+        decorations.push(
+          Decoration.inline(
+            from,
+            to,
+            {
+              class: 'visible-text-editor__icu-number-placeholder',
+              title: 'ICU number placeholder',
+            },
+            {
+              inclusiveEnd: false,
+              inclusiveStart: false,
+            },
+          ),
+        );
+      }
 
       if (!marker) {
         continue;
@@ -974,7 +1370,7 @@ function buildVisibleDecorations(
       markerItems.push({ char, from, marker, rawEnd, rawStart, to });
     }
 
-    rawOffset += node.text?.length ?? 0;
+    rawOffset += text.length;
     return false;
   });
 
@@ -1106,13 +1502,25 @@ function deleteAdjacentProtectedToken(
 function createVisibleTextPlugin(
   marksMode: VisibleTextMarksMode,
   diagnostics: ProtectedTextDiagnostic[],
+  icuFormGroups: IcuFormGroup[],
+  icuFormTriggersEnabled: boolean,
   onBlockedEdit?: () => void,
   movableRangesRef?: { current: ProtectedTextMovableRange[] },
+  onIcuFormTriggerClickRef?: {
+    current: ((groupKey: string, element: HTMLElement) => void) | null;
+  },
 ): Plugin<VisibleTextPluginState> {
   let protectedDragRange: ProtectedDragRange | null = null;
 
   return new Plugin<VisibleTextPluginState>({
     key: visibleTextPluginKey,
+    appendTransaction(transactions, _oldState, newState) {
+      if (!transactions.some((transaction) => transaction.docChanged)) {
+        return null;
+      }
+
+      return appendIcuEditableTextMarkNormalization(newState);
+    },
     filterTransaction(transaction, state) {
       if (!transaction.docChanged || transaction.getMeta(externalValueMetaKey)) {
         return true;
@@ -1126,10 +1534,26 @@ function createVisibleTextPlugin(
       const isAllowedAdjacentProtectedDeletion = Boolean(
         transaction.getMeta(allowedProtectedDeletionMetaKey),
       );
-      if (!preservesTokens && !isAllowedProtectedDeletion && !isAllowedAdjacentProtectedDeletion) {
+      const isAllowedIcuFormInsertion = Boolean(
+        transaction.getMeta(allowedIcuFormInsertionMetaKey),
+      );
+      const isAllowedHistoryTransaction = isHistoryTransaction(transaction);
+      if (
+        !preservesTokens &&
+        !isAllowedProtectedDeletion &&
+        !isAllowedAdjacentProtectedDeletion &&
+        !isAllowedIcuFormInsertion &&
+        !isAllowedHistoryTransaction
+      ) {
         onBlockedEdit?.();
       }
-      return preservesTokens || isAllowedProtectedDeletion || isAllowedAdjacentProtectedDeletion;
+      return (
+        preservesTokens ||
+        isAllowedProtectedDeletion ||
+        isAllowedAdjacentProtectedDeletion ||
+        isAllowedIcuFormInsertion ||
+        isAllowedHistoryTransaction
+      );
     },
     props: {
       decorations(state) {
@@ -1137,7 +1561,13 @@ function createVisibleTextPlugin(
         if (!pluginState) {
           return null;
         }
-        return buildVisibleDecorations(state.doc, pluginState.marksMode, pluginState.diagnostics);
+        return buildVisibleDecorations(
+          state.doc,
+          pluginState.marksMode,
+          pluginState.diagnostics,
+          pluginState.icuFormGroups,
+          pluginState.icuFormTriggersEnabled,
+        );
       },
       handlePaste(view, event) {
         if (!view.editable) {
@@ -1151,6 +1581,20 @@ function createVisibleTextPlugin(
         event.preventDefault();
         replaceSelectionWithRawText(view, text);
         return true;
+      },
+      handleTextInput(view, from, to, text) {
+        if (!view.editable || !text) {
+          return false;
+        }
+        if (!selectionCoversOnlyEmptyIcuSyntaxTokens(view.state.doc, from, to)) {
+          return false;
+        }
+
+        view.dispatch(view.state.tr.insertText(text, from, from).scrollIntoView());
+        return true;
+      },
+      handleKeyDown(view, event) {
+        return handleIcuSyntaxArrowNavigation(view, event);
       },
       clipboardTextSerializer(slice) {
         return textFromFragment(slice.content);
@@ -1210,6 +1654,71 @@ function createVisibleTextPlugin(
         return false;
       },
       handleDOMEvents: {
+        click(view, event) {
+          const target = event.target;
+          const protectedToken =
+            target instanceof Element
+              ? target.closest<HTMLElement>('.visible-text-editor__protected-token')
+              : null;
+          if (
+            protectedToken &&
+            !protectedToken.classList.contains('visible-text-editor__protected-token--icu-syntax')
+          ) {
+            const tokenPosition = protectedTokenPositionFromElement(view, protectedToken);
+            if (tokenPosition === null) {
+              return false;
+            }
+
+            const token = view.state.doc.nodeAt(tokenPosition);
+            if (!token) {
+              return false;
+            }
+
+            const selectionPosition = tokenPosition + token.nodeSize;
+            event.preventDefault();
+            view.focus();
+            view.dispatch(
+              view.state.tr.setSelection(TextSelection.create(view.state.doc, selectionPosition)),
+            );
+            return true;
+          }
+
+          const syntaxToken = protectedToken?.classList.contains(
+            'visible-text-editor__protected-token--icu-syntax',
+          )
+            ? protectedToken
+            : null;
+          if (!syntaxToken) {
+            return false;
+          }
+
+          const tokenPosition = protectedTokenPositionFromElement(view, syntaxToken);
+          if (tokenPosition === null) {
+            return false;
+          }
+
+          const pluginState = visibleTextPluginKey.getState(view.state);
+          if (!pluginState?.icuFormTriggersEnabled) {
+            return false;
+          }
+
+          const rawStart = rawOffsetFromDocPosition(view.state.doc, tokenPosition);
+          const group = pluginState.icuFormGroups
+            .filter(
+              (candidate) => rawStart >= candidate.messageStart && rawStart < candidate.messageEnd,
+            )
+            .sort(
+              (first, second) =>
+                first.messageEnd - first.messageStart - (second.messageEnd - second.messageStart),
+            )[0];
+          if (!group) {
+            return false;
+          }
+
+          event.preventDefault();
+          onIcuFormTriggerClickRef?.current?.(group.key, syntaxToken);
+          return true;
+        },
         dragenter(view, event) {
           if (!view.editable) {
             return false;
@@ -1309,7 +1818,7 @@ function createVisibleTextPlugin(
       },
     },
     state: {
-      init: () => ({ diagnostics, marksMode }),
+      init: () => ({ diagnostics, icuFormGroups, icuFormTriggersEnabled, marksMode }),
       apply(tr, current) {
         const next = tr.getMeta(visibleTextPluginKey) as
           | Partial<VisibleTextPluginState>
@@ -1317,6 +1826,8 @@ function createVisibleTextPlugin(
         if (next) {
           return {
             diagnostics: next.diagnostics ?? current.diagnostics,
+            icuFormGroups: next.icuFormGroups ?? current.icuFormGroups,
+            icuFormTriggersEnabled: next.icuFormTriggersEnabled ?? current.icuFormTriggersEnabled,
             marksMode: next.marksMode ?? current.marksMode,
           };
         }
@@ -1329,8 +1840,13 @@ function createVisibleTextPlugin(
 function createPlugins(
   marksMode: VisibleTextMarksMode,
   diagnostics: ProtectedTextDiagnostic[],
+  icuFormGroups: IcuFormGroup[],
+  icuFormTriggersEnabled: boolean,
   onBlockedEdit?: () => void,
   movableRangesRef?: { current: ProtectedTextMovableRange[] },
+  onIcuFormTriggerClickRef?: {
+    current: ((groupKey: string, element: HTMLElement) => void) | null;
+  },
 ) {
   return [
     keymap({
@@ -1350,7 +1866,15 @@ function createPlugins(
     history(),
     keymap(baseKeymap),
     dropCursor({ color: false, width: 2, class: 'visible-text-editor__drop-cursor' }),
-    createVisibleTextPlugin(marksMode, diagnostics, onBlockedEdit, movableRangesRef),
+    createVisibleTextPlugin(
+      marksMode,
+      diagnostics,
+      icuFormGroups,
+      icuFormTriggersEnabled,
+      onBlockedEdit,
+      movableRangesRef,
+      onIcuFormTriggerClickRef,
+    ),
   ];
 }
 
@@ -1419,9 +1943,24 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
     const resolvedMarksMode = resolveVisibleTextMarksMode(marksMode, showInvisibles);
     const initialMarksModeRef = useRef(resolvedMarksMode);
     const initialDiagnosticsRef = useRef(protectedDiagnostics ?? []);
+    const icuFormGroups = useMemo(
+      () =>
+        getVisibleTextIcuMessagesFromControls(
+          controlBar?.icuFormOptions,
+          controlBar?.icuExactFormInsertions,
+        ),
+      [controlBar?.icuExactFormInsertions, controlBar?.icuFormOptions],
+    );
+    const icuFormTriggersEnabled = Boolean(controlBar?.onAddIcuForm || controlBar?.onToggleIcuForm);
+    const initialIcuFormGroupsRef = useRef(icuFormGroups);
+    const initialIcuFormTriggersEnabledRef = useRef(icuFormTriggersEnabled);
+    const icuFormGroupsRef = useRef(icuFormGroups);
     const movableRangesRef = useRef(movableProtectedRanges ?? []);
     const protectedTokensRef = useRef(protectedTokens ?? []);
     const validateNextValueRef = useRef(validateNextValue);
+    const onIcuFormTriggerClickRef = useRef<
+      ((groupKey: string, element: HTMLElement) => void) | null
+    >(null);
     const protectedTokenSignatureRef = useRef(
       protectedTokenSignature(value, normalizeProtectedTokens(value, protectedTokens ?? [])),
     );
@@ -1447,7 +1986,12 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
       left: number;
       top: number;
     } | null>(null);
+    const [activeIcuFormGroupKey, setActiveIcuFormGroupKey] = useState<string | null>(null);
+    const [icuFormMenuPosition, setIcuFormMenuPosition] = useState<IcuFormMenuPosition | null>(
+      null,
+    );
     const [isMarksMenuOpen, setIsMarksMenuOpen] = useState(false);
+    const icuFormMenuRef = useRef<HTMLDivElement | null>(null);
     const marksMenuRef = useRef<HTMLDivElement | null>(null);
     onChangeRef.current = onChange;
     onFocusRef.current = onFocus;
@@ -1457,9 +2001,31 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
     valueRef.current = value;
     disabledRef.current = disabled;
     readOnlyRef.current = readOnly;
+    icuFormGroupsRef.current = icuFormGroups;
     movableRangesRef.current = movableProtectedRanges ?? [];
     protectedTokensRef.current = protectedTokens ?? [];
     validateNextValueRef.current = validateNextValue;
+    onIcuFormTriggerClickRef.current = (groupKey, element) => {
+      if (disabledRef.current || readOnlyRef.current) {
+        return;
+      }
+
+      const root = rootRef.current;
+      if (!root) {
+        return;
+      }
+      const elementRect = element.getBoundingClientRect();
+      const rootRect = root.getBoundingClientRect();
+      setExactValueInsertionId(null);
+      setExactValueDraft('');
+      setExactValueError(null);
+      setActiveIcuFormGroupKey((current) => (current === groupKey ? null : groupKey));
+      setIcuFormMenuPosition({
+        left: Math.max(0, elementRect.left - rootRect.left),
+        top: Math.max(0, elementRect.bottom - rootRect.top + 4),
+      });
+      setIsMarksMenuOpen(false);
+    };
     domAttributesRef.current = {
       ariaLabel,
       disabled,
@@ -1478,11 +2044,19 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
         }${disabled ? ' visible-text-editor--disabled' : ''}${
           readOnly ? ' visible-text-editor--read-only' : ''
         }${
-          isMarksMenuOpen || (completion?.options.length ?? 0) > 0
+          activeIcuFormGroupKey || isMarksMenuOpen || (completion?.options.length ?? 0) > 0
             ? ' visible-text-editor--menu-open'
             : ''
         }${className ? ` ${className}` : ''}`,
-      [className, completion?.options.length, controlBar, disabled, isMarksMenuOpen, readOnly],
+      [
+        activeIcuFormGroupKey,
+        className,
+        completion?.options.length,
+        controlBar,
+        disabled,
+        isMarksMenuOpen,
+        readOnly,
+      ],
     );
 
     const updateCompletionPosition = () => {
@@ -1532,8 +2106,11 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
           plugins: createPlugins(
             initialMarksModeRef.current,
             initialDiagnosticsRef.current,
+            initialIcuFormGroupsRef.current,
+            initialIcuFormTriggersEnabledRef.current,
             showBlockedEditMessage,
             movableRangesRef,
+            onIcuFormTriggerClickRef,
           ),
         }),
         dispatchTransaction(transaction) {
@@ -1548,6 +2125,7 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
             ) &&
             !transaction.getMeta(allowedProtectedDeletionMetaKey) &&
             !transaction.getMeta(allowedProtectedMoveMetaKey) &&
+            !transaction.getMeta(allowedIcuFormInsertionMetaKey) &&
             !validateNextValueRef.current(textFromDoc(transaction.doc))
           ) {
             showBlockedEditMessage();
@@ -1653,10 +2231,12 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
       view.dispatch(
         view.state.tr.setMeta(visibleTextPluginKey, {
           diagnostics: protectedDiagnostics ?? [],
+          icuFormGroups,
+          icuFormTriggersEnabled,
           marksMode: resolvedMarksMode,
         } satisfies VisibleTextPluginState),
       );
-    }, [protectedDiagnostics, resolvedMarksMode]);
+    }, [icuFormGroups, icuFormTriggersEnabled, protectedDiagnostics, resolvedMarksMode]);
 
     useEffect(() => {
       const view = viewRef.current;
@@ -1821,17 +2401,30 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
       [],
     );
 
-    const controlStatus = exactValueError ?? blockedEditMessage;
-    const shouldShowControlStatus = Boolean(exactValueError) || Boolean(blockedEditMessage);
-    const shouldAnnounceControlStatus = Boolean(exactValueError || blockedEditMessage);
+    const controlStatus = blockedEditMessage;
+    const shouldShowControlStatus = Boolean(blockedEditMessage);
+    const shouldAnnounceControlStatus = Boolean(blockedEditMessage);
     const controlMarksMode = controlBar?.marksMode ?? resolvedMarksMode;
     const controlMarksLabel =
       marksModeOptions.find((option) => option.value === controlMarksMode)?.label ?? 'Auto';
-    const addIcuFormLabel = getAddIcuFormLabel(controlBar?.icuFormInsertions);
-    const activeExactValueInsertion = controlBar?.icuFormInsertions?.find(
+    const activeExactValueInsertion = controlBar?.icuExactFormInsertions?.find(
       (insertion) => insertion.id === exactValueInsertionId && insertion.kind === 'exact-value',
     );
     const controlBarDisabled = disabled || readOnly;
+    const activeIcuFormGroup = icuFormGroups.find((group) => group.key === activeIcuFormGroupKey);
+    const activeIcuFormOptions =
+      controlBar?.icuFormOptions?.filter(
+        (option) => visibleTextIcuMessageKey(option) === activeIcuFormGroupKey,
+      ) ?? [];
+    const activeIcuExactFormInsertions =
+      controlBar?.icuExactFormInsertions?.filter(
+        (insertion) =>
+          visibleTextIcuMessageKey({
+            messageEnd: insertion.messageEnd,
+            messageStart: insertion.messageStart,
+            messageType: insertion.messageType ?? 'plural',
+          }) === activeIcuFormGroupKey,
+      ) ?? [];
     useEffect(() => {
       if (!isMarksMenuOpen) {
         return;
@@ -1857,10 +2450,52 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
       };
     }, [isMarksMenuOpen]);
     useEffect(() => {
+      if (!activeIcuFormGroupKey) {
+        return;
+      }
+
+      const handlePointerDown = (event: PointerEvent) => {
+        if (icuFormMenuRef.current?.contains(event.target as Node)) {
+          return;
+        }
+        setActiveIcuFormGroupKey(null);
+        setExactValueInsertionId(null);
+        setExactValueDraft('');
+        setExactValueError(null);
+      };
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          setActiveIcuFormGroupKey(null);
+          setExactValueInsertionId(null);
+          setExactValueDraft('');
+          setExactValueError(null);
+        }
+      };
+
+      window.addEventListener('pointerdown', handlePointerDown, true);
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        window.removeEventListener('pointerdown', handlePointerDown, true);
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }, [activeIcuFormGroupKey]);
+    useEffect(() => {
       if (controlBarDisabled) {
+        setActiveIcuFormGroupKey(null);
+        setExactValueInsertionId(null);
+        setExactValueDraft('');
+        setExactValueError(null);
         setIsMarksMenuOpen(false);
       }
     }, [controlBarDisabled]);
+    useEffect(() => {
+      if (activeIcuFormGroupKey && !activeIcuFormGroup) {
+        setActiveIcuFormGroupKey(null);
+        setExactValueInsertionId(null);
+        setExactValueDraft('');
+        setExactValueError(null);
+      }
+    }, [activeIcuFormGroup, activeIcuFormGroupKey]);
     const resetExactValueInput = () => {
       setExactValueInsertionId(null);
       setExactValueDraft('');
@@ -1881,6 +2516,7 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
             protectedTokensRef.current,
             result.selectionStart,
             result.selectionEnd,
+            true,
           );
           view.focus();
         }
@@ -1910,6 +2546,21 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
         resetExactValueInput();
         return;
       }
+    };
+    const handleToggleIcuFormOption = (option: IcuFormOption, checked: boolean) => {
+      if (!controlBar?.onToggleIcuForm) {
+        return;
+      }
+      const result = controlBar.onToggleIcuForm(option.id, checked);
+      if (applyAddIcuFormResult(result)) {
+        setExactValueInsertionId(null);
+        setExactValueDraft('');
+      }
+    };
+    const handleStartExactValueInsertion = (insertion: IcuFormInsertion) => {
+      setExactValueInsertionId(insertion.id);
+      setExactValueDraft('');
+      setExactValueError(null);
     };
     const controlBarElement = controlBar ? (
       <div className="visible-text-editor__control-bar" aria-label="Text editor controls">
@@ -1979,109 +2630,11 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
             {controlBar.rawMode ? 'Lock placeholders' : 'Edit placeholders'}
           </button>
         ) : null}
-        {controlBar.onAddIcuForm &&
-        controlBar.icuFormInsertions &&
-        controlBar.icuFormInsertions.length > 0 ? (
-          <select
-            className="visible-text-editor__control-select visible-text-editor__icu-form-select"
-            aria-label={addIcuFormLabel}
-            defaultValue=""
-            disabled={controlBarDisabled}
-            onChange={(event) => {
-              const insertionId = event.target.value;
-              if (insertionId) {
-                const insertion = controlBar.icuFormInsertions?.find(
-                  (item) => item.id === insertionId,
-                );
-                if (insertion?.kind === 'exact-value') {
-                  setExactValueInsertionId(insertionId);
-                  setExactValueDraft('');
-                  setExactValueError(null);
-                } else {
-                  const result = controlBar.onAddIcuForm?.(insertionId);
-                  if (result) {
-                    applyAddIcuFormResult(result);
-                  }
-                }
-              }
-              event.currentTarget.value = '';
-            }}
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <option value="">{addIcuFormLabel}</option>
-            {controlBar.icuFormInsertions.map((insertion) => (
-              <option key={insertion.id} value={insertion.id}>
-                {insertion.label}
-              </option>
-            ))}
-          </select>
-        ) : null}
-        {activeExactValueInsertion ? (
-          <span
-            className={`visible-text-editor__exact-form${
-              exactValueError ? ' visible-text-editor__exact-form--error' : ''
-            }`}
-            title={exactValueError ?? 'Add an exact ICU plural selector'}
-          >
-            <span className="visible-text-editor__exact-form-prefix" aria-hidden="true">
-              =
-            </span>
-            <input
-              ref={exactValueInputRef}
-              className="visible-text-editor__exact-form-input"
-              aria-label="Exact ICU plural value"
-              aria-invalid={exactValueError ? 'true' : undefined}
-              disabled={controlBarDisabled}
-              inputMode="numeric"
-              pattern="[0-9]*"
-              placeholder="0"
-              value={exactValueDraft}
-              onChange={(event) => {
-                setExactValueDraft(event.target.value);
-                setExactValueError(null);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  commitExactValueInput();
-                }
-                if (event.key === 'Escape') {
-                  event.preventDefault();
-                  resetExactValueInput();
-                  viewRef.current?.focus();
-                }
-              }}
-              onMouseDown={(event) => event.stopPropagation()}
-            />
-            <button
-              type="button"
-              className="visible-text-editor__exact-form-button"
-              disabled={controlBarDisabled}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={commitExactValueInput}
-            >
-              Add
-            </button>
-            <button
-              type="button"
-              className="visible-text-editor__exact-form-button visible-text-editor__exact-form-button--icon"
-              aria-label="Cancel exact plural value"
-              disabled={controlBarDisabled}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => {
-                resetExactValueInput();
-                viewRef.current?.focus();
-              }}
-            >
-              x
-            </button>
-          </span>
-        ) : null}
         {shouldShowControlStatus ? (
           <span
             className={`visible-text-editor__control-status${
-              exactValueError ? ' visible-text-editor__control-status--error' : ''
-            }${blockedEditMessage ? ' visible-text-editor__control-status--blocked' : ''}`}
+              blockedEditMessage ? ' visible-text-editor__control-status--blocked' : ''
+            }`}
             aria-live={shouldAnnounceControlStatus ? 'polite' : 'off'}
             title={controlStatus ?? undefined}
           >
@@ -2090,6 +2643,132 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
         ) : null}
       </div>
     ) : null;
+
+    const icuFormMenuElement =
+      activeIcuFormGroup && icuFormMenuPosition ? (
+        <div
+          className="visible-text-editor__icu-form-menu"
+          role="menu"
+          aria-label={activeIcuFormGroup.ariaLabel}
+          ref={icuFormMenuRef}
+          style={{
+            left: icuFormMenuPosition.left,
+            top: icuFormMenuPosition.top,
+          }}
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          {activeIcuFormOptions.map((option) => (
+            <label
+              key={option.id}
+              className={`visible-text-editor__icu-form-option${
+                option.disabled ? ' visible-text-editor__icu-form-option--disabled' : ''
+              }`}
+            >
+              <input
+                type="checkbox"
+                aria-label={option.form}
+                checked={option.checked}
+                disabled={controlBarDisabled || option.disabled}
+                onChange={(event) => handleToggleIcuFormOption(option, event.target.checked)}
+              />
+              <span className="visible-text-editor__icu-form-option-label">{option.form}</span>
+              {option.disabled ? (
+                <span className="visible-text-editor__icu-form-option-state">Required</span>
+              ) : null}
+            </label>
+          ))}
+          {activeIcuExactFormInsertions.length > 0 ? (
+            <div className="visible-text-editor__icu-form-menu-separator" role="separator" />
+          ) : null}
+          {activeIcuExactFormInsertions.map((insertion) =>
+            activeExactValueInsertion?.id === insertion.id ? (
+              <div key={insertion.id} className="visible-text-editor__exact-form-panel">
+                <span
+                  className={`visible-text-editor__exact-form visible-text-editor__exact-form--menu${
+                    exactValueError ? ' visible-text-editor__exact-form--error' : ''
+                  }`}
+                  title={exactValueError ?? 'Add an exact ICU plural selector'}
+                >
+                  <span className="visible-text-editor__exact-form-prefix" aria-hidden="true">
+                    =
+                  </span>
+                  <input
+                    ref={exactValueInputRef}
+                    className="visible-text-editor__exact-form-input"
+                    aria-label="Exact ICU plural value"
+                    aria-invalid={exactValueError ? 'true' : undefined}
+                    disabled={controlBarDisabled}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="0"
+                    value={exactValueDraft}
+                    onChange={(event) => {
+                      setExactValueDraft(event.target.value);
+                      setExactValueError(null);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        commitExactValueInput();
+                      }
+                      if (event.key === 'Escape') {
+                        event.preventDefault();
+                        resetExactValueInput();
+                        viewRef.current?.focus();
+                      }
+                    }}
+                    onMouseDown={(event) => event.stopPropagation()}
+                  />
+                  <button
+                    type="button"
+                    className="visible-text-editor__exact-form-button"
+                    disabled={controlBarDisabled}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={commitExactValueInput}
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    className="visible-text-editor__exact-form-button visible-text-editor__exact-form-button--icon"
+                    aria-label="Cancel exact plural value"
+                    disabled={controlBarDisabled}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      resetExactValueInput();
+                      viewRef.current?.focus();
+                    }}
+                  >
+                    x
+                  </button>
+                </span>
+                {exactValueError ? (
+                  <span className="visible-text-editor__exact-form-error" aria-live="polite">
+                    {exactValueError}
+                  </span>
+                ) : null}
+              </div>
+            ) : (
+              <button
+                key={insertion.id}
+                type="button"
+                className="visible-text-editor__icu-form-option visible-text-editor__icu-form-option--button"
+                role="menuitem"
+                onClick={() => handleStartExactValueInsertion(insertion)}
+              >
+                <span className="visible-text-editor__icu-form-option-label">
+                  {insertion.label}
+                </span>
+              </button>
+            ),
+          )}
+          {!activeExactValueInsertion && exactValueError ? (
+            <span className="visible-text-editor__exact-form-error" aria-live="polite">
+              {exactValueError}
+            </span>
+          ) : null}
+        </div>
+      ) : null;
 
     const completionOptions = completion?.options ?? [];
     const completionElement =
@@ -2125,11 +2804,11 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
           ))}
         </div>
       ) : null;
-
     return (
       <div className={editorClassName} style={style} ref={rootRef}>
         {controlBar?.position === 'top' ? controlBarElement : null}
         <div className="visible-text-editor__surface" ref={mountRef} />
+        {icuFormMenuElement}
         {completionElement}
         {controlBar?.position === 'top' ? null : controlBarElement}
       </div>

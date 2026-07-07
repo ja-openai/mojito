@@ -11,6 +11,7 @@ import com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobStorageConfi
 import com.box.l10n.mojito.service.blobstorage.database.MBlobRepository;
 import com.box.l10n.mojito.service.blobstorage.s3.S3BlobStorage;
 import com.box.l10n.mojito.service.blobstorage.s3.S3BlobStorageConfigurationProperties;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.util.Map;
 import org.quartz.JobDetail;
@@ -19,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.annotation.Bean;
@@ -100,13 +102,16 @@ public class BlobStorageConfiguration {
     @Autowired
     DataIntegrityViolationExceptionRetryTemplate dataIntegrityViolationExceptionRetryTemplate;
 
+    @Autowired MeterRegistry meterRegistry;
+
     @Bean
     public DatabaseBlobStorage databaseBlobStorage() {
       logger.info("Configure DatabaseBlobStorage");
       return new DatabaseBlobStorage(
           databaseBlobStorageConfigurationProperties,
           mBlobRepository,
-          dataIntegrityViolationExceptionRetryTemplate);
+          dataIntegrityViolationExceptionRetryTemplate,
+          meterRegistry);
     }
 
     @Bean(name = "jobDetailDatabaseBlobStorageCleanupJob")
@@ -119,6 +124,10 @@ public class BlobStorageConfiguration {
     }
 
     @Profile("!disablescheduling")
+    @ConditionalOnProperty(
+        name = "l10n.blob-storage.database.cleanup-enabled",
+        havingValue = "true",
+        matchIfMissing = true)
     @Bean
     public SimpleTriggerFactoryBean triggerExpiringBlobCleanup(
         @Qualifier("jobDetailDatabaseBlobStorageCleanupJob") JobDetail job) {

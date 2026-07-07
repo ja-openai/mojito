@@ -38,6 +38,7 @@ import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -417,6 +418,50 @@ public class ReviewProjectWS {
     }
   }
 
+  @PostMapping("/review-project-text-units/{textUnitId}/suggestion")
+  public ResponseEntity<GetReviewProjectResponse.ReviewProjectTextUnit> saveSuggestion(
+      @PathVariable Long textUnitId, @RequestBody ReviewProjectTextUnitSuggestionRequest request) {
+    if (request == null || request.target() == null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "target is required");
+    }
+    try {
+      return ResponseEntity.ok(
+          toTextUnitResponse(
+              reviewProjectService.saveSuggestion(
+                  textUnitId,
+                  request.target(),
+                  request.source(),
+                  request.notes(),
+                  request.previousTarget(),
+                  request.expectedCurrentTmTextUnitVariantId(),
+                  Boolean.TRUE.equals(request.overrideChangedCurrent()))));
+    } catch (ReviewProjectCurrentVariantConflictException conflict) {
+      ReviewProjectTextUnitDetail currentTextUnit = conflict.getCurrentTextUnit();
+      return currentTextUnit == null
+          ? ResponseEntity.status(HttpStatus.CONFLICT).build()
+          : ResponseEntity.status(HttpStatus.CONFLICT).body(toTextUnitResponse(currentTextUnit));
+    } catch (AccessDeniedException accessDeniedException) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, accessDeniedException.getMessage());
+    } catch (IllegalArgumentException illegalArgumentException) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, illegalArgumentException.getMessage());
+    }
+  }
+
+  @DeleteMapping("/review-project-text-units/{textUnitId}/suggestion")
+  public ResponseEntity<GetReviewProjectResponse.ReviewProjectTextUnit> deleteSuggestion(
+      @PathVariable Long textUnitId) {
+    try {
+      return ResponseEntity.ok(
+          toTextUnitResponse(reviewProjectService.deleteSuggestion(textUnitId)));
+    } catch (AccessDeniedException accessDeniedException) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, accessDeniedException.getMessage());
+    } catch (IllegalArgumentException illegalArgumentException) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, illegalArgumentException.getMessage());
+    }
+  }
+
   @PostMapping("/review-project-text-units/{textUnitId}/terminology-feedback")
   public GetReviewProjectResponse.ReviewProjectTextUnit saveTerminologyFeedback(
       @PathVariable Long textUnitId, @RequestBody ReviewProjectTextUnitFeedbackRequest request)
@@ -545,6 +590,14 @@ public class ReviewProjectWS {
 
   public record AdminBatchActionResponse(int affectedCount) {}
 
+  public record ReviewProjectTextUnitSuggestionRequest(
+      String target,
+      String source,
+      String notes,
+      String previousTarget,
+      Long expectedCurrentTmTextUnitVariantId,
+      Boolean overrideChangedCurrent) {}
+
   public record ReviewProjectTextUnitFeedbackRequest(
       Recommendation recommendation, Integer confidence, String notes) {}
 
@@ -663,6 +716,7 @@ public class ReviewProjectWS {
         TmTextUnitVariant baselineTmTextUnitVariant,
         TmTextUnitVariant currentTmTextUnitVariant,
         ReviewProjectTextUnitDecision reviewProjectTextUnitDecision,
+        ReviewProjectTextUnitSuggestion reviewProjectTextUnitSuggestion,
         TerminologyTerm terminologyTerm,
         List<TerminologyTermEvidence> glossaryTermEvidence,
         List<ReviewProjectTextUnitFeedback> terminologyFeedbacks) {}
@@ -749,6 +803,16 @@ public class ReviewProjectWS {
         String notes,
         String decisionState,
         TmTextUnitVariant decisionTmTextUnitVariant,
+        ZonedDateTime lastModifiedDate,
+        String lastModifiedByUsername) {}
+
+    public record ReviewProjectTextUnitSuggestion(
+        Long id,
+        String target,
+        String source,
+        String notes,
+        String previousTarget,
+        ZonedDateTime createdDate,
         ZonedDateTime lastModifiedDate,
         String lastModifiedByUsername) {}
 
@@ -1062,9 +1126,26 @@ public class ReviewProjectWS {
                 decisionVariant,
                 decision.lastModifiedDate(),
                 decision.lastModifiedByUsername()),
+        toSuggestionResponse(view.reviewProjectTextUnitSuggestion()),
         toTerminologyTermResponse(view.terminologyTerm()),
         glossaryTermEvidence.stream().map(this::toTerminologyTermEvidenceResponse).toList(),
         terminologyFeedbacks.stream().map(this::toTerminologyFeedbackResponse).toList());
+  }
+
+  private GetReviewProjectResponse.ReviewProjectTextUnitSuggestion toSuggestionResponse(
+      GetProjectDetailView.ReviewProjectTextUnitSuggestion suggestion) {
+    if (suggestion == null) {
+      return null;
+    }
+    return new GetReviewProjectResponse.ReviewProjectTextUnitSuggestion(
+        suggestion.id(),
+        suggestion.target(),
+        suggestion.source(),
+        suggestion.notes(),
+        suggestion.previousTarget(),
+        suggestion.createdDate(),
+        suggestion.lastModifiedDate(),
+        suggestion.lastModifiedByUsername());
   }
 
   private GetReviewProjectResponse.ReviewProjectTextUnit toTextUnitResponse(
@@ -1138,6 +1219,7 @@ public class ReviewProjectWS {
         baselineVariant,
         currentVariant,
         decision,
+        null,
         null,
         List.of(),
         List.of());

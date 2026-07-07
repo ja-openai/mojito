@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.oaitranslate;
 
 import com.box.l10n.mojito.quartz.QuartzSchedulerManager;
+import com.box.l10n.mojito.service.blobstorage.Retention;
 import java.util.Locale;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -10,10 +11,11 @@ import org.springframework.stereotype.Component;
 public class AiTranslateConfigurationProperties {
   String openaiClientToken;
   String schedulerName = QuartzSchedulerManager.DEFAULT_SCHEDULER_NAME;
-  String modelName = "gpt-5.4";
+  String modelName = "gpt-5.5";
   PoolProperties pool = new PoolProperties();
   RetryProperties retry = new RetryProperties();
   NoBatchProperties noBatch = new NoBatchProperties();
+  LineageProperties lineage = new LineageProperties();
   PricingProperties pricing = new PricingProperties();
   ResponsesProperties responses = new ResponsesProperties();
 
@@ -65,6 +67,14 @@ public class AiTranslateConfigurationProperties {
     this.noBatch = noBatch;
   }
 
+  public LineageProperties getLineage() {
+    return lineage;
+  }
+
+  public void setLineage(LineageProperties lineage) {
+    this.lineage = lineage;
+  }
+
   public PricingProperties getPricing() {
     return pricing;
   }
@@ -83,6 +93,7 @@ public class AiTranslateConfigurationProperties {
 
   public static class NoBatchProperties {
     TimeoutProperties timeout = new TimeoutProperties();
+    Retention outputRetention = Retention.MIN_1_DAY;
 
     public TimeoutProperties getTimeout() {
       return timeout;
@@ -90,6 +101,14 @@ public class AiTranslateConfigurationProperties {
 
     public void setTimeout(TimeoutProperties timeout) {
       this.timeout = timeout;
+    }
+
+    public Retention getOutputRetention() {
+      return outputRetention;
+    }
+
+    public void setOutputRetention(Retention outputRetention) {
+      this.outputRetention = outputRetention;
     }
 
     public static class TimeoutProperties {
@@ -202,6 +221,18 @@ public class AiTranslateConfigurationProperties {
     }
   }
 
+  public static class LineageProperties {
+    boolean payloadStorageEnabled = true;
+
+    public boolean isPayloadStorageEnabled() {
+      return payloadStorageEnabled;
+    }
+
+    public void setPayloadStorageEnabled(boolean payloadStorageEnabled) {
+      this.payloadStorageEnabled = payloadStorageEnabled;
+    }
+  }
+
   public static class PoolProperties {
     int maxConnections = 20;
     int maxPendingAcquires = 100;
@@ -234,9 +265,9 @@ public class AiTranslateConfigurationProperties {
 
   public static class PricingProperties {
     // Rough defaults for the current default model; keep raw token usage as the source of truth.
-    double inputCostPerMillion = 1.75d;
-    double cachedInputCostPerMillion = 0.175d;
-    double outputCostPerMillion = 14.0d;
+    double inputCostPerMillion = 5.0d;
+    double cachedInputCostPerMillion = 0.5d;
+    double outputCostPerMillion = 30.0d;
 
     public double getInputCostPerMillion() {
       return inputCostPerMillion;

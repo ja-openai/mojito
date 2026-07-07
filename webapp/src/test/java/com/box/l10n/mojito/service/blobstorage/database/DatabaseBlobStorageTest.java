@@ -2,11 +2,13 @@ package com.box.l10n.mojito.service.blobstorage.database;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import com.box.l10n.mojito.entity.MBlob;
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
 import com.box.l10n.mojito.service.blobstorage.BlobStorage;
 import com.box.l10n.mojito.service.blobstorage.BlobStorageTestShared;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.ZonedDateTime;
 import org.junit.Before;
 import org.junit.Test;
@@ -18,6 +20,8 @@ public class DatabaseBlobStorageTest extends ServiceTestBase implements BlobStor
   DatabaseBlobStorage databaseBlobStorage;
 
   @Autowired MBlobRepository mBlobRepository;
+
+  @Autowired MeterRegistry meterRegistry;
 
   @Override
   public BlobStorage getBlobStorage() {
@@ -94,5 +98,22 @@ public class DatabaseBlobStorageTest extends ServiceTestBase implements BlobStor
 
     assertNull(mBlobRepository.findById(expired.getId()).orElse(null));
     assertNotNull(mBlobRepository.findById(notExpired.getId()).orElse(null));
+    assertTrue(meterRegistry.get(DatabaseBlobStorage.CLEANUP_DURATION_METRIC).timer().count() > 0);
+    assertTrue(
+        meterRegistry
+                .get(DatabaseBlobStorage.CLEANUP_STEP_DURATION_METRIC)
+                .tag("step", "findExpiredIds")
+                .timer()
+                .count()
+            > 0);
+    assertTrue(
+        meterRegistry
+                .get(DatabaseBlobStorage.CLEANUP_STEP_DURATION_METRIC)
+                .tag("step", "deleteBatch")
+                .timer()
+                .count()
+            > 0);
+    assertTrue(
+        meterRegistry.get(DatabaseBlobStorage.CLEANUP_DELETED_ROWS_METRIC).counter().count() > 0);
   }
 }

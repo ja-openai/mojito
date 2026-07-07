@@ -201,12 +201,6 @@
   filter: brightness(1.05);
 }
 
-.review-project-page__header-action--secondary {
-  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
-  color: var(--color-text);
-  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 78%, transparent);
-}
-
 .review-project-page__close-request {
   display: grid;
   gap: var(--space-2);
@@ -621,7 +615,7 @@
 
 .review-project-page__controls {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: var(--space-2);
   align-items: stretch;
   padding: var(--space-3) 0;
@@ -634,6 +628,36 @@
   width: 2rem;
   padding: 0;
   justify-content: center;
+}
+
+.review-project-page__find-replace-link {
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-2);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  background: var(--color-surface);
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.review-project-page__find-replace-link:hover,
+.review-project-page__find-replace-link:focus-visible {
+  border-color: color-mix(in srgb, var(--color-border) 90%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+  color: var(--color-text);
+}
+
+.review-project-page__find-replace-icon {
+  width: 1rem;
+  height: 1rem;
+  display: block;
 }
 
 .review-project-page__filter-chip .chip-dropdown__summary,
@@ -1299,6 +1323,17 @@
 
 .review-project-detail__field--translation .review-project-detail__label-row {
   position: relative;
+}
+
+.review-project-detail__origin-pill {
+  min-height: 1.25rem;
+  padding: 0 var(--space-2);
+  border-color: color-mix(in srgb, var(--color-accent) 24%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-accent) 76%, var(--color-text));
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: none;
 }
 
 .review-project-detail__side .review-project-detail__label {

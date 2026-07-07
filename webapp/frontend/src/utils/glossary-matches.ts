@@ -1,5 +1,5 @@
 import type { AiReviewMessage } from '../api/ai-review';
-import type { ApiMatchedGlossaryTerm } from '../api/glossaries';
+import type { ApiMatchedGlossaryTerm, ApiMatchedGlossaryTermRange } from '../api/glossaries';
 
 export function filterSelfGlossaryMatches(
   matches: ApiMatchedGlossaryTerm[] | null | undefined,
@@ -25,16 +25,77 @@ export function sortGlossaryMatches(
   });
 }
 
+export function getGlossaryMatchRanges(
+  match: ApiMatchedGlossaryTerm,
+): ApiMatchedGlossaryTermRange[] {
+  return match.ranges && match.ranges.length > 0
+    ? match.ranges
+    : [
+        {
+          matchType: match.matchType,
+          startIndex: match.startIndex,
+          endIndex: match.endIndex,
+          matchedText: match.matchedText,
+        },
+      ];
+}
+
+export function dedupeGlossaryMatchesByTermId(
+  matches: ApiMatchedGlossaryTerm[] | null | undefined,
+): ApiMatchedGlossaryTerm[] {
+  const matchesByTermId = new Map<string, ApiMatchedGlossaryTerm>();
+  const rangeKeysByTermId = new Map<string, Set<string>>();
+  const dedupedMatches: ApiMatchedGlossaryTerm[] = [];
+
+  for (const match of matches ?? []) {
+    const termId = `${match.glossaryId ?? 'none'}:${match.tmTextUnitId}`;
+    const ranges = getGlossaryMatchRanges(match);
+    const existingMatch = matchesByTermId.get(termId);
+    const existingRangeKeys = rangeKeysByTermId.get(termId) ?? new Set<string>();
+    const nextRanges = ranges.filter((range) => {
+      const rangeKey = `${range.matchType}:${range.startIndex}:${range.endIndex}:${range.matchedText}`;
+      if (existingRangeKeys.has(rangeKey)) {
+        return false;
+      }
+      existingRangeKeys.add(rangeKey);
+      return true;
+    });
+
+    rangeKeysByTermId.set(termId, existingRangeKeys);
+
+    if (existingMatch) {
+      existingMatch.ranges = [...getGlossaryMatchRanges(existingMatch), ...nextRanges];
+      continue;
+    }
+
+    const dedupedMatch = { ...match, ranges: nextRanges };
+    matchesByTermId.set(termId, dedupedMatch);
+    dedupedMatches.push(dedupedMatch);
+  }
+
+  return dedupedMatches;
+}
+
+export function prepareGlossaryMatches(
+  matches: ApiMatchedGlossaryTerm[] | null | undefined,
+): ApiMatchedGlossaryTerm[] {
+  return dedupeGlossaryMatchesByTermId(sortGlossaryMatches(matches));
+}
+
 export function buildGlossaryContextMessage(
   matches: ApiMatchedGlossaryTerm[] | null | undefined,
 ): AiReviewMessage | null {
-  const sortedMatches = sortGlossaryMatches(matches);
+  const sortedMatches = prepareGlossaryMatches(matches);
   if (sortedMatches.length === 0) {
     return null;
   }
 
   const lines = sortedMatches.map((match) => {
-    const parts = [`- ${match.matchedText} [${match.startIndex}-${match.endIndex}]`];
+    const ranges = getGlossaryMatchRanges(match);
+    const rangeSummary = ranges
+      .map((range) => `${range.matchedText} [${range.startIndex}-${range.endIndex}]`)
+      .join(', ');
+    const parts = [`- ${rangeSummary}`];
 
     if (match.source.trim() !== match.matchedText.trim()) {
       parts.push(`source term: ${match.source}`);

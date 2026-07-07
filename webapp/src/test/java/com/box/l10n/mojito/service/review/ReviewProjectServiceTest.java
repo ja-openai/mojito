@@ -40,6 +40,7 @@ import com.box.l10n.mojito.entity.review.ReviewProjectTerminologyPhase;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnit;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitFeedback;
+import com.box.l10n.mojito.entity.review.ReviewProjectTextUnitSuggestion;
 import com.box.l10n.mojito.entity.review.ReviewProjectType;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.quartz.QuartzJobInfo;
@@ -91,6 +92,9 @@ public class ReviewProjectServiceTest {
       Mockito.mock(ReviewProjectTextUnitRepository.class);
   private final ReviewProjectTextUnitDecisionRepository reviewProjectTextUnitDecisionRepository =
       Mockito.mock(ReviewProjectTextUnitDecisionRepository.class);
+  private final ReviewProjectTextUnitSuggestionRepository
+      reviewProjectTextUnitSuggestionRepository =
+          Mockito.mock(ReviewProjectTextUnitSuggestionRepository.class);
   private final ReviewProjectTextUnitFeedbackRepository reviewProjectTextUnitFeedbackRepository =
       Mockito.mock(ReviewProjectTextUnitFeedbackRepository.class);
   private final ReviewProjectRequestRepository reviewProjectRequestRepository =
@@ -156,6 +160,7 @@ public class ReviewProjectServiceTest {
                 reviewProjectRepository,
                 reviewProjectTextUnitRepository,
                 reviewProjectTextUnitDecisionRepository,
+                reviewProjectTextUnitSuggestionRepository,
                 reviewProjectTextUnitFeedbackRepository,
                 reviewProjectRequestRepository,
                 reviewProjectRequestScreenshotRepository,
@@ -1149,6 +1154,211 @@ public class ReviewProjectServiceTest {
     assertEquals(1L, saveDecisionDurationCount("initialRead", "success", false));
     assertEquals(1L, saveDecisionDurationCount("detailReload", "success", false));
     assertEquals(1L, saveDecisionDurationCount("total", "noop", false));
+  }
+
+  @Test
+  public void saveDecisionStoresPendingNotesWithoutWritingCurrentVariant() {
+    Team team = team(7L);
+    Locale locale = locale(14L, "ja-JP");
+    ReviewProject reviewProject = project(12L, team, locale, user(101L, "pm-a"), currentUser);
+
+    TMTextUnit tmTextUnit = new TMTextUnit();
+    tmTextUnit.setId(321L);
+    tmTextUnit.setWordCount(7);
+    ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
+    reviewProjectTextUnit.setId(55L);
+    reviewProjectTextUnit.setReviewProject(reviewProject);
+    reviewProjectTextUnit.setTmTextUnit(tmTextUnit);
+    String stagedNote =
+        "__mojito_find_replace_stage_v1__:"
+            + "{\"source\":\"find-replace\",\"target\":\"Bonjour\",\"previousTarget\":\"Salut\"}";
+
+    when(reviewProjectTextUnitRepository.findById(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnit));
+    when(reviewProjectTextUnitDecisionRepository.findByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.empty());
+    when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
+
+    ReviewProjectTextUnitDetail detail =
+        reviewProjectService.saveDecision(
+            55L,
+            null,
+            null,
+            null,
+            null,
+            com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState.PENDING,
+            null,
+            false,
+            stagedNote);
+
+    assertEquals(Long.valueOf(55L), detail.reviewProjectTextUnitId());
+    ArgumentCaptor<ReviewProjectTextUnitDecision> decisionCaptor =
+        ArgumentCaptor.forClass(ReviewProjectTextUnitDecision.class);
+    verify(reviewProjectTextUnitDecisionRepository).saveAndFlush(decisionCaptor.capture());
+    assertEquals(stagedNote, decisionCaptor.getValue().getNotes());
+    assertEquals(
+        com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState.PENDING,
+        decisionCaptor.getValue().getDecisionState());
+    assertNull(decisionCaptor.getValue().getDecisionVariant());
+    verify(tmService, never())
+        .addTMTextUnitCurrentVariantWithResult(
+            any(),
+            anyLong(),
+            anyLong(),
+            anyLong(),
+            anyLong(),
+            any(),
+            any(),
+            any(),
+            anyBoolean(),
+            any(),
+            any());
+    verify(reviewProjectRepository, never()).incrementDecidedProgress(anyLong(), anyLong());
+    verify(reviewProjectRepository, never()).decrementDecidedProgress(anyLong(), anyLong());
+    assertEquals(1L, saveDecisionDurationCount("decisionWrite", "success", false));
+    assertEquals(1L, saveDecisionDurationCount("total", "success", false));
+  }
+
+  @Test
+  public void saveSuggestionStagesTargetWithoutWritingCurrentVariant() throws Exception {
+    Team team = team(7L);
+    Locale locale = locale(14L, "ja-JP");
+    ReviewProject reviewProject = project(12L, team, locale, user(101L, "pm-a"), currentUser);
+
+    TMTextUnit tmTextUnit = new TMTextUnit();
+    tmTextUnit.setId(321L);
+    ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
+    reviewProjectTextUnit.setId(55L);
+    reviewProjectTextUnit.setReviewProject(reviewProject);
+    reviewProjectTextUnit.setTmTextUnit(tmTextUnit);
+
+    when(reviewProjectTextUnitRepository.findById(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnit));
+    when(reviewProjectTextUnitSuggestionRepository.findByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.empty(), Optional.empty());
+    when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
+
+    reviewProjectService.saveSuggestion(
+        55L, "Bonjour", "FIND_REPLACE", "manual cleanup", "Salut", null, false);
+
+    ArgumentCaptor<ReviewProjectTextUnitSuggestion> suggestionCaptor =
+        ArgumentCaptor.forClass(ReviewProjectTextUnitSuggestion.class);
+    verify(reviewProjectTextUnitSuggestionRepository).saveAndFlush(suggestionCaptor.capture());
+    ReviewProjectTextUnitSuggestion suggestion = suggestionCaptor.getValue();
+    assertEquals(reviewProjectTextUnit, suggestion.getReviewProjectTextUnit());
+    assertEquals("Bonjour", suggestion.getTarget());
+    assertEquals("Salut", suggestion.getPreviousTarget());
+    assertEquals(ReviewProjectTextUnitSuggestion.Source.FIND_REPLACE, suggestion.getSource());
+    assertEquals("manual cleanup", suggestion.getNotes());
+    verify(tmTextUnitIntegrityCheckService).checkTMTextUnitIntegrity(321L, "Bonjour");
+    verify(tmService, never())
+        .addTMTextUnitCurrentVariantWithResult(
+            any(),
+            anyLong(),
+            anyLong(),
+            anyLong(),
+            anyLong(),
+            any(),
+            any(),
+            any(),
+            anyBoolean(),
+            any(),
+            any());
+  }
+
+  @Test
+  public void saveSuggestionConflictsWhenCurrentVariantChangedFromExpectedNull() throws Exception {
+    Team team = team(7L);
+    Locale locale = locale(14L, "ja-JP");
+    ReviewProject reviewProject = project(12L, team, locale, user(101L, "pm-a"), currentUser);
+
+    TMTextUnit tmTextUnit = new TMTextUnit();
+    tmTextUnit.setId(321L);
+    ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
+    reviewProjectTextUnit.setId(55L);
+    reviewProjectTextUnit.setReviewProject(reviewProject);
+    reviewProjectTextUnit.setTmTextUnit(tmTextUnit);
+
+    TMTextUnitVariant currentVariant = new TMTextUnitVariant();
+    currentVariant.setId(777L);
+    TMTextUnitCurrentVariant current = new TMTextUnitCurrentVariant();
+    current.setTmTextUnitVariant(currentVariant);
+
+    when(reviewProjectTextUnitRepository.findById(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnit));
+    when(tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(14L, 321L))
+        .thenReturn(current);
+    when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
+
+    try {
+      reviewProjectService.saveSuggestion(
+          55L, "Bonjour", "FIND_REPLACE", "manual cleanup", "Salut", null, false);
+      fail("Expected ReviewProjectCurrentVariantConflictException");
+    } catch (ReviewProjectCurrentVariantConflictException e) {
+      assertNull(e.getExpectedVariantId());
+      assertEquals(Long.valueOf(777L), e.getCurrentVariantId());
+    }
+
+    verify(reviewProjectTextUnitSuggestionRepository, never()).saveAndFlush(any());
+    verify(tmService, never())
+        .addTMTextUnitCurrentVariantWithResult(
+            any(),
+            anyLong(),
+            anyLong(),
+            anyLong(),
+            anyLong(),
+            any(),
+            any(),
+            any(),
+            anyBoolean(),
+            any(),
+            any());
+  }
+
+  @Test
+  public void deleteSuggestionClearsStagedTargetWithoutWritingCurrentVariant() throws Exception {
+    Team team = team(7L);
+    Locale locale = locale(14L, "ja-JP");
+    ReviewProject reviewProject = project(12L, team, locale, user(101L, "pm-a"), currentUser);
+
+    TMTextUnit tmTextUnit = new TMTextUnit();
+    tmTextUnit.setId(321L);
+    ReviewProjectTextUnit reviewProjectTextUnit = new ReviewProjectTextUnit();
+    reviewProjectTextUnit.setId(55L);
+    reviewProjectTextUnit.setReviewProject(reviewProject);
+    reviewProjectTextUnit.setTmTextUnit(tmTextUnit);
+    ReviewProjectTextUnitSuggestion suggestion = new ReviewProjectTextUnitSuggestion();
+    suggestion.setReviewProjectTextUnit(reviewProjectTextUnit);
+    suggestion.setTarget("Bonjour");
+
+    when(reviewProjectTextUnitRepository.findById(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnit));
+    when(reviewProjectTextUnitSuggestionRepository.findByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.of(suggestion), Optional.empty());
+    when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
+        .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
+
+    reviewProjectService.deleteSuggestion(55L);
+
+    verify(reviewProjectTextUnitSuggestionRepository).delete(suggestion);
+    verify(reviewProjectTextUnitSuggestionRepository).flush();
+    verify(tmTextUnitIntegrityCheckService, never()).checkTMTextUnitIntegrity(anyLong(), any());
+    verify(tmService, never())
+        .addTMTextUnitCurrentVariantWithResult(
+            any(),
+            anyLong(),
+            anyLong(),
+            anyLong(),
+            anyLong(),
+            any(),
+            any(),
+            any(),
+            anyBoolean(),
+            any(),
+            any());
   }
 
   @Test

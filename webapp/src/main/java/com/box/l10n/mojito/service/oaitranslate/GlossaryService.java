@@ -399,10 +399,10 @@ public class GlossaryService {
   public static class GlossaryTrie {
     CharTrie<GlossaryTerm> glossaryTrieSensitive = new CharTrie<>(true);
     CharTrie<GlossaryTerm> glossaryTrieInsensitive = new CharTrie<>(false);
-    Set<TermKey> loadedTerms = new HashSet<>();
+    Set<Long> loadedTermIds = new HashSet<>();
 
     public boolean addTerm(GlossaryTerm term) {
-      if (!loadedTerms.add(new TermKey(term.source(), term.caseSensitive()))) {
+      if (!loadedTermIds.add(term.tmTextUnitId())) {
         return false;
       }
 
@@ -458,7 +458,5 @@ public class GlossaryService {
     }
 
     private record MatchKey(GlossaryTerm glossaryTerm, int startIndex, int endIndex) {}
-
-    private record TermKey(String source, boolean caseSensitive) {}
   }
 }

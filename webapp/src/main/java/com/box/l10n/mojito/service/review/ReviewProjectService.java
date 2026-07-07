@@ -87,6 +87,7 @@ public class ReviewProjectService {
   private final ReviewProjectRepository reviewProjectRepository;
   private final ReviewProjectTextUnitRepository reviewProjectTextUnitRepository;
   private final ReviewProjectTextUnitDecisionRepository reviewProjectTextUnitDecisionRepository;
+  private final ReviewProjectTextUnitSuggestionRepository reviewProjectTextUnitSuggestionRepository;
   private final ReviewProjectTextUnitFeedbackRepository reviewProjectTextUnitFeedbackRepository;
   private final ReviewProjectRequestRepository reviewProjectRequestRepository;
   private final ReviewProjectRequestScreenshotRepository reviewProjectScreenshotRepository;
@@ -125,6 +126,7 @@ public class ReviewProjectService {
       ReviewProjectRepository reviewProjectRepository,
       ReviewProjectTextUnitRepository reviewProjectTextUnitRepository,
       ReviewProjectTextUnitDecisionRepository reviewProjectTextUnitDecisionRepository,
+      ReviewProjectTextUnitSuggestionRepository reviewProjectTextUnitSuggestionRepository,
       ReviewProjectTextUnitFeedbackRepository reviewProjectTextUnitFeedbackRepository,
       ReviewProjectRequestRepository reviewProjectRequestRepository,
       ReviewProjectRequestScreenshotRepository reviewProjectScreenshotRepository,
@@ -159,6 +161,7 @@ public class ReviewProjectService {
     this.reviewProjectRepository = reviewProjectRepository;
     this.reviewProjectTextUnitRepository = reviewProjectTextUnitRepository;
     this.reviewProjectTextUnitDecisionRepository = reviewProjectTextUnitDecisionRepository;
+    this.reviewProjectTextUnitSuggestionRepository = reviewProjectTextUnitSuggestionRepository;
     this.reviewProjectTextUnitFeedbackRepository = reviewProjectTextUnitFeedbackRepository;
     this.reviewProjectRequestRepository = reviewProjectRequestRepository;
     this.reviewProjectScreenshotRepository = reviewProjectScreenshotRepository;
@@ -1736,6 +1739,8 @@ public class ReviewProjectService {
     Map<Long, List<GetProjectDetailView.TerminologyTermEvidence>>
         glossaryTermEvidenceByReviewProjectTextUnitId =
             getGlossaryTermEvidenceByReviewProjectTextUnitId(textUnitDetails);
+    Map<Long, ReviewProjectTextUnitSuggestion> suggestionsByReviewProjectTextUnitId =
+        getSuggestionsByReviewProjectTextUnitId(projectId);
 
     List<GetProjectDetailView.ReviewProjectTextUnit> reviewProjectTextUnits =
         textUnitDetails.stream()
@@ -1748,7 +1753,8 @@ public class ReviewProjectService {
                         terminologyTermsByReviewProjectTextUnitId.get(
                             detail.reviewProjectTextUnitId()),
                         glossaryTermEvidenceByReviewProjectTextUnitId.getOrDefault(
-                            detail.reviewProjectTextUnitId(), List.of())))
+                            detail.reviewProjectTextUnitId(), List.of()),
+                        suggestionsByReviewProjectTextUnitId.get(detail.reviewProjectTextUnitId())))
             .toList();
 
     List<String> screenshotImageIds =
@@ -2264,6 +2270,7 @@ public class ReviewProjectService {
     reviewProjectTimeSpentStatService.deleteByReviewProjectIds(distinctIds);
     reviewProjectAssignmentWindowRepository.deleteByReviewProjectIds(distinctIds);
     reviewProjectTextUnitDecisionRepository.deleteByReviewProjectIds(distinctIds);
+    reviewProjectTextUnitSuggestionRepository.deleteByReviewProjectIds(distinctIds);
     reviewProjectTextUnitFeedbackRepository.deleteByReviewProjectIds(distinctIds);
     reviewProjectTextUnitRepository.deleteByReviewProjectIds(distinctIds);
     int deletedProjects = reviewProjectRepository.deleteByProjectIds(distinctIds);
@@ -2296,6 +2303,7 @@ public class ReviewProjectService {
     Stopwatch totalStopwatch = Stopwatch.createStarted();
     String totalResult = "success";
     boolean hasTarget = target != null;
+    boolean hasDecisionNotes = decisionNotes != null;
     try {
       if (hasTarget) {
         if (status == null) {
@@ -2351,8 +2359,7 @@ public class ReviewProjectService {
 
                 if (requireCurrentVariantMatch
                     && !overrideChangedCurrent
-                    && expectedCurrentTmTextUnitVariantId != null
-                    && !expectedCurrentTmTextUnitVariantId.equals(currentVariantId)) {
+                    && !Objects.equals(expectedCurrentTmTextUnitVariantId, currentVariantId)) {
                   throw new ReviewProjectCurrentVariantConflictException(
                       expectedCurrentTmTextUnitVariantId,
                       currentVariantId,
@@ -2389,7 +2396,10 @@ public class ReviewProjectService {
       TMTextUnitVariant currentTmTextUnitVariant = initialRead.currentTmTextUnitVariant();
       Optional<ReviewProjectTextUnitDecision> existingDecision = initialRead.existingDecision();
       boolean wasDecided = initialRead.wasDecided();
-      if (!hasTarget && decisionState == DecisionState.PENDING && existingDecision.isEmpty()) {
+      if (!hasTarget
+          && !hasDecisionNotes
+          && decisionState == DecisionState.PENDING
+          && existingDecision.isEmpty()) {
         totalResult = "noop";
         return timeSaveDecisionPhase(
             "detailReload",
@@ -2462,6 +2472,9 @@ public class ReviewProjectService {
             currentTmTextUnitVariant != null ? currentTmTextUnitVariant : baselineVariant;
         decision.setDecisionVariant(fallbackVariant);
         decision.setReviewedVariant(reviewedVariant);
+      } else if (hasDecisionNotes) {
+        decision.setReviewedVariant(reviewedVariant);
+        decision.setNotes(decisionNotes);
       }
 
       decision.setDecisionState(decisionState);
@@ -2473,6 +2486,11 @@ public class ReviewProjectService {
             reviewProjectAssignmentWindowService.acceptCurrentAssignmentIfAssignedTranslator(
                 project);
             reviewProjectTextUnitDecisionRepository.saveAndFlush(decision);
+            if (hasTarget) {
+              reviewProjectTextUnitSuggestionRepository
+                  .findByReviewProjectTextUnitId(reviewProjectTextUnitId)
+                  .ifPresent(reviewProjectTextUnitSuggestionRepository::delete);
+            }
           });
 
       runSaveDecisionPhase(
@@ -2500,6 +2518,99 @@ public class ReviewProjectService {
       recordSaveDecisionPhase(
           "total", totalResult, reviewProjectTextUnitId, hasTarget, totalStopwatch);
     }
+  }
+
+  @Transactional
+  public GetProjectDetailView.ReviewProjectTextUnit saveSuggestion(
+      Long reviewProjectTextUnitId,
+      String target,
+      String source,
+      String notes,
+      String previousTarget,
+      Long expectedCurrentTmTextUnitVariantId,
+      boolean overrideChangedCurrent) {
+    if (target == null) {
+      throw new IllegalArgumentException("target is required");
+    }
+
+    ReviewProjectTextUnit textUnit =
+        reviewProjectTextUnitRepository
+            .findById(reviewProjectTextUnitId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "reviewProjectTextUnit with id: "
+                            + reviewProjectTextUnitId
+                            + " not found"));
+    ReviewProject project = textUnit.getReviewProject();
+    assertCurrentUserCanReadProject(project);
+    userService.checkUserCanEditLocale(project.getLocale().getId());
+
+    TMTextUnit tmTextUnit = textUnit.getTmTextUnit();
+    TMTextUnitCurrentVariant currentVariant =
+        tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
+            project.getLocale().getId(), tmTextUnit.getId());
+    TMTextUnitVariant currentTmTextUnitVariant =
+        currentVariant != null ? currentVariant.getTmTextUnitVariant() : null;
+    Long currentVariantId =
+        currentTmTextUnitVariant != null ? currentTmTextUnitVariant.getId() : null;
+    if (!overrideChangedCurrent
+        && !Objects.equals(expectedCurrentTmTextUnitVariantId, currentVariantId)) {
+      throw new ReviewProjectCurrentVariantConflictException(
+          expectedCurrentTmTextUnitVariantId,
+          currentVariantId,
+          fetchReviewProjectTextUnitDetail(reviewProjectTextUnitId));
+    }
+
+    String normalizedTarget = NormalizationUtils.normalize(target);
+    try {
+      tmTextUnitIntegrityCheckService.checkTMTextUnitIntegrity(
+          tmTextUnit.getId(), normalizedTarget);
+    } catch (IntegrityCheckException e) {
+      throw new AccessDeniedException(TRANSLATOR_INTEGRITY_BYPASS_DENIED_MESSAGE);
+    }
+
+    ReviewProjectTextUnitSuggestion suggestion =
+        reviewProjectTextUnitSuggestionRepository
+            .findByReviewProjectTextUnitId(reviewProjectTextUnitId)
+            .orElseGet(
+                () -> {
+                  ReviewProjectTextUnitSuggestion entity = new ReviewProjectTextUnitSuggestion();
+                  entity.setReviewProjectTextUnit(textUnit);
+                  return entity;
+                });
+    suggestion.setTarget(normalizedTarget);
+    suggestion.setPreviousTarget(
+        previousTarget == null ? null : NormalizationUtils.normalize(previousTarget));
+    suggestion.setSource(parseSuggestionSource(source));
+    suggestion.setNotes(truncate(normalizeOptional(notes), 4000));
+    reviewProjectAssignmentWindowService.acceptCurrentAssignmentIfAssignedTranslator(project);
+    reviewProjectTextUnitSuggestionRepository.saveAndFlush(suggestion);
+
+    return fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project);
+  }
+
+  @Transactional
+  public GetProjectDetailView.ReviewProjectTextUnit deleteSuggestion(Long reviewProjectTextUnitId) {
+    ReviewProjectTextUnit textUnit =
+        reviewProjectTextUnitRepository
+            .findById(reviewProjectTextUnitId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "reviewProjectTextUnit with id: "
+                            + reviewProjectTextUnitId
+                            + " not found"));
+    ReviewProject project = textUnit.getReviewProject();
+    assertCurrentUserCanReadProject(project);
+    userService.checkUserCanEditLocale(project.getLocale().getId());
+
+    reviewProjectTextUnitSuggestionRepository
+        .findByReviewProjectTextUnitId(reviewProjectTextUnitId)
+        .ifPresent(reviewProjectTextUnitSuggestionRepository::delete);
+    reviewProjectTextUnitSuggestionRepository.flush();
+
+    return fetchReviewProjectTextUnitWithFeedback(reviewProjectTextUnitId, project);
   }
 
   @Transactional
@@ -3007,6 +3118,19 @@ public class ReviewProjectService {
                 Collectors.toList()));
   }
 
+  private Map<Long, ReviewProjectTextUnitSuggestion> getSuggestionsByReviewProjectTextUnitId(
+      Long reviewProjectId) {
+    return reviewProjectTextUnitSuggestionRepository
+        .findByReviewProjectIdOrderByTextUnitId(reviewProjectId)
+        .stream()
+        .collect(
+            Collectors.toMap(
+                suggestion -> suggestion.getReviewProjectTextUnit().getId(),
+                Function.identity(),
+                (left, right) -> left,
+                LinkedHashMap::new));
+  }
+
   private Map<Long, GetProjectDetailView.TerminologyTerm>
       getTerminologyTermsByReviewProjectTextUnitId(
           ReviewProject reviewProject, List<ReviewProjectTextUnitDetail> textUnitDetails) {
@@ -3378,6 +3502,10 @@ public class ReviewProjectService {
   private GetProjectDetailView.ReviewProjectTextUnit fetchReviewProjectTextUnitWithFeedback(
       Long reviewProjectTextUnitId, ReviewProject reviewProject) {
     ReviewProjectTextUnitDetail detail = fetchReviewProjectTextUnitDetail(reviewProjectTextUnitId);
+    ReviewProjectTextUnitSuggestion suggestion =
+        reviewProjectTextUnitSuggestionRepository
+            .findByReviewProjectTextUnitId(reviewProjectTextUnitId)
+            .orElse(null);
     return toReviewProjectTextUnit(
         detail,
         getTerminologyFeedbacksByReviewProjectTextUnitId(reviewProject, List.of(detail))
@@ -3385,14 +3513,16 @@ public class ReviewProjectService {
         getTerminologyTermsByReviewProjectTextUnitId(reviewProject, List.of(detail))
             .get(detail.reviewProjectTextUnitId()),
         getGlossaryTermEvidenceByReviewProjectTextUnitId(List.of(detail))
-            .getOrDefault(detail.reviewProjectTextUnitId(), List.of()));
+            .getOrDefault(detail.reviewProjectTextUnitId(), List.of()),
+        suggestion);
   }
 
   private GetProjectDetailView.ReviewProjectTextUnit toReviewProjectTextUnit(
       ReviewProjectTextUnitDetail detail,
       List<ReviewProjectTextUnitFeedback> feedbacks,
       GetProjectDetailView.TerminologyTerm terminologyTerm,
-      List<GetProjectDetailView.TerminologyTermEvidence> glossaryTermEvidence) {
+      List<GetProjectDetailView.TerminologyTermEvidence> glossaryTermEvidence,
+      ReviewProjectTextUnitSuggestion suggestion) {
     GetProjectDetailView.Asset.Repository repository =
         new GetProjectDetailView.Asset.Repository(detail.repositoryId(), detail.repositoryName());
     GetProjectDetailView.Asset assetView =
@@ -3460,9 +3590,27 @@ public class ReviewProjectService {
         baselineTmTextUnitVariantView,
         currentTmTextUnitVariantView,
         reviewProjectTextUnitDecision,
+        toReviewProjectTextUnitSuggestion(suggestion),
         terminologyTerm,
         glossaryTermEvidence == null ? List.of() : glossaryTermEvidence,
         feedbacks.stream().map(this::toReviewProjectTextUnitFeedback).toList());
+  }
+
+  private GetProjectDetailView.ReviewProjectTextUnitSuggestion toReviewProjectTextUnitSuggestion(
+      ReviewProjectTextUnitSuggestion suggestion) {
+    if (suggestion == null) {
+      return null;
+    }
+    User lastModifiedBy = suggestion.getLastModifiedByUser();
+    return new GetProjectDetailView.ReviewProjectTextUnitSuggestion(
+        suggestion.getId(),
+        suggestion.getTarget(),
+        suggestion.getSource() == null ? null : suggestion.getSource().name(),
+        suggestion.getNotes(),
+        suggestion.getPreviousTarget(),
+        suggestion.getCreatedDate(),
+        suggestion.getLastModifiedDate(),
+        lastModifiedBy == null ? null : lastModifiedBy.getUsername());
   }
 
   private GetProjectDetailView.ReviewProjectTextUnitFeedback toReviewProjectTextUnitFeedback(
@@ -4157,6 +4305,19 @@ public class ReviewProjectService {
       return null;
     }
     return value.trim();
+  }
+
+  private ReviewProjectTextUnitSuggestion.Source parseSuggestionSource(String source) {
+    String normalized = normalizeOptional(source);
+    if (normalized == null) {
+      return ReviewProjectTextUnitSuggestion.Source.FIND_REPLACE;
+    }
+    try {
+      return ReviewProjectTextUnitSuggestion.Source.valueOf(
+          normalized.toUpperCase(java.util.Locale.ROOT));
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException("Unknown suggestion source: " + source);
+    }
   }
 
   private String normalizeKnownValue(String value, Set<String> allowedValues, String fieldName) {

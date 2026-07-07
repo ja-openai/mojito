@@ -1,8 +1,61 @@
+.visible-text-editor,
+.visible-text-renderer {
+  --visible-text-editor-protected-surface: color-mix(
+    in srgb,
+    var(--color-accent) 8%,
+    var(--color-surface)
+  );
+  --visible-text-editor-protected-outline: color-mix(in srgb, var(--color-accent) 24%, transparent);
+  --visible-text-editor-protected-color: color-mix(
+    in srgb,
+    var(--color-accent) 58%,
+    var(--color-text)
+  );
+  --visible-text-editor-protected-radius: 0.45rem;
+  --visible-text-editor-protected-font-size: 0.94em;
+  --visible-text-editor-protected-margin-inline: 0.04em;
+  --visible-text-editor-protected-padding-block: 0.13em;
+  --visible-text-editor-protected-padding-inline: 0.34em;
+  --visible-text-editor-icu-label-color: color-mix(
+    in srgb,
+    var(--color-accent) 36%,
+    var(--color-text-muted)
+  );
+  --visible-text-editor-icu-form-color: color-mix(
+    in srgb,
+    var(--color-accent) 28%,
+    var(--color-text-muted)
+  );
+  --visible-text-editor-icu-outline: color-mix(in srgb, var(--color-accent) 34%, transparent);
+  --visible-text-editor-icu-surface: color-mix(in srgb, var(--color-accent) 9%, transparent);
+}
+
 .visible-text-editor {
+  --visible-text-editor-hidden-mark-background: color-mix(
+    in srgb,
+    var(--color-text-muted) 12%,
+    transparent
+  );
+  --visible-text-editor-hidden-mark-color: color-mix(
+    in srgb,
+    var(--color-text-subtle) 82%,
+    var(--color-text)
+  );
+  --visible-text-editor-hidden-mark-strong-background: color-mix(
+    in srgb,
+    var(--color-text-muted) 16%,
+    transparent
+  );
+  --visible-text-editor-hidden-mark-strong-color: color-mix(
+    in srgb,
+    var(--color-text-muted) 82%,
+    var(--color-text)
+  );
   background: var(--color-surface);
   border: var(--border-width) solid color-mix(in srgb, var(--color-border) 78%, transparent);
   border-radius: var(--radius-2);
   color: var(--color-text);
+  isolation: isolate;
   min-height: 12rem;
   position: relative;
   transition:
@@ -38,7 +91,10 @@
 }
 
 .visible-text-editor__surface {
+  background: transparent;
   min-height: inherit;
+  position: relative;
+  z-index: 1;
 }
 
 .visible-text-editor__raw-textarea {
@@ -63,6 +119,7 @@
 }
 
 .visible-text-editor .ProseMirror {
+  background: transparent;
   box-sizing: border-box;
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
@@ -86,7 +143,9 @@
   gap: 0.375rem;
   min-height: 2rem;
   padding: 0.125rem 0.625rem;
+  position: relative;
   row-gap: 0;
+  z-index: 2;
 }
 
 .visible-text-editor--control-bar-top .visible-text-editor__control-bar {
@@ -151,27 +210,6 @@
   border-color: transparent;
   box-shadow: none;
   color: var(--color-text-muted);
-}
-
-.visible-text-editor__control-select {
-  background: transparent;
-  border: var(--border-width) solid transparent;
-  border-radius: var(--radius-2);
-  color: var(--color-text-muted);
-  font: inherit;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  height: 1.5rem;
-  max-width: 7rem;
-  padding: 0 var(--space-1);
-}
-
-.visible-text-editor__control-select:hover,
-.visible-text-editor__control-select:focus-visible {
-  background: var(--color-surface);
-  border-color: color-mix(in srgb, var(--color-border) 80%, transparent);
-  color: var(--color-text);
-  outline: none;
 }
 
 .visible-text-editor__marks-control {
@@ -267,12 +305,6 @@
   outline: none;
 }
 
-.visible-text-editor__icu-form-select {
-  color: var(--color-text-muted);
-  font-weight: var(--font-weight-medium);
-  max-width: 8.5rem;
-}
-
 .visible-text-editor__exact-form {
   align-items: center;
   background: var(--color-surface);
@@ -283,6 +315,17 @@
   flex: 0 1 auto;
   height: 1.5rem;
   overflow: hidden;
+}
+
+.visible-text-editor__exact-form-panel {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.25rem;
+}
+
+.visible-text-editor__exact-form--menu {
+  height: 1.75rem;
+  width: 100%;
 }
 
 .visible-text-editor__exact-form--error {
@@ -342,6 +385,13 @@
 .visible-text-editor__exact-form-button--icon {
   color: var(--color-text-subtle);
   min-width: 1.45rem;
+  padding: 0 var(--space-1);
+}
+
+.visible-text-editor__exact-form-error {
+  color: var(--color-danger);
+  font-size: var(--font-size-xs);
+  line-height: 1.25;
   padding: 0 var(--space-1);
 }
 
@@ -417,6 +467,138 @@
   color: var(--color-text-subtle);
   font-size: 0.92em;
   white-space: nowrap;
+}
+
+.visible-text-renderer__icu-message,
+.visible-text-editor__icu-inline-message {
+  align-items: baseline;
+  background: var(--visible-text-editor-icu-surface);
+  border-radius: var(--visible-text-editor-protected-radius);
+  box-shadow: inset 0 0 0 var(--border-width) var(--visible-text-editor-icu-outline);
+  column-gap: 0.04em;
+  display: inline-flex;
+  flex-wrap: wrap;
+  line-height: 1.38;
+  margin-inline: var(--visible-text-editor-protected-margin-inline);
+  max-width: 100%;
+  padding-block: 0.38em;
+  padding-inline: var(--visible-text-editor-protected-padding-inline);
+  row-gap: 0.12em;
+  vertical-align: baseline;
+}
+
+.visible-text-renderer__icu-message .visible-text-editor__marked-char,
+.visible-text-renderer__icu-message .visible-text-editor__marker-widget,
+.visible-text-editor__icu-inline-message .visible-text-editor__marked-char,
+.visible-text-editor__icu-inline-message .visible-text-editor__marker-widget {
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.visible-text-renderer__icu-message .visible-text-editor__icu-editable-text,
+.visible-text-editor__icu-inline-message .visible-text-editor__icu-editable-text {
+  background: transparent;
+  border-radius: 0;
+  box-decoration-break: clone;
+  padding-inline: 0;
+  -webkit-box-decoration-break: clone;
+}
+
+.visible-text-editor__icu-form-body {
+  align-items: baseline;
+  background: var(--color-surface);
+  border-radius: calc(var(--visible-text-editor-protected-radius) - 0.08rem);
+  display: inline-flex;
+  flex-wrap: wrap;
+  line-height: inherit;
+  margin-inline: 0.04em;
+  max-width: 100%;
+  min-width: 0;
+  padding-block: 0.12em;
+  padding-inline: 0.1em;
+  row-gap: 0.08em;
+}
+
+.visible-text-editor__icu-form-body
+  .visible-text-editor__protected-token:not(.visible-text-editor__protected-token--icu-syntax),
+.visible-text-editor__icu-form-body .visible-text-editor__icu-number-placeholder {
+  line-height: 1.08;
+  padding-block: 0.04em;
+  vertical-align: 0.02em;
+}
+
+.visible-text-editor__icu-form-menu {
+  background: var(--color-surface);
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 86%, transparent);
+  border-radius: var(--radius-2);
+  box-shadow: 0 0.375rem 1rem color-mix(in srgb, var(--color-text) 12%, transparent);
+  display: grid;
+  min-width: 10rem;
+  overflow: hidden;
+  padding: 0.125rem;
+  position: absolute;
+  z-index: 95;
+}
+
+.visible-text-editor__icu-form-option {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: calc(var(--radius-2) - 1px);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  gap: var(--space-2);
+  grid-template-columns: auto minmax(5rem, 1fr);
+  line-height: 1;
+  padding: 0.375rem var(--space-2);
+  text-align: start;
+}
+
+.visible-text-editor__icu-form-option:hover:not(.visible-text-editor__icu-form-option--disabled),
+.visible-text-editor__icu-form-option:focus-within {
+  background: color-mix(in srgb, var(--color-accent) 9%, var(--color-surface));
+  color: var(--color-text);
+}
+
+.visible-text-editor__icu-form-option input {
+  margin: 0;
+}
+
+.visible-text-editor__icu-form-option--button {
+  grid-template-columns: minmax(6rem, 1fr);
+  width: 100%;
+}
+
+.visible-text-editor__icu-form-option--disabled {
+  color: var(--color-text-subtle);
+  cursor: not-allowed;
+}
+
+.visible-text-editor__icu-form-option-label {
+  color: currentColor;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  font-weight: var(--font-weight-medium);
+}
+
+.visible-text-editor__icu-form-option-state {
+  color: var(--color-text-subtle);
+  font-size: 0.92em;
+  justify-self: end;
+}
+
+.visible-text-editor__icu-form-option--disabled {
+  grid-template-columns: auto minmax(3.5rem, 1fr) auto;
+}
+
+.visible-text-editor__icu-form-menu-separator {
+  border-top: var(--border-width) solid color-mix(in srgb, var(--color-border) 72%, transparent);
+  margin: 0.125rem 0;
 }
 
 .visible-text-editor__diagnostic {
@@ -495,9 +677,9 @@
 }
 
 .visible-text-editor__marked-char::before {
-  color: color-mix(in srgb, var(--color-accent) 82%, var(--color-text));
+  color: var(--visible-text-editor-hidden-mark-color);
   content: attr(data-marker);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-medium);
   inset-inline-start: 50%;
   pointer-events: none;
   position: absolute;
@@ -509,20 +691,20 @@
 .visible-text-editor__marked-char--space,
 .visible-text-editor__marked-char--special-space,
 .visible-text-editor__marked-char--tab {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: var(--visible-text-editor-hidden-mark-background);
   border-radius: 2px;
 }
 
 .visible-text-editor__marked-char--special-space::before,
 .visible-text-editor__marked-char--tab::before {
-  color: color-mix(in srgb, var(--color-accent) 86%, var(--color-text));
+  color: var(--visible-text-editor-hidden-mark-strong-color);
 }
 
 .visible-text-editor__marker-widget {
-  color: color-mix(in srgb, var(--color-accent) 82%, var(--color-text));
+  color: var(--visible-text-editor-hidden-mark-color);
   display: inline-block;
   font-size: 0.85em;
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-medium);
   line-height: 1;
   pointer-events: none;
   user-select: none;
@@ -535,29 +717,29 @@
 
 .visible-text-editor__marker-widget--control,
 .visible-text-editor__marker-widget--zero-width {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: var(--visible-text-editor-hidden-mark-strong-background);
   border-radius: 2px;
-  color: color-mix(in srgb, var(--color-accent) 86%, var(--color-text));
+  color: var(--visible-text-editor-hidden-mark-strong-color);
   margin-inline: 1px;
   padding: 0 2px;
 }
 
 .visible-text-editor__protected-token {
-  background: color-mix(in srgb, var(--color-accent) 9%, var(--color-surface));
-  border: var(--border-width) solid color-mix(in srgb, var(--color-accent) 46%, transparent);
-  border-radius: var(--radius-2);
-  box-shadow:
-    inset 0 -0.1rem 0 color-mix(in srgb, var(--color-accent) 22%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 10%, transparent);
-  color: color-mix(in srgb, var(--color-accent) 58%, var(--color-text));
+  background: var(--visible-text-editor-protected-surface);
+  border: 0;
+  border-radius: var(--visible-text-editor-protected-radius);
+  box-shadow: inset 0 0 0 var(--border-width) var(--visible-text-editor-protected-outline);
+  color: var(--visible-text-editor-protected-color);
   cursor: default;
   display: inline-block;
+  font-size: var(--visible-text-editor-protected-font-size);
   font-weight: 400;
-  line-height: 1.16;
-  margin: 0 1px;
+  line-height: inherit;
+  margin-inline: var(--visible-text-editor-protected-margin-inline);
   max-width: 100%;
   overflow-wrap: anywhere;
-  padding: 0 0.2rem;
+  padding-block: var(--visible-text-editor-protected-padding-block);
+  padding-inline: var(--visible-text-editor-protected-padding-inline);
   vertical-align: baseline;
   white-space: pre-wrap;
 }
@@ -568,9 +750,10 @@
 }
 
 .visible-text-editor .ProseMirror .visible-text-editor__protected-token:hover {
-  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--color-accent) 58%, transparent);
-  color: color-mix(in srgb, var(--color-accent) 64%, var(--color-text));
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  box-shadow: inset 0 0 0 var(--border-width)
+    color-mix(in srgb, var(--color-accent) 34%, transparent);
+  color: var(--visible-text-editor-protected-color);
 }
 
 .visible-text-editor .ProseMirror .visible-text-editor__protected-token:active {
@@ -601,20 +784,140 @@
 }
 
 .visible-text-editor__protected-token.ProseMirror-selectednode {
-  background: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--color-accent) 70%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 24%, transparent),
-    0 0 0 2px color-mix(in srgb, var(--color-accent) 18%, transparent);
-  color: color-mix(in srgb, var(--color-accent) 64%, var(--color-text));
+    inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 34%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--color-accent) 10%, transparent);
+  color: var(--visible-text-editor-protected-color);
 }
 
-.visible-text-editor__protected-token--icu-syntax,
-.visible-text-editor__protected-token--icu-pound {
+.visible-text-editor__protected-token--icu-syntax {
+  align-items: center;
+  background: transparent;
+  border-radius: 0;
+  border-color: transparent;
+  box-shadow: none;
+  color: inherit;
+  display: inline-flex;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  margin-inline: 0;
+  max-width: none;
+  min-width: 0;
+  overflow-wrap: normal;
+  padding-block: 0;
+  padding-inline: 0.22em 0.42em;
+  text-align: inherit;
+  vertical-align: baseline;
+  white-space: pre-wrap;
+}
+
+.visible-text-editor__icu-syntax-label {
+  align-items: center;
+  display: inline-flex;
+  gap: 0;
+}
+
+.visible-text-editor__icu-syntax-argument {
+  color: var(--visible-text-editor-protected-color);
+  font-size: var(--visible-text-editor-protected-font-size);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.visible-text-editor__icu-syntax-form {
+  align-items: center;
+  color: var(--visible-text-editor-icu-form-color);
+  display: inline-flex;
   font-size: 0.92em;
+  font-style: italic;
+  font-weight: 400;
+  line-height: inherit;
+  margin-inline-end: 0.08em;
+  padding-inline: 0;
 }
 
-.visible-text-editor__protected-token--icu-pound {
-  min-width: 1.1em;
-  text-align: center;
+.visible-text-editor__icu-syntax-label .visible-text-editor__icu-syntax-form {
+  margin-inline-start: 0;
+  padding-inline-start: 0;
+}
+
+.visible-text-editor__icu-syntax-label .visible-text-editor__icu-syntax-form::before {
+  color: color-mix(in srgb, var(--color-accent) 18%, var(--color-text-muted));
+  content: '\00b7';
+  font-style: normal;
+  margin-inline: 0.28em;
+}
+
+.visible-text-editor .ProseMirror .visible-text-editor__protected-token--icu-syntax:hover,
+.visible-text-editor .ProseMirror .visible-text-editor__protected-token--icu-syntax:active,
+.visible-text-editor
+  .ProseMirror
+  .visible-text-editor__protected-token--icu-syntax.ProseMirror-selectednode {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: inherit;
+}
+
+.visible-text-editor .ProseMirror .visible-text-editor__protected-token--icu-form-trigger {
+  cursor: pointer;
+}
+
+.visible-text-editor .ProseMirror .visible-text-editor__protected-token--icu-form-trigger:hover,
+.visible-text-editor .ProseMirror .visible-text-editor__protected-token--icu-form-trigger:active,
+.visible-text-editor
+  .ProseMirror
+  .visible-text-editor__protected-token--icu-form-trigger.ProseMirror-selectednode {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.visible-text-editor__protected-token--empty-icu-syntax {
+  box-shadow: none;
+  display: inline-block;
+  height: 1em;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+  pointer-events: none;
+  vertical-align: baseline;
+  width: 0;
+}
+
+.visible-text-renderer__icu-message
+  .visible-text-editor__protected-token:not(.visible-text-editor__protected-token--icu-syntax),
+.visible-text-editor__icu-inline-message
+  .visible-text-editor__protected-token:not(.visible-text-editor__protected-token--icu-syntax) {
+  background: var(--visible-text-editor-protected-surface);
+  border-radius: var(--visible-text-editor-protected-radius);
+  box-shadow: inset 0 0 0 var(--border-width) var(--visible-text-editor-protected-outline);
+  color: var(--visible-text-editor-protected-color);
+  display: inline-block;
+  font-size: var(--visible-text-editor-protected-font-size);
+  font-weight: 400;
+  line-height: inherit;
+  margin-inline: var(--visible-text-editor-protected-margin-inline);
+  padding-block: var(--visible-text-editor-protected-padding-block);
+  padding-inline: var(--visible-text-editor-protected-padding-inline);
+  vertical-align: middle;
+}
+
+.visible-text-editor__icu-number-placeholder {
+  background: var(--visible-text-editor-protected-surface);
+  border-radius: var(--visible-text-editor-protected-radius);
+  box-shadow: inset 0 0 0 var(--border-width) var(--visible-text-editor-protected-outline);
+  color: var(--visible-text-editor-protected-color);
+  display: inline-block;
+  font-size: var(--visible-text-editor-protected-font-size);
+  font-weight: 400;
+  line-height: inherit;
+  margin-inline: var(--visible-text-editor-protected-margin-inline);
+  padding-block: var(--visible-text-editor-protected-padding-block);
+  padding-inline: var(--visible-text-editor-protected-padding-inline);
+  vertical-align: middle;
 }

@@ -34,4 +34,14 @@ public interface BlobStorage {
   default void put(String name, byte[] content) {
     put(name, content, Retention.PERMANENT);
   }
+
+  /**
+   * Returns a credential-free description of where a blob is stored.
+   *
+   * <p>This is intended for diagnostics only. Implementations that have a useful external location
+   * should override it.
+   */
+  default String getTargetDescription(String name) {
+    return getClass().getSimpleName() + ":" + name;
+  }
 }

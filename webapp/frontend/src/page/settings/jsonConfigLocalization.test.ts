@@ -638,7 +638,7 @@ describe('jsonConfigLocalization', () => {
 
     expect(
       getStatsigSourceConfigStringIds(JSON.stringify(extraction.sourceConfig), profile),
-    ).toEqual(new Set(['message.1']));
+    ).toEqual(new Set(['messages.message.1']));
     expect(
       buildStatsigSourceConfigExport(profile, extraction.sourceConfig, [], extraction.strings, {})
         .value,
@@ -647,6 +647,261 @@ describe('jsonConfigLocalization', () => {
         'message.1': {
           defaultMessage: 'Saved notification',
           description: 'Shown after save',
+        },
+      },
+    });
+  });
+
+  it('builds multilingual FormatJS message maps under a messages object', () => {
+    const profile = {
+      ...DEFAULT_STATSIG_SOURCE_CONFIG_PROFILE,
+      format: 'FORMATJS_MULTILINGUAL_MAP' as const,
+      collectionKey: 'messages',
+      sourceField: 'defaultMessage',
+      commentField: 'description',
+    };
+    const extraction = extractStatsigSourceConfigStrings(
+      '',
+      JSON.stringify({
+        messages: {
+          'message.1': {
+            defaultMessage: 'Saved notification',
+            description: 'Shown after save',
+            translations: {
+              'fr-FR': 'Ancienne notification',
+            },
+          },
+        },
+      }),
+      0,
+      profile,
+    );
+    const sourceStrings = extraction.strings.map((sourceString) => ({
+      ...sourceString,
+      clientId: 'text-unit-11',
+      tmTextUnitId: 11,
+    }));
+    const readiness = buildJsonConfigLocalizationReadiness(
+      sourceStrings,
+      [buildTargetRow(11, 'fr', 'Notification enregistree', 'APPROVED')],
+      ['fr', 'ja-JP'],
+    );
+
+    expect(
+      extraction.strings.map((sourceString) => [
+        sourceString.stringId,
+        sourceString.source,
+        sourceString.comment,
+      ]),
+    ).toEqual([['messages.message.1', 'Saved notification', 'Shown after save']]);
+    expect(
+      buildStatsigSourceConfigExport(
+        profile,
+        extraction.sourceConfig,
+        ['fr', 'ja-JP'],
+        sourceStrings,
+        readiness,
+        { fr: 'fr-FR' },
+      ).value,
+    ).toEqual({
+      messages: {
+        'message.1': {
+          defaultMessage: 'Saved notification',
+          description: 'Shown after save',
+          translations: {
+            'fr-FR': 'Notification enregistree',
+          },
+        },
+      },
+    });
+  });
+
+  it('builds multilingual FormatJS message maps under JSONPath-style message selectors', () => {
+    const profile = {
+      ...DEFAULT_STATSIG_SOURCE_CONFIG_PROFILE,
+      format: 'FORMATJS_MULTILINGUAL_MAP' as const,
+      collectionKey: '$..messages',
+      sourceField: 'defaultMessage',
+      commentField: 'description',
+    };
+    const extraction = extractStatsigSourceConfigStrings(
+      '',
+      JSON.stringify({
+        messages: {
+          'global.cancel': {
+            defaultMessage: 'Cancel',
+            description: 'Generic cancel button.',
+            translations: {},
+          },
+        },
+        surface: {
+          checkout: {
+            messages: {
+              'checkout.pay': {
+                defaultMessage: 'Pay now',
+                description: 'Primary checkout button.',
+                translations: {},
+              },
+            },
+          },
+          profile: {
+            settings: {
+              messages: {
+                'profile.saved': {
+                  defaultMessage: 'Profile saved',
+                  description: 'Toast after profile changes are saved.',
+                  translations: {},
+                },
+              },
+            },
+          },
+        },
+      }),
+      0,
+      profile,
+    );
+    const sourceStrings = extraction.strings.map((sourceString, index) => ({
+      ...sourceString,
+      clientId: `text-unit-${index + 1}`,
+      tmTextUnitId: index + 1,
+    }));
+    const readiness = buildJsonConfigLocalizationReadiness(
+      sourceStrings,
+      [
+        buildTargetRow(1, 'fr', 'Annuler', 'APPROVED'),
+        buildTargetRow(2, 'fr', 'Payer maintenant', 'APPROVED'),
+        buildTargetRow(3, 'fr', 'Profil enregistre', 'APPROVED'),
+      ],
+      ['fr'],
+    );
+
+    expect(
+      extraction.strings.map((sourceString) => [
+        sourceString.stringId,
+        sourceString.source,
+        sourceString.comment,
+      ]),
+    ).toEqual([
+      ['messages.global.cancel', 'Cancel', 'Generic cancel button.'],
+      ['surface.checkout.messages.checkout.pay', 'Pay now', 'Primary checkout button.'],
+      [
+        'surface.profile.settings.messages.profile.saved',
+        'Profile saved',
+        'Toast after profile changes are saved.',
+      ],
+    ]);
+    expect(
+      buildStatsigSourceConfigExport(
+        profile,
+        extraction.sourceConfig,
+        ['fr'],
+        sourceStrings,
+        readiness,
+        { fr: 'fr-FR' },
+      ).value,
+    ).toEqual({
+      messages: {
+        'global.cancel': {
+          defaultMessage: 'Cancel',
+          description: 'Generic cancel button.',
+          translations: {
+            'fr-FR': 'Annuler',
+          },
+        },
+      },
+      surface: {
+        checkout: {
+          messages: {
+            'checkout.pay': {
+              defaultMessage: 'Pay now',
+              description: 'Primary checkout button.',
+              translations: {
+                'fr-FR': 'Payer maintenant',
+              },
+            },
+          },
+        },
+        profile: {
+          settings: {
+            messages: {
+              'profile.saved': {
+                defaultMessage: 'Profile saved',
+                description: 'Toast after profile changes are saved.',
+                translations: {
+                  'fr-FR': 'Profil enregistre',
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it('uses message map paths to disambiguate duplicate FormatJS message ids', () => {
+    const profile = {
+      ...DEFAULT_STATSIG_SOURCE_CONFIG_PROFILE,
+      format: 'FORMATJS_MULTILINGUAL_MAP' as const,
+      collectionKey: '$..messages',
+      sourceField: 'defaultMessage',
+      commentField: 'description',
+    };
+    const extraction = extractStatsigSourceConfigStrings(
+      '',
+      JSON.stringify({
+        checkout: {
+          messages: {
+            'common.save': {
+              defaultMessage: 'Save order',
+              description: 'Checkout save action.',
+              translations: {},
+            },
+          },
+        },
+        profile: {
+          messages: {
+            'common.save': {
+              defaultMessage: 'Save profile',
+              description: 'Profile save action.',
+              translations: {},
+            },
+          },
+        },
+      }),
+      0,
+      profile,
+    );
+
+    expect(
+      extraction.strings.map((sourceString) => [
+        sourceString.stringId,
+        sourceString.source,
+        sourceString.comment,
+      ]),
+    ).toEqual([
+      ['checkout.messages.common.save', 'Save order', 'Checkout save action.'],
+      ['profile.messages.common.save', 'Save profile', 'Profile save action.'],
+    ]);
+    expect(
+      buildStatsigSourceConfigExport(profile, extraction.sourceConfig, [], extraction.strings, {})
+        .value,
+    ).toEqual({
+      checkout: {
+        messages: {
+          'common.save': {
+            defaultMessage: 'Save order',
+            description: 'Checkout save action.',
+            translations: {},
+          },
+        },
+      },
+      profile: {
+        messages: {
+          'common.save': {
+            defaultMessage: 'Save profile',
+            description: 'Profile save action.',
+            translations: {},
+          },
         },
       },
     });
@@ -803,6 +1058,30 @@ describe('jsonConfigLocalization', () => {
     });
     expect(result.itemKey).toBe('item_3');
     expect(result.stringIds).toEqual(['item_3.title', 'item_3.body']);
+    expect(result.appended).toBe(true);
+  });
+
+  it('appends multilingual FormatJS entries inside the configured message map', () => {
+    const profile = {
+      ...DEFAULT_STATSIG_SOURCE_CONFIG_PROFILE,
+      format: 'FORMATJS_MULTILINGUAL_MAP' as const,
+      collectionKey: 'messages',
+      sourceField: 'defaultMessage',
+      commentField: 'description',
+    };
+    const result = appendStatsigSourceConfigEntry('', JSON.stringify({ messages: {} }), profile);
+
+    expect(JSON.parse(result.sourceConfigJson)).toEqual({
+      messages: {
+        'message.1': {
+          defaultMessage: '',
+          description: '',
+          translations: {},
+        },
+      },
+    });
+    expect(result.itemKey).toBe('messages.message.1');
+    expect(result.stringIds).toEqual(['messages.message.1']);
     expect(result.appended).toBe(true);
   });
 

@@ -125,7 +125,7 @@ public class GlossaryServiceTest {
   }
 
   @Test
-  public void duplicateTermsKeepFirstLoadedGlossaryTerm() {
+  public void sameSourceDifferentTermIdsAllMatch() {
     GlossaryTrie trie = new GlossaryTrie();
 
     trie.addTerm(
@@ -169,10 +169,26 @@ public class GlossaryServiceTest {
 
     List<MatchedGlossaryTerm> matches = trie.findMatches("Settings");
 
-    assertEquals(1, matches.size());
+    assertEquals(2, matches.size());
     assertEquals(Long.valueOf(101L), matches.get(0).glossaryTerm().glossaryId());
     assertEquals("Core", matches.get(0).glossaryTerm().glossaryName());
     assertEquals("Core definition", matches.get(0).glossaryTerm().comment());
+    assertEquals(Long.valueOf(102L), matches.get(1).glossaryTerm().glossaryId());
+    assertEquals("Brand", matches.get(1).glossaryTerm().glossaryName());
+    assertEquals("Brand definition", matches.get(1).glossaryTerm().comment());
+  }
+
+  @Test
+  public void sameTermIdIsLoadedOnce() {
+    GlossaryTrie trie = new GlossaryTrie();
+
+    trie.addTerm(term(9L, "Settings", false));
+    trie.addTerm(term(9L, "Settings", false));
+
+    List<MatchedGlossaryTerm> matches = trie.findMatches("Settings");
+
+    assertEquals(1, matches.size());
+    assertEquals(9L, matches.get(0).glossaryTerm().tmTextUnitId());
   }
 
   @Test

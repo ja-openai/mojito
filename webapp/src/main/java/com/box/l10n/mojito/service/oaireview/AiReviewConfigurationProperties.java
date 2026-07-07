@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 public class AiReviewConfigurationProperties {
   String openaiClientToken;
   String schedulerName = QuartzSchedulerManager.DEFAULT_SCHEDULER_NAME;
-  String modelName = "gpt-5.4";
+  String modelName = "gpt-5.5";
   ResponsesProperties responses = new ResponsesProperties();
   TimeoutProperties timeout = new TimeoutProperties();
 

@@ -46,7 +46,11 @@ export type ApiJsonConfigLocalizationInput = {
 };
 
 export type ApiJsonConfigProfile = {
-  format?: 'EMBEDDED_TRANSLATIONS' | 'FLAT_SOURCE_ARRAY' | 'FORMATJS_MAP';
+  format?:
+    | 'EMBEDDED_TRANSLATIONS'
+    | 'FLAT_SOURCE_ARRAY'
+    | 'FORMATJS_MAP'
+    | 'FORMATJS_MULTILINGUAL_MAP';
   collectionKey: string;
   itemIdField: string;
   translationsField: string;
@@ -113,12 +117,15 @@ export type ApiStatsigPullInput = {
 export type ApiStatsigPushInput = {
   configId?: string | null;
   dryRun?: boolean | null;
+  updateSchema?: boolean | null;
+  pushConfig?: boolean | null;
 };
 
 export type ApiStatsigPushResult = {
   configId: string;
   dryRun: boolean;
   skipped?: boolean;
+  schemaUpdated?: boolean;
   responseJson?: string | null;
   warnings: string[];
 };

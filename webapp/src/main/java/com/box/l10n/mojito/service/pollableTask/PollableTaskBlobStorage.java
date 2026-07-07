@@ -5,7 +5,12 @@ import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Pref
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
+import io.micrometer.core.instrument.MeterRegistry;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -13,16 +18,75 @@ import org.springframework.stereotype.Component;
 @Component
 public class PollableTaskBlobStorage {
 
+  static final Logger logger = LoggerFactory.getLogger(PollableTaskBlobStorage.class);
+
+  static final String SAVE_INPUT_PAYLOAD_BYTES_METRIC =
+      "PollableTaskBlobStorage.saveInput.payloadBytes";
+
+  static final String SAVE_INPUT_DURATION_METRIC = "PollableTaskBlobStorage.saveInput.duration";
+
   @Autowired StructuredBlobStorage structuredBlobStorage;
 
   @Autowired
   @Qualifier("fail_on_unknown_properties_false")
   ObjectMapper objectMapper;
 
+  @Autowired MeterRegistry meterRegistry;
+
   public void saveInput(Long pollableTaskId, Object input) {
+    long startNanos = System.nanoTime();
     String inputName = getInputName(pollableTaskId);
     String inputJson = objectMapper.writeValueAsStringUnchecked(input);
-    structuredBlobStorage.put(POLLABLE_TASK, inputName, inputJson, Retention.MIN_1_DAY);
+    long serializedNanos = System.nanoTime();
+    int payloadBytes = inputJson.getBytes(StandardCharsets.UTF_8).length;
+    String storageType = structuredBlobStorage.getStorageType(POLLABLE_TASK);
+    String target = structuredBlobStorage.getTargetDescription(POLLABLE_TASK, inputName);
+    String inputType = input == null ? "null" : input.getClass().getName();
+
+    meterRegistry
+        .summary(SAVE_INPUT_PAYLOAD_BYTES_METRIC, "storageType", storageType)
+        .record(payloadBytes);
+
+    logger.info(
+        "Saving pollable task input: pollableTaskId={}, inputType={}, payloadBytes={}, payloadChars={}, storageType={}, target={}, serializationDurationMs={}",
+        pollableTaskId,
+        inputType,
+        payloadBytes,
+        inputJson.length(),
+        storageType,
+        target,
+        nanosToMillis(serializedNanos - startNanos));
+
+    String result = "success";
+    try {
+      structuredBlobStorage.put(POLLABLE_TASK, inputName, inputJson, Retention.MIN_1_DAY);
+      logger.info(
+          "Saved pollable task input: pollableTaskId={}, payloadBytes={}, storageType={}, target={}, writeDurationMs={}, totalDurationMs={}",
+          pollableTaskId,
+          payloadBytes,
+          storageType,
+          target,
+          nanosToMillis(System.nanoTime() - serializedNanos),
+          nanosToMillis(System.nanoTime() - startNanos));
+    } catch (RuntimeException | Error e) {
+      result = "failure";
+      logger.error(
+          "Failed to save pollable task input: pollableTaskId={}, inputType={}, payloadBytes={}, payloadChars={}, storageType={}, target={}, writeDurationMs={}, totalDurationMs={}",
+          pollableTaskId,
+          inputType,
+          payloadBytes,
+          inputJson.length(),
+          storageType,
+          target,
+          nanosToMillis(System.nanoTime() - serializedNanos),
+          nanosToMillis(System.nanoTime() - startNanos),
+          e);
+      throw e;
+    } finally {
+      meterRegistry
+          .timer(SAVE_INPUT_DURATION_METRIC, "storageType", storageType, "result", result)
+          .record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+    }
   }
 
   public void saveOutput(Long pollableTaskId, Object output) {
@@ -75,5 +139,9 @@ public class PollableTaskBlobStorage {
   public Optional<String> findOutputJson(Long pollableTaskId) {
     String outputName = getOutputName(pollableTaskId);
     return structuredBlobStorage.getString(POLLABLE_TASK, outputName);
+  }
+
+  private long nanosToMillis(long nanos) {
+    return TimeUnit.NANOSECONDS.toMillis(nanos);
   }
 }

@@ -109,9 +109,17 @@ type StatsigSyncOptions = {
   translate: boolean;
   merge: boolean;
   saveConfig: boolean;
+  updateSchema: boolean;
   push: boolean;
 };
-type StatsigSyncStepId = 'PULL' | 'EXTRACT' | 'TRANSLATE' | 'MERGE' | 'SAVE_CONFIG' | 'PUSH';
+type StatsigSyncStepId =
+  | 'PULL'
+  | 'EXTRACT'
+  | 'TRANSLATE'
+  | 'MERGE'
+  | 'SAVE_CONFIG'
+  | 'UPDATE_SCHEMA'
+  | 'PUSH';
 type StatsigSyncStepStatus = 'PENDING' | 'RUNNING' | 'DONE' | 'SKIPPED' | 'ERROR';
 type StatsigSyncProgress = {
   steps: Record<StatsigSyncStepId, StatsigSyncStepStatus>;
@@ -197,6 +205,7 @@ const STATSIG_SYNC_STEP_LABELS: Record<StatsigSyncStepId, string> = {
   TRANSLATE: 'AI translate',
   MERGE: 'Merge translations into config',
   SAVE_CONFIG: 'Save config in Mojito',
+  UPDATE_SCHEMA: 'Push schema to Statsig',
   PUSH: 'Push config to Statsig',
 };
 const DEFAULT_JSON_CONFIG_AUTOMATION_OPTIONS: StatsigSyncOptions = {
@@ -205,6 +214,7 @@ const DEFAULT_JSON_CONFIG_AUTOMATION_OPTIONS: StatsigSyncOptions = {
   translate: false,
   merge: true,
   saveConfig: true,
+  updateSchema: false,
   push: true,
 };
 const JSON_CONFIG_AUTOMATION_STEP_IDS: StatsigSyncStepId[] = [
@@ -213,9 +223,16 @@ const JSON_CONFIG_AUTOMATION_STEP_IDS: StatsigSyncStepId[] = [
   'TRANSLATE',
   'MERGE',
   'SAVE_CONFIG',
+  'UPDATE_SCHEMA',
   'PUSH',
 ];
-const PUBLISH_CONFIG_STEP_IDS: StatsigSyncStepId[] = ['TRANSLATE', 'MERGE', 'SAVE_CONFIG', 'PUSH'];
+const PUBLISH_CONFIG_STEP_IDS: StatsigSyncStepId[] = [
+  'TRANSLATE',
+  'MERGE',
+  'SAVE_CONFIG',
+  'UPDATE_SCHEMA',
+  'PUSH',
+];
 const JSON_CONFIG_AUTOMATION_CRON_PRESETS = [
   { label: 'Hourly', value: '0 0 * * * ?' },
   { label: 'Daily 2 AM', value: '0 0 2 * * ?' },
@@ -404,6 +421,27 @@ const JSON_CONFIG_SCHEMA_PRESETS: JsonConfigSchemaPreset[] = [
         required: ['defaultMessage'],
         additionalProperties: true,
       },
+    },
+  },
+  {
+    id: 'formatjs-multilingual-map',
+    label: 'Multilingual FormatJS message map',
+    description:
+      'Finds message maps named messages anywhere in the config, with defaultMessage, optional description, and locale translations.',
+    profile: {
+      format: 'FORMATJS_MULTILINGUAL_MAP',
+      collectionKey: '$..messages',
+      itemIdField: 'id',
+      translationsField: 'translations',
+      sourceLocaleTag: 'en-US',
+      translatableFields: [],
+      sourceField: 'defaultMessage',
+      commentField: 'description',
+    },
+    schema: {
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      type: 'object',
+      additionalProperties: true,
     },
   },
 ];
@@ -925,6 +963,7 @@ function JsonConfigLocalizationWorkspace({
     translate: false,
     merge: true,
     saveConfig: true,
+    updateSchema: false,
     push: false,
   });
   const activeTab = getJsonConfigLocalizationTab(workspaceSearchParams.get('tab'));
@@ -1044,20 +1083,27 @@ function JsonConfigLocalizationWorkspace({
     }
   }, [sourceConfigText, statsigProfile]);
   const canExportLocalizedConfig =
-    effectiveStatsigProfile.format === 'EMBEDDED_TRANSLATIONS' &&
-    Boolean(effectiveStatsigProfile.collectionKey.trim()) &&
-    Boolean(effectiveStatsigProfile.translationsField.trim()) &&
-    Boolean(effectiveStatsigProfile.sourceLocaleTag.trim()) &&
-    effectiveStatsigProfile.translatableFields.length > 0;
+    (effectiveStatsigProfile.format === 'EMBEDDED_TRANSLATIONS' &&
+      Boolean(effectiveStatsigProfile.collectionKey.trim()) &&
+      Boolean(effectiveStatsigProfile.translationsField.trim()) &&
+      Boolean(effectiveStatsigProfile.sourceLocaleTag.trim()) &&
+      effectiveStatsigProfile.translatableFields.length > 0) ||
+    (effectiveStatsigProfile.format === 'FORMATJS_MULTILINGUAL_MAP' &&
+      Boolean(effectiveStatsigProfile.sourceField?.trim()) &&
+      Boolean(effectiveStatsigProfile.translationsField.trim()));
+  const localizedConfigExportLabel =
+    effectiveStatsigProfile.format === 'FORMATJS_MULTILINGUAL_MAP'
+      ? 'Multilingual FormatJS config'
+      : 'Embedded multilingual config';
   const exportFormatOptions = useMemo(
     () => [
       { value: 'locale-map' as const, label: 'Locale map' },
       { value: 'locale-files' as const, label: 'Locale files' },
       ...(canExportLocalizedConfig
-        ? [{ value: 'localized-config' as const, label: 'Embedded multilingual config' }]
+        ? [{ value: 'localized-config' as const, label: localizedConfigExportLabel }]
         : []),
     ],
-    [canExportLocalizedConfig],
+    [canExportLocalizedConfig, localizedConfigExportLabel],
   );
 
   const localizedConfigExportQuery = useQuery({
@@ -1497,7 +1543,7 @@ function JsonConfigLocalizationWorkspace({
         return {
           json: localeMapExportJson,
           warnings: [
-            'Embedded multilingual config export requires an embedded translations mapping. Showing locale-map export instead.',
+            'Localized config export requires an embedded translations or multilingual FormatJS mapping. Showing locale-map export instead.',
           ],
         };
       }
@@ -1694,7 +1740,7 @@ function JsonConfigLocalizationWorkspace({
     return syncedConfig.sourceConfigJson;
   };
 
-  const pushSavedConfigToStatsig = async () => {
+  const pushSavedConfigToStatsig = async (updateSchema = false, pushConfig = true) => {
     if (!repository) {
       throw new Error('Repository not found.');
     }
@@ -1704,7 +1750,11 @@ function JsonConfigLocalizationWorkspace({
     }
 
     const setup = jsonConfigLocalizationQuery.data ?? (await saveJsonConfigLocalizationSetup());
-    return pushJsonConfigToStatsigForSetup(setup.id, { configId: trimmedConfigId });
+    return pushJsonConfigToStatsigForSetup(setup.id, {
+      configId: trimmedConfigId,
+      updateSchema,
+      pushConfig,
+    });
   };
 
   const saveDraftStringsToJsonConfig = async (
@@ -1852,7 +1902,7 @@ function JsonConfigLocalizationWorkspace({
     setDraftStrings(nextDraftStrings);
     setSelectedClientId(extractedStrings[0]?.clientId ?? nextDraftStrings[0]?.clientId ?? null);
     setExportFormat(
-      storedDraft.profile.format === 'EMBEDDED_TRANSLATIONS' ? 'localized-config' : 'locale-map',
+      isLocalizedConfigFormat(storedDraft.profile) ? 'localized-config' : 'locale-map',
     );
 
     return {
@@ -1943,6 +1993,7 @@ function JsonConfigLocalizationWorkspace({
             translate: true,
             merge: false,
             saveConfig: false,
+            updateSchema: false,
             push: false,
           }),
           'TRANSLATE',
@@ -2059,7 +2110,7 @@ function JsonConfigLocalizationWorkspace({
         throw new Error('Repository not found.');
       }
       const trimmedConfigId = providerConfigId.trim();
-      if ((options.pull || options.push) && !trimmedConfigId) {
+      if ((options.pull || options.updateSchema || options.push) && !trimmedConfigId) {
         throw new Error('Provide a Statsig config id.');
       }
       if (
@@ -2068,6 +2119,7 @@ function JsonConfigLocalizationWorkspace({
         !options.translate &&
         !options.merge &&
         !options.saveConfig &&
+        !options.updateSchema &&
         !options.push
       ) {
         throw new Error('Select at least one sync step.');
@@ -2238,29 +2290,77 @@ function JsonConfigLocalizationWorkspace({
         );
       }
 
-      const pushResult = options.push
-        ? await (async () => {
-            setStatsigSyncProgress((current) =>
-              markStatsigSyncStep(current, 'PUSH', 'RUNNING', 'Pushing saved config to Statsig.'),
-            );
-            const result = await pushSavedConfigToStatsig();
-            warnings.push(...result.warnings);
-            setStatsigSyncProgress((current) =>
-              markStatsigSyncStep(
-                current,
-                'PUSH',
-                'DONE',
-                result.skipped
-                  ? `Statsig config ${result.configId} already matched; skipped push.`
-                  : `Pushed Statsig config ${result.configId}.`,
-              ),
-            );
-            return result;
-          })()
-        : null;
-      if (!options.push) {
+      const pushResult =
+        options.updateSchema || options.push
+          ? await (async () => {
+              if (options.updateSchema) {
+                setStatsigSyncProgress((current) =>
+                  markStatsigSyncStep(
+                    current,
+                    'UPDATE_SCHEMA',
+                    'RUNNING',
+                    'Pushing schema to Statsig.',
+                  ),
+                );
+              } else {
+                setStatsigSyncProgress((current) =>
+                  markStatsigSyncStep(
+                    current,
+                    'UPDATE_SCHEMA',
+                    'SKIPPED',
+                    'Statsig schema push skipped.',
+                  ),
+                );
+              }
+              if (options.push) {
+                setStatsigSyncProgress((current) =>
+                  markStatsigSyncStep(
+                    current,
+                    'PUSH',
+                    'RUNNING',
+                    options.updateSchema
+                      ? 'Pushing schema and config to Statsig.'
+                      : 'Pushing saved config to Statsig.',
+                  ),
+                );
+              } else {
+                setStatsigSyncProgress((current) =>
+                  markStatsigSyncStep(current, 'PUSH', 'SKIPPED', 'Statsig config push skipped.'),
+                );
+              }
+              const result = await pushSavedConfigToStatsig(options.updateSchema, options.push);
+              warnings.push(...result.warnings);
+              if (options.updateSchema) {
+                setStatsigSyncProgress((current) =>
+                  markStatsigSyncStep(
+                    current,
+                    'UPDATE_SCHEMA',
+                    'DONE',
+                    'Pushed schema to Statsig.',
+                  ),
+                );
+              }
+              if (options.push) {
+                setStatsigSyncProgress((current) =>
+                  markStatsigSyncStep(
+                    current,
+                    'PUSH',
+                    'DONE',
+                    result.skipped
+                      ? `Statsig config ${result.configId} already matched; skipped push.`
+                      : `Pushed Statsig config ${result.configId}.`,
+                  ),
+                );
+              }
+              return result;
+            })()
+          : null;
+      if (!options.updateSchema && !options.push) {
         setStatsigSyncProgress((current) =>
-          markStatsigSyncStep(current, 'PUSH', 'SKIPPED', 'Statsig push skipped.'),
+          markStatsigSyncStep(current, 'UPDATE_SCHEMA', 'SKIPPED', 'Statsig schema push skipped.'),
+        );
+        setStatsigSyncProgress((current) =>
+          markStatsigSyncStep(current, 'PUSH', 'SKIPPED', 'Statsig config push skipped.'),
         );
       }
 
@@ -2280,7 +2380,8 @@ function JsonConfigLocalizationWorkspace({
         options.translate ? `started AI translation for ${translatedCount}` : null,
         options.merge ? 'merged translations into config' : null,
         options.saveConfig ? 'saved config in Mojito' : null,
-        pushResult ? `pushed Statsig config ${pushResult.configId}` : null,
+        pushResult?.schemaUpdated ? 'pushed Statsig schema' : null,
+        options.push && pushResult ? `pushed Statsig config ${pushResult.configId}` : null,
       ].filter(Boolean);
       setStatusNotice({
         kind: 'success',
@@ -2340,7 +2441,11 @@ function JsonConfigLocalizationWorkspace({
       setSourceConfigText(result.sourceConfigJson);
       setStatsigProfile(result.profile);
       setStatsigWarnings(result.warnings);
-      const focusField = result.profile.translatableFields[0];
+      const focusField =
+        result.profile.format === 'FORMATJS_MAP' ||
+        result.profile.format === 'FORMATJS_MULTILINGUAL_MAP'
+          ? result.profile.sourceField
+          : result.profile.translatableFields[0];
       if (focusField) {
         const needle = `"${focusField}": ""`;
         setPendingConfigFocusTarget({
@@ -2448,7 +2553,7 @@ function JsonConfigLocalizationWorkspace({
     setDraftStrings(nextDraftStrings);
     setSelectedClientId(extractedStrings[0]?.clientId ?? nextDraftStrings[0]?.clientId ?? null);
     setExportFormat(
-      extraction.profile.format === 'EMBEDDED_TRANSLATIONS' ? 'localized-config' : 'locale-map',
+      isLocalizedConfigFormat(extraction.profile) ? 'localized-config' : 'locale-map',
     );
     return { extraction, extractedStrings, nextDraftStrings };
   };
@@ -2729,6 +2834,10 @@ function JsonConfigLocalizationWorkspace({
   const selectedSchemaPreset =
     builtInSchemaOptions.find((preset) => preset.id === selectedSchemaPresetId) ?? null;
   const mappingFormat = statsigProfile.format ?? 'EMBEDDED_TRANSLATIONS';
+  const isFormatJsMapping =
+    mappingFormat === 'FORMATJS_MAP' || mappingFormat === 'FORMATJS_MULTILINGUAL_MAP';
+  const usesTranslationsField =
+    mappingFormat === 'EMBEDDED_TRANSLATIONS' || mappingFormat === 'FORMATJS_MULTILINGUAL_MAP';
   const mappingStatusNotice =
     mappingNotice ??
     (selectedSchemaPreset
@@ -2778,6 +2887,7 @@ function JsonConfigLocalizationWorkspace({
     hasStatsigSyncStepSelected &&
     (!statsigSyncRequiresSavedStrings || !hasUnsavedDraftStrings) &&
     (!effectiveStatsigSyncOptions.pull || Boolean(providerConfigId.trim())) &&
+    (!effectiveStatsigSyncOptions.updateSchema || Boolean(providerConfigId.trim())) &&
     (!effectiveStatsigSyncOptions.push || Boolean(providerConfigId.trim())) &&
     !isBusy;
   const canSaveAutomationSetup =
@@ -2790,13 +2900,20 @@ function JsonConfigLocalizationWorkspace({
     translate: publishConfigOptions.translate && targetLocaleTags.length > 0,
     merge: publishConfigOptions.merge,
     saveConfig: publishConfigOptions.saveConfig,
+    updateSchema: publishConfigOptions.updateSchema,
     push: publishConfigOptions.push,
   };
   const hasPublishConfigStepSelected = Object.values(effectivePublishConfigOptions).some(Boolean);
+  const publishConfigRequiresSavedStrings =
+    effectivePublishConfigOptions.translate ||
+    effectivePublishConfigOptions.merge ||
+    effectivePublishConfigOptions.saveConfig ||
+    effectivePublishConfigOptions.push;
   const canRunPublishConfig =
     isStatsigProvider &&
     hasPublishConfigStepSelected &&
-    !hasUnsavedDraftStrings &&
+    (!publishConfigRequiresSavedStrings || !hasUnsavedDraftStrings) &&
+    (!effectivePublishConfigOptions.updateSchema || Boolean(providerConfigId.trim())) &&
     (!effectivePublishConfigOptions.push || Boolean(providerConfigId.trim())) &&
     !isBusy;
   const canSaveConfigEditor = Boolean(sourceConfigText.trim()) && !isBusy;
@@ -2855,14 +2972,32 @@ function JsonConfigLocalizationWorkspace({
       },
     });
   };
-  const extractionMappingSummary = [
-    statsigProfile.collectionKey,
-    statsigProfile.translationsField,
-    statsigProfile.sourceLocaleTag,
-    statsigProfile.translatableFields.join(', '),
-  ]
-    .filter(Boolean)
-    .join(' / ');
+  const extractionMappingSummary =
+    mappingFormat === 'FORMATJS_MAP'
+      ? [
+          statsigProfile.collectionKey ? `map ${statsigProfile.collectionKey}` : 'root map',
+          statsigProfile.sourceField,
+          statsigProfile.commentField,
+        ]
+          .filter(Boolean)
+          .join(' / ')
+      : mappingFormat === 'FORMATJS_MULTILINGUAL_MAP'
+        ? [
+            statsigProfile.collectionKey ? `map ${statsigProfile.collectionKey}` : 'root map',
+            statsigProfile.sourceField,
+            statsigProfile.commentField,
+            statsigProfile.translationsField,
+          ]
+            .filter(Boolean)
+            .join(' / ')
+        : [
+            statsigProfile.collectionKey,
+            statsigProfile.translationsField,
+            statsigProfile.sourceLocaleTag,
+            statsigProfile.translatableFields.join(', '),
+          ]
+            .filter(Boolean)
+            .join(' / ');
   const activeStatusNotice: StatusNotice | null = saveConfigEditorMutation.isPending
     ? {
         kind: 'info',
@@ -2936,6 +3071,20 @@ function JsonConfigLocalizationWorkspace({
       <label className="settings-toggle">
         <input
           type="checkbox"
+          checked={publishConfigOptions.updateSchema}
+          disabled={isBusy}
+          onChange={(event) =>
+            setPublishConfigOptions((current) => ({
+              ...current,
+              updateSchema: event.target.checked,
+            }))
+          }
+        />
+        Push schema to Statsig
+      </label>
+      <label className="settings-toggle">
+        <input
+          type="checkbox"
           checked={publishConfigOptions.push}
           disabled={isBusy}
           onChange={(event) =>
@@ -2969,6 +3118,7 @@ function JsonConfigLocalizationWorkspace({
         progress={statsigSyncProgress}
         title={title}
         visibleStepIds={visibleStepIds}
+        statsigConsoleUrl={statsigConsoleUrl}
         onDismiss={() => setStatsigSyncProgress(null)}
       />
     ) : null;
@@ -3234,6 +3384,20 @@ function JsonConfigLocalizationWorkspace({
                       <label className="settings-toggle">
                         <input
                           type="checkbox"
+                          checked={statsigSyncOptions.updateSchema}
+                          disabled={isBusy}
+                          onChange={(event) =>
+                            setStatsigSyncOptions((current) => ({
+                              ...current,
+                              updateSchema: event.target.checked,
+                            }))
+                          }
+                        />
+                        Push schema to Statsig
+                      </label>
+                      <label className="settings-toggle">
+                        <input
+                          type="checkbox"
                           checked={statsigSyncOptions.push}
                           disabled={isBusy}
                           onChange={(event) =>
@@ -3486,9 +3650,29 @@ function JsonConfigLocalizationWorkspace({
                           <option value="EMBEDDED_TRANSLATIONS">Embedded translations</option>
                           <option value="FLAT_SOURCE_ARRAY">Flat source array</option>
                           <option value="FORMATJS_MAP">FormatJS message map</option>
+                          <option value="FORMATJS_MULTILINGUAL_MAP">
+                            Multilingual FormatJS message map
+                          </option>
                         </select>
                       </label>
-                      {mappingFormat !== 'FORMATJS_MAP' ? (
+                      {isFormatJsMapping ? (
+                        <label className="settings-field">
+                          <span className="settings-field__label">Message map key</span>
+                          <input
+                            className="settings-input"
+                            value={statsigProfile.collectionKey}
+                            placeholder="Blank for root, e.g. $..messages or $.surface..messages"
+                            onChange={(event) =>
+                              updateStatsigProfile({ collectionKey: event.target.value })
+                            }
+                          />
+                          <span className="json-config-localization-page__muted">
+                            Supports this JSONPath subset: <code>$..messages</code> for recursive
+                            object search, <code>$.surface..messages</code> to scope it, and{' '}
+                            <code>*</code> for one object level. Arrays are not traversed.
+                          </span>
+                        </label>
+                      ) : (
                         <label className="settings-field">
                           <span className="settings-field__label">Collection key</span>
                           <input
@@ -3499,8 +3683,8 @@ function JsonConfigLocalizationWorkspace({
                             }
                           />
                         </label>
-                      ) : null}
-                      {mappingFormat !== 'FORMATJS_MAP' ? (
+                      )}
+                      {!isFormatJsMapping ? (
                         <label className="settings-field">
                           <span className="settings-field__label">Item id field</span>
                           <input
@@ -3512,7 +3696,7 @@ function JsonConfigLocalizationWorkspace({
                           />
                         </label>
                       ) : null}
-                      {mappingFormat === 'EMBEDDED_TRANSLATIONS' ? (
+                      {usesTranslationsField ? (
                         <label className="settings-field">
                           <span className="settings-field__label">Translations field</span>
                           <input
@@ -3633,6 +3817,7 @@ function JsonConfigLocalizationWorkspace({
                     progress={statsigSyncProgress}
                     title="Publish progress"
                     visibleStepIds={PUBLISH_CONFIG_STEP_IDS}
+                    statsigConsoleUrl={statsigConsoleUrl}
                     onDismiss={() => setStatsigSyncProgress(null)}
                   />
                 </div>
@@ -4372,11 +4557,13 @@ function StatsigSyncProgressPanel({
   progress,
   title = 'Sync progress',
   visibleStepIds = Object.keys(STATSIG_SYNC_STEP_LABELS) as StatsigSyncStepId[],
+  statsigConsoleUrl,
   onDismiss,
 }: {
   progress: StatsigSyncProgress;
   title?: string;
   visibleStepIds?: StatsigSyncStepId[];
+  statsigConsoleUrl?: string | null;
   onDismiss?: () => void;
 }) {
   const percent = getStatsigSyncProgressPercent(progress, visibleStepIds);
@@ -4413,7 +4600,19 @@ function StatsigSyncProgressPanel({
           const status = progress.steps[stepId];
           return (
             <div key={stepId} className="json-config-localization-page__sync-step">
-              <span>{STATSIG_SYNC_STEP_LABELS[stepId]}</span>
+              <span className="json-config-localization-page__sync-step-label">
+                <span>{STATSIG_SYNC_STEP_LABELS[stepId]}</span>
+                {stepId === 'PUSH' && statsigConsoleUrl ? (
+                  <a
+                    href={statsigConsoleUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="json-config-localization-page__sync-step-link"
+                  >
+                    Open in Statsig
+                  </a>
+                ) : null}
+              </span>
               <span
                 className={`json-config-localization-page__sync-step-status is-${status.toLowerCase()}`}
               >
@@ -4820,6 +5019,7 @@ function createStatsigSyncProgress(options: StatsigSyncOptions): StatsigSyncProg
       TRANSLATE: options.translate ? 'PENDING' : 'SKIPPED',
       MERGE: options.merge ? 'PENDING' : 'SKIPPED',
       SAVE_CONFIG: options.saveConfig ? 'PENDING' : 'SKIPPED',
+      UPDATE_SCHEMA: options.updateSchema ? 'PENDING' : 'SKIPPED',
       PUSH: options.push ? 'PENDING' : 'SKIPPED',
     },
     message: 'Starting automation.',
@@ -4913,6 +5113,10 @@ function formatJsonConfigApiErrorMessage(error: unknown, fallback: string): stri
 }
 
 function formatDetectedMappingMessage(profile: StatsigSourceConfigProfile): string {
+  if (profile.format === 'FORMATJS_MULTILINGUAL_MAP') {
+    return `Detected multilingual FormatJS messages using "${profile.sourceField || 'defaultMessage'}". Save setup to persist it.`;
+  }
+
   if (profile.format === 'FORMATJS_MAP') {
     return `Detected FormatJS messages using "${profile.sourceField || 'defaultMessage'}". Save setup to persist it.`;
   }
@@ -4925,6 +5129,12 @@ function formatDetectedMappingMessage(profile: StatsigSourceConfigProfile): stri
   return fields
     ? `Detected ${profile.collectionKey} with fields ${fields}. Save setup to persist it.`
     : `Detected ${profile.collectionKey}. Add translatable fields, then save setup.`;
+}
+
+function isLocalizedConfigFormat(profile: StatsigSourceConfigProfile): boolean {
+  return (
+    profile.format === 'EMBEDDED_TRANSLATIONS' || profile.format === 'FORMATJS_MULTILINGUAL_MAP'
+  );
 }
 
 function parseTranslatableFields(value: string): string[] {
@@ -5080,8 +5290,11 @@ function isStatsigSyncOptions(value: unknown): value is StatsigSyncOptions {
   }
 
   const candidate = value as Partial<StatsigSyncOptions>;
-  return ['pull', 'extract', 'translate', 'merge', 'saveConfig', 'push'].every(
-    (key) => typeof candidate[key as keyof StatsigSyncOptions] === 'boolean',
+  return (
+    ['pull', 'extract', 'translate', 'merge', 'saveConfig', 'push'].every(
+      (key) => typeof candidate[key as keyof StatsigSyncOptions] === 'boolean',
+    ) &&
+    (candidate.updateSchema == null || typeof candidate.updateSchema === 'boolean')
   );
 }
 

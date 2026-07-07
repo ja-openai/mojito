@@ -410,6 +410,8 @@ public abstract class JsonConfigCommandSupport extends Command {
       case "embedded", "embedded_translations" -> "EMBEDDED_TRANSLATIONS";
       case "flat", "flat_source_array" -> "FLAT_SOURCE_ARRAY";
       case "formatjs", "formatjs_map" -> "FORMATJS_MAP";
+      case "formatjs_multilingual", "formatjs_multilingual_map", "multilingual_formatjs" ->
+          "FORMATJS_MULTILINGUAL_MAP";
       default -> format.trim();
     };
   }

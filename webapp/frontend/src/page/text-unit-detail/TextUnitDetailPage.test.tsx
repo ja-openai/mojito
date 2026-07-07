@@ -132,7 +132,7 @@ describe('TextUnitDetailPage', () => {
 
     await waitFor(() => {
       const protectedToken = container.querySelector('.visible-text-editor__protected-token');
-      expect(protectedToken).toHaveTextContent('{price}');
+      expect(protectedToken).toHaveTextContent('price');
       expect(protectedToken).toHaveClass('visible-text-editor__protected-token--icu-placeholder');
     });
 

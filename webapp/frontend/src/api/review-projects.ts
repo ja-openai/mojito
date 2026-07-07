@@ -23,6 +23,10 @@ export const isTerminologyReviewProjectType = (type?: ApiReviewProjectType | nul
 export const REVIEW_PROJECT_TERMINOLOGY_PHASES = ['SPECIALIST_INPUT', 'PM_RESOLUTION'] as const;
 export type ApiReviewProjectTerminologyPhase = (typeof REVIEW_PROJECT_TERMINOLOGY_PHASES)[number];
 
+export const REVIEW_PROJECT_TEXT_UNIT_SUGGESTION_SOURCES = ['FIND_REPLACE', 'AI_REVIEW'] as const;
+export type ApiReviewProjectTextUnitSuggestionSource =
+  (typeof REVIEW_PROJECT_TEXT_UNIT_SUGGESTION_SOURCES)[number];
+
 // Keep in sync with com.box.l10n.mojito.service.tm.search.StatusFilter
 export const REVIEW_PROJECT_CREATE_STATUS_FILTERS = [
   'ALL',
@@ -143,6 +147,16 @@ export type ApiReviewProjectTextUnit = {
       includedInLocalizedFile?: boolean | null;
       comment?: string | null;
     } | null;
+  } | null;
+  reviewProjectTextUnitSuggestion?: {
+    id?: number | null;
+    target?: string | null;
+    source?: ApiReviewProjectTextUnitSuggestionSource | null;
+    notes?: string | null;
+    previousTarget?: string | null;
+    createdDate?: string | null;
+    lastModifiedDate?: string | null;
+    lastModifiedByUsername?: string | null;
   } | null;
   terminologyTerm?: ApiReviewProjectTerminologyTerm | null;
   glossaryTermEvidence?: ApiGlossaryTermEvidence[] | null;
@@ -963,6 +977,7 @@ export const saveReviewProjectTextUnitDecision = async ({
   decisionState: 'PENDING' | 'DECIDED';
   expectedCurrentTmTextUnitVariantId?: number | null;
   overrideChangedCurrent?: boolean;
+  /** Reviewer-facing decision note. Send the current value when saving a target should preserve it. */
   decisionNotes?: string | null;
 }): Promise<ApiReviewProjectTextUnit> => {
   const response = await fetch(`/api/review-project-text-units/${textUnitId}/decision`, {
@@ -992,6 +1007,91 @@ export const saveReviewProjectTextUnitDecision = async ({
   if (!response.ok) {
     const message = await responseClone.text().catch(() => '');
     const error = new Error(message || 'Failed to save text unit decision') as Error & {
+      status?: number;
+      data?: ApiReviewProjectTextUnit | null;
+    };
+    error.status = response.status;
+    error.data = data;
+    throw error;
+  }
+
+  return data as ApiReviewProjectTextUnit;
+};
+
+export const saveReviewProjectTextUnitSuggestion = async ({
+  textUnitId,
+  target,
+  source,
+  notes,
+  previousTarget,
+  expectedCurrentTmTextUnitVariantId,
+  overrideChangedCurrent = false,
+}: {
+  textUnitId: number;
+  target: string;
+  source: ApiReviewProjectTextUnitSuggestionSource;
+  notes?: string | null;
+  previousTarget?: string | null;
+  expectedCurrentTmTextUnitVariantId?: number | null;
+  overrideChangedCurrent?: boolean;
+}): Promise<ApiReviewProjectTextUnit> => {
+  const response = await fetch(`/api/review-project-text-units/${textUnitId}/suggestion`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: jsonHeaders,
+    body: JSON.stringify({
+      target,
+      source,
+      notes,
+      previousTarget,
+      expectedCurrentTmTextUnitVariantId,
+      overrideChangedCurrent,
+    }),
+  });
+
+  const responseClone = response.clone();
+  let data: ApiReviewProjectTextUnit | null = null;
+  try {
+    data = (await response.json()) as ApiReviewProjectTextUnit;
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const message = await responseClone.text().catch(() => '');
+    const error = new Error(message || 'Failed to stage text unit suggestion') as Error & {
+      status?: number;
+      data?: ApiReviewProjectTextUnit | null;
+    };
+    error.status = response.status;
+    error.data = data;
+    throw error;
+  }
+
+  return data as ApiReviewProjectTextUnit;
+};
+
+export const deleteReviewProjectTextUnitSuggestion = async ({
+  textUnitId,
+}: {
+  textUnitId: number;
+}): Promise<ApiReviewProjectTextUnit> => {
+  const response = await fetch(`/api/review-project-text-units/${textUnitId}/suggestion`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+
+  const responseClone = response.clone();
+  let data: ApiReviewProjectTextUnit | null = null;
+  try {
+    data = (await response.json()) as ApiReviewProjectTextUnit;
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const message = await responseClone.text().catch(() => '');
+    const error = new Error(message || 'Failed to clear text unit suggestion') as Error & {
       status?: number;
       data?: ApiReviewProjectTextUnit | null;
     };

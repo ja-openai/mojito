@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   extractIcuProtectedTextTokens,
+  getIcuFormOptions,
   getIcuMovableTextRanges,
   preservesProtectedTextTokenStructure,
 } from '../utils/protectedTextTokens';
@@ -13,6 +14,14 @@ function renderEditor(value: string) {
   return render(
     <VisibleTextEditor value={value} onChange={vi.fn()} showInvisibles ariaLabel="Translation" />,
   );
+}
+
+function openIcuFormMenu(container: HTMLElement) {
+  const trigger = container.querySelector<HTMLElement>(
+    '.visible-text-editor__protected-token--icu-syntax:not(.visible-text-editor__protected-token--empty-icu-syntax)',
+  );
+  expect(trigger).toBeInTheDocument();
+  fireEvent.click(trigger as HTMLElement);
 }
 
 function lastValue(values: string[]): string | undefined {
@@ -206,6 +215,261 @@ describe('VisibleTextEditor', () => {
     expect(
       container.querySelectorAll('.visible-text-editor__marked-char--space[data-marker="·"]'),
     ).toHaveLength(1);
+  });
+
+  it('keeps the hidden-space marker after an ICU message outside ICU styling', async () => {
+    const value = '{count, plural, one {#file} other {#files}} after';
+    const { container } = render(
+      <VisibleTextEditor
+        value={value}
+        onChange={vi.fn()}
+        marksMode="all"
+        ariaLabel="Translation"
+        controlBar={{
+          icuFormOptions: getIcuFormOptions(value),
+          onToggleIcuForm: vi.fn(),
+        }}
+        protectedTokens={extractIcuProtectedTextTokens(value)}
+      />,
+    );
+
+    await waitFor(() => expect(container.querySelector('.ProseMirror')).toBeInTheDocument());
+
+    const markedSpaces = container.querySelectorAll<HTMLElement>(
+      '.visible-text-editor__marked-char--space[data-marker="·"]',
+    );
+    expect(markedSpaces).toHaveLength(1);
+    expect(markedSpaces[0].closest('.visible-text-editor__icu-inline-message')).toBeNull();
+
+    const icuMessages = container.querySelectorAll('.visible-text-editor__icu-inline-message');
+    expect(icuMessages).toHaveLength(1);
+    expect(icuMessages[0]).toHaveTextContent('count one#fileother#files');
+    expect(
+      Array.from(icuMessages[0].querySelectorAll('.visible-text-editor__icu-editable-text')).map(
+        (element) => element.textContent,
+      ),
+    ).toEqual(['file', 'files']);
+    expect(
+      Array.from(
+        icuMessages[0].querySelectorAll('.visible-text-editor__protected-token--icu-placeholder'),
+      ).map((element) => element.textContent),
+    ).toEqual(['#', '#']);
+  });
+
+  it('keeps text inserted after a placeholder inside an ICU body on the editable text surface', async () => {
+    const ref = createRef<VisibleTextEditorHandle>();
+    const handleChange = vi.fn();
+    const value = '{count, plural, one {{count} h} other {{count} h}}';
+    const protectedTokens = extractIcuProtectedTextTokens(value);
+    const { container } = render(
+      <VisibleTextEditor
+        ref={ref}
+        value={value}
+        onChange={handleChange}
+        showInvisibles={false}
+        ariaLabel="Translation"
+        protectedTokens={protectedTokens}
+      />,
+    );
+
+    await waitFor(() => expect(ref.current).not.toBeNull());
+
+    const otherPlaceholderStart = value.indexOf('{count} h', value.indexOf('other'));
+    expect(otherPlaceholderStart).toBeGreaterThan(0);
+
+    act(() => {
+      const insertOffset = otherPlaceholderStart + '{count}'.length;
+      ref.current?.setSelection({ start: insertOffset, end: insertOffset });
+      ref.current?.insertText('s');
+    });
+
+    expect(handleChange).toHaveBeenLastCalledWith(
+      '{count, plural, one {{count} h} other {{count}s h}}',
+    );
+
+    await waitFor(() => {
+      const icuMessage = container.querySelector('.visible-text-editor__icu-inline-message');
+      expect(icuMessage).toBeInTheDocument();
+      expect(
+        Array.from(
+          icuMessage?.querySelectorAll('.visible-text-editor__icu-editable-text') ?? [],
+        ).some((element) => element.textContent?.includes('s h')),
+      ).toBe(true);
+    });
+  });
+
+  it('places the caret after a clicked placeholder inside an ICU body', async () => {
+    const ref = createRef<VisibleTextEditorHandle>();
+    const handleChange = vi.fn();
+    const value = '{count, plural, one {{count} h} other {{count} h}}';
+    const protectedTokens = extractIcuProtectedTextTokens(value);
+    const { container } = render(
+      <VisibleTextEditor
+        ref={ref}
+        value={value}
+        onChange={handleChange}
+        showInvisibles={false}
+        ariaLabel="Translation"
+        protectedTokens={protectedTokens}
+      />,
+    );
+
+    await waitFor(() => expect(ref.current).not.toBeNull());
+
+    const placeholders = container.querySelectorAll<HTMLElement>(
+      '.visible-text-editor__icu-inline-message .visible-text-editor__protected-token--icu-placeholder',
+    );
+    const otherPlaceholder = placeholders[1];
+    expect(otherPlaceholder).toBeInTheDocument();
+    vi.spyOn(otherPlaceholder, 'getBoundingClientRect').mockReturnValue({
+      bottom: 20,
+      height: 20,
+      left: 0,
+      right: 100,
+      top: 0,
+      width: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    fireEvent.click(otherPlaceholder, { clientX: 90 });
+    act(() => {
+      ref.current?.insertText('x');
+    });
+
+    expect(handleChange).toHaveBeenLastCalledWith(
+      '{count, plural, one {{count} h} other {{count}x h}}',
+    );
+  });
+
+  it('places the caret after a clicked standalone placeholder', async () => {
+    const ref = createRef<VisibleTextEditorHandle>();
+    const handleChange = vi.fn();
+    const value = 'Hello {name} friend';
+    const protectedTokens = extractIcuProtectedTextTokens(value);
+    const { container } = render(
+      <VisibleTextEditor
+        ref={ref}
+        value={value}
+        onChange={handleChange}
+        showInvisibles={false}
+        ariaLabel="Translation"
+        protectedTokens={protectedTokens}
+      />,
+    );
+
+    const placeholder = await waitFor(() => {
+      const element = container.querySelector<HTMLElement>(
+        '.visible-text-editor__protected-token--icu-placeholder',
+      );
+      expect(element).toBeInTheDocument();
+      expect(element).toHaveTextContent('name');
+      return element as HTMLElement;
+    });
+
+    fireEvent.click(placeholder);
+    act(() => {
+      ref.current?.insertText('!');
+    });
+
+    expect(handleChange).toHaveBeenLastCalledWith('Hello {name}! friend');
+    expect(
+      screen.queryByText(
+        'Placeholder edit blocked. Use Edit placeholders to change placeholders or tags.',
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it('types before an invisible ICU boundary instead of replacing it', async () => {
+    const ref = createRef<VisibleTextEditorHandle>();
+    const handleChange = vi.fn();
+    const value = '{count, plural, one {{count} h} other {{count} h}}';
+    const protectedTokens = extractIcuProtectedTextTokens(value);
+    render(
+      <VisibleTextEditor
+        ref={ref}
+        value={value}
+        onChange={handleChange}
+        showInvisibles={false}
+        ariaLabel="Translation"
+        controlBar={{ protectedTokenCount: protectedTokens.length }}
+        protectedTokens={protectedTokens}
+        validateNextValue={(nextValue) =>
+          preservesProtectedTextTokenStructure({
+            previousValue: value,
+            previousTokens: protectedTokens,
+            nextValue,
+            mode: 'icu',
+          })
+        }
+      />,
+    );
+
+    await waitFor(() => expect(ref.current).not.toBeNull());
+
+    act(() => {
+      ref.current?.setSelection({ start: value.length - 2, end: value.length });
+      ref.current?.insertText('x');
+    });
+
+    expect(handleChange).toHaveBeenLastCalledWith(
+      '{count, plural, one {{count} h} other {{count} hx}}',
+    );
+    expect(
+      screen.queryByText(
+        'Placeholder edit blocked. Use Edit placeholders to change placeholders or tags.',
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it('skips ICU syntax tokens when arrowing between plural forms', async () => {
+    const ref = createRef<VisibleTextEditorHandle>();
+    const handleChange = vi.fn();
+    const value = '{count, plural, one {# file} other {# files}}';
+    const protectedTokens = extractIcuProtectedTextTokens(value);
+    render(
+      <VisibleTextEditor
+        ref={ref}
+        value={value}
+        onChange={handleChange}
+        showInvisibles={false}
+        ariaLabel="Translation"
+        controlBar={{ protectedTokenCount: protectedTokens.length }}
+        protectedTokens={protectedTokens}
+        validateNextValue={(nextValue) =>
+          preservesProtectedTextTokenStructure({
+            previousValue: value,
+            previousTokens: protectedTokens,
+            nextValue,
+            mode: 'icu',
+          })
+        }
+      />,
+    );
+
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    const firstFormEnd = value.indexOf('} other');
+    const otherFormBodyStart = value.indexOf('# files');
+    expect(firstFormEnd).toBeGreaterThan(0);
+    expect(otherFormBodyStart).toBeGreaterThan(firstFormEnd);
+
+    act(() => {
+      ref.current?.setSelection({ start: firstFormEnd, end: firstFormEnd });
+    });
+    fireEvent.keyDown(editor, { key: 'ArrowRight' });
+    act(() => {
+      ref.current?.insertText('x');
+    });
+
+    expect(handleChange).toHaveBeenLastCalledWith(
+      `${value.slice(0, otherFormBodyStart)}x${value.slice(otherFormBodyStart)}`,
+    );
+    expect(
+      screen.queryByText(
+        'Placeholder edit blocked. Use Edit placeholders to change placeholders or tags.',
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it('can turn marks off entirely', async () => {
@@ -478,6 +742,27 @@ describe('VisibleTextEditor', () => {
       expect(protectedToken).toHaveAttribute('aria-label', 'ICU argument name');
       expect(protectedToken).toHaveAttribute('data-raw', '{name}');
       expect(protectedToken).toHaveAttribute('title', 'ICU argument name');
+    });
+  });
+
+  it('renders ICU syntax labels without repeated message type words', async () => {
+    const value = '{count, plural, one {# file} other {# files}}';
+    const protectedTokens = extractIcuProtectedTextTokens(value);
+    const { container } = render(
+      <VisibleTextEditor
+        value={value}
+        onChange={vi.fn()}
+        showInvisibles={false}
+        protectedTokens={protectedTokens}
+      />,
+    );
+
+    await waitFor(() => {
+      const firstSyntaxToken = container.querySelector(
+        '.visible-text-editor__protected-token[data-raw="{count, plural, one {"]',
+      );
+      expect(firstSyntaxToken).toHaveTextContent('count one');
+      expect(firstSyntaxToken).not.toHaveTextContent('plural');
     });
   });
 
@@ -1130,7 +1415,7 @@ describe('VisibleTextEditor', () => {
 
     const protectedToken = await waitFor(() => {
       const element = container.querySelector('.visible-text-editor__protected-token');
-      expect(element).toHaveTextContent('{name}');
+      expect(element).toHaveTextContent('name');
       return element as HTMLElement;
     });
 
@@ -1171,7 +1456,7 @@ describe('VisibleTextEditor', () => {
     const editor = await screen.findByRole('textbox');
     const protectedToken = await waitFor(() => {
       const element = container.querySelector('.visible-text-editor__protected-token');
-      expect(element).toHaveTextContent('{name}');
+      expect(element).toHaveTextContent('name');
       return element as HTMLElement;
     });
 
@@ -1207,7 +1492,7 @@ describe('VisibleTextEditor', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('allows dragging locked plural syntax and pound tokens', async () => {
+  it('allows dragging locked plural syntax and plural pound placeholders', async () => {
     const ref = createRef<VisibleTextEditorHandle>();
     const handleChange = vi.fn();
     const value = '{count, plural, one {# file} other {# files}}';
@@ -1234,7 +1519,7 @@ describe('VisibleTextEditor', () => {
       />,
     );
 
-    const { pluralSyntaxToken, pluralPoundToken } = await waitFor(() => {
+    const pluralSyntaxToken = await waitFor(() => {
       const tokens = Array.from(
         container.querySelectorAll('.visible-text-editor__protected-token'),
       );
@@ -1242,25 +1527,36 @@ describe('VisibleTextEditor', () => {
       const poundToken = tokens.find((token) => token.textContent === '#');
       expect(syntaxToken).toBeDefined();
       expect(poundToken).toBeDefined();
-      return {
-        pluralSyntaxToken: syntaxToken as HTMLElement,
-        pluralPoundToken: poundToken as HTMLElement,
-      };
+      return syntaxToken as HTMLElement;
     });
 
     expect(pluralSyntaxToken).toHaveAttribute('draggable', 'true');
-    expect(pluralPoundToken).toHaveAttribute('draggable', 'true');
     expect(fireProseMirrorDragStart(pluralSyntaxToken)).toBe(true);
     expect(ref.current?.getSelection()).toEqual({ start: 0, end: value.length });
+
+    const poundToken = container.querySelector<HTMLElement>(
+      '.visible-text-editor__protected-token--icu-placeholder[data-raw="#"]',
+    );
+    expect(poundToken).toHaveAttribute('draggable', 'true');
+    expect(poundToken).toHaveAttribute('contenteditable', 'false');
 
     act(() => {
       ref.current?.setSelection({ start: value.indexOf('#'), end: value.indexOf('#') });
     });
 
-    expect(fireProseMirrorDragStart(pluralPoundToken)).toBe(true);
+    expect(fireProseMirrorDragStart(poundToken!)).toBe(true);
     expect(ref.current?.getSelection()).toEqual({
       start: value.indexOf('#'),
       end: value.indexOf('#') + 1,
+    });
+
+    act(() => {
+      ref.current?.setSelection({ start: value.indexOf('#'), end: value.indexOf('#') });
+    });
+
+    expect(ref.current?.getSelection()).toEqual({
+      start: value.indexOf('#'),
+      end: value.indexOf('#'),
     });
     expect(handleChange).not.toHaveBeenCalled();
     expect(
@@ -1485,7 +1781,7 @@ describe('VisibleTextEditor', () => {
     const nameToken = await waitFor(() => {
       const element = Array.from(
         container.querySelectorAll('.visible-text-editor__protected-token'),
-      ).find((token) => token.textContent === '{name}');
+      ).find((token) => token.textContent === 'name');
       expect(element).toBeDefined();
       return element as HTMLElement;
     });
@@ -1552,7 +1848,7 @@ describe('VisibleTextEditor', () => {
     const nameToken = await waitFor(() => {
       const element = Array.from(
         container.querySelectorAll('.visible-text-editor__protected-token'),
-      ).find((token) => token.textContent === '{name}');
+      ).find((token) => token.textContent === 'name');
       expect(element).toBeDefined();
       return element as HTMLElement;
     });
@@ -1785,8 +2081,8 @@ describe('VisibleTextEditor', () => {
       const element = Array.from(
         container.querySelectorAll('.visible-text-editor__protected-token'),
       );
-      const middleToken = element.find((token) => token.textContent === '} other {');
-      const closingToken = element.find((token) => token.textContent === '}}');
+      const middleToken = element.find((token) => token.getAttribute('data-raw') === '} other {');
+      const closingToken = element.find((token) => token.getAttribute('data-raw') === '}}');
       expect(middleToken).toBeDefined();
       expect(closingToken).toBeDefined();
       return {
@@ -2047,7 +2343,7 @@ describe('VisibleTextEditor', () => {
 
     const protectedToken = await waitFor(() => {
       const element = container.querySelector('.visible-text-editor__protected-token');
-      expect(element).toHaveTextContent('{name}');
+      expect(element).toHaveTextContent('name');
       return element as HTMLElement;
     });
 
@@ -2108,7 +2404,7 @@ describe('VisibleTextEditor', () => {
     const editor = await screen.findByRole('textbox');
     const protectedToken = await waitFor(() => {
       const element = container.querySelector('.visible-text-editor__protected-token');
-      expect(element).toHaveTextContent('{name}');
+      expect(element).toHaveTextContent('name');
       return element as HTMLElement;
     });
     const dataTransfer = {
@@ -2166,7 +2462,7 @@ describe('VisibleTextEditor', () => {
     const nameToken = await waitFor(() => {
       const element = Array.from(
         container.querySelectorAll('.visible-text-editor__protected-token'),
-      ).find((token) => token.textContent === '{name}');
+      ).find((token) => token.textContent === 'name');
       expect(element).toBeDefined();
       return element as HTMLElement;
     });
@@ -2363,14 +2659,15 @@ describe('VisibleTextEditor', () => {
   });
 
   it('disables compact control bar actions when the editor is disabled', () => {
-    render(
+    const value = '{count, plural, one {# file} other {# files}}';
+    const { container } = render(
       <VisibleTextEditor
-        value="{count, plural, one {# file} other {# files}}"
+        value={value}
         onChange={vi.fn()}
         showInvisibles={false}
         disabled
         controlBar={{
-          icuFormInsertions: [
+          icuExactFormInsertions: [
             {
               id: '0:exact-value',
               kind: 'exact-value',
@@ -2388,6 +2685,7 @@ describe('VisibleTextEditor', () => {
           onToggleRawMode: vi.fn(),
           rawMode: false,
         }}
+        protectedTokens={extractIcuProtectedTextTokens(value)}
       />,
     );
 
@@ -2397,7 +2695,12 @@ describe('VisibleTextEditor', () => {
         name: 'Placeholder editing is off. Edit placeholders',
       }),
     ).toBeDisabled();
-    expect(screen.getByRole('combobox', { name: 'Add plural form' })).toBeDisabled();
+    const formTrigger = container.querySelector(
+      '.visible-text-editor__protected-token--icu-syntax',
+    );
+    expect(formTrigger).toHaveTextContent('count one');
+    openIcuFormMenu(container);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('changes marks mode from the integrated hidden characters menu', () => {
@@ -2426,15 +2729,16 @@ describe('VisibleTextEditor', () => {
     expect(screen.queryByRole('listbox', { name: 'Hidden characters' })).not.toBeInTheDocument();
   });
 
-  it('collects an exact ICU plural value from the control bar', async () => {
+  it('collects an exact ICU plural value from the inline form menu', async () => {
+    const value = '{count, plural, one {# file} other {# files}}';
     const handleAddIcuForm = vi.fn().mockReturnValue({ ok: true });
-    render(
+    const { container } = render(
       <VisibleTextEditor
-        value="{count, plural, one {# file} other {# files}}"
+        value={value}
         onChange={vi.fn()}
         showInvisibles={false}
         controlBar={{
-          icuFormInsertions: [
+          icuExactFormInsertions: [
             {
               id: '0:exact-value',
               kind: 'exact-value',
@@ -2448,18 +2752,62 @@ describe('VisibleTextEditor', () => {
           ],
           onAddIcuForm: handleAddIcuForm,
         }}
+        protectedTokens={extractIcuProtectedTextTokens(value)}
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('Add plural form'), {
-      target: { value: '0:exact-value' },
-    });
-    fireEvent.change(await screen.findByLabelText('Exact ICU plural value'), {
+    openIcuFormMenu(container);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'count: exact value...' }));
+    const exactValueInput = await screen.findByLabelText('Exact ICU plural value');
+
+    expect(screen.getByRole('menu')).toContainElement(exactValueInput);
+    expect(screen.getByLabelText('Text editor controls')).not.toContainElement(exactValueInput);
+
+    fireEvent.change(exactValueInput, {
       target: { value: '0' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
 
     expect(handleAddIcuForm).toHaveBeenCalledWith('0:exact-value', '0');
+  });
+
+  it('opens the ICU form menu from later form labels', () => {
+    const value = '{count, plural, one {# file} other {# files}}';
+    const { container } = render(
+      <VisibleTextEditor
+        value={value}
+        onChange={vi.fn()}
+        showInvisibles={false}
+        controlBar={{
+          icuFormOptions: [
+            {
+              id: '0:few',
+              checked: false,
+              disabled: false,
+              form: 'few',
+              label: 'count: few',
+              messageType: 'plural',
+              nextValue: '{count, plural, one {# file} few {# } other {# files}}',
+              messageStart: 0,
+              messageEnd: 46,
+              selectionStart: 35,
+              selectionEnd: 35,
+            },
+          ],
+          onToggleIcuForm: vi.fn(),
+        }}
+        protectedTokens={extractIcuProtectedTextTokens(value)}
+      />,
+    );
+
+    const otherTrigger = Array.from(
+      container.querySelectorAll<HTMLElement>('.visible-text-editor__protected-token--icu-syntax'),
+    ).find((token) => token.textContent === 'other');
+    expect(otherTrigger).toBeInTheDocument();
+
+    fireEvent.click(otherTrigger as HTMLElement);
+
+    expect(screen.getByRole('menu', { name: /count plural forms/ })).toBeInTheDocument();
   });
 
   it('clears the exact ICU plural input when its insertion is removed', async () => {
@@ -2474,35 +2822,37 @@ describe('VisibleTextEditor', () => {
       existingForms: [],
     };
     const handleAddIcuForm = vi.fn().mockReturnValue({ ok: true });
-    const { rerender } = render(
+    const value = '{count, plural, one {# file} other {# files}}';
+    const { container, rerender } = render(
       <VisibleTextEditor
-        value="{count, plural, one {# file} other {# files}}"
+        value={value}
         onChange={vi.fn()}
         showInvisibles={false}
         controlBar={{
-          icuFormInsertions: [exactInsertion],
+          icuExactFormInsertions: [exactInsertion],
           onAddIcuForm: handleAddIcuForm,
           rawMode: false,
         }}
+        protectedTokens={extractIcuProtectedTextTokens(value)}
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('Add plural form'), {
-      target: { value: '0:exact-value' },
-    });
+    openIcuFormMenu(container);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'count: exact value...' }));
 
     expect(await screen.findByLabelText('Exact ICU plural value')).toBeInTheDocument();
 
     rerender(
       <VisibleTextEditor
-        value="{count, plural, one {# file} other {# files}}"
+        value={value}
         onChange={vi.fn()}
         showInvisibles={false}
         controlBar={{
-          icuFormInsertions: [],
+          icuExactFormInsertions: [],
           onAddIcuForm: undefined,
           rawMode: true,
         }}
+        protectedTokens={extractIcuProtectedTextTokens(value)}
       />,
     );
 
@@ -2512,32 +2862,34 @@ describe('VisibleTextEditor', () => {
 
     rerender(
       <VisibleTextEditor
-        value="{count, plural, one {# file} other {# files}}"
+        value={value}
         onChange={vi.fn()}
         showInvisibles={false}
         controlBar={{
-          icuFormInsertions: [exactInsertion],
+          icuExactFormInsertions: [exactInsertion],
           onAddIcuForm: handleAddIcuForm,
           rawMode: false,
         }}
+        protectedTokens={extractIcuProtectedTextTokens(value)}
       />,
     );
 
     expect(screen.queryByLabelText('Exact ICU plural value')).not.toBeInTheDocument();
   });
 
-  it('shows exact ICU plural value errors in the compact status text', async () => {
+  it('shows exact ICU plural value errors in the inline form menu', async () => {
+    const value = '{count, plural, one {# file} other {# files}}';
     const handleAddIcuForm = vi.fn().mockReturnValue({
       ok: false,
       error: 'Enter a non-negative integer.',
     });
-    render(
+    const { container } = render(
       <VisibleTextEditor
-        value="{count, plural, one {# file} other {# files}}"
+        value={value}
         onChange={vi.fn()}
         showInvisibles={false}
         controlBar={{
-          icuFormInsertions: [
+          icuExactFormInsertions: [
             {
               id: '0:exact-value',
               kind: 'exact-value',
@@ -2551,12 +2903,12 @@ describe('VisibleTextEditor', () => {
           ],
           onAddIcuForm: handleAddIcuForm,
         }}
+        protectedTokens={extractIcuProtectedTextTokens(value)}
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('Add plural form'), {
-      target: { value: '0:exact-value' },
-    });
+    openIcuFormMenu(container);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'count: exact value...' }));
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
 
     expect(await screen.findByText('Enter a non-negative integer.')).toHaveAttribute(
@@ -2565,21 +2917,24 @@ describe('VisibleTextEditor', () => {
     );
   });
 
-  it('shows category ICU form errors in the compact status text', async () => {
-    const handleAddIcuForm = vi.fn().mockReturnValue({
+  it('shows category ICU form errors in the inline form menu', async () => {
+    const value = '{count, plural, one {# file} other {# files}}';
+    const handleToggleIcuForm = vi.fn().mockReturnValue({
       ok: false,
       error: 'That ICU form is no longer available.',
     });
-    render(
+    const { container } = render(
       <VisibleTextEditor
-        value="{count, plural, one {# file} other {# files}}"
+        value={value}
         onChange={vi.fn()}
         showInvisibles={false}
         controlBar={{
-          icuFormInsertions: [
+          icuFormOptions: [
             {
               id: '0:few',
-              kind: 'category',
+              checked: false,
+              disabled: false,
+              form: 'few',
               label: 'count: few',
               messageType: 'plural',
               nextValue: '{count, plural, one {# file} few {# } other {# files}}',
@@ -2589,14 +2944,14 @@ describe('VisibleTextEditor', () => {
               selectionEnd: 35,
             },
           ],
-          onAddIcuForm: handleAddIcuForm,
+          onToggleIcuForm: handleToggleIcuForm,
         }}
+        protectedTokens={extractIcuProtectedTextTokens(value)}
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('Add plural form'), {
-      target: { value: '0:few' },
-    });
+    openIcuFormMenu(container);
+    fireEvent.click(screen.getByRole('checkbox', { name: /few/ }));
 
     expect(await screen.findByText('That ICU form is no longer available.')).toHaveAttribute(
       'aria-live',
@@ -2605,20 +2960,19 @@ describe('VisibleTextEditor', () => {
   });
 
   it('clears exact ICU plural value errors after adding a category form', async () => {
-    const handleAddIcuForm = vi
-      .fn()
-      .mockReturnValueOnce({
-        ok: false,
-        error: 'Enter a non-negative integer.',
-      })
-      .mockReturnValueOnce({ ok: true });
-    render(
+    const handleAddIcuForm = vi.fn().mockReturnValue({
+      ok: false,
+      error: 'Enter a non-negative integer.',
+    });
+    const handleToggleIcuForm = vi.fn().mockReturnValue({ ok: true });
+    const value = '{count, plural, one {# file} other {# files}}';
+    const { container } = render(
       <VisibleTextEditor
-        value="{count, plural, one {# file} other {# files}}"
+        value={value}
         onChange={vi.fn()}
         showInvisibles={false}
         controlBar={{
-          icuFormInsertions: [
+          icuExactFormInsertions: [
             {
               id: '0:exact-value',
               kind: 'exact-value',
@@ -2629,9 +2983,13 @@ describe('VisibleTextEditor', () => {
               selectionEnd: 28,
               existingForms: [],
             },
+          ],
+          icuFormOptions: [
             {
               id: '0:few',
-              kind: 'category',
+              checked: false,
+              disabled: false,
+              form: 'few',
               label: 'count: few',
               messageType: 'plural',
               nextValue: '{count, plural, one {# file} few {# } other {# files}}',
@@ -2642,21 +3000,20 @@ describe('VisibleTextEditor', () => {
             },
           ],
           onAddIcuForm: handleAddIcuForm,
+          onToggleIcuForm: handleToggleIcuForm,
           protectedTokenCount: 5,
         }}
+        protectedTokens={extractIcuProtectedTextTokens(value)}
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('Add plural form'), {
-      target: { value: '0:exact-value' },
-    });
+    openIcuFormMenu(container);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'count: exact value...' }));
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
 
     expect(await screen.findByText('Enter a non-negative integer.')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Add plural form'), {
-      target: { value: '0:few' },
-    });
+    fireEvent.click(screen.getByRole('checkbox', { name: /few/ }));
 
     expect(screen.queryByText('Enter a non-negative integer.')).not.toBeInTheDocument();
     expect(screen.queryByText('5 tokens found')).not.toBeInTheDocument();

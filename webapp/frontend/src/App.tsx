@@ -24,6 +24,7 @@ import { LoginPage } from './page/login/LoginPage';
 import { MonitoringPage } from './page/monitoring/MonitoringPage';
 import { RepositoriesPage } from './page/repositories/RepositoriesPage';
 import { ReviewProjectPage } from './page/review-project/ReviewProjectPage';
+import { ReviewProjectFindReplacePage } from './page/review-project-find-replace/ReviewProjectFindReplacePage';
 import { ReviewProjectCreatePage } from './page/review-projects/ReviewProjectCreatePage';
 import { ReviewProjectsPage } from './page/review-projects/ReviewProjectsPage';
 import { ScreenshotsDropzonePage } from './page/screenshots/ScreenshotsDropzonePage';
@@ -214,6 +215,10 @@ export function App() {
               element={<GlossaryWorkspacePage />}
             />
             <Route path="/review-projects/:projectId" element={<ReviewProjectPage />} />
+            <Route
+              path="/review-projects/:projectId/find-replace"
+              element={<ReviewProjectFindReplacePage />}
+            />
             <Route path="/text-units/:tmTextUnitId" element={<TextUnitDetailPage />} />
             <Route
               path="/settings/admin/ai-translate"

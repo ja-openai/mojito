@@ -138,6 +138,9 @@ public class JsonConfigLocalizationRunService {
     if (steps.savedConfig()) {
       completed.add("saved config");
     }
+    if (steps.schemaUpdated()) {
+      completed.add("pushed Statsig schema");
+    }
     if (steps.pushed()) {
       completed.add(steps.pushSkipped() ? "skipped unchanged Statsig push" : "pushed to Statsig");
     }
@@ -157,6 +160,7 @@ public class JsonConfigLocalizationRunService {
       boolean translated,
       boolean merged,
       boolean savedConfig,
+      boolean schemaUpdated,
       boolean pushed,
       boolean pushSkipped) {}
 

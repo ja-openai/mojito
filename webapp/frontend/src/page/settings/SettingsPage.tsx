@@ -62,7 +62,7 @@ export function SettingsPage() {
       loadReviewProjectShortcutHelpPreference(defaultShortcutHelpPreference),
     );
   const [visibleTextEditorEnabled, setVisibleTextEditorEnabled] = useState(() =>
-    loadVisibleTextEditorEnabled(),
+    loadVisibleTextEditorEnabled(username),
   );
   const [worksetDraft, setWorksetDraft] = useState<string>(() =>
     savedWorkset == null ? '' : String(savedWorkset),
@@ -139,6 +139,7 @@ export function SettingsPage() {
   }, []);
 
   useEffect(() => {
+    setVisibleTextEditorEnabled(loadVisibleTextEditorEnabled(username));
     const nextDefaultReviewTeamIds = loadDefaultReviewProjectTeamIds(username);
     setSavedDefaultReviewTeamIds(nextDefaultReviewTeamIds);
     setDefaultReviewTeamDraft(nextDefaultReviewTeamIds);
@@ -246,7 +247,7 @@ export function SettingsPage() {
   };
 
   const handleVisibleTextEditorChange = (enabled: boolean) => {
-    saveVisibleTextEditorEnabled(enabled);
+    saveVisibleTextEditorEnabled(enabled, username);
     setVisibleTextEditorEnabled(enabled);
   };
 
@@ -320,11 +321,13 @@ export function SettingsPage() {
               </span>
               <span className="settings-hint">
                 Enables issue-focused text marks, unprotected editing, and protected placeholder
-                chips for this browser only.
+                chips for this Mojito user in this browser only.
               </span>
             </span>
           </label>
-          <p className="settings-hint">Default is off while the editor is being validated.</p>
+          <p className="settings-hint">
+            Saved separately for each Mojito user in this browser. New users start with it off.
+          </p>
         </div>
       </section>
 
