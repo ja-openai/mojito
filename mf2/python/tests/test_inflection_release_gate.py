@@ -2695,6 +2695,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "Hindi pronoun facade failure-mode guard",
             "release-wrapper path-escape root-leak guard",
             "MCP review input-boundary guard",
+            "Admin render-probe failure-mode guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -2715,8 +2716,8 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Python package harness at 131 tests",
             "the Java/common renderer/manifest/requirement/runtime failure-mode slice at 81 tests",
             "webapp backend product integration at 68 REST/service/MCP tests",
-            "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current MCP review input-boundary guard slice touches the MCP review tool test, the Python release-gate tracker guard, and 2 docs files",
+            "webapp frontend product integration at 87 API/admin/Workbench/private-utility tests",
+            "current Admin render-probe failure-mode guard slice touches the Admin glossary detail page test, the Python release-gate tracker guard, and 2 docs files",
             "Latest release-wrapper invalid manifest-path syntax guard",
             "test_inflection_release_wrapper_rejects_invalid_manifest_path_syntax_without_leaking_path",
             "does not echo the malformed path or local temporary root",
@@ -2743,6 +2744,13 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "trimmed locale/action normalization at the MCP review boundary",
             "invalid inputs rejected before glossary resolution",
             "backend REST/service/MCP product-integration gate passes 68 tests",
+            "Latest Admin render-probe failure-mode guard",
+            "`AdminGlossaryDetailPage.test.tsx` now pins the local render probe after checked V0 compiled-preview generation",
+            "empty compiled previews report the required term-id diagnostic",
+            "invalid Variables JSON is rejected locally",
+            "missing compiled terms surface renderer diagnostics",
+            "focused Admin test passes 9 tests",
+            "frontend product-integration gate passes 87 API/admin/Workbench/private-utility tests",
             "Latest blank manifest/report schema guard",
             "test_inflection_release_wrapper_rejects_blank_manifest_report_schema",
             "Latest manifest/report row field-type guard",
@@ -2819,6 +2827,13 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "trimmed locale/action normalization at the MCP review boundary",
             "invalid inputs rejected before glossary resolution",
             "backend REST/service/MCP product-integration gate passes 68 tests",
+            "Two thousand one hundred sixty-fourth Admin render-probe failure-mode guard",
+            "`AdminGlossaryDetailPage.test.tsx` now pins the local render probe after checked V0 compiled-preview generation",
+            "empty compiled previews report the required term-id diagnostic",
+            "invalid Variables JSON is rejected locally",
+            "missing compiled terms surface renderer diagnostics",
+            "focused Admin test passes 9 tests",
+            "frontend product-integration gate passes 87 API/admin/Workbench/private-utility tests",
         ):
             self.assertIn(snippet, normalized_design_note)
 
@@ -3085,15 +3100,15 @@ class InflectionReleaseGateTest(unittest.TestCase):
         non_webapp_status_paths = tuple(
             path for path in status_paths if not path.startswith("webapp/")
         )
-        current_webapp_mcp_review_slice_paths = (
-            "webapp/src/test/java/com/box/l10n/mojito/service/mcp/glossary/ReviewGlossaryTermInflectionProfilesMcpToolTest.java",
+        current_webapp_admin_render_slice_paths = (
+            "webapp/frontend/src/page/settings/AdminGlossaryDetailPage.test.tsx",
         )
 
         self.assertEqual(
             (),
             self.missing_status_paths(path_provenance_slice_paths, first_slice_args),
         )
-        self.assertIn(webapp_status_paths, ((), current_webapp_mcp_review_slice_paths))
+        self.assertIn(webapp_status_paths, ((), current_webapp_admin_render_slice_paths))
         self.assertEqual(
             (),
             self.missing_status_paths(non_webapp_status_paths, first_slice_args),

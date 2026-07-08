@@ -24423,6 +24423,16 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   REST/service/MCP product-integration gate passes 68 tests. This tightens
   webapp MCP input-boundary coverage only; it does not add locale coverage,
   certify memory leaks, or promote package-local non-Java runtime APIs.
+- Two thousand one hundred sixty-fourth Admin render-probe failure-mode guard:
+  `AdminGlossaryDetailPage.test.tsx` now pins the local render probe after
+  checked V0 compiled-preview generation: empty compiled previews report the
+  required term-id diagnostic, populated previews render approved explicit rows,
+  invalid Variables JSON is rejected locally, and missing compiled terms surface
+  renderer diagnostics. The focused Admin test passes 9 tests, and the frontend
+  product-integration gate passes 87 API/admin/Workbench/private-utility tests.
+  This tightens Admin frontend failure-mode coverage only; it does not add
+  locale coverage, certify memory leaks, or promote package-local non-Java
+  runtime APIs.
 - Next target: continue REST/MCP/Admin and release-fixture failure-mode review
   inside checked V0 scope, especially stable product-facing diagnostics and
   release-wrapper malformed manifest/report coverage.

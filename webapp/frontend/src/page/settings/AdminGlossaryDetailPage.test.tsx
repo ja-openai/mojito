@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -69,6 +69,30 @@ const glossary = {
   localeTags: ['fr-FR'],
   repositories: [],
   excludedRepositories: [],
+};
+
+const renderProbeCompiledPack = {
+  schema: 'mojito-mf2-inflection/compiled-term-pack/v0',
+  locale: 'ar',
+  strings: ['ar.explicit.message', 'count.one', 'count.other', 'message', 'messages'],
+  terms: [{ id: 0, text: 0, featureBits: 0, formSet: 0 }],
+  formSets: [
+    {
+      term: 0,
+      forms: [
+        { key: 1, value: 3, kind: 'literal' },
+        { key: 2, value: 4, kind: 'literal' },
+      ],
+    },
+  ],
+};
+
+const emptyCompiledPack = {
+  schema: 'mojito-mf2-inflection/compiled-term-pack/v0',
+  locale: 'fr-FR',
+  strings: [],
+  terms: [],
+  formSets: [],
 };
 
 function renderPage() {
@@ -346,6 +370,86 @@ describe('AdminGlossaryDetailPage inflection profile packs', () => {
       ),
     ).toBeVisible();
     expect(screen.queryByText('Skipped profile diagnostics')).toBeNull();
+  });
+
+  it('pins render probe required-term diagnostics after empty compiled preview', async () => {
+    const user = userEvent.setup();
+    mocks.fetchCompiledInflectionProfilePack.mockResolvedValue({
+      approvedProfileCount: 0,
+      skippedProfileCount: 0,
+      runtimeExport: 'closed-world-glossary-approved-profile-forms',
+      compositionMode: 'explicit-form-rows-v0',
+      profileCount: 0,
+      formCount: 0,
+      content: JSON.stringify(emptyCompiledPack),
+      pack: emptyCompiledPack,
+    });
+
+    renderPage();
+
+    const previewButton = await screen.findByRole('button', { name: 'Preview compiled pack' });
+    await waitFor(() => expect(previewButton).toBeEnabled());
+    await user.click(previewButton);
+    const termIdInput = await screen.findByLabelText('Term id');
+    expect(termIdInput).toHaveValue('');
+
+    await user.click(screen.getByRole('button', { name: 'Render' }));
+    expect(await screen.findByText('Term id is required.')).toBeVisible();
+  });
+
+  it('pins render probe success and local renderer diagnostics after compiled preview', async () => {
+    const user = userEvent.setup();
+    mocks.fetchInflectionProfiles.mockResolvedValue({
+      profiles: [
+        {
+          id: 12,
+          glossaryTermMetadataId: 13,
+          tmTextUnitId: 14,
+          termId: 'ar.explicit.message',
+          source: 'message',
+          localeTag: 'fr-FR',
+          schema: 'mojito-mf2-inflection/term-inflection-profile-pack/v0',
+          status: 'APPROVED',
+          morphologyJson: '{"partOfSpeech":"noun"}',
+          formsJson: '{"count.one":"message","count.other":"messages"}',
+          diagnosticsJson: '[]',
+          missingFormKeys: [],
+          provenanceJson: '{"reviewedBy":"translator"}',
+        },
+      ],
+    });
+    mocks.fetchCompiledInflectionProfilePack.mockResolvedValue({
+      approvedProfileCount: 1,
+      skippedProfileCount: 0,
+      runtimeExport: 'closed-world-glossary-approved-profile-forms',
+      compositionMode: 'explicit-form-rows-v0',
+      profileCount: 1,
+      formCount: 2,
+      content: JSON.stringify(renderProbeCompiledPack),
+      pack: renderProbeCompiledPack,
+    });
+
+    renderPage();
+
+    const previewButton = await screen.findByRole('button', { name: 'Preview compiled pack' });
+    await waitFor(() => expect(previewButton).toBeEnabled());
+    await user.click(previewButton);
+    const termIdInput = await screen.findByLabelText('Term id');
+    await waitFor(() => expect(termIdInput).toHaveValue('ar.explicit.message'));
+    const variablesJsonInput = screen.getByLabelText('Variables JSON');
+    const renderButton = screen.getByRole('button', { name: 'Render' });
+
+    await user.click(renderButton);
+    expect(await screen.findByText('Preview: message.')).toBeVisible();
+
+    fireEvent.change(variablesJsonInput, { target: { value: 'not json' } });
+    await user.click(renderButton);
+    expect(await screen.findByText('Variables JSON must be valid JSON.')).toBeVisible();
+
+    fireEvent.change(variablesJsonInput, { target: { value: '{"count":"1"}' } });
+    fireEvent.change(termIdInput, { target: { value: 'missing.term' } });
+    await user.click(renderButton);
+    expect(await screen.findByText('Missing compiled term: missing.term')).toBeVisible();
   });
 
   it('saves reviewed form-grid edits through the review endpoint before approving', async () => {
