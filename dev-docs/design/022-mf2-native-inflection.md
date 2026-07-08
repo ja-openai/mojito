@@ -24367,6 +24367,16 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   This refreshes bounded Java/common V0 smoke evidence only; it is not a
   profiler-backed benchmark, a soak test, memory-leak certification,
   all-locale coverage, or non-Java runtime support.
+- Two thousand one hundred fifty-eighth release-wrapper invalid manifest-path
+  syntax guard: `validate_inflection_release_fixture.py` now rejects
+  embedded-NUL manifest artifact paths before expected-path drift comparison,
+  and
+  `test_inflection_release_wrapper_rejects_invalid_manifest_path_syntax_without_leaking_path`
+  pins an artifact-qualified `is invalid` diagnostic that does not echo the
+  malformed path or local temporary root. The Python package harness now passes
+  129 tests. This tightens release-fixture path hygiene only; it does not add
+  locale coverage, certify memory leaks, or promote package-local non-Java
+  runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.

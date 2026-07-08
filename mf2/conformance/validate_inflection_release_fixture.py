@@ -209,6 +209,15 @@ def is_absolute_artifact_path(artifact_path: str) -> bool:
     )
 
 
+def validate_manifest_artifact_path_syntax(artifact_path: str, artifact_id: str) -> None:
+    if "\x00" in artifact_path:
+        raise ValueError(f"{MANIFEST_FILE} artifact path for {artifact_id} is invalid")
+    if is_absolute_artifact_path(artifact_path):
+        raise ValueError(
+            f"{MANIFEST_FILE} artifact path for {artifact_id} must be relative"
+        )
+
+
 def require_bundle_artifact_fields(artifact: Any) -> dict[str, Any]:
     try:
         return vars(artifact)
@@ -458,16 +467,18 @@ def validate_materialized_bundle(out_dir: Path) -> dict[str, Any]:
             item.get("path"),
             f"{MANIFEST_FILE}.artifacts[{artifact_id}].path",
         )
-        if is_absolute_artifact_path(artifact_path):
-            raise ValueError(
-                f"{MANIFEST_FILE} artifact path for {artifact_id} must be relative"
-            )
+        validate_manifest_artifact_path_syntax(artifact_path, artifact_id)
         if artifact_path != expected_path:
             raise ValueError(
                 f"Unexpected {MANIFEST_FILE} artifact path for {artifact_id}: "
                 f"expected {expected_path!r}, got {artifact_path!r}"
             )
-        resolved = (out_dir / artifact_path).resolve()
+        try:
+            resolved = (out_dir / artifact_path).resolve()
+        except (OSError, ValueError) as error:
+            raise ValueError(
+                f"{MANIFEST_FILE} artifact path for {artifact_id} is invalid"
+            ) from error
         if not resolved.is_relative_to(out_dir.resolve()):
             raise ValueError(
                 f"{MANIFEST_FILE} artifact escapes bundle directory: {artifact_path}"
