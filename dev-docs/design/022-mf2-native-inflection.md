@@ -24407,6 +24407,14 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   checked Java/common V0 public failure-mode behavior only; it does not add
   locale coverage, certify memory leaks, or promote package-local non-Java
   runtime APIs.
+- Two thousand one hundred sixty-second release-wrapper path-escape root-leak
+  guard: `test_inflection_release_wrapper_rejects_artifact_path_escape` now
+  pins symlink escape diagnostics to the manifest-relative path
+  `artifacts/ar-approved.json` and asserts the temp root, bundle root, and
+  outside target directory stay out of the error message. The Python package
+  harness remains at 131 tests. This tightens release-fixture diagnostic hygiene
+  only; it does not add locale coverage, certify memory leaks, or promote
+  package-local non-Java runtime APIs.
 - Next target: continue REST/MCP/Admin and release-fixture failure-mode review
   inside checked V0 scope, especially stable product-facing diagnostics and
   release-wrapper malformed manifest/report coverage.

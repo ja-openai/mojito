@@ -2693,6 +2693,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-validator failed-code constructor guard",
             "post-failed-code performance smoke refresh",
             "Hindi pronoun facade failure-mode guard",
+            "release-wrapper path-escape root-leak guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -2714,7 +2715,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Java/common renderer/manifest/requirement/runtime failure-mode slice at 81 tests",
             "webapp backend product integration at 63 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current Hindi pronoun facade failure-mode guard slice touches 2 docs files plus the Python release-gate tracker guard",
+            "current release-wrapper path-escape root-leak guard slice touches the Python release-gate wrapper test plus 2 docs files",
             "Latest release-wrapper invalid manifest-path syntax guard",
             "test_inflection_release_wrapper_rejects_invalid_manifest_path_syntax_without_leaking_path",
             "does not echo the malformed path or local temporary root",
@@ -2732,6 +2733,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "missing runtime `ownerCount`/`agreeWithCount` variables",
             "both GitHub Actions builds are green for the pushed commit",
             "Python tracker guard pins this latest/current wording",
+            "Latest release-wrapper path-escape root-leak guard",
+            "test_inflection_release_wrapper_rejects_artifact_path_escape",
+            "symlink escape diagnostics to the manifest-relative path `artifacts/ar-approved.json`",
+            "the temp root, bundle root, and outside target directory are absent",
             "Latest blank manifest/report schema guard",
             "test_inflection_release_wrapper_rejects_blank_manifest_report_schema",
             "Latest manifest/report row field-type guard",
@@ -2798,6 +2803,11 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "missing runtime `ownerCount`/`agreeWithCount` variables",
             "The Python release-gate tracker guard now pins the latest/current wording",
             "it does not add locale coverage, certify memory leaks, or promote package-local non-Java runtime APIs",
+            "Two thousand one hundred sixty-second release-wrapper path-escape root-leak",
+            "test_inflection_release_wrapper_rejects_artifact_path_escape",
+            "symlink escape diagnostics to the manifest-relative path",
+            "outside target directory stay out of the error message",
+            "The Python package harness remains at 131 tests",
         ):
             self.assertIn(snippet, normalized_design_note)
 
@@ -4014,11 +4024,18 @@ class InflectionReleaseGateTest(unittest.TestCase):
             (outside_dir / "ar-approved.json").write_text("{}", encoding="utf-8")
             (base_dir / "artifacts").symlink_to(outside_dir, target_is_directory=True)
 
-            with self.assertRaisesRegex(
-                ValueError,
-                "release-validation-manifest.json artifact escapes bundle directory",
-            ):
+            with self.assertRaises(ValueError) as error:
                 wrapper.validate_materialized_bundle(base_dir)
+
+        message = str(error.exception)
+        self.assertIn(
+            "release-validation-manifest.json artifact escapes bundle directory: "
+            "artifacts/ar-approved.json",
+            message,
+        )
+        self.assertNotIn(str(root_dir), message)
+        self.assertNotIn(str(base_dir), message)
+        self.assertNotIn(str(outside_dir), message)
 
     def test_inflection_release_wrapper_rejects_missing_report_file(self) -> None:
         wrapper = self.load_release_fixture_wrapper()
