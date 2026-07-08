@@ -1186,6 +1186,92 @@ class InflectionReleaseGateTest(unittest.TestCase):
         for phrase in forbidden_claim_phrases:
             self.assertNotIn(phrase, normalized_stderr)
 
+    def test_release_validator_rejects_top_level_manifest_fields_without_report(
+        self,
+    ) -> None:
+        forbidden_claim_phrases = (
+            "complete locale",
+            "complete grammar",
+            "all languages",
+            "all inflection",
+            "public api",
+            "package-local runtime",
+        )
+        valid_artifact = {
+            "artifactId": "valid-json",
+            "kind": "compiled-term-pack-json",
+            "path": "artifact.json",
+        }
+        cases = (
+            (
+                "missing-schema",
+                {"artifacts": [valid_artifact]},
+                "Expected nonblank text: release-validation-manifest.json.schema",
+            ),
+            (
+                "non-text-schema",
+                {"schema": 7, "artifacts": [valid_artifact]},
+                "Expected nonblank text: release-validation-manifest.json.schema",
+            ),
+            (
+                "unsupported-schema",
+                {
+                    "schema": "mojito-mf2-inflection/release-validation-manifest/v1",
+                    "artifacts": [valid_artifact],
+                },
+                "Unsupported release validation manifest schema: "
+                "mojito-mf2-inflection/release-validation-manifest/v1",
+            ),
+            (
+                "missing-artifacts",
+                {"schema": "mojito-mf2-inflection/release-validation-manifest/v0"},
+                "Expected array: release-validation-manifest.json.artifacts",
+            ),
+        )
+        for label, manifest, expected_error in cases:
+            with self.subTest(label=label):
+                with tempfile.TemporaryDirectory(
+                    prefix="mojito-mf2-inflection-release-test-"
+                ) as tmp:
+                    base_dir = Path(tmp)
+                    manifest_path = base_dir / "release-validation-manifest.json"
+                    report_path = base_dir / "release-validation-report.json"
+                    manifest_path.write_text(
+                        json.dumps(manifest, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+
+                    result = subprocess.run(
+                        [
+                            "python3",
+                            str(RELEASE_VALIDATION),
+                            "--manifest",
+                            str(manifest_path),
+                            "--base-dir",
+                            str(base_dir),
+                            "--out",
+                            str(report_path),
+                            "--allow-failures",
+                        ],
+                        text=True,
+                        capture_output=True,
+                        check=False,
+                    )
+
+                    report_exists = report_path.exists()
+
+                self.assertEqual("", result.stdout)
+                self.assertEqual(1, result.returncode, result.stderr)
+                self.assertFalse(report_exists)
+                self.assertEqual(
+                    f"Release validation failed: {expected_error}\n",
+                    result.stderr,
+                )
+                self.assertNotIn("Traceback", result.stderr)
+                normalized_stderr = result.stderr.lower()
+                for phrase in forbidden_claim_phrases:
+                    self.assertNotIn(phrase, normalized_stderr)
+
     def test_release_validator_rejects_missing_manifest_artifact_fields_without_report(
         self,
     ) -> None:
@@ -1902,7 +1988,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 121 tests",
+            "the Python package harness at 122 tests",
             normalized_tracker,
         )
 
@@ -1955,7 +2041,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 121 tests",
+            "the Python package harness at 122 tests",
             normalized_tracker,
         )
 
@@ -2041,7 +2127,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
         self.assertNotIn("webapp/", design_command)
         self.assertNotIn("webapp/", tracker_command)
         self.assertIn(
-            "the Python package harness at 121 tests",
+            "the Python package harness at 122 tests",
             normalized_tracker,
         )
 
@@ -2158,6 +2244,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-wrapper blank manifest/report schema guard",
             "release-wrapper manifest/report row field-type guard",
             "release-validator manifest row field-type CLI guard",
+            "release-validator top-level manifest-field CLI guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -2175,16 +2262,18 @@ class InflectionReleaseGateTest(unittest.TestCase):
             self.assertIn(snippet, normalized_tracker)
         for snippet in (
             "Verification snapshot: current focused gates pass",
-            "the Python package harness at 121 tests",
+            "the Python package harness at 122 tests",
             "webapp backend product integration at 63 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-validator manifest row field-type CLI guard slice touches 3 non-webapp files plus 0 webapp files covered by the focused generator CLI row-field-type regression and Python release/doc guard",
+            "current release-validator top-level manifest-field CLI guard slice touches 3 non-webapp files plus 0 webapp files covered by the focused generator CLI top-level manifest regression and Python release/doc guard",
             "Latest blank manifest/report schema guard",
             "test_inflection_release_wrapper_rejects_blank_manifest_report_schema",
             "Latest manifest/report row field-type guard",
             "test_inflection_release_wrapper_rejects_non_text_manifest_report_artifact_fields",
             "Latest release-validator manifest row field-type CLI guard",
             "test_release_validator_rejects_non_text_manifest_artifact_fields_without_report",
+            "Latest release-validator top-level manifest-field CLI guard",
+            "test_release_validator_rejects_top_level_manifest_fields_without_report",
             "Latest absolute/invalid-path hygiene refresh",
             "POSIX absolute and Windows-style qualified/rooted manifest artifact paths",
             "including drive-relative paths such as `C:artifact.json`",

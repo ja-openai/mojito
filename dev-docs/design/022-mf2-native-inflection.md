@@ -24266,6 +24266,16 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   tightens generator manifest failure-mode diagnostics only; it does not add
   locale coverage, certify memory leaks, or promote package-local non-Java
   runtime APIs.
+- Two thousand one hundred forty-eighth release-validator top-level
+  manifest-field CLI guard:
+  `test_release_validator_rejects_top_level_manifest_fields_without_report`
+  now pins missing `schema`, non-text `schema`, unsupported `schema`, and
+  missing `artifacts` in the shared generator CLI to one-line
+  `Release validation failed:` diagnostics with no traceback and no partially
+  written `--out` report, even with `--allow-failures`. The Python package
+  harness now passes 122 tests. This tightens generator manifest failure-mode
+  diagnostics only; it does not add locale coverage, certify memory leaks, or
+  promote package-local non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.
