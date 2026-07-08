@@ -471,6 +471,69 @@ public class Mf2TermRendererTest {
   }
 
   @Test
+  public void rejectsHindiPronounMissingAgreementBindingAtFacadeBoundary() {
+    Mf2TermRenderer renderer =
+        Mf2TermRenderer.forHindi(hindiTermPack(), hindiPronounAgreementPack());
+
+    assertThatThrownBy(
+            () ->
+                renderer.renderBoundMessage(
+                    usageCatalog(
+                        """
+                        {
+                          "schema": "mojito-mf2-inflection/message-term-binding-manifest/v0",
+                          "locale": "hi",
+                          "messages": {
+                            "inventory.owner": "{$owner :term person=first case=genitive count=$ownerCount agreeWith=$item}."
+                          },
+                          "argumentTerms": {
+                            "inventory.owner": {}
+                          }
+                        }
+                        """),
+                    "inventory.owner",
+                    Map.of("ownerCount", "1")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("MF2 term binding manifest is not renderable: 1 binding diagnostics")
+        .hasMessageContaining("inventory.owner.item=missing");
+  }
+
+  @Test
+  public void rejectsHindiPronounMissingRuntimeVariablesAtFacadeBoundary() {
+    Mf2TermRenderer renderer =
+        Mf2TermRenderer.forHindi(hindiTermPack(), hindiPronounAgreementPack());
+    TermUsageCatalog usageCatalog =
+        usageCatalog(
+            """
+            {
+              "schema": "mojito-mf2-inflection/message-term-binding-manifest/v0",
+              "locale": "hi",
+              "messages": {
+                "inventory.owner": "{$owner :term person=first case=genitive count=$ownerCount agreeWith=$item agreeWithCount=$itemCount}."
+              },
+              "argumentTerms": {
+                "inventory.owner": {
+                  "item": ["hi.case.अंगारा"]
+                }
+              }
+            }
+            """);
+
+    assertThatThrownBy(() -> renderer.renderBoundMessage(usageCatalog, "inventory.owner", Map.of()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Failed to render term argument owner")
+        .hasMessageContaining("Missing count variable: ownerCount");
+
+    assertThatThrownBy(
+            () ->
+                renderer.renderBoundMessage(
+                    usageCatalog, "inventory.owner", Map.of("ownerCount", "1")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Failed to render term argument owner")
+        .hasMessageContaining("Missing Hindi pronoun agreeWithCount variable: itemCount");
+  }
+
+  @Test
   public void rejectsHindiExtensionForNonHindiTermPack() {
     assertThatThrownBy(
             () -> Mf2TermRenderer.forHindi(spanishTermPack(), hindiPronounAgreementPack()))
