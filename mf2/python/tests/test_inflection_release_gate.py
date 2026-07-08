@@ -1019,6 +1019,68 @@ class InflectionReleaseGateTest(unittest.TestCase):
         for phrase in forbidden_claim_phrases:
             self.assertNotIn(phrase, normalized_row)
 
+    def test_release_validator_reports_artifact_json_utf8_failures_without_traceback_or_root_leak(
+        self,
+    ) -> None:
+        forbidden_claim_phrases = (
+            "all languages",
+            "all inflection",
+            "complete locale",
+            "complete grammar",
+            "runtime promotion",
+            "package-local runtime",
+            "public api",
+        )
+        cases = (
+            (
+                "invalid-json.json",
+                b"{",
+                "Invalid JSON in release validation file invalid-json.json",
+            ),
+            (
+                "invalid-utf8.json",
+                b"\xff",
+                "Invalid UTF-8 in release validation file invalid-utf8.json",
+            ),
+        )
+        for artifact_path, payload, expected_message_prefix in cases:
+            with self.subTest(artifact_path=artifact_path):
+                with tempfile.TemporaryDirectory(
+                    prefix="mojito-mf2-inflection-release-test-"
+                ) as tmp:
+                    base_dir = Path(tmp)
+                    (base_dir / artifact_path).write_bytes(payload)
+                    report = self.validate_single_artifact(
+                        base_dir,
+                        artifact_path,
+                        "compiled-term-pack-json",
+                    )
+
+                self.assertEqual(1, report["summary"]["artifacts"])
+                self.assertEqual(0, report["summary"]["passed"])
+                self.assertEqual(1, report["summary"]["failed"])
+                row = report["artifacts"][0]
+                self.assertEqual(
+                    {
+                        "artifactId",
+                        "kind",
+                        "status",
+                        "code",
+                        "message",
+                    },
+                    set(row),
+                )
+                self.assertEqual("invalid-artifact", row["artifactId"])
+                self.assertEqual("compiled-term-pack-json", row["kind"])
+                self.assertEqual("failed", row["status"])
+                self.assertEqual("invalid-compiled-term-pack-json", row["code"])
+                self.assertTrue(row["message"].startswith(expected_message_prefix))
+                self.assertNotIn("Traceback", row["message"])
+                self.assertNotIn(str(base_dir), row["message"])
+                normalized_row = json.dumps(row, ensure_ascii=False, sort_keys=True).lower()
+                for phrase in forbidden_claim_phrases:
+                    self.assertNotIn(phrase, normalized_row)
+
     def test_release_report_summary_is_derived_from_mixed_artifact_rows(self) -> None:
         valid_fixture = (
             REPO_ROOT
@@ -2089,7 +2151,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 124 tests",
+            "the Python package harness at 125 tests",
             normalized_tracker,
         )
 
@@ -2142,7 +2204,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 124 tests",
+            "the Python package harness at 125 tests",
             normalized_tracker,
         )
 
@@ -2228,7 +2290,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
         self.assertNotIn("webapp/", design_command)
         self.assertNotIn("webapp/", tracker_command)
         self.assertIn(
-            "the Python package harness at 124 tests",
+            "the Python package harness at 125 tests",
             normalized_tracker,
         )
 
@@ -2348,6 +2410,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-validator top-level manifest-field CLI guard",
             "release-validator absolute manifest-path CLI guard",
             "release-validator invalid manifest-path syntax CLI guard",
+            "release-validator artifact JSON/UTF-8 row guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -2365,10 +2428,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             self.assertIn(snippet, normalized_tracker)
         for snippet in (
             "Verification snapshot: current focused gates pass",
-            "the Python package harness at 124 tests",
+            "the Python package harness at 125 tests",
             "webapp backend product integration at 63 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-validator invalid manifest-path syntax CLI guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused generator CLI invalid-path regression and Python release/doc guard",
+            "current release-validator artifact JSON/UTF-8 row guard slice touches 3 non-webapp files plus 0 webapp files covered by the focused generator CLI artifact-payload regression and Python release/doc guard",
             "Latest blank manifest/report schema guard",
             "test_inflection_release_wrapper_rejects_blank_manifest_report_schema",
             "Latest manifest/report row field-type guard",
@@ -2381,6 +2444,8 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "test_release_validator_rejects_absolute_manifest_paths_without_leaking_root",
             "Latest release-validator invalid manifest-path syntax CLI guard",
             "test_release_validator_rejects_invalid_manifest_path_syntax_without_leaking_root",
+            "Latest release-validator artifact JSON/UTF-8 row guard",
+            "test_release_validator_reports_artifact_json_utf8_failures_without_traceback_or_root_leak",
             "Latest absolute/invalid-path hygiene refresh",
             "POSIX absolute and Windows-style qualified/rooted manifest artifact paths",
             "including drive-relative paths such as `C:artifact.json`",

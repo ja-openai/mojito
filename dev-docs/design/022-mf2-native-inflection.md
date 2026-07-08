@@ -24299,6 +24299,15 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   passes 124 tests. This tightens generator manifest path hygiene only; it does
   not add locale coverage, certify memory leaks, or promote package-local
   non-Java runtime APIs.
+- Two thousand one hundred fifty-first release-validator artifact JSON/UTF-8
+  row guard:
+  `test_release_validator_reports_artifact_json_utf8_failures_without_traceback_or_root_leak`
+  now pins malformed compiled JSON artifact payloads to failed artifact rows
+  with `invalid-compiled-term-pack-json`, stable invalid JSON/UTF-8 filename
+  diagnostics, no traceback, and no local root leak. The Python package harness
+  now passes 125 tests. This tightens artifact payload failure-mode coverage
+  only; it does not add locale coverage, certify memory leaks, or promote
+  package-local non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.
