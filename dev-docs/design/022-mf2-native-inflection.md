@@ -24318,6 +24318,16 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   package harness now passes 126 tests. This tightens multi-artifact failure
   aggregation only; it does not add locale coverage, certify memory leaks, or
   promote package-local non-Java runtime APIs.
+- Two thousand one hundred fifty-third release-validator default failure exit
+  guard:
+  `test_release_validator_emits_report_before_failing_without_allow_failures`
+  now pins the default generator CLI behavior when failed artifacts are present
+  without `--allow-failures`: the CLI emits the full JSON report to stdout,
+  exits 1, prints `Release validation failed for 1 artifact(s)` to stderr, and
+  avoids traceback or local root leakage. The Python package harness now passes
+  127 tests. This tightens automation-facing failure semantics only; it does
+  not add locale coverage, certify memory leaks, or promote package-local
+  non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.
