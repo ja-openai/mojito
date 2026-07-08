@@ -30,7 +30,7 @@ public class ReviewGlossaryTermInflectionProfilesMcpTool
   private static final Set<String> ACTIONS =
       Set.of(ACTION_LIST, ACTION_APPROVE, ACTION_DISABLE, ACTION_MARK_REVIEW_NEEDED);
   private static final int DEFAULT_LIMIT = 100;
-  private static final int MAX_LIMIT = 500;
+  private static final int MAX_LIMIT = GlossaryTermInflectionProfileService.MAX_REVIEW_LIST_LIMIT;
 
   private static final McpToolDescriptor DESCRIPTOR =
       new McpToolDescriptor(
@@ -115,7 +115,7 @@ public class ReviewGlossaryTermInflectionProfilesMcpTool
       String localeTag,
       String action,
       InflectionProfileSummary reviewedProfile,
-      int totalProfileCount,
+      long totalProfileCount,
       int returnedProfileCount,
       List<InflectionProfileSummary> profiles) {}
 
@@ -159,20 +159,20 @@ public class ReviewGlossaryTermInflectionProfilesMcpTool
       reviewedProfile = toSummary(view);
     }
 
-    List<GlossaryTermInflectionProfileService.InflectionProfileView> profileViews =
-        inflectionProfileService.getProfiles(glossary.id(), effectiveInput.localeTag());
+    GlossaryTermInflectionProfileService.InflectionProfileReviewList reviewList =
+        inflectionProfileService.getProfileReviewList(
+            glossary.id(),
+            effectiveInput.localeTag(),
+            effectiveInput.includeApproved(),
+            effectiveInput.limit());
     List<InflectionProfileSummary> profiles =
-        profileViews.stream()
-            .map(this::toSummary)
-            .filter(profile -> effectiveInput.includeApproved() || needsReview(profile))
-            .limit(effectiveInput.limit())
-            .toList();
+        reviewList.profiles().stream().map(this::toSummary).toList();
     return new Result(
         new GlossaryRef(glossary.id(), glossary.name()),
-        effectiveInput.localeTag(),
+        reviewList.localeTag(),
         effectiveInput.action(),
         reviewedProfile,
-        profileViews.size(),
+        reviewList.totalProfileCount(),
         profiles.size(),
         profiles);
   }
@@ -224,11 +224,6 @@ public class ReviewGlossaryTermInflectionProfilesMcpTool
         forms,
         diagnostics,
         provenance);
-  }
-
-  private boolean needsReview(InflectionProfileSummary profile) {
-    return !TermInflectionProfilePackJsonLoader.STATUS_APPROVED.equals(profile.status())
-        || profile.diagnosticCount() > 0;
   }
 
   private String reviewStatus(String action) {

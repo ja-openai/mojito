@@ -80,6 +80,8 @@ public class ReviewGlossaryTermInflectionProfilesMcpToolTest {
     assertThat(result.action()).isEqualTo("LIST");
     assertThat(result.totalProfileCount()).isEqualTo(3);
     assertThat(result.returnedProfileCount()).isEqualTo(2);
+    assertThat(inflectionProfileService.lastIncludeApproved).isFalse();
+    assertThat(inflectionProfileService.lastLimit).isEqualTo(10);
     assertThat(result.profiles())
         .extracting("termId")
         .containsExactly("ar.explicit.mother", "item.disabled");
@@ -215,6 +217,8 @@ public class ReviewGlossaryTermInflectionProfilesMcpToolTest {
     assertThat(result.localeTag()).isEqualTo("ml");
     assertThat(result.totalProfileCount()).isEqualTo(1);
     assertThat(result.returnedProfileCount()).isEqualTo(1);
+    assertThat(inflectionProfileService.lastIncludeApproved).isTrue();
+    assertThat(inflectionProfileService.lastLimit).isEqualTo(10);
     ReviewGlossaryTermInflectionProfilesMcpTool.InflectionProfileSummary profile =
         result.profiles().getFirst();
     assertThat(profile.termId()).isEqualTo("ml.case.father");
@@ -341,6 +345,8 @@ public class ReviewGlossaryTermInflectionProfilesMcpToolTest {
     private List<InflectionProfileView> profiles = List.of();
     private Long lastGlossaryId;
     private Long lastTmTextUnitId;
+    private Boolean lastIncludeApproved;
+    private Integer lastLimit;
     private InflectionProfileReviewInput lastInput;
 
     private FakeInflectionProfileService() {
@@ -348,9 +354,17 @@ public class ReviewGlossaryTermInflectionProfilesMcpToolTest {
     }
 
     @Override
-    public List<InflectionProfileView> getProfiles(Long glossaryId, String localeTag) {
+    public InflectionProfileReviewList getProfileReviewList(
+        Long glossaryId, String localeTag, boolean includeApproved, int limit) {
       lastGlossaryId = glossaryId;
-      return profiles;
+      lastIncludeApproved = includeApproved;
+      lastLimit = limit;
+      List<InflectionProfileView> visibleProfiles =
+          profiles.stream()
+              .filter(profile -> includeApproved || needsReview(profile))
+              .limit(limit)
+              .toList();
+      return new InflectionProfileReviewList(localeTag, profiles.size(), visibleProfiles);
     }
 
     @Override
@@ -387,6 +401,11 @@ public class ReviewGlossaryTermInflectionProfilesMcpToolTest {
               .map(profile -> profile.tmTextUnitId().equals(tmTextUnitId) ? reviewed : profile)
               .toList();
       return reviewed;
+    }
+
+    private boolean needsReview(InflectionProfileView profile) {
+      return !TermInflectionProfilePackJsonLoader.STATUS_APPROVED.equals(profile.status())
+          || !"[]".equals(profile.diagnosticsJson());
     }
   }
 

@@ -25,6 +25,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +39,7 @@ public class GlossaryTermInflectionProfileService {
       "closed-world-glossary-approved-profile-forms";
   private static final String COMPILED_PROFILE_PACK_COMPOSITION_MODE = "explicit-form-rows-v0";
   private static final String COMPILED_PROFILE_PACK_DISABLED_REASON = "disabled-profile";
+  public static final int MAX_REVIEW_LIST_LIMIT = 500;
   private static final Pattern SHA256_HEX_PATTERN = Pattern.compile("[0-9a-f]{64}");
 
   private final GlossaryTermInflectionProfileRepository profileRepository;
@@ -70,6 +72,35 @@ public class GlossaryTermInflectionProfileService {
     return profileRepository.findByGlossaryIdAndLocaleTag(glossaryId, normalizedLocaleTag).stream()
         .map(this::toView)
         .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public InflectionProfileReviewList getProfileReviewList(
+      Long glossaryId, String localeTag, boolean includeApproved, int limit) {
+    requireGlossaryReader();
+    return getProfileReviewListForSystem(glossaryId, localeTag, includeApproved, limit);
+  }
+
+  @Transactional(readOnly = true)
+  public InflectionProfileReviewList getProfileReviewListForSystem(
+      Long glossaryId, String localeTag, boolean includeApproved, int limit) {
+    String normalizedLocaleTag = normalizeLocaleTag(localeTag);
+    int normalizedLimit = normalizeReviewListLimit(limit);
+    long totalProfileCount =
+        profileRepository.countByGlossaryIdAndLocaleTag(glossaryId, normalizedLocaleTag);
+    PageRequest pageRequest = PageRequest.of(0, normalizedLimit);
+    List<GlossaryTermInflectionProfile> profiles =
+        includeApproved
+            ? profileRepository.findByGlossaryIdAndLocaleTag(
+                glossaryId, normalizedLocaleTag, pageRequest)
+            : profileRepository.findProfilesNeedingReviewByGlossaryIdAndLocaleTag(
+                glossaryId,
+                normalizedLocaleTag,
+                TermInflectionProfilePackJsonLoader.STATUS_APPROVED,
+                "[]",
+                pageRequest);
+    return new InflectionProfileReviewList(
+        normalizedLocaleTag, totalProfileCount, profiles.stream().map(this::toView).toList());
   }
 
   @Transactional
@@ -572,6 +603,13 @@ public class GlossaryTermInflectionProfileService {
     };
   }
 
+  private int normalizeReviewListLimit(int limit) {
+    if (limit < 1 || limit > MAX_REVIEW_LIST_LIMIT) {
+      throw new IllegalArgumentException("limit must be between 1 and " + MAX_REVIEW_LIST_LIMIT);
+    }
+    return limit;
+  }
+
   private static String requireText(String value, String field) {
     if (value == null || value.isBlank()) {
       throw new IllegalArgumentException(field + " is required");
@@ -614,6 +652,18 @@ public class GlossaryTermInflectionProfileService {
       int createdProfileCount,
       int updatedProfileCount,
       List<InflectionProfileView> profiles) {}
+
+  public record InflectionProfileReviewList(
+      String localeTag, long totalProfileCount, List<InflectionProfileView> profiles) {
+
+    public InflectionProfileReviewList {
+      localeTag = requireText(localeTag, "localeTag");
+      if (totalProfileCount < 0) {
+        throw new IllegalArgumentException("totalProfileCount must be non-negative");
+      }
+      profiles = List.copyOf(Objects.requireNonNull(profiles, "profiles"));
+    }
+  }
 
   public record SkippedInflectionProfile(
       String termId,

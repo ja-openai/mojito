@@ -26,6 +26,7 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -55,6 +56,9 @@ public class GlossaryTermInflectionProfileServiceTest {
     assertThatThrownBy(() -> service.getProfiles(GLOSSARY_ID, "fr"))
         .isInstanceOf(AccessDeniedException.class)
         .hasMessageContaining("Translation role required");
+    assertThatThrownBy(() -> service.getProfileReviewList(GLOSSARY_ID, "fr", false, 10))
+        .isInstanceOf(AccessDeniedException.class)
+        .hasMessageContaining("Translation role required");
     assertThatThrownBy(() -> service.profilePack(GLOSSARY_ID, "fr"))
         .isInstanceOf(AccessDeniedException.class)
         .hasMessageContaining("Translation role required");
@@ -66,6 +70,74 @@ public class GlossaryTermInflectionProfileServiceTest {
         .hasMessageContaining("Translation role required");
 
     verifyNoInteractions(profileRepository, glossaryTermMetadataRepository);
+  }
+
+  @Test
+  public void getProfileReviewListForSystemUsesBoundedReviewRepositoryAndSeparateCount() {
+    GlossaryTermMetadata metadata = metadata("item.iron_sword", "iron sword");
+    GlossaryTermInflectionProfile generatedProfile =
+        profile(
+            metadata,
+            TermInflectionProfilePackJsonLoader.STATUS_GENERATED,
+            "{\"partOfSpeech\":\"noun\"}",
+            "{\"bare.singular\":\"epee de fer\"}",
+            """
+            [{"code": "missing-form-cell", "message": "Needs review"}]
+            """,
+            "{\"source\":\"dictionary-prefill\"}");
+    when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(2500L);
+    when(profileRepository.findProfilesNeedingReviewByGlossaryIdAndLocaleTag(
+            GLOSSARY_ID,
+            "fr",
+            TermInflectionProfilePackJsonLoader.STATUS_APPROVED,
+            "[]",
+            PageRequest.of(0, 2)))
+        .thenReturn(List.of(generatedProfile));
+
+    GlossaryTermInflectionProfileService.InflectionProfileReviewList reviewList =
+        service.getProfileReviewListForSystem(GLOSSARY_ID, " fr ", false, 2);
+
+    assertThat(reviewList.localeTag()).isEqualTo("fr");
+    assertThat(reviewList.totalProfileCount()).isEqualTo(2500L);
+    assertThat(reviewList.profiles()).hasSize(1);
+    assertThat(reviewList.profiles().getFirst().status())
+        .isEqualTo(TermInflectionProfilePackJsonLoader.STATUS_GENERATED);
+    verify(profileRepository, never()).findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr");
+  }
+
+  @Test
+  public void getProfileReviewListForSystemCanIncludeApprovedThroughBoundedRepository() {
+    GlossaryTermMetadata metadata = metadata("item.iron_sword", "iron sword");
+    GlossaryTermInflectionProfile approvedProfile =
+        approvedProfile(
+            metadata, "{\"partOfSpeech\":\"noun\"}", "{\"bare.singular\":\"epee de fer\"}");
+    when(profileRepository.countByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr")).thenReturn(3L);
+    when(profileRepository.findByGlossaryIdAndLocaleTag(GLOSSARY_ID, "fr", PageRequest.of(0, 1)))
+        .thenReturn(List.of(approvedProfile));
+
+    GlossaryTermInflectionProfileService.InflectionProfileReviewList reviewList =
+        service.getProfileReviewListForSystem(GLOSSARY_ID, "fr", true, 1);
+
+    assertThat(reviewList.totalProfileCount()).isEqualTo(3L);
+    assertThat(reviewList.profiles()).hasSize(1);
+    assertThat(reviewList.profiles().getFirst().status())
+        .isEqualTo(TermInflectionProfilePackJsonLoader.STATUS_APPROVED);
+    verify(profileRepository, never())
+        .findProfilesNeedingReviewByGlossaryIdAndLocaleTag(
+            GLOSSARY_ID,
+            "fr",
+            TermInflectionProfilePackJsonLoader.STATUS_APPROVED,
+            "[]",
+            PageRequest.of(0, 1));
+  }
+
+  @Test
+  public void getProfileReviewListForSystemRejectsOutOfRangeLimitBeforeRepositoryAccess() {
+    assertThatThrownBy(() -> service.getProfileReviewListForSystem(GLOSSARY_ID, "fr", false, 0))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("limit must be between 1 and 500");
+
+    verifyNoInteractions(profileRepository);
   }
 
   @Test

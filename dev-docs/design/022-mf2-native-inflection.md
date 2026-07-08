@@ -24488,6 +24488,17 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   focused controller rerun passes 44 tests. This tightens REST failure-mode
   coverage only; it does not add locale coverage, certify memory leaks, or
   promote package-local non-Java runtime APIs.
+- Two thousand one hundred seventy-second MCP review-list bounded-fetch guard:
+  `ReviewGlossaryTermInflectionProfilesMcpTool` now calls
+  `GlossaryTermInflectionProfileService.getProfileReviewList(...)` instead of
+  fetching every profile and filtering in memory. The service now runs a
+  separate total-count query plus either a filtered needs-review query or an
+  include-approved query with a validated 1..500 `PageRequest` cap, preserving
+  full profile-pack export as the intentionally whole-pack path. The focused
+  service/MCP rerun passes 37 tests, and the backend REST/service/MCP
+  product-integration gate passes 81 tests. This tightens MCP list
+  memory/performance boundary evidence only; it is not profiler-backed leak
+  certification, broader locale coverage, or public non-Java runtime promotion.
 - Next target: continue REST/MCP/Admin product-boundary review inside checked
   V0 scope, especially remaining diagnostic paths and any formal profiler-backed
   performance or leak evidence needed before broader rollout.

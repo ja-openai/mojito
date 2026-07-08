@@ -2716,9 +2716,9 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "Verification snapshot: current focused gates pass",
             "the Python package harness at 131 tests",
             "the Java/common renderer/manifest/requirement/runtime failure-mode slice at 81 tests",
-            "webapp backend product integration at 68 REST/service/MCP tests",
+            "webapp backend product integration at 81 REST/service/MCP tests",
             "webapp frontend product integration at 87 API/admin/Workbench/private-utility tests",
-            "current REST write not-found mapping guard slice touches the REST glossary controller test, the Python release-gate tracker guard, and 2 docs files",
+            "current MCP review-list bounded-fetch guard slice touches the MCP review tool, the inflection profile service/repository, their focused service/MCP tests, the Python release-gate tracker guard, and 2 docs files",
             "Latest release-wrapper invalid manifest-path syntax guard",
             "test_inflection_release_wrapper_rejects_invalid_manifest_path_syntax_without_leaking_path",
             "does not echo the malformed path or local temporary root",
@@ -2768,6 +2768,13 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "upsert maps missing glossary term metadata to `404`",
             "profile review maps missing inflection profiles to `404`",
             "focused controller rerun passes 44 tests",
+            "Latest MCP review-list bounded-fetch guard",
+            "`ReviewGlossaryTermInflectionProfilesMcpTool` now uses `GlossaryTermInflectionProfileService.getProfileReviewList(...)`",
+            "validated 1..500 `PageRequest` review rows after a separate count query",
+            "`GlossaryTermInflectionProfileServiceTest` pins the filtered and include-approved bounded repository paths",
+            "`ReviewGlossaryTermInflectionProfilesMcpToolTest` pins normalized include/limit pass-through",
+            "focused service/MCP rerun passes 37 tests",
+            "backend REST/service/MCP product-integration gate passes 81 tests",
             "Latest blank manifest/report schema guard",
             "test_inflection_release_wrapper_rejects_blank_manifest_report_schema",
             "Latest manifest/report row field-type guard",
@@ -2867,6 +2874,15 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "inflection profile upsert maps missing glossary term metadata to `404`",
             "profile review maps missing inflection profiles to `404`",
             "focused controller rerun passes 44 tests",
+            "Two thousand one hundred seventy-second MCP review-list bounded-fetch guard",
+            "`ReviewGlossaryTermInflectionProfilesMcpTool` now calls",
+            "`GlossaryTermInflectionProfileService.getProfileReviewList(...)`",
+            "fetching every profile and filtering in memory",
+            "separate total-count query plus either a filtered needs-review query",
+            "validated 1..500 `PageRequest` cap",
+            "focused service/MCP rerun passes 37 tests",
+            "backend REST/service/MCP product-integration gate passes 81 tests",
+            "it is not profiler-backed leak certification",
         ):
             self.assertIn(snippet, normalized_design_note)
 
@@ -3143,6 +3159,13 @@ class InflectionReleaseGateTest(unittest.TestCase):
         current_webapp_admin_render_slice_paths = (
             "webapp/frontend/src/page/settings/AdminGlossaryDetailPage.test.tsx",
         )
+        current_webapp_mcp_review_list_slice_paths = (
+            "webapp/src/main/java/com/box/l10n/mojito/service/glossary/GlossaryTermInflectionProfileRepository.java",
+            "webapp/src/main/java/com/box/l10n/mojito/service/glossary/GlossaryTermInflectionProfileService.java",
+            "webapp/src/main/java/com/box/l10n/mojito/service/mcp/glossary/ReviewGlossaryTermInflectionProfilesMcpTool.java",
+            "webapp/src/test/java/com/box/l10n/mojito/service/glossary/GlossaryTermInflectionProfileServiceTest.java",
+            "webapp/src/test/java/com/box/l10n/mojito/service/mcp/glossary/ReviewGlossaryTermInflectionProfilesMcpToolTest.java",
+        )
 
         self.assertEqual(
             (),
@@ -3155,6 +3178,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
                 current_webapp_rest_boundary_slice_paths,
                 current_webapp_rest_test_slice_paths,
                 current_webapp_admin_render_slice_paths,
+                current_webapp_mcp_review_list_slice_paths,
                 current_webapp_rest_boundary_slice_paths
                 + current_webapp_admin_render_slice_paths,
                 current_webapp_rest_test_slice_paths + current_webapp_admin_render_slice_paths,
