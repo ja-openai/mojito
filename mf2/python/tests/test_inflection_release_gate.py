@@ -2694,6 +2694,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "post-failed-code performance smoke refresh",
             "Hindi pronoun facade failure-mode guard",
             "release-wrapper path-escape root-leak guard",
+            "MCP review input-boundary guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -2713,9 +2714,9 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "Verification snapshot: current focused gates pass",
             "the Python package harness at 131 tests",
             "the Java/common renderer/manifest/requirement/runtime failure-mode slice at 81 tests",
-            "webapp backend product integration at 63 REST/service/MCP tests",
+            "webapp backend product integration at 68 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-wrapper path-escape root-leak guard slice touches the Python release-gate wrapper test plus 2 docs files",
+            "current MCP review input-boundary guard slice touches the MCP review tool test, the Python release-gate tracker guard, and 2 docs files",
             "Latest release-wrapper invalid manifest-path syntax guard",
             "test_inflection_release_wrapper_rejects_invalid_manifest_path_syntax_without_leaking_path",
             "does not echo the malformed path or local temporary root",
@@ -2737,6 +2738,11 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "test_inflection_release_wrapper_rejects_artifact_path_escape",
             "symlink escape diagnostics to the manifest-relative path `artifacts/ar-approved.json`",
             "the temp root, bundle root, and outside target directory are absent",
+            "Latest MCP review input-boundary guard",
+            "`ReviewGlossaryTermInflectionProfilesMcpToolTest` now pins null input, blank locale",
+            "trimmed locale/action normalization at the MCP review boundary",
+            "invalid inputs rejected before glossary resolution",
+            "backend REST/service/MCP product-integration gate passes 68 tests",
             "Latest blank manifest/report schema guard",
             "test_inflection_release_wrapper_rejects_blank_manifest_report_schema",
             "Latest manifest/report row field-type guard",
@@ -2808,6 +2814,11 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "symlink escape diagnostics to the manifest-relative path",
             "outside target directory stay out of the error message",
             "The Python package harness remains at 131 tests",
+            "Two thousand one hundred sixty-third MCP review input-boundary guard",
+            "`ReviewGlossaryTermInflectionProfilesMcpToolTest` now pins null input, blank locale",
+            "trimmed locale/action normalization at the MCP review boundary",
+            "invalid inputs rejected before glossary resolution",
+            "backend REST/service/MCP product-integration gate passes 68 tests",
         ):
             self.assertIn(snippet, normalized_design_note)
 
@@ -3074,15 +3085,15 @@ class InflectionReleaseGateTest(unittest.TestCase):
         non_webapp_status_paths = tuple(
             path for path in status_paths if not path.startswith("webapp/")
         )
-        current_webapp_endpoint_slice_paths = (
-            "webapp/src/main/java/com/box/l10n/mojito/rest/glossary/GlossaryWS.java",
+        current_webapp_mcp_review_slice_paths = (
+            "webapp/src/test/java/com/box/l10n/mojito/service/mcp/glossary/ReviewGlossaryTermInflectionProfilesMcpToolTest.java",
         )
 
         self.assertEqual(
             (),
             self.missing_status_paths(path_provenance_slice_paths, first_slice_args),
         )
-        self.assertIn(webapp_status_paths, ((), current_webapp_endpoint_slice_paths))
+        self.assertIn(webapp_status_paths, ((), current_webapp_mcp_review_slice_paths))
         self.assertEqual(
             (),
             self.missing_status_paths(non_webapp_status_paths, first_slice_args),

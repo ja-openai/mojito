@@ -238,6 +238,86 @@ public class ReviewGlossaryTermInflectionProfilesMcpToolTest {
         .hasMessageContaining("tmTextUnitId is required");
   }
 
+  @Test
+  public void executeRejectsNullInputBeforeResolvingGlossary() {
+    assertThatThrownBy(() -> tool.execute(null))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("input is required");
+
+    assertThat(inflectionProfileService.lastGlossaryId).isNull();
+  }
+
+  @Test
+  public void executeRejectsBlankLocaleBeforeResolvingGlossary() {
+    assertThatThrownBy(
+            () ->
+                tool.execute(
+                    new ReviewGlossaryTermInflectionProfilesMcpTool.Input(
+                        null, "target", "  ", null, "LIST", null, null, null, null, null, null)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("localeTag is required");
+
+    assertThat(inflectionProfileService.lastGlossaryId).isNull();
+  }
+
+  @Test
+  public void executeRejectsUnsupportedActionBeforeResolvingGlossary() {
+    assertThatThrownBy(
+            () ->
+                tool.execute(
+                    new ReviewGlossaryTermInflectionProfilesMcpTool.Input(
+                        null, "target", "ar", null, "PUBLISH", null, null, null, null, null, null)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Unsupported action: PUBLISH");
+
+    assertThat(inflectionProfileService.lastGlossaryId).isNull();
+  }
+
+  @Test
+  public void executeRejectsLimitOutsideBoundaryBeforeResolvingGlossary() {
+    assertThatThrownBy(
+            () ->
+                tool.execute(
+                    new ReviewGlossaryTermInflectionProfilesMcpTool.Input(
+                        null, "target", "ar", null, "LIST", null, null, null, null, null, 0)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("limit must be between 1 and 500");
+    assertThatThrownBy(
+            () ->
+                tool.execute(
+                    new ReviewGlossaryTermInflectionProfilesMcpTool.Input(
+                        null, "target", "ar", null, "LIST", null, null, null, null, null, 501)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("limit must be between 1 and 500");
+
+    assertThat(inflectionProfileService.lastGlossaryId).isNull();
+  }
+
+  @Test
+  public void executeNormalizesTrimmedLocaleAndActionAtBoundary() {
+    inflectionProfileService.profiles =
+        List.of(
+            profile(
+                21L,
+                "ar.explicit.mother",
+                TermInflectionProfilePackJsonLoader.STATUS_REVIEW_NEEDED,
+                """
+                [{"code": "missing-form-cell", "message": "Needs review"}]
+                """));
+
+    ReviewGlossaryTermInflectionProfilesMcpTool.Result result =
+        (ReviewGlossaryTermInflectionProfilesMcpTool.Result)
+            tool.execute(
+                new ReviewGlossaryTermInflectionProfilesMcpTool.Input(
+                    null, "target", " ar ", 21L, " approve ", "[]", null, null, null, true, 10));
+
+    assertThat(result.localeTag()).isEqualTo("ar");
+    assertThat(result.action()).isEqualTo("APPROVE");
+    assertThat(inflectionProfileService.lastInput.localeTag()).isEqualTo("ar");
+    assertThat(inflectionProfileService.lastInput.status())
+        .isEqualTo(TermInflectionProfilePackJsonLoader.STATUS_APPROVED);
+  }
+
   private static final class FakeGlossaryManagementService extends GlossaryManagementService {
     private FakeGlossaryManagementService() {
       super(null, null, null, null, null, null, null);

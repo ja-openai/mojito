@@ -24415,6 +24415,14 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   harness remains at 131 tests. This tightens release-fixture diagnostic hygiene
   only; it does not add locale coverage, certify memory leaks, or promote
   package-local non-Java runtime APIs.
+- Two thousand one hundred sixty-third MCP review input-boundary guard:
+  `ReviewGlossaryTermInflectionProfilesMcpToolTest` now pins null input, blank
+  locale, unsupported action, out-of-range limit, and trimmed locale/action
+  normalization at the MCP review boundary, with invalid inputs rejected before
+  glossary resolution. The focused MCP tool test passes 11 tests and the backend
+  REST/service/MCP product-integration gate passes 68 tests. This tightens
+  webapp MCP input-boundary coverage only; it does not add locale coverage,
+  certify memory leaks, or promote package-local non-Java runtime APIs.
 - Next target: continue REST/MCP/Admin and release-fixture failure-mode review
   inside checked V0 scope, especially stable product-facing diagnostics and
   release-wrapper malformed manifest/report coverage.
