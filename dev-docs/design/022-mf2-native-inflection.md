@@ -24449,10 +24449,18 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   permission helpers outside this settings page. This tightens frontend
   authorization-boundary coverage only; it does not add locale coverage,
   certify memory leaks, or promote package-local non-Java runtime APIs.
+- Two thousand one hundred sixty-seventh service authorization-boundary refresh:
+  `GlossaryTermInflectionProfileServiceTest` already pins server-side role
+  checks for the inflection profile APIs: read/export/compile paths require a
+  translation role before repository access, while import/upsert/review paths
+  require PM or admin before repository access. The focused service rerun passes
+  23 tests. This refreshes server-side authorization evidence only; it does not
+  add locale coverage, certify memory leaks, or promote package-local non-Java
+  runtime APIs.
 - Next target: continue REST/MCP/Admin product-boundary review inside checked
-  V0 scope, especially server-side authorization/diagnostic paths and any
-  formal profiler-backed performance or leak evidence needed before broader
-  rollout.
+  V0 scope, especially controller-level REST error mapping, diagnostic paths,
+  and any formal profiler-backed performance or leak evidence needed before
+  broader rollout.
 - Production formatting uses term IDs or declared dictionaries, not unqualified
   bare words.
 - Build-time validation expands message usages and catches missing term
