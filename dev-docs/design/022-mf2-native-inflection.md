@@ -24441,9 +24441,18 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   leak certification. The Python package harness remains at 131 tests. This
   tightens production-readiness wording only; it does not add locale coverage,
   certify memory leaks, or promote package-local non-Java runtime APIs.
+- Two thousand one hundred sixty-sixth Admin inflection authorization-boundary
+  guard: `AdminGlossaryDetailPage.test.tsx` now pins that the inflection review
+  settings page remains behind the admin-only settings boundary. A PM/glossary
+  manager is redirected before glossary or inflection profile queries run, while
+  day-to-day glossary term management continues to use the broader glossary
+  permission helpers outside this settings page. This tightens frontend
+  authorization-boundary coverage only; it does not add locale coverage,
+  certify memory leaks, or promote package-local non-Java runtime APIs.
 - Next target: continue REST/MCP/Admin product-boundary review inside checked
-  V0 scope, especially authorization/diagnostic paths and any formal
-  profiler-backed performance or leak evidence needed before broader rollout.
+  V0 scope, especially server-side authorization/diagnostic paths and any
+  formal profiler-backed performance or leak evidence needed before broader
+  rollout.
 - Production formatting uses term IDs or declared dictionaries, not unqualified
   bare words.
 - Build-time validation expands message usages and catches missing term

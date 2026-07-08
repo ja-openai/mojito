@@ -17,6 +17,12 @@ const mocks = vi.hoisted(() => ({
   reviewInflectionProfile: vi.fn(),
   updateGlossary: vi.fn(),
   upsertInflectionProfile: vi.fn(),
+  user: {
+    username: 'admin',
+    role: 'ROLE_ADMIN',
+    canTranslateAllLocales: true,
+    userLocales: [] as string[],
+  },
 }));
 
 vi.mock('../../api/glossaries', () => ({
@@ -45,12 +51,7 @@ vi.mock('../../hooks/useRepositories', () => ({
 }));
 
 vi.mock('../../hooks/useUser', () => ({
-  useUser: () => ({
-    username: 'admin',
-    role: 'ROLE_ADMIN',
-    canTranslateAllLocales: true,
-    userLocales: [],
-  }),
+  useUser: () => mocks.user,
 }));
 
 vi.mock('../workbench/workbench-import-export', () => ({
@@ -130,9 +131,42 @@ function readBlobAsText(blob: Blob): Promise<string> {
 
 describe('AdminGlossaryDetailPage inflection profile packs', () => {
   beforeEach(() => {
-    Object.values(mocks).forEach((mock) => mock.mockReset());
+    [
+      mocks.deleteGlossary,
+      mocks.downloadBlob,
+      mocks.exportInflectionProfilePack,
+      mocks.fetchCompiledInflectionProfilePack,
+      mocks.fetchGlossary,
+      mocks.fetchInflectionProfiles,
+      mocks.importInflectionProfiles,
+      mocks.reviewInflectionProfile,
+      mocks.updateGlossary,
+      mocks.upsertInflectionProfile,
+    ].forEach((mock) => mock.mockReset());
+    mocks.user = {
+      username: 'admin',
+      role: 'ROLE_ADMIN',
+      canTranslateAllLocales: true,
+      userLocales: [],
+    };
     mocks.fetchGlossary.mockResolvedValue(glossary);
     mocks.fetchInflectionProfiles.mockResolvedValue({ profiles: [] });
+  });
+
+  it('keeps the inflection review settings page behind the admin boundary', async () => {
+    mocks.user = {
+      username: 'pm',
+      role: 'ROLE_PM',
+      canTranslateAllLocales: true,
+      userLocales: [],
+    };
+
+    renderPage();
+
+    expect(await screen.findByText('Repositories')).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Inflection review' })).toBeNull();
+    expect(mocks.fetchGlossary).not.toHaveBeenCalled();
+    expect(mocks.fetchInflectionProfiles).not.toHaveBeenCalled();
   });
 
   it('downloads exported authoring profile packs with the backend attachment filename', async () => {
