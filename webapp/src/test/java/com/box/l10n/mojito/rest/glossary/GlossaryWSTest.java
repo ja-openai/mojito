@@ -39,6 +39,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.server.ResponseStatusException;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -315,6 +316,102 @@ public class GlossaryWSTest {
     assertEquals("[]", input.diagnosticsJson());
     assertEquals("{\"reviewedBy\":\"translator\"}", input.provenanceJson());
     assertEquals("item.iron_sword", response.termId());
+  }
+
+  @Test
+  public void inflectionProfileReadEndpointsPropagateAccessDenied() {
+    when(glossaryTermInflectionProfileService.getProfiles(1L, "fr"))
+        .thenThrow(new AccessDeniedException("Translation role required"));
+    when(glossaryTermInflectionProfileService.compileProfilePackExport(1L, "fr"))
+        .thenThrow(new AccessDeniedException("Translation role required"));
+    when(glossaryTermInflectionProfileService.profilePack(1L, "fr"))
+        .thenThrow(new AccessDeniedException("Translation role required"));
+    when(glossaryTermInflectionProfileService.compileProfilePack(1L, "fr"))
+        .thenThrow(new AccessDeniedException("Translation role required"));
+
+    assertEquals(
+        "Translation role required",
+        assertThrows(AccessDeniedException.class, () -> glossaryWS.getInflectionProfiles(1L, "fr"))
+            .getMessage());
+    assertEquals(
+        "Translation role required",
+        assertThrows(
+                AccessDeniedException.class,
+                () -> glossaryWS.exportCompiledInflectionProfilePack(1L, "fr"))
+            .getMessage());
+    assertEquals(
+        "Translation role required",
+        assertThrows(
+                AccessDeniedException.class,
+                () ->
+                    glossaryWS.reportInflectionBindingManifest(
+                        1L,
+                        "fr",
+                        new GlossaryWS.InflectionBindingManifestReportRequest(
+                            bindingManifestWithSingleItemFile())))
+            .getMessage());
+    assertEquals(
+        "Translation role required",
+        assertThrows(
+                AccessDeniedException.class, () -> glossaryWS.exportInflectionProfilePack(1L, "fr"))
+            .getMessage());
+    assertEquals(
+        "Translation role required",
+        assertThrows(
+                AccessDeniedException.class,
+                () ->
+                    glossaryWS.renderInflectionBindingManifest(
+                        1L,
+                        "fr",
+                        new GlossaryWS.InflectionBindingManifestRenderRequest(
+                            bindingManifestWithSingleItemFile(), Map.of("count", "1"))))
+            .getMessage());
+  }
+
+  @Test
+  public void inflectionProfileWriteEndpointsPropagateAccessDenied() {
+    when(glossaryTermInflectionProfileService.importProfilePack(1L, "{\"schema\":\"pack\"}"))
+        .thenThrow(new AccessDeniedException("PM or admin access required"));
+    when(glossaryTermInflectionProfileService.upsertProfile(
+            eq(1L), eq(2L), org.mockito.ArgumentMatchers.any()))
+        .thenThrow(new AccessDeniedException("PM or admin access required"));
+    when(glossaryTermInflectionProfileService.reviewProfile(
+            eq(1L), eq(2L), org.mockito.ArgumentMatchers.any()))
+        .thenThrow(new AccessDeniedException("PM or admin access required"));
+
+    assertEquals(
+        "PM or admin access required",
+        assertThrows(
+                AccessDeniedException.class,
+                () ->
+                    glossaryWS.importInflectionProfiles(
+                        1L,
+                        new GlossaryWS.ImportInflectionProfilesRequest("{\"schema\":\"pack\"}")))
+            .getMessage());
+    assertEquals(
+        "PM or admin access required",
+        assertThrows(
+                AccessDeniedException.class,
+                () ->
+                    glossaryWS.upsertInflectionProfile(
+                        1L,
+                        2L,
+                        "fr",
+                        new GlossaryWS.UpsertInflectionProfileRequest(
+                            "approved", "{}", "{}", null, "{}")))
+            .getMessage());
+    assertEquals(
+        "PM or admin access required",
+        assertThrows(
+                AccessDeniedException.class,
+                () ->
+                    glossaryWS.reviewInflectionProfile(
+                        1L,
+                        2L,
+                        "fr",
+                        new GlossaryWS.ReviewInflectionProfileRequest(
+                            "approved", null, null, null, null)))
+            .getMessage());
   }
 
   @Test
@@ -1123,6 +1220,23 @@ public class GlossaryWSTest {
           "argumentTerms": {
             "inventory.deleted": {
               "item": ["item.water", "item.water"]
+            }
+          }
+        }
+        """;
+  }
+
+  private String bindingManifestWithSingleItemFile() {
+    return """
+        {
+          "schema": "mojito-mf2-inflection/message-term-binding-manifest/v0",
+          "locale": "fr",
+          "messages": {
+            "inventory.deleted": "Deleted {$count} {$item :term count=$count}."
+          },
+          "argumentTerms": {
+            "inventory.deleted": {
+              "item": ["item.file"]
             }
           }
         }

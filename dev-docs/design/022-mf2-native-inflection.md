@@ -24457,10 +24457,17 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   23 tests. This refreshes server-side authorization evidence only; it does not
   add locale coverage, certify memory leaks, or promote package-local non-Java
   runtime APIs.
+- Two thousand one hundred sixty-eighth REST access-denied mapping guard:
+  `GlossaryWSTest` now pins that representative inflection read endpoints
+  (`get`, compiled export, authoring export, binding report, binding render)
+  and write endpoints (import, upsert, review) propagate
+  `AccessDeniedException` instead of remapping it to 400 validation errors. The
+  focused controller rerun passes 36 tests. This tightens REST authorization
+  error-boundary coverage only; it does not add locale coverage, certify memory
+  leaks, or promote package-local non-Java runtime APIs.
 - Next target: continue REST/MCP/Admin product-boundary review inside checked
-  V0 scope, especially controller-level REST error mapping, diagnostic paths,
-  and any formal profiler-backed performance or leak evidence needed before
-  broader rollout.
+  V0 scope, especially remaining diagnostic paths and any formal profiler-backed
+  performance or leak evidence needed before broader rollout.
 - Production formatting uses term IDs or declared dictionaries, not unqualified
   bare words.
 - Build-time validation expands message usages and catches missing term

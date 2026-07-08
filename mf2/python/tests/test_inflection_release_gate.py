@@ -3109,6 +3109,9 @@ class InflectionReleaseGateTest(unittest.TestCase):
         non_webapp_status_paths = tuple(
             path for path in status_paths if not path.startswith("webapp/")
         )
+        current_webapp_rest_access_denied_slice_paths = (
+            "webapp/src/test/java/com/box/l10n/mojito/rest/glossary/GlossaryWSTest.java",
+        )
         current_webapp_admin_render_slice_paths = (
             "webapp/frontend/src/page/settings/AdminGlossaryDetailPage.test.tsx",
         )
@@ -3117,7 +3120,16 @@ class InflectionReleaseGateTest(unittest.TestCase):
             (),
             self.missing_status_paths(path_provenance_slice_paths, first_slice_args),
         )
-        self.assertIn(webapp_status_paths, ((), current_webapp_admin_render_slice_paths))
+        self.assertIn(
+            webapp_status_paths,
+            (
+                (),
+                current_webapp_rest_access_denied_slice_paths,
+                current_webapp_admin_render_slice_paths,
+                current_webapp_rest_access_denied_slice_paths
+                + current_webapp_admin_render_slice_paths,
+            ),
+        )
         self.assertEqual(
             (),
             self.missing_status_paths(non_webapp_status_paths, first_slice_args),
