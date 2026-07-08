@@ -24015,9 +24015,9 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   passes 27 tests with the two smoke scenarios skipped by default, and the
   enabled smoke
   `mvn -pl common -Dtest=Mf2InflectionPerformanceSmokeTest -Dmojito.test.mf2InflectionPerfSmoke=true test`
-  rendered 20,000 post-warmup Spanish compiled messages at about 941,627
-  renders/sec with a 75 KB retained heap delta and 20,000 Hindi pronoun
-  messages at about 424,998 renders/sec with a 60 KB retained heap delta. This
+  rendered 20,000 post-warmup Spanish compiled messages at about 390,146
+  renders/sec with a 6 KB retained heap delta and 20,000 Hindi pronoun
+  messages at about 97,380 renders/sec with a 17 KB retained heap delta. This
   is bounded
   Java/common V0 smoke evidence only; it is not a profiler-backed benchmark, a
   soak test, memory-leak certification, all-locale coverage, or non-Java runtime
