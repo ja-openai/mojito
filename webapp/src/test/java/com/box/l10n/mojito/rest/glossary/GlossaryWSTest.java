@@ -5,6 +5,7 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.json.ObjectMapper;
@@ -680,6 +681,35 @@ public class GlossaryWSTest {
   }
 
   @Test
+  public void reportInflectionBindingManifestRejectsMissingContentBeforeProfileLookup() {
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () -> glossaryWS.reportInflectionBindingManifest(1L, "fr", null));
+
+    assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    assertEquals("content is required", exception.getReason());
+    verifyNoInteractions(glossaryTermInflectionProfileService);
+  }
+
+  @Test
+  public void reportInflectionBindingManifestRejectsBlankLocaleBeforeProfileLookup() {
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                glossaryWS.reportInflectionBindingManifest(
+                    1L,
+                    " ",
+                    new GlossaryWS.InflectionBindingManifestReportRequest(
+                        bindingManifestWithSingleItemFile())));
+
+    assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    assertEquals("locale is required", exception.getReason());
+    verifyNoInteractions(glossaryTermInflectionProfileService);
+  }
+
+  @Test
   public void reportInflectionBindingManifestRejectsBlankMessageIdWithStableReason() {
     assertReportInflectionBindingManifestRejected(
         bindingManifestWithBlankMessageId(), "Expected non-blank message id");
@@ -970,6 +1000,35 @@ public class GlossaryWSTest {
   }
 
   @Test
+  public void renderInflectionBindingManifestRejectsMissingContentBeforeCompile() {
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () -> glossaryWS.renderInflectionBindingManifest(1L, "fr", null));
+
+    assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    assertEquals("content is required", exception.getReason());
+    verifyNoInteractions(glossaryTermInflectionProfileService);
+  }
+
+  @Test
+  public void renderInflectionBindingManifestRejectsBlankLocaleBeforeCompile() {
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                glossaryWS.renderInflectionBindingManifest(
+                    1L,
+                    " ",
+                    new GlossaryWS.InflectionBindingManifestRenderRequest(
+                        bindingManifestWithSingleItemFile(), Map.of())));
+
+    assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    assertEquals("locale is required", exception.getReason());
+    verifyNoInteractions(glossaryTermInflectionProfileService);
+  }
+
+  @Test
   public void exportInflectionProfilePackReturnsJsonAttachment() {
     when(glossaryTermInflectionProfileService.profilePack(1L, "fr"))
         .thenReturn(
@@ -1130,9 +1189,6 @@ public class GlossaryWSTest {
   }
 
   private void assertReportInflectionBindingManifestRejected(String manifest, String reason) {
-    when(glossaryTermInflectionProfileService.profilePack(1L, "fr"))
-        .thenReturn(profilePack("fr", "item.water"));
-
     ResponseStatusException exception =
         assertThrows(
             ResponseStatusException.class,

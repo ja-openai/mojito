@@ -2718,7 +2718,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Java/common renderer/manifest/requirement/runtime failure-mode slice at 81 tests",
             "webapp backend product integration at 68 REST/service/MCP tests",
             "webapp frontend product integration at 87 API/admin/Workbench/private-utility tests",
-            "current Admin render-probe failure-mode guard slice touches the Admin glossary detail page test, the Python release-gate tracker guard, and 2 docs files",
+            "current REST request-validation ordering guard slice touches the REST glossary controller and test, the Python release-gate tracker guard, and 2 docs files",
             "Latest release-wrapper invalid manifest-path syntax guard",
             "test_inflection_release_wrapper_rejects_invalid_manifest_path_syntax_without_leaking_path",
             "does not echo the malformed path or local temporary root",
@@ -2756,6 +2756,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "profiler-backed benchmark, soak test, memory-leak certification, and leak-free runtime claims",
             "unless they appear in boundary/caveat context",
             "Python package harness remains at 131 tests",
+            "Latest REST request-validation ordering guard",
+            "`GlossaryWS.reportInflectionBindingManifest(...)` now validates locale/content before profile-pack lookup",
+            "stable `400` diagnostics for report/render requests without touching the inflection profile service on invalid input",
+            "focused controller rerun passes 40 tests",
             "Latest blank manifest/report schema guard",
             "test_inflection_release_wrapper_rejects_blank_manifest_report_schema",
             "Latest manifest/report row field-type guard",
@@ -2843,6 +2847,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "profiler-backed benchmark, soak test, memory-leak certification, and leak-free runtime claims",
             "unless they appear in boundary/caveat context",
             "Python package harness remains at 131 tests",
+            "Two thousand one hundred sixty-ninth REST request-validation ordering guard",
+            "`GlossaryWS.reportInflectionBindingManifest(...)` now validates the requested locale and manifest content before profile-pack lookup",
+            "stable `400` diagnostics for report/render requests",
+            "focused controller rerun passes 40 tests",
         ):
             self.assertIn(snippet, normalized_design_note)
 
@@ -3109,7 +3117,8 @@ class InflectionReleaseGateTest(unittest.TestCase):
         non_webapp_status_paths = tuple(
             path for path in status_paths if not path.startswith("webapp/")
         )
-        current_webapp_rest_access_denied_slice_paths = (
+        current_webapp_rest_boundary_slice_paths = (
+            "webapp/src/main/java/com/box/l10n/mojito/rest/glossary/GlossaryWS.java",
             "webapp/src/test/java/com/box/l10n/mojito/rest/glossary/GlossaryWSTest.java",
         )
         current_webapp_admin_render_slice_paths = (
@@ -3124,9 +3133,9 @@ class InflectionReleaseGateTest(unittest.TestCase):
             webapp_status_paths,
             (
                 (),
-                current_webapp_rest_access_denied_slice_paths,
+                current_webapp_rest_boundary_slice_paths,
                 current_webapp_admin_render_slice_paths,
-                current_webapp_rest_access_denied_slice_paths
+                current_webapp_rest_boundary_slice_paths
                 + current_webapp_admin_render_slice_paths,
             ),
         )

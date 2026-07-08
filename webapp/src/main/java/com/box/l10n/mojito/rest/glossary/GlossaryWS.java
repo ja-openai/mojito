@@ -1273,12 +1273,13 @@ public class GlossaryWS {
       @RequestParam(name = "locale") String localeTag,
       @RequestBody InflectionBindingManifestReportRequest request) {
     try {
-      var profilePack = glossaryTermInflectionProfileService.profilePack(glossaryId, localeTag);
       String requiredLocaleTag = requireText(localeTag, "locale");
       String manifestContent = requireText(request != null ? request.content() : null, "content");
       JsonNode manifestRoot = bindingManifestJsonForLocale(requiredLocaleTag, manifestContent);
       TermUsageCatalog usageCatalog = termRequirementJsonLoader.loadUsageCatalog(manifestRoot);
       TermUsageCatalog localizedCatalog = bindingCatalogForLocale(requiredLocaleTag, usageCatalog);
+      var profilePack =
+          glossaryTermInflectionProfileService.profilePack(glossaryId, requiredLocaleTag);
       TermBindingReport report =
           termBindingManifestValidator.validate(
               localizedCatalog, profilePack.toRequirementTerms().keySet());

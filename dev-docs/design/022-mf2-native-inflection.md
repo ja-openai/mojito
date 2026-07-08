@@ -24465,6 +24465,15 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   focused controller rerun passes 36 tests. This tightens REST authorization
   error-boundary coverage only; it does not add locale coverage, certify memory
   leaks, or promote package-local non-Java runtime APIs.
+- Two thousand one hundred sixty-ninth REST request-validation ordering guard:
+  `GlossaryWS.reportInflectionBindingManifest(...)` now validates the requested
+  locale and manifest content before profile-pack lookup, matching the render
+  endpoint's input-first boundary. `GlossaryWSTest` pins missing content and
+  blank locale as stable `400` diagnostics for report/render requests and
+  verifies invalid requests do not reach the inflection profile service. The
+  focused controller rerun passes 40 tests. This tightens REST request-boundary
+  coverage only; it does not add locale coverage, certify memory leaks, or
+  promote package-local non-Java runtime APIs.
 - Next target: continue REST/MCP/Admin product-boundary review inside checked
   V0 scope, especially remaining diagnostic paths and any formal profiler-backed
   performance or leak evidence needed before broader rollout.
