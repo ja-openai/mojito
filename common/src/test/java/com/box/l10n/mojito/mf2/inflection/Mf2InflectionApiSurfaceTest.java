@@ -3,6 +3,7 @@ package com.box.l10n.mojito.mf2.inflection;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
@@ -211,6 +212,32 @@ public class Mf2InflectionApiSurfaceTest {
                 + Mf2InflectionReleaseValidator.ReleaseArtifact.class.getName());
     assertThat(publicStaticMethodSignatures(Mf2InflectionReleaseValidator.ArtifactResult.class))
         .isEmpty();
+    assertThat(publicConstructorSignatures(Mf2InflectionReleaseValidator.ReleaseArtifact.class))
+        .containsExactly(
+            Mf2InflectionReleaseValidator.ReleaseArtifact.class.getName()
+                + "(java.lang.String,"
+                + Mf2InflectionReleaseValidator.ArtifactKind.class.getName()
+                + ",java.lang.String,[B)");
+    assertThat(
+            publicConstructorSignatures(
+                Mf2InflectionReleaseValidator.ReleaseValidationReport.class))
+        .containsExactly(
+            Mf2InflectionReleaseValidator.ReleaseValidationReport.class.getName()
+                + "(java.util.List)",
+            Mf2InflectionReleaseValidator.ReleaseValidationReport.class.getName()
+                + "(java.util.List,"
+                + Mf2InflectionReleaseValidator.Summary.class.getName()
+                + ")");
+    assertThat(publicConstructorSignatures(Mf2InflectionReleaseValidator.ArtifactResult.class))
+        .containsExactly(
+            Mf2InflectionReleaseValidator.ArtifactResult.class.getName()
+                + "(java.lang.String,"
+                + Mf2InflectionReleaseValidator.ArtifactKind.class.getName()
+                + ","
+                + Mf2InflectionReleaseValidator.ArtifactStatus.class.getName()
+                + ",java.lang.String,java.lang.String)");
+    assertThat(publicConstructorSignatures(Mf2InflectionReleaseValidator.Summary.class))
+        .containsExactly(Mf2InflectionReleaseValidator.Summary.class.getName() + "(int,int,int)");
   }
 
   @Test
@@ -398,6 +425,22 @@ public class Mf2InflectionApiSurfaceTest {
         .map(this::methodSignature)
         .sorted()
         .toList();
+  }
+
+  private List<String> publicConstructorSignatures(Class<?> type) {
+    return Stream.of(type.getDeclaredConstructors())
+        .filter(constructor -> Modifier.isPublic(constructor.getModifiers()))
+        .map(this::constructorSignature)
+        .sorted()
+        .toList();
+  }
+
+  private String constructorSignature(Constructor<?> constructor) {
+    String parameterTypes =
+        Stream.of(constructor.getParameterTypes())
+            .map(Class::getName)
+            .collect(Collectors.joining(","));
+    return constructor.getDeclaringClass().getName() + "(" + parameterTypes + ")";
   }
 
   private String methodSignature(Method method) {

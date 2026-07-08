@@ -2622,6 +2622,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-validator mixed failure aggregation guard",
             "release-validator default failure exit guard",
             "release-validator default `--out` failure report guard",
+            "release-validator nested constructor API-surface guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -2642,7 +2643,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Python package harness at 128 tests",
             "webapp backend product integration at 63 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-validator default `--out` failure report guard slice touches 3 non-webapp files plus 0 webapp files covered by the focused generator CLI default-out-failure regression and Python release/doc guard",
+            "current release-validator nested constructor API-surface guard slice touches 3 non-webapp files plus 0 webapp files covered by the focused Java/common API-surface regression and Python release/doc guard",
             "Latest blank manifest/report schema guard",
             "test_inflection_release_wrapper_rejects_blank_manifest_report_schema",
             "Latest manifest/report row field-type guard",
@@ -2663,6 +2664,9 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "test_release_validator_emits_report_before_failing_without_allow_failures",
             "Latest release-validator default `--out` failure report guard",
             "test_release_validator_writes_out_report_before_failing_without_allow_failures",
+            "Latest release-validator nested constructor API-surface guard",
+            "Mf2InflectionApiSurfaceTest.releaseValidatorNestedApiSurfaceStaysNarrow",
+            "public constructor signatures for `ReleaseArtifact`, `ReleaseValidationReport`, `ArtifactResult`, and `Summary`",
             "Latest absolute/invalid-path hygiene refresh",
             "POSIX absolute and Windows-style qualified/rooted manifest artifact paths",
             "including drive-relative paths such as `C:artifact.json`",

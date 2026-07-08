@@ -24339,6 +24339,16 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   tightens automation-facing report-file failure semantics only; it does not
   add locale coverage, certify memory leaks, or promote package-local non-Java
   runtime APIs.
+- Two thousand one hundred fifty-fifth release-validator nested constructor
+  API-surface guard:
+  `Mf2InflectionApiSurfaceTest.releaseValidatorNestedApiSurfaceStaysNarrow`
+  now pins the public constructor signatures for `ReleaseArtifact`,
+  `ReleaseValidationReport`, `ArtifactResult`, and `Summary`, making the nested
+  record constructor surface explicit alongside the factory/static-method and
+  record-component checks. The combined Java/common API/release/binding slice
+  remains 52 tests. This tightens the Java/common public boundary only; it does
+  not add locale coverage, certify memory leaks, or promote package-local
+  non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.
