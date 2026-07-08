@@ -24387,6 +24387,16 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   tests. This tightens release-fixture source-map path hygiene only; it does not
   add locale coverage, certify memory leaks, or promote package-local non-Java
   runtime APIs.
+- Two thousand one hundred sixtieth release-wrapper bundle-source filename
+  hygiene guard: `validate_inflection_release_fixture.py` now rejects absolute,
+  POSIX path-like, Windows path-like, and embedded-NUL bundle `ARTIFACTS.source`
+  values before release-fixture source drift comparison, and
+  `test_inflection_release_wrapper_rejects_pathlike_bundle_source_filenames_without_leaking_root`
+  pins artifact-qualified diagnostics that do not echo the local absolute
+  source path, path-like source value, malformed source value, or temporary
+  root. The Python package harness now passes 131 tests. This tightens
+  release-fixture source filename hygiene only; it does not add locale coverage,
+  certify memory leaks, or promote package-local non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.

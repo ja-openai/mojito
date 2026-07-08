@@ -216,6 +216,20 @@ def validate_artifact_path_syntax(artifact_path: str, artifact_id: str, label: s
         raise ValueError(f"{label} artifact path for {artifact_id} must be relative")
 
 
+def validate_bundle_source_filename_syntax(artifact_source: str, artifact_id: str) -> None:
+    if "\x00" in artifact_source:
+        raise ValueError(f"bundle ARTIFACTS source for {artifact_id} is invalid")
+    windows_path = PureWindowsPath(artifact_source)
+    if (
+        is_absolute_artifact_path(artifact_source)
+        or Path(artifact_source).name != artifact_source
+        or windows_path.name != artifact_source
+    ):
+        raise ValueError(
+            f"bundle ARTIFACTS source for {artifact_id} must be a fixture filename"
+        )
+
+
 def require_bundle_artifact_fields(artifact: Any) -> dict[str, Any]:
     try:
         return vars(artifact)
@@ -399,6 +413,7 @@ def validate_bundle_artifact_specs(artifacts: Any) -> None:
                 f"Unexpected bundle artifact path for {artifact_id}: "
                 f"expected {expected_path!r}, got {artifact_path!r}"
             )
+        validate_bundle_source_filename_syntax(artifact_source, artifact_id)
         if artifact_source != expected_source:
             raise ValueError(
                 f"Unexpected release fixture source for {artifact_id}: "
