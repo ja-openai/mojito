@@ -24397,9 +24397,19 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   root. The Python package harness now passes 131 tests. This tightens
   release-fixture source filename hygiene only; it does not add locale coverage,
   certify memory leaks, or promote package-local non-Java runtime APIs.
-- Next target: continue release-fixture and failure-mode review inside checked
-  V0 scope, especially malformed manifest/report diagnostics and release-wrapper
-  failure-mode coverage.
+- Two thousand one hundred sixty-first Java/common Hindi pronoun facade
+  failure-mode guard: `Mf2TermRendererTest` now pins schema-gated Hindi
+  `renderBoundMessage(...)` failure behavior for missing genitive agreement
+  bindings and missing runtime `ownerCount`/`agreeWithCount` variables. The
+  focused `Mf2TermRendererTest` rerun passes 18 tests, and the adjacent
+  renderer/manifest/requirement/runtime slice passes 81 tests. The Python
+  release-gate tracker guard now pins the latest/current wording. This tightens
+  checked Java/common V0 public failure-mode behavior only; it does not add
+  locale coverage, certify memory leaks, or promote package-local non-Java
+  runtime APIs.
+- Next target: continue REST/MCP/Admin and release-fixture failure-mode review
+  inside checked V0 scope, especially stable product-facing diagnostics and
+  release-wrapper malformed manifest/report coverage.
 - Production formatting uses term IDs or declared dictionaries, not unqualified
   bare words.
 - Build-time validation expands message usages and catches missing term

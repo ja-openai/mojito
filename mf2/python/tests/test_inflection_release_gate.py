@@ -2692,6 +2692,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-validator nested constructor API-surface guard",
             "release-validator failed-code constructor guard",
             "post-failed-code performance smoke refresh",
+            "Hindi pronoun facade failure-mode guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -2710,9 +2711,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
         for snippet in (
             "Verification snapshot: current focused gates pass",
             "the Python package harness at 131 tests",
+            "the Java/common renderer/manifest/requirement/runtime failure-mode slice at 81 tests",
             "webapp backend product integration at 63 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-wrapper bundle-source filename hygiene guard slice touches 4 non-webapp files plus 0 webapp files covered by the focused Python package harness and shared release fixture gate",
+            "current Hindi pronoun facade failure-mode guard slice touches 2 docs files plus the Python release-gate tracker guard",
             "Latest release-wrapper invalid manifest-path syntax guard",
             "test_inflection_release_wrapper_rejects_invalid_manifest_path_syntax_without_leaking_path",
             "does not echo the malformed path or local temporary root",
@@ -2725,6 +2727,11 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "test_inflection_release_wrapper_rejects_pathlike_bundle_source_filenames_without_leaking_root",
             "do not echo the local absolute source path, path-like source value, malformed source value, or temporary root",
             "The Python package harness now passes 131 tests",
+            "Latest Hindi pronoun facade failure-mode guard",
+            "schema-gated Hindi `renderBoundMessage(...)` failures for missing genitive agreement bindings",
+            "missing runtime `ownerCount`/`agreeWithCount` variables",
+            "both GitHub Actions builds are green for the pushed commit",
+            "Python tracker guard pins this latest/current wording",
             "Latest blank manifest/report schema guard",
             "test_inflection_release_wrapper_rejects_blank_manifest_report_schema",
             "Latest manifest/report row field-type guard",
@@ -2786,6 +2793,11 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "absolute, POSIX path-like, Windows path-like, and embedded-NUL bundle `ARTIFACTS.source` values before release-fixture source drift comparison",
             "do not echo the local absolute source path, path-like source value, malformed source value, or temporary root",
             "The Python package harness now passes 131 tests",
+            "Two thousand one hundred sixty-first Java/common Hindi pronoun facade",
+            "`Mf2TermRendererTest` now pins schema-gated Hindi",
+            "missing runtime `ownerCount`/`agreeWithCount` variables",
+            "The Python release-gate tracker guard now pins the latest/current wording",
+            "it does not add locale coverage, certify memory leaks, or promote package-local non-Java runtime APIs",
         ):
             self.assertIn(snippet, normalized_design_note)
 
