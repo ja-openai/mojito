@@ -1823,7 +1823,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 118 tests",
+            "the Python package harness at 119 tests",
             normalized_tracker,
         )
 
@@ -1876,7 +1876,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 118 tests",
+            "the Python package harness at 119 tests",
             normalized_tracker,
         )
 
@@ -1962,7 +1962,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
         self.assertNotIn("webapp/", design_command)
         self.assertNotIn("webapp/", tracker_command)
         self.assertIn(
-            "the Python package harness at 118 tests",
+            "the Python package harness at 119 tests",
             normalized_tracker,
         )
 
@@ -2076,6 +2076,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-validator report immutability guard",
             "release-wrapper absolute manifest-path hygiene guard",
             "Java/common invalid manifest-path syntax guard",
+            "release-wrapper blank manifest/report schema guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -2093,10 +2094,12 @@ class InflectionReleaseGateTest(unittest.TestCase):
             self.assertIn(snippet, normalized_tracker)
         for snippet in (
             "Verification snapshot: current focused gates pass",
-            "the Python package harness at 118 tests",
+            "the Python package harness at 119 tests",
             "webapp backend product integration at 63 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current absolute/invalid manifest-path hygiene guard slice touches 6 non-webapp files plus 0 webapp files covered by the focused Java release-validator absolute/invalid-path regressions, focused wrapper absolute-path regression, shared 35-artifact release wrapper, and Python release/doc guard",
+            "current blank manifest/report schema guard slice touches 3 non-webapp files plus 0 webapp files covered by the focused wrapper blank-schema regression and Python release/doc guard",
+            "Latest blank manifest/report schema guard",
+            "test_inflection_release_wrapper_rejects_blank_manifest_report_schema",
             "Latest absolute/invalid-path hygiene refresh",
             "POSIX absolute and Windows-style qualified/rooted manifest artifact paths",
             "including drive-relative paths such as `C:artifact.json`",
@@ -2883,6 +2886,26 @@ class InflectionReleaseGateTest(unittest.TestCase):
         cases = (
             ("manifest", {"manifest_schema": 7}, "release-validation-manifest.json.schema"),
             ("report", {"report_schema": 7}, "release-validation-report.json.schema"),
+        )
+        with tempfile.TemporaryDirectory(prefix="mojito-mf2-inflection-wrapper-test-") as tmp:
+            root_dir = Path(tmp)
+            for label, overrides, expected_field in cases:
+                with self.subTest(label=label):
+                    base_dir = root_dir / label
+                    base_dir.mkdir()
+                    self.write_release_wrapper_bundle(base_dir, wrapper, **overrides)
+
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        rf"Expected non-empty text: {re.escape(expected_field)}",
+                    ):
+                        wrapper.validate_materialized_bundle(base_dir)
+
+    def test_inflection_release_wrapper_rejects_blank_manifest_report_schema(self) -> None:
+        wrapper = self.load_release_fixture_wrapper()
+        cases = (
+            ("manifest", {"manifest_schema": ""}, "release-validation-manifest.json.schema"),
+            ("report", {"report_schema": ""}, "release-validation-report.json.schema"),
         )
         with tempfile.TemporaryDirectory(prefix="mojito-mf2-inflection-wrapper-test-") as tmp:
             root_dir = Path(tmp)
@@ -3995,7 +4018,11 @@ class InflectionReleaseGateTest(unittest.TestCase):
         (base_dir / "release-validation-manifest.json").write_text(
             json.dumps(
                 {
-                    "schema": manifest_schema or wrapper.EXPECTED_MANIFEST_SCHEMA,
+                    "schema": (
+                        wrapper.EXPECTED_MANIFEST_SCHEMA
+                        if manifest_schema is None
+                        else manifest_schema
+                    ),
                     "artifacts": artifacts,
                 },
                 indent=2,
@@ -4012,7 +4039,11 @@ class InflectionReleaseGateTest(unittest.TestCase):
         (base_dir / "release-validation-report.json").write_text(
             json.dumps(
                 {
-                    "schema": report_schema or wrapper.EXPECTED_REPORT_SCHEMA,
+                    "schema": (
+                        wrapper.EXPECTED_REPORT_SCHEMA
+                        if report_schema is None
+                        else report_schema
+                    ),
                     "summary": summary,
                     "artifacts": report_artifacts,
                 },

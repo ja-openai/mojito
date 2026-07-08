@@ -24237,6 +24237,15 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   pushed coverage commit. This tightens Mojito webapp API-boundary coverage
   around checked Java/common V0 only; it does not add locale coverage, certify
   memory leaks, or promote package-local non-Java runtime APIs.
+- Two thousand one hundred forty-fifth release-wrapper blank-schema guard:
+  `test_inflection_release_wrapper_rejects_blank_manifest_report_schema` now
+  pins explicit blank top-level manifest and report `schema` values to the same
+  filename-qualified `Expected non-empty text` diagnostics as other malformed
+  fixture fields. The test helper now preserves explicit blank schema overrides
+  instead of replacing them with expected schemas. The Python package harness
+  now passes 119 tests. This tightens malformed manifest/report failure-mode
+  coverage only; it does not add locale coverage, certify memory leaks, or
+  promote package-local non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.
