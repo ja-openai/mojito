@@ -46,6 +46,19 @@ public class Mf2InflectionReleaseValidator {
 
   static final String SCHEMA = "mojito-mf2-inflection/release-validation-report/v0";
   static final String MANIFEST_SCHEMA = "mojito-mf2-inflection/release-validation-manifest/v0";
+  private static final String INVALID_RELEASE_ARTIFACT_PATH = "invalid-release-artifact-path";
+  private static final String UNREADABLE_RELEASE_ARTIFACT = "unreadable-release-artifact";
+  private static final String INVALID_COMPILED_TERM_PACK_JSON = "invalid-compiled-term-pack-json";
+  private static final String INVALID_COMPILED_TERM_PACK_M2IF = "invalid-compiled-term-pack-m2if";
+  private static final String INVALID_HINDI_PRONOUN_AGREEMENT_PACK_JSON =
+      "invalid-hindi-pronoun-agreement-pack-json";
+  private static final List<String> ARTIFACT_FAILURE_CODES =
+      List.of(
+          INVALID_RELEASE_ARTIFACT_PATH,
+          UNREADABLE_RELEASE_ARTIFACT,
+          INVALID_COMPILED_TERM_PACK_JSON,
+          INVALID_COMPILED_TERM_PACK_M2IF,
+          INVALID_HINDI_PRONOUN_AGREEMENT_PACK_JSON);
 
   private final CompiledTermPackJsonLoader compiledTermPackJsonLoader;
   private final CompiledTermPackBinaryCodec compiledTermPackBinaryCodec;
@@ -151,19 +164,19 @@ public class Mf2InflectionReleaseValidator {
       return ArtifactResult.failed(
           manifestArtifact.artifactId(),
           manifestArtifact.kind(),
-          "invalid-release-artifact-path",
+          INVALID_RELEASE_ARTIFACT_PATH,
           errorMessage(e));
     } catch (IOException e) {
       return ArtifactResult.failed(
           manifestArtifact.artifactId(),
           manifestArtifact.kind(),
-          "unreadable-release-artifact",
+          UNREADABLE_RELEASE_ARTIFACT,
           unreadableArtifactMessage(manifestArtifact));
     } catch (SecurityException e) {
       return ArtifactResult.failed(
           manifestArtifact.artifactId(),
           manifestArtifact.kind(),
-          "unreadable-release-artifact",
+          UNREADABLE_RELEASE_ARTIFACT,
           unreadableArtifactMessage(manifestArtifact));
     } catch (RuntimeException e) {
       return ArtifactResult.failed(
@@ -263,9 +276,9 @@ public class Mf2InflectionReleaseValidator {
 
   private String errorCode(ArtifactKind kind) {
     return switch (kind) {
-      case COMPILED_TERM_PACK_JSON -> "invalid-compiled-term-pack-json";
-      case COMPILED_TERM_PACK_M2IF -> "invalid-compiled-term-pack-m2if";
-      case HINDI_PRONOUN_AGREEMENT_PACK_JSON -> "invalid-hindi-pronoun-agreement-pack-json";
+      case COMPILED_TERM_PACK_JSON -> INVALID_COMPILED_TERM_PACK_JSON;
+      case COMPILED_TERM_PACK_M2IF -> INVALID_COMPILED_TERM_PACK_M2IF;
+      case HINDI_PRONOUN_AGREEMENT_PACK_JSON -> INVALID_HINDI_PRONOUN_AGREEMENT_PACK_JSON;
     };
   }
 
@@ -490,6 +503,9 @@ public class Mf2InflectionReleaseValidator {
       if (status == ArtifactStatus.FAILED) {
         code = InflectionJsonFields.requireText(code, "code");
         message = InflectionJsonFields.requireText(message, "message");
+        if (!ARTIFACT_FAILURE_CODES.contains(code)) {
+          throw new IllegalArgumentException("Unsupported release artifact failure code: " + code);
+        }
       } else if (code != null || message != null) {
         throw new IllegalArgumentException("Passed release artifacts must not carry errors");
       }

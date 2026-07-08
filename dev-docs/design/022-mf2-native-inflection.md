@@ -24349,6 +24349,15 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   remains 52 tests. This tightens the Java/common public boundary only; it does
   not add locale coverage, certify memory leaks, or promote package-local
   non-Java runtime APIs.
+- Two thousand one hundred fifty-sixth release-validator failed-code
+  constructor guard: `Mf2InflectionReleaseValidator.ArtifactResult` now
+  rejects failed release artifact rows whose `code` is outside the documented
+  five-code artifact failure set, and the Java release-validator regression pins
+  unsupported constructor codes while keeping required-field diagnostics stable.
+  The combined Java/common API/release/binding slice now passes 53 tests. This
+  tightens the Java/common public report-row boundary only; it does not add
+  locale coverage, certify memory leaks, or promote package-local non-Java
+  runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.

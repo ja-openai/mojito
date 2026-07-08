@@ -2623,6 +2623,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-validator default failure exit guard",
             "release-validator default `--out` failure report guard",
             "release-validator nested constructor API-surface guard",
+            "release-validator failed-code constructor guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -2643,7 +2644,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Python package harness at 128 tests",
             "webapp backend product integration at 63 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-validator nested constructor API-surface guard slice touches 3 non-webapp files plus 0 webapp files covered by the focused Java/common API-surface regression and Python release/doc guard",
+            "current release-validator failed-code constructor guard slice touches 5 non-webapp files plus 0 webapp files covered by the focused Java/common release-validator regression and Python release/doc guard",
             "Latest blank manifest/report schema guard",
             "test_inflection_release_wrapper_rejects_blank_manifest_report_schema",
             "Latest manifest/report row field-type guard",
@@ -2667,6 +2668,9 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "Latest release-validator nested constructor API-surface guard",
             "Mf2InflectionApiSurfaceTest.releaseValidatorNestedApiSurfaceStaysNarrow",
             "public constructor signatures for `ReleaseArtifact`, `ReleaseValidationReport`, `ArtifactResult`, and `Summary`",
+            "Latest release-validator failed-code constructor guard",
+            "Mf2InflectionReleaseValidator.ArtifactResult` now rejects failed release artifact rows",
+            "outside the documented five-code artifact failure set",
             "Latest absolute/invalid-path hygiene refresh",
             "POSIX absolute and Windows-style qualified/rooted manifest artifact paths",
             "including drive-relative paths such as `C:artifact.json`",
@@ -2680,6 +2684,8 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the MF2-01 current checkpoint now names the bounded-claim wording guard",
             "This is tracker alignment only",
             "Python package harness now passes 92 tests",
+            "Two thousand one hundred fifty-sixth release-validator failed-code",
+            "unsupported constructor codes while keeping required-field diagnostics stable",
         ):
             self.assertIn(snippet, normalized_design_note)
 

@@ -295,7 +295,11 @@ public class Mf2InflectionReleaseValidatorTest {
 
     ReleaseValidationReport report = new ReleaseValidationReport(rows);
     rows.add(
-        ArtifactResult.failed("later", ArtifactKind.COMPILED_TERM_PACK_M2IF, "code", "message"));
+        ArtifactResult.failed(
+            "later",
+            ArtifactKind.COMPILED_TERM_PACK_M2IF,
+            "invalid-compiled-term-pack-m2if",
+            "message"));
 
     assertThat(report.artifacts()).extracting(ArtifactResult::artifactId).containsExactly("terms");
     assertThat(report.summary()).isEqualTo(new Summary(1, 1, 0));
@@ -414,6 +418,20 @@ public class Mf2InflectionReleaseValidatorTest {
                     ""))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("message is required");
+  }
+
+  @Test
+  public void rejectsUnsupportedArtifactResultFailureCode() {
+    assertThatThrownBy(
+            () ->
+                new ArtifactResult(
+                    "terms",
+                    ArtifactKind.COMPILED_TERM_PACK_JSON,
+                    ArtifactStatus.FAILED,
+                    "custom-code",
+                    "message"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Unsupported release artifact failure code: custom-code");
   }
 
   @Test
