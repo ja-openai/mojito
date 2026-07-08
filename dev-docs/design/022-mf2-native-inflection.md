@@ -24308,6 +24308,16 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   now passes 125 tests. This tightens artifact payload failure-mode coverage
   only; it does not add locale coverage, certify memory leaks, or promote
   package-local non-Java runtime APIs.
+- Two thousand one hundred fifty-second release-validator mixed failure
+  aggregation guard:
+  `test_release_validator_reports_mixed_failure_codes_without_short_circuiting`
+  now pins one manifest with an invalid path, malformed compiled JSON, missing
+  artifact, and valid compiled JSON to a deterministic four-row report with
+  summary counts `artifacts=4`, `passed=1`, and `failed=3`; failed rows keep
+  their specific codes while the passed row stays code/message-free. The Python
+  package harness now passes 126 tests. This tightens multi-artifact failure
+  aggregation only; it does not add locale coverage, certify memory leaks, or
+  promote package-local non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.

@@ -1149,6 +1149,97 @@ class InflectionReleaseGateTest(unittest.TestCase):
             [row["status"] for row in report["artifacts"]],
         )
 
+    def test_release_validator_reports_mixed_failure_codes_without_short_circuiting(
+        self,
+    ) -> None:
+        valid_fixture = (
+            REPO_ROOT
+            / "common/src/test/resources/com/box/l10n/mojito/mf2/inflection"
+            / "es_compiled_article_pack_fixture.json"
+        )
+        with tempfile.TemporaryDirectory(prefix="mojito-mf2-inflection-release-test-") as tmp:
+            base_dir = Path(tmp)
+            (base_dir / "valid.json").write_text(
+                valid_fixture.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            (base_dir / "invalid.json").write_text("{", encoding="utf-8")
+            manifest_path = base_dir / "release-validation-manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "schema": "mojito-mf2-inflection/release-validation-manifest/v0",
+                        "artifacts": [
+                            {
+                                "artifactId": "valid-json",
+                                "kind": "compiled-term-pack-json",
+                                "path": "valid.json",
+                            },
+                            {
+                                "artifactId": "invalid-json",
+                                "kind": "compiled-term-pack-json",
+                                "path": "invalid.json",
+                            },
+                            {
+                                "artifactId": "missing-json",
+                                "kind": "compiled-term-pack-json",
+                                "path": "missing.json",
+                            },
+                            {
+                                "artifactId": "escape-json",
+                                "kind": "compiled-term-pack-json",
+                                "path": "../escape.json",
+                            },
+                        ],
+                    },
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    "python3",
+                    str(RELEASE_VALIDATION),
+                    "--manifest",
+                    str(manifest_path),
+                    "--base-dir",
+                    str(base_dir),
+                    "--allow-failures",
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+        self.assertEqual("", result.stderr)
+        self.assertEqual(0, result.returncode, result.stdout)
+        report = json.loads(result.stdout)
+        self.assertEqual({"artifacts", "passed", "failed"}, set(report["summary"]))
+        self.assertEqual(4, report["summary"]["artifacts"])
+        self.assertEqual(1, report["summary"]["passed"])
+        self.assertEqual(3, report["summary"]["failed"])
+        self.assertEqual(
+            ["escape-json", "invalid-json", "missing-json", "valid-json"],
+            [row["artifactId"] for row in report["artifacts"]],
+        )
+        expected_rows = {
+            "escape-json": ("failed", "invalid-release-artifact-path"),
+            "invalid-json": ("failed", "invalid-compiled-term-pack-json"),
+            "missing-json": ("failed", "unreadable-release-artifact"),
+            "valid-json": ("passed", None),
+        }
+        for row in report["artifacts"]:
+            expected_status, expected_code = expected_rows[row["artifactId"]]
+            self.assertEqual(expected_status, row["status"])
+            if expected_code is None:
+                self.assertEqual({"artifactId", "kind", "status"}, set(row))
+            else:
+                self.assertEqual({"artifactId", "kind", "status", "code", "message"}, set(row))
+                self.assertEqual(expected_code, row["code"])
+                self.assertNotIn(str(base_dir), row["message"])
+
     def test_release_validator_rejects_unwritable_report_without_traceback(
         self,
     ) -> None:
@@ -2151,7 +2242,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 125 tests",
+            "the Python package harness at 126 tests",
             normalized_tracker,
         )
 
@@ -2204,7 +2295,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 125 tests",
+            "the Python package harness at 126 tests",
             normalized_tracker,
         )
 
@@ -2290,7 +2381,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
         self.assertNotIn("webapp/", design_command)
         self.assertNotIn("webapp/", tracker_command)
         self.assertIn(
-            "the Python package harness at 125 tests",
+            "the Python package harness at 126 tests",
             normalized_tracker,
         )
 
@@ -2411,6 +2502,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-validator absolute manifest-path CLI guard",
             "release-validator invalid manifest-path syntax CLI guard",
             "release-validator artifact JSON/UTF-8 row guard",
+            "release-validator mixed failure aggregation guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -2428,10 +2520,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             self.assertIn(snippet, normalized_tracker)
         for snippet in (
             "Verification snapshot: current focused gates pass",
-            "the Python package harness at 125 tests",
+            "the Python package harness at 126 tests",
             "webapp backend product integration at 63 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current release-validator artifact JSON/UTF-8 row guard slice touches 3 non-webapp files plus 0 webapp files covered by the focused generator CLI artifact-payload regression and Python release/doc guard",
+            "current release-validator mixed failure aggregation guard slice touches 3 non-webapp files plus 0 webapp files covered by the focused generator CLI mixed-failure regression and Python release/doc guard",
             "Latest blank manifest/report schema guard",
             "test_inflection_release_wrapper_rejects_blank_manifest_report_schema",
             "Latest manifest/report row field-type guard",
@@ -2446,6 +2538,8 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "test_release_validator_rejects_invalid_manifest_path_syntax_without_leaking_root",
             "Latest release-validator artifact JSON/UTF-8 row guard",
             "test_release_validator_reports_artifact_json_utf8_failures_without_traceback_or_root_leak",
+            "Latest release-validator mixed failure aggregation guard",
+            "test_release_validator_reports_mixed_failure_codes_without_short_circuiting",
             "Latest absolute/invalid-path hygiene refresh",
             "POSIX absolute and Windows-style qualified/rooted manifest artifact paths",
             "including drive-relative paths such as `C:artifact.json`",
