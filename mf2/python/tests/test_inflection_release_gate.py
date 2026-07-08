@@ -2718,7 +2718,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Java/common renderer/manifest/requirement/runtime failure-mode slice at 81 tests",
             "webapp backend product integration at 68 REST/service/MCP tests",
             "webapp frontend product integration at 87 API/admin/Workbench/private-utility tests",
-            "current REST request-validation ordering guard slice touches the REST glossary controller and test, the Python release-gate tracker guard, and 2 docs files",
+            "current REST attachment filename guard slice touches the REST glossary controller test, the Python release-gate tracker guard, and 2 docs files",
             "Latest release-wrapper invalid manifest-path syntax guard",
             "test_inflection_release_wrapper_rejects_invalid_manifest_path_syntax_without_leaking_path",
             "does not echo the malformed path or local temporary root",
@@ -2760,6 +2760,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "`GlossaryWS.reportInflectionBindingManifest(...)` now validates locale/content before profile-pack lookup",
             "stable `400` diagnostics for report/render requests without touching the inflection profile service on invalid input",
             "focused controller rerun passes 40 tests",
+            "Latest REST attachment filename guard",
+            "compiled profile-pack and authoring profile-pack downloads replace CR/LF",
+            "unsafe locale-tag filename characters with underscores before setting `Content-Disposition`",
+            "focused controller rerun passes 42 tests",
             "Latest blank manifest/report schema guard",
             "test_inflection_release_wrapper_rejects_blank_manifest_report_schema",
             "Latest manifest/report row field-type guard",
@@ -2851,6 +2855,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "`GlossaryWS.reportInflectionBindingManifest(...)` now validates the requested locale and manifest content before profile-pack lookup",
             "stable `400` diagnostics for report/render requests",
             "focused controller rerun passes 40 tests",
+            "Two thousand one hundred seventieth REST attachment filename guard",
+            "compiled profile-pack downloads and authoring profile-pack downloads sanitize CR/LF-bearing locale tags",
+            "`Content-Disposition` filenames",
+            "focused controller rerun passes 42 tests",
         ):
             self.assertIn(snippet, normalized_design_note)
 
@@ -3121,6 +3129,9 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "webapp/src/main/java/com/box/l10n/mojito/rest/glossary/GlossaryWS.java",
             "webapp/src/test/java/com/box/l10n/mojito/rest/glossary/GlossaryWSTest.java",
         )
+        current_webapp_rest_test_slice_paths = (
+            "webapp/src/test/java/com/box/l10n/mojito/rest/glossary/GlossaryWSTest.java",
+        )
         current_webapp_admin_render_slice_paths = (
             "webapp/frontend/src/page/settings/AdminGlossaryDetailPage.test.tsx",
         )
@@ -3134,9 +3145,11 @@ class InflectionReleaseGateTest(unittest.TestCase):
             (
                 (),
                 current_webapp_rest_boundary_slice_paths,
+                current_webapp_rest_test_slice_paths,
                 current_webapp_admin_render_slice_paths,
                 current_webapp_rest_boundary_slice_paths
                 + current_webapp_admin_render_slice_paths,
+                current_webapp_rest_test_slice_paths + current_webapp_admin_render_slice_paths,
             ),
         )
         self.assertEqual(

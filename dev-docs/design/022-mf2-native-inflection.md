@@ -24474,6 +24474,13 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   focused controller rerun passes 40 tests. This tightens REST request-boundary
   coverage only; it does not add locale coverage, certify memory leaks, or
   promote package-local non-Java runtime APIs.
+- Two thousand one hundred seventieth REST attachment filename guard:
+  `GlossaryWSTest` now pins that both compiled profile-pack downloads and
+  authoring profile-pack downloads sanitize CR/LF-bearing locale tags before
+  writing `Content-Disposition` filenames. The focused controller rerun passes
+  42 tests. This tightens REST response-header hygiene only; it does not add
+  locale coverage, certify memory leaks, or promote package-local non-Java
+  runtime APIs.
 - Next target: continue REST/MCP/Admin product-boundary review inside checked
   V0 scope, especially remaining diagnostic paths and any formal profiler-backed
   performance or leak evidence needed before broader rollout.

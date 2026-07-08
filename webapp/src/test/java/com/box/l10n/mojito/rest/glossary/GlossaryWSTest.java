@@ -468,6 +468,24 @@ public class GlossaryWSTest {
   }
 
   @Test
+  public void exportCompiledInflectionProfilePackSanitizesAttachmentFilename() {
+    String localeTag = "fr\r\nSet-Cookie:bad";
+    when(glossaryTermInflectionProfileService.compileProfilePackExport(1L, localeTag))
+        .thenReturn(
+            new GlossaryTermInflectionProfileService.CompiledInflectionProfilePackExport(
+                compiledProfilePack("fr", "item.file", "\"bare.singular\":\"file\""),
+                1,
+                List.of()));
+
+    ResponseEntity<byte[]> response = glossaryWS.exportCompiledInflectionProfilePack(1L, localeTag);
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals(
+        "attachment; filename=\"glossary-1-inflection-fr__Set-Cookie_bad-compiled.json\"",
+        response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION));
+  }
+
+  @Test
   public void exportCompiledInflectionProfilePackReturnsApprovedArabicRows() {
     when(glossaryTermInflectionProfileService.compileProfilePackExport(1L, "ar"))
         .thenReturn(
@@ -1062,6 +1080,20 @@ public class GlossaryWSTest {
     assertTrue(
         body.contains("\"schema\":\"mojito-mf2-inflection/term-inflection-profile-pack/v0\""));
     assertTrue(body.contains("\"termId\":\"item.iron_sword\""));
+  }
+
+  @Test
+  public void exportInflectionProfilePackSanitizesAttachmentFilename() {
+    String localeTag = "fr\r\nSet-Cookie:bad";
+    when(glossaryTermInflectionProfileService.profilePack(1L, localeTag))
+        .thenReturn(profilePack("fr", "item.file"));
+
+    ResponseEntity<byte[]> response = glossaryWS.exportInflectionProfilePack(1L, localeTag);
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals(
+        "attachment; filename=\"glossary-1-inflection-fr__Set-Cookie_bad.json\"",
+        response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION));
   }
 
   @Test
