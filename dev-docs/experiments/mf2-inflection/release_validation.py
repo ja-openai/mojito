@@ -96,11 +96,18 @@ def load_json(path: Path) -> dict[str, Any]:
 
 
 def resolve_artifact_path(base_dir: Path, manifest_path: str) -> Path:
-    path = Path(manifest_path)
-    if is_absolute_artifact_path(manifest_path):
-        raise InvalidReleaseArtifactPath("Release artifact path must be relative")
-    base = base_dir.resolve()
-    resolved = (base / path).resolve()
+    try:
+        if "\x00" in manifest_path:
+            raise ValueError("embedded null byte")
+        path = Path(manifest_path)
+        if is_absolute_artifact_path(manifest_path):
+            raise InvalidReleaseArtifactPath("Release artifact path must be relative")
+        base = base_dir.resolve()
+        resolved = (base / path).resolve()
+    except InvalidReleaseArtifactPath:
+        raise
+    except (OSError, ValueError) as error:
+        raise InvalidReleaseArtifactPath("Release artifact path is invalid") from error
     if not resolved.is_relative_to(base):
         raise InvalidReleaseArtifactPath(
             f"Release artifact path must stay under baseDirectory: {manifest_path}"

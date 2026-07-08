@@ -24288,6 +24288,17 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   passes 123 tests. This tightens generator manifest path hygiene only; it does
   not add locale coverage, certify memory leaks, or promote package-local
   non-Java runtime APIs.
+- Two thousand one hundred fiftieth release-validator invalid manifest-path
+  syntax CLI guard: `release_validation.py` now maps invalid manifest artifact
+  path syntax such as `bad\u0000path.json` to an
+  `invalid-release-artifact-path` artifact row with
+  `Release artifact path is invalid`, matching the Java/common boundary without
+  traceback and without echoing the malformed path or local root.
+  `test_release_validator_rejects_invalid_manifest_path_syntax_without_leaking_root`
+  pins that shared generator CLI behavior. The Python package harness now
+  passes 124 tests. This tightens generator manifest path hygiene only; it does
+  not add locale coverage, certify memory leaks, or promote package-local
+  non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.
