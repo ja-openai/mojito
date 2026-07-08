@@ -23,9 +23,21 @@ public class McpServerService {
     try {
       return mcpToolRegistry.getRequired(toolName).call(arguments);
     } catch (AccessDeniedException exception) {
-      return McpToolCallResult.error(exception.getMessage());
+      return McpToolCallResult.error(
+          errorMessage(exception.getMessage(), "MCP tool access denied", toolName));
     } catch (IllegalArgumentException exception) {
-      return McpToolCallResult.error(exception.getMessage());
+      return McpToolCallResult.error(
+          errorMessage(exception.getMessage(), "MCP tool call failed", toolName));
     }
+  }
+
+  private String errorMessage(String message, String fallback, String toolName) {
+    if (message != null && !message.isBlank()) {
+      return message;
+    }
+    if (toolName == null || toolName.isBlank()) {
+      return fallback;
+    }
+    return fallback + ": " + toolName;
   }
 }

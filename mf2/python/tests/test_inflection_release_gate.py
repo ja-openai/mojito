@@ -2697,6 +2697,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "MCP review input-boundary guard",
             "Admin render-probe failure-mode guard",
             "performance/memory bounded-claim guard",
+            "MCP tool-error boundary guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -2775,6 +2776,11 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "`ReviewGlossaryTermInflectionProfilesMcpToolTest` pins normalized include/limit pass-through",
             "focused service/MCP rerun passes 37 tests",
             "backend REST/service/MCP product-integration gate passes 81 tests",
+            "Latest MCP tool-error boundary guard",
+            "`McpServerService` now keeps expected validation/access-denied exceptions as tool errors",
+            "replacing blank/null expected exception messages with stable tool-scoped diagnostics",
+            "focused MCP service/transport rerun passes 8 tests",
+            "MCP API-boundary diagnostics only",
             "Latest blank manifest/report schema guard",
             "test_inflection_release_wrapper_rejects_blank_manifest_report_schema",
             "Latest manifest/report row field-type guard",
@@ -2883,6 +2889,11 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "focused service/MCP rerun passes 37 tests",
             "backend REST/service/MCP product-integration gate passes 81 tests",
             "it is not profiler-backed leak certification",
+            "Two thousand one hundred seventy-third MCP tool-error boundary guard",
+            "`McpServerService` now preserves expected validation/access-denied messages",
+            "`MCP tool call failed: <tool>`",
+            "`MCP tool access denied: <tool>`",
+            "focused service/transport rerun passes 8 tests",
         ):
             self.assertIn(snippet, normalized_design_note)
 
@@ -3166,6 +3177,11 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "webapp/src/test/java/com/box/l10n/mojito/service/glossary/GlossaryTermInflectionProfileServiceTest.java",
             "webapp/src/test/java/com/box/l10n/mojito/service/mcp/glossary/ReviewGlossaryTermInflectionProfilesMcpToolTest.java",
         )
+        current_webapp_mcp_tool_error_slice_paths = (
+            "webapp/src/main/java/com/box/l10n/mojito/service/mcp/McpServerService.java",
+            "webapp/src/test/java/com/box/l10n/mojito/service/mcp/McpServerServiceTest.java",
+        )
+        current_webapp_args = webapp_args + current_webapp_mcp_tool_error_slice_paths
 
         self.assertEqual(
             (),
@@ -3179,6 +3195,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
                 current_webapp_rest_test_slice_paths,
                 current_webapp_admin_render_slice_paths,
                 current_webapp_mcp_review_list_slice_paths,
+                current_webapp_mcp_tool_error_slice_paths,
                 current_webapp_rest_boundary_slice_paths
                 + current_webapp_admin_render_slice_paths,
                 current_webapp_rest_test_slice_paths + current_webapp_admin_render_slice_paths,
@@ -3188,7 +3205,9 @@ class InflectionReleaseGateTest(unittest.TestCase):
             (),
             self.missing_status_paths(non_webapp_status_paths, first_slice_args),
         )
-        self.assertEqual((), self.missing_status_paths(webapp_status_paths, webapp_args))
+        self.assertEqual(
+            (), self.missing_status_paths(webapp_status_paths, current_webapp_args)
+        )
         self.assertEqual((), tuple(path for path in first_slice_args if path.startswith("webapp/")))
         self.assertTrue(all(path.startswith("webapp/") for path in webapp_args))
         self.assertFalse(set(non_webapp_status_paths).intersection(webapp_status_paths))

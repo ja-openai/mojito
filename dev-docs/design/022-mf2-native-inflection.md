@@ -24499,6 +24499,15 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   product-integration gate passes 81 tests. This tightens MCP list
   memory/performance boundary evidence only; it is not profiler-backed leak
   certification, broader locale coverage, or public non-Java runtime promotion.
+- Two thousand one hundred seventy-third MCP tool-error boundary guard:
+  `McpServerService` now preserves expected validation/access-denied messages
+  as tool errors, but blank/null expected exception messages fall back to stable
+  tool-scoped diagnostics: `MCP tool call failed: <tool>` or
+  `MCP tool access denied: <tool>`. `McpServerServiceTest` pins validation,
+  blank validation, and blank access-denied cases, and the focused
+  service/transport rerun passes 8 tests. This tightens MCP API-boundary
+  diagnostics only; it does not add locale coverage, certify memory leaks, or
+  promote package-local non-Java runtime APIs.
 - Next target: continue REST/MCP/Admin product-boundary review inside checked
   V0 scope, especially remaining diagnostic paths and any formal profiler-backed
   performance or leak evidence needed before broader rollout.
