@@ -7,7 +7,7 @@ import argparse
 import json
 import re
 import sys
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 from m2if_decode_fixture import decode_m2if
@@ -97,8 +97,8 @@ def load_json(path: Path) -> dict[str, Any]:
 
 def resolve_artifact_path(base_dir: Path, manifest_path: str) -> Path:
     path = Path(manifest_path)
-    if path.is_absolute():
-        raise InvalidReleaseArtifactPath(f"Release artifact path must be relative: {manifest_path}")
+    if is_absolute_artifact_path(manifest_path):
+        raise InvalidReleaseArtifactPath("Release artifact path must be relative")
     base = base_dir.resolve()
     resolved = (base / path).resolve()
     if not resolved.is_relative_to(base):
@@ -106,6 +106,16 @@ def resolve_artifact_path(base_dir: Path, manifest_path: str) -> Path:
             f"Release artifact path must stay under baseDirectory: {manifest_path}"
         )
     return resolved
+
+
+def is_absolute_artifact_path(artifact_path: str) -> bool:
+    windows_path = PureWindowsPath(artifact_path)
+    return (
+        Path(artifact_path).is_absolute()
+        or windows_path.is_absolute()
+        or bool(windows_path.drive)
+        or bool(windows_path.root)
+    )
 
 
 def artifact_failure(artifact: dict[str, Any], code: str, message: str) -> dict[str, str]:

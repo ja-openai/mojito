@@ -24276,6 +24276,18 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   harness now passes 122 tests. This tightens generator manifest failure-mode
   diagnostics only; it does not add locale coverage, certify memory leaks, or
   promote package-local non-Java runtime APIs.
+- Two thousand one hundred forty-ninth release-validator absolute manifest-path
+  CLI guard: `release_validation.py` now rejects POSIX absolute and
+  Windows-style qualified/rooted manifest artifact paths before resolving
+  artifacts, including drive-relative paths such as
+  `C:Users\dev\outside.json`, and reports `invalid-release-artifact-path` with
+  `Release artifact path must be relative` without echoing the rejected path or
+  local temp root.
+  `test_release_validator_rejects_absolute_manifest_paths_without_leaking_root`
+  pins that shared generator CLI behavior. The Python package harness now
+  passes 123 tests. This tightens generator manifest path hygiene only; it does
+  not add locale coverage, certify memory leaks, or promote package-local
+  non-Java runtime APIs.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.
