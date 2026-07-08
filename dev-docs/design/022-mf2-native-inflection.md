@@ -24433,9 +24433,17 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   This tightens Admin frontend failure-mode coverage only; it does not add
   locale coverage, certify memory leaks, or promote package-local non-Java
   runtime APIs.
-- Next target: continue REST/MCP/Admin and release-fixture failure-mode review
-  inside checked V0 scope, especially stable product-facing diagnostics and
-  release-wrapper malformed manifest/report coverage.
+- Two thousand one hundred sixty-fifth performance/memory bounded-claim guard:
+  the bounded docs harness now treats positive profiler-backed benchmark, soak
+  test, memory-leak certification, and leak-free runtime claims as overclaims
+  unless they appear in boundary/caveat context. This keeps the Java/common
+  performance smoke framed as smoke evidence, not profiler evidence or memory
+  leak certification. The Python package harness remains at 131 tests. This
+  tightens production-readiness wording only; it does not add locale coverage,
+  certify memory leaks, or promote package-local non-Java runtime APIs.
+- Next target: continue REST/MCP/Admin product-boundary review inside checked
+  V0 scope, especially authorization/diagnostic paths and any formal
+  profiler-backed performance or leak evidence needed before broader rollout.
 - Production formatting uses term IDs or declared dictionaries, not unqualified
   bare words.
 - Build-time validation expands message usages and catches missing term

@@ -2696,6 +2696,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-wrapper path-escape root-leak guard",
             "MCP review input-boundary guard",
             "Admin render-probe failure-mode guard",
+            "performance/memory bounded-claim guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -2751,6 +2752,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "missing compiled terms surface renderer diagnostics",
             "focused Admin test passes 9 tests",
             "frontend product-integration gate passes 87 API/admin/Workbench/private-utility tests",
+            "Latest performance/memory bounded-claim guard",
+            "profiler-backed benchmark, soak test, memory-leak certification, and leak-free runtime claims",
+            "unless they appear in boundary/caveat context",
+            "Python package harness remains at 131 tests",
             "Latest blank manifest/report schema guard",
             "test_inflection_release_wrapper_rejects_blank_manifest_report_schema",
             "Latest manifest/report row field-type guard",
@@ -2834,6 +2839,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "missing compiled terms surface renderer diagnostics",
             "focused Admin test passes 9 tests",
             "frontend product-integration gate passes 87 API/admin/Workbench/private-utility tests",
+            "Two thousand one hundred sixty-fifth performance/memory bounded-claim guard",
+            "profiler-backed benchmark, soak test, memory-leak certification, and leak-free runtime claims",
+            "unless they appear in boundary/caveat context",
+            "Python package harness remains at 131 tests",
         ):
             self.assertIn(snippet, normalized_design_note)
 
@@ -3153,6 +3162,8 @@ class InflectionReleaseGateTest(unittest.TestCase):
             r"\ball Unicode/CLDR languages\b[^.\n]*(?:complete|supported|covered|available)",
             r"\bPolish\b[^.\n]*(?:supported|covered|complete)",
             r"\bpublic non-Java\b[^.\n]*(?:available|supported|promoted)",
+            r"\b(?:profiler-backed benchmark|soak test|memory-leak certification|"
+            r"memory leak certification|leak-free runtime|certif(?:y|ied|ies) memory leaks?)\b",
         )
         boundary_context = re.compile(
             r"\b(not|without|blocked|backlog|boundary|guard|rejects?|scope)\b",
