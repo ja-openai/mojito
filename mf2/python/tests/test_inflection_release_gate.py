@@ -1823,7 +1823,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 119 tests",
+            "the Python package harness at 120 tests",
             normalized_tracker,
         )
 
@@ -1876,7 +1876,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             normalized_tracker,
         )
         self.assertIn(
-            "the Python package harness at 119 tests",
+            "the Python package harness at 120 tests",
             normalized_tracker,
         )
 
@@ -1962,7 +1962,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
         self.assertNotIn("webapp/", design_command)
         self.assertNotIn("webapp/", tracker_command)
         self.assertIn(
-            "the Python package harness at 119 tests",
+            "the Python package harness at 120 tests",
             normalized_tracker,
         )
 
@@ -2077,6 +2077,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "release-wrapper absolute manifest-path hygiene guard",
             "Java/common invalid manifest-path syntax guard",
             "release-wrapper blank manifest/report schema guard",
+            "release-wrapper manifest/report row field-type guard",
         ):
             self.assertIn(snippet, checkpoint_line)
 
@@ -2094,12 +2095,14 @@ class InflectionReleaseGateTest(unittest.TestCase):
             self.assertIn(snippet, normalized_tracker)
         for snippet in (
             "Verification snapshot: current focused gates pass",
-            "the Python package harness at 119 tests",
+            "the Python package harness at 120 tests",
             "webapp backend product integration at 63 REST/service/MCP tests",
             "webapp frontend product integration at 81 API/admin/Workbench/private-utility tests",
-            "current blank manifest/report schema guard slice touches 3 non-webapp files plus 0 webapp files covered by the focused wrapper blank-schema regression and Python release/doc guard",
+            "current manifest/report row field-type guard slice touches 3 non-webapp files plus 0 webapp files covered by the focused wrapper row-field-type regression and Python release/doc guard",
             "Latest blank manifest/report schema guard",
             "test_inflection_release_wrapper_rejects_blank_manifest_report_schema",
+            "Latest manifest/report row field-type guard",
+            "test_inflection_release_wrapper_rejects_non_text_manifest_report_artifact_fields",
             "Latest absolute/invalid-path hygiene refresh",
             "POSIX absolute and Windows-style qualified/rooted manifest artifact paths",
             "including drive-relative paths such as `C:artifact.json`",
@@ -3763,6 +3766,73 @@ class InflectionReleaseGateTest(unittest.TestCase):
                     fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
                     artifact_id = fixture["artifacts"][0]["artifactId"]
                     del fixture["artifacts"][0][field]
+                    fixture_path.write_text(
+                        json.dumps(fixture, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+                    expected_label = expected_label_template.format(
+                        artifact_id=artifact_id,
+                    )
+
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        rf"Expected non-empty text: {re.escape(expected_label)}",
+                    ):
+                        wrapper.validate_materialized_bundle(base_dir)
+
+    def test_inflection_release_wrapper_rejects_non_text_manifest_report_artifact_fields(
+        self,
+    ) -> None:
+        wrapper = self.load_release_fixture_wrapper()
+        cases = (
+            (
+                "manifest-artifact-id",
+                "release-validation-manifest.json",
+                "artifactId",
+                "release-validation-manifest.json.artifacts[].artifactId",
+            ),
+            (
+                "manifest-kind",
+                "release-validation-manifest.json",
+                "kind",
+                "release-validation-manifest.json.artifacts[{artifact_id}].kind",
+            ),
+            (
+                "manifest-path",
+                "release-validation-manifest.json",
+                "path",
+                "release-validation-manifest.json.artifacts[{artifact_id}].path",
+            ),
+            (
+                "report-artifact-id",
+                "release-validation-report.json",
+                "artifactId",
+                "release-validation-report.json.artifacts[].artifactId",
+            ),
+            (
+                "report-kind",
+                "release-validation-report.json",
+                "kind",
+                "release-validation-report.json.artifacts[{artifact_id}].kind",
+            ),
+            (
+                "report-status",
+                "release-validation-report.json",
+                "status",
+                "release-validation-report.json.artifacts[{artifact_id}].status",
+            ),
+        )
+        with tempfile.TemporaryDirectory(prefix="mojito-mf2-inflection-wrapper-test-") as tmp:
+            root_dir = Path(tmp)
+            for label, filename, field, expected_label_template in cases:
+                with self.subTest(label=label):
+                    base_dir = root_dir / label
+                    base_dir.mkdir()
+                    self.write_release_wrapper_bundle(base_dir, wrapper)
+                    fixture_path = base_dir / filename
+                    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+                    artifact_id = fixture["artifacts"][0]["artifactId"]
+                    fixture["artifacts"][0][field] = 7
                     fixture_path.write_text(
                         json.dumps(fixture, indent=2) + "\n",
                         encoding="utf-8",
