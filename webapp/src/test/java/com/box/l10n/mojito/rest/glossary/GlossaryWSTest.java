@@ -285,6 +285,27 @@ public class GlossaryWSTest {
   }
 
   @Test
+  public void upsertInflectionProfileMapsMissingTermMetadataToNotFound() {
+    when(glossaryTermInflectionProfileService.upsertProfile(
+            eq(1L), eq(2L), org.mockito.ArgumentMatchers.any()))
+        .thenThrow(new IllegalArgumentException("Glossary term metadata not found: 1 / 2"));
+
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                glossaryWS.upsertInflectionProfile(
+                    1L,
+                    2L,
+                    "fr",
+                    new GlossaryWS.UpsertInflectionProfileRequest(
+                        "approved", "{}", "{}", null, "{}")));
+
+    assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+    assertEquals("Glossary term metadata not found: 1 / 2", exception.getReason());
+  }
+
+  @Test
   public void reviewInflectionProfileUsesPathLocaleAndPartialReviewInput() {
     when(glossaryTermInflectionProfileService.reviewProfile(
             eq(1L), eq(2L), org.mockito.ArgumentMatchers.any()))
@@ -317,6 +338,27 @@ public class GlossaryWSTest {
     assertEquals("[]", input.diagnosticsJson());
     assertEquals("{\"reviewedBy\":\"translator\"}", input.provenanceJson());
     assertEquals("item.iron_sword", response.termId());
+  }
+
+  @Test
+  public void reviewInflectionProfileMapsMissingProfileToNotFound() {
+    when(glossaryTermInflectionProfileService.reviewProfile(
+            eq(1L), eq(2L), org.mockito.ArgumentMatchers.any()))
+        .thenThrow(new IllegalArgumentException("Inflection profile not found: 1 / 2 / fr"));
+
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                glossaryWS.reviewInflectionProfile(
+                    1L,
+                    2L,
+                    "fr",
+                    new GlossaryWS.ReviewInflectionProfileRequest(
+                        "approved", null, null, null, null)));
+
+    assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+    assertEquals("Inflection profile not found: 1 / 2 / fr", exception.getReason());
   }
 
   @Test

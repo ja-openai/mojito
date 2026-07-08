@@ -2718,7 +2718,7 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "the Java/common renderer/manifest/requirement/runtime failure-mode slice at 81 tests",
             "webapp backend product integration at 68 REST/service/MCP tests",
             "webapp frontend product integration at 87 API/admin/Workbench/private-utility tests",
-            "current REST attachment filename guard slice touches the REST glossary controller test, the Python release-gate tracker guard, and 2 docs files",
+            "current REST write not-found mapping guard slice touches the REST glossary controller test, the Python release-gate tracker guard, and 2 docs files",
             "Latest release-wrapper invalid manifest-path syntax guard",
             "test_inflection_release_wrapper_rejects_invalid_manifest_path_syntax_without_leaking_path",
             "does not echo the malformed path or local temporary root",
@@ -2764,6 +2764,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "compiled profile-pack and authoring profile-pack downloads replace CR/LF",
             "unsafe locale-tag filename characters with underscores before setting `Content-Disposition`",
             "focused controller rerun passes 42 tests",
+            "Latest REST write not-found mapping guard",
+            "upsert maps missing glossary term metadata to `404`",
+            "profile review maps missing inflection profiles to `404`",
+            "focused controller rerun passes 44 tests",
             "Latest blank manifest/report schema guard",
             "test_inflection_release_wrapper_rejects_blank_manifest_report_schema",
             "Latest manifest/report row field-type guard",
@@ -2859,6 +2863,10 @@ class InflectionReleaseGateTest(unittest.TestCase):
             "compiled profile-pack downloads and authoring profile-pack downloads sanitize CR/LF-bearing locale tags",
             "`Content-Disposition` filenames",
             "focused controller rerun passes 42 tests",
+            "Two thousand one hundred seventy-first REST write not-found mapping guard",
+            "inflection profile upsert maps missing glossary term metadata to `404`",
+            "profile review maps missing inflection profiles to `404`",
+            "focused controller rerun passes 44 tests",
         ):
             self.assertIn(snippet, normalized_design_note)
 

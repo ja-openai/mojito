@@ -24481,6 +24481,13 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   42 tests. This tightens REST response-header hygiene only; it does not add
   locale coverage, certify memory leaks, or promote package-local non-Java
   runtime APIs.
+- Two thousand one hundred seventy-first REST write not-found mapping guard:
+  `GlossaryWSTest` now pins that inflection profile upsert maps missing glossary
+  term metadata to `404` and profile review maps missing inflection profiles to
+  `404`, instead of collapsing both write-side lookup failures into `400`. The
+  focused controller rerun passes 44 tests. This tightens REST failure-mode
+  coverage only; it does not add locale coverage, certify memory leaks, or
+  promote package-local non-Java runtime APIs.
 - Next target: continue REST/MCP/Admin product-boundary review inside checked
   V0 scope, especially remaining diagnostic paths and any formal profiler-backed
   performance or leak evidence needed before broader rollout.
