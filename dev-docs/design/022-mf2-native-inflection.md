@@ -24358,6 +24358,15 @@ Inflection checkout has no `locale.group.pl`, `dictionary_pl.lst`,
   tightens the Java/common public report-row boundary only; it does not add
   locale coverage, certify memory leaks, or promote package-local non-Java
   runtime APIs.
+- Two thousand one hundred fifty-seventh post-failed-code performance smoke
+  refresh:
+  `mvn -pl common -Dtest=Mf2InflectionPerformanceSmokeTest -Dmojito.test.mf2InflectionPerfSmoke=true test`
+  now passes with 20,000 post-warmup compiled Spanish bound renders at about
+  924,980 renders/sec and a 6 KB retained heap delta, plus 20,000 Hindi pronoun
+  bound renders at about 405,798 renders/sec and a 60 KB retained heap delta.
+  This refreshes bounded Java/common V0 smoke evidence only; it is not a
+  profiler-backed benchmark, a soak test, memory-leak certification,
+  all-locale coverage, or non-Java runtime support.
 - Next target: continue release-fixture and failure-mode review inside checked
   V0 scope, especially malformed manifest/report diagnostics and release-wrapper
   failure-mode coverage.
