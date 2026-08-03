@@ -7,6 +7,7 @@ type SettingsSubpageHeaderProps = {
   onBack?: () => void;
   context?: ReactNode;
   title: ReactNode;
+  titleSuffix?: ReactNode;
   centerContent?: ReactNode;
   rightContent?: ReactNode;
 };
@@ -17,6 +18,7 @@ export function SettingsSubpageHeader({
   onBack,
   context,
   title,
+  titleSuffix,
   centerContent,
   rightContent,
 }: SettingsSubpageHeaderProps) {
@@ -75,6 +77,7 @@ export function SettingsSubpageHeader({
           <div className="settings-subpage__topbar-copy">
             {context ? <div className="settings-subpage__topbar-context">{context}</div> : null}
             <h1 className="settings-subpage__topbar-title">{title}</h1>
+            {titleSuffix}
           </div>
         </div>
         {centerContent ? (

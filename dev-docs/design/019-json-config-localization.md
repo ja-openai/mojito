@@ -5,20 +5,21 @@
 Some strings are authored outside the application release cycle. When the source text already moves
 out of band, translation delivery should use the same path instead of waiting for a product release.
 
-The v0 implementation keeps the repository model unchanged: a regular Mojito repository plus one
-`json_config_localization` setup row that stores the JSON config localization settings for that
-repository. The virtual asset path still acts as the authored bundle boundary. Setups can be generic
-JSON or provider-backed; the first provider adapter is Statsig dynamic configs.
+The implementation keeps the repository model unchanged: a regular Mojito repository can have one
+or more named `json_config_localization` setup rows that store its JSON config localization settings.
+The virtual asset path still acts as the authored bundle boundary. Setups can be generic JSON or
+provider-backed; the first provider adapter is Statsig dynamic configs.
 
 ## Use Cases
 
 1. Create a regular repository for the authored source strings. The repository row is not flagged;
    JSON config localization is tracked in a separate setup table.
-2. Open `/settings/system/json-config-localization`. The landing page lists repositories that have a saved
-   JSON config localization setup and can temporarily show all repositories to bootstrap a setup.
-   The editor supports direct links to `/settings/system/json-config-localization/{repositoryId}` with
-   an optional `assetPath` query parameter. A setup can be removed from this list without deleting
-   the Mojito repository or its text units.
+2. Open `/settings/system/json-config-localization`. The landing page groups named setups and their
+   asset paths under each repository and can temporarily show all repositories to bootstrap a setup.
+   The editor supports direct links to `/settings/system/json-config-localization/{repositoryId}`
+   with optional `setupId` and `assetPath` query parameters. Repositories with multiple setups show
+   a compact setup selector beside the repository breadcrumb. A setup can be removed without
+   deleting the Mojito repository or its text units.
 3. Add, edit, and remove strings from the authored bundle. The UI saves by replacing the selected
    virtual asset text units with rows marked `used`; removed rows become unused and can be restored
    through the unused/all filters.
@@ -118,7 +119,7 @@ to push the saved setup's localized config through the configured provider adapt
 
 ## V0 Boundaries
 
-- One JSON config localization setup per repository.
+- Multiple named JSON config localization setups can share a repository.
 - No repository model flag.
 - No hidden candidate repository lifecycle.
 - No arbitrary JSON Schema-to-TMS inference. Users confirm or override the detected mapping.
@@ -129,6 +130,5 @@ to push the saved setup's localized config through the configured provider adapt
 
 ## Follow-Ups
 
-- Decide whether the setup model should support multiple named bundles per repository and owners.
 - Add a bundled review action that creates or opens a review project for the active strings.
 - Add schema validation for pasted source configs and generated localized configs.

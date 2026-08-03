@@ -537,6 +537,19 @@ function JsonConfigLocalizationRepositoryPicker() {
     return filteredRows.filter((row) => selectedRepositoryIdSet.has(row.repositoryId));
   }, [filteredRows, selectedRepositoryIds]);
 
+  const visibleRepositoryGroups = useMemo(() => {
+    const groups: RepositoryPickerRow[][] = [];
+    visibleRows.forEach((row) => {
+      const previousGroup = groups[groups.length - 1];
+      if (previousGroup?.[0].repositoryId === row.repositoryId) {
+        previousGroup.push(row);
+      } else {
+        groups.push([row]);
+      }
+    });
+    return groups;
+  }, [visibleRows]);
+
   const repositoryOptions = useMemo(() => {
     const optionsByRepositoryId = new Map<
       number,
@@ -669,7 +682,7 @@ function JsonConfigLocalizationRepositoryPicker() {
       return;
     }
     const confirmed = window.confirm(
-      `Remove JSON config localization setup for "${row.repositoryName}"? The repository and text units will remain.`,
+      `Remove JSON config localization setup "${row.config.name || row.config.providerConfigId || row.assetPath}" from "${row.repositoryName}"? The repository and text units will remain.`,
     );
     if (!confirmed) {
       return;
@@ -733,78 +746,97 @@ function JsonConfigLocalizationRepositoryPicker() {
                 <thead>
                   <tr>
                     <th scope="col">Repository</th>
-                    <th scope="col">Setup</th>
+                    <th scope="col">Configuration</th>
+                    <th scope="col">Provider</th>
                     <th scope="col" className="json-config-localization-page__repository-action">
                       Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleRows.map((row) => (
-                    <tr key={row.config?.id ?? `repository-${row.repositoryId}`}>
-                      <td>
-                        <div className="json-config-localization-page__repository-name">
-                          {row.repositoryName}
-                        </div>
-                      </td>
-                      <td>
-                        <span
-                          className={`json-config-localization-page__setup-badge${
-                            row.config ? ' is-configured' : ''
-                          }`}
-                        >
-                          {formatRepositorySetupStatus(row)}
-                        </span>
-                      </td>
-                      <td className="json-config-localization-page__repository-action">
-                        <div className="json-config-localization-page__repository-actions">
-                          <button
-                            type="button"
-                            className="settings-button settings-button--primary"
-                            onClick={() => {
-                              openRow(row);
-                            }}
-                            disabled={
-                              creatingRepositoryId === row.repositoryId ||
-                              deletingRepositoryId === row.repositoryId
-                            }
+                  {visibleRepositoryGroups.flatMap((group) =>
+                    group.map((row, index) => (
+                      <tr key={row.config?.id ?? `repository-${row.repositoryId}`}>
+                        {index === 0 ? (
+                          <td rowSpan={group.length}>
+                            <div className="json-config-localization-page__repository-name">
+                              {row.repositoryName}
+                            </div>
+                          </td>
+                        ) : null}
+                        <td>
+                          {row.config ? (
+                            <div className="json-config-localization-page__configuration">
+                              <div className="json-config-localization-page__configuration-name">
+                                {row.config.name || row.config.providerConfigId || row.assetPath}
+                              </div>
+                              <div className="json-config-localization-page__configuration-path">
+                                {row.assetPath}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="json-config-localization-page__muted">Not set up</span>
+                          )}
+                        </td>
+                        <td>
+                          <span
+                            className={`json-config-localization-page__setup-badge${
+                              row.config ? ' is-configured' : ''
+                            }`}
                           >
-                            {row.config ? 'Edit config' : 'Set up'}
-                          </button>
-                          {row.config ? (
+                            {formatRepositorySetupStatus(row)}
+                          </span>
+                        </td>
+                        <td className="json-config-localization-page__repository-action">
+                          <div className="json-config-localization-page__repository-actions">
                             <button
                               type="button"
-                              className="settings-button"
+                              className="settings-button settings-button--primary"
                               onClick={() => {
-                                startCreateSetup(row);
+                                openRow(row);
                               }}
                               disabled={
-                                deletingRepositoryId === row.repositoryId ||
-                                creatingRepositoryId === row.repositoryId
+                                creatingRepositoryId === row.repositoryId ||
+                                deletingRepositoryId === row.repositoryId
                               }
                             >
-                              New setup
+                              {row.config ? 'Edit config' : 'Set up'}
                             </button>
-                          ) : null}
-                          {row.config ? (
-                            <button
-                              type="button"
-                              className="settings-button"
-                              onClick={() => {
-                                void removeRow(row);
-                              }}
-                              disabled={
-                                deletingRepositoryId === row.repositoryId ||
-                                creatingRepositoryId === row.repositoryId
-                              }
-                            >
-                              Remove
-                            </button>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            {row.config ? (
+                              <button
+                                type="button"
+                                className="settings-button"
+                                onClick={() => {
+                                  startCreateSetup(row);
+                                }}
+                                disabled={
+                                  deletingRepositoryId === row.repositoryId ||
+                                  creatingRepositoryId === row.repositoryId
+                                }
+                              >
+                                New setup
+                              </button>
+                            ) : null}
+                            {row.config ? (
+                              <button
+                                type="button"
+                                className="settings-button"
+                                onClick={() => {
+                                  void removeRow(row);
+                                }}
+                                disabled={
+                                  deletingRepositoryId === row.repositoryId ||
+                                  creatingRepositoryId === row.repositoryId
+                                }
+                              >
+                                Remove
+                              </button>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    )),
+                  )}
                 </tbody>
               </table>
             ) : (
@@ -3145,6 +3177,27 @@ function JsonConfigLocalizationWorkspace({
         backLabel="Select repository"
         context="JSON config localization"
         title={repository.name}
+        titleSuffix={
+          setupOptions.length > 1 ? (
+            <span className="json-config-localization-page__setup-selector">
+              <span className="json-config-localization-page__breadcrumb-separator" aria-hidden>
+                &gt;
+              </span>
+              <select
+                className="settings-input json-config-localization-page__setup-select"
+                value={selectedSetupId ?? ''}
+                aria-label="Select JSON config setup"
+                onChange={(event) => handleSetupSelectionChange(Number(event.target.value))}
+              >
+                {setupOptions.map((setup) => (
+                  <option key={setup.id} value={setup.id}>
+                    {setup.name || setup.providerConfigId || setup.assetPath}
+                  </option>
+                ))}
+              </select>
+            </span>
+          ) : null
+        }
         centerContent={
           <nav
             className="json-config-localization-page__topbar-tabs"
@@ -3178,36 +3231,6 @@ function JsonConfigLocalizationWorkspace({
               </button>
             ))}
           </nav>
-        }
-        rightContent={
-          setupOptions.length > 1 || statsigConsoleUrl ? (
-            <div className="json-config-localization-page__topbar-actions">
-              {setupOptions.length > 1 ? (
-                <select
-                  className="settings-input json-config-localization-page__setup-select"
-                  value={selectedSetupId ?? ''}
-                  aria-label="Select JSON config setup"
-                  onChange={(event) => handleSetupSelectionChange(Number(event.target.value))}
-                >
-                  {setupOptions.map((setup) => (
-                    <option key={setup.id} value={setup.id}>
-                      {setup.name || setup.providerConfigId || setup.assetPath}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-              {statsigConsoleUrl ? (
-                <a
-                  className="settings-button"
-                  href={statsigConsoleUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open in Statsig
-                </a>
-              ) : null}
-            </div>
-          ) : null
         }
       />
       <div className="json-config-localization-page__workspace">
