@@ -75,6 +75,7 @@ export function UserMenu() {
     ? [
         { label: 'Statistics', path: '/statistics' },
         { label: 'Database monitoring', path: '/monitoring' },
+        { label: 'Azure Storage', path: '/monitoring/azure-storage' },
       ]
     : [];
 

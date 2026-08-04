@@ -21,6 +21,30 @@ export type DbMonitoringSnapshot = {
   hibernateRepo: DbLatencySeries;
 };
 
+export type AzureStorageCheck = {
+  name: string;
+  success: boolean;
+  latencyMs: number;
+  message: string | null;
+};
+
+export type AzureStorageRoute = {
+  prefix: string;
+  backend: string;
+};
+
+export type AzureStorageSnapshot = {
+  timestamp: string;
+  enabled: boolean;
+  status: 'NOT_CONFIGURED' | 'READY' | 'UNAVAILABLE';
+  endpoint: string | null;
+  container: string;
+  prefix: string;
+  defaultBackend: string;
+  routes: AzureStorageRoute[];
+  checks: AzureStorageCheck[];
+};
+
 export type IngestionGroupBy = 'day' | 'month' | 'year';
 
 export type TextUnitIngestionPoint = {
@@ -62,6 +86,35 @@ export async function fetchDbLatencySnapshot(iterations: number): Promise<DbMoni
   }
 
   return (await response.json()) as DbMonitoringSnapshot;
+}
+
+export async function fetchAzureStorageSnapshot(): Promise<AzureStorageSnapshot> {
+  const response = await fetch('/api/monitoring/azure-storage', {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to check Azure Storage');
+  }
+
+  return (await response.json()) as AzureStorageSnapshot;
+}
+
+export async function runAzureStorageProbe(): Promise<AzureStorageSnapshot> {
+  const response = await fetch('/api/monitoring/azure-storage/probe', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to run Azure Storage probe');
+  }
+
+  return (await response.json()) as AzureStorageSnapshot;
 }
 
 export async function fetchTextUnitIngestionSnapshot(options: {

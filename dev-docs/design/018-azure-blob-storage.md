@@ -52,6 +52,19 @@ l10n.blob-storage.routing.prefixes.image=azure
 
 `StructuredBlobStorage` uses semantic prefixes, not repository shape, to choose a backend. This lets control-plane data such as `pollable-task` remain DB-backed while large artifact-like prefixes use Azure or S3.
 
+## Staged rollout and monitoring
+
+Enable `l10n.azure.blob-storage.enabled` and configure the endpoint/container while keeping
+`l10n.blob-storage.type=database` to initialize the Azure client without changing any active blob
+routes. Admins can open **Azure Storage** next to **Database monitoring** in the account menu to
+inspect container access, current per-prefix routing, and run an explicit write/read/delete probe.
+The monitoring API is protected by the existing admin-only `/api/monitoring/**` security rule.
+
+Only route selected prefixes to Azure after the status page and active probe are healthy. Existing
+database-backed prefixes remain unchanged until explicitly reconfigured. Azure being disabled or
+unavailable is reported on the monitoring page without changing application readiness or silently
+falling back to MySQL.
+
 ## Remaining gaps
 
 - Azure and S3 retention cleanup is not owned by Mojito. Operators must configure provider lifecycle rules that match `retention=MIN_1_DAY`; otherwise temporary blobs are retained indefinitely.
