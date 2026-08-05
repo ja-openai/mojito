@@ -45,6 +45,34 @@ export type AzureStorageSnapshot = {
   checks: AzureStorageCheck[];
 };
 
+export type RedisCheck = {
+  name: string;
+  success: boolean;
+  latencyMs: number;
+  message: string | null;
+};
+
+export type RedisMetrics = {
+  version: string | null;
+  uptimeSeconds: number | null;
+  usedMemoryBytes: number | null;
+  usedMemoryHuman: string | null;
+  maxMemoryBytes: number | null;
+  connectedClients: number | null;
+  keyCount: number;
+};
+
+export type RedisSnapshot = {
+  timestamp: string;
+  enabled: boolean;
+  status: 'NOT_CONFIGURED' | 'READY' | 'UNAVAILABLE';
+  endpoint: string;
+  database: number;
+  ssl: boolean;
+  metrics: RedisMetrics | null;
+  checks: RedisCheck[];
+};
+
 export type IngestionGroupBy = 'day' | 'month' | 'year';
 
 export type TextUnitIngestionPoint = {
@@ -115,6 +143,35 @@ export async function runAzureStorageProbe(): Promise<AzureStorageSnapshot> {
   }
 
   return (await response.json()) as AzureStorageSnapshot;
+}
+
+export async function fetchRedisSnapshot(): Promise<RedisSnapshot> {
+  const response = await fetch('/api/monitoring/redis', {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to check Redis');
+  }
+
+  return (await response.json()) as RedisSnapshot;
+}
+
+export async function runRedisProbe(): Promise<RedisSnapshot> {
+  const response = await fetch('/api/monitoring/redis/probe', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to run Redis probe');
+  }
+
+  return (await response.json()) as RedisSnapshot;
 }
 
 export async function fetchTextUnitIngestionSnapshot(options: {
