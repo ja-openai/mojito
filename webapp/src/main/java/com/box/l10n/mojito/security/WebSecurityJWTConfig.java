@@ -128,6 +128,7 @@ public class WebSecurityJWTConfig {
                 "/branches",
                 "/string-authoring",
                 "/monitoring",
+                "/monitoring/**",
                 "/statistics",
                 "/screenshots",
                 "/screenshots-legacy",

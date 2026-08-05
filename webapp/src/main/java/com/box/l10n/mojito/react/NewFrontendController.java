@@ -28,6 +28,8 @@ public class NewFrontendController {
     "/workbench",
     "/branches",
     "/monitoring",
+    "/monitoring/{path:[^.]*}",
+    "/monitoring/{path:[^.]*}/**",
     "/statistics",
     "/screenshots",
     "/screenshots-legacy",
