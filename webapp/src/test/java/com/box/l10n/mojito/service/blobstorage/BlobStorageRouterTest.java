@@ -21,7 +21,7 @@ public class BlobStorageRouterTest {
   @Test
   public void routesPrefixToConfiguredBackend() {
     BlobStorageConfigurationProperties properties = new BlobStorageConfigurationProperties();
-    properties.setType(BlobStorageType.DATABASE);
+    properties.setDefaultType(BlobStorageType.DATABASE);
     properties.getRouting().getPrefixes().put("image", BlobStorageType.AZURE);
 
     BlobStorageRouter router =

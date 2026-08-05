@@ -3,23 +3,44 @@ package com.box.l10n.mojito.service.blobstorage;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.DeprecatedConfigurationProperty;
 import org.springframework.stereotype.Component;
 
 @Component
 @ConfigurationProperties("l10n.blob-storage")
 public class BlobStorageConfigurationProperties {
 
-  BlobStorageType type = BlobStorageType.DATABASE;
+  private static final Logger logger =
+      LoggerFactory.getLogger(BlobStorageConfigurationProperties.class);
+
+  BlobStorageType defaultType;
+
+  BlobStorageType type;
 
   Routing routing = new Routing();
 
-  public BlobStorageType getType() {
-    return type;
+  public BlobStorageType getDefaultType() {
+    return defaultType != null ? defaultType : type != null ? type : BlobStorageType.DATABASE;
   }
 
+  public void setDefaultType(BlobStorageType defaultType) {
+    this.defaultType = defaultType;
+  }
+
+  @Deprecated
+  @DeprecatedConfigurationProperty(replacement = "l10n.blob-storage.default-type")
+  public BlobStorageType getType() {
+    return getDefaultType();
+  }
+
+  @Deprecated
   public void setType(BlobStorageType type) {
     this.type = type;
+    logger.warn(
+        "Configuration property 'l10n.blob-storage.type' is deprecated; use 'l10n.blob-storage.default-type' instead");
   }
 
   public Routing getRouting() {

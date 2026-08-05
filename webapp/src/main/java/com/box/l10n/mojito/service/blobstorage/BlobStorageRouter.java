@@ -29,7 +29,7 @@ public class BlobStorageRouter {
     BlobStorageType storageType =
         blobStorageConfigurationProperties
             .getStorageTypeForPrefix(prefix)
-            .orElse(blobStorageConfigurationProperties.getType());
+            .orElse(blobStorageConfigurationProperties.getDefaultType());
     return getBlobStorage(storageType);
   }
 

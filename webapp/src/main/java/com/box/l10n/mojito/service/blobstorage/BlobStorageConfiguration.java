@@ -41,10 +41,11 @@ import org.springframework.scheduling.quartz.SimpleTriggerFactoryBean;
  * testing or deployments with limited load.
  *
  * <p>Consider using {@link S3BlobStorage} for larger deployment. An {@link AmazonS3} client must be
- * configured first, and then the storage enabled with the `l10n.blob-storage.type=s3` property
+ * configured first, and then the storage enabled with the `l10n.blob-storage.default-type=s3`
+ * property
  *
  * <p>Azure Blob Storage can also be used for larger deployment. A {@link BlobContainerClient} must
- * be configured first, and then the storage enabled with the `l10n.blob-storage.type=azure`
+ * be configured first, and then the storage enabled with the `l10n.blob-storage.default-type=azure`
  * property
  */
 @Configuration
@@ -87,7 +88,7 @@ public class BlobStorageConfiguration {
   public BlobStorage blobStorage(
       BlobStorageRouter blobStorageRouter,
       BlobStorageConfigurationProperties blobStorageConfigurationProperties) {
-    return blobStorageRouter.getBlobStorage(blobStorageConfigurationProperties.getType());
+    return blobStorageRouter.getBlobStorage(blobStorageConfigurationProperties.getDefaultType());
   }
 
   @Configuration
@@ -174,8 +175,12 @@ public class BlobStorageConfiguration {
       Binder binder = Binder.get(context.getEnvironment());
       BlobStorageType defaultType =
           binder
-              .bind("l10n.blob-storage.type", BlobStorageType.class)
-              .orElse(BlobStorageType.DATABASE);
+              .bind("l10n.blob-storage.default-type", BlobStorageType.class)
+              .orElseGet(
+                  () ->
+                      binder
+                          .bind("l10n.blob-storage.type", BlobStorageType.class)
+                          .orElse(BlobStorageType.DATABASE));
 
       if (blobStorageType == defaultType) {
         return true;

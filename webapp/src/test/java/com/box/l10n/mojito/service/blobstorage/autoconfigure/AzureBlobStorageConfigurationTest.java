@@ -8,6 +8,7 @@ import com.box.l10n.mojito.retry.DataIntegrityViolationExceptionRetryTemplate;
 import com.box.l10n.mojito.service.blobstorage.BlobStorageConfiguration;
 import com.box.l10n.mojito.service.blobstorage.BlobStorageConfigurationProperties;
 import com.box.l10n.mojito.service.blobstorage.BlobStorageRouter;
+import com.box.l10n.mojito.service.blobstorage.BlobStorageType;
 import com.box.l10n.mojito.service.blobstorage.azure.AzureBlobStorage;
 import com.box.l10n.mojito.service.blobstorage.azure.AzureBlobStorageConfigurationProperties;
 import com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobStorage;
@@ -35,7 +36,8 @@ public class AzureBlobStorageConfigurationTest {
   @Test
   public void testAzureImplementationIsLoaded() {
     applicationContextRunner
-        .withPropertyValues("l10n.azure.blob-storage.enabled=true", "l10n.blob-storage.type=azure")
+        .withPropertyValues(
+            "l10n.azure.blob-storage.enabled=true", "l10n.blob-storage.default-type=azure")
         .run(
             context ->
                 assertThat(context.getBean("azureBlobStorage"))
@@ -46,7 +48,7 @@ public class AzureBlobStorageConfigurationTest {
   public void testAzureClientConfigurationDoesNotCreateAzureBlobStorageWhenUnused() {
     applicationContextRunner
         .withPropertyValues(
-            "l10n.azure.blob-storage.enabled=true", "l10n.blob-storage.type=database")
+            "l10n.azure.blob-storage.enabled=true", "l10n.blob-storage.default-type=database")
         .run(context -> assertThat(context).doesNotHaveBean(AzureBlobStorage.class));
   }
 
@@ -55,12 +57,39 @@ public class AzureBlobStorageConfigurationTest {
     applicationContextRunner
         .withPropertyValues(
             "l10n.azure.blob-storage.enabled=true",
-            "l10n.blob-storage.type=azure",
+            "l10n.blob-storage.default-type=azure",
             "l10n.blob-storage.routing.prefixes.pollable-task=database")
         .run(
             context ->
                 assertThat(context.getBean("databaseBlobStorage"))
                     .isInstanceOf(DatabaseBlobStorage.class));
+  }
+
+  @Test
+  public void testLegacyTypeStillConfiguresDefaultBackend() {
+    applicationContextRunner
+        .withPropertyValues("l10n.azure.blob-storage.enabled=true", "l10n.blob-storage.type=azure")
+        .run(
+            context -> {
+              assertThat(context.getBean("azureBlobStorage")).isInstanceOf(AzureBlobStorage.class);
+              assertThat(context.getBean(BlobStorageConfigurationProperties.class).getDefaultType())
+                  .isEqualTo(BlobStorageType.AZURE);
+            });
+  }
+
+  @Test
+  public void testDefaultTypeTakesPrecedenceOverLegacyType() {
+    applicationContextRunner
+        .withPropertyValues(
+            "l10n.azure.blob-storage.enabled=true",
+            "l10n.blob-storage.type=database",
+            "l10n.blob-storage.default-type=azure")
+        .run(
+            context -> {
+              assertThat(context.getBean("azureBlobStorage")).isInstanceOf(AzureBlobStorage.class);
+              assertThat(context.getBean(BlobStorageConfigurationProperties.class).getDefaultType())
+                  .isEqualTo(BlobStorageType.AZURE);
+            });
   }
 
   @Configuration

@@ -28,7 +28,7 @@ Connection string:
 l10n.azure.blob-storage.enabled=true
 l10n.azure.blob-storage.connection-string=...
 l10n.azure.blob-storage.container=mojito
-l10n.blob-storage.type=azure
+l10n.blob-storage.default-type=azure
 l10n.blob-storage.azure.prefix=mojito
 ```
 
@@ -38,24 +38,28 @@ Managed identity or other default Azure credentials:
 l10n.azure.blob-storage.enabled=true
 l10n.azure.blob-storage.endpoint=https://<account>.blob.core.windows.net
 l10n.azure.blob-storage.container=mojito
-l10n.blob-storage.type=azure
+l10n.blob-storage.default-type=azure
 l10n.blob-storage.azure.prefix=mojito
 ```
 
 Per-prefix routing:
 
 ```properties
-l10n.blob-storage.type=azure
+l10n.blob-storage.default-type=azure
 l10n.blob-storage.routing.prefixes.pollable-task=database
 l10n.blob-storage.routing.prefixes.image=azure
 ```
 
 `StructuredBlobStorage` uses semantic prefixes, not repository shape, to choose a backend. This lets control-plane data such as `pollable-task` remain DB-backed while large artifact-like prefixes use Azure or S3.
 
+`l10n.blob-storage.default-type` selects the backend for prefixes without an explicit route.
+The old `l10n.blob-storage.type` setting remains supported temporarily for existing deployments,
+but logs a deprecation warning. When both settings are present, `default-type` takes precedence.
+
 ## Staged rollout and monitoring
 
 Enable `l10n.azure.blob-storage.enabled` and configure the endpoint/container while keeping
-`l10n.blob-storage.type=database` to initialize the Azure client without changing any active blob
+`l10n.blob-storage.default-type=database` to initialize the Azure client without changing any active blob
 routes. Admins can open **Azure Storage** next to **Database monitoring** in the account menu to
 inspect container access, current per-prefix routing, and run an explicit write/read/delete probe.
 The monitoring API is protected by the existing admin-only `/api/monitoring/**` security rule.
@@ -68,6 +72,6 @@ falling back to MySQL.
 ## Remaining gaps
 
 - Azure and S3 retention cleanup is not owned by Mojito. Operators must configure provider lifecycle rules that match `retention=MIN_1_DAY`; otherwise temporary blobs are retained indefinitely.
-- Image storage can use Azure through `l10n.image-service.storage.type=blobStorage` or `blobStorageFallback` with `l10n.blob-storage.type=azure`.
+- Image storage can use Azure through `l10n.image-service.storage.type=blobStorage` or `blobStorageFallback` with `l10n.blob-storage.default-type=azure`.
 - There is no live Azure integration test in the default suite. The unit tests cover request shape, not an actual Azure account/container.
 - Production deployments still need an explicit prefix policy. Recommended initial policy is to keep `pollable-task` in the database and route only large artifact-like prefixes to remote object storage.

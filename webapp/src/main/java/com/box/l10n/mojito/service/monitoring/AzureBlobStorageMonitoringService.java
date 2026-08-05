@@ -117,7 +117,7 @@ public class AzureBlobStorageMonitoringService {
                         prefix.name().toLowerCase(Locale.ROOT),
                         blobStorageProperties
                             .getStorageTypeForPrefix(prefix)
-                            .orElse(blobStorageProperties.getType())
+                            .orElse(blobStorageProperties.getDefaultType())
                             .name()
                             .toLowerCase(Locale.ROOT)))
             .toList();
@@ -129,7 +129,7 @@ public class AzureBlobStorageMonitoringService {
         client == null ? azureConfigurationProperties.getEndpoint() : client.getBlobContainerUrl(),
         azureConfigurationProperties.getContainer(),
         azureStorageProperties.getPrefix(),
-        blobStorageProperties.getType().name().toLowerCase(Locale.ROOT),
+        blobStorageProperties.getDefaultType().name().toLowerCase(Locale.ROOT),
         routes,
         checks);
   }

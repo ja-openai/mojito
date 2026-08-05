@@ -34,7 +34,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
     },
     properties = {
       "l10n.image-service.storage.type=s3Fallback",
-      "l10n.blob-storage.type=s3",
+      "l10n.blob-storage.default-type=s3",
       "l10n.aws.s3.enabled=true"
     })
 public class S3FallbackImageServiceTest {
