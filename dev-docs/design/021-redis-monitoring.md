@@ -34,6 +34,11 @@ The full Docker Compose application enables Redis automatically and connects to 
 hostname. Production deployments must opt in explicitly and can additionally configure
 `l10n.redis.username`, `l10n.redis.password`, `l10n.redis.ssl`, and `l10n.redis.timeout`.
 
+Azure Managed Redis can instead use `l10n.redis.managed-identity=true` with the same Azure workload
+identity used for Blob Storage. Mojito requests an access token for `https://redis.azure.com/.default`,
+uses the token's object ID as its Redis username, and lets Lettuce refresh and re-authenticate before
+the token expires. No Redis password or Kubernetes Secret is needed.
+
 ## Admin dashboard
 
 Open **Redis** next to **Azure Storage** in the account menu, or visit `/monitoring/redis`. The

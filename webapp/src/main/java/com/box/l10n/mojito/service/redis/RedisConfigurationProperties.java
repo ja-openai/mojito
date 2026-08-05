@@ -15,6 +15,7 @@ public class RedisConfigurationProperties {
   private String username;
   private String password;
   private boolean ssl;
+  private boolean managedIdentity;
   private Duration timeout = Duration.ofSeconds(2);
 
   public boolean isEnabled() {
@@ -71,6 +72,14 @@ public class RedisConfigurationProperties {
 
   public void setSsl(boolean ssl) {
     this.ssl = ssl;
+  }
+
+  public boolean isManagedIdentity() {
+    return managedIdentity;
+  }
+
+  public void setManagedIdentity(boolean managedIdentity) {
+    this.managedIdentity = managedIdentity;
   }
 
   public Duration getTimeout() {
