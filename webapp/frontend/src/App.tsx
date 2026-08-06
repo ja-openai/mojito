@@ -29,6 +29,7 @@ import { ReviewProjectFindReplacePage } from './page/review-project-find-replace
 import { ReviewProjectCreatePage } from './page/review-projects/ReviewProjectCreatePage';
 import { ReviewProjectsPage } from './page/review-projects/ReviewProjectsPage';
 import { ScreenshotsDropzonePage } from './page/screenshots/ScreenshotsDropzonePage';
+import { SearchIndexPage } from './page/search-index/SearchIndexPage';
 import { AdminAiTranslateAutomationPage } from './page/settings/AdminAiTranslateAutomationPage';
 import { AdminAiTranslatePromptsPage } from './page/settings/AdminAiTranslatePromptsPage';
 import { AdminGlossaryDetailPage } from './page/settings/AdminGlossaryDetailPage';
@@ -181,6 +182,7 @@ export function App() {
             <Route path="/ai-translate" element={<AiTranslatePage />} />
             <Route path="/monitoring" element={<MonitoringPage />} />
             <Route path="/monitoring/azure-storage" element={<AzureStorageMonitoringPage />} />
+            <Route path="/monitoring/search-index" element={<SearchIndexPage />} />
             <Route path="/statistics" element={<StatisticsPage />} />
             <Route path="/review-projects/new" element={<ReviewProjectCreatePage />} />
             <Route path="/translation-incidents" element={<AdminTranslationIncidentsPage />} />

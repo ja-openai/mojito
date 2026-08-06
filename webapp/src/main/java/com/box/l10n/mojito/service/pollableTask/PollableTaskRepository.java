@@ -22,6 +22,9 @@ public interface PollableTaskRepository extends JpaRepository<PollableTask, Long
   @EntityGraph(value = "PollableTask.legacy", type = EntityGraphType.FETCH)
   Optional<PollableTask> findById(Long aLong);
 
+  @EntityGraph(value = "PollableTask.legacy", type = EntityGraphType.FETCH)
+  List<PollableTask> findByNameAndFinishedDateIsNullOrderByCreatedDateDesc(String name);
+
   /**
    * Retrieves pollable tasks that have not finished yet and have exceeded the maximum execution
    * time.

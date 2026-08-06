@@ -1,0 +1,35 @@
+.search-index-page__controls {
+  align-items: flex-end;
+}
+
+.search-index-page__query-field {
+  flex: 1 1 16rem;
+  min-width: 12rem;
+}
+
+.search-index-page__current-only {
+  align-items: center;
+  align-self: flex-end;
+  display: inline-flex;
+  gap: var(--space-1);
+  min-height: 2.5rem;
+  white-space: nowrap;
+}
+
+.search-index-page__progress {
+  width: 100%;
+}
+
+@media (max-width: 48rem) {
+  .search-index-page__controls {
+    align-items: stretch;
+  }
+
+  .search-index-page__query-field {
+    min-width: 0;
+  }
+
+  .search-index-page__current-only {
+    align-self: flex-start;
+  }
+}

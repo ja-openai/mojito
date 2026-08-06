@@ -22,6 +22,25 @@ services:
     volumes:
         - mysql-data:/var/lib/mysql
 
+  opensearch:
+    build:
+      context: ./opensearch
+    image: mojito-opensearch:2.17.1
+    restart: always
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "127.0.0.1:9200:9200"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9200/_cluster/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+
   api:
     deploy:
       mode: replicated
@@ -36,6 +55,8 @@ services:
           memory: 200M
     depends_on:
       db:
+        condition: service_healthy
+      opensearch:
         condition: service_healthy
     build:
       dockerfile: docker/Dockerfile-bk17
@@ -59,6 +80,8 @@ services:
       "spring.datasource.username" : "mojito",
       "spring.datasource.password" : "ChangeMe",
       "spring.datasource.driverClassName" : "com.mysql.cj.jdbc.Driver",
+      "l10n.search-index.enabled" : "true",
+      "l10n.search-index.base-url" : "http://opensearch:9200",
       "spring.jpa.defer-datasource-initialization" : "false",
       "l10n.org.quartz.scheduler.enabled" : "false",
       "l10n.org.multi-quartz.enabled" : "true",
@@ -109,6 +132,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      opensearch:
+        condition: service_healthy
     image: mojito:latest
     pull_policy: never
     links:
@@ -127,6 +152,8 @@ services:
         "spring.datasource.username" : "mojito",
         "spring.datasource.password" : "ChangeMe",
         "spring.datasource.driverClassName" : "com.mysql.cj.jdbc.Driver",
+        "l10n.search-index.enabled" : "true",
+        "l10n.search-index.base-url" : "http://opensearch:9200",
         "spring.jpa.defer-datasource-initialization" : "false",
         "l10n.org.quartz.scheduler.enabled" : "true",
         "l10n.org.multi-quartz.enabled" : "true",
@@ -165,3 +192,4 @@ services:
 
 volumes:
   mysql-data:
+  opensearch-data:
