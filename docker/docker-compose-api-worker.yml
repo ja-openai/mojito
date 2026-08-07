@@ -1,4 +1,3 @@
-version: '2.4'
 name: mojito
 services:
   db:
@@ -59,7 +58,7 @@ services:
       opensearch:
         condition: service_healthy
     build:
-      dockerfile: docker/Dockerfile-bk17
+      dockerfile: docker/Dockerfile-bk21
       context: ../
     image: mojito:latest
     pull_policy: never
