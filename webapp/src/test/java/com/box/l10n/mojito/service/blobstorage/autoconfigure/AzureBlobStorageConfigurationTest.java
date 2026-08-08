@@ -14,6 +14,11 @@ import com.box.l10n.mojito.service.blobstorage.azure.AzureBlobStorageConfigurati
 import com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobStorage;
 import com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobStorageConfigurationProperties;
 import com.box.l10n.mojito.service.blobstorage.database.MBlobRepository;
+import com.box.l10n.mojito.service.image.BlobStorageFallbackImageService;
+import com.box.l10n.mojito.service.image.ImageMigrationService;
+import com.box.l10n.mojito.service.image.ImageRepository;
+import com.box.l10n.mojito.service.image.ImageService;
+import com.box.l10n.mojito.service.image.ImageServiceConfiguration;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -89,6 +94,24 @@ public class AzureBlobStorageConfigurationTest {
               assertThat(context.getBean("azureBlobStorage")).isInstanceOf(AzureBlobStorage.class);
               assertThat(context.getBean(BlobStorageConfigurationProperties.class).getDefaultType())
                   .isEqualTo(BlobStorageType.AZURE);
+            });
+  }
+
+  @Test
+  public void testImagePrefixRouteEnablesImageMigrationWithoutLegacyImageStorageSetting() {
+    applicationContextRunner
+        .withUserConfiguration(ImageServiceConfiguration.class, ImageMigrationService.class)
+        .withBean(ImageRepository.class, () -> mock(ImageRepository.class))
+        .withPropertyValues(
+            "l10n.azure.blob-storage.enabled=true",
+            "l10n.blob-storage.default-type=database",
+            "l10n.blob-storage.routing.prefixes.image=azure",
+            "l10n.image-service.migration.enabled=true")
+        .run(
+            context -> {
+              assertThat(context.getBean(ImageService.class))
+                  .isInstanceOf(BlobStorageFallbackImageService.class);
+              assertThat(context).hasSingleBean(ImageMigrationService.class);
             });
   }
 

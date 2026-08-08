@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.service.image;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -49,5 +50,70 @@ public class ImageServiceConfigurationTest {
               context.getBean(ImageService.class).uploadImage("fallback.png", new byte[] {2});
               verify(imageBlobStorage).put("image/fallback.png", new byte[] {2});
             });
+  }
+
+  @Test
+  public void imagePrefixRouteAutomaticallyEnablesDatabaseFallback() {
+    applicationContextRunner
+        .withPropertyValues("l10n.blob-storage.routing.prefixes.image=azure")
+        .run(
+            context -> {
+              assertThat(context.getBean(ImageService.class))
+                  .isInstanceOf(BlobStorageFallbackImageService.class);
+              context.getBean(ImageService.class).uploadImage("automatic.png", new byte[] {3});
+              verify(imageBlobStorage).put("image/automatic.png", new byte[] {3});
+            });
+  }
+
+  @Test
+  public void remoteDefaultAutomaticallyEnablesDatabaseFallback() {
+    applicationContextRunner
+        .withPropertyValues("l10n.blob-storage.default-type=azure")
+        .run(
+            context ->
+                assertThat(context.getBean(ImageService.class))
+                    .isInstanceOf(BlobStorageFallbackImageService.class));
+  }
+
+  @Test
+  public void databaseImagePrefixOverridesRemoteDefault() {
+    applicationContextRunner
+        .withPropertyValues(
+            "l10n.blob-storage.default-type=azure",
+            "l10n.blob-storage.routing.prefixes.image=database")
+        .run(
+            context ->
+                assertThat(context.getBean(ImageService.class))
+                    .isInstanceOf(DatabaseImageService.class));
+  }
+
+  @Test
+  public void explicitDatabaseImageStorageOverridesRemoteImageRoute() {
+    applicationContextRunner
+        .withPropertyValues(
+            "l10n.blob-storage.routing.prefixes.image=azure",
+            "l10n.image-service.storage.type=database")
+        .run(
+            context ->
+                assertThat(context.getBean(ImageService.class))
+                    .isInstanceOf(DatabaseImageService.class));
+  }
+
+  @Test
+  public void databaseRemainsDefaultWhenNoBlobRouteIsConfigured() {
+    applicationContextRunner.run(
+        context ->
+            assertThat(context.getBean(ImageService.class))
+                .isInstanceOf(DatabaseImageService.class));
+  }
+
+  @Test
+  public void migrationUsesImagePrefixRouteWithoutSeparateImageStorageSetting() {
+    applicationContextRunner
+        .withUserConfiguration(ImageMigrationService.class)
+        .withPropertyValues(
+            "l10n.blob-storage.routing.prefixes.image=azure",
+            "l10n.image-service.migration.enabled=true")
+        .run(context -> assertThat(context).hasSingleBean(ImageMigrationService.class));
   }
 }

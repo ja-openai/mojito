@@ -59,11 +59,12 @@ but logs a deprecation warning. When both settings are present, `default-type` t
 ## Image migration
 
 Image services honor the `image` prefix route, so existing database images can be migrated to Azure
-without changing the default database-backed blob-storage backend:
+without changing the default database-backed blob-storage backend. A remote image route
+automatically enables database fallback for existing images; no separate image-storage backend
+setting is required:
 
 ```properties
 l10n.blob-storage.routing.prefixes.image=azure
-l10n.image-service.storage.type=blobStorageFallback
 l10n.image-service.migration.enabled=true
 l10n.image-service.migration.cron=0 0 * * * ?
 l10n.image-service.migration.batch-size=25
@@ -72,9 +73,9 @@ l10n.image-service.migration.delete-source=false
 
 The Quartz job is disabled unless explicitly enabled and requires a remote image backend. It scans
 database images in primary-key order, skips images already present in blob storage, and limits each
-run to the configured number of uploads or source deletions. Set `delete-source=true` only after
-image reads use `blobStorageFallback` or `blobStorage`; source rows are removed only after the
-remote bytes have been verified against the database image.
+run to the configured number of uploads or source deletions. Source rows are removed only when
+`delete-source=true` and the remote bytes have been verified against the database image. Explicit
+legacy `l10n.image-service.storage.type` settings still override automatic image routing.
 
 ## Staged rollout and monitoring
 
