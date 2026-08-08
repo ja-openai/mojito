@@ -95,6 +95,13 @@ falling back to MySQL.
 
 ## Remaining gaps
 
+- Database-backed blobs can now be drained by admin-managed prefix cleanup policies under
+  `/settings/system/blob-cleanup`. Scheduling is opt-in, policies are disabled by default,
+  and policies delete only rows with a TTL,
+  use the existing `name` index in independently committed batches, and continue until the prefix
+  is drained unless an explicit batch cap or stop request is configured. MySQL skips locked rows
+  and retries transient lock conflicts. The policy worker is independent of the legacy generic
+  expired-blob cleanup job; keep the generic job disabled on large `mblob` tables.
 - Azure and S3 retention cleanup is not owned by Mojito. Operators must configure provider lifecycle rules that match `retention=MIN_1_DAY`; otherwise temporary blobs are retained indefinitely.
 - There is no live Azure integration test in the default suite. The unit tests cover request shape, not an actual Azure account/container.
 - Production deployments still need an explicit prefix policy. Recommended initial policy is to keep `pollable-task` in the database and route only large artifact-like prefixes to remote object storage.

@@ -1,0 +1,98 @@
+.blob-cleanup-page {
+  max-width: 70rem;
+}
+
+.blob-cleanup-page__create {
+  display: grid;
+  grid-template-columns: minmax(16rem, 1fr) auto;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.blob-cleanup-policy__header {
+  display: grid;
+  grid-template-columns: minmax(16rem, 1fr) auto auto;
+  align-items: end;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.blob-cleanup-policy__enabled {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.25rem;
+  white-space: nowrap;
+}
+
+.blob-cleanup-policy__status {
+  align-self: center;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  white-space: nowrap;
+}
+
+.blob-cleanup-policy__status--running {
+  color: var(--color-success);
+}
+
+.blob-cleanup-policy__status--failed {
+  color: var(--color-danger);
+}
+
+.blob-cleanup-policy__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+}
+
+.blob-cleanup-policy__progress {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.blob-cleanup-policy__progress > div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.blob-cleanup-policy__progress span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.blob-cleanup-policy__progress strong {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+}
+
+.blob-cleanup-policy__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.blob-cleanup-policy__delete {
+  margin-left: auto;
+}
+
+.blob-cleanup-policy__error {
+  margin-top: var(--space-3);
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 44rem) {
+  .blob-cleanup-policy__header,
+  .blob-cleanup-page__create {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .blob-cleanup-policy__delete {
+    margin-left: 0;
+  }
+}
