@@ -56,6 +56,26 @@ l10n.blob-storage.routing.prefixes.image=azure
 The old `l10n.blob-storage.type` setting remains supported temporarily for existing deployments,
 but logs a deprecation warning. When both settings are present, `default-type` takes precedence.
 
+## Image migration
+
+Image services honor the `image` prefix route, so existing database images can be migrated to Azure
+without changing the default database-backed blob-storage backend:
+
+```properties
+l10n.blob-storage.routing.prefixes.image=azure
+l10n.image-service.storage.type=blobStorageFallback
+l10n.image-service.migration.enabled=true
+l10n.image-service.migration.cron=0 0 * * * ?
+l10n.image-service.migration.batch-size=25
+l10n.image-service.migration.delete-source=false
+```
+
+The Quartz job is disabled unless explicitly enabled and requires a remote image backend. It scans
+database images in primary-key order, skips images already present in blob storage, and limits each
+run to the configured number of uploads or source deletions. Set `delete-source=true` only after
+image reads use `blobStorageFallback` or `blobStorage`; source rows are removed only after the
+remote bytes have been verified against the database image.
+
 ## Staged rollout and monitoring
 
 Enable `l10n.azure.blob-storage.enabled` and configure the endpoint/container while keeping
@@ -75,6 +95,5 @@ falling back to MySQL.
 ## Remaining gaps
 
 - Azure and S3 retention cleanup is not owned by Mojito. Operators must configure provider lifecycle rules that match `retention=MIN_1_DAY`; otherwise temporary blobs are retained indefinitely.
-- Image storage can use Azure through `l10n.image-service.storage.type=blobStorage` or `blobStorageFallback` with `l10n.blob-storage.default-type=azure`.
 - There is no live Azure integration test in the default suite. The unit tests cover request shape, not an actual Azure account/container.
 - Production deployments still need an explicit prefix policy. Recommended initial policy is to keep `pollable-task` in the database and route only large artifact-like prefixes to remote object storage.

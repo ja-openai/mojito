@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.image;
 
-import com.box.l10n.mojito.service.blobstorage.BlobStorage;
+import com.box.l10n.mojito.service.blobstorage.BlobStorageRouter;
+import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.blobstorage.s3.S3BlobStorage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -15,8 +16,8 @@ import org.springframework.context.annotation.Primary;
  *
  * <p>{@link DatabaseImageService} is the default implementation.
  *
- * <p>{@link BlobStorageImageService} uses the configured {@link BlobStorage}. Use it with
- * `l10n.image-service.storage.type=blobStorage`.
+ * <p>{@link BlobStorageImageService} uses the backend configured for the image blob-storage prefix.
+ * Use it with `l10n.image-service.storage.type=blobStorage`.
  *
  * <p>{@link S3ImageService} and {@link S3FallbackImageService} both require that configured {@link
  * S3BlobStorage} and {@link com.amazonaws.services.s3.AmazonS3} client instances are available in
@@ -28,13 +29,12 @@ public class ImageServiceConfiguration {
   @ConditionalOnProperty(value = "l10n.image-service.storage.type", havingValue = "blobStorage")
   static class BlobStorageImageServiceConfiguration {
 
-    @Autowired BlobStorage blobStorage;
-
     @Bean
-    public ImageService blobStorageImageService(
-        BlobStorage blobStorage,
+    public BlobStorageImageService blobStorageImageService(
+        BlobStorageRouter blobStorageRouter,
         @Value("${l10n.image-service.storage.blob-storage.prefix:image}") String pathPrefix) {
-      return new BlobStorageImageService(blobStorage, pathPrefix);
+      return new BlobStorageImageService(
+          blobStorageRouter.getBlobStorage(StructuredBlobStorage.Prefix.IMAGE), pathPrefix);
     }
   }
 
@@ -45,8 +45,6 @@ public class ImageServiceConfiguration {
 
     @Autowired ImageRepository imageRepository;
 
-    @Autowired BlobStorage blobStorage;
-
     @Bean
     @Qualifier("databaseImageService")
     public DatabaseImageService databaseImageService() {
@@ -56,9 +54,10 @@ public class ImageServiceConfiguration {
     @Bean
     @Qualifier("blobStorageImageService")
     public BlobStorageImageService blobStorageImageService(
-        BlobStorage blobStorage,
+        BlobStorageRouter blobStorageRouter,
         @Value("${l10n.image-service.storage.blob-storage.prefix:image}") String pathPrefix) {
-      return new BlobStorageImageService(blobStorage, pathPrefix);
+      return new BlobStorageImageService(
+          blobStorageRouter.getBlobStorage(StructuredBlobStorage.Prefix.IMAGE), pathPrefix);
     }
 
     @Bean
