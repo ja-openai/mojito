@@ -1,12 +1,13 @@
 package com.box.l10n.mojito.service.monitoring;
 
-import com.azure.core.util.BinaryData;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.models.BlobStorageException;
 import com.box.l10n.mojito.azure.blobstorage.AzureBlobStorageConfigurationProperties;
 import com.box.l10n.mojito.service.blobstorage.BlobStorageConfigurationProperties;
+import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
+import com.box.l10n.mojito.service.blobstorage.azure.AzureBlobStorage;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -78,15 +79,17 @@ public class AzureBlobStorageMonitoringService {
       return snapshot(true, client, "UNAVAILABLE", checks);
     }
 
-    String probeName = azureStorageProperties.getPrefix() + "/_monitoring/" + UUID.randomUUID();
-    BlobClient blobClient = client.getBlobClient(probeName);
+    String probeName = "_monitoring/" + UUID.randomUUID();
+    BlobClient blobClient =
+        client.getBlobClient(azureStorageProperties.getPrefix() + "/" + probeName);
+    AzureBlobStorage azureBlobStorage = new AzureBlobStorage(client, azureStorageProperties);
     boolean uploaded = false;
     try {
       AzureStorageCheck writeCheck =
           runCheck(
               "Write probe",
               () -> {
-                blobClient.upload(BinaryData.fromString(PROBE_CONTENT), true);
+                azureBlobStorage.put(probeName, PROBE_CONTENT, Retention.MIN_1_DAY);
                 return true;
               });
       checks.add(writeCheck);

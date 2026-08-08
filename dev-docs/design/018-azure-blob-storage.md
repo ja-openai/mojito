@@ -62,6 +62,9 @@ Enable `l10n.azure.blob-storage.enabled` and configure the endpoint/container wh
 `l10n.blob-storage.default-type=database` to initialize the Azure client without changing any active blob
 routes. Admins can open **Azure Storage** next to **Database monitoring** in the account menu to
 inspect container access, current per-prefix routing, and run an explicit write/read/delete probe.
+The probe uses the same tagged upload as production writes, including the `retention=MIN_1_DAY`
+blob index tag, so missing blob-tag permissions fail the write check instead of reporting false
+readiness.
 The monitoring API is protected by the existing admin-only `/api/monitoring/**` security rule.
 
 Only route selected prefixes to Azure after the status page and active probe are healthy. Existing
