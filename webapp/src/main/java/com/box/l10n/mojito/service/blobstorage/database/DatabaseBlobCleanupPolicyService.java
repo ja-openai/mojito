@@ -10,7 +10,9 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
+import org.quartz.JobBuilder;
 import org.quartz.JobKey;
+import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -122,9 +124,19 @@ public class DatabaseBlobCleanupPolicyService {
             });
 
     try {
-      quartzSchedulerManager
-          .getScheduler(QuartzSchedulerManager.DEFAULT_SCHEDULER_NAME)
-          .triggerJob(JobKey.jobKey(DatabaseBlobPolicyCleanupJobConfig.JOB_NAME));
+      Scheduler scheduler =
+          quartzSchedulerManager.getScheduler(QuartzSchedulerManager.DEFAULT_SCHEDULER_NAME);
+      JobKey jobKey = JobKey.jobKey(DatabaseBlobPolicyCleanupJobConfig.JOB_NAME);
+      if (!scheduler.checkExists(jobKey)) {
+        scheduler.addJob(
+            JobBuilder.newJob(DatabaseBlobPolicyCleanupJob.class)
+                .withIdentity(jobKey)
+                .storeDurably()
+                .requestRecovery()
+                .build(),
+            true);
+      }
+      scheduler.triggerJob(jobKey);
     } catch (SchedulerException e) {
       throw new IllegalStateException("Could not start database blob cleanup", e);
     }

@@ -109,6 +109,28 @@ public class DatabaseBlobCleanupPolicyServiceTest extends ServiceTestBase {
     assertNull(stopped.getLastError());
   }
 
+  @Test
+  public void startsManualCleanupWhenRecurringScheduleIsDisabled() throws InterruptedException {
+    saveBlob("pollable_task/expired-1/input", 10, 86_400L);
+    DatabaseBlobCleanupPolicy policy = createPolicy(false, 250, 0);
+
+    DatabaseBlobCleanupPolicy queued = policyService.startPolicy(policy.getId());
+
+    assertTrue(queued.isEnabled());
+    waitForCondition(
+        "Manual cleanup did not drain the policy",
+        () ->
+            policyRepository
+                .findById(policy.getId())
+                .map(DatabaseBlobCleanupPolicy::getStatus)
+                .filter(DatabaseBlobCleanupPolicyService.STATUS_DRAINED::equals)
+                .isPresent());
+
+    DatabaseBlobCleanupPolicy completed = policyRepository.findById(policy.getId()).orElseThrow();
+    assertEquals(1L, completed.getLastDeletedCount());
+    assertFalse(mBlobRepository.findByName("pollable_task/expired-1/input").isPresent());
+  }
+
   private DatabaseBlobCleanupPolicy createPolicy(
       boolean enabled, int batchSize, int maxBatchesPerRun) {
     return policyService.createPolicy(
