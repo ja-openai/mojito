@@ -9,6 +9,7 @@ import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.google.common.collect.ImmutableList;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.time.ZonedDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -67,6 +68,22 @@ public class TextUnitDTOsCacheBlobStorageTest extends ServiceTestBase {
         .usingFieldByFieldElementComparator()
         .containsExactlyElementsOf(textUnitDTOSToWrite);
     assertEquals(hitsBefore + 1, cacheLookupCount("json", "hit"), 0);
+  }
+
+  @Test
+  public void writeAndReadWatermark() {
+    TextUnitDTO textUnitDTO = new TextUnitDTO();
+    textUnitDTO.setName(UUID.randomUUID().toString());
+    TextUnitDTOsCacheState cacheState =
+        new TextUnitDTOsCacheState(7L, 3L, false, ZonedDateTime.parse("2026-08-10T15:00:00Z"), 11L);
+    textUnitDTOsCacheBlobStorage.putTextUnitDTOs(
+        12345L, 67890L, ImmutableList.of(textUnitDTO), cacheState);
+
+    TextUnitDTOsCacheBlobStorageJson cacheEntry =
+        textUnitDTOsCacheBlobStorage.getCacheEntry(12345L, 67890L).orElseThrow();
+
+    assertEquals(cacheState, cacheEntry.getCacheState());
+    assertEquals(1, cacheEntry.getTextUnitDTOs().size());
   }
 
   @Test
