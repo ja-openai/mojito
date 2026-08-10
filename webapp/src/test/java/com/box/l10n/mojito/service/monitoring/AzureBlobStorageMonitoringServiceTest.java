@@ -20,6 +20,7 @@ import com.box.l10n.mojito.azure.blobstorage.AzureBlobStorageConfigurationProper
 import com.box.l10n.mojito.service.blobstorage.BlobStorageConfigurationProperties;
 import com.box.l10n.mojito.service.blobstorage.BlobStorageType;
 import com.box.l10n.mojito.service.monitoring.AzureBlobStorageMonitoringService.AzureStorageSnapshot;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.ObjectProvider;
@@ -47,13 +48,16 @@ public class AzureBlobStorageMonitoringServiceTest {
 
   private final MockEnvironment environment = new MockEnvironment();
 
+  private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+
   private final AzureBlobStorageMonitoringService service =
       new AzureBlobStorageMonitoringService(
           blobContainerClientProvider,
           azureConfigurationProperties,
           azureStorageProperties,
           blobStorageProperties,
-          environment);
+          environment,
+          meterRegistry);
 
   @Test
   public void reportsDisabledAzureWithoutRequiringAClient() {
@@ -149,6 +153,15 @@ public class AzureBlobStorageMonitoringServiceTest {
     assertThat(uploadOptions.getValue().getTags()).containsEntry("retention", "MIN_1_DAY");
     assertThat(uploadOptions.getValue().getHeaders().getContentType()).isEqualTo("text/plain");
     verify(blobClient).deleteIfExists();
+    assertThat(
+            meterRegistry
+                .get("AzureBlobStorage.operation.duration")
+                .tag("prefix", "other")
+                .tag("operation", "write")
+                .tag("result", "success")
+                .timer()
+                .count())
+        .isEqualTo(1);
   }
 
   @Test

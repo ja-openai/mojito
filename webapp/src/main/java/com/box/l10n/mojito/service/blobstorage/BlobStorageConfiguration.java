@@ -76,10 +76,13 @@ public class BlobStorageConfiguration {
 
     @Autowired AzureBlobStorageConfigurationProperties azureBlobStorageConfigurationProperties;
 
+    @Autowired MeterRegistry meterRegistry;
+
     @Bean
     public AzureBlobStorage azureBlobStorage() {
       logger.info("Configure AzureBlobStorage");
-      return new AzureBlobStorage(blobContainerClient, azureBlobStorageConfigurationProperties);
+      return new AzureBlobStorage(
+          blobContainerClient, azureBlobStorageConfigurationProperties, meterRegistry);
     }
   }
 

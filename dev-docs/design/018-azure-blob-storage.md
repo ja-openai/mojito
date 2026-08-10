@@ -112,6 +112,11 @@ blob index tag, so missing blob-tag permissions fail the write check instead of 
 readiness.
 The monitoring API is protected by the existing admin-only `/api/monitoring/**` security rule.
 
+Every Azure Blob read, write, delete, and existence check also records the Micrometer timer
+`AzureBlobStorage.operation.duration`, tagged by bounded semantic `prefix`, `operation`, and
+`result={success|miss|failure}`. These production-path timers complement the one-off latencies shown
+by the admin probe and include failed operations and expected Azure 404 misses.
+
 Only route selected prefixes to Azure after the status page and active probe are healthy. Existing
 database-backed prefixes remain unchanged until explicitly reconfigured. Azure being disabled or
 unavailable is reported on the monitoring page without changing application readiness or silently
