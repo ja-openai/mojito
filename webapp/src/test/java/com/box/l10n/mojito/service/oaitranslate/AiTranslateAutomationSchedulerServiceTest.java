@@ -2,20 +2,30 @@ package com.box.l10n.mojito.service.oaitranslate;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
+import com.box.l10n.mojito.entity.RepositoryLocale;
+import com.box.l10n.mojito.entity.TM;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateService.AiTranslateInput;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
+import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -32,6 +42,8 @@ public class AiTranslateAutomationSchedulerServiceTest {
       Mockito.mock(AiTranslateRunService.class);
   private final RepositoryRepository repositoryRepository =
       Mockito.mock(RepositoryRepository.class);
+  private final TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository =
+      Mockito.mock(TMTextUnitCurrentVariantRepository.class);
 
   private AiTranslateAutomationSchedulerService aiTranslateAutomationSchedulerService;
 
@@ -44,9 +56,11 @@ public class AiTranslateAutomationSchedulerServiceTest {
             aiTranslateService,
             aiTranslateRunService,
             repositoryRepository,
+            tmTextUnitCurrentVariantRepository,
             new SimpleMeterRegistry());
     when(aiTranslateConfigurationProperties.getModelName()).thenReturn("gpt-test");
     when(aiTranslateService.aiTranslateAsync(any(), anyString())).thenReturn(pollableFuture());
+    when(aiTranslateRunService.getLatestCompletedRunStarts(anyCollection())).thenReturn(Map.of());
   }
 
   @Test
@@ -109,6 +123,44 @@ public class AiTranslateAutomationSchedulerServiceTest {
         inputCaptor.getAllValues().stream().map(AiTranslateInput::repositoryName).toList());
   }
 
+  @Test
+  public void skipsUnchangedRepositoriesBeforeCreatingPollableTasks() {
+    when(aiTranslateAutomationConfigService.getConfig()).thenReturn(config(List.of(), List.of()));
+    when(repositoryRepository.findByDeletedFalseAndHiddenFalseOrderByNameAsc())
+        .thenReturn(List.of(repository(1L, "repo-a"), repository(2L, "repo-b")));
+    ZonedDateTime lastCompletedRunStart = ZonedDateTime.now().minusHours(1);
+    when(aiTranslateRunService.getLatestCompletedRunStarts(List.of(1L, 2L)))
+        .thenReturn(Map.of(1L, lastCompletedRunStart, 2L, lastCompletedRunStart));
+    when(tmTextUnitCurrentVariantRepository.findFirstChangeSince(
+            eq(2L), anyCollection(), eq(lastCompletedRunStart)))
+        .thenReturn(Optional.of(1));
+
+    AiTranslateAutomationSchedulerService.RunResult result =
+        aiTranslateAutomationSchedulerService.scheduleConfiguredRepositories("cron", true);
+
+    assertEquals(1, result.scheduledRepositoryCount());
+    ArgumentCaptor<AiTranslateInput> inputCaptor = ArgumentCaptor.forClass(AiTranslateInput.class);
+    verify(aiTranslateService).aiTranslateAsync(inputCaptor.capture(), anyString());
+    assertEquals("repo-b", inputCaptor.getValue().repositoryName());
+    verify(aiTranslateRunService).getLatestCompletedRunStarts(List.of(1L, 2L));
+  }
+
+  @Test
+  public void createsNoPollableTasksWhenNoRepositoryChanged() {
+    when(aiTranslateAutomationConfigService.getConfig()).thenReturn(config(List.of(), List.of()));
+    when(repositoryRepository.findByDeletedFalseAndHiddenFalseOrderByNameAsc())
+        .thenReturn(List.of(repository(1L, "repo-a"), repository(2L, "repo-b")));
+    ZonedDateTime lastCompletedRunStart = ZonedDateTime.now().minusHours(1);
+    when(aiTranslateRunService.getLatestCompletedRunStarts(List.of(1L, 2L)))
+        .thenReturn(Map.of(1L, lastCompletedRunStart, 2L, lastCompletedRunStart));
+
+    AiTranslateAutomationSchedulerService.RunResult result =
+        aiTranslateAutomationSchedulerService.scheduleConfiguredRepositories("cron", true);
+
+    assertEquals(0, result.scheduledRepositoryCount());
+    verify(aiTranslateService, never()).aiTranslateAsync(any(), anyString());
+  }
+
   private AiTranslateAutomationConfigService.Config config(
       List<Long> repositoryIds, List<Long> excludedRepositoryIds) {
     return new AiTranslateAutomationConfigService.Config(
@@ -119,6 +171,19 @@ public class AiTranslateAutomationSchedulerServiceTest {
     Repository repository = new Repository();
     repository.setId(id);
     repository.setName(name);
+    TM tm = new TM();
+    tm.setId(id);
+    repository.setTm(tm);
+    RepositoryLocale rootLocale = new RepositoryLocale();
+    Locale root = new Locale();
+    root.setId(id * 10);
+    rootLocale.setLocale(root);
+    RepositoryLocale targetLocale = new RepositoryLocale();
+    Locale target = new Locale();
+    target.setId(id * 10 + 1);
+    targetLocale.setLocale(target);
+    targetLocale.setParentLocale(rootLocale);
+    repository.setRepositoryLocales(Set.of(rootLocale, targetLocale));
     return repository;
   }
 

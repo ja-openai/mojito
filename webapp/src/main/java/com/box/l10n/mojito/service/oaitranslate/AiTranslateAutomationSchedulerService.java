@@ -4,9 +4,12 @@ import com.box.l10n.mojito.entity.AiTranslateRun;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateService.AiTranslateInput;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
+import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
+import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -26,6 +29,7 @@ public class AiTranslateAutomationSchedulerService {
   private final AiTranslateService aiTranslateService;
   private final AiTranslateRunService aiTranslateRunService;
   private final RepositoryRepository repositoryRepository;
+  private final TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository;
   private final MeterRegistry meterRegistry;
 
   public AiTranslateAutomationSchedulerService(
@@ -34,12 +38,14 @@ public class AiTranslateAutomationSchedulerService {
       AiTranslateService aiTranslateService,
       AiTranslateRunService aiTranslateRunService,
       RepositoryRepository repositoryRepository,
+      TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository,
       MeterRegistry meterRegistry) {
     this.aiTranslateAutomationConfigService = aiTranslateAutomationConfigService;
     this.aiTranslateConfigurationProperties = aiTranslateConfigurationProperties;
     this.aiTranslateService = aiTranslateService;
     this.aiTranslateRunService = aiTranslateRunService;
     this.repositoryRepository = repositoryRepository;
+    this.tmTextUnitCurrentVariantRepository = tmTextUnitCurrentVariantRepository;
     this.meterRegistry = meterRegistry;
   }
 
@@ -82,6 +88,23 @@ public class AiTranslateAutomationSchedulerService {
           includedRepositoryIds.isEmpty()
               ? config.excludedRepositoryIds().stream().collect(Collectors.toSet())
               : Set.of();
+      List<Repository> candidateRepositories =
+          eligibleRepositories.stream()
+              .filter(
+                  repository ->
+                      includedRepositoryIds.isEmpty()
+                          || includedRepositoryIds.contains(repository.getId()))
+              .filter(repository -> !excludedRepositoryIds.contains(repository.getId()))
+              .toList();
+      List<Long> candidateRepositoryIds =
+          candidateRepositories.stream().map(Repository::getId).toList();
+      Map<Long, ZonedDateTime> lastCompletedRunStarts =
+          aiTranslateRunService.getLatestCompletedRunStarts(candidateRepositoryIds);
+      Set<Long> repositoriesWithRecentChanges =
+          candidateRepositories.stream()
+              .filter(repository -> hasChangesSinceLastRun(repository, lastCompletedRunStarts))
+              .map(Repository::getId)
+              .collect(Collectors.toSet());
       for (Repository repository : eligibleRepositories) {
         if (!includedRepositoryIds.isEmpty()
             && !includedRepositoryIds.contains(repository.getId())) {
@@ -101,6 +124,16 @@ public class AiTranslateAutomationSchedulerService {
               repository.getId(),
               repository.getName());
           incrementCounter("repositories", Tags.of("result", "excluded"));
+          continue;
+        }
+
+        if (!repositoriesWithRecentChanges.contains(repository.getId())) {
+          logger.info(
+              "AI translate automation repository skipped: source={}, repositoryId={}, repositoryName={}, reason=no_recent_changes",
+              triggerSource,
+              repository.getId(),
+              repository.getName());
+          incrementCounter("repositories", Tags.of("result", "no_recent_changes"));
           continue;
         }
 
@@ -167,6 +200,22 @@ public class AiTranslateAutomationSchedulerService {
 
   private void incrementCounter(String metricSuffix, Tags tags) {
     meterRegistry.counter("%s.%s".formatted(METRIC_PREFIX, metricSuffix), tags).increment();
+  }
+
+  private boolean hasChangesSinceLastRun(
+      Repository repository, Map<Long, ZonedDateTime> lastCompletedRunStarts) {
+    ZonedDateTime lastCompletedRunStart = lastCompletedRunStarts.get(repository.getId());
+    if (lastCompletedRunStart == null) {
+      return true;
+    }
+
+    List<Long> localeIds =
+        repository.getRepositoryLocales().stream()
+            .map(repositoryLocale -> repositoryLocale.getLocale().getId())
+            .toList();
+    return tmTextUnitCurrentVariantRepository
+        .findFirstChangeSince(repository.getTm().getId(), localeIds, lastCompletedRunStart)
+        .isPresent();
   }
 
   public record RunResult(int scheduledRepositoryCount) {}

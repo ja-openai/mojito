@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.oaitranslate;
 
 import com.box.l10n.mojito.entity.AiTranslateRun;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -11,6 +12,20 @@ import org.springframework.data.repository.query.Param;
 public interface AiTranslateRunRepository extends JpaRepository<AiTranslateRun, Long> {
 
   Optional<AiTranslateRun> findByPollableTask_Id(Long pollableTaskId);
+
+  @Query(
+      """
+      select new com.box.l10n.mojito.service.oaitranslate.AiTranslateRunTimestampRow(
+        run.repository.id,
+        max(coalesce(run.startedAt, run.createdDate))
+      )
+      from AiTranslateRun run
+      where run.repository.id in :repositoryIds
+        and run.status = com.box.l10n.mojito.entity.AiTranslateRun.Status.COMPLETED
+      group by run.repository.id
+      """)
+  List<AiTranslateRunTimestampRow> findLatestCompletedRunStarts(
+      @Param("repositoryIds") Collection<Long> repositoryIds);
 
   @Query(
       """

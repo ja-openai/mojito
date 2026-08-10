@@ -7,7 +7,10 @@ import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -114,6 +117,18 @@ public class AiTranslateRunService {
               }
               run.setFinishedAt(ZonedDateTime.now());
             });
+  }
+
+  @Transactional(readOnly = true)
+  public Map<Long, ZonedDateTime> getLatestCompletedRunStarts(Collection<Long> repositoryIds) {
+    if (repositoryIds.isEmpty()) {
+      return Map.of();
+    }
+
+    return aiTranslateRunRepository.findLatestCompletedRunStarts(repositoryIds).stream()
+        .collect(
+            Collectors.toMap(
+                AiTranslateRunTimestampRow::repositoryId, AiTranslateRunTimestampRow::startedAt));
   }
 
   @Transactional(readOnly = true)
