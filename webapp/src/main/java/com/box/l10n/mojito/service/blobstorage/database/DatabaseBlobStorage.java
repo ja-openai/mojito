@@ -111,14 +111,25 @@ public class DatabaseBlobStorage implements BlobStorage {
 
   @Override
   public Optional<byte[]> getBytes(String name) {
-    byte[] bytes = null;
-    return mBlobRepository.findByName(name).map(MBlob::getContent);
+    return getStoredBlob(name).map(StoredBlob::content);
+  }
+
+  public Optional<StoredBlob> getStoredBlob(String name) {
+    return mBlobRepository
+        .findByName(name)
+        .map(
+            mBlob ->
+                new StoredBlob(
+                    mBlob.getContent(),
+                    mBlob.hasExpiration() ? Retention.MIN_1_DAY : Retention.PERMANENT));
   }
 
   @Override
   public String getTargetDescription(String name) {
     return "mblob:" + name;
   }
+
+  public record StoredBlob(byte[] content, Retention retention) {}
 
   public void deleteExpired() {
     String cleanupRunId = UUID.randomUUID().toString();

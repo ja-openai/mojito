@@ -24,6 +24,10 @@ public class TextUnitDTOsSmileCacheBlobStorage extends TextUnitDTOsCacheBlobStor
     return "asset/" + assetId + "/locale/" + localeId + ".smile";
   }
 
+  String getFormat() {
+    return "smile";
+  }
+
   Optional<ImmutableList<TextUnitDTO>> getTextUnitsFromCache(Long assetId, Long localeId) {
     Optional<byte[]> bytes =
         structuredBlobStorage.getBytes(TEXT_UNIT_DTOS_CACHE, getName(assetId, localeId));

@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.service.blobstorage.database;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -8,8 +9,11 @@ import com.box.l10n.mojito.entity.MBlob;
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
 import com.box.l10n.mojito.service.blobstorage.BlobStorage;
 import com.box.l10n.mojito.service.blobstorage.BlobStorageTestShared;
+import com.box.l10n.mojito.service.blobstorage.Retention;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
+import java.util.UUID;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -76,6 +80,39 @@ public class DatabaseBlobStorageTest extends ServiceTestBase implements BlobStor
   @Override
   public void testUpdatesWithPut() {
     BlobStorageTestShared.super.testUpdatesWithPut();
+  }
+
+  @Test
+  public void getStoredBlobPreservesPermanentRetention() {
+    String name = "permanent-" + UUID.randomUUID();
+    byte[] content = "permanent-content".getBytes(StandardCharsets.UTF_8);
+    databaseBlobStorage.put(name, content, Retention.PERMANENT);
+
+    assertThat(databaseBlobStorage.getStoredBlob(name))
+        .hasValueSatisfying(
+            storedBlob -> {
+              assertThat(storedBlob.content()).containsExactly(content);
+              assertThat(storedBlob.retention()).isEqualTo(Retention.PERMANENT);
+            });
+  }
+
+  @Test
+  public void getStoredBlobPreservesTemporaryRetention() {
+    String name = "temporary-" + UUID.randomUUID();
+    byte[] content = "temporary-content".getBytes(StandardCharsets.UTF_8);
+    databaseBlobStorage.put(name, content, Retention.MIN_1_DAY);
+
+    assertThat(databaseBlobStorage.getStoredBlob(name))
+        .hasValueSatisfying(
+            storedBlob -> {
+              assertThat(storedBlob.content()).containsExactly(content);
+              assertThat(storedBlob.retention()).isEqualTo(Retention.MIN_1_DAY);
+            });
+  }
+
+  @Test
+  public void getStoredBlobIsEmptyWhenMissing() {
+    assertThat(databaseBlobStorage.getStoredBlob("missing-" + UUID.randomUUID())).isEmpty();
   }
 
   @Test

@@ -3,6 +3,7 @@ package com.box.l10n.mojito.service.blobstorage;
 import com.box.l10n.mojito.service.blobstorage.azure.AzureBlobStorage;
 import com.box.l10n.mojito.service.blobstorage.database.DatabaseBlobStorage;
 import com.box.l10n.mojito.service.blobstorage.s3.S3BlobStorage;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
@@ -13,16 +14,19 @@ public class BlobStorageRouter {
   ObjectProvider<DatabaseBlobStorage> databaseBlobStorage;
   ObjectProvider<S3BlobStorage> s3BlobStorage;
   ObjectProvider<AzureBlobStorage> azureBlobStorage;
+  MeterRegistry meterRegistry;
 
   public BlobStorageRouter(
       BlobStorageConfigurationProperties blobStorageConfigurationProperties,
       ObjectProvider<DatabaseBlobStorage> databaseBlobStorage,
       ObjectProvider<S3BlobStorage> s3BlobStorage,
-      ObjectProvider<AzureBlobStorage> azureBlobStorage) {
+      ObjectProvider<AzureBlobStorage> azureBlobStorage,
+      MeterRegistry meterRegistry) {
     this.blobStorageConfigurationProperties = blobStorageConfigurationProperties;
     this.databaseBlobStorage = databaseBlobStorage;
     this.s3BlobStorage = s3BlobStorage;
     this.azureBlobStorage = azureBlobStorage;
+    this.meterRegistry = meterRegistry;
   }
 
   public BlobStorage getBlobStorage(StructuredBlobStorage.Prefix prefix) {
@@ -38,6 +42,11 @@ public class BlobStorageRouter {
       case DATABASE -> getRequiredBlobStorage(storageType, databaseBlobStorage);
       case S3 -> getRequiredBlobStorage(storageType, s3BlobStorage);
       case AZURE -> getRequiredBlobStorage(storageType, azureBlobStorage);
+      case AZURE_WITH_DATABASE_FALLBACK ->
+          new AzureDatabaseFallbackBlobStorage(
+              getRequiredBlobStorage(BlobStorageType.AZURE, azureBlobStorage),
+              getRequiredBlobStorage(BlobStorageType.DATABASE, databaseBlobStorage),
+              meterRegistry);
     };
   }
 

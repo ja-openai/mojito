@@ -5,6 +5,8 @@ import static org.mockito.Mockito.mock;
 
 import com.azure.storage.blob.BlobContainerClient;
 import com.box.l10n.mojito.retry.DataIntegrityViolationExceptionRetryTemplate;
+import com.box.l10n.mojito.service.blobstorage.AzureDatabaseFallbackBlobStorage;
+import com.box.l10n.mojito.service.blobstorage.BlobStorage;
 import com.box.l10n.mojito.service.blobstorage.BlobStorageConfiguration;
 import com.box.l10n.mojito.service.blobstorage.BlobStorageConfigurationProperties;
 import com.box.l10n.mojito.service.blobstorage.BlobStorageRouter;
@@ -44,9 +46,50 @@ public class AzureBlobStorageConfigurationTest {
         .withPropertyValues(
             "l10n.azure.blob-storage.enabled=true", "l10n.blob-storage.default-type=azure")
         .run(
-            context ->
-                assertThat(context.getBean("azureBlobStorage"))
-                    .isInstanceOf(AzureBlobStorage.class));
+            context -> {
+              assertThat(context.getBean("azureBlobStorage")).isInstanceOf(AzureBlobStorage.class);
+              assertThat(context).doesNotHaveBean(DatabaseBlobStorage.class);
+            });
+  }
+
+  @Test
+  public void testAzureFallbackDefaultLoadsAzureAndDatabaseBackends() {
+    applicationContextRunner
+        .withPropertyValues(
+            "l10n.azure.blob-storage.enabled=true",
+            "l10n.blob-storage.default-type=azure-with-database-fallback")
+        .run(
+            context -> {
+              assertThat(context.getBean("azureBlobStorage")).isInstanceOf(AzureBlobStorage.class);
+              assertThat(context.getBean("databaseBlobStorage"))
+                  .isInstanceOf(DatabaseBlobStorage.class);
+              assertThat(context.getBean(BlobStorage.class))
+                  .isInstanceOf(AzureDatabaseFallbackBlobStorage.class);
+              assertThat(context.getBean(BlobStorageConfigurationProperties.class).getDefaultType())
+                  .isEqualTo(BlobStorageType.AZURE_WITH_DATABASE_FALLBACK);
+            });
+  }
+
+  @Test
+  public void testAzureFallbackPrefixLoadsAzureAndDatabaseBackends() {
+    applicationContextRunner
+        .withPropertyValues(
+            "l10n.azure.blob-storage.enabled=true",
+            "l10n.blob-storage.default-type=azure",
+            "l10n.blob-storage.routing.prefixes.pollable-task=azure-with-database-fallback")
+        .run(
+            context -> {
+              assertThat(context.getBean("azureBlobStorage")).isInstanceOf(AzureBlobStorage.class);
+              assertThat(context.getBean("databaseBlobStorage"))
+                  .isInstanceOf(DatabaseBlobStorage.class);
+              assertThat(
+                      context
+                          .getBean(BlobStorageRouter.class)
+                          .getBlobStorage(
+                              com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix
+                                  .POLLABLE_TASK))
+                  .isInstanceOf(AzureDatabaseFallbackBlobStorage.class);
+            });
   }
 
   @Test

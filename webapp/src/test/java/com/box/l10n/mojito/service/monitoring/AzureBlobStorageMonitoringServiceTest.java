@@ -92,6 +92,25 @@ public class AzureBlobStorageMonitoringServiceTest {
   }
 
   @Test
+  public void reportsAzureDatabaseFallbackRoute() {
+    enableAzure();
+    when(blobContainerClient.exists()).thenReturn(true);
+    blobStorageProperties
+        .getRouting()
+        .getPrefixes()
+        .put("pollable-task", BlobStorageType.AZURE_WITH_DATABASE_FALLBACK);
+
+    AzureStorageSnapshot snapshot = service.getStatus();
+
+    assertThat(snapshot.routes())
+        .anySatisfy(
+            route -> {
+              assertThat(route.prefix()).isEqualTo("pollable_task");
+              assertThat(route.backend()).isEqualTo("azure_with_database_fallback");
+            });
+  }
+
+  @Test
   public void reportsContainerFailureWithoutThrowing() {
     enableAzure();
     when(blobContainerClient.exists()).thenThrow(new IllegalStateException("unavailable"));

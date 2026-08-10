@@ -66,6 +66,16 @@ public class ImageServiceConfigurationTest {
   }
 
   @Test
+  public void compositeImagePrefixRoutePreservesImageTableFallback() {
+    applicationContextRunner
+        .withPropertyValues("l10n.blob-storage.routing.prefixes.image=azure-with-database-fallback")
+        .run(
+            context ->
+                assertThat(context.getBean(ImageService.class))
+                    .isInstanceOf(BlobStorageFallbackImageService.class));
+  }
+
+  @Test
   public void remoteDefaultAutomaticallyEnablesDatabaseFallback() {
     applicationContextRunner
         .withPropertyValues("l10n.blob-storage.default-type=azure")

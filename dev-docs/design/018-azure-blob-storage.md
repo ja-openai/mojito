@@ -2,11 +2,13 @@
 
 ## Summary
 
-Mojito now has three `BlobStorage` implementations:
+Mojito now has four `BlobStorage` implementations:
 
 - `DatabaseBlobStorage`: default implementation that stores blob bytes in the `mblob` table.
 - `S3BlobStorage`: stores blobs in S3 under `l10n.blob-storage.s3.prefix`.
 - `AzureBlobStorage`: stores blobs in Azure Blob Storage under `l10n.blob-storage.azure.prefix`.
+- `AzureDatabaseFallbackBlobStorage`: writes to Azure and backfills missing Azure objects from
+  existing `mblob` rows on read.
 
 ## Behavior comparison
 
@@ -51,6 +53,28 @@ l10n.blob-storage.routing.prefixes.image=azure
 ```
 
 `StructuredBlobStorage` uses semantic prefixes, not repository shape, to choose a backend. This lets control-plane data such as `pollable-task` remain DB-backed while large artifact-like prefixes use Azure or S3.
+
+Migration fallback is opt-in through a composite backend. Route an individual prefix to it while
+moving existing objects away from MySQL:
+
+```properties
+l10n.blob-storage.routing.prefixes.pollable-task=azure-with-database-fallback
+```
+
+Alternatively, set `l10n.blob-storage.default-type=azure-with-database-fallback` to use it for every
+prefix without an explicit route. The composite initializes both Azure and database storage, reads
+Azure first, and checks the same full object name in the legacy `mblob` table only when Azure
+reports the object missing. When a legacy object exists, its string or binary contents are written
+to Azure with the original temporary or permanent retention policy before being returned. Future
+reads then hit Azure directly. Provider read or backfill errors propagate; normal writes, deletes,
+and existence checks remain Azure-only. Switch migrated routes to plain `azure` after the legacy
+data is no longer needed to avoid a MySQL lookup for every missing remote object.
+
+`AzureDatabaseFallbackBlobStorage.read` counts migration reads by bounded semantic `prefix`,
+`format`, and `result` tags. Results distinguish `azure_hit`, `database_hit`, `miss`,
+`azure_error`, `database_error`, and `backfill_error`. Text-unit DTO caches also expose
+`TextUnitDTOsCacheBlobStorage.lookup` with `format={json|smile}` and `result={hit|miss}` to measure
+logical cache reuse independently from migration progress.
 
 `l10n.blob-storage.default-type` selects the backend for prefixes without an explicit route.
 The old `l10n.blob-storage.type` setting remains supported temporarily for existing deployments,

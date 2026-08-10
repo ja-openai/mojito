@@ -8,6 +8,7 @@ import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.google.common.collect.ImmutableList;
 import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,9 +24,13 @@ import org.springframework.stereotype.Component;
     matchIfMissing = true)
 class TextUnitDTOsCacheBlobStorage {
 
+  static final String CACHE_LOOKUP_METRIC = "TextUnitDTOsCacheBlobStorage.lookup";
+
   static Logger logger = LoggerFactory.getLogger(TextUnitDTOsCacheBlobStorage.class);
 
   @Autowired StructuredBlobStorage structuredBlobStorage;
+
+  @Autowired MeterRegistry meterRegistry;
 
   @Autowired
   @Qualifier("fail_on_unknown_properties_false")
@@ -44,7 +49,16 @@ class TextUnitDTOsCacheBlobStorage {
   public Optional<ImmutableList<TextUnitDTO>> getTextUnitDTOs(Long assetId, Long localeId) {
     logger.debug(
         "Get TextUnitDTOs from Blob Storage for assetId: {}, localeId: {}", assetId, localeId);
-    return getTextUnitsFromCache(assetId, localeId);
+    Optional<ImmutableList<TextUnitDTO>> textUnitDTOs = getTextUnitsFromCache(assetId, localeId);
+    meterRegistry
+        .counter(
+            CACHE_LOOKUP_METRIC,
+            "format",
+            getFormat(),
+            "result",
+            textUnitDTOs.isPresent() ? "hit" : "miss")
+        .increment();
+    return textUnitDTOs;
   }
 
   @Timed("TextUnitDTOsCacheBlobStorage.putTextUnitDTOs")
@@ -63,6 +77,10 @@ class TextUnitDTOsCacheBlobStorage {
 
   String getName(Long assetId, Long localeId) {
     return "asset/" + assetId + "/locale/" + localeId;
+  }
+
+  String getFormat() {
+    return "json";
   }
 
   ImmutableList<TextUnitDTO> convertToListOrEmptyList(String s) {
