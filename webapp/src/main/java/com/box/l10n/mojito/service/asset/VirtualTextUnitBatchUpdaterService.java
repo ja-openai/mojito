@@ -3,6 +3,7 @@ package com.box.l10n.mojito.service.asset;
 import static com.box.l10n.mojito.service.asset.VirtualAssetService.logger;
 
 import com.box.l10n.mojito.entity.Asset;
+import com.box.l10n.mojito.entity.AssetExtraction;
 import com.box.l10n.mojito.entity.AssetTextUnit;
 import com.box.l10n.mojito.entity.AssetTextUnitToTMTextUnit;
 import com.box.l10n.mojito.entity.PluralForm;
@@ -25,6 +26,7 @@ import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
 import com.box.l10n.mojito.service.tm.textunitdtocache.UpdateType;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Iterables;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -114,6 +116,10 @@ public class VirtualTextUnitBatchUpdaterService {
     if (replace) {
       deleteOldAssetTextUnits(md5ToTextUnitDTOs, md5ToVirtualTextUnits);
     }
+
+    AssetExtraction assetExtraction = asset.getLastSuccessfulAssetExtraction();
+    assetExtraction.setLastModifiedDate(ZonedDateTime.now());
+    assetExtractionRepository.save(assetExtraction);
   }
 
   void performLeveraging(
