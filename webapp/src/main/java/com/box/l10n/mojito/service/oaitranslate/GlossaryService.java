@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.oaitranslate;
 
 import com.box.l10n.mojito.entity.Asset;
+import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.glossary.Glossary;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermEvidence;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
@@ -8,11 +9,19 @@ import com.box.l10n.mojito.service.glossary.GlossaryRepository;
 import com.box.l10n.mojito.service.glossary.GlossaryStorageService;
 import com.box.l10n.mojito.service.glossary.GlossaryTermEvidenceRepository;
 import com.box.l10n.mojito.service.glossary.GlossaryTermMetadataRepository;
+import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.box.l10n.mojito.service.tm.search.UsedFilter;
+import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
+import com.box.l10n.mojito.service.tm.textunitdtocache.UpdateType;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import io.micrometer.core.instrument.MeterRegistry;
+import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -22,6 +31,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -32,12 +43,22 @@ public class GlossaryService {
   /** logger */
   static Logger logger = LoggerFactory.getLogger(GlossaryService.class);
 
+  static final String CACHE_LOOKUP_METRIC = "GlossaryService.cache.lookup";
+  static final String CACHE_LOAD_DURATION_METRIC = "GlossaryService.cache.loadDuration";
+  static final int MAX_CACHED_GLOSSARIES = 128;
+  static final Duration CACHE_TTL = Duration.ofSeconds(30);
+
   TextUnitSearcher textUnitSearcher;
   GlossaryRepository glossaryRepository;
   GlossaryStorageService glossaryStorageService;
   GlossaryTermMetadataRepository glossaryTermMetadataRepository;
   GlossaryTermEvidenceRepository glossaryTermEvidenceRepository;
   RepositoryRepository repositoryRepository;
+  private final TextUnitDTOsCacheService textUnitDTOsCacheService;
+  private final LocaleService localeService;
+  private final MeterRegistry meterRegistry;
+  private final Cache<GlossaryCacheKey, GlossaryTrie> glossaryTrieCache =
+      Caffeine.newBuilder().maximumSize(MAX_CACHED_GLOSSARIES).expireAfterWrite(CACHE_TTL).build();
 
   public GlossaryService(
       TextUnitSearcher textUnitSearcher,
@@ -45,13 +66,19 @@ public class GlossaryService {
       GlossaryStorageService glossaryStorageService,
       GlossaryTermMetadataRepository glossaryTermMetadataRepository,
       GlossaryTermEvidenceRepository glossaryTermEvidenceRepository,
-      RepositoryRepository repositoryRepository) {
+      RepositoryRepository repositoryRepository,
+      TextUnitDTOsCacheService textUnitDTOsCacheService,
+      LocaleService localeService,
+      MeterRegistry meterRegistry) {
     this.textUnitSearcher = textUnitSearcher;
     this.glossaryRepository = glossaryRepository;
     this.glossaryStorageService = glossaryStorageService;
     this.glossaryTermMetadataRepository = glossaryTermMetadataRepository;
     this.glossaryTermEvidenceRepository = glossaryTermEvidenceRepository;
     this.repositoryRepository = repositoryRepository;
+    this.textUnitDTOsCacheService = textUnitDTOsCacheService;
+    this.localeService = localeService;
+    this.meterRegistry = meterRegistry;
   }
 
   /**
@@ -71,7 +98,9 @@ public class GlossaryService {
       return loadGlossaryTrieForGlossaries(List.of(glossary), bcp47Locale);
     }
 
-    return loadGlossaryTrieForRepository(null, glossaryRepositoryName, bcp47Locale);
+    return getCachedGlossaryTrie(
+        GlossaryCacheKey.forRepository(glossaryRepositoryName, bcp47Locale),
+        () -> loadGlossaryTrieForRepository(null, glossaryRepositoryName, bcp47Locale));
   }
 
   public GlossaryTrie loadLinkedGlossaryTrieForLocale(Long repositoryId, String bcp47Locale) {
@@ -137,13 +166,63 @@ public class GlossaryService {
 
   private GlossaryTrie loadGlossaryTrieForGlossaries(
       List<Glossary> glossaries, String bcp47Locale) {
-    GlossaryTrie glossaryTrie = new GlossaryTrie();
-    for (Glossary glossary : glossaries) {
-      loadGlossaryTrieForRepository(
-          glossaryTrie, glossary, glossary.getBackingRepository().getName(), bcp47Locale);
-    }
+    return getCachedGlossaryTrie(
+        GlossaryCacheKey.forGlossaries(glossaries, bcp47Locale),
+        () -> {
+          GlossaryTrie glossaryTrie = new GlossaryTrie();
+          for (Glossary glossary : glossaries) {
+            loadGlossaryTrieForRepository(
+                glossaryTrie, glossary, glossary.getBackingRepository().getName(), bcp47Locale);
+          }
+          return glossaryTrie;
+        });
+  }
+
+  private GlossaryTrie getCachedGlossaryTrie(
+      GlossaryCacheKey cacheKey, Supplier<GlossaryTrie> glossaryTrieLoader) {
+    AtomicBoolean loaded = new AtomicBoolean();
+    GlossaryTrie glossaryTrie =
+        glossaryTrieCache.get(
+            cacheKey,
+            ignored -> {
+              loaded.set(true);
+              return meterRegistry
+                  .timer(CACHE_LOAD_DURATION_METRIC, "scope", cacheKey.scope())
+                  .record(glossaryTrieLoader);
+            });
+    meterRegistry
+        .counter(
+            CACHE_LOOKUP_METRIC, "scope", cacheKey.scope(), "result", loaded.get() ? "miss" : "hit")
+        .increment();
     return glossaryTrie;
   }
+
+  private record GlossaryCacheKey(
+      List<GlossaryConfiguration> glossaryConfigurations,
+      String repositoryName,
+      String bcp47Locale) {
+
+    private static GlossaryCacheKey forGlossaries(List<Glossary> glossaries, String bcp47Locale) {
+      return new GlossaryCacheKey(
+          glossaries.stream()
+              .map(
+                  glossary ->
+                      new GlossaryConfiguration(glossary.getId(), glossary.getLastModifiedDate()))
+              .toList(),
+          null,
+          bcp47Locale);
+    }
+
+    private static GlossaryCacheKey forRepository(String repositoryName, String bcp47Locale) {
+      return new GlossaryCacheKey(List.of(), repositoryName, bcp47Locale);
+    }
+
+    private String scope() {
+      return glossaryConfigurations.isEmpty() ? "legacy_repository" : "managed";
+    }
+  }
+
+  private record GlossaryConfiguration(Long glossaryId, ZonedDateTime lastModifiedDate) {}
 
   private GlossaryTrie loadGlossaryTrieForRepository(
       Glossary glossary, String repositoryName, String bcp47Locale) {
@@ -154,12 +233,15 @@ public class GlossaryService {
       GlossaryTrie glossaryTrie, Glossary glossary, String repositoryName, String bcp47Locale) {
     Asset canonicalAsset =
         glossary == null ? null : glossaryStorageService.ensureCanonicalAsset(glossary);
+    Locale sourceLocale =
+        glossary == null ? null : glossary.getBackingRepository().getSourceLocale();
     List<TextUnitDTO> textUnitDTOForGlossary =
-        getTextUnitDTOForGlossary(canonicalAsset, repositoryName, bcp47Locale);
+        getTextUnitDTOForGlossary(canonicalAsset, sourceLocale, repositoryName, bcp47Locale);
     Map<String, TextUnitDTO> localizedTextUnitByTermKey =
         canonicalAsset == null
             ? Map.of()
-            : getLocalizedTextUnitByTermKey(canonicalAsset, bcp47Locale);
+            : getLocalizedTextUnitByTermKey(
+                canonicalAsset, sourceLocale, bcp47Locale, textUnitDTOForGlossary);
     Map<Long, GlossaryTermMetadata> metadataByTmTextUnitId =
         getMetadataByTmTextUnitId(glossary, textUnitDTOForGlossary);
     Map<Long, List<GlossaryEvidence>> evidenceByTmTextUnitId =
@@ -227,12 +309,16 @@ public class GlossaryService {
    * <p>A global DNT for example just need an entry for English.
    */
   List<TextUnitDTO> getTextUnitDTOForGlossary(String repositoryName, String bcp47Locale) {
-    return getTextUnitDTOForGlossary(null, repositoryName, bcp47Locale);
+    return getTextUnitDTOForGlossary(null, null, repositoryName, bcp47Locale);
   }
 
   List<TextUnitDTO> getTextUnitDTOForGlossary(
-      Asset canonicalAsset, String repositoryName, String bcp47Locale) {
+      Asset canonicalAsset, Locale sourceLocale, String repositoryName, String bcp47Locale) {
     if (canonicalAsset != null) {
+      if (sourceLocale != null && sourceLocale.getId() != null) {
+        return getCachedAssetTextUnits(canonicalAsset, sourceLocale, true);
+      }
+
       TextUnitSearcherParameters parameters = new TextUnitSearcherParameters();
       parameters.setAssetId(canonicalAsset.getId());
       parameters.setUsedFilter(UsedFilter.USED);
@@ -251,15 +337,43 @@ public class GlossaryService {
   }
 
   private Map<String, TextUnitDTO> getLocalizedTextUnitByTermKey(
-      Asset canonicalAsset, String bcp47Locale) {
+      Asset canonicalAsset,
+      Locale sourceLocale,
+      String bcp47Locale,
+      List<TextUnitDTO> sourceTextUnits) {
+    Locale targetLocale = localeService.findByBcp47Tag(bcp47Locale);
+    if (targetLocale != null && targetLocale.getId() != null) {
+      boolean isRootLocale =
+          sourceLocale != null && targetLocale.getId().equals(sourceLocale.getId());
+      if (isRootLocale) {
+        return indexTextUnitsByTermKey(sourceTextUnits);
+      }
+      return indexTextUnitsByTermKey(
+          getCachedAssetTextUnits(canonicalAsset, targetLocale, isRootLocale));
+    }
+
     TextUnitSearcherParameters parameters = new TextUnitSearcherParameters();
     parameters.setAssetId(canonicalAsset.getId());
     parameters.setUsedFilter(UsedFilter.USED);
     parameters.setLocaleTags(List.of(bcp47Locale));
     parameters.setRootLocaleExcluded(false);
 
+    return indexTextUnitsByTermKey(textUnitSearcher.search(parameters));
+  }
+
+  private List<TextUnitDTO> getCachedAssetTextUnits(
+      Asset asset, Locale locale, boolean isRootLocale) {
+    return textUnitDTOsCacheService
+        .getTextUnitDTOsForAssetAndLocale(
+            asset.getId(), locale.getId(), isRootLocale, UpdateType.ALWAYS)
+        .stream()
+        .filter(TextUnitDTO::isUsed)
+        .toList();
+  }
+
+  private Map<String, TextUnitDTO> indexTextUnitsByTermKey(List<TextUnitDTO> textUnits) {
     Map<String, TextUnitDTO> textUnitByTermKey = new LinkedHashMap<>();
-    for (TextUnitDTO textUnitDTO : textUnitSearcher.search(parameters)) {
+    for (TextUnitDTO textUnitDTO : textUnits) {
       textUnitByTermKey.putIfAbsent(textUnitDTO.getName(), textUnitDTO);
     }
     return textUnitByTermKey;
