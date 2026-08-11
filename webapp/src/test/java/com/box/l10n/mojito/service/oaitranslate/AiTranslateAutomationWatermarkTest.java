@@ -94,12 +94,8 @@ public class AiTranslateAutomationWatermarkTest extends ServiceTestBase {
       return true;
     }
 
-    List<Long> localeIds =
-        data.repository.getRepositoryLocales().stream()
-            .map(repositoryLocale -> repositoryLocale.getLocale().getId())
-            .toList();
     return tmTextUnitCurrentVariantRepository
-        .findFirstChangeSince(data.tm.getId(), localeIds, lastCompletedRunStart)
+        .findFirstChangeSince(data.tm.getId(), lastCompletedRunStart)
         .isPresent();
   }
 

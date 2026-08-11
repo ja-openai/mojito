@@ -2,7 +2,6 @@ package com.box.l10n.mojito.service.tm;
 
 import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import java.time.ZonedDateTime;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -32,13 +31,11 @@ public interface TMTextUnitCurrentVariantRepository
           select 1
           from tm_text_unit_current_variant
           where tm_id = ?1
-            and locale_id in (?2)
-            and last_modified_date > ?3
+            and last_modified_date > ?2
           limit 1
           """,
       nativeQuery = true)
-  Optional<Integer> findFirstChangeSince(
-      Long tmId, Collection<Long> localeIds, ZonedDateTime lastModifiedDate);
+  Optional<Integer> findFirstChangeSince(Long tmId, ZonedDateTime lastModifiedDate);
 
   @Query(
       """

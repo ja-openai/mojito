@@ -209,12 +209,8 @@ public class AiTranslateAutomationSchedulerService {
       return true;
     }
 
-    List<Long> localeIds =
-        repository.getRepositoryLocales().stream()
-            .map(repositoryLocale -> repositoryLocale.getLocale().getId())
-            .toList();
     return tmTextUnitCurrentVariantRepository
-        .findFirstChangeSince(repository.getTm().getId(), localeIds, lastCompletedRunStart)
+        .findFirstChangeSince(repository.getTm().getId(), lastCompletedRunStart)
         .isPresent();
   }
 

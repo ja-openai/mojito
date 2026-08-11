@@ -11,10 +11,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
-import com.box.l10n.mojito.entity.RepositoryLocale;
 import com.box.l10n.mojito.entity.TM;
 import com.box.l10n.mojito.service.oaitranslate.AiTranslateService.AiTranslateInput;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
@@ -25,7 +23,6 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -131,8 +128,7 @@ public class AiTranslateAutomationSchedulerServiceTest {
     ZonedDateTime lastCompletedRunStart = ZonedDateTime.now().minusHours(1);
     when(aiTranslateRunService.getLatestCompletedRunStarts(List.of(1L, 2L)))
         .thenReturn(Map.of(1L, lastCompletedRunStart, 2L, lastCompletedRunStart));
-    when(tmTextUnitCurrentVariantRepository.findFirstChangeSince(
-            eq(2L), anyCollection(), eq(lastCompletedRunStart)))
+    when(tmTextUnitCurrentVariantRepository.findFirstChangeSince(eq(2L), eq(lastCompletedRunStart)))
         .thenReturn(Optional.of(1));
 
     AiTranslateAutomationSchedulerService.RunResult result =
@@ -143,6 +139,8 @@ public class AiTranslateAutomationSchedulerServiceTest {
     verify(aiTranslateService).aiTranslateAsync(inputCaptor.capture(), anyString());
     assertEquals("repo-b", inputCaptor.getValue().repositoryName());
     verify(aiTranslateRunService).getLatestCompletedRunStarts(List.of(1L, 2L));
+    verify(tmTextUnitCurrentVariantRepository).findFirstChangeSince(1L, lastCompletedRunStart);
+    verify(tmTextUnitCurrentVariantRepository).findFirstChangeSince(2L, lastCompletedRunStart);
   }
 
   @Test
@@ -174,16 +172,6 @@ public class AiTranslateAutomationSchedulerServiceTest {
     TM tm = new TM();
     tm.setId(id);
     repository.setTm(tm);
-    RepositoryLocale rootLocale = new RepositoryLocale();
-    Locale root = new Locale();
-    root.setId(id * 10);
-    rootLocale.setLocale(root);
-    RepositoryLocale targetLocale = new RepositoryLocale();
-    Locale target = new Locale();
-    target.setId(id * 10 + 1);
-    targetLocale.setLocale(target);
-    targetLocale.setParentLocale(rootLocale);
-    repository.setRepositoryLocales(Set.of(rootLocale, targetLocale));
     return repository;
   }
 
