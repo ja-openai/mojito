@@ -13,13 +13,15 @@ import org.springframework.context.annotation.Profile;
 @Profile("!disablescheduling")
 public class DatabaseBlobStorageCleanupJob implements Job {
 
+  public static final String JOB_NAME = "jobDetailDatabaseBlobStorageCleanupJob";
+
   static Logger logger = LoggerFactory.getLogger(DatabaseBlobStorageCleanupJob.class);
 
-  @Autowired DatabaseBlobStorage databaseBlobStorage;
+  @Autowired DatabaseBlobCleanupService databaseBlobCleanupService;
 
   @Override
   public void execute(JobExecutionContext context) throws JobExecutionException {
     logger.debug("Cleanup expired blobs");
-    databaseBlobStorage.deleteExpired();
+    databaseBlobCleanupService.runIfEnabled();
   }
 }

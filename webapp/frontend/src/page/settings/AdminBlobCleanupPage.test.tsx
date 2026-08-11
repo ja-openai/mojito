@@ -5,23 +5,22 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  createBlobCleanupPolicy,
-  fetchBlobCleanupPolicies,
-  startBlobCleanupPolicy,
-} from '../../api/blob-cleanup-policies';
+  fetchBlobCleanupSettings,
+  startBlobCleanup,
+  stopBlobCleanup,
+  updateBlobCleanupSettings,
+} from '../../api/blob-cleanup';
 import { AdminBlobCleanupPage } from './AdminBlobCleanupPage';
 
 vi.mock('../../hooks/useUser', () => ({
   useUser: () => ({ role: 'ROLE_ADMIN' }),
 }));
 
-vi.mock('../../api/blob-cleanup-policies', () => ({
-  fetchBlobCleanupPolicies: vi.fn(),
-  createBlobCleanupPolicy: vi.fn(),
-  updateBlobCleanupPolicy: vi.fn(),
-  startBlobCleanupPolicy: vi.fn(),
-  stopBlobCleanupPolicy: vi.fn(),
-  deleteBlobCleanupPolicy: vi.fn(),
+vi.mock('../../api/blob-cleanup', () => ({
+  fetchBlobCleanupSettings: vi.fn(),
+  updateBlobCleanupSettings: vi.fn(),
+  startBlobCleanup: vi.fn(),
+  stopBlobCleanup: vi.fn(),
 }));
 
 function renderPage() {
@@ -38,17 +37,15 @@ function renderPage() {
   return { ...result, queryClient };
 }
 
-const policy = {
-  id: 7,
-  prefix: 'pollable_task/',
+const settings = {
   enabled: true,
-  retentionDays: 3,
-  batchSize: 250,
-  maxBatchesPerRun: 0,
+  batchSize: 500,
+  maxBatchesPerRun: 100,
   pauseMillis: 250,
   maxRetries: 5,
   status: 'DRAINED',
   lastStartedDate: null,
+  lastProgressDate: null,
   lastFinishedDate: null,
   lastDeletedCount: 1200,
   totalDeletedCount: 3400,
@@ -58,69 +55,107 @@ const policy = {
 describe('AdminBlobCleanupPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(fetchBlobCleanupPolicies).mockResolvedValue([policy]);
-    vi.mocked(startBlobCleanupPolicy).mockResolvedValue({ ...policy, status: 'QUEUED' });
-    vi.mocked(createBlobCleanupPolicy).mockResolvedValue(policy);
+    vi.mocked(fetchBlobCleanupSettings).mockResolvedValue(settings);
+    vi.mocked(startBlobCleanup).mockResolvedValue({ ...settings, status: 'QUEUED' });
+    vi.mocked(stopBlobCleanup).mockResolvedValue({
+      ...settings,
+      enabled: false,
+      status: 'STOPPED',
+    });
+    vi.mocked(updateBlobCleanupSettings).mockResolvedValue(settings);
   });
 
-  it('shows policy controls and accumulated cleanup progress', async () => {
+  it('shows global cleanup controls and accumulated progress', async () => {
     renderPage();
 
     expect(
-      await screen.findByRole('region', { name: 'pollable_task/ policy' }),
+      await screen.findByRole('region', { name: 'Global database blob cleanup' }),
     ).toBeInTheDocument();
     expect(screen.getByText('1,200')).toBeInTheDocument();
     expect(screen.getByText('3,400')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Start now' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Run now' })).toBeEnabled();
+    expect(screen.queryByLabelText(/prefix/i)).not.toBeInTheDocument();
   });
 
-  it('starts a saved cleanup policy immediately', async () => {
+  it('enables or disables cleanup from the admin page', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(await screen.findByRole('button', { name: 'Start now' }));
+    await user.click(await screen.findByRole('checkbox', { name: 'Enabled' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
-      expect(startBlobCleanupPolicy).toHaveBeenCalledWith(7);
+      expect(updateBlobCleanupSettings).toHaveBeenCalledWith({
+        enabled: false,
+        batchSize: 500,
+        maxBatchesPerRun: 100,
+        pauseMillis: 250,
+        maxRetries: 5,
+      });
     });
   });
 
-  it('preserves unsaved policy edits when cleanup progress refreshes', async () => {
+  it('starts global cleanup immediately', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Run now' }));
+
+    await waitFor(() => {
+      expect(startBlobCleanup).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('preserves unsaved settings when cleanup progress refreshes', async () => {
     const user = userEvent.setup();
     const { queryClient } = renderPage();
     const batchSize = await screen.findByRole('spinbutton', { name: 'Batch size' });
 
     await user.clear(batchSize);
-    await user.type(batchSize, '500');
+    await user.type(batchSize, '750');
 
     act(() => {
-      queryClient.setQueryData(
-        ['blob-cleanup-policies'],
-        [{ ...policy, status: 'RUNNING', lastDeletedCount: 1300 }],
-      );
+      queryClient.setQueryData(['blob-cleanup'], {
+        ...settings,
+        status: 'RUNNING',
+        lastDeletedCount: 1300,
+      });
     });
 
     await screen.findByText('1,300');
-    expect(batchSize).toHaveValue(500);
+    expect(batchSize).toHaveValue(750);
   });
 
-  it('creates new policies disabled with conservative batch defaults', async () => {
+  it('stops an active cleanup run', async () => {
+    vi.mocked(fetchBlobCleanupSettings).mockResolvedValue({
+      ...settings,
+      status: 'RUNNING',
+      lastProgressDate: new Date().toISOString(),
+    });
     const user = userEvent.setup();
-    vi.mocked(fetchBlobCleanupPolicies).mockResolvedValue([]);
     renderPage();
 
-    await user.click(await screen.findByRole('button', { name: 'Add policy' }));
+    await user.click(await screen.findByRole('button', { name: 'Stop' }));
 
     await waitFor(() => {
-      expect(createBlobCleanupPolicy).toHaveBeenCalledWith({
-        prefix: 'pollable_task/',
-        enabled: false,
-        retentionDays: 3,
-        batchSize: 250,
-        maxBatchesPerRun: 0,
-        pauseMillis: 250,
-        maxRetries: 5,
-      });
+      expect(stopBlobCleanup).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('identifies and permits restarting stalled cleanup runs', async () => {
+    vi.mocked(fetchBlobCleanupSettings).mockResolvedValue({
+      ...settings,
+      status: 'RUNNING',
+      lastProgressDate: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText('STALLED')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Restart stalled run' }));
+
+    await waitFor(() => {
+      expect(startBlobCleanup).toHaveBeenCalledOnce();
     });
   });
 });

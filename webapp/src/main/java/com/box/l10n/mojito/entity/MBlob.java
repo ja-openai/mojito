@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
+import java.time.ZonedDateTime;
 
 /**
  * Storage for blobs with optional expiration.
@@ -14,7 +15,10 @@ import jakarta.persistence.Table;
 @Entity
 @Table(
     name = "mblob",
-    indexes = {@Index(name = "UK__MBLOB__NAME", columnList = "name", unique = true)})
+    indexes = {
+      @Index(name = "UK__MBLOB__NAME", columnList = "name", unique = true),
+      @Index(name = "I__MBLOB__EXPIRATION_DATE_ID", columnList = "expiration_date,id")
+    })
 public class MBlob extends SettableAuditableEntity {
 
   @Column(name = "name")
@@ -26,6 +30,14 @@ public class MBlob extends SettableAuditableEntity {
 
   @Column(name = "expire_after_seconds")
   private Long expireAfterSeconds;
+
+  @Column(
+      name = "expiration_date",
+      insertable = false,
+      updatable = false,
+      columnDefinition =
+          "datetime generated always as (timestampadd(SECOND, expire_after_seconds, created_date))")
+  private ZonedDateTime expirationDate;
 
   public String getName() {
     return name;
@@ -53,5 +65,13 @@ public class MBlob extends SettableAuditableEntity {
 
   public void setExpireAfterSeconds(long expireAfterSeconds) {
     this.expireAfterSeconds = expireAfterSeconds;
+  }
+
+  public void clearExpiration() {
+    expireAfterSeconds = null;
+  }
+
+  public ZonedDateTime getExpirationDate() {
+    return expirationDate;
   }
 }

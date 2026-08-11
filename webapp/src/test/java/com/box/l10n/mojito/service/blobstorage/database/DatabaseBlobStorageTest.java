@@ -116,6 +116,62 @@ public class DatabaseBlobStorageTest extends ServiceTestBase implements BlobStor
   }
 
   @Test
+  public void generatedColumnTracksExpiration() {
+    String name = "pollable_task/generated-" + UUID.randomUUID();
+    databaseBlobStorage.put(
+        name, "temporary".getBytes(StandardCharsets.UTF_8), Retention.MIN_1_DAY);
+
+    MBlob blob = mBlobRepository.findByName(name).orElseThrow();
+
+    assertThat(blob.getExpirationDate()).isNotNull();
+    assertThat(blob.getExpirationDate().toInstant())
+        .isEqualTo(blob.getCreatedDate().plusSeconds(blob.getExpireAfterSeconds()).toInstant());
+  }
+
+  @Test
+  public void deletesExpiredBlobsAcrossEveryPrefix() {
+    String pollableTaskName = "pollable_task/expired-" + UUID.randomUUID();
+    String aiReportName = "ai_transalate_no_batch_output/expired-" + UUID.randomUUID();
+    String searchName = "text_unit_ws_search_async/expired-" + UUID.randomUUID();
+    String permanentName = "pollable_task/permanent-" + UUID.randomUUID();
+    saveExpiredBlob(pollableTaskName);
+    saveExpiredBlob(aiReportName);
+    saveExpiredBlob(searchName);
+    databaseBlobStorage.put(permanentName, new byte[] {1}, Retention.PERMANENT);
+
+    try {
+      databaseBlobStorage.deleteExpired();
+
+      assertThat(mBlobRepository.findByName(pollableTaskName)).isEmpty();
+      assertThat(mBlobRepository.findByName(aiReportName)).isEmpty();
+      assertThat(mBlobRepository.findByName(searchName)).isEmpty();
+      assertThat(mBlobRepository.findByName(permanentName)).isPresent();
+    } finally {
+      mBlobRepository.findByName(pollableTaskName).ifPresent(mBlobRepository::delete);
+      mBlobRepository.findByName(aiReportName).ifPresent(mBlobRepository::delete);
+      mBlobRepository.findByName(searchName).ifPresent(mBlobRepository::delete);
+      mBlobRepository.findByName(permanentName).ifPresent(mBlobRepository::delete);
+    }
+  }
+
+  @Test
+  public void changingTemporaryBlobToPermanentClearsItsExpiration() {
+    String name = "pollable_task/permanent-" + UUID.randomUUID();
+    databaseBlobStorage.put(
+        name, "temporary".getBytes(StandardCharsets.UTF_8), Retention.MIN_1_DAY);
+    databaseBlobStorage.put(
+        name, "permanent".getBytes(StandardCharsets.UTF_8), Retention.PERMANENT);
+
+    MBlob blob = mBlobRepository.findByName(name).orElseThrow();
+
+    assertThat(blob.hasExpiration()).isFalse();
+    assertThat(blob.getExpirationDate()).isNull();
+    assertThat(databaseBlobStorage.getStoredBlob(name))
+        .hasValueSatisfying(
+            storedBlob -> assertThat(storedBlob.retention()).isEqualTo(Retention.PERMANENT));
+  }
+
+  @Test
   public void testCleanup() {
 
     ZonedDateTime now = ZonedDateTime.now();
@@ -152,5 +208,13 @@ public class DatabaseBlobStorageTest extends ServiceTestBase implements BlobStor
             > 0);
     assertTrue(
         meterRegistry.get(DatabaseBlobStorage.CLEANUP_DELETED_ROWS_METRIC).counter().count() > 0);
+  }
+
+  private void saveExpiredBlob(String name) {
+    MBlob blob = new MBlob();
+    blob.setCreatedDate(ZonedDateTime.now().minusDays(2));
+    blob.setExpireAfterSeconds(1L);
+    blob.setName(name);
+    mBlobRepository.saveAndFlush(blob);
   }
 }

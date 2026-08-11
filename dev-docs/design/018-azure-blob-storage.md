@@ -19,8 +19,8 @@ Mojito now has four `BlobStorage` implementations:
 | Delete | Deletes matching `mblob` row. | Deletes object. | Deletes blob if present. |
 | Exists | Looks up row by name. | Uses `doesObjectExist`. | Uses `BlobClient.exists`. |
 | Text encoding | Shared interface uses UTF-8. | Sets `text/plain` and UTF-8 encoding. | Sets `text/plain` and UTF-8 encoding. |
-| Retention marker | Stores `expire_after_seconds` for `MIN_1_DAY`. | Adds `retention=<Retention>` object tag. | Adds `retention=<Retention>` blob index tag. |
-| Cleanup | Internal Quartz cleanup job runs every 5 minutes. | External S3 lifecycle rule required. | External Azure lifecycle management rule required. |
+| Retention marker | Stores `expire_after_seconds` and exposes an indexed generated `expiration_date`. | Adds `retention=<Retention>` object tag. | Adds `retention=<Retention>` blob index tag. |
+| Cleanup | Admin-controlled bounded Quartz cleanup removes expired rows globally. | External S3 lifecycle rule required. | External Azure lifecycle management rule required. |
 
 ## Configuration
 
@@ -122,15 +122,33 @@ database-backed prefixes remain unchanged until explicitly reconfigured. Azure b
 unavailable is reported on the monitoring page without changing application readiness or silently
 falling back to MySQL.
 
+## Database-backed blob expiration
+
+`mblob` exposes one virtual generated `expiration_date` column, computed as
+`timestampadd(SECOND, expire_after_seconds, created_date)`. Permanent rows have a null expiration
+date. Existing rows become indexable without a large backfill transaction: adding the generated
+column uses MySQL's instant DDL, and its `(expiration_date, id)` index is built online with
+`ALGORITHM=INPLACE, LOCK=NONE`.
+
+The cleanup job owns expiration for every database-backed blob family. It selects only actually
+expired rows, without filtering by name or prefix, orders by expiration and id, and commits small
+bounded batches. Permanent blobs always have a null expiration date and are never deleted.
+
+Cleanup settings are persisted in `mblob_cleanup_settings` and managed from
+`/settings/system/blob-cleanup`; no deployment property or application restart is required to
+enable or disable the job. New deployments start with cleanup disabled until an administrator
+explicitly enables it. The same page configures batch size, maximum batches per run, inter-batch
+pause, and retry limits. Every committed batch updates **Last progress**; runs without progress
+for five minutes are marked stalled and can be explicitly restarted.
+
 ## Remaining gaps
 
-- Database-backed blobs can now be drained by admin-managed prefix cleanup policies under
-  `/settings/system/blob-cleanup`. Scheduling is opt-in, policies are disabled by default,
-  and policies delete only rows with a TTL,
-  use the existing `name` index in independently committed batches, and continue until the prefix
-  is drained unless an explicit batch cap or stop request is configured. MySQL skips locked rows
-  and retries transient lock conflicts. The policy worker is independent of the legacy generic
-  expired-blob cleanup job; keep the generic job disabled on large `mblob` tables.
+- Database-backed cleanup is disabled by default and must be explicitly enabled from the admin UI.
+  The worker uses `FOR UPDATE SKIP LOCKED` on MySQL, retries transient lock conflicts, commits every
+  batch independently, and records deletion progress. Legacy rows that were incorrectly written as
+  permanent remain permanent and require separately reviewed remediation.
 - Azure and S3 retention cleanup is not owned by Mojito. Operators must configure provider lifecycle rules that match `retention=MIN_1_DAY`; otherwise temporary blobs are retained indefinitely.
 - There is no live Azure integration test in the default suite. The unit tests cover request shape, not an actual Azure account/container.
-- Production deployments still need an explicit prefix policy. Recommended initial policy is to keep `pollable-task` in the database and route only large artifact-like prefixes to remote object storage.
+- Production deployments still need an explicit blob-storage routing policy. Recommended initial
+  routing keeps `pollable-task` in the database and moves only large artifact-like prefixes to
+  remote object storage.

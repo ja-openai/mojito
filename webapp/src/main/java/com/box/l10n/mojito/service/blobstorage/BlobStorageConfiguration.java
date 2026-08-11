@@ -20,7 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.annotation.Bean;
@@ -118,7 +117,7 @@ public class BlobStorageConfiguration {
           meterRegistry);
     }
 
-    @Bean(name = "jobDetailDatabaseBlobStorageCleanupJob")
+    @Bean(name = DatabaseBlobStorageCleanupJob.JOB_NAME)
     public JobDetailFactoryBean jobDetailExpiringBlobCleanup() {
       JobDetailFactoryBean jobDetailFactory = new JobDetailFactoryBean();
       jobDetailFactory.setJobClass(DatabaseBlobStorageCleanupJob.class);
@@ -128,13 +127,9 @@ public class BlobStorageConfiguration {
     }
 
     @Profile("!disablescheduling")
-    @ConditionalOnProperty(
-        name = "l10n.blob-storage.database.cleanup-enabled",
-        havingValue = "true",
-        matchIfMissing = true)
     @Bean
     public SimpleTriggerFactoryBean triggerExpiringBlobCleanup(
-        @Qualifier("jobDetailDatabaseBlobStorageCleanupJob") JobDetail job) {
+        @Qualifier(DatabaseBlobStorageCleanupJob.JOB_NAME) JobDetail job) {
       logger.info("Configure jobDetailDatabaseBlobStorageCleanupJob");
       SimpleTriggerFactoryBean trigger = new SimpleTriggerFactoryBean();
       trigger.setJobDetail(job);

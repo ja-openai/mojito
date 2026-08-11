@@ -6,29 +6,18 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 
 import {
-  type ApiBlobCleanupPolicy,
-  type ApiBlobCleanupPolicyUpdate,
-  createBlobCleanupPolicy,
-  deleteBlobCleanupPolicy,
-  fetchBlobCleanupPolicies,
-  startBlobCleanupPolicy,
-  stopBlobCleanupPolicy,
-  updateBlobCleanupPolicy,
-} from '../../api/blob-cleanup-policies';
+  type ApiBlobCleanupSettings,
+  type ApiBlobCleanupSettingsUpdate,
+  fetchBlobCleanupSettings,
+  startBlobCleanup,
+  stopBlobCleanup,
+  updateBlobCleanupSettings,
+} from '../../api/blob-cleanup';
 import { useUser } from '../../hooks/useUser';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
-const QUERY_KEY = ['blob-cleanup-policies'];
-
-const DEFAULT_POLICY: ApiBlobCleanupPolicyUpdate = {
-  prefix: 'pollable_task/',
-  enabled: false,
-  retentionDays: 3,
-  batchSize: 250,
-  maxBatchesPerRun: 0,
-  pauseMillis: 250,
-  maxRetries: 5,
-};
+const QUERY_KEY = ['blob-cleanup'];
+const STALE_PROGRESS_THRESHOLD_MS = 5 * 60 * 1000;
 
 function formatDate(value: string | null): string {
   if (!value) {
@@ -37,65 +26,60 @@ function formatDate(value: string | null): string {
   return new Date(value).toLocaleString();
 }
 
-type PolicyEditorProps = {
-  policy: ApiBlobCleanupPolicy;
-  onDelete: (id: number) => void;
-  onSave: (id: number, update: ApiBlobCleanupPolicyUpdate) => void;
-  onStart: (id: number) => void;
-  onStop: (id: number) => void;
+type CleanupEditorProps = {
+  settings: ApiBlobCleanupSettings;
   busy: boolean;
+  onSave: (update: ApiBlobCleanupSettingsUpdate) => void;
+  onStart: () => void;
+  onStop: () => void;
 };
 
-function PolicyEditor({ policy, onDelete, onSave, onStart, onStop, busy }: PolicyEditorProps) {
-  const savedPolicy = useMemo<ApiBlobCleanupPolicyUpdate>(
+function CleanupEditor({ settings, onSave, onStart, onStop, busy }: CleanupEditorProps) {
+  const savedSettings = useMemo<ApiBlobCleanupSettingsUpdate>(
     () => ({
-      prefix: policy.prefix,
-      enabled: policy.enabled,
-      retentionDays: policy.retentionDays,
-      batchSize: policy.batchSize,
-      maxBatchesPerRun: policy.maxBatchesPerRun,
-      pauseMillis: policy.pauseMillis,
-      maxRetries: policy.maxRetries,
+      enabled: settings.enabled,
+      batchSize: settings.batchSize,
+      maxBatchesPerRun: settings.maxBatchesPerRun,
+      pauseMillis: settings.pauseMillis,
+      maxRetries: settings.maxRetries,
     }),
     [
-      policy.prefix,
-      policy.enabled,
-      policy.retentionDays,
-      policy.batchSize,
-      policy.maxBatchesPerRun,
-      policy.pauseMillis,
-      policy.maxRetries,
+      settings.enabled,
+      settings.batchSize,
+      settings.maxBatchesPerRun,
+      settings.pauseMillis,
+      settings.maxRetries,
     ],
   );
-  const [draft, setDraft] = useState<ApiBlobCleanupPolicyUpdate>(savedPolicy);
+  const [draft, setDraft] = useState<ApiBlobCleanupSettingsUpdate>(savedSettings);
 
   useEffect(() => {
-    setDraft(savedPolicy);
-  }, [savedPolicy]);
+    setDraft(savedSettings);
+  }, [savedSettings]);
 
-  const running = policy.status === 'RUNNING' || policy.status === 'STOP_REQUESTED';
-  const dirty = JSON.stringify(draft) !== JSON.stringify(savedPolicy);
+  const lastProgressDate = settings.lastProgressDate ?? settings.lastStartedDate;
+  const stalled =
+    settings.status === 'RUNNING' &&
+    lastProgressDate !== null &&
+    Date.now() - new Date(lastProgressDate).getTime() > STALE_PROGRESS_THRESHOLD_MS;
+  const running =
+    !stalled && (settings.status === 'RUNNING' || settings.status === 'STOP_REQUESTED');
+  const displayedStatus = stalled ? 'STALLED' : settings.status;
+  const dirty = JSON.stringify(draft) !== JSON.stringify(savedSettings);
 
-  function setNumber(field: keyof ApiBlobCleanupPolicyUpdate, value: string) {
-    const parsed = Number(value);
-    setDraft((current) => ({ ...current, [field]: Number.isFinite(parsed) ? parsed : 0 }));
+  function setNumber(field: keyof ApiBlobCleanupSettingsUpdate, value: string) {
+    const parsed = Number.parseInt(value, 10);
+    setDraft((current) => ({ ...current, [field]: Number.isNaN(parsed) ? 0 : parsed }));
   }
 
   return (
-    <section className="settings-card blob-cleanup-policy" aria-label={`${policy.prefix} policy`}>
-      <div className="blob-cleanup-policy__header">
-        <label className="settings-field blob-cleanup-policy__prefix">
-          <span className="settings-field__label">Prefix</span>
-          <input
-            className="settings-input"
-            value={draft.prefix}
-            disabled={running || busy}
-            onChange={(event) => {
-              setDraft((current) => ({ ...current, prefix: event.target.value }));
-            }}
-          />
-        </label>
-        <label className="blob-cleanup-policy__enabled">
+    <section className="settings-card blob-cleanup" aria-label="Global database blob cleanup">
+      <div className="blob-cleanup__header">
+        <div>
+          <strong>Global expiration cleanup</strong>
+          <p>Deletes expired temporary blobs from every database-backed blob family.</p>
+        </div>
+        <label className="blob-cleanup__enabled">
           <input
             type="checkbox"
             checked={draft.enabled}
@@ -107,26 +91,13 @@ function PolicyEditor({ policy, onDelete, onSave, onStart, onStop, busy }: Polic
           Enabled
         </label>
         <span
-          className={`blob-cleanup-policy__status blob-cleanup-policy__status--${policy.status.toLowerCase()}`}
+          className={`blob-cleanup__status blob-cleanup__status--${displayedStatus.toLowerCase()}`}
         >
-          {policy.status.replace(/_/g, ' ')}
+          {displayedStatus.replace(/_/g, ' ')}
         </span>
       </div>
 
-      <div className="blob-cleanup-policy__fields">
-        <label className="settings-field">
-          <span className="settings-field__label">Retention days</span>
-          <input
-            className="settings-input"
-            type="number"
-            min={1}
-            value={draft.retentionDays}
-            disabled={busy}
-            onChange={(event) => {
-              setNumber('retentionDays', event.target.value);
-            }}
-          />
-        </label>
+      <div className="blob-cleanup__fields">
         <label className="settings-field">
           <span className="settings-field__label">Batch size</span>
           <input
@@ -142,28 +113,29 @@ function PolicyEditor({ policy, onDelete, onSave, onStart, onStop, busy }: Polic
           />
         </label>
         <label className="settings-field">
+          <span className="settings-field__label">Maximum batches per run</span>
+          <input
+            className="settings-input"
+            type="number"
+            min={1}
+            value={draft.maxBatchesPerRun}
+            disabled={busy}
+            onChange={(event) => {
+              setNumber('maxBatchesPerRun', event.target.value);
+            }}
+          />
+        </label>
+        <label className="settings-field">
           <span className="settings-field__label">Pause between batches (ms)</span>
           <input
             className="settings-input"
             type="number"
             min={0}
+            max={60000}
             value={draft.pauseMillis}
             disabled={busy}
             onChange={(event) => {
               setNumber('pauseMillis', event.target.value);
-            }}
-          />
-        </label>
-        <label className="settings-field">
-          <span className="settings-field__label">Maximum batches (0 = unlimited)</span>
-          <input
-            className="settings-input"
-            type="number"
-            min={0}
-            value={draft.maxBatchesPerRun}
-            disabled={busy}
-            onChange={(event) => {
-              setNumber('maxBatchesPerRun', event.target.value);
             }}
           />
         </label>
@@ -183,51 +155,48 @@ function PolicyEditor({ policy, onDelete, onSave, onStart, onStop, busy }: Polic
         </label>
       </div>
 
-      <div className="blob-cleanup-policy__progress">
+      <div className="blob-cleanup__progress">
         <div>
           <span>Last run</span>
-          <strong>{formatDate(policy.lastStartedDate)}</strong>
+          <strong>{formatDate(settings.lastStartedDate)}</strong>
+        </div>
+        <div>
+          <span>Last progress</span>
+          <strong>{formatDate(settings.lastProgressDate)}</strong>
         </div>
         <div>
           <span>Deleted this run</span>
-          <strong>{policy.lastDeletedCount.toLocaleString()}</strong>
+          <strong>{settings.lastDeletedCount.toLocaleString()}</strong>
         </div>
         <div>
           <span>Total deleted</span>
-          <strong>{policy.totalDeletedCount.toLocaleString()}</strong>
+          <strong>{settings.totalDeletedCount.toLocaleString()}</strong>
         </div>
         <div>
           <span>Finished</span>
-          <strong>{formatDate(policy.lastFinishedDate)}</strong>
+          <strong>{formatDate(settings.lastFinishedDate)}</strong>
         </div>
       </div>
 
-      {policy.lastError ? (
-        <p className="blob-cleanup-policy__error" role="alert">
-          {policy.lastError}
+      {settings.lastError ? (
+        <p className="blob-cleanup__error" role="alert">
+          {settings.lastError}
         </p>
       ) : null}
 
-      <div className="blob-cleanup-policy__actions">
+      <div className="blob-cleanup__actions">
         <button
           type="button"
           className="settings-button settings-button--primary"
           disabled={!dirty || busy}
           onClick={() => {
-            onSave(policy.id, draft);
+            onSave(draft);
           }}
         >
           Save
         </button>
         {running ? (
-          <button
-            type="button"
-            className="settings-button"
-            disabled={busy}
-            onClick={() => {
-              onStop(policy.id);
-            }}
-          >
+          <button type="button" className="settings-button" disabled={busy} onClick={onStop}>
             Stop
           </button>
         ) : (
@@ -235,23 +204,11 @@ function PolicyEditor({ policy, onDelete, onSave, onStart, onStop, busy }: Polic
             type="button"
             className="settings-button"
             disabled={busy || dirty}
-            onClick={() => {
-              onStart(policy.id);
-            }}
+            onClick={onStart}
           >
-            Start now
+            {stalled ? 'Restart stalled run' : 'Run now'}
           </button>
         )}
-        <button
-          type="button"
-          className="settings-button blob-cleanup-policy__delete"
-          disabled={busy || running}
-          onClick={() => {
-            onDelete(policy.id);
-          }}
-        >
-          Delete policy
-        </button>
       </div>
     </section>
   );
@@ -261,17 +218,14 @@ export function AdminBlobCleanupPage() {
   const user = useUser();
   const isAdmin = user.role === 'ROLE_ADMIN';
   const queryClient = useQueryClient();
-  const [newPrefix, setNewPrefix] = useState(DEFAULT_POLICY.prefix);
   const [error, setError] = useState<string | null>(null);
 
-  const policiesQuery = useQuery({
+  const settingsQuery = useQuery({
     queryKey: QUERY_KEY,
-    queryFn: fetchBlobCleanupPolicies,
+    queryFn: fetchBlobCleanupSettings,
     enabled: isAdmin,
     refetchInterval: (query) =>
-      query.state.data?.some(
-        (policy) => policy.status === 'RUNNING' || policy.status === 'STOP_REQUESTED',
-      )
+      query.state.data?.status === 'RUNNING' || query.state.data?.status === 'STOP_REQUESTED'
         ? 2000
         : 15000,
   });
@@ -291,10 +245,6 @@ export function AdminBlobCleanupPage() {
     return <Navigate to="/settings/me" replace />;
   }
 
-  function perform(action: () => Promise<unknown>) {
-    mutation.mutate(action);
-  }
-
   return (
     <div className="settings-subpage">
       <SettingsSubpageHeader
@@ -306,65 +256,30 @@ export function AdminBlobCleanupPage() {
 
       <div className="settings-page blob-cleanup-page">
         <p className="settings-page__hint">
-          Delete expired database blobs by indexed prefix. Each policy drains continuously in small
-          committed batches until it is stopped or no eligible blobs remain.
+          Manage expiration cleanup across all database blobs. Permanent blobs never expire and are
+          not deleted.
         </p>
 
-        {error || policiesQuery.error ? (
-          <p className="blob-cleanup-policy__error" role="alert">
-            {error ?? policiesQuery.error?.message}
+        {error || settingsQuery.error ? (
+          <p className="blob-cleanup__error" role="alert">
+            {error ?? settingsQuery.error?.message}
           </p>
         ) : null}
 
-        <section className="settings-card blob-cleanup-page__create">
-          <label className="settings-field">
-            <span className="settings-field__label">New cleanup prefix</span>
-            <input
-              className="settings-input"
-              value={newPrefix}
-              placeholder="pollable_task/"
-              onChange={(event) => {
-                setNewPrefix(event.target.value);
-              }}
-              disabled={mutation.isPending}
-            />
-          </label>
-          <button
-            type="button"
-            className="settings-button settings-button--primary"
-            disabled={mutation.isPending || !newPrefix.trim()}
-            onClick={() => {
-              perform(() => createBlobCleanupPolicy({ ...DEFAULT_POLICY, prefix: newPrefix }));
-            }}
-          >
-            Add policy
-          </button>
-        </section>
-
-        {policiesQuery.data?.map((policy) => (
-          <PolicyEditor
-            key={policy.id}
-            policy={policy}
+        {settingsQuery.data ? (
+          <CleanupEditor
+            settings={settingsQuery.data}
             busy={mutation.isPending}
-            onSave={(id, update) => {
-              perform(() => updateBlobCleanupPolicy(id, update));
+            onSave={(update) => {
+              mutation.mutate(() => updateBlobCleanupSettings(update));
             }}
-            onStart={(id) => {
-              perform(() => startBlobCleanupPolicy(id));
+            onStart={() => {
+              mutation.mutate(startBlobCleanup);
             }}
-            onStop={(id) => {
-              perform(() => stopBlobCleanupPolicy(id));
-            }}
-            onDelete={(id) => {
-              if (window.confirm(`Delete the ${policy.prefix} cleanup policy?`)) {
-                perform(() => deleteBlobCleanupPolicy(id));
-              }
+            onStop={() => {
+              mutation.mutate(stopBlobCleanup);
             }}
           />
-        ))}
-
-        {!policiesQuery.isLoading && policiesQuery.data?.length === 0 ? (
-          <p className="settings-page__hint">No cleanup policies configured.</p>
         ) : null}
       </div>
     </div>

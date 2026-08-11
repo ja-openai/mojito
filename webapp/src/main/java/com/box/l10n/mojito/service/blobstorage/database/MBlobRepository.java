@@ -22,16 +22,11 @@ public interface MBlobRepository
 
   Optional<MBlob> findByName(@Param("name") String name);
 
-  /**
-   * Must pass "now" as parameter due to HSQL persisting ZonedDateTime without TZ info. Comparing
-   * ZonedDateTime against unix_timestamp() then fails because of the TZ difference.
-   *
-   * <p>This does not show if test are running in UTC like on CI
-   */
   @Query(
       """
 	      select mb.id from #{#entityName} mb
-	      where (cast(unix_timestamp(mb.createdDate) as long) + mb.expireAfterSeconds) < cast(unix_timestamp(:now) as long)
+	      where mb.expirationDate < :now
+	      order by mb.expirationDate, mb.id
 	      """)
   List<Long> findExpiredBlobIdsWithNow(@Param("now") ZonedDateTime now, Pageable pageable);
 

@@ -222,8 +222,7 @@ public class WebSecurityConfig {
                 .hasRole("ADMIN")
                 .requestMatchers("/api/string-authoring/**")
                 .hasRole("ADMIN")
-                .requestMatchers(
-                    "/api/admin/blob-cleanup-policies", "/api/admin/blob-cleanup-policies/**")
+                .requestMatchers("/api/admin/blob-cleanup", "/api/admin/blob-cleanup/**")
                 .hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/admin/temporary-bulk-translation-accept/**")
                 .hasRole("ADMIN")

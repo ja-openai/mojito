@@ -2,22 +2,21 @@
   max-width: 70rem;
 }
 
-.blob-cleanup-page__create {
-  display: grid;
-  grid-template-columns: minmax(16rem, 1fr) auto;
-  align-items: end;
-  gap: var(--space-3);
-}
-
-.blob-cleanup-policy__header {
+.blob-cleanup__header {
   display: grid;
   grid-template-columns: minmax(16rem, 1fr) auto auto;
-  align-items: end;
+  align-items: center;
   gap: var(--space-4);
   margin-bottom: var(--space-4);
 }
 
-.blob-cleanup-policy__enabled {
+.blob-cleanup__header p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.blob-cleanup__enabled {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -25,74 +24,65 @@
   white-space: nowrap;
 }
 
-.blob-cleanup-policy__status {
-  align-self: center;
+.blob-cleanup__status {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-wide);
   white-space: nowrap;
 }
 
-.blob-cleanup-policy__status--running {
+.blob-cleanup__status--running {
   color: var(--color-success);
 }
 
-.blob-cleanup-policy__status--failed {
+.blob-cleanup__status--failed,
+.blob-cleanup__status--stalled {
   color: var(--color-danger);
 }
 
-.blob-cleanup-policy__fields {
+.blob-cleanup__fields {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   gap: var(--space-3);
 }
 
-.blob-cleanup-policy__progress {
+.blob-cleanup__progress {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
   gap: var(--space-3);
   margin-top: var(--space-4);
 }
 
-.blob-cleanup-policy__progress > div {
+.blob-cleanup__progress > div {
   display: grid;
   gap: var(--space-1);
 }
 
-.blob-cleanup-policy__progress span {
+.blob-cleanup__progress span {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
 }
 
-.blob-cleanup-policy__progress strong {
+.blob-cleanup__progress strong {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-regular);
 }
 
-.blob-cleanup-policy__actions {
+.blob-cleanup__actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
   margin-top: var(--space-4);
 }
 
-.blob-cleanup-policy__delete {
-  margin-left: auto;
-}
-
-.blob-cleanup-policy__error {
+.blob-cleanup__error {
   margin-top: var(--space-3);
   color: var(--color-danger);
   font-size: var(--font-size-sm);
 }
 
 @media (max-width: 44rem) {
-  .blob-cleanup-policy__header,
-  .blob-cleanup-page__create {
+  .blob-cleanup__header {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .blob-cleanup-policy__delete {
-    margin-left: 0;
   }
 }

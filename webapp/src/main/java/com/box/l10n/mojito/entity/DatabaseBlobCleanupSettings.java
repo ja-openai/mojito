@@ -6,23 +6,17 @@ import jakarta.persistence.Table;
 import java.time.ZonedDateTime;
 
 @Entity
-@Table(name = "mblob_cleanup_policy")
-public class DatabaseBlobCleanupPolicy extends AuditableEntity {
-
-  @Column(nullable = false, unique = true)
-  private String prefix;
+@Table(name = "mblob_cleanup_settings")
+public class DatabaseBlobCleanupSettings extends AuditableEntity {
 
   @Column(nullable = false)
   private boolean enabled;
 
-  @Column(name = "retention_days", nullable = false)
-  private int retentionDays = 3;
-
   @Column(name = "batch_size", nullable = false)
-  private int batchSize = 250;
+  private int batchSize = 500;
 
   @Column(name = "max_batches_per_run", nullable = false)
-  private int maxBatchesPerRun;
+  private int maxBatchesPerRun = 100;
 
   @Column(name = "pause_millis", nullable = false)
   private int pauseMillis = 250;
@@ -39,6 +33,9 @@ public class DatabaseBlobCleanupPolicy extends AuditableEntity {
   @Column(name = "last_started_date")
   private ZonedDateTime lastStartedDate;
 
+  @Column(name = "last_progress_date")
+  private ZonedDateTime lastProgressDate;
+
   @Column(name = "last_finished_date")
   private ZonedDateTime lastFinishedDate;
 
@@ -51,28 +48,12 @@ public class DatabaseBlobCleanupPolicy extends AuditableEntity {
   @Column(name = "last_error", length = 2048)
   private String lastError;
 
-  public String getPrefix() {
-    return prefix;
-  }
-
-  public void setPrefix(String prefix) {
-    this.prefix = prefix;
-  }
-
   public boolean isEnabled() {
     return enabled;
   }
 
   public void setEnabled(boolean enabled) {
     this.enabled = enabled;
-  }
-
-  public int getRetentionDays() {
-    return retentionDays;
-  }
-
-  public void setRetentionDays(int retentionDays) {
-    this.retentionDays = retentionDays;
   }
 
   public int getBatchSize() {
@@ -129,6 +110,14 @@ public class DatabaseBlobCleanupPolicy extends AuditableEntity {
 
   public void setLastStartedDate(ZonedDateTime lastStartedDate) {
     this.lastStartedDate = lastStartedDate;
+  }
+
+  public ZonedDateTime getLastProgressDate() {
+    return lastProgressDate;
+  }
+
+  public void setLastProgressDate(ZonedDateTime lastProgressDate) {
+    this.lastProgressDate = lastProgressDate;
   }
 
   public ZonedDateTime getLastFinishedDate() {

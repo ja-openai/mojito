@@ -32,6 +32,8 @@ public class DatabaseBlobStorage implements BlobStorage {
   static final String CLEANUP_DURATION_METRIC = "DatabaseBlobStorage.cleanup.duration";
   static final String CLEANUP_STEP_DURATION_METRIC = "DatabaseBlobStorage.cleanup.step.duration";
   static final String CLEANUP_DELETED_ROWS_METRIC = "DatabaseBlobStorage.cleanup.deletedRows";
+  private static final int CLEANUP_BATCH_SIZE = 500;
+  private static final int CLEANUP_MAX_BATCHES = 100;
 
   DatabaseBlobStorageConfigurationProperties databaseBlobStorageConfigurationProperties;
 
@@ -90,6 +92,8 @@ public class DatabaseBlobStorage implements BlobStorage {
 
     if (Retention.MIN_1_DAY.equals(retention)) {
       mBlob.setExpireAfterSeconds(databaseBlobStorageConfigurationProperties.getMin1DayTtl());
+    } else {
+      mBlob.clearExpiration();
     }
 
     mBlobRepository.save(mBlob);
@@ -139,7 +143,7 @@ public class DatabaseBlobStorage implements BlobStorage {
     int deletedCount;
     do {
       int batch = batches + 1;
-      PageRequest pageable = PageRequest.of(0, 500);
+      PageRequest pageable = PageRequest.of(0, CLEANUP_BATCH_SIZE);
 
       long findStartNanos = System.nanoTime();
       List<Long> expired = mBlobRepository.findExpiredBlobIdsWithNow(ZonedDateTime.now(), pageable);
@@ -179,7 +183,15 @@ public class DatabaseBlobStorage implements BlobStorage {
             deletedCount,
             databaseBlobStorageConfigurationProperties.getCleanupSlowThresholdMs());
       }
-    } while (deletedCount > 0);
+    } while (deletedCount > 0 && batches < CLEANUP_MAX_BATCHES);
+
+    if (deletedCount > 0) {
+      logger.info(
+          "Database blob cleanup paused at its configured batch limit: cleanupRunId={}, batches={}, maxBatches={}",
+          cleanupRunId,
+          batches,
+          CLEANUP_MAX_BATCHES);
+    }
 
     long cleanupDurationNanos = System.nanoTime() - cleanupStartNanos;
     long cleanupDurationMs = nanosToMillis(cleanupDurationNanos);
