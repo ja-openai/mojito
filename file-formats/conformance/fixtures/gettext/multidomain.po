@@ -1,0 +1,38 @@
+domain "navigation"
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: fr_FR\n"
+"Plural-Forms: nplurals=2; plural=n > 1;\n"
+
+#. Shared canonical contexts need a reversible native domain identity.
+msgctxt "shared.signal"
+msgid "Shared beacon"
+msgstr "Balise commune"
+
+#. French categories preserve the distinct million selector.
+#, c-format
+msgid "%d beacon"
+msgid_plural "%d beacons"
+msgstr[0] "%d balise"
+msgstr[1] "%d balises"
+
+domain "inventory"
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: ru_RU\n"
+"Plural-Forms: nplurals=3; plural=n%10==1&&n%100!=11?0:n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?1:2;\n"
+
+#. The same contextual source is valid in a different native domain.
+msgctxt "shared.signal"
+msgid "Shared beacon"
+msgstr "Общий маяк"
+
+#. Russian categories are evaluated against this domain's own formula.
+#, c-format
+msgid "%d beacon"
+msgid_plural "%d beacons"
+msgstr[0] "%d маяк"
+msgstr[1] "%d маяка"
+msgstr[2] "%d маяков"

@@ -1,0 +1,11 @@
+msgid ""
+msgstr ""
+"Language: he_IL\n"
+"Plural-Forms: nplurals=3; plural=n == 1 ? 0 : n == 2 ? 1 : 2;\n"
+
+msgctxt "sensor_readings"
+msgid "%d sensor reading"
+msgid_plural "%d sensor readings"
+msgstr[0] "%d מדידה יחידה"
+msgstr[1] "%d שתי מדידות"
+msgstr[2] "%d מדידות"

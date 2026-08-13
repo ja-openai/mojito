@@ -1,0 +1,12 @@
+{
+  "escaped key:=": "quai = abri : # calme",
+  "unicode.key": "Prêt {arg0}",
+  "continued.value": "route ouest calme",
+  "whitespace.key": "après",
+  "key.only": "valeur ajoutée",
+  "empty.colon": "valeur après deux-points",
+  "line.break": "Ouest\nSud",
+  "literal.percent": "75% prêt",
+  "key.continued": "clé jointe",
+  "visible key": "clé insécable"
+}

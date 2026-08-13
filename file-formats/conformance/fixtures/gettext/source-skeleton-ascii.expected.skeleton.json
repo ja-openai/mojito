@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "encoding": "US-ASCII",
+  "source": "# Preserve ASCII headers, history, physical wrapping, and empty entries.\nmsgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=US-ASCII\\n\"\n\"Language: en_GB\\n\"\n\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\n#, c-format\n#| msgid \"Previous harbor signal\"\nmsgctxt \"plain.signal\"\nmsgid \"Signal %s\"\nmsgstr \"\"\n\"Open \"\n\"signal %s\"\n\n#, c-format\nmsgctxt \"plain.count\"\nmsgid \"Crate %d\"\nmsgid_plural \"Crates %d\"\nmsgstr[0] \"One crate %d\"\nmsgstr[1] \"Several crates %d\"\n\nmsgctxt \"plain.empty\"\nmsgid \"Empty harbor\"\nmsgstr \"\"\n\n#~ msgid \"Obsolete harbor\"\n#~ msgstr \"Protected obsolete route\"\n",
+  "slots": [
+    {
+      "id": "plain.signal",
+      "start": 301,
+      "end": 323
+    },
+    {
+      "id": "plain.count",
+      "start": 411,
+      "end": 425,
+      "variant": "one"
+    },
+    {
+      "id": "plain.count",
+      "start": 436,
+      "end": 455,
+      "variant": "other"
+    },
+    {
+      "id": "plain.empty",
+      "start": 507,
+      "end": 509
+    }
+  ]
+}

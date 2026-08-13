@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "fr-FR",
+  "messages": {
+    "beacon.ready": {
+      "defaultMessage": "Balise prête",
+      "metadata": {
+        "gettextDomainHeader": {
+          "fields": [
+            {
+              "name": "X-Route",
+              "value": "north"
+            },
+            {
+              "name": "X-Route",
+              "value": "south"
+            },
+            {
+              "name": "North Route",
+              "value": "visible at dusk"
+            },
+            {
+              "name": "",
+              "value": "anonymous native metadata"
+            },
+            {
+              "name": "X-Empty",
+              "value": ""
+            }
+          ],
+          "locale": "fr-FR"
+        },
+        "sourceMessage": "beacon.ready"
+      }
+    }
+  }
+}

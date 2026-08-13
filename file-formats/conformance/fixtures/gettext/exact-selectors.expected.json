@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "en",
+  "messages": {
+    "signal_strength": {
+      "defaultMessage": "{arg0, plural, =0 {{arg0} signals: idle} one {{arg0} signal: listening} =2 {{arg0} signals: paired} other {{arg0} signals: connected}}",
+      "variants": {
+        "=0": "{arg0} signals: idle",
+        "one": "{arg0} signal: listening",
+        "=2": "{arg0} signals: paired",
+        "other": "{arg0} signals: connected"
+      },
+      "placeholders": [{ "name": "arg0", "source": "%d", "kind": "integer", "position": 1 }],
+      "metadata": {
+        "sourceMessage": "%d signal",
+        "sourcePlural": "%d signals",
+        "context": "signal_strength",
+        "gettextPluralIndexes": { "0": "=0", "1": "one", "2": "=2", "3": "other" },
+        "gettextPluralForms": {
+          "nplurals": 4,
+          "expression": "n == 0 ? 0 : n == 1 ? 1 : n == 2 ? 2 : 3"
+        }
+      }
+    }
+  }
+}

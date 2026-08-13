@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "java_properties",
+  "messages": {
+    "cafe": {
+      "defaultMessage": "Café",
+      "description": "Legacy Java properties encoding"
+    }
+  }
+}

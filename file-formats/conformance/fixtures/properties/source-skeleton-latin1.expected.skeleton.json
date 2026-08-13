@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "java_properties",
+  "encoding": "ISO-8859-1",
+  "source": "# Préserver l'ordre, les commentaires et les espaces.\ncafé = crème\nescaped\\u002Ekey : crème %1$s\ncontinued = café \\\n    crème\nempty.key\n",
+  "slots": [
+    {
+      "id": "café",
+      "start": 61,
+      "end": 66
+    },
+    {
+      "id": "escaped.key",
+      "start": 86,
+      "end": 96
+    },
+    {
+      "id": "continued",
+      "start": 109,
+      "end": 125
+    },
+    {
+      "id": "empty.key",
+      "start": 135,
+      "end": 135
+    }
+  ]
+}

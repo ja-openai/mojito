@@ -1,0 +1,28 @@
+# Preserve ASCII headers, history, physical wrapping, and empty entries.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=US-ASCII\n"
+"Language: en_GB\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#, c-format
+#| msgid "Previous harbor signal"
+msgctxt "plain.signal"
+msgid "Signal %s"
+msgstr ""
+"Open "
+"signal %s"
+
+#, c-format
+msgctxt "plain.count"
+msgid "Crate %d"
+msgid_plural "Crates %d"
+msgstr[0] "One crate %d"
+msgstr[1] "Several crates %d"
+
+msgctxt "plain.empty"
+msgid "Empty harbor"
+msgstr ""
+
+#~ msgid "Obsolete harbor"
+#~ msgstr "Protected obsolete route"

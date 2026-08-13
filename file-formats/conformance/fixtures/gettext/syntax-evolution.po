@@ -1,0 +1,39 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en_US\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+
+#. Adjacent directives, physical C continuations, and horizontal tabs are native syntax.
+msgctxt	"default.route"msgid"Sea\
+ward " "signal" msgstr "Ruta\
+ tranquila"
+
+domain "harbor.signals"
+
+#. Current sticky-flag spelling keeps previous context, singular, and plural history.
+#= c-format, no-wrap, x-project-signal
+#, fuzzy, range: 1..7
+#| msgctxt "historic."
+#| "signal"
+#| msgid "Former %d "
+#| "beacon"
+#| msgid_plural "Former %d beacons"
+msgctxt	"current.signal"
+msgid	"Current %d beacon"
+msgid_plural "Current %d beacons"
+msgstr [ 0 ] "Nueva %d baliza"
+msgstr[1] "Nuevas %d balizas"
+
+#. Last format polarity wins while project-owned sticky flags remain reversible.
+#= c-format, x-project-review
+#, no-c-format
+msgctxt "literal.route" msgid "Literal %s" msgstr "Visible %s"
+
+domain ""
+
+#. An explicitly empty domain is distinct from an omitted domain directive.
+#| msgid "Previous reset"
+msgctxt "reset.signal"
+msgid "Reset"
+msgstr "Inicio"

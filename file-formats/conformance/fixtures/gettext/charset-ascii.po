@@ -1,0 +1,8 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=US-ASCII\n"
+"Language: en\n"
+
+msgctxt "plain.route"
+msgid "Quiet route"
+msgstr "Open route"

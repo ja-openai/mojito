@@ -1,0 +1,12 @@
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=4; plural=n == 0 ? 0 : n == 1 ? 1 : n == 2 ? 2 : 3;\n"
+
+msgctxt "signal_strength"
+msgid "%d signal"
+msgid_plural "%d signals"
+msgstr[0] "%d signals: idle"
+msgstr[1] "%d signal: listening"
+msgstr[2] "%d signals: paired"
+msgstr[3] "%d signals: connected"

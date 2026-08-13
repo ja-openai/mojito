@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "messages": {
+    "welcome": {
+      "defaultMessage": "Bonjour {user}, vous avez {count} éléments",
+      "placeholders": [
+        { "name": "user", "source": "%(user)s", "kind": "string" },
+        { "name": "count", "source": "%(count)d", "kind": "integer" }
+      ],
+      "metadata": {
+        "sourceMessage": "Hello %(user)s, you have %(count)d items",
+        "flags": ["python-format"],
+        "context": "welcome"
+      }
+    },
+    "literal": {
+      "defaultMessage": "La valeur est %s et 50%%",
+      "metadata": {
+        "sourceMessage": "The value is %s and 50%%",
+        "flags": ["no-c-format"],
+        "context": "literal"
+      }
+    }
+  }
+}

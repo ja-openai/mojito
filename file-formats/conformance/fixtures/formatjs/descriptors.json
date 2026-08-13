@@ -1,0 +1,9 @@
+{
+  "welcome": {
+    "defaultMessage": "Welcome, {name}!",
+    "description": "Home screen greeting"
+  },
+  "files": {
+    "defaultMessage": "{count, plural, one {# file} other {# files}}"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "java_properties",
+  "messages": {
+    "path:=key": {
+      "defaultMessage": "firstsecond",
+      "description": "Escaped separators belong to the key."
+    },
+    "unicode": { "defaultMessage": "Snowman ☃ and smile 😃" },
+    "escaped key": { "defaultMessage": "tab\tline\nslash\\ and escaped:colon" },
+    "literal": { "defaultMessage": "unknownq escapes drop the slash" }
+  }
+}

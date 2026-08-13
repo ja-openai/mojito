@@ -1,0 +1,48 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en_US\n"
+"Plural-Forms: nplurals=2; plural=n == 1 ? 0 : 1;\n"
+
+# Keep the partial plural visible in translation review.
+#. Dashboard signal count
+#: src/dashboard.py:17 src/signal.py:5
+#, fuzzy
+msgctxt "dashboard\tsignal"
+msgid "%1$d signal at 50%%"
+msgid_plural "%1$d signals at 50%%"
+msgstr[0] "%1$d marker at 40%%"
+msgstr[1] ""
+
+# Named interpolation must retain its source spelling.
+#. Personalized greeting
+#, python-format
+msgctxt "named.user"
+msgid "Welcome %(user)s; 80%% ready"
+msgstr "Salute %(user)s; 75%% ready"
+
+#. Line conversions and literal newlines are different native spellings.
+#| msgctxt "previous.scope"
+#| msgid "Previous message"
+msgctxt "line.separators"
+msgid "Source%2$nfinish"
+msgstr "before\nafter%2$nfinish"
+
+#. Explicitly disabled format parsing keeps every literal percent.
+#, no-c-format
+msgctxt "literal.percent"
+msgid "Literal %s and 50%%"
+msgstr "Visible %s and 25%%"
+
+#. Empty singular translations stay absent from the native MO file.
+msgctxt "not.translated"
+msgid "Awaiting translation"
+msgstr ""
+
+msgctxt "supplementary_😃"
+msgid "Snow ☃"
+msgstr "Bright ☃"
+
+msgctxt "_private"
+msgid "Private marker"
+msgstr "Private result"

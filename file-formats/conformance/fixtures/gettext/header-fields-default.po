@@ -1,0 +1,13 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en_US\n"
+"Language: fr_FR\n"
+"X-Route: north\n"
+"X-Route: south\n"
+"North Route: visible at dusk\n"
+": anonymous native metadata\n"
+"X-Empty:\n"
+
+msgid "beacon.ready"
+msgstr "Balise prête"

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "messages": {
+    "quoted\"id": {
+      "defaultMessage": "Ligne\nune\t\"citée\"",
+      "description": "Quoted context",
+      "metadata": {
+        "sourceMessage": "Line\none\t\"quoted\"",
+        "references": ["first.py:1", "second.py:2"],
+        "context": "quoted\"id"
+      }
+    }
+  }
+}

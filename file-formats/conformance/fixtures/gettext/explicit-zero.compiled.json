@@ -1,0 +1,9 @@
+{
+  "plurals": {
+    "queue_depth\u0004%d pending item": {
+      "0": "%d items remain in the empty queue",
+      "1": "%d item remains in the queue",
+      "2": "%d items remain in the queue"
+    }
+  }
+}

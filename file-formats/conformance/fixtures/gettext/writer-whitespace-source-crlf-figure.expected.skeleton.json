@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "encoding": "UTF-8",
+  "source": "domain \"north \"\r\nmsgid \"\"\r\nmsgstr \"\"\r\n\"Content-Type: text/plain; charset=UTF-8\\n\"\r\n\"Language: en_US\\n\"\r\n\r\n#: north dock\r\n#,  \r\nmsgid \"Quiet bay\"\r\nmsgstr \"Port calme\"\r\n",
+  "slots": [
+    {
+      "id": "Quiet bay",
+      "start": 159,
+      "end": 171
+    }
+  ]
+}

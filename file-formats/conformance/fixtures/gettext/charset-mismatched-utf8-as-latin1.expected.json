@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "fr",
+  "messages": {
+    "mismatched.route": {
+      "defaultMessage": "CafÃ©",
+      "metadata": {
+        "context": "mismatched.route",
+        "sourceMessage": "Quiet route"
+      }
+    }
+  }
+}

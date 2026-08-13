@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "iw-IL",
+  "messages": {
+    "legacy_readings": {
+      "defaultMessage": "{arg0, plural, one {{arg0} מדידה יחידה} two {{arg0} שתי מדידות} other {{arg0} מדידות}}",
+      "variants": {
+        "one": "{arg0} מדידה יחידה",
+        "two": "{arg0} שתי מדידות",
+        "other": "{arg0} מדידות"
+      },
+      "placeholders": [{ "name": "arg0", "source": "%d", "kind": "integer", "position": 1 }],
+      "metadata": {
+        "sourceMessage": "%d sensor reading",
+        "sourcePlural": "%d sensor readings",
+        "context": "legacy_readings",
+        "gettextPluralIndexes": { "0": "one", "1": "two", "2": "other" }
+      }
+    }
+  }
+}

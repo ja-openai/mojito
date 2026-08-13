@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "cy",
+  "messages": {
+    "welsh_navigation": {
+      "defaultMessage": "{arg0, plural, one {{arg0} route is active} zero {{arg0} routes are active} two {{arg0} routes are active} few {{arg0} routes are active} many {{arg0} routes are active} other {{arg0} routes are active}}",
+      "variants": {
+        "one": "{arg0} route is active",
+        "zero": "{arg0} routes are active",
+        "two": "{arg0} routes are active",
+        "few": "{arg0} routes are active",
+        "many": "{arg0} routes are active",
+        "other": "{arg0} routes are active"
+      },
+      "placeholders": [{ "name": "arg0", "source": "%d", "kind": "integer", "position": 1 }],
+      "metadata": {
+        "sourceMessage": "%d route",
+        "sourcePlural": "%d routes",
+        "context": "welsh_navigation",
+        "gettextPluralIndexes": { "0": "one", "1": "zero" },
+        "gettextPluralSelectors": {
+          "0": ["one"],
+          "1": ["zero", "two", "few", "many", "other"]
+        },
+        "gettextPluralForms": { "nplurals": 2, "expression": "n == 1 ? 0 : 1" }
+      }
+    }
+  }
+}

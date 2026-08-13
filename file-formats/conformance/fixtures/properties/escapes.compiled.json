@@ -1,0 +1,6 @@
+{
+  "path:=key": "firstsecond",
+  "unicode": "Snowman ☃ and smile 😃",
+  "escaped key": "tab\tline\nslash\\ and escaped:colon",
+  "literal": "unknownq escapes drop the slash"
+}

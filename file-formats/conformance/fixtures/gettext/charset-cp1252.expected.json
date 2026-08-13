@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "en-GB",
+  "messages": {
+    "escaped.euro": {
+      "defaultMessage": "Cost: €",
+      "description": "The escaped byte is interpreted in the declared CP1252 code page.",
+      "metadata": {
+        "context": "escaped.euro",
+        "sourceMessage": "Escaped €"
+      }
+    },
+    "typography.route": {
+      "defaultMessage": "“Quiet” route – €5",
+      "description": "Original neutral typographic CP1252 characters.",
+      "metadata": {
+        "context": "typography.route",
+        "sourceMessage": "Quiet € route"
+      }
+    }
+  }
+}

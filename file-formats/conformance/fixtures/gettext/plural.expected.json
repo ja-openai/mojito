@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "fr-FR",
+  "messages": {
+    "files.remaining": {
+      "defaultMessage": "{arg0, plural, one {{arg0} fichier} many {{arg0} fichiers} other {{arg0} fichiers}}",
+      "description": "Remaining files",
+      "variants": { "one": "{arg0} fichier", "many": "{arg0} fichiers", "other": "{arg0} fichiers" },
+      "placeholders": [{ "name": "arg0", "source": "%d", "kind": "integer", "position": 1 }],
+      "metadata": {
+        "sourceMessage": "%d file",
+        "sourcePlural": "%d files",
+        "references": ["files.py:18"],
+        "context": "files.remaining",
+        "gettextPluralIndexes": { "0": "one", "1": "many" },
+        "gettextPluralSelectors": { "0": ["one"], "1": ["many", "other"] },
+        "gettextPluralForms": { "nplurals": 2, "expression": "(n > 1)" }
+      }
+    }
+  }
+}

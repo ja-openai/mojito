@@ -1,0 +1,13 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#. Hexadecimal escapes describe encoded bytes, not Unicode code points.
+msgctxt "hex.bytes"
+msgid "é route"
+msgstr "☃ marker"
+
+#. Octal escapes use the same byte-oriented UTF-8 grammar.
+msgctxt "octal.bytes"
+msgid "é route"
+msgstr "☃ marker"

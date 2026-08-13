@@ -1,0 +1,14 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en_GB\n"
+
+#. The escaped byte is interpreted in the declared CP1252 code page.
+msgctxt "escaped.euro"
+msgid "Escaped €"
+msgstr "Cost: €"
+
+#. Original neutral typographic CP1252 characters.
+msgctxt "typography.route"
+msgid "Quiet € route"
+msgstr "“Quiet” route – €5"

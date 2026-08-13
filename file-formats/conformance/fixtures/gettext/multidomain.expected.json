@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "messages": {
+    "shared.signal@domain=navigation": {
+      "defaultMessage": "Balise commune",
+      "description": "Shared canonical contexts need a reversible native domain identity.",
+      "metadata": {
+        "sourceMessage": "Shared beacon",
+        "gettextDomain": "navigation",
+        "gettextDomainHeader": {
+          "locale": "fr-FR",
+          "pluralForms": {
+            "nplurals": 2,
+            "expression": "n > 1"
+          }
+        },
+        "context": "shared.signal",
+        "gettextOriginalId": "shared.signal"
+      }
+    },
+    "%d beacon@domain=navigation": {
+      "defaultMessage": "{arg0, plural, one {{arg0} balise} many {{arg0} balises} other {{arg0} balises}}",
+      "description": "French categories preserve the distinct million selector.",
+      "variants": {
+        "one": "{arg0} balise",
+        "many": "{arg0} balises",
+        "other": "{arg0} balises"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "sourceMessage": "%d beacon",
+        "sourcePlural": "%d beacons",
+        "gettextDomain": "navigation",
+        "gettextDomainHeader": {
+          "locale": "fr-FR",
+          "pluralForms": {
+            "nplurals": 2,
+            "expression": "n > 1"
+          }
+        },
+        "flags": [
+          "c-format"
+        ],
+        "gettextPluralIndexes": {
+          "0": "one",
+          "1": "many"
+        },
+        "gettextPluralSelectors": {
+          "0": [
+            "one"
+          ],
+          "1": [
+            "many",
+            "other"
+          ]
+        },
+        "gettextPluralForms": {
+          "nplurals": 2,
+          "expression": "n > 1"
+        },
+        "gettextOriginalId": "%d beacon"
+      }
+    },
+    "shared.signal@domain=inventory": {
+      "defaultMessage": "Общий маяк",
+      "description": "The same contextual source is valid in a different native domain.",
+      "metadata": {
+        "sourceMessage": "Shared beacon",
+        "gettextDomain": "inventory",
+        "gettextDomainHeader": {
+          "locale": "ru-RU",
+          "pluralForms": {
+            "nplurals": 3,
+            "expression": "n%10==1&&n%100!=11?0:n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?1:2"
+          }
+        },
+        "context": "shared.signal",
+        "gettextOriginalId": "shared.signal"
+      }
+    },
+    "%d beacon@domain=inventory": {
+      "defaultMessage": "{arg0, plural, one {{arg0} маяк} few {{arg0} маяка} many {{arg0} маяков} other {{arg0} маяков}}",
+      "description": "Russian categories are evaluated against this domain's own formula.",
+      "variants": {
+        "one": "{arg0} маяк",
+        "few": "{arg0} маяка",
+        "many": "{arg0} маяков",
+        "other": "{arg0} маяков"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "sourceMessage": "%d beacon",
+        "sourcePlural": "%d beacons",
+        "gettextDomain": "inventory",
+        "gettextDomainHeader": {
+          "locale": "ru-RU",
+          "pluralForms": {
+            "nplurals": 3,
+            "expression": "n%10==1&&n%100!=11?0:n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?1:2"
+          }
+        },
+        "flags": [
+          "c-format"
+        ],
+        "gettextPluralIndexes": {
+          "0": "one",
+          "1": "few",
+          "2": "many"
+        },
+        "gettextPluralForms": {
+          "nplurals": 3,
+          "expression": "n%10==1&&n%100!=11?0:n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?1:2"
+        },
+        "gettextOriginalId": "%d beacon"
+      }
+    }
+  }
+}

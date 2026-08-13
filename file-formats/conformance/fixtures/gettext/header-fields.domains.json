@@ -1,0 +1,110 @@
+{
+  "inventory": {
+    "entries": {
+      "signal.report": "Отчёт сигнала"
+    },
+    "header": {
+      "locale": "ru-RU",
+      "fields": [
+        {
+          "name": "Project-Id-Version",
+          "value": "inventory-ledger 2.1"
+        },
+        {
+          "name": "PO-Revision-Date",
+          "value": "2026-04-03 15:10+0000"
+        },
+        {
+          "name": "Last-Translator",
+          "value": "Deck Crew <deck@example.invalid>"
+        },
+        {
+          "name": "Language-Team",
+          "value": "Russian Crew <stock@example.invalid>"
+        },
+        {
+          "name": "MIME-Version",
+          "value": "1.0"
+        },
+        {
+          "name": "Content-Transfer-Encoding",
+          "value": "8bit"
+        },
+        {
+          "name": "X-Route",
+          "value": "storage"
+        },
+        {
+          "name": "X-Details",
+          "value": "shelf seven\nlower compartment"
+        }
+      ]
+    }
+  },
+  "navigation": {
+    "entries": {
+      "signal.report": "Rapport du signal"
+    },
+    "header": {
+      "locale": "fr-FR",
+      "pluralForms": {
+        "nplurals": 2,
+        "expression": "n > 1"
+      },
+      "fields": [
+        {
+          "name": "Project-Id-Version",
+          "value": "lantern-control 4.2"
+        },
+        {
+          "name": "Report-Msgid-Bugs-To",
+          "value": "signal-team@example.invalid"
+        },
+        {
+          "name": "PO-Revision-Date",
+          "value": "2026-04-03 14:20+0000"
+        },
+        {
+          "name": "Last-Translator",
+          "value": "Night Watch <watch@example.invalid>"
+        },
+        {
+          "name": "Language-Team",
+          "value": "French Crew <crew@example.invalid>"
+        },
+        {
+          "name": "MIME-Version",
+          "value": "1.0"
+        },
+        {
+          "name": "Content-Transfer-Encoding",
+          "value": "8bit"
+        },
+        {
+          "name": "X-Route",
+          "value": "north"
+        },
+        {
+          "name": "X-Route",
+          "value": "south"
+        },
+        {
+          "name": "x-Generator",
+          "value": "Harbor Lens 2"
+        },
+        {
+          "name": "Équipe",
+          "value": "quart nord"
+        },
+        {
+          "name": "X-Empty",
+          "value": ""
+        },
+        {
+          "name": "X-Details",
+          "value": "watch deck\nsecondary route\nbay 4"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "plurals": {
+    "alerts\u0004%d signal": {
+      "0": "%d sygnał",
+      "1": "%d sygnały",
+      "2": "%d sygnałów"
+    }
+  }
+}

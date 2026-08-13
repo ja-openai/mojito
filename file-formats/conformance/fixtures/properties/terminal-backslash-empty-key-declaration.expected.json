@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "java_properties",
+  "messages": {
+    "anchor": {
+      "defaultMessage": "steady"
+    },
+    "harbor.route": {
+      "defaultMessage": ""
+    }
+  }
+}

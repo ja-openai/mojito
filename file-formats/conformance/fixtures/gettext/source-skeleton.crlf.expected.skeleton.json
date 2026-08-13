@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "encoding": "UTF-8",
+  "source": "# Preserve this 🧭 catalog header and every project-owned field.\r\nmsgid \"\"\r\nmsgstr \"\"\r\n\"Project-Id-Version: Neutral Harbor 7.4\\n\"\r\n\"Content-Type: text/plain; charset=UTF-8\\n\"\r\n\"Language: fr_FR\\n\"\r\n\"Plural-Forms: nplurals=2; plural=(n > 1);\\n\"\r\n\"X-Project-Owner: lighthouse crew\\n\"\r\n\r\n# Translator notes, references, sticky flags, and previous history stay untouched.\r\n#. A signal with an ordinary native printf placeholder.\r\n#: navigation/deck.py:17\r\n#, c-format\r\n#| msgid \"Earlier signal %s\"\r\nmsgctxt \"harbor.signal\"\r\nmsgid \"Signal %s\"\r\nmsgstr \"\"\r\n\"Port \"\r\n\"calme %s\"\r\n\r\n#. Plural native indexes must retain their original spelling and quote layout.\r\n#, c-format\r\nmsgctxt \"crate.count\"\r\nmsgid \"%d crate\"\r\nmsgid_plural \"%d crates\"\r\nmsgstr[0] \"%d caisse\"\r\nmsgstr[1] \"\"\r\n\"%d \"\r\n\"caisses\"\r\n\r\n#. Quotes in source IDs and target values remain safe C strings.\r\nmsgid \"Dock \\\"North\\\"\"\r\nmsgstr \"Quai \\\"Nord\\\"\"\r\n\r\nmsgctxt \"route.lines\"\r\nmsgid \"North\\nSouth\"\r\nmsgstr \"\"\r\n\"Nord\\n\"\r\n\"Sud\"\r\n\r\n# Empty native translations become active without losing their original quotes.\r\nmsgid \"untranslated.wave\"\r\nmsgstr \"\"\r\n\r\n#~ msgctxt \"retired.signal\"\r\n#~ msgid \"Retired beacon\"\r\n#~ msgstr \"Balise ancienne\"\r\n",
+  "slots": [
+    {
+      "id": "harbor.signal",
+      "start": 547,
+      "end": 570
+    },
+    {
+      "id": "crate.count",
+      "start": 744,
+      "end": 755,
+      "variant": "one"
+    },
+    {
+      "id": "crate.count",
+      "start": 767,
+      "end": 787,
+      "variant": "many"
+    },
+    {
+      "id": "Dock \"North\"",
+      "start": 888,
+      "end": 903
+    },
+    {
+      "id": "route.lines",
+      "start": 959,
+      "end": 978
+    },
+    {
+      "id": "untranslated.wave",
+      "start": 1097,
+      "end": 1099
+    }
+  ]
+}

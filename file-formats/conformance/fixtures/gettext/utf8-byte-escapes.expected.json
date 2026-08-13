@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "messages": {
+    "hex.bytes": {
+      "defaultMessage": "☃ marker",
+      "description": "Hexadecimal escapes describe encoded bytes, not Unicode code points.",
+      "metadata": {
+        "context": "hex.bytes",
+        "sourceMessage": "é route"
+      }
+    },
+    "octal.bytes": {
+      "defaultMessage": "☃ marker",
+      "description": "Octal escapes use the same byte-oriented UTF-8 grammar.",
+      "metadata": {
+        "context": "octal.bytes",
+        "sourceMessage": "é route"
+      }
+    }
+  }
+}

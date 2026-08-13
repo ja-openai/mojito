@@ -1,0 +1,11 @@
+{
+  "entries": {
+    "plain.signal\u0004Signal %s": "Open signal %s"
+  },
+  "plurals": {
+    "plain.count\u0004Crate %d": {
+      "0": "One crate %d",
+      "1": "Several crates %d"
+    }
+  }
+}

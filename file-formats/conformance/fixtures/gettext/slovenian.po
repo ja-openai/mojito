@@ -1,0 +1,12 @@
+msgid ""
+msgstr ""
+"Language: sl_SI\n"
+"Plural-Forms: nplurals=4; plural=n%100==1 ? 0 : n%100==2 ? 1 : n%100==3 || n%100==4 ? 2 : 3;\n"
+
+msgctxt "measurements"
+msgid "%d measurement"
+msgid_plural "%d measurements"
+msgstr[0] "%d meritev"
+msgstr[1] "%d meritvi"
+msgstr[2] "%d meritve"
+msgstr[3] "%d meritev skupaj"

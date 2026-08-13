@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "encoding": "UTF-8",
+  "source": "# Keep the implicit domain, its original comments, and its project-owned fields.\r\nmsgid \"\"\r\nmsgstr \"\"\r\n\"Project-Id-Version: Home pier 2.7\\n\"\r\n\"Content-Type: text/plain; charset=UTF-8\\n\"\r\n\"Language: en_GB\\n\"\r\n\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\r\n\"X-Owner: home crew\\n\"\r\n\r\n#. The same context is translated separately in all three native domains.\r\n#: routes/home.py:12\r\nmsgctxt \"shared.route\"\r\nmsgid \"Common route\"\r\nmsgstr \"\"\r\n\"Home \"\r\n\"pier\"\r\n\r\n#, c-format\r\nmsgid \"%d signal\"\r\nmsgid_plural \"%d signals\"\r\nmsgstr[0] \"%d signal\"\r\nmsgstr[1] \"%d signals\"\r\n\r\n# Domain directives, local header spelling, and their order are source-owned.\r\ndomain \"north.fr\"\r\nmsgid \"\"\r\nmsgstr \"\"\r\n\"Project-Id-Version: Northern watch 3.1\\n\"\r\n\"Content-Type: text/plain; charset=UTF-8\\n\"\r\n\"Language: fr_FR\\n\"\r\n\"Plural-Forms: nplurals=2; plural=(n > 1);\\n\"\r\n\"X-Owner: équipe nord\\n\"\r\n\r\n#. Identical contextual IDs cannot borrow the implicit-domain slot.\r\nmsgctxt \"shared.route\"\r\nmsgid \"Common route\"\r\nmsgstr \"\"\r\n\"Route \"\r\n\"commune\"\r\n\r\n#, c-format\r\nmsgid \"%d signal\"\r\nmsgid_plural \"%d signals\"\r\nmsgstr[0] \"%d veille\"\r\nmsgstr[1] \"\"\r\n\"%d \"\r\n\"veilles\"\r\n\r\n# Percent-bearing native domain names remain reversible canonical identities.\r\ndomain \"stock%ru\"\r\nmsgid \"\"\r\nmsgstr \"\"\r\n\"Project-Id-Version: Southern stores 9.6\\n\"\r\n\"Content-Type: text/plain; charset=UTF-8\\n\"\r\n\"Language: ru_RU\\n\"\r\n\"Plural-Forms: nplurals=3; plural=n%10==1&&n%100!=11?0:n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?1:2;\\n\"\r\n\"X-Owner: южная смена\\n\"\r\n\r\n#. The third collision owns a Russian target and its independent locale.\r\nmsgctxt \"shared.route\"\r\nmsgid \"Common route\"\r\nmsgstr \"Общий путь\"\r\n\r\n#, c-format\r\nmsgid \"%d signal\"\r\nmsgid_plural \"%d signals\"\r\nmsgstr[0] \"%d маяк\"\r\nmsgstr[1] \"%d маяка\"\r\nmsgstr[2] \"\"\r\n\"%d \"\r\n\"маяков\"\r\n\r\n#~ msgctxt \"retired.route\"\r\n#~ msgid \"Closed channel\"\r\n#~ msgstr \"Закрытый путь\"\r\n",
+  "slots": [
+    {
+      "id": "shared.route@domain=messages",
+      "start": 432,
+      "end": 451
+    },
+    {
+      "id": "%d signal@domain=messages",
+      "start": 524,
+      "end": 535,
+      "variant": "one"
+    },
+    {
+      "id": "%d signal@domain=messages",
+      "start": 547,
+      "end": 559,
+      "variant": "other"
+    },
+    {
+      "id": "shared.route@domain=north.fr",
+      "start": 990,
+      "end": 1013
+    },
+    {
+      "id": "%d signal@domain=north.fr",
+      "start": 1086,
+      "end": 1097,
+      "variant": "one"
+    },
+    {
+      "id": "%d signal@domain=north.fr",
+      "start": 1109,
+      "end": 1129,
+      "variant": "many"
+    },
+    {
+      "id": "shared.route@domain=stock%25ru",
+      "start": 1632,
+      "end": 1653
+    },
+    {
+      "id": "%d signal@domain=stock%25ru",
+      "start": 1726,
+      "end": 1739,
+      "variant": "one"
+    },
+    {
+      "id": "%d signal@domain=stock%25ru",
+      "start": 1751,
+      "end": 1766,
+      "variant": "few"
+    },
+    {
+      "id": "%d signal@domain=stock%25ru",
+      "start": 1778,
+      "end": 1803,
+      "variant": "many"
+    }
+  ]
+}

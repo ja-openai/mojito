@@ -1,0 +1,12 @@
+{
+  "shared.route@domain=messages": "Main harbor",
+  "%d signal@domain=messages#one": "{arg0} home beacon",
+  "%d signal@domain=messages#other": "{arg0} home beacons",
+  "shared.route@domain=north.fr": "Quai ouvert",
+  "%d signal@domain=north.fr#one": "{arg0} balise claire",
+  "%d signal@domain=north.fr#many": "{arg0} balises claires",
+  "shared.route@domain=stock%25ru": "Южный проход",
+  "%d signal@domain=stock%25ru#one": "{arg0} южный маяк",
+  "%d signal@domain=stock%25ru#few": "{arg0} южных маяка",
+  "%d signal@domain=stock%25ru#many": "{arg0} южных маяков"
+}

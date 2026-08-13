@@ -1,0 +1,9 @@
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=n == 999 ? n / (n - 999) : n != 1;\n"
+
+msgid "%d interval"
+msgid_plural "%d intervals"
+msgstr[0] "%d interval"
+msgstr[1] "%d intervals"

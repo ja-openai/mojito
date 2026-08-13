@@ -1,0 +1,2 @@
+msgid "safe source"
+msgstr "unsupported\qescape"

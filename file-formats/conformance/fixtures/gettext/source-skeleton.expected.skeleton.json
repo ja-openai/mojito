@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "encoding": "UTF-8",
+  "source": "# Preserve this 🧭 catalog header and every project-owned field.\nmsgid \"\"\nmsgstr \"\"\n\"Project-Id-Version: Neutral Harbor 7.4\\n\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\"Language: fr_FR\\n\"\n\"Plural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\"X-Project-Owner: lighthouse crew\\n\"\n\n# Translator notes, references, sticky flags, and previous history stay untouched.\n#. A signal with an ordinary native printf placeholder.\n#: navigation/deck.py:17\n#, c-format\n#| msgid \"Earlier signal %s\"\nmsgctxt \"harbor.signal\"\nmsgid \"Signal %s\"\nmsgstr \"\"\n\"Port \"\n\"calme %s\"\n\n#. Plural native indexes must retain their original spelling and quote layout.\n#, c-format\nmsgctxt \"crate.count\"\nmsgid \"%d crate\"\nmsgid_plural \"%d crates\"\nmsgstr[0] \"%d caisse\"\nmsgstr[1] \"\"\n\"%d \"\n\"caisses\"\n\n#. Quotes in source IDs and target values remain safe C strings.\nmsgid \"Dock \\\"North\\\"\"\nmsgstr \"Quai \\\"Nord\\\"\"\n\nmsgctxt \"route.lines\"\nmsgid \"North\\nSouth\"\nmsgstr \"\"\n\"Nord\\n\"\n\"Sud\"\n\n# Empty native translations become active without losing their original quotes.\nmsgid \"untranslated.wave\"\nmsgstr \"\"\n\n#~ msgctxt \"retired.signal\"\n#~ msgid \"Retired beacon\"\n#~ msgstr \"Balise ancienne\"\n",
+  "slots": [
+    {
+      "id": "harbor.signal",
+      "start": 531,
+      "end": 552
+    },
+    {
+      "id": "crate.count",
+      "start": 719,
+      "end": 730,
+      "variant": "one"
+    },
+    {
+      "id": "crate.count",
+      "start": 741,
+      "end": 759,
+      "variant": "many"
+    },
+    {
+      "id": "Dock \"North\"",
+      "start": 856,
+      "end": 871
+    },
+    {
+      "id": "route.lines",
+      "start": 923,
+      "end": 940
+    },
+    {
+      "id": "untranslated.wave",
+      "start": 1055,
+      "end": 1057
+    }
+  ]
+}

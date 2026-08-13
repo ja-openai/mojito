@@ -1,0 +1,7 @@
+{
+  "prix.€": "“Facture” — € {arg0}",
+  "caisse.count#one": "“une” – {arg0}",
+  "caisse.count#many": "“plusieurs” — {arg0}",
+  "escaped.euro": "Total € — “sûr”",
+  "empty.route": "Route – ouverte"
+}

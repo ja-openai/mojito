@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "fr",
+  "messages": {
+    "escaped.café": {
+      "defaultMessage": "Café prêt",
+      "description": "Original neutral escaped Latin-1 bytes.",
+      "metadata": {
+        "context": "escaped.café",
+        "sourceMessage": "Quiet café"
+      }
+    }
+  }
+}

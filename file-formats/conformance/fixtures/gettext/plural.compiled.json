@@ -1,0 +1,8 @@
+{
+  "plurals": {
+    "files.remaining\u0004%d file": {
+      "0": "%d fichier",
+      "1": "%d fichiers"
+    }
+  }
+}

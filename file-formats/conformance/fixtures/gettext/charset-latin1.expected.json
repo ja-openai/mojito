@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "fr-FR",
+  "messages": {
+    "entrée.count": {
+      "defaultMessage": "{arg0, plural, one {{arg0} entrée discrète} many {{arg0} entrées discrètes} other {{arg0} entrées discrètes}}",
+      "description": "Entrée count on a neutral route.",
+      "variants": {
+        "many": "{arg0} entrées discrètes",
+        "one": "{arg0} entrée discrète",
+        "other": "{arg0} entrées discrètes"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "context": "entrée.count",
+        "gettextPluralForms": {
+          "expression": "(n > 1)",
+          "nplurals": 2
+        },
+        "gettextPluralIndexes": {
+          "0": "one",
+          "1": "many"
+        },
+        "gettextPluralSelectors": {
+          "0": [
+            "one"
+          ],
+          "1": [
+            "many",
+            "other"
+          ]
+        },
+        "references": [
+          "source/route.py:28"
+        ],
+        "sourceMessage": "%d entrée",
+        "sourcePlural": "%d entrées"
+      }
+    },
+    "quiet.café": {
+      "defaultMessage": "Café déjà fermé",
+      "description": "Café fermé near the neutral route.",
+      "metadata": {
+        "context": "quiet.café",
+        "references": [
+          "source/cafe.py:14"
+        ],
+        "sourceMessage": "Quiet café"
+      }
+    }
+  }
+}

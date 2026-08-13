@@ -1,0 +1,8 @@
+{
+  "harbor.signal": "Lueur {arg0}",
+  "crate.count#one": "{arg0} caisse légère",
+  "crate.count#many": "{arg0} caisses lourdes",
+  "Dock \"North\"": "Quai \"Sud\"",
+  "route.lines": "Ouest\nEst",
+  "untranslated.wave": "Vague activée"
+}

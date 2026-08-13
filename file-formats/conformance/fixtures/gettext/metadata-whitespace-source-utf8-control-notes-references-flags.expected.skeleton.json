@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "encoding": "UTF-8",
+  "source": "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\"Language: en_US\\n\"\n\n#.\u001c neutral\u001f\n# \u001d translator\u001e\n#:first\u001clast\n#, \u001fno-c-format\u001c\nmsgid \"Quiet bay\"\nmsgstr \"Port calme\"\n\n",
+  "slots": [
+    {
+      "id": "Quiet bay",
+      "start": 168,
+      "end": 180
+    }
+  ]
+}

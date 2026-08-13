@@ -1,0 +1,13 @@
+{
+  "entries": {
+    "empty.route\u0004Empty harbor": "Route – ouverte",
+    "escaped.euro\u0004Escaped €": "Total € — “sûr”",
+    "prix.€\u0004Invoice %1$s": "“Facture” — € %1$s"
+  },
+  "plurals": {
+    "caisse.count\u0004Crate %d": {
+      "0": "“une” – %d",
+      "1": "“plusieurs” — %d"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "entries": {
+    "Dock \"North\"": "Quai \"Sud\"",
+    "harbor.signal\u0004Signal %s": "Lueur %s",
+    "route.lines\u0004North\nSouth": "Ouest\nEst",
+    "untranslated.wave": "Vague activée"
+  },
+  "plurals": {
+    "crate.count\u0004%d crate": {
+      "0": "%d caisse légère",
+      "1": "%d caisses lourdes"
+    }
+  }
+}

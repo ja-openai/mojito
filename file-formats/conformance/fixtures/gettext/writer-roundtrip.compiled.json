@@ -1,0 +1,15 @@
+{
+  "entries": {
+    "line.separators\u0004Source%2$nfinish": "before\nafter%2$nfinish",
+    "literal.percent\u0004Literal %s and 50%%": "Visible %s and 25%%",
+    "named.user\u0004Welcome %(user)s; 80%% ready": "Salute %(user)s; 75%% ready",
+    "supplementary_😃\u0004Snow ☃": "Bright ☃",
+    "_private\u0004Private marker": "Private result"
+  },
+  "plurals": {
+    "dashboard\tsignal\u0004%1$d signal at 50%%": {
+      "0": "%1$d marker at 40%%",
+      "1": ""
+    }
+  }
+}

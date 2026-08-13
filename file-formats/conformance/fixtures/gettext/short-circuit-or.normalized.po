@@ -1,0 +1,11 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=n == 0 || 1 / n != 1;\n"
+
+msgctxt "safe_threshold"
+msgid "%d threshold"
+msgid_plural "%d thresholds"
+msgstr[0] "%d active threshold"
+msgstr[1] "%d active thresholds"

@@ -1,0 +1,9 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#. Quoted context
+#: first.py:1 second.py:2
+msgctxt "quoted\"id"
+msgid "Line\none\t\"quoted\""
+msgstr "Ligne\nune\t\"citée\""

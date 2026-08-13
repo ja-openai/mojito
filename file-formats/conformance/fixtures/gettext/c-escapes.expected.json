@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "messages": {
+    "escaped": {
+      "defaultMessage": "bell\u0007 vertical\u000b hexC octalD",
+      "metadata": {
+        "sourceMessage": "bell\u0007 vertical\u000b hexA octalB",
+        "context": "escaped"
+      }
+    }
+  }
+}

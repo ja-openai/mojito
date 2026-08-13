@@ -1,0 +1,16 @@
+msgid ""
+msgstr ""
+"Language: fr\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+# Translator note
+#. Button label on the home screen
+#: src/home.py:12 src/menu.py:4
+#, c-format
+msgctxt "home.welcome"
+msgid "Hello %s"
+msgstr "Bonjour %s"
+
+#. No translation exists yet.
+msgid "Fallback text"
+msgstr ""

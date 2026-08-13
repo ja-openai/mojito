@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "es",
+  "messages": {
+    "alias.route": {
+      "defaultMessage": "Ruta señalada",
+      "metadata": {
+        "context": "alias.route",
+        "sourceMessage": "Señal tranquila"
+      }
+    }
+  }
+}

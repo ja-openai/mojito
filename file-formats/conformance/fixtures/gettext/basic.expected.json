@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "fr",
+  "messages": {
+    "home.welcome": {
+      "defaultMessage": "Bonjour {arg0}",
+      "description": "Button label on the home screen",
+      "placeholders": [{ "name": "arg0", "source": "%s", "kind": "string", "position": 1 }],
+      "metadata": {
+        "sourceMessage": "Hello %s",
+        "translatorComments": ["Translator note"],
+        "references": ["src/home.py:12", "src/menu.py:4"],
+        "flags": ["c-format"],
+        "context": "home.welcome"
+      }
+    },
+    "Fallback text": {
+      "defaultMessage": "Fallback text",
+      "description": "No translation exists yet.",
+      "metadata": { "gettextUntranslated": true }
+    }
+  }
+}

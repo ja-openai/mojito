@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "messages": {
+    "signal@domain=%E5%8C%97%F0%9F%A7%AD": {
+      "defaultMessage": "北方灯塔",
+      "description": "Unicode native domain bytes require deterministic identity escaping.",
+      "metadata": {
+        "sourceMessage": "Beacon",
+        "gettextDomain": "北🧭",
+        "gettextDomainHeader": {
+          "locale": "zh-CN"
+        },
+        "context": "signal",
+        "gettextOriginalId": "signal"
+      }
+    },
+    "signal@domain=north%25wing": {
+      "defaultMessage": "North beacon",
+      "description": "Literal percent bytes cannot collide with encoded domain suffixes.",
+      "metadata": {
+        "sourceMessage": "Beacon",
+        "gettextDomain": "north%wing",
+        "gettextDomainHeader": {
+          "locale": "en-US"
+        },
+        "context": "signal",
+        "gettextOriginalId": "signal"
+      }
+    }
+  }
+}

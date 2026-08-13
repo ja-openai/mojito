@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "en-US",
+  "messages": {
+    "dashboard\tsignal": {
+      "defaultMessage": "{arg0, plural, one {{arg0} marker at 40%} other {{arg0} signals at 50%}}",
+      "description": "Dashboard signal count",
+      "variants": {
+        "one": "{arg0} marker at 40%",
+        "other": "{arg0} signals at 50%"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "context": "dashboard\tsignal",
+        "flags": [
+          "fuzzy"
+        ],
+        "gettextPluralEscapedPercents": {
+          "0": [
+            19
+          ],
+          "1": [
+            20
+          ]
+        },
+        "gettextPluralForms": {
+          "expression": "n == 1 ? 0 : 1",
+          "nplurals": 2
+        },
+        "gettextPluralIndexes": {
+          "0": "one",
+          "1": "other"
+        },
+        "gettextUntranslatedIndexes": [
+          1
+        ],
+        "references": [
+          "src/dashboard.py:17",
+          "src/signal.py:5"
+        ],
+        "sourceMessage": "%1$d signal at 50%%",
+        "sourcePlural": "%1$d signals at 50%%",
+        "translatorComments": [
+          "Keep the partial plural visible in translation review."
+        ]
+      }
+    },
+    "line.separators": {
+      "defaultMessage": "before\nafter\nfinish",
+      "description": "Line conversions and literal newlines are different native spellings.",
+      "metadata": {
+        "context": "line.separators",
+        "gettextPrevious": {
+          "context": "previous.scope",
+          "id": "Previous message"
+        },
+        "gettextPrintfLineSeparators": [
+          {
+            "position": 12,
+            "source": "%2$n"
+          }
+        ],
+        "sourceMessage": "Source%2$nfinish"
+      }
+    },
+    "literal.percent": {
+      "defaultMessage": "Visible %s and 25%%",
+      "description": "Explicitly disabled format parsing keeps every literal percent.",
+      "metadata": {
+        "context": "literal.percent",
+        "flags": [
+          "no-c-format"
+        ],
+        "sourceMessage": "Literal %s and 50%%"
+      }
+    },
+    "named.user": {
+      "defaultMessage": "Salute {user}; 75% ready",
+      "description": "Personalized greeting",
+      "placeholders": [
+        {
+          "name": "user",
+          "source": "%(user)s",
+          "kind": "string"
+        }
+      ],
+      "metadata": {
+        "context": "named.user",
+        "flags": [
+          "python-format"
+        ],
+        "gettextEscapedPercents": [
+          17
+        ],
+        "sourceMessage": "Welcome %(user)s; 80%% ready",
+        "translatorComments": [
+          "Named interpolation must retain its source spelling."
+        ]
+      }
+    },
+    "not.translated": {
+      "defaultMessage": "Awaiting translation",
+      "description": "Empty singular translations stay absent from the native MO file.",
+      "metadata": {
+        "context": "not.translated",
+        "gettextUntranslated": true
+      }
+    },
+    "supplementary_😃": {
+      "defaultMessage": "Bright ☃",
+      "metadata": {
+        "context": "supplementary_😃",
+        "sourceMessage": "Snow ☃"
+      }
+    },
+    "_private": {
+      "defaultMessage": "Private result",
+      "metadata": {
+        "context": "_private",
+        "sourceMessage": "Private marker"
+      }
+    }
+  }
+}

@@ -1,0 +1,8 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=ISO-8859-1\n"
+"Language: fr\n"
+
+msgctxt "mismatched.route"
+msgid "Quiet route"
+msgstr "Café"

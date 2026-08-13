@@ -1,0 +1,13 @@
+{
+  "entries": {
+    "default.route\u0004Seaward signal": "Ruta tranquila",
+    "literal.route\u0004Literal %s": "Visible %s",
+    "reset.signal\u0004Reset": "Inicio"
+  },
+  "plurals": {
+    "current.signal\u0004Current %d beacon": {
+      "0": "Nueva %d baliza",
+      "1": "Nuevas %d balizas"
+    }
+  }
+}

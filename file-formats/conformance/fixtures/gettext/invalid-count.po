@@ -1,0 +1,9 @@
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2unexpected; plural=n != 1;\n"
+
+msgid "%d setting"
+msgid_plural "%d settings"
+msgstr[0] "%d setting"
+msgstr[1] "%d settings"

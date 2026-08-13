@@ -1,0 +1,12 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+"Plural-Forms: nplurals=3; plural=n == 0 ? 0 : n == 1 ? 1 : 2;\n"
+
+msgctxt "queue_depth"
+msgid "%d pending item"
+msgid_plural "%d pending items"
+msgstr[0] "%d items remain in the empty queue"
+msgstr[1] "%d item remains in the queue"
+msgstr[2] "%d items remain in the queue"

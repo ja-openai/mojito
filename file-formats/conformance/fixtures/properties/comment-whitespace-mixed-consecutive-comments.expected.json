@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "java_properties",
+  "messages": {
+    "keep.nel": {
+      "defaultMessage": "Quiet bay",
+      "description": ""
+    },
+    "keep.nbsp": {
+      "defaultMessage": "Quiet bay",
+      "description": " "
+    },
+    "keep.figure": {
+      "defaultMessage": "Quiet bay",
+      "description": " "
+    },
+    "keep.narrow": {
+      "defaultMessage": "Quiet bay",
+      "description": " "
+    },
+    "trim.file": {
+      "defaultMessage": "Quiet bay",
+      "description": "note"
+    },
+    "trim.unit": {
+      "defaultMessage": "Quiet bay",
+      "description": "note"
+    }
+  }
+}

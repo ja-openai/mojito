@@ -1,0 +1,6 @@
+#. Quoted context
+#: first.py:1
+#: second.py:2
+msgctxt "quoted\"id"
+msgid "Line\none\t\"quoted\""
+msgstr "Ligne\nune\t\"citée\""

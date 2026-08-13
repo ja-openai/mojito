@@ -1,0 +1,16 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: ar_EG\n"
+"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5;\n"
+
+#. Activity counter in the neutral status panel
+msgctxt "signals"
+msgid "%d signal"
+msgid_plural "%d signals"
+msgstr[0] "%d: no signals"
+msgstr[1] "%d: one signal"
+msgstr[2] "%d: two signals"
+msgstr[3] "%d: a few signals"
+msgstr[4] "%d: many signals"
+msgstr[5] "%d: other signals"

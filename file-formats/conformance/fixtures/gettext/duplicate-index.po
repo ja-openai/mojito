@@ -1,0 +1,9 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "One signal"
+msgid_plural "Many signals"
+msgstr[0] "Una señal"
+msgstr[0] "Otra señal"
+msgstr[1] "Muchas señales"

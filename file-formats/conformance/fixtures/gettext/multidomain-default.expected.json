@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "messages": {
+    "%d signal@domain=messages": {
+      "defaultMessage": "{arg0, plural, one {{arg0} signal} other {{arg0} signals}}",
+      "description": "The implicit messages domain owns its own English header.",
+      "variants": {
+        "one": "{arg0} signal",
+        "other": "{arg0} signals"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "sourceMessage": "%d signal",
+        "sourcePlural": "%d signals",
+        "gettextDomainHeader": {
+          "locale": "en-US",
+          "pluralForms": {
+            "nplurals": 2,
+            "expression": "n != 1"
+          }
+        },
+        "flags": [
+          "c-format"
+        ],
+        "gettextPluralIndexes": {
+          "0": "one",
+          "1": "other"
+        },
+        "gettextPluralForms": {
+          "nplurals": 2,
+          "expression": "n != 1"
+        },
+        "gettextOriginalId": "%d signal"
+      }
+    },
+    "%d signal@domain=navigation": {
+      "defaultMessage": "{arg0, plural, one {{arg0} signal} many {{arg0} signaux} other {{arg0} signaux}}",
+      "description": "The named domain keeps the same source and a different locale.",
+      "variants": {
+        "one": "{arg0} signal",
+        "many": "{arg0} signaux",
+        "other": "{arg0} signaux"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "sourceMessage": "%d signal",
+        "sourcePlural": "%d signals",
+        "gettextDomain": "navigation",
+        "gettextDomainHeader": {
+          "locale": "fr-FR",
+          "pluralForms": {
+            "nplurals": 2,
+            "expression": "n > 1"
+          }
+        },
+        "flags": [
+          "c-format"
+        ],
+        "gettextPluralIndexes": {
+          "0": "one",
+          "1": "many"
+        },
+        "gettextPluralSelectors": {
+          "0": [
+            "one"
+          ],
+          "1": [
+            "many",
+            "other"
+          ]
+        },
+        "gettextPluralForms": {
+          "nplurals": 2,
+          "expression": "n > 1"
+        },
+        "gettextOriginalId": "%d signal"
+      }
+    }
+  }
+}

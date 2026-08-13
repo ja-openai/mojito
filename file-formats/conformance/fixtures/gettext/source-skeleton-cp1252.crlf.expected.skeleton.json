@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "encoding": "CP1252",
+  "source": "# Preserve original “smart” comments, € prices, obsolete entries, and wrapped slots.\r\nmsgid \"\"\r\nmsgstr \"\"\r\n\"Project-Id-Version: Neutral – Harbor\\n\"\r\n\"Content-Type: text/plain; charset=CP1252\\n\"\r\n\"Language: fr_FR\\n\"\r\n\"Plural-Forms: nplurals=2; plural=(n > 1);\\n\"\r\n\r\n#. Translator notes retain the original Windows quotation marks.\r\n#, c-format\r\nmsgctxt \"prix.€\"\r\nmsgid \"Invoice %1$s\"\r\nmsgstr \"\"\r\n\"“Quai” \"\r\n\"€ %1$s\"\r\n\r\n#, c-format\r\nmsgctxt \"caisse.count\"\r\nmsgid \"Crate %d\"\r\nmsgid_plural \"Crates %d\"\r\nmsgstr[0] \"“une” – %d\"\r\nmsgstr[1] \"“plusieurs” — %d\"\r\n\r\nmsgctxt \"escaped.euro\"\r\nmsgid \"Escaped \\x80\"\r\nmsgstr \"Frais : \\x80\"\r\n\r\nmsgctxt \"empty.route\"\r\nmsgid \"Empty harbor\"\r\nmsgstr \"\"\r\n\r\n#~ msgid \"Old – route\"\r\n#~ msgstr \"Ancienne — route\"\r\n",
+  "slots": [
+    {
+      "id": "prix.€",
+      "start": 391,
+      "end": 414
+    },
+    {
+      "id": "caisse.count",
+      "start": 509,
+      "end": 521,
+      "variant": "one"
+    },
+    {
+      "id": "caisse.count",
+      "start": 533,
+      "end": 551,
+      "variant": "many"
+    },
+    {
+      "id": "escaped.euro",
+      "start": 608,
+      "end": 622
+    },
+    {
+      "id": "empty.route",
+      "start": 678,
+      "end": 680
+    }
+  ]
+}

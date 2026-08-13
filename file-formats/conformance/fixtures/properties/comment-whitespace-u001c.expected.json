@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "java_properties",
+  "messages": {
+    "hash.left": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "hash.right": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "hash.both": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "hash.inner": {
+      "defaultMessage": "Quiet bay",
+      "description": "first\u001clast"
+    },
+    "hash.only": {
+      "defaultMessage": "Quiet bay"
+    },
+    "bang.left": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "bang.right": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "bang.both": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "bang.inner": {
+      "defaultMessage": "Quiet bay",
+      "description": "first\u001clast"
+    },
+    "bang.only": {
+      "defaultMessage": "Quiet bay"
+    }
+  }
+}

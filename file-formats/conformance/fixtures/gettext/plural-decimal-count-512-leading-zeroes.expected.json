@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "en",
+  "messages": {
+    "harbor.beacon_count": {
+      "defaultMessage": "{arg0, plural, one {{arg0} steady beacon} other {{arg0} steady beacons}}",
+      "variants": {
+        "one": "{arg0} steady beacon",
+        "other": "{arg0} steady beacons"
+      },
+      "description": "Count the active beacons visible from the inlet.",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "sourceMessage": "%d coastal beacon",
+        "sourcePlural": "%d coastal beacons",
+        "context": "harbor.beacon_count",
+        "flags": [
+          "c-format"
+        ],
+        "gettextPluralIndexes": {
+          "0": "one",
+          "1": "other"
+        },
+        "gettextPluralForms": {
+          "nplurals": 2,
+          "expression": "n!=1"
+        }
+      }
+    }
+  }
+}

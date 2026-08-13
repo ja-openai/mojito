@@ -1,0 +1,23 @@
+# Préserver les notes, l'ordre et les accents historiques.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=ISO-8859-1\n"
+"Language: fr_FR\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#, c-format
+msgctxt "café.signal"
+msgid "Signal %s"
+msgstr "café %s"
+
+msgid "Harbor route"
+msgstr ""
+"café "
+"calme"
+
+msgctxt "empty.signal"
+msgid "Empty harbor"
+msgstr ""
+
+#~ msgid "Ancienne route"
+#~ msgstr "désuète"

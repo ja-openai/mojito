@@ -1,0 +1,9 @@
+{
+  "plurals": {
+    "boundary_pulse_groups\u0004%d relay pulse": {
+      "0": "%d pulse: singular grouping",
+      "1": "%d pulses: boundary override",
+      "2": "%d pulses: ordinary grouping"
+    }
+  }
+}

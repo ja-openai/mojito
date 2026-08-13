@@ -1,0 +1,9 @@
+{
+  "plurals": {
+    "legacy_readings\u0004%d sensor reading": {
+      "0": "%d מדידה יחידה",
+      "1": "%d שתי מדידות",
+      "2": "%d מדידות"
+    }
+  }
+}

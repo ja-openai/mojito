@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "java_properties",
+  "messages": {
+    " leading key:=#!": {
+      "defaultMessage": " leading value   ",
+      "description": "Escaped punctuation and spaces remain visible to translators."
+    },
+    "#not_comment": {
+      "defaultMessage": "#!=: start"
+    },
+    "controls": {
+      "defaultMessage": "first\nsecond\tthird\rend\fstop\u0001"
+    },
+    "emoji😃": {
+      "defaultMessage": "Snow ☃ / 😃"
+    },
+    "mixed_lines": {
+      "defaultMessage": "before\nafter\nend\nlast",
+      "metadata": {
+        "javaPropertiesPrintfLineSeparator": true,
+        "javaPropertiesPrintfLineSeparators": [
+          {
+            "position": 12,
+            "source": "%2$n"
+          }
+        ]
+      }
+    },
+    "percent_mixed": {
+      "defaultMessage": "raw 50% / escaped 25% / {arg1}",
+      "placeholders": [
+        {
+          "name": "arg1",
+          "source": "%2$s",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "javaPropertiesEscapedPercents": [
+          20
+        ]
+      }
+    },
+    "percent_n": {
+      "defaultMessage": "%n / plain \n",
+      "metadata": {
+        "javaPropertiesEscapedPercents": [
+          0
+        ],
+        "javaPropertiesPrintfLineSeparator": true,
+        "javaPropertiesPrintfLineSeparators": [
+          {
+            "position": 11,
+            "source": "%n"
+          }
+        ]
+      }
+    },
+    "printf_line": {
+      "defaultMessage": "north\nready",
+      "metadata": {
+        "javaPropertiesPrintfLineSeparator": true,
+        "javaPropertiesPrintfLineSeparators": [
+          {
+            "position": 5,
+            "source": "%n"
+          }
+        ]
+      }
+    },
+    "repeat": {
+      "defaultMessage": "{arg0} and {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ]
+    },
+    "scalar_percent": {
+      "defaultMessage": "😃 40% then 20% / {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "javaPropertiesEscapedPercents": [
+          4,
+          13
+        ]
+      }
+    },
+    "supplementary_😃": {
+      "defaultMessage": "bright"
+    },
+    "_private": {
+      "defaultMessage": "private use"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "sl-SI",
+  "messages": {
+    "measurements": {
+      "defaultMessage": "{arg0, plural, one {{arg0} meritev} two {{arg0} meritvi} few {{arg0} meritve} other {{arg0} meritev skupaj}}",
+      "variants": {
+        "one": "{arg0} meritev",
+        "two": "{arg0} meritvi",
+        "few": "{arg0} meritve",
+        "other": "{arg0} meritev skupaj"
+      },
+      "placeholders": [{ "name": "arg0", "source": "%d", "kind": "integer", "position": 1 }],
+      "metadata": {
+        "sourceMessage": "%d measurement",
+        "sourcePlural": "%d measurements",
+        "context": "measurements",
+        "gettextPluralIndexes": { "0": "one", "1": "two", "2": "few", "3": "other" },
+        "gettextPluralForms": {
+          "nplurals": 4,
+          "expression": "n%100==1 ? 0 : n%100==2 ? 1 : n%100==3 || n%100==4 ? 2 : 3"
+        }
+      }
+    }
+  }
+}

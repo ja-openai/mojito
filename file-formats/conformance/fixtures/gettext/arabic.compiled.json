@@ -1,0 +1,12 @@
+{
+  "plurals": {
+    "signals\u0004%d signal": {
+      "0": "%d: no signals",
+      "1": "%d: one signal",
+      "2": "%d: two signals",
+      "3": "%d: a few signals",
+      "4": "%d: many signals",
+      "5": "%d: other signals"
+    }
+  }
+}

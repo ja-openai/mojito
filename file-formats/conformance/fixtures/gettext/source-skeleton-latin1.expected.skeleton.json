@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "encoding": "ISO-8859-1",
+  "source": "# Préserver les notes, l'ordre et les accents historiques.\nmsgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=ISO-8859-1\\n\"\n\"Language: fr_FR\\n\"\n\"Plural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\n#, c-format\nmsgctxt \"café.signal\"\nmsgid \"Signal %s\"\nmsgstr \"café %s\"\n\nmsgid \"Harbor route\"\nmsgstr \"\"\n\"café \"\n\"calme\"\n\nmsgctxt \"empty.signal\"\nmsgid \"Empty harbor\"\nmsgstr \"\"\n\n#~ msgid \"Ancienne route\"\n#~ msgstr \"désuète\"\n",
+  "slots": [
+    {
+      "id": "café.signal",
+      "start": 253,
+      "end": 262
+    },
+    {
+      "id": "Harbor route",
+      "start": 292,
+      "end": 310
+    },
+    {
+      "id": "empty.signal",
+      "start": 363,
+      "end": 365
+    }
+  ]
+}

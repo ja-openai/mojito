@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "en",
+  "messages": {
+    "inverted": {
+      "defaultMessage": "{arg0, plural, other {{arg0} samples selected} one {{arg0} sample selected}}",
+      "variants": {
+        "other": "{arg0} samples selected",
+        "one": "{arg0} sample selected"
+      },
+      "placeholders": [{ "name": "arg0", "source": "%d", "kind": "integer", "position": 1 }],
+      "metadata": {
+        "sourceMessage": "%d sample",
+        "sourcePlural": "%d samples",
+        "context": "inverted",
+        "gettextPluralIndexes": { "0": "other", "1": "one" },
+        "gettextPluralForms": { "nplurals": 2, "expression": "n == 1 ? 1 : 0" }
+      }
+    }
+  }
+}

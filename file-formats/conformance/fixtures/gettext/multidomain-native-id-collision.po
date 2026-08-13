@@ -1,0 +1,23 @@
+domain "alpha"
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "route@domain=beta"
+msgstr "Literal identity"
+
+domain "beta"
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "route"
+msgstr "Beta route"
+
+domain "gamma"
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "route"
+msgstr "Gamma route"

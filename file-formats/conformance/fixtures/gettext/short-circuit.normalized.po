@@ -1,0 +1,11 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=!(n != 0 && 1 / n == 1);\n"
+
+msgctxt "safe_ratio"
+msgid "%d measurement"
+msgid_plural "%d measurements"
+msgstr[0] "%d calibrated measurement"
+msgstr[1] "%d calibrated measurements"

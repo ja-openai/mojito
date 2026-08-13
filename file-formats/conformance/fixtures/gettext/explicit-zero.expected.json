@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "en",
+  "messages": {
+    "queue_depth": {
+      "defaultMessage": "{arg0, plural, =0 {{arg0} items remain in the empty queue} one {{arg0} item remains in the queue} other {{arg0} items remain in the queue}}",
+      "variants": {
+        "=0": "{arg0} items remain in the empty queue",
+        "one": "{arg0} item remains in the queue",
+        "other": "{arg0} items remain in the queue"
+      },
+      "placeholders": [{ "name": "arg0", "source": "%d", "kind": "integer", "position": 1 }],
+      "metadata": {
+        "sourceMessage": "%d pending item",
+        "sourcePlural": "%d pending items",
+        "context": "queue_depth",
+        "gettextPluralIndexes": { "0": "=0", "1": "one", "2": "other" },
+        "gettextPluralForms": { "nplurals": 3, "expression": "n == 0 ? 0 : n == 1 ? 1 : 2" }
+      }
+    }
+  }
+}
