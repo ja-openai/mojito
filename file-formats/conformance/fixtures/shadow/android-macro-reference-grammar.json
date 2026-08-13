@@ -1,0 +1,101 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 25,
+  "legacyUnits": 24,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "id": "generic_route",
+      "count": 1
+    },
+    {
+      "category": "source_mismatch",
+      "id": "auto_chained_route"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "auto_route"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor_routes_0"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor_routes_1"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor_routes_2"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor_signals_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor_signals_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor_signals_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor_signals_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor_signals_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor_signals_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "local_route"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "package_alias_route"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "package_chained_route"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "package_route"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "private_alias_route"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "private_chained_route"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "private_package_route"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "private_route"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected_package_route"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "scoped_chained_route"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "styled_private_route"
+    }
+  ]
+}

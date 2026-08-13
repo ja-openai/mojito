@@ -1,0 +1,9 @@
+{
+  "filterConfigId": "okf_po@mojito",
+  "units": [
+    {
+      "name": "Current %s",
+      "source": "Current %s"
+    }
+  ]
+}

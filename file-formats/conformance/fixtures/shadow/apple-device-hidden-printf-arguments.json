@@ -1,0 +1,128 @@
+{
+  "sourceFormat": "apple_stringsdict",
+  "canonicalUnits": 24,
+  "legacyUnits": 0,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "id": "device.after🧭_count_few",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.after🧭_count_many",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.after🧭_count_one",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.after🧭_count_other",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.after🧭_count_two",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.after🧭_count_zero",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.escaped_count_few",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.escaped_count_many",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.escaped_count_one",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.escaped_count_other",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.escaped_count_two",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.escaped_count_zero",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.explicit_count_few",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.explicit_count_many",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.explicit_count_one",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.explicit_count_other",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.explicit_count_two",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.explicit_count_zero",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.repeated_count_few",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.repeated_count_many",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.repeated_count_one",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.repeated_count_other",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.repeated_count_two",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.repeated_count_zero",
+      "count": 1
+    }
+  ]
+}

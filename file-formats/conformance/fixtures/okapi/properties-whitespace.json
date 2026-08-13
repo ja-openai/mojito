@@ -1,0 +1,18 @@
+{
+  "filterConfigId": "okf_properties-outputNotEscaped",
+  "units": [
+    {
+      "name": "key_only",
+      "source": "",
+      "comments": " Key without a separator has an empty value."
+    },
+    {
+      "name": "\\ leading\\ key",
+      "source": "\\ leading value"
+    },
+    {
+      "name": "double_slash",
+      "source": "value\\\\"
+    }
+  ]
+}

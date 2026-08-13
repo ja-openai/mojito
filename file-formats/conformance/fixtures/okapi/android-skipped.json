@@ -1,0 +1,69 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "alias",
+      "source": "@string/original"
+    },
+    {
+      "name": "platform",
+      "source": "@android:string/ok"
+    },
+    {
+      "name": "theme",
+      "source": "?attr/title"
+    },
+    {
+      "name": "ignored_zero",
+      "source": "Other",
+      "pluralForm": "zero",
+      "pluralFormOther": "ignored_other"
+    },
+    {
+      "name": "ignored_one",
+      "source": "One",
+      "pluralForm": "one",
+      "pluralFormOther": "ignored_other"
+    },
+    {
+      "name": "ignored_two",
+      "source": "Other",
+      "pluralForm": "two",
+      "pluralFormOther": "ignored_other"
+    },
+    {
+      "name": "ignored_few",
+      "source": "Other",
+      "pluralForm": "few",
+      "pluralFormOther": "ignored_other"
+    },
+    {
+      "name": "ignored_many",
+      "source": "Other",
+      "pluralForm": "many",
+      "pluralFormOther": "ignored_other"
+    },
+    {
+      "name": "ignored_other",
+      "source": "Other",
+      "pluralForm": "other",
+      "pluralFormOther": "ignored_other"
+    },
+    {
+      "name": "ignored_array_0",
+      "source": "No"
+    },
+    {
+      "name": "visible_0",
+      "source": "No"
+    },
+    {
+      "name": "visible_1",
+      "source": "Yes"
+    },
+    {
+      "name": "escaped",
+      "source": "@string/original"
+    }
+  ]
+}

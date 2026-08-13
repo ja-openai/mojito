@@ -1,0 +1,57 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "blocked_arrival",
+      "source": "Reserved arrival lane"
+    },
+    {
+      "name": "blocked_departure",
+      "source": "Reserved departure lane"
+    },
+    {
+      "name": "blocked_routes_0",
+      "source": "Restricted shipping channel"
+    },
+    {
+      "name": "blocked_routes_1",
+      "source": "Public shipping channel"
+    },
+    {
+      "name": "blocked_signals_zero",
+      "source": "Several restricted beacons",
+      "pluralForm": "zero",
+      "pluralFormOther": "blocked_signals_other"
+    },
+    {
+      "name": "blocked_signals_one",
+      "source": "One restricted beacon",
+      "pluralForm": "one",
+      "pluralFormOther": "blocked_signals_other"
+    },
+    {
+      "name": "blocked_signals_two",
+      "source": "Several restricted beacons",
+      "pluralForm": "two",
+      "pluralFormOther": "blocked_signals_other"
+    },
+    {
+      "name": "blocked_signals_few",
+      "source": "Several restricted beacons",
+      "pluralForm": "few",
+      "pluralFormOther": "blocked_signals_other"
+    },
+    {
+      "name": "blocked_signals_many",
+      "source": "Several restricted beacons",
+      "pluralForm": "many",
+      "pluralFormOther": "blocked_signals_other"
+    },
+    {
+      "name": "blocked_signals_other",
+      "source": "Several restricted beacons",
+      "pluralForm": "other",
+      "pluralFormOther": "blocked_signals_other"
+    }
+  ]
+}

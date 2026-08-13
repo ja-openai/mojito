@@ -1,0 +1,47 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    { "name": "harbor_routes_0", "source": "?attr/route_signal" },
+    { "name": "harbor_routes_1", "source": "?attr/depth_scale" },
+    { "name": "harbor_routes_2", "source": "?attr/passage_mode" },
+    { "name": "harbor_routes_3", "source": "?attr/beam_direction" },
+    { "name": "harbor_routes_4", "source": "?attr/shared_signal" },
+    { "name": "harbor_routes_5", "source": "A charted styleable passage" },
+    {
+      "name": "harbor_signals_zero",
+      "source": "%d visible styleable signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_one",
+      "source": "?attr/passage_mode",
+      "pluralForm": "one",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_two",
+      "source": "%d visible styleable signals",
+      "pluralForm": "two",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_few",
+      "source": "%d visible styleable signals",
+      "pluralForm": "few",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_many",
+      "source": "%d visible styleable signals",
+      "pluralForm": "many",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_other",
+      "source": "%d visible styleable signals",
+      "pluralForm": "other",
+      "pluralFormOther": "harbor_signals_other"
+    }
+  ]
+}

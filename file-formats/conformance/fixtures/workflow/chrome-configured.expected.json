@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "formatjs_json",
+  "messages": {
+    "farewell/message": {
+      "defaultMessage": "See you later",
+      "description": "Extension farewell"
+    },
+    "welcome/message": {
+      "defaultMessage": "Welcome",
+      "description": "Extension greeting"
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "filterConfigId": "okf_macStringdict@mojito",
+  "units": [
+    {
+      "name": "files.remaining_files_zero",
+      "source": "%d files",
+      "pluralForm": "zero",
+      "pluralFormOther": "files.remaining_files_other"
+    },
+    {
+      "name": "files.remaining_files_one",
+      "source": "%d file",
+      "pluralForm": "one",
+      "pluralFormOther": "files.remaining_files_other"
+    },
+    {
+      "name": "files.remaining_files_two",
+      "source": "%d files",
+      "pluralForm": "two",
+      "pluralFormOther": "files.remaining_files_other"
+    },
+    {
+      "name": "files.remaining_files_few",
+      "source": "%d files",
+      "pluralForm": "few",
+      "pluralFormOther": "files.remaining_files_other"
+    },
+    {
+      "name": "files.remaining_files_many",
+      "source": "%d files",
+      "pluralForm": "many",
+      "pluralFormOther": "files.remaining_files_other"
+    },
+    {
+      "name": "files.remaining_files_other",
+      "source": "%d files",
+      "pluralForm": "other",
+      "pluralFormOther": "files.remaining_files_other"
+    }
+  ]
+}

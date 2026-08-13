@@ -1,0 +1,69 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 17,
+  "legacyUnits": 16,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "id": "generic_style",
+      "count": 1
+    },
+    {
+      "category": "source_mismatch",
+      "id": "font_effect"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "foreign_annotation"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "inline_namespace"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "language_style"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "ordered_namespaces"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "routes_0"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "routes_1"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "space_style"
+    }
+  ]
+}

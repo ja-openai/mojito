@@ -1,0 +1,51 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    { "name": "anchor", "source": "Quiet harbor" },
+    { "name": "escaped_alias", "source": "@string/anchor" },
+    { "name": "quoted_alias", "source": "@string/anchor" },
+    { "name": "routes_0", "source": "@string/anchor" },
+    { "name": "routes_1", "source": "Silent beacon" },
+    { "name": "routes_2", "source": "@null" },
+    { "name": "routes_3", "source": "Across %1$s" },
+    { "name": "routes_4", "source": "@empty" },
+    { "name": "routes_5", "source": "?attr/title" },
+    { "name": "routes_6", "source": "@string/anchor" },
+    {
+      "name": "signals_zero",
+      "source": "%1$d signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_one",
+      "source": "@string/anchor",
+      "pluralForm": "one",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_two",
+      "source": "%1$d signals",
+      "pluralForm": "two",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_few",
+      "source": "%1$d signals",
+      "pluralForm": "few",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_many",
+      "source": "@null",
+      "pluralForm": "many",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_other",
+      "source": "%1$d signals",
+      "pluralForm": "other",
+      "pluralFormOther": "signals_other"
+    }
+  ]
+}

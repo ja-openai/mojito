@@ -1,0 +1,6 @@
+
+'single' = 'Harbor /*literal*/ // north';
+
+bare = 'Coast // south';
+ 'line' = 'Line // north';
+ 'paragraph' = 'Paragraph /*literal*/ south';

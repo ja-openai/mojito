@@ -1,0 +1,85 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "anchor",
+      "source": "North harbor marker"
+    },
+    {
+      "name": "direct_macro",
+      "source": "@macro/harbor_phrase"
+    },
+    {
+      "name": "styled_macro",
+      "source": "@macro/styled_phrase"
+    },
+    {
+      "name": "protected_macro",
+      "source": "@macro/protected_phrase"
+    },
+    {
+      "name": "chained_macro",
+      "source": "@macro/indirect_phrase"
+    },
+    {
+      "name": "empty_macro",
+      "source": "@macro/empty_phrase"
+    },
+    {
+      "name": "disabled_macro",
+      "source": "@macro/disabled_phrase"
+    },
+    {
+      "name": "mutable_macro",
+      "source": "@macro/mutable_phrase"
+    },
+    {
+      "name": "macro_routes_0",
+      "source": "@macro/harbor_phrase"
+    },
+    {
+      "name": "macro_routes_1",
+      "source": "A direct harbor lane"
+    },
+    {
+      "name": "macro_routes_2",
+      "source": "@macro/indirect_phrase"
+    },
+    {
+      "name": "macro_signals_zero",
+      "pluralForm": "zero",
+      "pluralFormOther": "macro_signals_other",
+      "source": "@macro/other_signals"
+    },
+    {
+      "name": "macro_signals_one",
+      "pluralForm": "one",
+      "pluralFormOther": "macro_signals_other",
+      "source": "@macro/one_signal"
+    },
+    {
+      "name": "macro_signals_two",
+      "pluralForm": "two",
+      "pluralFormOther": "macro_signals_other",
+      "source": "@macro/other_signals"
+    },
+    {
+      "name": "macro_signals_few",
+      "pluralForm": "few",
+      "pluralFormOther": "macro_signals_other",
+      "source": "@macro/other_signals"
+    },
+    {
+      "name": "macro_signals_many",
+      "pluralForm": "many",
+      "pluralFormOther": "macro_signals_other",
+      "source": "@macro/other_signals"
+    },
+    {
+      "name": "macro_signals_other",
+      "pluralForm": "other",
+      "pluralFormOther": "macro_signals_other",
+      "source": "@macro/other_signals"
+    }
+  ]
+}

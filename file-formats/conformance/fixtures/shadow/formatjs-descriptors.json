@@ -1,0 +1,33 @@
+{
+  "sourceFormat": "formatjs_json",
+  "canonicalUnits": 2,
+  "legacyUnits": 3,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "id": "files",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "welcome",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "files/defaultMessage",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "welcome/defaultMessage",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "welcome/description",
+      "count": 1
+    }
+  ]
+}

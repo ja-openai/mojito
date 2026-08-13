@@ -1,0 +1,61 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "visible",
+      "source": "Visible harbor"
+    },
+    {
+      "name": "protected_routes_0",
+      "source": "South's pier"
+    },
+    {
+      "name": "protected_routes_1",
+      "source": "East's calm"
+    },
+    {
+      "name": "protected_routes_2",
+      "source": "North <x:g id=\"bad id\">%1$s</x:g> lane"
+    },
+    {
+      "name": "protected_routes_3",
+      "source": "<x:g id=\"other\"><b>%1$s</b></x:g>"
+    },
+    {
+      "name": "protected_counts_zero",
+      "source": "%s then %d",
+      "pluralForm": "zero",
+      "pluralFormOther": "protected_counts_other"
+    },
+    {
+      "name": "protected_counts_one",
+      "source": "One signal's shore",
+      "pluralForm": "one",
+      "pluralFormOther": "protected_counts_other"
+    },
+    {
+      "name": "protected_counts_two",
+      "source": "%s then %d",
+      "pluralForm": "two",
+      "pluralFormOther": "protected_counts_other"
+    },
+    {
+      "name": "protected_counts_few",
+      "source": "%s then %d",
+      "pluralForm": "few",
+      "pluralFormOther": "protected_counts_other"
+    },
+    {
+      "name": "protected_counts_many",
+      "source": "%s then %d",
+      "pluralForm": "many",
+      "pluralFormOther": "protected_counts_other"
+    },
+    {
+      "name": "protected_counts_other",
+      "source": "%s then %d",
+      "pluralForm": "other",
+      "pluralFormOther": "protected_counts_other"
+    }
+  ]
+}

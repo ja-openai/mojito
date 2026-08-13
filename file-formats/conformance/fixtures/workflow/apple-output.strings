@@ -1,0 +1,4 @@
+/* Visible control */
+"visible" = "Hello";
+/* Remove untranslated */
+"missing" = "Goodbye";

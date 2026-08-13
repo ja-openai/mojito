@@ -1,0 +1,65 @@
+{
+  "filterConfigId": "okf_po@mojito",
+  "units": [
+    {
+      "name": "%d file --- files.remaining _zero",
+      "source": "%d files",
+      "comments": "Remaining files",
+      "pluralForm": "zero",
+      "pluralFormOther": "%d file --- files.remaining _other",
+      "usages": [
+        "files.py:18"
+      ]
+    },
+    {
+      "name": "%d file --- files.remaining _one",
+      "source": "%d file",
+      "comments": "Remaining files",
+      "pluralForm": "one",
+      "pluralFormOther": "%d file --- files.remaining _other",
+      "usages": [
+        "files.py:18"
+      ]
+    },
+    {
+      "name": "%d file --- files.remaining _two",
+      "source": "%d files",
+      "comments": "Remaining files",
+      "pluralForm": "two",
+      "pluralFormOther": "%d file --- files.remaining _other",
+      "usages": [
+        "files.py:18"
+      ]
+    },
+    {
+      "name": "%d file --- files.remaining _few",
+      "source": "%d files",
+      "comments": "Remaining files",
+      "pluralForm": "few",
+      "pluralFormOther": "%d file --- files.remaining _other",
+      "usages": [
+        "files.py:18"
+      ]
+    },
+    {
+      "name": "%d file --- files.remaining _many",
+      "source": "%d files",
+      "comments": "Remaining files",
+      "pluralForm": "many",
+      "pluralFormOther": "%d file --- files.remaining _other",
+      "usages": [
+        "files.py:18"
+      ]
+    },
+    {
+      "name": "%d file --- files.remaining _other",
+      "source": "%d files",
+      "comments": "Remaining files",
+      "pluralForm": "other",
+      "pluralFormOther": "%d file --- files.remaining _other",
+      "usages": [
+        "files.py:18"
+      ]
+    }
+  ]
+}

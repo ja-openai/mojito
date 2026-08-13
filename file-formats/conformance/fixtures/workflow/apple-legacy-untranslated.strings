@@ -1,0 +1,8 @@
+/* Keep translated single-quoted entry */
+'single' = 'Source harbor';
+/* Remove untranslated single-quoted entry */
+'missing_single' = 'Source missing harbor';
+/* Remove untranslated bare-key entry */
+missing_bare = 'Source missing coast';
+/* Keep translated shortcut entry */
+shortcut;

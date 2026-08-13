@@ -1,0 +1,12 @@
+<plist version="1.0"><dict>
+  <key>beacons</key><dict>
+    <key>NSStringLocalizedFormatKey</key><string>%#@beacons@</string>
+    <key>beacons</key><dict>
+      <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key><string>d</string>
+      <key>one</key><string>%d beacon</string>
+      <key>many</key><string>%d beacons at scale</string>
+      <key>other</key><string>%d beacons</string>
+    </dict>
+  </dict>
+</dict></plist>

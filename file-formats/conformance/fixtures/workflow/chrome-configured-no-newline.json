@@ -1,0 +1,14 @@
+{
+  "welcome": {
+    "message": "Welcome",
+    "description": "Extension greeting"
+  },
+  "farewell": {
+    "message": "See you later",
+    "description": "Extension farewell"
+  },
+  "private": {
+    "message": "Internal",
+    "description": "DO NOT TRANSLATE: internal"
+  }
+}

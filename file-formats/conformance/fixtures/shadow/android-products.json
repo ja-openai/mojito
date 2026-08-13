@@ -1,0 +1,23 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 12,
+  "legacyUnits": 12,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "duplicate_legacy",
+      "id": "button",
+      "count": 3
+    },
+    {
+      "category": "legacy_projection_collision",
+      "id": "button",
+      "count": 3,
+      "canonicalIds": [
+        "button",
+        "button@product=tablet",
+        "button@product=watch"
+      ]
+    }
+  ]
+}

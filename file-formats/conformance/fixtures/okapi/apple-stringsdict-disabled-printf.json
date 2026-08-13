@@ -1,0 +1,149 @@
+{
+  "filterConfigId": "okf_macStringdict@mojito",
+  "units": [
+    {
+      "name": "harbor.after_count_zero",
+      "source": "%d%n beacons",
+      "pluralForm": "zero",
+      "pluralFormOther": "harbor.after_count_other"
+    },
+    {
+      "name": "harbor.after_count_one",
+      "source": "%d%n beacon",
+      "pluralForm": "one",
+      "pluralFormOther": "harbor.after_count_other"
+    },
+    {
+      "name": "harbor.after_count_two",
+      "source": "%d%n beacons",
+      "pluralForm": "two",
+      "pluralFormOther": "harbor.after_count_other"
+    },
+    {
+      "name": "harbor.after_count_few",
+      "source": "%d%n beacons",
+      "pluralForm": "few",
+      "pluralFormOther": "harbor.after_count_other"
+    },
+    {
+      "name": "harbor.after_count_many",
+      "source": "%d%n beacons",
+      "pluralForm": "many",
+      "pluralFormOther": "harbor.after_count_other"
+    },
+    {
+      "name": "harbor.after_count_other",
+      "source": "%d%n beacons",
+      "pluralForm": "other",
+      "pluralFormOther": "harbor.after_count_other"
+    },
+    {
+      "name": "harbor.literal_count_zero",
+      "source": "%d%%n beacons",
+      "pluralForm": "zero",
+      "pluralFormOther": "harbor.literal_count_other"
+    },
+    {
+      "name": "harbor.literal_count_one",
+      "source": "%d%%n beacon",
+      "pluralForm": "one",
+      "pluralFormOther": "harbor.literal_count_other"
+    },
+    {
+      "name": "harbor.literal_count_two",
+      "source": "%d%%n beacons",
+      "pluralForm": "two",
+      "pluralFormOther": "harbor.literal_count_other"
+    },
+    {
+      "name": "harbor.literal_count_few",
+      "source": "%d%%n beacons",
+      "pluralForm": "few",
+      "pluralFormOther": "harbor.literal_count_other"
+    },
+    {
+      "name": "harbor.literal_count_many",
+      "source": "%d%%n beacons",
+      "pluralForm": "many",
+      "pluralFormOther": "harbor.literal_count_other"
+    },
+    {
+      "name": "harbor.literal_count_other",
+      "source": "%d%%n beacons",
+      "pluralForm": "other",
+      "pluralFormOther": "harbor.literal_count_other"
+    },
+    {
+      "name": "harbor.mixed.🧭_count_zero",
+      "source": "%d%n beacons",
+      "pluralForm": "zero",
+      "pluralFormOther": "harbor.mixed.🧭_count_other"
+    },
+    {
+      "name": "harbor.mixed.🧭_count_one",
+      "source": "%d%n beacon",
+      "pluralForm": "one",
+      "pluralFormOther": "harbor.mixed.🧭_count_other"
+    },
+    {
+      "name": "harbor.mixed.🧭_count_two",
+      "source": "%d%n beacons",
+      "pluralForm": "two",
+      "pluralFormOther": "harbor.mixed.🧭_count_other"
+    },
+    {
+      "name": "harbor.mixed.🧭_count_few",
+      "source": "%d%n beacons",
+      "pluralForm": "few",
+      "pluralFormOther": "harbor.mixed.🧭_count_other"
+    },
+    {
+      "name": "harbor.mixed.🧭_count_many",
+      "source": "%d%n beacons",
+      "pluralForm": "many",
+      "pluralFormOther": "harbor.mixed.🧭_count_other"
+    },
+    {
+      "name": "harbor.mixed.🧭_count_other",
+      "source": "%d%n beacons",
+      "pluralForm": "other",
+      "pluralFormOther": "harbor.mixed.🧭_count_other"
+    },
+    {
+      "name": "harbor.repeated_count_zero",
+      "source": "%d%n%n beacons",
+      "pluralForm": "zero",
+      "pluralFormOther": "harbor.repeated_count_other"
+    },
+    {
+      "name": "harbor.repeated_count_one",
+      "source": "%d%n%n beacon",
+      "pluralForm": "one",
+      "pluralFormOther": "harbor.repeated_count_other"
+    },
+    {
+      "name": "harbor.repeated_count_two",
+      "source": "%d%n%n beacons",
+      "pluralForm": "two",
+      "pluralFormOther": "harbor.repeated_count_other"
+    },
+    {
+      "name": "harbor.repeated_count_few",
+      "source": "%d%n%n beacons",
+      "pluralForm": "few",
+      "pluralFormOther": "harbor.repeated_count_other"
+    },
+    {
+      "name": "harbor.repeated_count_many",
+      "source": "%d%n%n beacons",
+      "pluralForm": "many",
+      "pluralFormOther": "harbor.repeated_count_other"
+    },
+    {
+      "name": "harbor.repeated_count_other",
+      "source": "%d%n%n beacons",
+      "pluralForm": "other",
+      "pluralFormOther": "harbor.repeated_count_other"
+    }
+  ]
+}

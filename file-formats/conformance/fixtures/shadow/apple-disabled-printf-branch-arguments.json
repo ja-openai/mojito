@@ -1,0 +1,176 @@
+{
+  "sourceFormat": "apple_stringsdict",
+  "canonicalUnits": 42,
+  "legacyUnits": 42,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "source_mismatch",
+      "id": "harbor.after_count_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.after_count_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.after_count_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.after_count_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.after_count_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.after_count_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.escaped_count_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.escaped_count_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.escaped_count_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.escaped_count_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.escaped_count_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.escaped_count_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.explicit_count_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.explicit_count_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.explicit_count_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.explicit_count_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.explicit_count_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.explicit_count_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.overlap_count_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.overlap_count_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.overlap_count_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.overlap_count_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.overlap_count_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.overlap_count_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.positioned_count_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.positioned_count_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.positioned_count_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.positioned_count_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.positioned_count_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.positioned_count_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.repeated_count_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.repeated_count_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.repeated_count_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.repeated_count_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.repeated_count_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.repeated_count_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.unicode.🧭_count_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.unicode.🧭_count_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.unicode.🧭_count_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.unicode.🧭_count_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.unicode.🧭_count_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.unicode.🧭_count_zero"
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "scalar_space",
+      "source": "north west"
+    },
+    {
+      "name": "scalar_default_space",
+      "source": "north east"
+    },
+    {
+      "name": "space_style",
+      "source": "<b xml:space=\"preserve\"> northern passage </b>"
+    },
+    {
+      "name": "language_style",
+      "source": "<b xml:lang=\"fr\">Harbor signal</b>"
+    },
+    {
+      "name": "foreign_annotation",
+      "source": "<annotation f:route=\"north dock\">Harbor signal</annotation>"
+    },
+    {
+      "name": "font_effect",
+      "source": "<font android:size=\"12\" f:color=\"red\">Harbor glow</font>"
+    },
+    {
+      "name": "ordered_namespaces",
+      "source": "<b alpha=\"A\" android:bravo=\"B\" f:delta=\"D\" xml:charlie=\"C\">Harbor order</b>"
+    },
+    {
+      "name": "inline_namespace",
+      "source": "<b inner:route=\"quiet\" xmlns:inner=\"urn:neutral:inline\">Harbor route</b>"
+    },
+    {
+      "name": "routes_0",
+      "source": "<annotation f:key=\"private\">Harbor route</annotation>"
+    },
+    {
+      "name": "routes_1",
+      "source": "<font f:color=\"#112233\">Harbor light</font>"
+    },
+    {
+      "name": "signals_zero",
+      "source": "<annotation f:key=\"beacon\">%1$d harbor beacons</annotation>",
+      "pluralForm": "zero",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_one",
+      "source": "<font android:size=\"9\">%1$d harbor beacon</font>",
+      "pluralForm": "one",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_two",
+      "source": "<annotation f:key=\"beacon\">%1$d harbor beacons</annotation>",
+      "pluralForm": "two",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_few",
+      "source": "<annotation f:key=\"beacon\">%1$d harbor beacons</annotation>",
+      "pluralForm": "few",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_many",
+      "source": "<annotation f:key=\"beacon\">%1$d harbor beacons</annotation>",
+      "pluralForm": "many",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_other",
+      "source": "<annotation f:key=\"beacon\">%1$d harbor beacons</annotation>",
+      "pluralForm": "other",
+      "pluralFormOther": "signals_other"
+    }
+  ]
+}

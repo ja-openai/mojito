@@ -1,0 +1,148 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 19,
+  "legacyUnits": 43,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "source_mismatch",
+      "id": "signals_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_zero"
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "color_alias",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "created_identity",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "dashed_entry",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "dotted_entry",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "macro_alias",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "package_alias",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "package_short_theme",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "package_theme",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private_package",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private_platform",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private_theme",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "qualified_theme",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "raw_alias",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_0",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_1",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_2",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_3",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_4",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_5",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_6",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_7",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_8",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "shorthand_theme",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "style_alias",
+      "count": 1
+    }
+  ]
+}

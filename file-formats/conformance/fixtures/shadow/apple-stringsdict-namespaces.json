@@ -1,0 +1,38 @@
+{
+  "sourceFormat": "apple_stringsdict",
+  "canonicalUnits": 6,
+  "legacyUnits": 0,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "id": "dock.namespace_signals_few",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "dock.namespace_signals_many",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "dock.namespace_signals_one",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "dock.namespace_signals_other",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "dock.namespace_signals_two",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "dock.namespace_signals_zero",
+      "count": 1
+    }
+  ]
+}

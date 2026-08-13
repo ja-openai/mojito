@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "java_properties",
+  "messages": {
+    "gate": {
+      "defaultMessage": "South pier",
+      "description": "Gate label shown in the harbor terminal."
+    }
+  }
+}

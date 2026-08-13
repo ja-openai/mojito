@@ -1,0 +1,10 @@
+{
+  "filterConfigId": "okf_regex@mojito-macStrings",
+  "units": [
+    {
+      "name": "{\n  /* OpenStep dictionary translator context. */\n  \"wrapped.route",
+      "source": "Wrapped %@ harbor",
+      "comments": " A comment outside the dictionary does not describe its first key. "
+    }
+  ]
+}

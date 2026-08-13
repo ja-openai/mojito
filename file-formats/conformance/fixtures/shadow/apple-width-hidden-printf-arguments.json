@@ -1,0 +1,108 @@
+{
+  "sourceFormat": "apple_stringsdict",
+  "canonicalUnits": 10,
+  "legacyUnits": 10,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "id": "device.after🧭",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.escaped",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.explicit",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.middle",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "device.repeated",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "width.after🧭",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "width.escaped",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "width.explicit",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "width.middle",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "width.repeated",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "width.after🧭_NSStringVariableWidthRuleType_040",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "width.after🧭_NSStringVariableWidthRuleType_5",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "width.escaped_NSStringVariableWidthRuleType_040",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "width.escaped_NSStringVariableWidthRuleType_5",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "width.explicit_NSStringVariableWidthRuleType_040",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "width.explicit_NSStringVariableWidthRuleType_5",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "width.middle_NSStringVariableWidthRuleType_040",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "width.middle_NSStringVariableWidthRuleType_5",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "width.repeated_NSStringVariableWidthRuleType_040",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "width.repeated_NSStringVariableWidthRuleType_5",
+      "count": 1
+    }
+  ]
+}

@@ -1,0 +1,451 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "scalar_hash",
+      "source": "Dock #7",
+      "comments": "Hash spellings are original neutral cases, not platform examples."
+    },
+    {
+      "name": "escaped_hash",
+      "source": "Dock #8"
+    },
+    {
+      "name": "entity_hash",
+      "source": "Dock #9"
+    },
+    {
+      "name": "unicode_hash",
+      "source": "Dock #10"
+    },
+    {
+      "name": "protected_conventional",
+      "source": "<code:g id=\"arg0\">%1$s</code:g> #harbor"
+    },
+    {
+      "name": "mixed_conventional",
+      "source": "<code:g id=\"arg0\">%1$s</code:g> / %1$s / <code:g example=\"\" id=\"arg0\">%1$s</code:g> #signal"
+    },
+    {
+      "name": "styled_conventional",
+      "source": "<b lane=\"#signal\"><code:g id=\"arg0\">%1$s</code:g></b> / %1$s"
+    },
+    {
+      "name": "hash_routes_0",
+      "source": "#lane north",
+      "comments": "Generic TYPE_ANY recognizes an unescaped leading color as a primitive. Untyped array colors remain protected slots; escaped colors stay editable."
+    },
+    {
+      "name": "hash_routes_1",
+      "source": "Dock #lane south"
+    },
+    {
+      "name": "hash_routes_2",
+      "source": "Dock #lane east"
+    },
+    {
+      "name": "conventional_routes_0",
+      "source": "<code:g id=\"arg0\">%1$s</code:g> #north"
+    },
+    {
+      "name": "conventional_routes_1",
+      "source": "%1$s / <code:g id=\"arg0\">%1$s</code:g> ##south"
+    },
+    {
+      "name": "raw_signals_zero",
+      "source": "%1$d routes ##north",
+      "pluralForm": "zero",
+      "pluralFormOther": "raw_signals_other"
+    },
+    {
+      "name": "raw_signals_one",
+      "source": "%1$d route #north",
+      "pluralForm": "one",
+      "pluralFormOther": "raw_signals_other"
+    },
+    {
+      "name": "raw_signals_two",
+      "source": "%1$d routes ##north",
+      "pluralForm": "two",
+      "pluralFormOther": "raw_signals_other"
+    },
+    {
+      "name": "raw_signals_few",
+      "source": "%1$d routes ##north",
+      "pluralForm": "few",
+      "pluralFormOther": "raw_signals_other"
+    },
+    {
+      "name": "raw_signals_many",
+      "source": "%1$d routes ##north",
+      "pluralForm": "many",
+      "pluralFormOther": "raw_signals_other"
+    },
+    {
+      "name": "raw_signals_other",
+      "source": "%1$d routes ##north",
+      "pluralForm": "other",
+      "pluralFormOther": "raw_signals_other"
+    },
+    {
+      "name": "escaped_signals_zero",
+      "source": "%1$d routes #west",
+      "pluralForm": "zero",
+      "pluralFormOther": "escaped_signals_other"
+    },
+    {
+      "name": "escaped_signals_one",
+      "source": "%1$d route #west",
+      "pluralForm": "one",
+      "pluralFormOther": "escaped_signals_other"
+    },
+    {
+      "name": "escaped_signals_two",
+      "source": "%1$d routes #west",
+      "pluralForm": "two",
+      "pluralFormOther": "escaped_signals_other"
+    },
+    {
+      "name": "escaped_signals_few",
+      "source": "%1$d routes #west",
+      "pluralForm": "few",
+      "pluralFormOther": "escaped_signals_other"
+    },
+    {
+      "name": "escaped_signals_many",
+      "source": "%1$d routes #west",
+      "pluralForm": "many",
+      "pluralFormOther": "escaped_signals_other"
+    },
+    {
+      "name": "escaped_signals_other",
+      "source": "%1$d routes #west",
+      "pluralForm": "other",
+      "pluralFormOther": "escaped_signals_other"
+    },
+    {
+      "name": "styled_signals_zero",
+      "source": "%1$d <i lane=\"hash#inner\">##blue</i> routes",
+      "pluralForm": "zero",
+      "pluralFormOther": "styled_signals_other"
+    },
+    {
+      "name": "styled_signals_one",
+      "source": "%1$d <b lane=\"#inner\">#blue</b> route",
+      "pluralForm": "one",
+      "pluralFormOther": "styled_signals_other"
+    },
+    {
+      "name": "styled_signals_two",
+      "source": "%1$d <i lane=\"hash#inner\">##blue</i> routes",
+      "pluralForm": "two",
+      "pluralFormOther": "styled_signals_other"
+    },
+    {
+      "name": "styled_signals_few",
+      "source": "%1$d <i lane=\"hash#inner\">##blue</i> routes",
+      "pluralForm": "few",
+      "pluralFormOther": "styled_signals_other"
+    },
+    {
+      "name": "styled_signals_many",
+      "source": "%1$d <i lane=\"hash#inner\">##blue</i> routes",
+      "pluralForm": "many",
+      "pluralFormOther": "styled_signals_other"
+    },
+    {
+      "name": "styled_signals_other",
+      "source": "%1$d <i lane=\"hash#inner\">##blue</i> routes",
+      "pluralForm": "other",
+      "pluralFormOther": "styled_signals_other"
+    },
+    {
+      "name": "protected_signals_zero",
+      "source": "<code:g example=\"#2\" id=\"count\">%1$d</code:g> protected ##lanes",
+      "pluralForm": "zero",
+      "pluralFormOther": "protected_signals_other"
+    },
+    {
+      "name": "protected_signals_one",
+      "source": "<code:g example=\"#1\" id=\"count\">%1$d</code:g> protected #lane",
+      "pluralForm": "one",
+      "pluralFormOther": "protected_signals_other"
+    },
+    {
+      "name": "protected_signals_two",
+      "source": "<code:g example=\"#2\" id=\"count\">%1$d</code:g> protected ##lanes",
+      "pluralForm": "two",
+      "pluralFormOther": "protected_signals_other"
+    },
+    {
+      "name": "protected_signals_few",
+      "source": "<code:g example=\"#2\" id=\"count\">%1$d</code:g> protected ##lanes",
+      "pluralForm": "few",
+      "pluralFormOther": "protected_signals_other"
+    },
+    {
+      "name": "protected_signals_many",
+      "source": "<code:g example=\"#2\" id=\"count\">%1$d</code:g> protected ##lanes",
+      "pluralForm": "many",
+      "pluralFormOther": "protected_signals_other"
+    },
+    {
+      "name": "protected_signals_other",
+      "source": "<code:g example=\"#2\" id=\"count\">%1$d</code:g> protected ##lanes",
+      "pluralForm": "other",
+      "pluralFormOther": "protected_signals_other"
+    },
+    {
+      "name": "optional_examples_zero",
+      "source": "<code:g example=\"#many\" id=\"count\">%1$d</code:g> supplied ##north",
+      "pluralForm": "zero",
+      "pluralFormOther": "optional_examples_other"
+    },
+    {
+      "name": "optional_examples_one",
+      "source": "<code:g id=\"count\">%1$d</code:g> omitted #north",
+      "pluralForm": "one",
+      "pluralFormOther": "optional_examples_other"
+    },
+    {
+      "name": "optional_examples_two",
+      "source": "<code:g example=\"#many\" id=\"count\">%1$d</code:g> supplied ##north",
+      "pluralForm": "two",
+      "pluralFormOther": "optional_examples_other"
+    },
+    {
+      "name": "optional_examples_few",
+      "source": "<code:g example=\"#many\" id=\"count\">%1$d</code:g> supplied ##north",
+      "pluralForm": "few",
+      "pluralFormOther": "optional_examples_other"
+    },
+    {
+      "name": "optional_examples_many",
+      "source": "<code:g example=\"#many\" id=\"count\">%1$d</code:g> supplied ##north",
+      "pluralForm": "many",
+      "pluralFormOther": "optional_examples_other"
+    },
+    {
+      "name": "optional_examples_other",
+      "source": "<code:g example=\"#many\" id=\"count\">%1$d</code:g> supplied ##north",
+      "pluralForm": "other",
+      "pluralFormOther": "optional_examples_other"
+    },
+    {
+      "name": "empty_examples_zero",
+      "source": "<code:g id=\"count\">%1$d</code:g> absent ##west",
+      "pluralForm": "zero",
+      "pluralFormOther": "empty_examples_other"
+    },
+    {
+      "name": "empty_examples_one",
+      "source": "<code:g example=\"\" id=\"count\">%1$d</code:g> empty #west",
+      "pluralForm": "one",
+      "pluralFormOther": "empty_examples_other"
+    },
+    {
+      "name": "empty_examples_two",
+      "source": "<code:g id=\"count\">%1$d</code:g> absent ##west",
+      "pluralForm": "two",
+      "pluralFormOther": "empty_examples_other"
+    },
+    {
+      "name": "empty_examples_few",
+      "source": "<code:g id=\"count\">%1$d</code:g> absent ##west",
+      "pluralForm": "few",
+      "pluralFormOther": "empty_examples_other"
+    },
+    {
+      "name": "empty_examples_many",
+      "source": "<code:g id=\"count\">%1$d</code:g> absent ##west",
+      "pluralForm": "many",
+      "pluralFormOther": "empty_examples_other"
+    },
+    {
+      "name": "empty_examples_other",
+      "source": "<code:g id=\"count\">%1$d</code:g> absent ##west",
+      "pluralForm": "other",
+      "pluralFormOther": "empty_examples_other"
+    },
+    {
+      "name": "repeated_examples_zero",
+      "source": "<code:g example=\"#tail\" id=\"count\">%1$d</code:g>/<code:g example=\"#lead\" id=\"count\">%1$d</code:g> repeated ##east",
+      "pluralForm": "zero",
+      "pluralFormOther": "repeated_examples_other"
+    },
+    {
+      "name": "repeated_examples_one",
+      "source": "<code:g example=\"#lead\" id=\"count\">%1$d</code:g>/<code:g example=\"#tail\" id=\"count\">%1$d</code:g> repeated #east",
+      "pluralForm": "one",
+      "pluralFormOther": "repeated_examples_other"
+    },
+    {
+      "name": "repeated_examples_two",
+      "source": "<code:g example=\"#tail\" id=\"count\">%1$d</code:g>/<code:g example=\"#lead\" id=\"count\">%1$d</code:g> repeated ##east",
+      "pluralForm": "two",
+      "pluralFormOther": "repeated_examples_other"
+    },
+    {
+      "name": "repeated_examples_few",
+      "source": "<code:g example=\"#tail\" id=\"count\">%1$d</code:g>/<code:g example=\"#lead\" id=\"count\">%1$d</code:g> repeated ##east",
+      "pluralForm": "few",
+      "pluralFormOther": "repeated_examples_other"
+    },
+    {
+      "name": "repeated_examples_many",
+      "source": "<code:g example=\"#tail\" id=\"count\">%1$d</code:g>/<code:g example=\"#lead\" id=\"count\">%1$d</code:g> repeated ##east",
+      "pluralForm": "many",
+      "pluralFormOther": "repeated_examples_other"
+    },
+    {
+      "name": "repeated_examples_other",
+      "source": "<code:g example=\"#tail\" id=\"count\">%1$d</code:g>/<code:g example=\"#lead\" id=\"count\">%1$d</code:g> repeated ##east",
+      "pluralForm": "other",
+      "pluralFormOther": "repeated_examples_other"
+    },
+    {
+      "name": "conventional_signals_zero",
+      "source": "%1$d / <code:g id=\"arg0\">%1$d</code:g> ##bridges",
+      "pluralForm": "zero",
+      "pluralFormOther": "conventional_signals_other"
+    },
+    {
+      "name": "conventional_signals_one",
+      "source": "<code:g id=\"arg0\">%1$d</code:g> #bridge",
+      "pluralForm": "one",
+      "pluralFormOther": "conventional_signals_other"
+    },
+    {
+      "name": "conventional_signals_two",
+      "source": "%1$d / <code:g id=\"arg0\">%1$d</code:g> ##bridges",
+      "pluralForm": "two",
+      "pluralFormOther": "conventional_signals_other"
+    },
+    {
+      "name": "conventional_signals_few",
+      "source": "%1$d / <code:g id=\"arg0\">%1$d</code:g> ##bridges",
+      "pluralForm": "few",
+      "pluralFormOther": "conventional_signals_other"
+    },
+    {
+      "name": "conventional_signals_many",
+      "source": "%1$d / <code:g id=\"arg0\">%1$d</code:g> ##bridges",
+      "pluralForm": "many",
+      "pluralFormOther": "conventional_signals_other"
+    },
+    {
+      "name": "conventional_signals_other",
+      "source": "%1$d / <code:g id=\"arg0\">%1$d</code:g> ##bridges",
+      "pluralForm": "other",
+      "pluralFormOther": "conventional_signals_other"
+    },
+    {
+      "name": "conventional_examples_zero",
+      "source": "<code:g example=\"\" id=\"arg0\">%1$d</code:g>/<code:g id=\"arg0\">%1$d</code:g> ##east",
+      "pluralForm": "zero",
+      "pluralFormOther": "conventional_examples_other"
+    },
+    {
+      "name": "conventional_examples_one",
+      "source": "<code:g id=\"arg0\">%1$d</code:g>/<code:g example=\"\" id=\"arg0\">%1$d</code:g> #east",
+      "pluralForm": "one",
+      "pluralFormOther": "conventional_examples_other"
+    },
+    {
+      "name": "conventional_examples_two",
+      "source": "<code:g example=\"\" id=\"arg0\">%1$d</code:g>/<code:g id=\"arg0\">%1$d</code:g> ##east",
+      "pluralForm": "two",
+      "pluralFormOther": "conventional_examples_other"
+    },
+    {
+      "name": "conventional_examples_few",
+      "source": "<code:g example=\"\" id=\"arg0\">%1$d</code:g>/<code:g id=\"arg0\">%1$d</code:g> ##east",
+      "pluralForm": "few",
+      "pluralFormOther": "conventional_examples_other"
+    },
+    {
+      "name": "conventional_examples_many",
+      "source": "<code:g example=\"\" id=\"arg0\">%1$d</code:g>/<code:g id=\"arg0\">%1$d</code:g> ##east",
+      "pluralForm": "many",
+      "pluralFormOther": "conventional_examples_other"
+    },
+    {
+      "name": "conventional_examples_other",
+      "source": "<code:g example=\"\" id=\"arg0\">%1$d</code:g>/<code:g id=\"arg0\">%1$d</code:g> ##east",
+      "pluralForm": "other",
+      "pluralFormOther": "conventional_examples_other"
+    },
+    {
+      "name": "product_signals_zero",
+      "source": "%1$d default ##signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "product_signals_other"
+    },
+    {
+      "name": "product_signals_one",
+      "source": "%1$d default #signal",
+      "pluralForm": "one",
+      "pluralFormOther": "product_signals_other"
+    },
+    {
+      "name": "product_signals_two",
+      "source": "%1$d default ##signals",
+      "pluralForm": "two",
+      "pluralFormOther": "product_signals_other"
+    },
+    {
+      "name": "product_signals_few",
+      "source": "%1$d default ##signals",
+      "pluralForm": "few",
+      "pluralFormOther": "product_signals_other"
+    },
+    {
+      "name": "product_signals_many",
+      "source": "%1$d default ##signals",
+      "pluralForm": "many",
+      "pluralFormOther": "product_signals_other"
+    },
+    {
+      "name": "product_signals_other",
+      "source": "%1$d default ##signals",
+      "pluralForm": "other",
+      "pluralFormOther": "product_signals_other"
+    },
+    {
+      "name": "product_signals_zero",
+      "source": "%1$d tablet ##signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "product_signals_other"
+    },
+    {
+      "name": "product_signals_one",
+      "source": "%1$d tablet #signal",
+      "pluralForm": "one",
+      "pluralFormOther": "product_signals_other"
+    },
+    {
+      "name": "product_signals_two",
+      "source": "%1$d tablet ##signals",
+      "pluralForm": "two",
+      "pluralFormOther": "product_signals_other"
+    },
+    {
+      "name": "product_signals_few",
+      "source": "%1$d tablet ##signals",
+      "pluralForm": "few",
+      "pluralFormOther": "product_signals_other"
+    },
+    {
+      "name": "product_signals_many",
+      "source": "%1$d tablet ##signals",
+      "pluralForm": "many",
+      "pluralFormOther": "product_signals_other"
+    },
+    {
+      "name": "product_signals_other",
+      "source": "%1$d tablet ##signals",
+      "pluralForm": "other",
+      "pluralFormOther": "product_signals_other"
+    }
+  ]
+}

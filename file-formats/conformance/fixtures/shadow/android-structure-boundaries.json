@@ -1,0 +1,130 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 13,
+  "legacyUnits": 15,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "comment_mismatch",
+      "id": "North.Path-7"
+    },
+    {
+      "category": "comment_mismatch",
+      "id": "_underway"
+    },
+    {
+      "category": "comment_mismatch",
+      "id": "éclat"
+    },
+    {
+      "category": "missing_legacy",
+      "id": "harbor.pad",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "mixed.route_1",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "route.list_0",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "route.list_1",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "tide.signals_few",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "tide.signals_many",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "tide.signals_one",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "tide.signals_other",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "tide.signals_two",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "tide.signals_zero",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "  harbor.pad  ",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "  route.list  _1",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "  route.list  _3",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "  tide.signals  _few",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "  tide.signals  _many",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "  tide.signals  _one",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "  tide.signals  _other",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "  tide.signals  _two",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "  tide.signals  _zero",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "_0",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "buried_control",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "foreign_nested",
+      "count": 1
+    }
+  ]
+}

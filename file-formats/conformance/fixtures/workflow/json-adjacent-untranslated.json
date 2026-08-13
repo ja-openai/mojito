@@ -1,0 +1,26 @@
+{
+  "entries": [
+    {"message": "First missing", "description": "First removable"},
+    {"message": "Second missing", "description": "Second removable"},
+    {"message": "Keep visible", "description": "Visible control"},
+    {"message": "Keep literal", "description": "Literal marker control"},
+    {
+      "label": "Nested array owner",
+      "children": [
+        {"message": "Deep missing", "description": "Deep removable"},
+        {"message": "Deep keep literal", "description": "Deep literal marker control"}
+      ]
+    }
+  ],
+  "literal": {
+    "message": "Keep top-level marker",
+    "description": "Top-level literal marker control"
+  },
+  "nested": {
+    "rows": [
+      {"message": "Nested first missing", "description": "Nested first removable"},
+      {"message": "Nested second missing", "description": "Nested second removable"},
+      {"message": "Nested keep literal", "description": "Nested literal marker control"}
+    ]
+  }
+}

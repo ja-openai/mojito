@@ -1,0 +1,13 @@
+{
+  "filterConfigId": "okf_properties-outputNotEscaped",
+  "units": [
+    {
+      "name": "anchor",
+      "source": "steady"
+    },
+    {
+      "name": "harbor.route\\",
+      "source": ""
+    }
+  ]
+}

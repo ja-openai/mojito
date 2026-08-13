@@ -1,0 +1,26 @@
+{
+  "sourceFormat": "java_properties",
+  "canonicalUnits": 3,
+  "legacyUnits": 3,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "comment_mismatch",
+      "id": "key_only"
+    },
+    {
+      "category": "missing_legacy",
+      "id": " leading key",
+      "count": 1
+    },
+    {
+      "category": "source_mismatch",
+      "id": "double_slash"
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "\\ leading\\ key",
+      "count": 1
+    }
+  ]
+}

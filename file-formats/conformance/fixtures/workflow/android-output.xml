@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="retained" description="Visible note">Hello</string>
+  <string name="exact" description="Preserve exact marker">Source exact marker</string>
+  <string name="quoted_exact" description="Preserve quoted marker">Source quoted marker</string>
+  <string name="missing" description="Remove with missing translation">Goodbye</string>
+  <string name="protected" translatable="false">Internal</string>
+  <plurals name="count" description="Plural note">
+    <item quantity="one">One item</item>
+    <item quantity="other">Many items</item>
+  </plurals>
+</resources>

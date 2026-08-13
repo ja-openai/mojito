@@ -1,0 +1,153 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "upper_enabled",
+      "source": "%1$s orbital route"
+    },
+    {
+      "name": "title_enabled",
+      "source": "%1$d quiet beacons"
+    },
+    {
+      "name": "padded_enabled",
+      "source": "%1$s harbor route"
+    },
+    {
+      "name": "uppercase_unformatted",
+      "source": "%s %d preserved"
+    },
+    {
+      "name": "title_unformatted",
+      "source": "%s %d retained"
+    },
+    {
+      "name": "hidden_upper_string",
+      "source": "Hidden uppercase signal"
+    },
+    {
+      "name": "hidden_title_string",
+      "source": "Hidden title-case signal"
+    },
+    {
+      "name": "upper_array_0",
+      "source": "Uppercase array signal"
+    },
+    {
+      "name": "title_array_0",
+      "source": "Title-case array signal"
+    },
+    {
+      "name": "hidden_title_array_0",
+      "source": "Hidden title-case array signal"
+    },
+    {
+      "name": "ignored_mixed_plural_zero",
+      "source": "%1$d visible mixed signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "ignored_mixed_plural_other"
+    },
+    {
+      "name": "ignored_mixed_plural_one",
+      "source": "%1$d visible mixed signal",
+      "pluralForm": "one",
+      "pluralFormOther": "ignored_mixed_plural_other"
+    },
+    {
+      "name": "ignored_mixed_plural_two",
+      "source": "%1$d visible mixed signals",
+      "pluralForm": "two",
+      "pluralFormOther": "ignored_mixed_plural_other"
+    },
+    {
+      "name": "ignored_mixed_plural_few",
+      "source": "%1$d visible mixed signals",
+      "pluralForm": "few",
+      "pluralFormOther": "ignored_mixed_plural_other"
+    },
+    {
+      "name": "ignored_mixed_plural_many",
+      "source": "%1$d visible mixed signals",
+      "pluralForm": "many",
+      "pluralFormOther": "ignored_mixed_plural_other"
+    },
+    {
+      "name": "ignored_mixed_plural_other",
+      "source": "%1$d visible mixed signals",
+      "pluralForm": "other",
+      "pluralFormOther": "ignored_mixed_plural_other"
+    },
+    {
+      "name": "ignored_invalid_plural_zero",
+      "source": "%1$d visible ignored signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "ignored_invalid_plural_other"
+    },
+    {
+      "name": "ignored_invalid_plural_one",
+      "source": "%1$d visible ignored signals",
+      "pluralForm": "one",
+      "pluralFormOther": "ignored_invalid_plural_other"
+    },
+    {
+      "name": "ignored_invalid_plural_two",
+      "source": "%1$d visible ignored signals",
+      "pluralForm": "two",
+      "pluralFormOther": "ignored_invalid_plural_other"
+    },
+    {
+      "name": "ignored_invalid_plural_few",
+      "source": "%1$d visible ignored signals",
+      "pluralForm": "few",
+      "pluralFormOther": "ignored_invalid_plural_other"
+    },
+    {
+      "name": "ignored_invalid_plural_many",
+      "source": "%1$d visible ignored signals",
+      "pluralForm": "many",
+      "pluralFormOther": "ignored_invalid_plural_other"
+    },
+    {
+      "name": "ignored_invalid_plural_other",
+      "source": "%1$d visible ignored signals",
+      "pluralForm": "other",
+      "pluralFormOther": "ignored_invalid_plural_other"
+    },
+    {
+      "name": "hidden_title_plural_zero",
+      "source": "%1$d hidden title-case signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "hidden_title_plural_other"
+    },
+    {
+      "name": "hidden_title_plural_one",
+      "source": "%1$d hidden title-case signals",
+      "pluralForm": "one",
+      "pluralFormOther": "hidden_title_plural_other"
+    },
+    {
+      "name": "hidden_title_plural_two",
+      "source": "%1$d hidden title-case signals",
+      "pluralForm": "two",
+      "pluralFormOther": "hidden_title_plural_other"
+    },
+    {
+      "name": "hidden_title_plural_few",
+      "source": "%1$d hidden title-case signals",
+      "pluralForm": "few",
+      "pluralFormOther": "hidden_title_plural_other"
+    },
+    {
+      "name": "hidden_title_plural_many",
+      "source": "%1$d hidden title-case signals",
+      "pluralForm": "many",
+      "pluralFormOther": "hidden_title_plural_other"
+    },
+    {
+      "name": "hidden_title_plural_other",
+      "source": "%1$d hidden title-case signals",
+      "pluralForm": "other",
+      "pluralFormOther": "hidden_title_plural_other"
+    }
+  ]
+}

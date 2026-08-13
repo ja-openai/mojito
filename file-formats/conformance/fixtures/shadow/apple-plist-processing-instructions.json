@@ -1,0 +1,23 @@
+{
+  "sourceFormat": "apple_strings",
+  "canonicalUnits": 3,
+  "legacyUnits": 0,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "id": "harbor.route",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "quiet.empty",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "wrapped&signal",
+      "count": 1
+    }
+  ]
+}

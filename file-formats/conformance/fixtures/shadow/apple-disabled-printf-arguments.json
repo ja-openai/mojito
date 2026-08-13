@@ -1,0 +1,44 @@
+{
+  "sourceFormat": "apple_strings",
+  "canonicalUnits": 9,
+  "legacyUnits": 9,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "source_mismatch",
+      "id": "harbor.escaped"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.explicit"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.implicit"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.integer"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.middle"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.mixed"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.overlap"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.repeated"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.unicode.🧭"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="visible">Open harbor</string>
+  <string name="hidden_upper" translatable="FALSE">Uppercase protected harbor</string>
+  <string name="hidden_title" translatable="False">Title-case protected harbor</string>
+  <string name="hidden_padded" translatable=" false ">Padded protected harbor</string>
+</resources>

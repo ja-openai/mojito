@@ -1,0 +1,63 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 4,
+  "legacyUnits": 13,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "id": "empty",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "alias",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "ignored_array_0",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "ignored_few",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "ignored_many",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "ignored_one",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "ignored_other",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "ignored_two",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "ignored_zero",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "platform",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "theme",
+      "count": 1
+    }
+  ]
+}

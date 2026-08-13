@@ -1,0 +1,17 @@
+{
+  "filterConfigId": "okf_json@mojito",
+  "units": [
+    {
+      "name": "welcome/defaultMessage",
+      "source": "Welcome, {name}!"
+    },
+    {
+      "name": "welcome/description",
+      "source": "Home screen greeting"
+    },
+    {
+      "name": "files/defaultMessage",
+      "source": "{count, plural, one {# file} other {# files}}"
+    }
+  ]
+}

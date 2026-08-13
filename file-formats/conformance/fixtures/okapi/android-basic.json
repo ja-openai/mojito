@@ -1,0 +1,28 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "welcome",
+      "source": "Hello %1$s!",
+      "comments": "Welcome screen greeting"
+    },
+    {
+      "name": "rich",
+      "source": "Tap <b>Continue</b> & go",
+      "comments": "The markup is real XML, not escaped text."
+    },
+    {
+      "name": "named",
+      "source": "Hi <xliff:g example=\"Ada\" id=\"person\">%1$s</xliff:g>!"
+    },
+    {
+      "name": "days_0",
+      "source": "Monday",
+      "comments": "Day picker labels"
+    },
+    {
+      "name": "days_1",
+      "source": "Tuesday"
+    }
+  ]
+}

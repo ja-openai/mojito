@@ -1,0 +1,41 @@
+{
+  "filterConfigId": "okf_regex@mojito-macStrings",
+  "units": [
+    {
+      "name": "harbor.implicit",
+      "source": "North %n %@"
+    },
+    {
+      "name": "harbor.middle",
+      "source": "%@ dock %n %@"
+    },
+    {
+      "name": "harbor.repeated",
+      "source": "%n%n %@ port"
+    },
+    {
+      "name": "harbor.explicit",
+      "source": "%2$n %1$@ dock"
+    },
+    {
+      "name": "harbor.mixed",
+      "source": "%2$n %@ dock"
+    },
+    {
+      "name": "harbor.overlap",
+      "source": "%n %1$@ lane"
+    },
+    {
+      "name": "harbor.integer",
+      "source": "%n %d markers"
+    },
+    {
+      "name": "harbor.escaped",
+      "source": "%%n %@ tide"
+    },
+    {
+      "name": "harbor.unicode.🧭",
+      "source": "🧭%n %@ reef"
+    }
+  ]
+}

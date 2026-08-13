@@ -1,0 +1,30 @@
+{
+  "filterConfigId": "okf_regex@mojito-macStrings",
+  "units": [
+    {
+      "name": "plain",
+      "source": "North%nSouth",
+      "comments": " Foundation disables `%n`; a physical newline is a different runtime value. "
+    },
+    {
+      "name": "physical",
+      "source": "North\nSouth"
+    },
+    {
+      "name": "escaped",
+      "source": "North%%nSouth"
+    },
+    {
+      "name": "mixed.🧭",
+      "source": "🧭%nSnow\nLine%%n"
+    },
+    {
+      "name": "repeated",
+      "source": "%nStart%n%nEnd%n"
+    },
+    {
+      "name": "positional",
+      "source": "West%2$nEast"
+    }
+  ]
+}

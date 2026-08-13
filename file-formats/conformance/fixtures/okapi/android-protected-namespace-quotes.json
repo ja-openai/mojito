@@ -1,0 +1,69 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "visible",
+      "source": "Visible northern pier"
+    },
+    {
+      "name": "protected_routes_0",
+      "source": "West <f:g>it's</f:g> passage"
+    },
+    {
+      "name": "protected_routes_1",
+      "source": "South <x:note>it's</x:note> bay"
+    },
+    {
+      "name": "protected_routes_2",
+      "source": "Near <f:veil><x:g id=\"unsafe id\">it's</x:g></f:veil> shore"
+    },
+    {
+      "name": "protected_routes_3",
+      "source": "Far <x:g id=\"unsafe id\"><f:veil>it's</f:veil></x:g> lane"
+    },
+    {
+      "name": "protected_routes_4",
+      "source": "Old <f:first>it's</f:first><f:second> bay's</f:second> harbor"
+    },
+    {
+      "name": "protected_routes_5",
+      "source": "Clear <f:veil><b>quiet</b></f:veil> passage"
+    },
+    {
+      "name": "protected_counts_zero",
+      "source": "Many <x:note>beacon's</x:note> signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "protected_counts_other"
+    },
+    {
+      "name": "protected_counts_one",
+      "source": "One <f:veil>beacon's</f:veil> signal",
+      "pluralForm": "one",
+      "pluralFormOther": "protected_counts_other"
+    },
+    {
+      "name": "protected_counts_two",
+      "source": "Many <x:note>beacon's</x:note> signals",
+      "pluralForm": "two",
+      "pluralFormOther": "protected_counts_other"
+    },
+    {
+      "name": "protected_counts_few",
+      "source": "Many <x:note>beacon's</x:note> signals",
+      "pluralForm": "few",
+      "pluralFormOther": "protected_counts_other"
+    },
+    {
+      "name": "protected_counts_many",
+      "source": "Many <x:note>beacon's</x:note> signals",
+      "pluralForm": "many",
+      "pluralFormOther": "protected_counts_other"
+    },
+    {
+      "name": "protected_counts_other",
+      "source": "Many <x:note>beacon's</x:note> signals",
+      "pluralForm": "other",
+      "pluralFormOther": "protected_counts_other"
+    }
+  ]
+}

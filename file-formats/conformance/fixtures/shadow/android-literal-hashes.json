@@ -1,0 +1,300 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 86,
+  "legacyUnits": 78,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "comment_mismatch",
+      "id": "hash_routes_0"
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "product_signals_few",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "product_signals_many",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "product_signals_one",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "product_signals_other",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "product_signals_two",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "product_signals_zero",
+      "count": 2
+    },
+    {
+      "category": "legacy_projection_collision",
+      "id": "product_signals_few",
+      "count": 2,
+      "canonicalIds": [
+        "product_signals#few",
+        "product_signals@product=tablet#few"
+      ]
+    },
+    {
+      "category": "legacy_projection_collision",
+      "id": "product_signals_many",
+      "count": 2,
+      "canonicalIds": [
+        "product_signals#many",
+        "product_signals@product=tablet#many"
+      ]
+    },
+    {
+      "category": "legacy_projection_collision",
+      "id": "product_signals_one",
+      "count": 2,
+      "canonicalIds": [
+        "product_signals#one",
+        "product_signals@product=tablet#one"
+      ]
+    },
+    {
+      "category": "legacy_projection_collision",
+      "id": "product_signals_other",
+      "count": 2,
+      "canonicalIds": [
+        "product_signals#other",
+        "product_signals@product=tablet#other"
+      ]
+    },
+    {
+      "category": "legacy_projection_collision",
+      "id": "product_signals_two",
+      "count": 2,
+      "canonicalIds": [
+        "product_signals#two",
+        "product_signals@product=tablet#two"
+      ]
+    },
+    {
+      "category": "legacy_projection_collision",
+      "id": "product_signals_zero",
+      "count": 2,
+      "canonicalIds": [
+        "product_signals#zero",
+        "product_signals@product=tablet#zero"
+      ]
+    },
+    {
+      "category": "missing_legacy",
+      "id": "escaped_color",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "mixed_hashes_1",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "mixed_hashes_2",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "mixed_hashes_3",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "mixed_hashes_4",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "quoted_color",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "strict_color",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "unicode_color",
+      "count": 1
+    },
+    {
+      "category": "source_mismatch",
+      "id": "conventional_examples_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "conventional_examples_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "conventional_examples_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "conventional_examples_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "conventional_examples_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "conventional_examples_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "conventional_routes_0"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "conventional_routes_1"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "conventional_signals_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "conventional_signals_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "conventional_signals_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "conventional_signals_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "conventional_signals_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "conventional_signals_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "empty_examples_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "empty_examples_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "empty_examples_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "empty_examples_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "empty_examples_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "empty_examples_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "mixed_conventional"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "optional_examples_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "optional_examples_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "optional_examples_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "optional_examples_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "optional_examples_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "optional_examples_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected_conventional"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected_signals_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected_signals_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected_signals_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected_signals_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected_signals_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected_signals_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "repeated_examples_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "repeated_examples_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "repeated_examples_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "repeated_examples_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "repeated_examples_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "repeated_examples_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "styled_conventional"
+    }
+  ]
+}

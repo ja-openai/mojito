@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- DO NOT TRANSLATE: implementation-owned -->
+  <!-- Secondary translator context -->
+  <string name="private">Internal</string>
+  <!-- DO NOT TRANSLATE: attribute precedence keeps this translatable -->
+  <string name="public" description="Visible control">Continue</string>
+  <!-- First translator context -->
+  <!-- Second translator context -->
+  <string name="joined">Visible details</string>
+  <string name="attribute_blocked" description="DO NOT TRANSLATE: legal">Brand</string>
+  <!-- DO NOT TRANSLATE: whole plural family -->
+  <plurals name="blocked_count">
+    <item quantity="one">One item</item>
+    <item quantity="other">Many items</item>
+  </plurals>
+</resources>

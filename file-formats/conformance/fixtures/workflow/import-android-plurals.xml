@@ -1,0 +1,8 @@
+<resources>
+  <!-- Imported inventory count -->
+  <plurals name="inventory">
+    <item quantity="one">%1$d lantern</item>
+    <item quantity="other">%1$d lanterns</item>
+  </plurals>
+  <string name="note">Inventory</string>
+</resources>

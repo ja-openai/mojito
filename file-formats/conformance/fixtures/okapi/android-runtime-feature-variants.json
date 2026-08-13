@@ -1,0 +1,101 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "harbor_route",
+      "source": "An open harbor route"
+    },
+    {
+      "name": "harbor_route",
+      "source": "A first conditional harbor route"
+    },
+    {
+      "name": "harbor_route",
+      "source": "An inverse conditional harbor route"
+    },
+    {
+      "name": "harbor_route",
+      "source": "A second conditional harbor route"
+    },
+    {
+      "name": "harbor_signals_zero",
+      "pluralForm": "zero",
+      "pluralFormOther": "harbor_signals_other",
+      "source": "Several open harbor signals"
+    },
+    {
+      "name": "harbor_signals_one",
+      "pluralForm": "one",
+      "pluralFormOther": "harbor_signals_other",
+      "source": "One open harbor signal"
+    },
+    {
+      "name": "harbor_signals_two",
+      "pluralForm": "two",
+      "pluralFormOther": "harbor_signals_other",
+      "source": "Several open harbor signals"
+    },
+    {
+      "name": "harbor_signals_few",
+      "pluralForm": "few",
+      "pluralFormOther": "harbor_signals_other",
+      "source": "Several open harbor signals"
+    },
+    {
+      "name": "harbor_signals_many",
+      "pluralForm": "many",
+      "pluralFormOther": "harbor_signals_other",
+      "source": "Several open harbor signals"
+    },
+    {
+      "name": "harbor_signals_other",
+      "pluralForm": "other",
+      "pluralFormOther": "harbor_signals_other",
+      "source": "Several open harbor signals"
+    },
+    {
+      "name": "harbor_signals_zero",
+      "pluralForm": "zero",
+      "pluralFormOther": "harbor_signals_other",
+      "source": "Several conditional harbor signals"
+    },
+    {
+      "name": "harbor_signals_one",
+      "pluralForm": "one",
+      "pluralFormOther": "harbor_signals_other",
+      "source": "One conditional harbor signal"
+    },
+    {
+      "name": "harbor_signals_two",
+      "pluralForm": "two",
+      "pluralFormOther": "harbor_signals_other",
+      "source": "Several conditional harbor signals"
+    },
+    {
+      "name": "harbor_signals_few",
+      "pluralForm": "few",
+      "pluralFormOther": "harbor_signals_other",
+      "source": "Several conditional harbor signals"
+    },
+    {
+      "name": "harbor_signals_many",
+      "pluralForm": "many",
+      "pluralFormOther": "harbor_signals_other",
+      "source": "Several conditional harbor signals"
+    },
+    {
+      "name": "harbor_signals_other",
+      "pluralForm": "other",
+      "pluralFormOther": "harbor_signals_other",
+      "source": "Several conditional harbor signals"
+    },
+    {
+      "name": "harbor_lanes_0",
+      "source": "An open harbor lane"
+    },
+    {
+      "name": "harbor_lanes_0",
+      "source": "A conditional harbor lane"
+    }
+  ]
+}

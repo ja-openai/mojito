@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "summary": {
+      "defaultMessage": "{files, plural, one {{files} file} few {{files} files} many {{files} files} other {{files} files}} in {folders, plural, one {{folders} folder} few {{folders} folders} many {{folders} folders} other {{folders} folders}}",
+      "placeholders": [
+        { "name": "files", "source": "%d", "kind": "integer", "position": 1 },
+        { "name": "folders", "source": "%d", "kind": "integer", "position": 1 }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@files@ in %#@folders@",
+        "applePluralRules": {
+          "files": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d file",
+              "few": "%d files",
+              "many": "%d files",
+              "other": "%d files"
+            }
+          },
+          "folders": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d folder",
+              "few": "%d folders",
+              "many": "%d folders",
+              "other": "%d folders"
+            }
+          }
+        },
+        "pluralVariables": ["files", "folders"]
+      }
+    }
+  }
+}

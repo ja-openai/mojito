@@ -1,0 +1,6 @@
+/* Preserve translator description */
+"literal" = "Keep 'shadow' = '@#$untranslated$#@'; literally";
+/* Preserve block-shadow translator description */
+"block_shadow" = "Keep /* fake translator comment */ 'shadow2' = '@#$untranslated$#@'; literal";
+/* Preserve exact marker translator description */
+"exact" = "@#$untranslated$#@";

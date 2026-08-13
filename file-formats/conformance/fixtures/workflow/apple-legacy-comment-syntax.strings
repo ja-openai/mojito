@@ -1,0 +1,6 @@
+/* Remove single-quoted note */
+'single' = 'Source harbor';
+/* Remove bare-key note */
+bare = 'Source coast';
+// Remove unicode line note 'line' = 'Source line';
+// Remove unicode paragraph note 'paragraph' = 'Source paragraph';

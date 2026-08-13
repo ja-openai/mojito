@@ -1,0 +1,29 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. Keep translated continuation
+msgid "visible"
+msgstr ""
+"Source visible"
+
+#. Remove untranslated multiline continuation
+msgid "missing"
+msgstr ""
+"Source missing"
+
+#. Remove contextual untranslated continuation
+msgctxt ""
+"unused.context"
+msgid "contextual"
+msgstr ""
+"Source context"
+
+#. Remove incomplete translated plural
+msgid "signal"
+msgid_plural "signals"
+msgstr[0] ""
+"Source singular"
+msgstr[1] "Source plural"

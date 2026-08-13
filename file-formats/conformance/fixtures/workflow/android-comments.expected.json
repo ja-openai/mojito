@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "joined": {
+      "defaultMessage": "Visible details",
+      "description": "First translator context Second translator context"
+    },
+    "public": {
+      "defaultMessage": "Continue",
+      "description": "Visible control"
+    }
+  }
+}

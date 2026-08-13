@@ -1,0 +1,28 @@
+{
+  "sourceFormat": "apple_strings",
+  "canonicalUnits": 3,
+  "legacyUnits": 1,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "id": "wrapped.$/north:west-2",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "wrapped.route",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "wrapped.shortcut",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "{\n  /* OpenStep dictionary translator context. */\n  \"wrapped.route",
+      "count": 1
+    }
+  ]
+}

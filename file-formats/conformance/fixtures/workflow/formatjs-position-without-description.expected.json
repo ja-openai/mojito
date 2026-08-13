@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "formatjs_json",
+  "messages": {
+    "without_description": {
+      "defaultMessage": "Location without a note",
+      "metadata": {
+        "references": ["src/WithoutDescription.tsx:17:3"]
+      }
+    },
+    "with_description": {
+      "defaultMessage": "Location with a note",
+      "description": "Reference control",
+      "metadata": {
+        "references": ["src/WithDescription.tsx:21:5"]
+      }
+    }
+  }
+}

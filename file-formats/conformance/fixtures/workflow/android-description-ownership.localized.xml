@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="plain">"Signal visible"</string>
+  <item name="generic" type="string">"Voie générique"</item>
+  <string-array name="routes">
+    <item>"Route nord"</item>
+  </string-array>
+  <plurals name="signals">
+    <item quantity="one">"Un signal"</item>
+    <item quantity="other">"Plusieurs signaux"</item>
+  </plurals>
+</resources>

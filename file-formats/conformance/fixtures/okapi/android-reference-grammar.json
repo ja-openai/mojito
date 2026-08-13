@@ -1,0 +1,189 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "anchor",
+      "source": "Calm harbor"
+    },
+    {
+      "name": "package_alias",
+      "source": "@com.neutral.port:string/anchor"
+    },
+    {
+      "name": "private_platform",
+      "source": "@*android:string/anchor"
+    },
+    {
+      "name": "private_package",
+      "source": "@*com.neutral.port:string/anchor"
+    },
+    {
+      "name": "qualified_theme",
+      "source": "?android:attr/title"
+    },
+    {
+      "name": "package_theme",
+      "source": "?com.neutral.port:attr/title"
+    },
+    {
+      "name": "private_theme",
+      "source": "?*android:attr/title"
+    },
+    {
+      "name": "package_short_theme",
+      "source": "?android:title"
+    },
+    {
+      "name": "shorthand_theme",
+      "source": "?title"
+    },
+    {
+      "name": "color_alias",
+      "source": "@color/harbor"
+    },
+    {
+      "name": "macro_alias",
+      "source": "@macro/harbor"
+    },
+    {
+      "name": "raw_alias",
+      "source": "@raw/harbor"
+    },
+    {
+      "name": "style_alias",
+      "source": "@style/harbor"
+    },
+    {
+      "name": "dotted_entry",
+      "source": "@string/harbor.deck"
+    },
+    {
+      "name": "dashed_entry",
+      "source": "@string/quiet-harbor"
+    },
+    {
+      "name": "created_identity",
+      "source": "@+id/harbor"
+    },
+    {
+      "name": "numeric_literal",
+      "source": "@0"
+    },
+    {
+      "name": "at_literal",
+      "source": "@not_a_reference"
+    },
+    {
+      "name": "unknown_type_literal",
+      "source": "@unknown/harbor"
+    },
+    {
+      "name": "invalid_create_literal",
+      "source": "@+string/harbor"
+    },
+    {
+      "name": "invalid_private_create_literal",
+      "source": "@+*android:id/harbor"
+    },
+    {
+      "name": "invalid_theme_type_literal",
+      "source": "?string/harbor"
+    },
+    {
+      "name": "quoted_package",
+      "source": "@com.neutral.port:string/anchor"
+    },
+    {
+      "name": "escaped_theme",
+      "source": "?android:attr/title"
+    },
+    {
+      "name": "unicode_padded",
+      "source": " @com.neutral.port:string/anchor "
+    },
+    {
+      "name": "routes_0",
+      "source": "@com.neutral.port:string/anchor"
+    },
+    {
+      "name": "routes_1",
+      "source": "@*android:string/anchor"
+    },
+    {
+      "name": "routes_2",
+      "source": "?android:attr/title"
+    },
+    {
+      "name": "routes_3",
+      "source": "?title"
+    },
+    {
+      "name": "routes_4",
+      "source": "@color/harbor"
+    },
+    {
+      "name": "routes_5",
+      "source": "@+id/harbor"
+    },
+    {
+      "name": "routes_6",
+      "source": "@macro/harbor"
+    },
+    {
+      "name": "routes_7",
+      "source": "?android:title"
+    },
+    {
+      "name": "routes_8",
+      "source": "@string/quiet-harbor"
+    },
+    {
+      "name": "routes_9",
+      "source": "Quiet %1$s"
+    },
+    {
+      "name": "routes_10",
+      "source": "@com.neutral.port:string/anchor"
+    },
+    {
+      "name": "routes_11",
+      "source": "?android:attr/title"
+    },
+    {
+      "name": "signals_zero",
+      "source": "@*com.neutral.port:string/anchor",
+      "pluralForm": "zero",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_one",
+      "source": "?android:attr/title",
+      "pluralForm": "one",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_two",
+      "source": "?title",
+      "pluralForm": "two",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_few",
+      "source": "@color/harbor",
+      "pluralForm": "few",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_many",
+      "source": "@+id/harbor",
+      "pluralForm": "many",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_other",
+      "source": "%1$d quiet signals",
+      "pluralForm": "other",
+      "pluralFormOther": "signals_other"
+    }
+  ]
+}

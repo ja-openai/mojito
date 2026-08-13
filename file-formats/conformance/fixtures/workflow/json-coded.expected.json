@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "formatjs_json",
+  "messages": {
+    "hello": {
+      "defaultMessage": "Hello <br id='p1'/>, <br id='p2'/> and <br id='p3'/>!",
+      "metadata": {
+        "mojitoInlineCodes": [
+          {"id": "p1", "source": "%s"},
+          {"id": "p2", "source": "{1}"},
+          {"id": "p3", "source": "%d"}
+        ]
+      }
+    }
+  }
+}
