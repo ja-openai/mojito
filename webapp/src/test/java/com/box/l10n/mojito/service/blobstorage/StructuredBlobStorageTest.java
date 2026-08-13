@@ -1,6 +1,8 @@
 package com.box.l10n.mojito.service.blobstorage;
 
+import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.AI_TRANSALATE_NO_BATCH_OUTPUT;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.AI_TRANSLATE_LINEAGE;
+import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.AI_TRANSLATE_NO_BATCH_OUTPUT;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.IMAGE;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.MULTI_BRANCH_STATE;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.POLLABLE_TASK;
@@ -58,6 +60,16 @@ public class StructuredBlobStorageTest {
   @Test
   public void getImage() {
     assertEquals("image/test1.jpg", structuredBlobStorage.getFullName(IMAGE, "test1.jpg"));
+  }
+
+  @Test
+  public void noBatchReportPrefixesUseDistinctObjectNames() {
+    assertEquals(
+        "ai_translate_no_batch_output/42/report",
+        structuredBlobStorage.getFullName(AI_TRANSLATE_NO_BATCH_OUTPUT, "42/report"));
+    assertEquals(
+        "ai_transalate_no_batch_output/42/report",
+        structuredBlobStorage.getFullName(AI_TRANSALATE_NO_BATCH_OUTPUT, "42/report"));
   }
 
   @Test

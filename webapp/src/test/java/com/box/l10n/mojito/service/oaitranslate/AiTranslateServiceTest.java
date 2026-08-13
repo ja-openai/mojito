@@ -1,9 +1,13 @@
 package com.box.l10n.mojito.service.oaitranslate;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
@@ -17,6 +21,8 @@ import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.test.TestIdWatcher;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import org.junit.Assume;
 import org.junit.Rule;
@@ -38,7 +44,7 @@ public class AiTranslateServiceTest extends ServiceTestBase {
   @Autowired RepositoryService repositoryService;
 
   @Test
-  public void noBatchOutputReportsUseConfiguredRetention() {
+  public void noBatchOutputReportsUseCorrectedPrefixAndConfiguredRetention() {
     StructuredBlobStorage originalStructuredBlobStorage = aiTranslateService.structuredBlobStorage;
     StructuredBlobStorage structuredBlobStorage = mock(StructuredBlobStorage.class);
     PollableTask pollableTask = new PollableTask();
@@ -53,16 +59,137 @@ public class AiTranslateServiceTest extends ServiceTestBase {
 
       verify(structuredBlobStorage)
           .put(
-              eq(StructuredBlobStorage.Prefix.AI_TRANSALATE_NO_BATCH_OUTPUT),
+              eq(StructuredBlobStorage.Prefix.AI_TRANSLATE_NO_BATCH_OUTPUT),
               eq("42/report"),
               anyString(),
               eq(Retention.MIN_1_DAY));
       verify(structuredBlobStorage)
           .put(
-              eq(StructuredBlobStorage.Prefix.AI_TRANSALATE_NO_BATCH_OUTPUT),
+              eq(StructuredBlobStorage.Prefix.AI_TRANSLATE_NO_BATCH_OUTPUT),
               eq("42/locale/fr-FR"),
               anyString(),
               eq(Retention.MIN_1_DAY));
+    } finally {
+      aiTranslateService.structuredBlobStorage = originalStructuredBlobStorage;
+    }
+  }
+
+  @Test
+  public void noBatchOutputReportsReadCorrectedPrefixWithoutLegacyLookup() {
+    StructuredBlobStorage originalStructuredBlobStorage = aiTranslateService.structuredBlobStorage;
+    StructuredBlobStorage structuredBlobStorage = mock(StructuredBlobStorage.class);
+    when(structuredBlobStorage.getString(
+            StructuredBlobStorage.Prefix.AI_TRANSLATE_NO_BATCH_OUTPUT, "42/report"))
+        .thenReturn(Optional.of("{\"reportLocaleUrls\":[\"42/locale/fr-FR\"]}"));
+    when(structuredBlobStorage.getString(
+            StructuredBlobStorage.Prefix.AI_TRANSLATE_NO_BATCH_OUTPUT, "42/locale/fr-FR"))
+        .thenReturn(Optional.of("corrected-locale-report"));
+
+    try {
+      aiTranslateService.structuredBlobStorage = structuredBlobStorage;
+
+      assertThat(aiTranslateService.getReportContent(42L).reportLocaleUrls())
+          .containsExactly("42/locale/fr-FR");
+      assertThat(aiTranslateService.getReportContentLocale(42L, "fr-FR"))
+          .isEqualTo("corrected-locale-report");
+      verify(structuredBlobStorage, never())
+          .getString(eq(StructuredBlobStorage.Prefix.AI_TRANSALATE_NO_BATCH_OUTPUT), anyString());
+    } finally {
+      aiTranslateService.structuredBlobStorage = originalStructuredBlobStorage;
+    }
+  }
+
+  @Test
+  public void noBatchOutputReportsFallBackToLegacyPrefix() {
+    StructuredBlobStorage originalStructuredBlobStorage = aiTranslateService.structuredBlobStorage;
+    StructuredBlobStorage structuredBlobStorage = mock(StructuredBlobStorage.class);
+    when(structuredBlobStorage.getString(
+            StructuredBlobStorage.Prefix.AI_TRANSLATE_NO_BATCH_OUTPUT, "42/report"))
+        .thenReturn(Optional.empty());
+    when(structuredBlobStorage.getString(
+            StructuredBlobStorage.Prefix.AI_TRANSALATE_NO_BATCH_OUTPUT, "42/report"))
+        .thenReturn(Optional.of("{\"reportLocaleUrls\":[\"42/locale/fr-FR\"]}"));
+    when(structuredBlobStorage.getString(
+            StructuredBlobStorage.Prefix.AI_TRANSLATE_NO_BATCH_OUTPUT, "42/locale/fr-FR"))
+        .thenReturn(Optional.empty());
+    when(structuredBlobStorage.getString(
+            StructuredBlobStorage.Prefix.AI_TRANSALATE_NO_BATCH_OUTPUT, "42/locale/fr-FR"))
+        .thenReturn(Optional.of("legacy-locale-report"));
+
+    try {
+      aiTranslateService.structuredBlobStorage = structuredBlobStorage;
+
+      assertThat(aiTranslateService.getReportContent(42L).reportLocaleUrls())
+          .containsExactly("42/locale/fr-FR");
+      assertThat(aiTranslateService.getReportContentLocale(42L, "fr-FR"))
+          .isEqualTo("legacy-locale-report");
+    } finally {
+      aiTranslateService.structuredBlobStorage = originalStructuredBlobStorage;
+    }
+  }
+
+  @Test
+  public void noBatchOutputReportsSupportMixedPrefixRuns() {
+    StructuredBlobStorage originalStructuredBlobStorage = aiTranslateService.structuredBlobStorage;
+    StructuredBlobStorage structuredBlobStorage = mock(StructuredBlobStorage.class);
+    when(structuredBlobStorage.getString(
+            StructuredBlobStorage.Prefix.AI_TRANSLATE_NO_BATCH_OUTPUT, "42/report"))
+        .thenReturn(Optional.of("{\"reportLocaleUrls\":[\"42/locale/fr-FR\"]}"));
+    when(structuredBlobStorage.getString(
+            StructuredBlobStorage.Prefix.AI_TRANSLATE_NO_BATCH_OUTPUT, "42/locale/fr-FR"))
+        .thenReturn(Optional.empty());
+    when(structuredBlobStorage.getString(
+            StructuredBlobStorage.Prefix.AI_TRANSALATE_NO_BATCH_OUTPUT, "42/locale/fr-FR"))
+        .thenReturn(Optional.of("legacy-locale-report"));
+    when(structuredBlobStorage.getString(
+            StructuredBlobStorage.Prefix.AI_TRANSLATE_NO_BATCH_OUTPUT, "43/report"))
+        .thenReturn(Optional.empty());
+    when(structuredBlobStorage.getString(
+            StructuredBlobStorage.Prefix.AI_TRANSALATE_NO_BATCH_OUTPUT, "43/report"))
+        .thenReturn(Optional.of("{\"reportLocaleUrls\":[\"43/locale/de-DE\"]}"));
+    when(structuredBlobStorage.getString(
+            StructuredBlobStorage.Prefix.AI_TRANSLATE_NO_BATCH_OUTPUT, "43/locale/de-DE"))
+        .thenReturn(Optional.of("corrected-locale-report"));
+
+    try {
+      aiTranslateService.structuredBlobStorage = structuredBlobStorage;
+
+      assertThat(aiTranslateService.getReportContent(42L).reportLocaleUrls())
+          .containsExactly("42/locale/fr-FR");
+      assertThat(aiTranslateService.getReportContentLocale(42L, "fr-FR"))
+          .isEqualTo("legacy-locale-report");
+      assertThat(aiTranslateService.getReportContent(43L).reportLocaleUrls())
+          .containsExactly("43/locale/de-DE");
+      assertThat(aiTranslateService.getReportContentLocale(43L, "de-DE"))
+          .isEqualTo("corrected-locale-report");
+    } finally {
+      aiTranslateService.structuredBlobStorage = originalStructuredBlobStorage;
+    }
+  }
+
+  @Test
+  public void noBatchOutputReportsPreserveMissingAndStorageFailureBehavior() {
+    StructuredBlobStorage originalStructuredBlobStorage = aiTranslateService.structuredBlobStorage;
+    StructuredBlobStorage structuredBlobStorage = mock(StructuredBlobStorage.class);
+    when(structuredBlobStorage.getString(
+            StructuredBlobStorage.Prefix.AI_TRANSLATE_NO_BATCH_OUTPUT, "42/report"))
+        .thenReturn(Optional.empty());
+    when(structuredBlobStorage.getString(
+            StructuredBlobStorage.Prefix.AI_TRANSALATE_NO_BATCH_OUTPUT, "42/report"))
+        .thenReturn(Optional.empty());
+    IllegalStateException storageFailure = new IllegalStateException("storage unavailable");
+    when(structuredBlobStorage.getString(
+            StructuredBlobStorage.Prefix.AI_TRANSLATE_NO_BATCH_OUTPUT, "43/report"))
+        .thenThrow(storageFailure);
+
+    try {
+      aiTranslateService.structuredBlobStorage = structuredBlobStorage;
+
+      assertThatThrownBy(() -> aiTranslateService.getReportContent(42L))
+          .isInstanceOf(NoSuchElementException.class);
+      assertThatThrownBy(() -> aiTranslateService.getReportContent(43L)).isSameAs(storageFailure);
+      verify(structuredBlobStorage, never())
+          .getString(StructuredBlobStorage.Prefix.AI_TRANSALATE_NO_BATCH_OUTPUT, "43/report");
     } finally {
       aiTranslateService.structuredBlobStorage = originalStructuredBlobStorage;
     }

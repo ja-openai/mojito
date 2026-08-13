@@ -6,6 +6,7 @@ import static com.box.l10n.mojito.openai.OpenAIClient.DownloadFileContentRespons
 import static com.box.l10n.mojito.openai.OpenAIClient.RetrieveBatchRequest;
 import static com.box.l10n.mojito.openai.OpenAIClient.RetrieveBatchResponse;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.AI_TRANSALATE_NO_BATCH_OUTPUT;
+import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.AI_TRANSLATE_NO_BATCH_OUTPUT;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.AI_TRANSLATE_WS;
 import static com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT;
 import static java.util.stream.Collectors.toMap;
@@ -946,7 +947,7 @@ public class AiTranslateService {
     // DatabaseBlobStorage keeps report bytes in mblob; use external blob storage for longer
     // retention instead of making these high-cardinality reports permanent DB rows.
     structuredBlobStorage.put(
-        AI_TRANSALATE_NO_BATCH_OUTPUT,
+        AI_TRANSLATE_NO_BATCH_OUTPUT,
         getReportFilename(currentTask.getId()),
         objectMapper.writeValueAsStringUnchecked(new ReportContent(reportFilenames)),
         aiTranslateConfigurationProperties.getNoBatch().getOutputRetention());
@@ -963,7 +964,7 @@ public class AiTranslateService {
         "Put report locale content for id: {} and locale: {}", currentTask.getId(), bcp47Tag);
     String filename = getReportLocaleFilename(currentTask.getId(), bcp47Tag);
     structuredBlobStorage.put(
-        AI_TRANSALATE_NO_BATCH_OUTPUT,
+        AI_TRANSLATE_NO_BATCH_OUTPUT,
         filename,
         objectMapper.writeValueAsStringUnchecked(importReportLines),
         aiTranslateConfigurationProperties.getNoBatch().getOutputRetention());
@@ -972,18 +973,19 @@ public class AiTranslateService {
 
   public ReportContent getReportContent(long pollableTaskId) {
     logger.debug("Get report content for id: {}", pollableTaskId);
-    String reportContentAsJson =
-        structuredBlobStorage
-            .getString(AI_TRANSALATE_NO_BATCH_OUTPUT, getReportFilename(pollableTaskId))
-            .get();
+    String reportContentAsJson = getReportBlob(getReportFilename(pollableTaskId)).get();
     return objectMapper.readValueUnchecked(reportContentAsJson, ReportContent.class);
   }
 
   public String getReportContentLocale(long pollableTaskId, String bcp47Tag) {
     logger.debug("Get report locale content for id: {} and locale: {}", pollableTaskId, bcp47Tag);
+    return getReportBlob(getReportLocaleFilename(pollableTaskId, bcp47Tag)).get();
+  }
+
+  private Optional<String> getReportBlob(String filename) {
     return structuredBlobStorage
-        .getString(AI_TRANSALATE_NO_BATCH_OUTPUT, getReportLocaleFilename(pollableTaskId, bcp47Tag))
-        .get();
+        .getString(AI_TRANSLATE_NO_BATCH_OUTPUT, filename)
+        .or(() -> structuredBlobStorage.getString(AI_TRANSALATE_NO_BATCH_OUTPUT, filename));
   }
 
   static String getReportFilename(long pollableTaskId) {

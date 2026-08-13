@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.service.blobstorage;
 
+import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.AI_TRANSLATE_NO_BATCH_OUTPUT;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.IMAGE;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.POLLABLE_TASK;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -58,6 +59,25 @@ public class BlobStorageRouterTest {
             meterRegistry);
 
     assertThat(router.getBlobStorage(POLLABLE_TASK)).isSameAs(azureBlobStorage);
+  }
+
+  @Test
+  public void routesCorrectedNoBatchReportPrefixToConfiguredBackend() {
+    BlobStorageConfigurationProperties properties = new BlobStorageConfigurationProperties();
+    properties
+        .getRouting()
+        .getPrefixes()
+        .put("ai-translate-no-batch-output", BlobStorageType.AZURE);
+
+    BlobStorageRouter router =
+        new BlobStorageRouter(
+            properties,
+            databaseBlobStorageProvider(databaseBlobStorage),
+            emptyS3BlobStorageProvider(),
+            azureBlobStorageProvider(azureBlobStorage),
+            meterRegistry);
+
+    assertThat(router.getBlobStorage(AI_TRANSLATE_NO_BATCH_OUTPUT)).isSameAs(azureBlobStorage);
   }
 
   @Test

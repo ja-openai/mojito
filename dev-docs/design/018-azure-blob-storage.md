@@ -54,6 +54,24 @@ l10n.blob-storage.routing.prefixes.image=azure
 
 `StructuredBlobStorage` uses semantic prefixes, not repository shape, to choose a backend. This lets control-plane data such as `pollable-task` remain DB-backed while large artifact-like prefixes use Azure or S3.
 
+### AI translation report prefix compatibility
+
+New no-batch AI translation report indexes and locale reports use the correctly spelled
+`ai_translate_no_batch_output/` object prefix. Reports previously persisted under
+`ai_transalate_no_batch_output/` remain readable: each report index and locale report first checks
+the corrected prefix and checks the legacy prefix only when the corrected object is missing.
+Storage-provider failures are not treated as misses, and existing legacy objects are never moved,
+rewritten, or deleted by the compatibility read.
+
+Configure the correctly spelled route when deploying this change. Legacy report reads use the legacy
+prefix route or the default backend, so keep that backend available while historical reports are
+needed. Older application versions cannot read reports written only under the corrected prefix, so
+avoid mixed-version report serving during rollout:
+
+```properties
+l10n.blob-storage.routing.prefixes.ai-translate-no-batch-output=azure
+```
+
 Migration fallback is opt-in through a composite backend. Route an individual prefix to it while
 moving existing objects away from MySQL:
 

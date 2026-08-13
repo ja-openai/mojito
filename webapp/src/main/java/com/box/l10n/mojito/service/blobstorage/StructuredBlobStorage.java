@@ -73,6 +73,9 @@ public class StructuredBlobStorage {
     CLOB_STORAGE_WS,
     AI_TRANSLATE_WS,
     AI_TRANSLATE_LINEAGE,
+    AI_TRANSLATE_NO_BATCH_OUTPUT,
+    /** @deprecated Only used to read reports persisted before the prefix spelling was corrected. */
+    @Deprecated
     AI_TRANSALATE_NO_BATCH_OUTPUT
   }
 }
