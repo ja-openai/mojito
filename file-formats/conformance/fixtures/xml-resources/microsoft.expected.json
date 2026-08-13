@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "resx",
+  "messages": {
+    "harbor": {
+      "defaultMessage": "Calm & steady 🧭",
+      "description": "Message shown at the north pier"
+    },
+    "count": {
+      "defaultMessage": "  {0} signals  "
+    },
+    "$this.Text": {
+      "defaultMessage": "Window title"
+    }
+  }
+}

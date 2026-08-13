@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <resheader name="version"><value>2.0</value></resheader>
+  <data name="harbor" xml:space="preserve">
+    <value>Calm &amp; steady 🧭</value>
+    <comment>Message shown at the north pier</comment>
+  </data>
+  <data name="count" xml:space="preserve">
+    <value>  {0} signals  </value>
+  </data>
+  <data name="$this.Text"><value>Window title</value><comment>Ignored note</comment></data>
+  <data name=">metadata"><value>Protected metadata</value></data>
+  <data name="navigation.Name"><value>Protected property</value></data>
+  <data name="icon" type="System.Drawing.Bitmap"><value>Protected bitmap</value></data>
+  <data name="blob" mimetype="application/octet-stream"><value>Protected binary</value></data>
+  <data name="empty"><value /></data>
+</root>

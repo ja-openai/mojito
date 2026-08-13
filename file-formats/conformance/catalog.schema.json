@@ -18,7 +18,8 @@
         "formatjs_json",
         "yaml",
         "javascript",
-        "typescript"
+        "typescript",
+        "resx"
       ]
     },
     "locale": { "type": "string", "minLength": 1 },

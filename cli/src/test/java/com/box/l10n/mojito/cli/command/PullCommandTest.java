@@ -360,6 +360,20 @@ public class PullCommandTest extends CLITestBase {
   }
 
   @Test
+  public void portableConverterReusesExistingResxDataset() throws Exception {
+    assertPortableMatchesExistingDataset("pullResx", "Test.resx", new String[0], new String[0]);
+  }
+
+  @Test
+  public void portableConverterReusesExistingReswDataset() throws Exception {
+    assertPortableMatchesExistingDataset(
+        "pullResw",
+        "en/Resources.resw",
+        new String[0],
+        new String[] {"-lm", "fr:fr-FR,fr-CA:fr-CA,ja:ja-JP", "-lmt", "MAP_ONLY"});
+  }
+
+  @Test
   public void portableConverterReusesExistingAndroidDataset() throws Exception {
     Repository repository = createTestRepoUsingRepoService();
     Path source = getTargetTestDir("source").toPath();

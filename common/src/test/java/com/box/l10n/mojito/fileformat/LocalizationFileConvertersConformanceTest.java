@@ -310,7 +310,8 @@ public class LocalizationFileConvertersConformanceTest {
             || fixture.has("appleStringsdictNormalized")
             || fixture.has("xcstringsNormalized")
             || fixture.has("propertiesNormalized")
-            || fixture.has("gettextNormalized")) {
+            || fixture.has("gettextNormalized")
+            || fixture.has("resxNormalized")) {
           String normalizedFixture =
               fixture.has("androidNormalized")
                   ? fixture.get("androidNormalized").asText()
@@ -322,7 +323,9 @@ public class LocalizationFileConvertersConformanceTest {
                               ? fixture.get("xcstringsNormalized").asText()
                               : fixture.has("propertiesNormalized")
                                   ? fixture.get("propertiesNormalized").asText()
-                                  : fixture.get("gettextNormalized").asText();
+                                  : fixture.has("gettextNormalized")
+                                      ? fixture.get("gettextNormalized").asText()
+                                      : fixture.get("resxNormalized").asText();
           String normalized = LocalizationFileConverters.write(format, actual);
           assertEquals(
               id + ": deterministic normalized resource",
@@ -3355,6 +3358,13 @@ public class LocalizationFileConvertersConformanceTest {
         for (Map.Entry<String, String> entry : translations.entrySet()) {
           assertEquals(
               id + ": translated JavaScript source identity " + entry.getKey(),
+              entry.getValue(),
+              localized.messages().get(entry.getKey()).defaultMessage());
+        }
+      } else if (format == LocalizationFileFormat.RESX) {
+        for (Map.Entry<String, String> entry : translations.entrySet()) {
+          assertEquals(
+              id + ": translated Microsoft resource " + entry.getKey(),
               entry.getValue(),
               localized.messages().get(entry.getKey()).defaultMessage());
         }

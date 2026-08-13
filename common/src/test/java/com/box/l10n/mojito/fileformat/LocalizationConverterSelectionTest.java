@@ -107,6 +107,10 @@ public class LocalizationConverterSelectionTest {
     assertEquals(
         LocalizationFileFormat.TYPESCRIPT,
         LocalizationConverterSelection.format("Messages.TS", null));
+    assertEquals(
+        LocalizationFileFormat.RESX, LocalizationConverterSelection.format("Messages.RESX", null));
+    assertEquals(
+        LocalizationFileFormat.RESX, LocalizationConverterSelection.format("Messages.resw", null));
   }
 
   @Test

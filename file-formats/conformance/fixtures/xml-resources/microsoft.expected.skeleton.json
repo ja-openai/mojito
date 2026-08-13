@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "resx",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<root>\n  <resheader name=\"version\"><value>2.0</value></resheader>\n  <data name=\"harbor\" xml:space=\"preserve\">\n    <value>Calm &amp; steady 🧭</value>\n    <comment>Message shown at the north pier</comment>\n  </data>\n  <data name=\"count\" xml:space=\"preserve\">\n    <value>  {0} signals  </value>\n  </data>\n  <data name=\"$this.Text\"><value>Window title</value><comment>Ignored note</comment></data>\n  <data name=\">metadata\"><value>Protected metadata</value></data>\n  <data name=\"navigation.Name\"><value>Protected property</value></data>\n  <data name=\"icon\" type=\"System.Drawing.Bitmap\"><value>Protected bitmap</value></data>\n  <data name=\"blob\" mimetype=\"application/octet-stream\"><value>Protected binary</value></data>\n  <data name=\"empty\"><value /></data>\n</root>\n",
+  "slots": [
+    {
+      "id": "harbor",
+      "start": 160,
+      "end": 182
+    },
+    {
+      "id": "count",
+      "start": 310,
+      "end": 325
+    },
+    {
+      "id": "$this.Text",
+      "start": 377,
+      "end": 389
+    }
+  ]
+}
