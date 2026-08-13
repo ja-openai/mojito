@@ -45,9 +45,9 @@ differential.
 | JSON | `removeKeySuffix` | Remove a suffix such as `/defaultMessage` from extracted identities. | Implemented. |
 | JSON | `convertToHtmlCodes` | Convert configured protected inline codes into reversible markup. | Implemented as exact legacy `<br id='pN'/>` extraction plus lossless reverse replacement; unknown, repeated, and missing codes fail closed. |
 | Apple `.strings` | `removeComment` | Remove comments from localized output. | Implemented for block and single-line comments without treating comment-like quoted translation content as a real comment. |
-| YAML | `useFullKeyPath` | Select full YAML key-path identities. | Out of scope until YAML has a portable format contract. |
-| YAML | `extractAllPairs` | Select every scalar or only configured exceptions. | Out of scope until YAML has a portable format contract. |
-| YAML | `exceptions` | Select configured YAML key/path patterns. | Out of scope until YAML has a portable format contract. |
+| YAML | `useFullKeyPath` | Select full YAML key-path identities. | Implemented independently in Java and Rust and verified against the existing configured CLI dataset. |
+| YAML | `extractAllPairs` | Select every scalar or only configured exceptions. | Implemented for nested YAML mappings and safe scalar extraction. |
+| YAML | `exceptions` | Select configured YAML key/path patterns. | Implemented with the same validated portable regular-expression policy as JSON. |
 | HTML | `processImageUrls` | Expose image URLs as protected adaptation units. | Out of scope until HTML has a portable format contract. |
 | HTML | `emptyAndNbspNotTranslatable` | Suppress empty and nonbreaking-space-only HTML units. | Out of scope until HTML has a portable format contract. |
 | Translation import | `targetComment` | Attach the configured note while importing translations. | Implemented only by explicit Java/Rust import APIs as `metadata.mojitoTargetComment`; source descriptions and TM source identity remain unchanged. |
@@ -67,6 +67,27 @@ inline-code configuration already exercised by Mojito's existing extraction test
 is compared directly against the customized filter; duplicate numbered rules
 and duplicate rule counts retain their final value rather than incorrectly
 counting repeated definitions or silently dropping protected placeholders.
+
+## Additional configured format behavior
+
+- Ordinary CSV uses the customized filter's ID/source/target/comment columns.
+  Adobe Magento CSV uses the source column as its stable identity and the target
+  column as localized content. Both implementations preserve the legacy filter's
+  literal quoted identities, doubled source quotes, quoted comments, empty
+  source entries, original line endings, and source-owned target-column layout.
+- Microsoft `.resx` and `.resw` extract untyped `data/value` entries, respect
+  the customized exclusion rules, preserve sibling comments and protected
+  placeholders, and render into the original XML source template.
+- Google `.xtb` preserves bundle language, translation IDs/descriptions,
+  source-owned placeholders, and exact markup. Its one recognized harmless
+  platform DOCTYPE is allowed; external and internal entity declarations are
+  rejected.
+- JavaScript and TypeScript preserve the actual customized filter's quoted-key
+  declarations, multiline backtick values, preceding translator comments,
+  protected entries, escaping, and stable translation-memory identities.
+- YAML preserves nested source mappings, configured key-path selection, block
+  scalars, comments, quoting, and original source-template bytes. Unsupported
+  ambiguous sequence ownership fails closed.
 
 Configured inline-code rules are compiled and ordered once for each parsed option
 set, then reused for every extracted message. A warmed 20,000-message,

@@ -4098,6 +4098,12 @@ fn all_shared_source_preserving_skeletons() {
                     "{id}: translated Microsoft resource {key}"
                 );
             }
+        } else if matches!(format, FileFormat::Csv | FileFormat::CsvAdobeMagento) {
+            let original_catalog = mojito_file_formats::parse(format, &original).unwrap();
+            assert_eq!(
+                parsed.messages, original_catalog.messages,
+                "{id}: CSV source IDs"
+            );
         } else if encoding == Some("ISO-8859-1") {
             assert_eq!(parsed.messages["café"].default_message, "prix 5 € 🙂");
             assert_eq!(

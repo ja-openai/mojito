@@ -63,13 +63,13 @@ pub(crate) fn extract(
         FileFormat::AppleStrings => extract_apple(bytes),
         FileFormat::AppleStringsdict => extract_stringsdict(bytes),
         FileFormat::AppleXcstrings => extract_xcstrings(bytes),
+        FileFormat::Csv | FileFormat::CsvAdobeMagento => crate::csv::extract(format, bytes),
         FileFormat::GettextPo => extract_gettext(bytes),
         FileFormat::JavaProperties => extract_properties(bytes, properties_encoding),
         FileFormat::Yaml => crate::yaml::extract(bytes),
         FileFormat::JavaScript | FileFormat::TypeScript => {
             crate::javascript::extract(format, bytes)
         }
-        FileFormat::Resx => crate::xml_resources::extract_skeleton(format, bytes),
         FileFormat::Resx | FileFormat::Xtb => crate::xml_resources::extract_skeleton(format, bytes),
         _ => Err(error(
             "UNSUPPORTED_SKELETON_FORMAT",
@@ -292,11 +292,11 @@ pub(crate) fn render(
         "apple_strings" => render_apple(skeleton, translations),
         "apple_stringsdict" => render_stringsdict(skeleton, translations),
         "apple_xcstrings" => render_xcstrings(skeleton, translations),
+        "csv" | "csv_adobe_magento" => crate::csv::render(skeleton, translations),
         "gettext_po" => render_gettext(skeleton, translations),
         "java_properties" => render_properties(skeleton, translations),
         "yaml" => crate::yaml::render(skeleton, translations),
         "javascript" | "typescript" => crate::javascript::render(skeleton, translations),
-        "resx" => crate::xml_resources::render_skeleton(skeleton, translations),
         "resx" | "xtb" => crate::xml_resources::render_skeleton(skeleton, translations),
         _ => Err(error(
             "UNSUPPORTED_SKELETON_FORMAT",

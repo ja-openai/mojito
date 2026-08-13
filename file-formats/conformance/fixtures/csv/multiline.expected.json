@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "csv",
+  "messages": {
+    "story": {
+      "defaultMessage": "First line\nSecond \"\"quoted\"\" line",
+      "description": "Context"
+    }
+  }
+}

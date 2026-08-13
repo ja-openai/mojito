@@ -203,6 +203,7 @@ public final class LocalizationFileConverters {
       case APPLE_STRINGS -> new AppleStringsParser(decoded).parse();
       case APPLE_STRINGSDICT -> new AppleStringsdictParser().parse(decoded);
       case APPLE_XCSTRINGS -> new AppleXcstringsParser().parse(decoded);
+      case CSV, CSV_ADOBE_MAGENTO -> CsvLocalizationFormat.parse(format, decoded);
       case GETTEXT_PO -> new GettextPoParser(gettextCharset).parse(decoded);
       case JAVA_PROPERTIES -> new JavaPropertiesParser().parse(decoded);
       case FORMATJS_JSON -> parseFormatJs(decoded);
@@ -314,6 +315,7 @@ public final class LocalizationFileConverters {
       case GETTEXT_PO -> new GettextPoWriter().write(catalog);
       case JAVA_PROPERTIES -> new JavaPropertiesWriter().write(catalog);
       case RESX, XTB -> XmlResourceParser.write(format, catalog);
+      case CSV, CSV_ADOBE_MAGENTO -> CsvLocalizationFormat.write(format, catalog);
       default ->
           throw new LocalizationParseException(
               "UNSUPPORTED_OUTPUT_FORMAT",
@@ -367,6 +369,7 @@ public final class LocalizationFileConverters {
       case APPLE_STRINGS -> AppleSourceSkeleton.extract(source);
       case APPLE_STRINGSDICT -> AppleStringsdictSourceSkeleton.extract(source);
       case APPLE_XCSTRINGS -> AppleXcstringsSourceSkeleton.extract(source);
+      case CSV, CSV_ADOBE_MAGENTO -> CsvLocalizationFormat.extract(format, source);
       case GETTEXT_PO -> GettextPoSourceSkeleton.extract(source);
       case JAVA_PROPERTIES -> JavaPropertiesSourceSkeleton.extract(source, propertiesCharset);
       case YAML -> YamlSourceFormat.extract(source);
@@ -426,6 +429,7 @@ public final class LocalizationFileConverters {
       case "apple_strings" -> AppleSourceSkeleton.render(skeleton, translations);
       case "apple_stringsdict" -> AppleStringsdictSourceSkeleton.render(skeleton, translations);
       case "apple_xcstrings" -> AppleXcstringsSourceSkeleton.render(skeleton, translations);
+      case "csv", "csv_adobe_magento" -> CsvLocalizationFormat.render(skeleton, translations);
       case "gettext_po" -> GettextPoSourceSkeleton.render(skeleton, translations);
       case "java_properties" -> JavaPropertiesSourceSkeleton.render(skeleton, translations);
       case "yaml" -> YamlSourceFormat.render(skeleton, translations);

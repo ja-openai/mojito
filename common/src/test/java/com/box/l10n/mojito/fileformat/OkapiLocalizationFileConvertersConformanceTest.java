@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import com.box.l10n.mojito.okapi.ExtractUsagesFromTextUnitComments;
+import com.box.l10n.mojito.okapi.FilterConfigIdOverride;
 import com.box.l10n.mojito.okapi.TextUnitUtils;
 import com.box.l10n.mojito.okapi.asset.AssetPathToFilterConfigMapper;
 import com.box.l10n.mojito.okapi.asset.FilterConfigurationMappers;
@@ -104,6 +105,50 @@ public class OkapiLocalizationFileConvertersConformanceTest {
                 unit.getName(), message.defaultMessage(), message.description()),
             textUnitUtils.computeTextUnitMD5(unit.getName(), unit.getSource(), unit.getComments()));
       }
+    }
+  }
+
+  @Test
+  public void csvCatalogsMatchBothActualCustomizedFilterConfigurations() throws Exception {
+    Path root = findFixtureRoot();
+    assertCsvMatchesCustomizedFilter(
+        LocalizationFileFormat.CSV,
+        root.resolve("fixtures/csv/standard.csv"),
+        "translations.csv",
+        null);
+    assertCsvMatchesCustomizedFilter(
+        LocalizationFileFormat.CSV_ADOBE_MAGENTO,
+        root.resolve("fixtures/csv/magento.csv"),
+        "i18n/en_US.csv",
+        FilterConfigIdOverride.CSV_ADOBE_MAGENTO);
+  }
+
+  private void assertCsvMatchesCustomizedFilter(
+      LocalizationFileFormat format, Path source, String assetPath, FilterConfigIdOverride override)
+      throws Exception {
+    String content = Files.readString(source);
+    LocalizationCatalog portable =
+        LocalizationFileConverters.parseForMojito(
+            format, content.getBytes(StandardCharsets.UTF_8), List.of());
+    List<AssetExtractorTextUnit> actual =
+        extractor.getAssetExtractorTextUnitsForAsset(assetPath, content, override, List.of());
+    Map<String, AssetExtractorTextUnit> legacy = new LinkedHashMap<>();
+    for (AssetExtractorTextUnit unit : actual) {
+      legacy.put(unit.getName(), unit);
+    }
+    assertEquals(
+        format + ": customized filter identities", portable.messages().keySet(), legacy.keySet());
+    for (Map.Entry<String, LocalizationMessage> entry : portable.messages().entrySet()) {
+      AssetExtractorTextUnit unit = legacy.get(entry.getKey());
+      assertEquals(
+          entry.getKey() + ": source", entry.getValue().defaultMessage(), unit.getSource());
+      assertEquals(
+          entry.getKey() + ": comments", entry.getValue().description(), unit.getComments());
+      assertEquals(
+          entry.getKey() + ": stable translation-memory identity",
+          textUnitUtils.computeTextUnitMD5(
+              entry.getKey(), entry.getValue().defaultMessage(), entry.getValue().description()),
+          textUnitUtils.computeTextUnitMD5(unit.getName(), unit.getSource(), unit.getComments()));
     }
   }
 

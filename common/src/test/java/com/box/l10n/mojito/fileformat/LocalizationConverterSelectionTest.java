@@ -113,16 +113,22 @@ public class LocalizationConverterSelectionTest {
         LocalizationFileFormat.RESX, LocalizationConverterSelection.format("Messages.resw", null));
     assertEquals(
         LocalizationFileFormat.XTB, LocalizationConverterSelection.format("Messages.XTB", null));
+    assertEquals(
+        LocalizationFileFormat.CSV, LocalizationConverterSelection.format("Messages.CSV", null));
+    assertEquals(
+        LocalizationFileFormat.CSV_ADOBE_MAGENTO,
+        LocalizationConverterSelection.format(
+            "i18n/en_US.csv", FilterConfigIdOverride.CSV_ADOBE_MAGENTO));
   }
 
   @Test
   public void unsupportedFormatsIncludeOverrideContextForDiagnostics() {
     try {
       LocalizationConverterSelection.format(
-          "messages.csv", FilterConfigIdOverride.CSV_ADOBE_MAGENTO);
+          "messages.unsupported", FilterConfigIdOverride.CSV_ADOBE_MAGENTO);
     } catch (LocalizationParseException unsupported) {
       assertEquals("UNSUPPORTED_PORTABLE_FORMAT", unsupported.code());
-      assertTrue(unsupported.getMessage().contains("messages.csv"));
+      assertTrue(unsupported.getMessage().contains("messages.unsupported"));
       assertTrue(unsupported.getMessage().contains("CSV_ADOBE_MAGENTO"));
       return;
     }

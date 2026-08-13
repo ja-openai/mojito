@@ -383,6 +383,17 @@ public class PullCommandTest extends CLITestBase {
   }
 
   @Test
+  public void portableConverterReusesExistingCsvDataset() throws Exception {
+    assertPortableMatchesExistingDataset("pullCsv", "demo.csv", new String[0], new String[0]);
+  }
+
+  @Test
+  public void portableConverterReusesExistingAdobeMagentoCsvDataset() throws Exception {
+    String[] options = {"-ft", "CSV_ADOBE_MAGENTO", "-sl", "en_US"};
+    assertPortableMatchesExistingDataset("pullCsvAdobeMagento", "i18n/en_US.csv", options, options);
+  }
+
+  @Test
   public void portableConverterReusesExistingAndroidDataset() throws Exception {
     Repository repository = createTestRepoUsingRepoService();
     Path source = getTargetTestDir("source").toPath();

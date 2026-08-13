@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "csv",
+  "encoding": "UTF-8",
+  "source": "harbor,\"Hello, friend\",\"Hello, friend\",\"Shown to new sailors\"\nplain,Simple,Simple,\nquoted,\"Say \"\"hello\"\"\",\"Say \"\"hello\"\"\",\"Dialog detail\"\nspaced,  padded source  ,  padded target  ,\"Keep comment spaces\"\nmissing_target,Missing target\nempty,,keep,Ignored\n",
+  "slots": [
+    {
+      "id": "harbor",
+      "start": 23,
+      "end": 38
+    },
+    {
+      "id": "plain",
+      "start": 75,
+      "end": 81
+    },
+    {
+      "id": "quoted",
+      "start": 106,
+      "end": 121
+    },
+    {
+      "id": "spaced",
+      "start": 163,
+      "end": 180
+    },
+    {
+      "id": "missing_target",
+      "start": 232,
+      "end": 232
+    },
+    {
+      "id": "empty",
+      "start": 240,
+      "end": 244
+    }
+  ]
+}
