@@ -53,6 +53,7 @@ Backlog
 - SOURCE-03 — Finish portable Java/Rust localization conversion: preserve native-verified extraction, source templates, protected content, comments, plural rules, and existing Mojito workflow policies; expand supported formats only with shared conformance fixtures. See `dev-docs/design/024-portable-localization-file-formats.md`, `025-portable-localization-compatibility-ledger.md`, and `026-portable-localization-custom-filter-parity.md`.
   - Keep `push`/`pull` defaulting to Okapi while supporting explicit `--converter portable`; preserve existing filter options, reject unsupported formats, and keep explicit portable requests explicit even for missing paths.
   - Maintain extraction/output service tests, including stored extracted-content bypass coverage, existing CLI regression coverage, and native Android/Apple/gettext/Properties/FormatJS verification.
+  - Keep the portable shadow observer disabled by default until production telemetry, alerting, and cutover rollback ownership are defined.
 - SOURCE-04 — Finish Apple `.stringsdict` cutover: preserve XML/binary plist ownership, independent plural/device/width branches, protected entries, and byte-preserving source templates.
 - SOURCE-05 — Finish gettext enrollment: preserve plural formulas, metadata/comments, contexts, encodings, untranslated policies, and native `msgfmt` round trips.
 - SOURCE-06 — Extend durable, source-preserving skeleton contracts and rollout coverage for supported Android, Apple, gettext, Java properties, and FormatJS formats; keep bilingual XLIFF deferred.
