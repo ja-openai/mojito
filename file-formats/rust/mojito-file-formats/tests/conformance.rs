@@ -1,9 +1,9 @@
 use mojito_file_formats::{
     compare_shadow, extract_android_overlay_skeleton,
-    extract_android_overlay_skeleton_with_context, extract_skeleton_with_android_context,
-    extract_skeleton_with_android_feature_flags, extract_skeleton_with_apple_variations,
-    extract_skeleton_with_encoding, localize_for_mojito, localize_for_mojito_locale,
-    parse_android_overlay_with_context,
+    extract_android_overlay_skeleton_with_context, extract_skeleton,
+    extract_skeleton_with_android_context, extract_skeleton_with_android_feature_flags,
+    extract_skeleton_with_apple_variations, extract_skeleton_with_encoding, localize_for_mojito,
+    localize_for_mojito_locale, parse_android_overlay_with_context,
     parse_android_overlay_with_feature_flag_definitions_and_package, parse_for_mojito,
     parse_for_mojito_import, parse_with_android_context,
     parse_with_android_feature_flag_definitions_and_package, render_android_overlay_skeleton,
@@ -154,6 +154,50 @@ fn all_shared_mojito_workflow_fixtures() {
                 );
             }
         }
+    }
+}
+
+#[test]
+fn android_utf16_skeleton_offsets_follow_mixed_width_code_points() {
+    let source = concat!(
+        "<resources>",
+        "<string name=\"first\">É🛰港</string>",
+        "<string name=\"second\">Beacon</string>",
+        "<string name=\"empty\"/>",
+        "</resources>"
+    );
+    for little_endian in [true, false] {
+        let mut bytes = if little_endian {
+            vec![0xff, 0xfe]
+        } else {
+            vec![0xfe, 0xff]
+        };
+        for unit in source.encode_utf16() {
+            bytes.extend(if little_endian {
+                unit.to_le_bytes()
+            } else {
+                unit.to_be_bytes()
+            });
+        }
+        let skeleton = extract_skeleton(FileFormat::Android, &bytes).unwrap();
+        for (id, value) in [("first", "É🛰港"), ("second", "Beacon")] {
+            let start = source.find(value).unwrap();
+            let end = start + value.len();
+            let slot = skeleton.slots.iter().find(|slot| slot.id == id).unwrap();
+            assert_eq!(slot.start, 2 + source[..start].encode_utf16().count() * 2);
+            assert_eq!(slot.end, 2 + source[..end].encode_utf16().count() * 2);
+        }
+        let slash = source.find("/>").unwrap();
+        let empty = skeleton
+            .slots
+            .iter()
+            .find(|slot| slot.id == "empty")
+            .unwrap();
+        assert_eq!(empty.start, 2 + source[..slash].encode_utf16().count() * 2);
+        assert_eq!(
+            empty.end,
+            2 + source[..slash + 2].encode_utf16().count() * 2
+        );
     }
 }
 

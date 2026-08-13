@@ -100,6 +100,7 @@ pub(crate) fn extract_android_with_catalog(
     let declared = crate::xml_encoding(FileFormat::Android, bytes)?;
     let encoding = Encoding::detect_declared(bytes, declared);
     let source = crate::decode(bytes, declared)?;
+    let mut offsets = AndroidOffsetCursor::new(&source, encoding);
     let catalog = resolved_catalog.cloned().map_or_else(
         || {
             if feature_flags.is_empty() && resource_path.is_none() {
@@ -166,8 +167,7 @@ pub(crate) fn extract_android_with_catalog(
                 &current,
                 stack.last(),
                 position,
-                &source,
-                encoding,
+                &mut offsets,
                 &mut slots,
                 &mut assigned,
             )?;
@@ -238,7 +238,7 @@ pub(crate) fn extract_android_with_catalog(
                         position,
                         end,
                         &source,
-                        encoding,
+                        &mut offsets,
                         &mut slots,
                         &mut assigned,
                     )?;
@@ -5356,14 +5356,12 @@ struct PropertyLine {
     end: usize,
 }
 
-#[allow(clippy::too_many_arguments)]
 fn add_slot(
     catalog: &Catalog,
     current: &Element,
     parent: Option<&Element>,
     body_end: usize,
-    source: &str,
-    encoding: Encoding,
+    offsets: &mut AndroidOffsetCursor<'_>,
     slots: &mut Vec<SourceSlot>,
     assigned: &mut HashSet<String>,
 ) -> Result<(), ParseError> {
@@ -5393,8 +5391,8 @@ fn add_slot(
         id,
         selector: None,
         variant,
-        start: encoding.offset(source, current.body_start),
-        end: encoding.offset(source, body_end),
+        start: offsets.offset(current.body_start),
+        end: offsets.offset(body_end),
         apple_object_index: None,
     };
     if !assigned.insert(slot.key()) {
@@ -5412,7 +5410,7 @@ fn add_empty_slot(
     tag_start: usize,
     tag_end: usize,
     source: &str,
-    encoding: Encoding,
+    offsets: &mut AndroidOffsetCursor<'_>,
     slots: &mut Vec<SourceSlot>,
     assigned: &mut HashSet<String>,
 ) -> Result<(), ParseError> {
@@ -5451,8 +5449,8 @@ fn add_empty_slot(
         id,
         selector: None,
         variant,
-        start: encoding.offset(source, slash),
-        end: encoding.offset(source, tag_end + 1),
+        start: offsets.offset(slash),
+        end: offsets.offset(tag_end + 1),
         apple_object_index: None,
     };
     if !assigned.insert(slot.key()) {
@@ -5463,6 +5461,40 @@ fn add_empty_slot(
     }
     slots.push(slot);
     Ok(())
+}
+
+struct AndroidOffsetCursor<'a> {
+    source: &'a str,
+    encoding: Encoding,
+    index: usize,
+    offset: usize,
+}
+
+impl<'a> AndroidOffsetCursor<'a> {
+    fn new(source: &'a str, encoding: Encoding) -> Self {
+        Self {
+            source,
+            encoding,
+            index: 0,
+            offset: encoding.bom_length(),
+        }
+    }
+
+    fn offset(&mut self, index: usize) -> usize {
+        if !matches!(
+            self.encoding,
+            Encoding::Utf16Le | Encoding::Utf16Be | Encoding::Utf16LeBare | Encoding::Utf16BeBare
+        ) {
+            return self.encoding.offset(self.source, index);
+        }
+        if index < self.index {
+            self.index = 0;
+            self.offset = self.encoding.bom_length();
+        }
+        self.offset += self.source[self.index..index].encode_utf16().count() * 2;
+        self.index = index;
+        self.offset
+    }
 }
 
 fn identity(current: &Element, parent: Option<&Element>) -> Option<String> {
