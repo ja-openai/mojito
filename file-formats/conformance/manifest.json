@@ -1241,6 +1241,12 @@
       "expected": "fixtures/html/plain.expected.json"
     },
     {
+      "id": "html-alpha-bounds-image-search-to-the-owning-element",
+      "format": "html",
+      "input": "fixtures/html/bounded-images.html",
+      "expected": "fixtures/html/bounded-images.expected.json"
+    },
+    {
       "id": "html-alpha-rejects-unterminated-quoted-markup",
       "format": "html",
       "input": "fixtures/html/invalid.html",

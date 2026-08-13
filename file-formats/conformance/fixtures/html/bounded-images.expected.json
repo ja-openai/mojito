@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "html",
+  "messages": {
+    "4f1d71b4f4ae40c6b74b31293471350f-d41d8cd98f00b204e9800998ecf8427e-1": {
+      "defaultMessage": "North channel"
+    },
+    "421ab589e82eae89d984166e4d3885ee-4f1d71b4f4ae40c6b74b31293471350f-1": {
+      "defaultMessage": "East channel"
+    },
+    "276941064a19bcd3b56dc7cd94e3d3b2-421ab589e82eae89d984166e4d3885ee-1": {
+      "defaultMessage": "South channel"
+    },
+    "3bd5571b2db43ea584bf8e7438434515-276941064a19bcd3b56dc7cd94e3d3b2-1": {
+      "defaultMessage": "Beacon"
+    },
+    "29b89a25fa48c480296ba497d322f9f8-3bd5571b2db43ea584bf8e7438434515-1": {
+      "defaultMessage": "Watch <br id='p1'/> ahead.",
+      "metadata": {
+        "mojitoInlineCodes": [
+          {
+            "id": "p1",
+            "source": "<img src=\"images/beacon.png\" alt=\"Beacon\">"
+          }
+        ]
+      }
+    },
+    "832bf990a69c3dec958fdaf26853c3a7-29b89a25fa48c480296ba497d322f9f8-1": {
+      "defaultMessage": "West channel"
+    }
+  }
+}

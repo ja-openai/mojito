@@ -107,6 +107,19 @@ repeated rule-count parsing and per-message rule-list allocation; Rust applies
 the same parse-once policy independently. These are local workload timings, not
 production throughput claims.
 
+Representative customized-filter measurements confirm that both production
+paths already receive the complete source as a `String` and materialize all
+extracted text units; Okapi's internal event iterator is not an end-to-end
+streaming or constant-memory advantage in Mojito. For 2,500 Android strings,
+actual customized Okapi extraction took 866 ms versus 6 ms for portable Java;
+configured JSON took 22 ms versus 12 ms. An image-free HTML workload exposed a
+quadratic search across later unrelated elements: bounding each inline-image
+scan to its owning element reduced Java extraction from 102.5 ms to 2.23 ms
+and complete parse/template rendering from 524 ms to 26.2 ms. Independent Rust
+extraction for 5,000 HTML elements fell from 183 ms to 10.5 ms; complete
+parse/template rendering fell from 631 ms to 42.6 ms. These are warmed local
+measurements, not production-capacity guarantees.
+
 ## Required non-option behavior
 
 - The shared extraction pipeline suppresses any text unit whose effective
