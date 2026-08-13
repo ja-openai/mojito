@@ -1,0 +1,10 @@
+msgid ""
+msgstr ""
+"Language: \n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgctxt "vessel"
+msgid "%d boat"
+msgid_plural "%d boats"
+msgstr[0] "%d 隻"

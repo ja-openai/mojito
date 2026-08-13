@@ -2,6 +2,7 @@ use crate::model::{Catalog, FileFormat, Message, ParseError};
 use crate::xml::{self, XmlElement, XmlNode};
 use regex::Regex;
 use serde_json::{Map, Value};
+use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::OnceLock;
 
@@ -264,7 +265,12 @@ pub(crate) fn parse_import(
         FilterOptions::parse(format, &extraction_options)?;
         crate::csv::parse_import(format, &crate::decode(source, None)?)?
     } else {
-        parse(format, source, &extraction_options)?
+        let localized = if format == FileFormat::GettextPo {
+            gettext_import_locale(source, target_locale)
+        } else {
+            Cow::Borrowed(source)
+        };
+        parse(format, localized.as_ref(), &extraction_options)?
     };
     if !copy_forms && target_comment.is_none() {
         return Ok(catalog);
@@ -387,7 +393,7 @@ pub(crate) fn parse_import(
             continue;
         };
         let gettext_categories = (format == FileFormat::GettextPo)
-            .then(|| gettext_import_categories(metadata, target_locale));
+            .then(|| gettext_import_categories(metadata, original, target_locale));
         let required = gettext_categories.as_ref().unwrap_or(&categories);
         let completed = complete_import_variants(original, required, target_locale, format)?;
         let selector = plural_selector(&message.default_message, metadata)?;
@@ -400,6 +406,7 @@ pub(crate) fn parse_import(
 
 fn gettext_import_categories(
     metadata: &Map<String, Value>,
+    variants: &BTreeMap<String, String>,
     locale: &str,
 ) -> std::collections::HashSet<String> {
     let mut categories = metadata
@@ -410,6 +417,7 @@ fn gettext_import_categories(
         .filter_map(Value::as_str)
         .map(str::to_owned)
         .collect::<std::collections::HashSet<_>>();
+    categories.extend(variants.keys().cloned());
     match import_language(locale).as_str() {
         "cs" | "sk" | "lt" => {
             categories.insert("many".into());
@@ -427,6 +435,23 @@ fn gettext_import_categories(
         categories.insert("other".into());
     }
     categories
+}
+
+fn gettext_import_locale<'a>(source: &'a [u8], target_locale: &str) -> Cow<'a, [u8]> {
+    const EMPTY_LANGUAGE: &[u8] = b"\"Language: \\n\"";
+    let Some(start) = source
+        .windows(EMPTY_LANGUAGE.len())
+        .position(|candidate| candidate == EMPTY_LANGUAGE)
+    else {
+        return Cow::Borrowed(source);
+    };
+    let mut localized = Vec::with_capacity(source.len() + target_locale.len());
+    localized.extend_from_slice(&source[..start]);
+    localized.extend_from_slice(b"\"Language: ");
+    localized.extend_from_slice(target_locale.as_bytes());
+    localized.extend_from_slice(b"\\n\"");
+    localized.extend_from_slice(&source[start + EMPTY_LANGUAGE.len()..]);
+    Cow::Owned(localized)
 }
 
 fn complete_import_variants(
