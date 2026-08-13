@@ -163,6 +163,26 @@
       "localized": "fixtures/workflow/properties-remove-untranslated.localized.properties"
     },
     {
+      "id": "resx-mojito-removes-untranslated-resources-without-touching-protected-data",
+      "format": "resx",
+      "input": "fixtures/xml-resources/microsoft.resx",
+      "expected": "fixtures/xml-resources/microsoft.expected.json",
+      "filterOptions": [],
+      "translations": { "harbor": "@#$untranslated$#@", "$this.Text": "Fenêtre nord" },
+      "removeUntranslated": true,
+      "localized": "fixtures/workflow/resx-remove-untranslated.localized.resx"
+    },
+    {
+      "id": "xtb-mojito-removes-untranslated-placeholder-resources-without-touching-doctype",
+      "format": "xtb",
+      "input": "fixtures/xml-resources/google.xtb",
+      "expected": "fixtures/xml-resources/google.expected.json",
+      "filterOptions": [],
+      "translations": { "harbor": "@#$untranslated$#@" },
+      "removeUntranslated": true,
+      "localized": "fixtures/workflow/xtb-remove-untranslated.localized.xtb"
+    },
+    {
       "id": "android-mojito-import-copies-arabic-plural-categories-and-target-comments",
       "format": "android",
       "input": "fixtures/workflow/import-android-plurals.xml",

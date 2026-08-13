@@ -153,6 +153,90 @@ final class XmlResourceSourceSkeleton {
     return localized.toByteArray();
   }
 
+  static byte[] removeEntries(LocalizationSourceSkeleton skeleton, Set<String> removed) {
+    SourceSkeletonEncoding encoding = SourceSkeletonEncoding.named(skeleton.encoding());
+    if (removed.isEmpty()) {
+      return encoding.encode(skeleton.source());
+    }
+    LocalizationFileFormat format = LocalizationFileFormat.fromId(skeleton.sourceFormat());
+    String source = skeleton.source();
+    StringBuilder result = new StringBuilder(source.length());
+    Deque<OpenElement> elements = new ArrayDeque<>();
+    int previous = 0;
+    for (int position = 0; position < source.length(); ) {
+      if (source.charAt(position) != '<') {
+        position++;
+        continue;
+      }
+      if (source.startsWith("<!--", position)) {
+        position = skip(source, position, "-->");
+        continue;
+      }
+      if (source.startsWith("<![CDATA[", position)) {
+        position = skip(source, position, "]]>");
+        continue;
+      }
+      if (source.startsWith("<?", position)) {
+        position = skip(source, position, "?>");
+        continue;
+      }
+      int end = tagEnd(source, position);
+      String token = source.substring(position + 1, end).trim();
+      if (token.startsWith("!")) {
+        position = end + 1;
+        continue;
+      }
+      if (token.startsWith("/")) {
+        OpenElement current = elements.pop();
+        boolean owner =
+            format == LocalizationFileFormat.RESX && "data".equals(current.name())
+                || format == LocalizationFileFormat.XTB && "translation".equals(current.name());
+        if (owner && removed.contains(current.identity())) {
+          int opening = source.lastIndexOf('<', current.bodyStart() - 1);
+          int start = opening;
+          while (start > previous
+              && (source.charAt(start - 1) == ' ' || source.charAt(start - 1) == '\t')) {
+            start--;
+          }
+          if (start > previous
+              && source.charAt(start - 1) != '\n'
+              && source.charAt(start - 1) != '\r') {
+            start = opening;
+          }
+          result.append(source, previous, start);
+          previous = end + 1;
+          while (previous < source.length()
+              && (source.charAt(previous) == ' ' || source.charAt(previous) == '\t')) {
+            previous++;
+          }
+          if (previous < source.length() && source.charAt(previous) == '\r') {
+            previous++;
+          }
+          if (previous < source.length() && source.charAt(previous) == '\n') {
+            previous++;
+          }
+        }
+      } else if (!token.endsWith("/")) {
+        String name = token.split("\\s+", 2)[0];
+        String identity = null;
+        if (format == LocalizationFileFormat.RESX && "data".equals(name)
+            || format == LocalizationFileFormat.XTB && "translation".equals(name)) {
+          Matcher matcher = ATTRIBUTE.matcher(token.substring(name.length()));
+          while (matcher.find()) {
+            if ((format == LocalizationFileFormat.RESX ? "name" : "key").equals(matcher.group(1))) {
+              identity = StringEscapeUtils.unescapeXml(matcher.group(3));
+              break;
+            }
+          }
+        }
+        elements.push(new OpenElement(name, identity, end + 1));
+      }
+      position = end + 1;
+    }
+    result.append(source, previous, source.length());
+    return encoding.encode(result.toString());
+  }
+
   private static int skip(String source, int start, String closing) {
     int end = source.indexOf(closing, start);
     if (end < 0) {

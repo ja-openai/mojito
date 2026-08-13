@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <resheader name="version"><value>2.0</value></resheader>
+  <data name="harbor" xml:space="preserve">
+    <value>@#$untranslated$#@</value>
+    <comment>Message shown at the north pier</comment>
+  </data>
+  <data name="$this.Text"><value>Fenêtre nord</value><comment>Ignored note</comment></data>
+  <data name=">metadata"><value>Protected metadata</value></data>
+  <data name="navigation.Name"><value>Protected property</value></data>
+  <data name="icon" type="System.Drawing.Bitmap"><value>Protected bitmap</value></data>
+  <data name="blob" mimetype="application/octet-stream"><value>Protected binary</value></data>
+  <data name="empty"><value /></data>
+</root>
