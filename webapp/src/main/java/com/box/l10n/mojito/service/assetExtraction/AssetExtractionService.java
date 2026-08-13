@@ -18,6 +18,11 @@ import com.box.l10n.mojito.entity.PushRun;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.security.user.User;
+import com.box.l10n.mojito.fileformat.LocalizationCatalog;
+import com.box.l10n.mojito.fileformat.LocalizationConverterSelection;
+import com.box.l10n.mojito.fileformat.LocalizationFileConverters;
+import com.box.l10n.mojito.fileformat.LocalizationFileFormat;
+import com.box.l10n.mojito.fileformat.LocalizationShadowComparator;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.localtm.merger.AssetExtractorTextUnitsToMultiBranchStateConverter;
 import com.box.l10n.mojito.localtm.merger.BranchData;
@@ -73,6 +78,7 @@ import com.google.common.collect.Sets;
 import com.ibm.icu.text.MessageFormat;
 import io.micrometer.core.annotation.Timed;
 import jakarta.persistence.EntityManager;
+import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -181,6 +187,9 @@ public class AssetExtractionService {
 
   @Value("${l10n.assetExtraction.crossAssetLeveragingBatchSize:1000}")
   int crossAssetLeveragingBatchSize;
+
+  @Value("${l10n.converter.portable:false}")
+  boolean portableConverter;
 
   @Autowired
   public void setRepositoryStatisticsJobScheduler(
@@ -1378,12 +1387,25 @@ public class AssetExtractionService {
       assetExtractorTextUnits = assetExtractorTextUnits.stream().collect(Collectors.toList());
 
     } else {
-      assetExtractorTextUnits =
-          assetExtractor.getAssetExtractorTextUnitsForAsset(
-              assetContent.getAsset().getPath(),
-              assetContent.getContent(),
-              filterConfigIdOverride,
-              filterOptions);
+      if (LocalizationConverterSelection.isPortable(
+          filterOptions, portableConverter, assetContent.getAsset().getPath())) {
+        LocalizationFileFormat format =
+            LocalizationConverterSelection.format(
+                assetContent.getAsset().getPath(), filterConfigIdOverride);
+        LocalizationCatalog catalog =
+            LocalizationFileConverters.parseForMojito(
+                format,
+                assetContent.getContent().getBytes(StandardCharsets.UTF_8),
+                LocalizationConverterSelection.platformOptions(filterOptions));
+        assetExtractorTextUnits = LocalizationShadowComparator.projectTextUnits(catalog);
+      } else {
+        assetExtractorTextUnits =
+            assetExtractor.getAssetExtractorTextUnitsForAsset(
+                assetContent.getAsset().getPath(),
+                assetContent.getContent(),
+                filterConfigIdOverride,
+                filterOptions);
+      }
     }
     return assetExtractorTextUnits;
   }

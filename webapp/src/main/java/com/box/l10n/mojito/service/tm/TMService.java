@@ -17,6 +17,13 @@ import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.TMXliff;
 import com.box.l10n.mojito.entity.security.user.User;
+import com.box.l10n.mojito.fileformat.LocalizationCatalog;
+import com.box.l10n.mojito.fileformat.LocalizationConverterSelection;
+import com.box.l10n.mojito.fileformat.LocalizationFileConverters;
+import com.box.l10n.mojito.fileformat.LocalizationFileFormat;
+import com.box.l10n.mojito.fileformat.LocalizationMessage;
+import com.box.l10n.mojito.fileformat.LocalizationShadowComparator;
+import com.box.l10n.mojito.fileformat.LocalizationSourceSkeleton;
 import com.box.l10n.mojito.okapi.AbstractImportTranslationsStep;
 import com.box.l10n.mojito.okapi.FilterConfigIdOverride;
 import com.box.l10n.mojito.okapi.ImportTranslationsByIdStep;
@@ -41,6 +48,7 @@ import com.box.l10n.mojito.okapi.qualitycheck.Parameters;
 import com.box.l10n.mojito.okapi.qualitycheck.QualityCheckStep;
 import com.box.l10n.mojito.okapi.steps.CheckForDoNotTranslateStep;
 import com.box.l10n.mojito.okapi.steps.FilterEventsToInMemoryRawDocumentStep;
+import com.box.l10n.mojito.po.PoPluralRule;
 import com.box.l10n.mojito.quartz.QuartzJobInfo;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.retry.DataIntegrityViolationExceptionRetryTemplate;
@@ -57,6 +65,8 @@ import com.box.l10n.mojito.service.pullrun.PullRunAssetService;
 import com.box.l10n.mojito.service.pullrun.PullRunService;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
+import com.box.l10n.mojito.service.tm.search.StatusFilter;
+import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.xliff.XliffUtils;
 import com.google.common.base.Preconditions;
 import com.ibm.icu.text.MessageFormat;
@@ -66,8 +76,14 @@ import jakarta.persistence.EntityManager;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import net.sf.okapi.common.LocaleId;
 import net.sf.okapi.common.exceptions.OkapiBadFilterInputException;
@@ -101,6 +117,13 @@ public class TMService {
 
   /** logger */
   static Logger logger = LoggerFactory.getLogger(TMService.class);
+
+  private static final Pattern GETTEXT_PLURAL_HEADER =
+      Pattern.compile("(?m)(\"Plural-Forms:\\s*)[^\"]*(\\\\n\")");
+  private static final Pattern GETTEXT_PLURAL_LINE =
+      Pattern.compile(
+          "(?m)^msgstr\\[([0-9]+)]\\h+\"(?:[^\"\\\\]|\\\\.)*\""
+              + "(?:\\h*\\R\\h*\"(?:[^\"\\\\]|\\\\.)*\")*\\h*\\R?");
 
   @Autowired TMTextUnitRepository tmTextUnitRepository;
 
@@ -149,6 +172,9 @@ public class TMService {
 
   @Value("${l10n.tmService.quartz.schedulerName:" + DEFAULT_SCHEDULER_NAME + "}")
   String schedulerName;
+
+  @Value("${l10n.converter.portable:false}")
+  boolean portableConverter;
 
   /**
    * Adds a {@link TMTextUnit} in a {@link TM}.
@@ -1067,6 +1093,20 @@ public class TMService {
       String pullRunName)
       throws UnsupportedAssetFilterTypeException {
 
+    if (LocalizationConverterSelection.isPortable(
+        filterOptions, portableConverter, asset.getPath())) {
+      return generateLocalizedPortable(
+          asset,
+          content,
+          repositoryLocale,
+          outputBcp47tag,
+          filterConfigIdOverride,
+          filterOptions,
+          status,
+          inheritanceMode,
+          pullRunName);
+    }
+
     String bcp47Tag;
 
     if (outputBcp47tag == null) {
@@ -1102,6 +1142,248 @@ public class TMService {
     }
 
     return generateLocalizedBase;
+  }
+
+  private String generateLocalizedPortable(
+      Asset asset,
+      String content,
+      RepositoryLocale repositoryLocale,
+      String outputBcp47tag,
+      FilterConfigIdOverride filterConfigIdOverride,
+      List<String> filterOptions,
+      Status status,
+      InheritanceMode inheritanceMode,
+      String pullRunName) {
+    LocalizationFileFormat format =
+        LocalizationConverterSelection.format(asset.getPath(), filterConfigIdOverride);
+    List<String> options = LocalizationConverterSelection.platformOptions(filterOptions);
+    byte[] source = content.getBytes(StandardCharsets.UTF_8);
+    LocalizationCatalog catalog =
+        LocalizationFileConverters.parseForMojito(format, source, options);
+    StatusFilter statusFilter =
+        switch (status) {
+          case ACCEPTED -> StatusFilter.APPROVED_AND_NOT_REJECTED;
+          case ACCEPTED_OR_NEEDS_REVIEW -> StatusFilter.APPROVED_OR_NEEDS_REVIEW_AND_NOT_REJECTED;
+          case ALL -> StatusFilter.TRANSLATED_AND_NOT_REJECTED;
+        };
+    TranslatorWithInheritance translator =
+        new TranslatorWithInheritance(asset, repositoryLocale, inheritanceMode, statusFilter);
+    PoPluralRule gettextRule =
+        format == LocalizationFileFormat.GETTEXT_PO
+            ? PoPluralRule.fromBcp47Tag(repositoryLocale.getLocale().getBcp47Tag())
+            : null;
+    Map<String, String> translations = new LinkedHashMap<>();
+    Map<String, Map<Integer, String>> gettextAdditionalForms = new LinkedHashMap<>();
+    Map<String, String> sourceSlots = new LinkedHashMap<>();
+    LocalizationSourceSkeleton sourceSkeleton = null;
+    if (format == LocalizationFileFormat.FORMATJS_JSON) {
+      for (String id : catalog.messages().keySet()) {
+        sourceSlots.put(id, id);
+      }
+    } else {
+      sourceSkeleton = LocalizationFileConverters.extractSkeleton(format, source);
+      for (LocalizationSourceSkeleton.LocalizationSourceSlot slot : sourceSkeleton.slots()) {
+        String canonicalId = slot.variant() == null ? slot.id() : slot.id() + "#" + slot.variant();
+        sourceSlots.put(canonicalId, slot.translationKey());
+      }
+    }
+    Map<String, LocalizationShadowComparator.ProjectedTextUnit> projectedById =
+        new LinkedHashMap<>();
+    for (var projected : LocalizationShadowComparator.projectTextUnitsWithIds(catalog)) {
+      projectedById.put(projected.canonicalId(), projected);
+    }
+    List<Long> usedVariants = new ArrayList<>();
+    for (var projected : projectedById.values()) {
+      String sourceSlot = sourceSlots.get(projected.canonicalId());
+      Integer gettextIndex = null;
+      if (gettextRule != null && projected.textUnit().getPluralForm() != null) {
+        String nativeIndex = gettextRule.cldrFormToPoForm(projected.textUnit().getPluralForm());
+        if (nativeIndex != null) {
+          gettextIndex = Integer.parseInt(nativeIndex);
+        }
+      }
+      if (sourceSlot == null && gettextIndex == null) {
+        continue;
+      }
+      var lookup = projected;
+      if (sourceSlot != null
+          && format == LocalizationFileFormat.GETTEXT_PO
+          && projected.textUnit().getPluralForm() != null) {
+        String canonicalId = projected.canonicalId();
+        LocalizationMessage message =
+            catalog.messages().get(canonicalId.substring(0, canonicalId.lastIndexOf('#')));
+        Map<?, ?> indexes = (Map<?, ?>) message.metadata().get("gettextPluralIndexes");
+        String nativeIndex =
+            indexes.entrySet().stream()
+                .filter(entry -> projected.textUnit().getPluralForm().equals(entry.getValue()))
+                .map(entry -> entry.getKey().toString())
+                .findFirst()
+                .orElse(null);
+        String category = nativeIndex == null ? null : gettextRule.poFormToCldrForm(nativeIndex);
+        var localized =
+            projectedById.get(
+                projected.canonicalId().substring(0, projected.canonicalId().lastIndexOf('#'))
+                    + "#"
+                    + category);
+        if (localized != null) {
+          lookup = localized;
+        }
+      }
+      var unit = lookup.textUnit();
+      String md5 =
+          textUnitUtils.computeTextUnitMD5(unit.getName(), unit.getSource(), unit.getComments());
+      TextUnitDTO translation = translator.getTextUnitDTO(md5);
+      String target = translator.getTranslationFromTextUnitDTO(translation, unit.getSource());
+      if (target != null) {
+        String canonicalId = projected.canonicalId();
+        String messageId =
+            projected.textUnit().getPluralForm() == null
+                ? canonicalId
+                : canonicalId.substring(0, canonicalId.lastIndexOf('#'));
+        target =
+            LocalizationFileConverters.normalizeMojitoTranslation(
+                format,
+                catalog.messages().get(messageId),
+                projected.textUnit().getPluralForm(),
+                target);
+        if (sourceSlot != null) {
+          translations.put(sourceSlot, target);
+        } else {
+          gettextAdditionalForms
+              .computeIfAbsent(messageId, ignored -> new LinkedHashMap<>())
+              .put(
+                  gettextIndex,
+                  LocalizationFileConverters.quoteGettextTranslation(
+                      catalog.messages().get(messageId), target, gettextIndex));
+        }
+        if (pullRunName != null && translation != null) {
+          usedVariants.add(translation.getTmTextUnitVariantId());
+        }
+      }
+    }
+    String localized =
+        new String(
+            LocalizationFileConverters.localizeForMojito(
+                format,
+                source,
+                translations,
+                options,
+                InheritanceMode.REMOVE_UNTRANSLATED.equals(inheritanceMode),
+                outputBcp47tag == null
+                    ? repositoryLocale.getLocale().getBcp47Tag()
+                    : outputBcp47tag),
+            StandardCharsets.UTF_8);
+    if (format == LocalizationFileFormat.GETTEXT_PO) {
+      localized = localizeGettextPluralForms(localized, repositoryLocale);
+      localized = addGettextPluralForms(localized, catalog, sourceSkeleton, gettextAdditionalForms);
+    } else if (format == LocalizationFileFormat.JAVA_PROPERTIES) {
+      if (!localized.endsWith("\n")) {
+        localized += "\n";
+      }
+      if (filterConfigIdOverride == FilterConfigIdOverride.PROPERTIES_JAVA) {
+        localized = escapeJavaPropertiesUnicode(localized);
+      }
+    }
+    if (pullRunName != null) {
+      dataIntegrityViolationExceptionRetryTemplate.execute(
+          context -> {
+            replaceUsedTmTextUnitVariantIds(
+                asset, pullRunName, repositoryLocale.getLocale(), usedVariants, outputBcp47tag);
+            return null;
+          });
+    }
+    return localized;
+  }
+
+  private String escapeJavaPropertiesUnicode(String source) {
+    StringBuilder escaped = new StringBuilder(source.length());
+    for (int index = 0; index < source.length(); index++) {
+      char value = source.charAt(index);
+      if (value > 0x7f) {
+        escaped.append("\\u").append(HexFormat.of().toHexDigits(value));
+      } else {
+        escaped.append(value);
+      }
+    }
+    return escaped.toString();
+  }
+
+  private String localizeGettextPluralForms(String localized, RepositoryLocale repositoryLocale) {
+    PoPluralRule pluralRule = PoPluralRule.fromBcp47Tag(repositoryLocale.getLocale().getBcp47Tag());
+    localized =
+        GETTEXT_PLURAL_HEADER
+            .matcher(localized)
+            .replaceAll("$1" + Matcher.quoteReplacement(pluralRule.getRule()) + "$2");
+    String rule = pluralRule.getRule();
+    int forms = Integer.parseInt(rule.substring("nplurals=".length(), rule.indexOf(';')));
+    Matcher values = GETTEXT_PLURAL_LINE.matcher(localized);
+    StringBuilder result = new StringBuilder();
+    while (values.find()) {
+      if (Integer.parseInt(values.group(1)) >= forms) {
+        values.appendReplacement(result, "");
+      }
+    }
+    return values.appendTail(result).toString();
+  }
+
+  private String addGettextPluralForms(
+      String localized,
+      LocalizationCatalog catalog,
+      LocalizationSourceSkeleton skeleton,
+      Map<String, Map<Integer, String>> forms) {
+    if (forms.isEmpty()) {
+      return localized;
+    }
+    List<String> pluralMessages = new ArrayList<>();
+    for (var slot : skeleton.slots()) {
+      if (slot.variant() != null && !pluralMessages.contains(slot.id())) {
+        pluralMessages.add(slot.id());
+      }
+    }
+    Matcher values = GETTEXT_PLURAL_LINE.matcher(localized);
+    StringBuilder result = new StringBuilder();
+    int messageIndex = -1;
+    Map<Integer, String> additions = Map.of();
+    int highest = -1;
+    while (values.find()) {
+      String current = values.group();
+      StringBuilder replacement = new StringBuilder(current);
+      int index = Integer.parseInt(values.group(1));
+      if (index == 0 && ++messageIndex < pluralMessages.size()) {
+        String id = pluralMessages.get(messageIndex);
+        additions = forms.getOrDefault(id, Map.of());
+        LocalizationMessage message = catalog.messages().get(id);
+        Map<?, ?> indexes = (Map<?, ?>) message.metadata().get("gettextPluralIndexes");
+        highest =
+            indexes.keySet().stream()
+                .map(Object::toString)
+                .mapToInt(Integer::parseInt)
+                .max()
+                .orElse(-1);
+      }
+      if (index == highest) {
+        boolean trailingNewline = current.endsWith("\n") || current.endsWith("\r");
+        String newline = current.endsWith("\r\n") ? "\r\n" : "\n";
+        if (trailingNewline) {
+          replacement.setLength(replacement.length() - newline.length());
+        }
+        for (var entry : additions.entrySet()) {
+          if (entry.getKey() > highest) {
+            replacement
+                .append(newline)
+                .append("msgstr[")
+                .append(entry.getKey())
+                .append("] ")
+                .append(entry.getValue());
+          }
+        }
+        if (trailingNewline) {
+          replacement.append(newline);
+        }
+      }
+      values.appendReplacement(result, Matcher.quoteReplacement(replacement.toString()));
+    }
+    return values.appendTail(result).toString();
   }
 
   void replaceUsedTmTextUnitVariantIds(
