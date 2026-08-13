@@ -148,6 +148,8 @@ impl FilterOptions {
                     | "noteKeepOrReplace"
                     | "usagesKeepOrReplace"
                     | "convertToHtmlCodes"
+                    | "processImageUrls"
+                    | "emptyAndNbspNotTranslatable"
             ) && !value.eq_ignore_ascii_case("true")
                 && !value.eq_ignore_ascii_case("false")
             {
@@ -210,6 +212,7 @@ fn supported(format: FileFormat, key: &str) -> bool {
         ),
         FileFormat::AppleStrings => key == "removeComment",
         FileFormat::Yaml => matches!(key, "useFullKeyPath" | "extractAllPairs" | "exceptions"),
+        FileFormat::Html => matches!(key, "processImageUrls" | "emptyAndNbspNotTranslatable"),
         _ => false,
     }
 }
@@ -220,6 +223,15 @@ pub(crate) fn parse(
     options: &[String],
 ) -> Result<Catalog, ParseError> {
     let options = FilterOptions::parse(format, options)?;
+    if format == FileFormat::Html {
+        let catalog = crate::html::parse(
+            &crate::decode(source, None)?,
+            options.enabled("processImageUrls"),
+            !options.contains("emptyAndNbspNotTranslatable")
+                || options.enabled("emptyAndNbspNotTranslatable"),
+        )?;
+        return apply_extraction(catalog, source, &options);
+    }
     let catalog = if format == FileFormat::Yaml {
         crate::yaml::parse_configured_bytes(source, &options)?
     } else if format == FileFormat::FormatJsJson
@@ -638,6 +650,15 @@ pub(crate) fn localize(
     }
     if matches!(format, FileFormat::Csv | FileFormat::CsvAdobeMagento) {
         return crate::csv::localize(format, source, translations, remove_untranslated);
+    }
+    if format == FileFormat::Html {
+        let skeleton = crate::html::extract(
+            source,
+            options.enabled("processImageUrls"),
+            !options.contains("emptyAndNbspNotTranslatable")
+                || options.enabled("emptyAndNbspNotTranslatable"),
+        )?;
+        return crate::html::render(&skeleton, translations);
     }
     let catalog = apply_extraction(
         if format == FileFormat::Yaml {

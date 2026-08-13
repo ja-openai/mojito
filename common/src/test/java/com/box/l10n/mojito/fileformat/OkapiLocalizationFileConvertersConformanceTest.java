@@ -2,6 +2,7 @@ package com.box.l10n.mojito.fileformat;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import com.box.l10n.mojito.okapi.ExtractUsagesFromTextUnitComments;
@@ -73,6 +74,49 @@ public class OkapiLocalizationFileConvertersConformanceTest {
   @Autowired private TextUnitUtils textUnitUtils;
 
   @Autowired private IFilterConfigurationMapper filterConfigurationMapper;
+
+  @Test
+  public void customizedHtmlAlphaPreservesContextAwareIdentityAndConfiguredImageUrls()
+      throws Exception {
+    Path root = findFixtureRoot();
+    String source = Files.readString(root.resolve("fixtures/html/harbor.html"));
+    for (List<String> options :
+        List.of(
+            List.<String>of(),
+            List.of("processImageUrls=true"),
+            List.of("emptyAndNbspNotTranslatable=false"))) {
+      LocalizationCatalog portable =
+          LocalizationFileConverters.parseForMojito(
+              LocalizationFileFormat.HTML, source.getBytes(StandardCharsets.UTF_8), options);
+      List<AssetExtractorTextUnit> legacy =
+          extractor.getAssetExtractorTextUnitsForAsset(
+              "harbor.html", source, FilterConfigIdOverride.HTML_ALPHA, options);
+      assertEquals(
+          "Customized HTML_ALPHA extraction count: " + options,
+          legacy.size(),
+          portable.messages().size());
+      for (AssetExtractorTextUnit unit : legacy) {
+        LocalizationMessage message = portable.messages().get(unit.getName());
+        assertNotNull(
+            "Legacy HTML unit "
+                + unit.getName()
+                + " / "
+                + unit.getSource()
+                + " was absent from portable identities "
+                + portable.messages().keySet(),
+            message);
+        assertEquals(
+            unit.getName() + ": visible HTML text", unit.getSource(), message.defaultMessage());
+        assertEquals(
+            unit.getName() + ": HTML description", unit.getComments(), message.description());
+        assertEquals(
+            unit.getName() + ": stable translation-memory identity",
+            textUnitUtils.computeTextUnitMD5(unit.getName(), unit.getSource(), unit.getComments()),
+            textUnitUtils.computeTextUnitMD5(
+                unit.getName(), message.defaultMessage(), message.description()));
+      }
+    }
+  }
 
   @Test
   public void customizedJavaScriptAndTypeScriptPreserveSourceCommentsAndStableIdentity()

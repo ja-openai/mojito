@@ -4080,6 +4080,16 @@ fn all_shared_source_preserving_skeletons() {
                 parsed.messages["group/block"].default_message,
                 "Première ligne\nDeuxième ligne"
             );
+        } else if format == FileFormat::Html {
+            let mut expected: Vec<_> = translations.values().collect();
+            let mut actual: Vec<_> = parsed
+                .messages
+                .values()
+                .map(|message| &message.default_message)
+                .collect();
+            expected.sort_unstable();
+            actual.sort_unstable();
+            assert_eq!(actual, expected, "{id}: translated HTML source text");
         } else if matches!(format, FileFormat::JavaScript | FileFormat::TypeScript) {
             for (key, translation) in &translations {
                 assert_eq!(

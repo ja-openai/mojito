@@ -3350,6 +3350,14 @@ public class LocalizationFileConvertersConformanceTest {
         assertEquals(
             "Première ligne\nDeuxième ligne",
             localized.messages().get("group/block").defaultMessage());
+      } else if (format == LocalizationFileFormat.HTML) {
+        var actualMessages = localized.messages().values().iterator();
+        for (LocalizationSourceSkeleton.LocalizationSourceSlot slot : skeleton.slots()) {
+          assertEquals(
+              id + ": translated HTML source text " + slot.id(),
+              translations.get(slot.id()),
+              actualMessages.next().defaultMessage());
+        }
       } else if (format == LocalizationFileFormat.JAVASCRIPT
           || format == LocalizationFileFormat.TYPESCRIPT) {
         for (Map.Entry<String, String> entry : translations.entrySet()) {

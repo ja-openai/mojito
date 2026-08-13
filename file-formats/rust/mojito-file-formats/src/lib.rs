@@ -17,6 +17,7 @@ mod csv;
 mod gettext;
 mod gettext_plural;
 mod gettext_writer;
+mod html;
 mod javascript;
 mod model;
 mod placeholders;
@@ -431,6 +432,7 @@ pub fn parse_with_feature_flags(
         FileFormat::Yaml => yaml::parse(&source),
         FileFormat::JavaScript | FileFormat::TypeScript => javascript::parse(format, &source),
         FileFormat::Resx | FileFormat::Xtb => xml_resources::parse(format, &source),
+        FileFormat::Html => html::parse(&source, false, true),
     }
 }
 

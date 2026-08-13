@@ -60,6 +60,7 @@ public final class LocalizationFilterOptions {
           case FORMATJS_JSON -> JSON_OPTIONS;
           case YAML -> Set.of("useFullKeyPath", "extractAllPairs", "exceptions");
           case APPLE_STRINGS -> Set.of("removeComment");
+          case HTML -> Set.of("processImageUrls", "emptyAndNbspNotTranslatable");
           default -> Set.of();
         };
     if (options != null) {
@@ -185,6 +186,8 @@ public final class LocalizationFilterOptions {
               "postRemoveTranslatableFalse",
               "postEmptyResourcesToEmptyFile",
               "removeComment",
+              "processImageUrls",
+              "emptyAndNbspNotTranslatable",
               "useFullKeyPath",
               "extractAllPairs",
               "noteKeepOrReplace",

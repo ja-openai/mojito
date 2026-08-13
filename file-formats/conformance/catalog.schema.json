@@ -22,8 +22,8 @@
         "javascript",
         "typescript",
         "resx",
-        "resx",
-        "xtb"
+        "xtb",
+        "html"
       ]
     },
     "locale": { "type": "string", "minLength": 1 },

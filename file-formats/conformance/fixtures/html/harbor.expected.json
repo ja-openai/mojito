@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "html",
+  "messages": {
+    "eedbdea4885092e36ff05dfa94535a00-d41d8cd98f00b204e9800998ecf8427e-1": {
+      "defaultMessage": "Harbor status"
+    },
+    "90585a2f2b78582dd03a1c8d5b378b05-eedbdea4885092e36ff05dfa94535a00-1": {
+      "defaultMessage": "Safe &amp; welcoming harbor"
+    },
+    "4f1d71b4f4ae40c6b74b31293471350f-90585a2f2b78582dd03a1c8d5b378b05-1": {
+      "defaultMessage": "North channel"
+    },
+    "4f1d71b4f4ae40c6b74b31293471350f-4f1d71b4f4ae40c6b74b31293471350f-1": {
+      "defaultMessage": "North channel"
+    },
+    "dbbb48fc7172c312d0c94c65b31c925d-4f1d71b4f4ae40c6b74b31293471350f-2": {
+      "defaultMessage": "Beacon image"
+    },
+    "6433ba9985b5e5e67694f302751890d4-dbbb48fc7172c312d0c94c65b31c925d-1": {
+      "defaultMessage": "Watch for <br id='p1'/> near the pier.",
+      "metadata": {
+        "mojitoInlineCodes": [
+          {
+            "id": "p1",
+            "source": "<img src=\"images/beacon.png\" alt=\"Beacon image\">"
+          }
+        ]
+      }
+    },
+    "3feb3cab8a7f5b9587450ef4fa19ec26-8df6fbcc43d31d99e5112eb009ed8a2d-1": {
+      "defaultMessage": "Night channel"
+    }
+  }
+}

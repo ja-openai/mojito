@@ -29,6 +29,7 @@ FORMAT_NAMES = {
     "typescript": "TypeScript source",
     "resx": "Microsoft RESX/RESW",
     "xtb": "Google XTB translation bundles",
+    "html": "HTML_ALPHA documents",
 }
 CATEGORY_NAMES = {
     "missing_legacy": "real platform-localizable units that Okapi omitted",
@@ -171,6 +172,14 @@ def document(manifest: dict[str, object]) -> str:
             "and inspect extraction only. Separate configured-workflow comparisons now",
             "run the actual custom Android, FormatJS, Chrome, Evolve, and Apple filters",
             "with their real options and verify source, comments, usages, and TM MD5.",
+            "Dedicated customized HTML_ALPHA comparisons additionally exercise default",
+            "extraction, configured image URLs, and retained nonbreaking-space units.",
+            "They verify decoded-entity MD5s, hidden document-part inline identities,",
+            "translator-visible HTML placeholders, image descriptions, and subsequent",
+            "stable context against the real override-selected legacy filter. Existing",
+            "HTML CLI datasets also verify exact localized markup, image URL/alt text,",
+            "and inherited locale output. These override-only comparisons are separate",
+            "from the manifest-declared path-routed comparison total above.",
             "Configured FormatJS positions preserve actual signed 32-bit line/column",
             "boundaries, normalize negative zero, and ignore overflows, leading plus",
             "signs, and padded numbers rather than emitting invented locations.",

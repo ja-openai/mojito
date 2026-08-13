@@ -102,7 +102,11 @@ for (const fixture of [
   );
   let checkedCatalog = false;
   for (const [id, descriptor] of Object.entries(catalog.messages)) {
-    const ast = parse(descriptor.defaultMessage, { requiresOtherClause: true });
+    // HTML_ALPHA exposes legacy inline-image placeholders, not ICU rich-text tags.
+    const ast = parse(descriptor.defaultMessage, {
+      requiresOtherClause: true,
+      ignoreTag: fixture.format === "html",
+    });
     validPatterns++;
     for (const [sampleField, label] of [
       ["xcstringsRuntimeSamples", "Xcode substitution"],

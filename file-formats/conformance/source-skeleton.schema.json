@@ -45,8 +45,8 @@
         "javascript",
         "typescript",
         "resx",
-        "resx",
-        "xtb"
+        "xtb",
+        "html"
       ]
     },
     "encoding": {

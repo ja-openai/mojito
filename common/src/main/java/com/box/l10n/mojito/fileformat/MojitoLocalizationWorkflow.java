@@ -67,6 +67,17 @@ final class MojitoLocalizationWorkflow {
   static LocalizationCatalog parse(
       LocalizationFileFormat format, byte[] source, List<String> filterOptions) {
     LocalizationFilterOptions options = LocalizationFilterOptions.parse(format, filterOptions);
+    if (format == LocalizationFileFormat.HTML) {
+      boolean includeImages = options.enabled("processImageUrls");
+      boolean suppressEmpty =
+          !options.contains("emptyAndNbspNotTranslatable")
+              || options.enabled("emptyAndNbspNotTranslatable");
+      return applyExtractionPolicy(
+          HtmlSourceFormat.parse(
+              LocalizationFileConverters.decode(source, null), includeImages, suppressEmpty),
+          source,
+          options);
+    }
     LocalizationCatalog catalog =
         format == LocalizationFileFormat.YAML
             ? YamlSourceFormat.parse(source, options)
@@ -409,6 +420,14 @@ final class MojitoLocalizationWorkflow {
     if (format == LocalizationFileFormat.CSV
         || format == LocalizationFileFormat.CSV_ADOBE_MAGENTO) {
       return CsvLocalizationFormat.localize(format, source, translations, removeUntranslated);
+    }
+    if (format == LocalizationFileFormat.HTML) {
+      boolean includeImages = options.enabled("processImageUrls");
+      boolean suppressEmpty =
+          !options.contains("emptyAndNbspNotTranslatable")
+              || options.enabled("emptyAndNbspNotTranslatable");
+      return HtmlSourceFormat.render(
+          HtmlSourceFormat.extract(source, includeImages, suppressEmpty), translations);
     }
     LocalizationCatalog catalog =
         applyExtractionPolicy(
