@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "neutral.width🧭": {
+      "defaultMessage": "Tap%n open tide",
+      "metadata": {
+        "widthVariants": {
+          "5": "Tap%n cove",
+          "040": "Tap%%n open tide"
+        },
+        "defaultWidth": 40,
+        "defaultWidthKey": "040",
+        "defaultDevice": "iphone",
+        "deviceWidthVariants": {
+          "iphone": {
+            "NSStringVariableWidthRuleType": {
+              "5": "Tap%n cove",
+              "040": "Tap%%n open tide"
+            }
+          },
+          "mac": {
+            "NSStringVariableWidthRuleType": {
+              "5": "Mac%n near",
+              "040": "Mac\nopen coast"
+            }
+          }
+        }
+      }
+    }
+  }
+}

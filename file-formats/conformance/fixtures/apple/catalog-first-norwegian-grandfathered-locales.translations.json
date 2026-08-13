@@ -1,0 +1,4 @@
+{
+  "harbor.first.norwegian.bokmal.grandfathered🧭": "{count, plural, one {{arg1} {count}  Bokmål one} other {{arg1} {count}  Bokmål other}}",
+  "harbor.first.norwegian.nynorsk.grandfathered🧭": "{count, plural, one {{arg1} {count}  Nynorsk one} other {{arg1} {count}  Nynorsk other}}"
+}

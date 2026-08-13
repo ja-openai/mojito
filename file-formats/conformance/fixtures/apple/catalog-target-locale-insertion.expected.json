@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "%@ %n %@ anchorage": {
+      "defaultMessage": "{arg0}  {arg2} anchorage",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        },
+        {
+          "name": "arg2",
+          "source": "%@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 7,
+            "source": "%n",
+            "argumentPosition": 2
+          }
+        ],
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ %n %@ anchorage"
+          }
+        },
+        "sourceState": "needs_review",
+        "localizations": {
+          "fr": {
+            "value": "%@ %@ mouillage distinct",
+            "state": "translated"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "%@ %@ mouillage distinct"
+            }
+          }
+        }
+      }
+    },
+    "North %n %@ 🧭": {
+      "defaultMessage": "North  {arg1} 🧭",
+      "placeholders": [
+        {
+          "name": "arg1",
+          "source": "%@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 6,
+            "source": "%n",
+            "argumentPosition": 1
+          }
+        ],
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "North %n %@ 🧭"
+          }
+        },
+        "sourceState": "translated",
+        "localizations": {
+          "de": {
+            "value": "Nord %@ geschützt",
+            "state": "future_review"
+          }
+        },
+        "appleLocalizationSources": {
+          "de": {
+            "stringUnit": {
+              "state": "future_review",
+              "value": "Nord %@ geschützt"
+            }
+          }
+        }
+      }
+    },
+    "Tide %%n %@ marker": {
+      "defaultMessage": "Tide %n {arg0} marker",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tide %%n %@ marker"
+          }
+        },
+        "sourceState": "translated",
+        "localizations": {
+          "fr-CA": {
+            "value": "Marée %%n %@ existante",
+            "state": "new"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr-CA": {
+            "stringUnit": {
+              "state": "new",
+              "value": "Marée %%n %@ existante"
+            }
+          }
+        },
+        "appleLocalizationIdentifiers": {
+          "fr-CA": "fr_CA"
+        }
+      }
+    },
+    "West %2$n %1$@ pier": {
+      "defaultMessage": "West  {arg0} pier",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 5,
+            "source": "%2$n",
+            "argumentPosition": 2
+          }
+        ],
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "machine_translated",
+            "value": "West %2$n %1$@ pier"
+          }
+        },
+        "sourceState": "machine_translated",
+        "localizations": {
+          "fr-CA": {
+            "value": "Ancien %2$n %1$@ quai",
+            "state": "needs_review"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr-CA": {
+            "stringUnit": {
+              "state": "needs_review",
+              "value": "Ancien %2$n %1$@ quai"
+            }
+          }
+        },
+        "appleLocalizationIdentifiers": {
+          "fr-CA": "fr_CA"
+        }
+      }
+    },
+    "harbor.target.missing🧭": {
+      "defaultMessage": "Calm harbor 🧭",
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Calm harbor 🧭"
+          }
+        },
+        "sourceState": "needs_review",
+        "extractionState": "stale",
+        "localizations": {
+          "de": {
+            "value": "Ruhiger Hafen",
+            "state": "machine_translated"
+          }
+        },
+        "appleLocalizationSources": {
+          "de": {
+            "stringUnit": {
+              "state": "machine_translated",
+              "value": "Ruhiger Hafen"
+            }
+          }
+        }
+      },
+      "description": "A neutral target missing from its active localization map"
+    },
+    "owned.scalar": {
+      "defaultMessage": "Steady {arg0} shore",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Steady %@ shore"
+          }
+        },
+        "sourceState": "needs_review",
+        "localizations": {
+          "fr-CA": {
+            "value": "Rive %@ existante",
+            "state": "future_review"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr-CA": {
+            "stringUnit": {
+              "state": "future_review",
+              "value": "Rive %@ existante"
+            }
+          }
+        },
+        "appleLocalizationIdentifiers": {
+          "fr-CA": "fr_CA"
+        }
+      }
+    }
+  }
+}

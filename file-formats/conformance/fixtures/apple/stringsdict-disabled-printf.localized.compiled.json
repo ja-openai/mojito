@@ -1,0 +1,38 @@
+{
+  "harbor.after": {
+    "NSStringLocalizedFormatKey": "%#@count@ visible",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%n balise",
+      "other": "%d%n balises"
+    }
+  },
+  "harbor.literal": {
+    "NSStringLocalizedFormatKey": "%#@count@ visible",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%%n balise",
+      "other": "%d%%n balises"
+    }
+  },
+  "harbor.mixed.🧭": {
+    "NSStringLocalizedFormatKey": "%#@count@ visible",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%n\nbalise",
+      "other": "%d%n\nbalises"
+    }
+  },
+  "harbor.repeated": {
+    "NSStringLocalizedFormatKey": "%#@count@ visible",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%n%n balise",
+      "other": "%d%n%n balises"
+    }
+  }
+}

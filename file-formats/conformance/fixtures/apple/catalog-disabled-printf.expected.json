@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "harbor.device": {
+      "defaultMessage": "PalmDock",
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 4,
+            "source": "%n"
+          }
+        ],
+        "appleSourceLocalization": {
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Palm%nDock"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Desk%%nDock"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Wide\nDock"
+                }
+              }
+            }
+          }
+        },
+        "appleLocalizationSources": {
+          "fr": {
+            "variations": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Quai existant"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "localizations": {
+          "fr": {
+            "variationAxes": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Quai existant"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "translated",
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Palm%nDock"
+              }
+            },
+            "mac": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Desk%%nDock"
+              }
+            },
+            "other": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Wide\nDock"
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.line": {
+      "defaultMessage": "North\nSouth",
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "North\nSouth"
+          }
+        },
+        "sourceState": "translated"
+      }
+    },
+    "harbor.literal": {
+      "defaultMessage": "North%nSouth",
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "North%%nSouth"
+          }
+        },
+        "sourceState": "translated"
+      }
+    },
+    "harbor.plural": {
+      "defaultMessage": "{count, plural, one {{count} beacon} other {{count} beacons}}",
+      "variants": {
+        "one": "{count} beacon",
+        "other": "{count} beacons"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 7,
+                "source": "%n"
+              }
+            ],
+            "other": [
+              {
+                "position": 7,
+                "source": "%n"
+              },
+              {
+                "position": 7,
+                "source": "%n"
+              }
+            ]
+          }
+        },
+        "appleSourceLocalization": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%d%n beacon"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%d%n%n beacons"
+                }
+              }
+            }
+          }
+        },
+        "sourcePluralStates": {
+          "one": "translated",
+          "other": "translated"
+        }
+      }
+    },
+    "harbor.positioned.🧭": {
+      "defaultMessage": "🧭WestEast",
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🧭West%2$nEast%n"
+          }
+        },
+        "sourceState": "translated",
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 5,
+            "source": "%2$n"
+          },
+          {
+            "position": 9,
+            "source": "%n"
+          }
+        ]
+      }
+    },
+    "harbor.zero": {
+      "defaultMessage": "NorthSouth",
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "North%nSouth"
+          }
+        },
+        "sourceState": "translated",
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 5,
+            "source": "%n"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"sourceLanguage\": \"en\",\n  \"version\": \"1.0\",\n  \"strings\": {\n    \"harbor.target.russian🧭\": {\n      \"comment\": \"Target languages independently own their native plural categories\",\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"%1$lld beacon %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld beacons %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"ru\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"%2$@ %3$n %1$lld маяк\"\n                }\n              },\n              \"few\": {\n                \"stringUnit\": {\n                  \"state\": \"new\",\n                  \"value\": \"%2$@ %3$n %1$lld маяка\"\n                }\n              },\n              \"many\": {\n                \"stringUnit\": {\n                  \"state\": \"future_review\",\n                  \"value\": \"%2$@ %3$n %1$lld маяков\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%2$@ %3$n %1$lld маяка\"\n                }\n              }\n            }\n          }\n        },\n        \"de\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld Signal %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"future_review\",\n                  \"value\": \"%1$lld Signale %2$@\"\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"harbor.target.russian.scalar\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"needs_review\",\n            \"value\": \"Steady %@ shore\"\n          }\n        },\n        \"ru\": {\n          \"stringUnit\": {\n            \"state\": \"future_review\",\n            \"value\": \"Старый %@ берег\"\n          }\n        }\n      }\n    },\n    \"Private target Russian plural\": {\n      \"shouldTranslate\": false,\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"%1$lld beacon %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld beacons %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"ru\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"%2$@ %3$n %1$lld маяк\"\n                }\n              },\n              \"few\": {\n                \"stringUnit\": {\n                  \"state\": \"new\",\n                  \"value\": \"%2$@ %3$n %1$lld маяка\"\n                }\n              },\n              \"many\": {\n                \"stringUnit\": {\n                  \"state\": \"future_review\",\n                  \"value\": \"%2$@ %3$n %1$lld маяков\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%2$@ %3$n %1$lld маяка\"\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n",
+  "appleTargetLocale": "ru",
+  "slots": [
+    {
+      "id": "harbor.target.russian🧭",
+      "start": 866,
+      "end": 891,
+      "variant": "one"
+    },
+    {
+      "id": "harbor.target.russian🧭",
+      "start": 1045,
+      "end": 1072,
+      "variant": "few"
+    },
+    {
+      "id": "harbor.target.russian🧭",
+      "start": 1237,
+      "end": 1266,
+      "variant": "many"
+    },
+    {
+      "id": "harbor.target.russian🧭",
+      "start": 1429,
+      "end": 1456,
+      "variant": "other"
+    },
+    {
+      "id": "harbor.target.russian.scalar",
+      "start": 2315,
+      "end": 2341
+    }
+  ]
+}

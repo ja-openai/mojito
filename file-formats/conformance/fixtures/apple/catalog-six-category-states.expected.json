@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "orbital.count": {
+      "defaultMessage": "{count, plural, few {{count} nearby signals} many {{count} distant signals} one {{count} single signal} other {{count} orbital signals} two {{count} paired signals} zero {{count} silent signals}}",
+      "variants": {
+        "few": "{count} nearby signals",
+        "many": "{count} distant signals",
+        "one": "{count} single signal",
+        "other": "{count} orbital signals",
+        "two": "{count} paired signals",
+        "zero": "{count} silent signals"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizationSources": {
+          "fr": {
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "machine_translated",
+                    "value": "%lld signal orbital"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "future_review",
+                    "value": "%lld signaux orbitaux"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleSourceLocalization": {
+          "variations": {
+            "plural": {
+              "few": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld nearby signals"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "stale",
+                  "value": "%lld distant signals"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "new",
+                  "value": "%lld single signal"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld orbital signals"
+                }
+              },
+              "two": {
+                "stringUnit": {
+                  "state": "future_review",
+                  "value": "%lld paired signals"
+                }
+              },
+              "zero": {
+                "stringUnit": {
+                  "state": "machine_translated",
+                  "value": "%lld silent signals"
+                }
+              }
+            }
+          }
+        },
+        "localizations": {
+          "fr": {
+            "variantStates": {
+              "one": "machine_translated",
+              "other": "future_review"
+            },
+            "variants": {
+              "one": "%lld signal orbital",
+              "other": "%lld signaux orbitaux"
+            }
+          }
+        },
+        "sourcePluralStates": {
+          "few": "needs_review",
+          "many": "stale",
+          "one": "new",
+          "other": "translated",
+          "two": "future_review",
+          "zero": "machine_translated"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,5 @@
+/* Apple positional substitutions and percent escaping */
+"mixed" = "%2$@ has %1$lld items (100%%)";
+/* Multiple comments */
+// are joined
+"simple" = "Value";

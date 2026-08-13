@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>width.after🧭</key>
+	<dict>
+		<key>NSStringVariableWidthRuleType</key>
+		<dict>
+			<key>5</key>
+			<string>%n %@ proche repère</string>
+			<key>040</key>
+			<string>%n %@ large repère</string>
+		</dict>
+	</dict>
+	<key>width.middle</key>
+	<dict>
+		<key>NSStringVariableWidthRuleType</key>
+		<dict>
+			<key>5</key>
+			<string>%@ %n %@ proche repère</string>
+			<key>040</key>
+			<string>%@ %n %@ large repère</string>
+		</dict>
+	</dict>
+	<key>width.repeated</key>
+	<dict>
+		<key>NSStringVariableWidthRuleType</key>
+		<dict>
+			<key>5</key>
+			<string>%n%n %@ proche repère</string>
+			<key>040</key>
+			<string>%n%n %@ large repère</string>
+		</dict>
+	</dict>
+	<key>width.explicit</key>
+	<dict>
+		<key>NSStringVariableWidthRuleType</key>
+		<dict>
+			<key>5</key>
+			<string>%2$n %1$@ proche repère</string>
+			<key>040</key>
+			<string>%2$n %1$@ large repère</string>
+		</dict>
+	</dict>
+	<key>width.escaped</key>
+	<dict>
+		<key>NSStringVariableWidthRuleType</key>
+		<dict>
+			<key>5</key>
+			<string>%%n %@ proche repère</string>
+			<key>040</key>
+			<string>%%n %@ large repère</string>
+		</dict>
+	</dict>
+	<key>device.after🧭</key>
+	<dict>
+		<key>NSStringDeviceSpecificRuleType</key>
+		<dict>
+			<key>iphone</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%n %@ mobile proche repère</string>
+					<key>040</key>
+					<string>%n %@ mobile large repère</string>
+				</dict>
+			</dict>
+			<key>mac</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%n %@ bureau proche repère</string>
+					<key>040</key>
+					<string>%n %@ bureau large repère</string>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+	<key>device.middle</key>
+	<dict>
+		<key>NSStringDeviceSpecificRuleType</key>
+		<dict>
+			<key>iphone</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%@ %n %@ mobile proche repère</string>
+					<key>040</key>
+					<string>%@ %n %@ mobile large repère</string>
+				</dict>
+			</dict>
+			<key>mac</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%@ %n %@ bureau proche repère</string>
+					<key>040</key>
+					<string>%@ %n %@ bureau large repère</string>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+	<key>device.repeated</key>
+	<dict>
+		<key>NSStringDeviceSpecificRuleType</key>
+		<dict>
+			<key>iphone</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%n%n %@ mobile proche repère</string>
+					<key>040</key>
+					<string>%n%n %@ mobile large repère</string>
+				</dict>
+			</dict>
+			<key>mac</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%n%n %@ bureau proche repère</string>
+					<key>040</key>
+					<string>%n%n %@ bureau large repère</string>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+	<key>device.explicit</key>
+	<dict>
+		<key>NSStringDeviceSpecificRuleType</key>
+		<dict>
+			<key>iphone</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%2$n %1$@ mobile proche repère</string>
+					<key>040</key>
+					<string>%2$n %1$@ mobile large repère</string>
+				</dict>
+			</dict>
+			<key>mac</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%2$n %1$@ bureau proche repère</string>
+					<key>040</key>
+					<string>%2$n %1$@ bureau large repère</string>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+	<key>device.escaped</key>
+	<dict>
+		<key>NSStringDeviceSpecificRuleType</key>
+		<dict>
+			<key>iphone</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%%n %@ mobile proche repère</string>
+					<key>040</key>
+					<string>%%n %@ mobile large repère</string>
+				</dict>
+			</dict>
+			<key>mac</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%%n %@ bureau proche repère</string>
+					<key>040</key>
+					<string>%%n %@ bureau large repère</string>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+</dict>
+</plist>

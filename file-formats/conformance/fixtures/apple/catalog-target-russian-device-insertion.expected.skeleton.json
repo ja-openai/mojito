@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"sourceLanguage\": \"en\",\n  \"version\": \"1.0\",\n  \"strings\": {\n    \"harbor.target.device.scalar🧭\": {\n      \"comment\": \"Target languages own device-specific scalar text independently\",\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"Touch %1$@ %2$n beacon\"\n                }\n              },\n              \"mac\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Click %1$@ %2$n beacon\"\n                }\n              }\n            }\n          }\n        },\n        \"ru\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"Коснитесь %1$@ %2$n маяка\"\n                }\n              },\n              \"mac\": {\n                \"stringUnit\": {\n                  \"state\": \"future_review\",\n                  \"value\": \"Выберите %1$@ %2$n маяк\"\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"harbor.target.device.plural🧭\": {\n      \"comment\": \"Each target device independently owns its language-specific plurals\",\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"needs_review\",\n                        \"value\": \"%1$lld %3$n mobile beacon %2$@\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%1$lld %3$n mobile beacons %2$@\"\n                      }\n                    }\n                  }\n                }\n              },\n              \"mac\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"needs_review\",\n                        \"value\": \"%1$lld %3$n desktop beacon %2$@\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%1$lld %3$n desktop beacons %2$@\"\n                      }\n                    }\n                  }\n                }\n              }\n            }\n          }\n        },\n        \"ru\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"needs_review\",\n                        \"value\": \"%2$@ %3$n %1$lld мобильный маяк\"\n                      }\n                    },\n                    \"few\": {\n                      \"stringUnit\": {\n                        \"state\": \"new\",\n                        \"value\": \"%2$@ %3$n %1$lld мобильный маяка\"\n                      }\n                    },\n                    \"many\": {\n                      \"stringUnit\": {\n                        \"state\": \"future_review\",\n                        \"value\": \"%2$@ %3$n %1$lld мобильный маяков\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%2$@ %3$n %1$lld мобильный маяка\"\n                      }\n                    }\n                  }\n                }\n              },\n              \"mac\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"needs_review\",\n                        \"value\": \"%2$@ %3$n %1$lld настольный маяк\"\n                      }\n                    },\n                    \"few\": {\n                      \"stringUnit\": {\n                        \"state\": \"new\",\n                        \"value\": \"%2$@ %3$n %1$lld настольный маяка\"\n                      }\n                    },\n                    \"many\": {\n                      \"stringUnit\": {\n                        \"state\": \"future_review\",\n                        \"value\": \"%2$@ %3$n %1$lld настольный маяков\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%2$@ %3$n %1$lld настольный маяка\"\n                      }\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"Private target Russian device branches\": {\n      \"shouldTranslate\": false,\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"needs_review\",\n                        \"value\": \"%1$lld %3$n mobile beacon %2$@\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%1$lld %3$n mobile beacons %2$@\"\n                      }\n                    }\n                  }\n                }\n              },\n              \"mac\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"needs_review\",\n                        \"value\": \"%1$lld %3$n desktop beacon %2$@\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%1$lld %3$n desktop beacons %2$@\"\n                      }\n                    }\n                  }\n                }\n              }\n            }\n          }\n        },\n        \"ru\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"needs_review\",\n                        \"value\": \"%2$@ %3$n %1$lld мобильный маяк\"\n                      }\n                    },\n                    \"few\": {\n                      \"stringUnit\": {\n                        \"state\": \"new\",\n                        \"value\": \"%2$@ %3$n %1$lld мобильный маяка\"\n                      }\n                    },\n                    \"many\": {\n                      \"stringUnit\": {\n                        \"state\": \"future_review\",\n                        \"value\": \"%2$@ %3$n %1$lld мобильный маяков\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%2$@ %3$n %1$lld мобильный маяка\"\n                      }\n                    }\n                  }\n                }\n              },\n              \"mac\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"needs_review\",\n                        \"value\": \"%2$@ %3$n %1$lld настольный маяк\"\n                      }\n                    },\n                    \"few\": {\n                      \"stringUnit\": {\n                        \"state\": \"new\",\n                        \"value\": \"%2$@ %3$n %1$lld настольный маяка\"\n                      }\n                    },\n                    \"many\": {\n                      \"stringUnit\": {\n                        \"state\": \"future_review\",\n                        \"value\": \"%2$@ %3$n %1$lld настольный маяков\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%2$@ %3$n %1$lld настольный маяка\"\n                      }\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"harbor.target.device.missing.scalar🧭\": {\n      \"comment\": \"One ICU select atomically owns every target device branch\",\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"Touch %1$@ %2$n beacon\"\n                }\n              },\n              \"mac\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Click %1$@ %2$n beacon\"\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"harbor.target.device.null.scalar🧭\": {\n      \"comment\": \"One ICU select atomically owns every target device branch\",\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"Touch %1$@ %2$n beacon\"\n                }\n              },\n              \"mac\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Click %1$@ %2$n beacon\"\n                }\n              }\n            }\n          }\n        },\n        \"ru\": null\n      }\n    },\n    \"harbor.target.device.missing.plural🧭\": {\n      \"comment\": \"One ICU select atomically owns every target device branch\",\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"needs_review\",\n                        \"value\": \"%1$lld %3$n mobile beacon %2$@\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%1$lld %3$n mobile beacons %2$@\"\n                      }\n                    }\n                  }\n                }\n              },\n              \"mac\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"needs_review\",\n                        \"value\": \"%1$lld %3$n desktop beacon %2$@\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%1$lld %3$n desktop beacons %2$@\"\n                      }\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"harbor.target.device.null.plural🧭\": {\n      \"comment\": \"One ICU select atomically owns every target device branch\",\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"needs_review\",\n                        \"value\": \"%1$lld %3$n mobile beacon %2$@\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%1$lld %3$n mobile beacons %2$@\"\n                      }\n                    }\n                  }\n                }\n              },\n              \"mac\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"needs_review\",\n                        \"value\": \"%1$lld %3$n desktop beacon %2$@\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%1$lld %3$n desktop beacons %2$@\"\n                      }\n                    }\n                  }\n                }\n              }\n            }\n          }\n        },\n        \"ru\": null\n      }\n    },\n    \"Private missing Russian device tree\": {\n      \"shouldTranslate\": false,\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"Touch %1$@ %2$n beacon\"\n                }\n              },\n              \"mac\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Click %1$@ %2$n beacon\"\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"Private null Russian device tree\": {\n      \"shouldTranslate\": false,\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"needs_review\",\n                        \"value\": \"%1$lld %3$n mobile beacon %2$@\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%1$lld %3$n mobile beacons %2$@\"\n                      }\n                    }\n                  }\n                }\n              },\n              \"mac\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"needs_review\",\n                        \"value\": \"%1$lld %3$n desktop beacon %2$@\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%1$lld %3$n desktop beacons %2$@\"\n                      }\n                    }\n                  }\n                }\n              }\n            }\n          }\n        },\n        \"ru\": null\n      }\n    }\n  }\n}\n",
+  "appleTargetLocale": "ru",
+  "slots": [
+    {
+      "id": "harbor.target.device.scalar🧭",
+      "selector": "@device",
+      "variant": "iphone",
+      "start": 880,
+      "end": 919
+    },
+    {
+      "id": "harbor.target.device.scalar🧭",
+      "selector": "@device",
+      "variant": "mac",
+      "start": 1083,
+      "end": 1118
+    },
+    {
+      "id": "harbor.target.device.plural🧭",
+      "selector": "@device=iphone",
+      "variant": "one",
+      "start": 2966,
+      "end": 3010
+    },
+    {
+      "id": "harbor.target.device.plural🧭",
+      "selector": "@device=iphone",
+      "variant": "few",
+      "start": 3200,
+      "end": 3246
+    },
+    {
+      "id": "harbor.target.device.plural🧭",
+      "selector": "@device=iphone",
+      "variant": "many",
+      "start": 3447,
+      "end": 3495
+    },
+    {
+      "id": "harbor.target.device.plural🧭",
+      "selector": "@device=iphone",
+      "variant": "other",
+      "start": 3694,
+      "end": 3740
+    },
+    {
+      "id": "harbor.target.device.plural🧭",
+      "selector": "@device=mac",
+      "variant": "one",
+      "start": 4078,
+      "end": 4124
+    },
+    {
+      "id": "harbor.target.device.plural🧭",
+      "selector": "@device=mac",
+      "variant": "few",
+      "start": 4314,
+      "end": 4362
+    },
+    {
+      "id": "harbor.target.device.plural🧭",
+      "selector": "@device=mac",
+      "variant": "many",
+      "start": 4563,
+      "end": 4613
+    },
+    {
+      "id": "harbor.target.device.plural🧭",
+      "selector": "@device=mac",
+      "variant": "other",
+      "start": 4812,
+      "end": 4860
+    },
+    {
+      "id": "harbor.target.device.missing.scalar🧭",
+      "start": 9395,
+      "end": 9395
+    },
+    {
+      "id": "harbor.target.device.null.scalar🧭",
+      "start": 10047,
+      "end": 10051
+    },
+    {
+      "id": "harbor.target.device.missing.plural🧭",
+      "start": 11520,
+      "end": 11520
+    },
+    {
+      "id": "harbor.target.device.null.plural🧭",
+      "start": 13002,
+      "end": 13006
+    }
+  ]
+}

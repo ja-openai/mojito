@@ -1,0 +1,11 @@
+{
+  "de-DD.lproj/catalog.strings": {
+    "harbor.native.script.collision🧭": "First catalog locale de-DD"
+  },
+  "de-DE.lproj/catalog.strings": {
+    "harbor.native.script.collision🧭": "Second catalog locale de-DE"
+  },
+  "en.lproj/catalog.strings": {
+    "harbor.native.script.collision🧭": "Source"
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "sourceLanguage" : "en",
+  "projectFlag" : { "preserve" : true, "rank" : 4 },
+  "strings" : {
+    "harbor.route🧭" : {
+      "comment" : "Independent neutral harbor counters and a positional pilot.",
+      "customFlag" : [ "keep", 9 ],
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "needs_review", "value" : "Pilot %3$@ escorts %#@lanes@ beyond %2$#@lights@" },
+          "substitutions" : {
+            "lanes" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : { "plural" : {
+                "one" : { "stringUnit" : { "state" : "needs_review", "value" : "%lld quiet lane" } },
+                "other" : { "stringUnit" : { "state" : "translated", "value" : "%lld quiet lanes" } }
+              } }
+            },
+            "lights" : {
+              "argNum" : 2,
+              "formatSpecifier" : "d",
+              "variations" : { "plural" : {
+                "one" : { "stringUnit" : { "state" : "machine_translated", "value" : "%d north light" } },
+                "other" : { "stringUnit" : { "state" : "translated", "value" : "%d north lights" } }
+              } }
+            }
+          }
+        },
+        "fr" : {
+          "stringUnit" : { "state" : "needs_review", "value" : "Pilote %3$@ escorte %#@lanes@ au-delà de %2$#@lights@" },
+          "substitutions" : {
+            "lanes" : {
+              "argNum" : 1, "formatSpecifier" : "lld",
+              "variations" : { "plural" : {
+                "one" : { "stringUnit" : { "state" : "needs_review", "value" : "%lld voie calme" } },
+                "other" : { "stringUnit" : { "state" : "translated", "value" : "%lld voies calmes" } }
+              } }
+            },
+            "lights" : {
+              "argNum" : 2, "formatSpecifier" : "d",
+              "variations" : { "plural" : {
+                "one" : { "stringUnit" : { "state" : "translated", "value" : "%d feu nord" } },
+                "other" : { "stringUnit" : { "state" : "machine_translated", "value" : "%d feux nord" } }
+              } }
+            }
+          }
+        }
+      }
+    },
+    "echo.route" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "%#@count@ before %1$#@count@" },
+          "substitutions" : {
+            "count" : { "argNum" : 1, "formatSpecifier" : "d", "variations" : { "plural" : {
+              "one" : { "stringUnit" : { "state" : "translated", "value" : "%d echo" } },
+              "other" : { "stringUnit" : { "state" : "needs_review", "value" : "%d echoes" } }
+            } } }
+          }
+        }
+      }
+    },
+    "unicode.route" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Follow %#@信号@" },
+          "substitutions" : {
+            "信号" : { "argNum" : 1, "formatSpecifier" : "lld", "variations" : { "plural" : {
+              "one" : { "stringUnit" : { "state" : "translated", "value" : "%lld soft pulse" } },
+              "other" : { "stringUnit" : { "state" : "machine_translated", "value" : "%lld soft pulses" } }
+            } } }
+          }
+        }
+      }
+    },
+    "implicit.lane" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "needs_review", "value" : "Observed %#@amount@" },
+          "substitutions" : {
+            "amount" : { "variations" : { "plural" : {
+              "one" : { "stringUnit" : { "state" : "translated", "value" : "%lld green berth" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%lld green berths" } }
+            } } }
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

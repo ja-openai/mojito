@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>harbor.device.🧭</key><dict>
+    <key>NSStringDeviceSpecificRuleType</key><dict>
+      <key>iphone</key><string>Touchez %@%n quai tranquille</string>
+      <key>mac</key><string>Click %@%n protected dock</string>
+      <key>applewatch</key><string>Watch %@ protected pier</string>
+    </dict>
+  </dict>
+  <key>harbor.device.literal</key><dict>
+    <key>NSStringDeviceSpecificRuleType</key><dict>
+      <key>iphone</key><string>Touchez %@%%n quai</string>
+      <key>mac</key><string>Click %@%%n protected dock</string>
+    </dict>
+  </dict>
+  <key>harbor.width</key><dict>
+    <key>NSStringVariableWidthRuleType</key><dict>
+      <key>8</key><string>Near%n</string>
+      <key>040</key><string>Follow%n%n the open tide</string>
+      <key>80</key><string>Suivez%n%n la vaste rive claire</string>
+    </dict>
+  </dict>
+  <key>harbor.width.line</key><dict>
+    <key>NSStringVariableWidthRuleType</key><dict>
+      <key>5</key><string>Low&#10;tide</string>
+      <key>18</key><string>Eau&#10;calme devant</string>
+    </dict>
+  </dict>
+  <key>harbor.width.literal</key><dict>
+    <key>NSStringVariableWidthRuleType</key><dict>
+      <key>4</key><string>A%%n</string>
+      <key>12</key><string>A%%n baie calme</string>
+    </dict>
+  </dict>
+</dict></plist>

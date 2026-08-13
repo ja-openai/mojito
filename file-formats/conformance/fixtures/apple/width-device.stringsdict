@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>signal.width</key><dict>
+    <key>NSStringVariableWidthRuleType</key><dict>
+      <key>4</key><string>Now</string>
+      <key>18</key><string>Signal ready</string>
+      <key>48</key><string>The neutral signal is ready</string>
+    </dict>
+  </dict>
+  <key>signal.device</key><dict>
+    <key>NSStringDeviceSpecificRuleType</key><dict>
+      <key>iphone</key><string>Touch %@</string>
+      <key>mac</key><string>Click %@</string>
+      <key>applevision</key><string>Focus on %@</string>
+    </dict>
+  </dict>
+  <key>literal.doctype</key><dict>
+    <key>NSStringVariableWidthRuleType</key><dict>
+      <key>12</key><string><![CDATA[<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">]]></string>
+    </dict>
+  </dict>
+</dict></plist>

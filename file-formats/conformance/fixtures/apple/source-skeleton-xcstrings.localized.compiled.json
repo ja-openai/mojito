@@ -1,0 +1,66 @@
+{
+  "en_US.lproj/catalog.strings": {
+    "do.not.translate": "Internal protected source",
+    "escaped.route_🧭": "Sud \"quai\" 🙂 %@"
+  },
+  "en_US.lproj/catalog.stringsdict": {
+    "device.count": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld route mobile",
+            "other": "%lld routes mobiles"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld protected desktop",
+            "other": "%lld protected desktops"
+          }
+        }
+      }
+    },
+    "device.route": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "Touchez %@",
+        "mac": "Click protected %@"
+      }
+    },
+    "plural.count": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld signal léger",
+        "other": "%lld signaux légers"
+      }
+    }
+  },
+  "fr.lproj/catalog.stringsdict": {
+    "device.route": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "Touchez la traduction %@"
+      }
+    }
+  },
+  "fr_CA.lproj/catalog.strings": {
+    "escaped.route_🧭": "Quai déjà traduit %@"
+  },
+  "fr_CA.lproj/catalog.stringsdict": {
+    "plural.count": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld signal existant",
+        "other": "%lld signaux existants"
+      }
+    }
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"sourceLanguage\" : \"en\",\n  \"projectMarker\" : { \"keep\" : true },\n  \"strings\" : {\n    \"mixed.route\" : {\n      \"comment\" : \"Implicit substitution placeholders start at their assigned native argument.\",\n      \"localizations\" : {\n        \"en\" : {\n          \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"Pilot %1$@ follows %#@lights@\" },\n          \"substitutions\" : {\n            \"lights\" : { \"argNum\" : 2, \"formatSpecifier\" : \"lld\", \"variations\" : { \"plural\" : {\n              \"one\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%lld pale light near %@\" } },\n              \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld pale lights near %@\" } }\n            } } }\n          }\n        },\n        \"fr\" : {\n          \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Pilote %1$@ suit %#@lights@\" },\n          \"substitutions\" : {\n            \"lights\" : { \"argNum\" : 2, \"formatSpecifier\" : \"lld\", \"variations\" : { \"plural\" : {\n              \"one\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%lld feu protégé près de %@\" } },\n              \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld feux protégés près de %@\" } }\n            } } }\n          }\n        }\n      }\n    },\n    \"extra.numeric\" : {\n      \"localizations\" : {\n        \"en\" : {\n          \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Pilot %1$@ counts %#@signals@\" },\n          \"substitutions\" : {\n            \"signals\" : { \"argNum\" : 2, \"formatSpecifier\" : \"lld\", \"variations\" : { \"plural\" : {\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld clear signal near %lld buoy\" } },\n              \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld clear signals near %lld buoys\" } }\n            } } }\n          }\n        }\n      }\n    },\n    \"reversed.route\" : {\n      \"localizations\" : {\n        \"en\" : {\n          \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Pilot %1$@ reports %#@routes@\" },\n          \"substitutions\" : {\n            \"routes\" : { \"argNum\" : 2, \"formatSpecifier\" : \"lld\", \"variations\" : { \"plural\" : {\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%3$@ protects %2$lld lane\" } },\n              \"other\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"%3$@ protects %2$lld lanes\" } }\n            } } }\n          }\n        }\n      }\n    },\n    \"unicode.mixed\" : {\n      \"localizations\" : {\n        \"en\" : {\n          \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%1$@ follows %#@信号@\" },\n          \"substitutions\" : {\n            \"信号\" : { \"argNum\" : 2, \"formatSpecifier\" : \"lld\", \"variations\" : { \"plural\" : {\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld blue pulse near %@\" } },\n              \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld blue pulses near %@\" } }\n            } } }\n          }\n        }\n      }\n    },\n    \"device.mixed\" : {\n      \"localizations\" : {\n        \"en\" : {\n          \"substitutions\" : {\n            \"beacons\" : { \"argNum\" : 2, \"formatSpecifier\" : \"lld\", \"variations\" : { \"plural\" : {\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld soft beacon near %@\" } },\n              \"other\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%lld soft beacons near %@\" } }\n            } } }\n          },\n          \"variations\" : { \"device\" : {\n            \"iphone\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"Tap %1$@ for %#@beacons@\" } },\n            \"mac\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Click %1$@ for %#@beacons@\" } }\n          } }\n        }\n      }\n    }\n  },\n  \"version\" : \"1.0\"\n}\n",
+  "slots": [
+    {
+      "id": "mixed.route",
+      "start": 310,
+      "end": 339
+    },
+    {
+      "id": "mixed.route",
+      "selector": "lights",
+      "variant": "one",
+      "start": 548,
+      "end": 571
+    },
+    {
+      "id": "mixed.route",
+      "selector": "lights",
+      "variant": "other",
+      "start": 656,
+      "end": 680
+    },
+    {
+      "id": "extra.numeric",
+      "start": 1379,
+      "end": 1408
+    },
+    {
+      "id": "extra.numeric",
+      "selector": "signals",
+      "variant": "one",
+      "start": 1616,
+      "end": 1648
+    },
+    {
+      "id": "extra.numeric",
+      "selector": "signals",
+      "variant": "other",
+      "start": 1733,
+      "end": 1767
+    },
+    {
+      "id": "reversed.route",
+      "start": 1958,
+      "end": 1987
+    },
+    {
+      "id": "reversed.route",
+      "selector": "routes",
+      "variant": "one",
+      "start": 2194,
+      "end": 2219
+    },
+    {
+      "id": "reversed.route",
+      "selector": "routes",
+      "variant": "other",
+      "start": 2312,
+      "end": 2338
+    },
+    {
+      "id": "unicode.mixed",
+      "start": 2528,
+      "end": 2551
+    },
+    {
+      "id": "unicode.mixed",
+      "selector": "信号",
+      "variant": "one",
+      "start": 2758,
+      "end": 2781
+    },
+    {
+      "id": "unicode.mixed",
+      "selector": "信号",
+      "variant": "other",
+      "start": 2866,
+      "end": 2890
+    },
+    {
+      "id": "device.mixed",
+      "selector": "beacons",
+      "variant": "one",
+      "start": 3220,
+      "end": 3244
+    },
+    {
+      "id": "device.mixed",
+      "selector": "beacons",
+      "variant": "other",
+      "start": 3331,
+      "end": 3356
+    },
+    {
+      "id": "device.mixed",
+      "start": 3512,
+      "end": 3536
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "en.lproj/catalog.strings": {
+    "decimal.version": "Fractional catalog revision"
+  },
+  "fr.lproj/catalog.strings": {
+    "decimal.version": "Signal orbital neutre"
+  }
+}

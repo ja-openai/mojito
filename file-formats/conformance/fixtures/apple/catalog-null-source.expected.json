@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "nullable.source": {
+      "defaultMessage": "nullable.source",
+      "metadata": {
+        "appleLocalizationSources": {
+          "fr": {
+            "stringUnit": {
+              "state": "machine_translated",
+              "value": "Chemin orbital"
+            }
+          }
+        },
+        "localizations": {
+          "fr": {
+            "state": "machine_translated",
+            "value": "Chemin orbital"
+          }
+        }
+      }
+    }
+  }
+}

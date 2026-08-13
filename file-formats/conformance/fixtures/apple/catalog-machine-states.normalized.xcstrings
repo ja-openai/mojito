@@ -1,0 +1,42 @@
+{
+  "nullableCatalogMetadata": null,
+  "rolloutRevision": 4,
+  "sourceLanguage": "en",
+  "strings": {
+    "machine.signal": {
+      "customDescriptorMetadata": null,
+      "extractionState": "future_extraction",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "machine_translated",
+            "value": "Orbital route %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "future_review",
+            "value": "Trajet orbital %@"
+          }
+        }
+      }
+    },
+    "nullable.signal": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Quiet harbor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "machine_translated",
+            "value": "Port paisible"
+          }
+        }
+      }
+    }
+  },
+  "version": 7
+}

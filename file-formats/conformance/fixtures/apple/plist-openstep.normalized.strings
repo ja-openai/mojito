@@ -1,0 +1,6 @@
+// Structural trivia is ignored between OpenStep dictionary tokens.
+"wrapped.$/north:west-2" = "south.$/east:bank-1";
+// OpenStep dictionary translator context.
+"wrapped.route" = "Wrapped %@ harbor";
+// OpenStep dictionaries support Foundation's key-only shortcut.
+"wrapped.shortcut" = "wrapped.shortcut";

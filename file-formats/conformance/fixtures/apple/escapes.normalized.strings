@@ -1,0 +1,5 @@
+"continued" = "hello\nworld";
+"octal" = "AB";
+// Escaped quotes, line feeds, and tabs
+"quoted\"key" = "Line one\nLine two\t\"quoted\"";
+"unicode" = "Snowman: ☃, smile: 😃";

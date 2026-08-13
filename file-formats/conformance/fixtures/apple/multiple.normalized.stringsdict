@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+  <key>summary</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%#@files@ in %#@folders@</string>
+    <key>files</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>d</string>
+      <key>one</key>
+      <string>%d file</string>
+      <key>other</key>
+      <string>%d files</string>
+    </dict>
+    <key>folders</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>d</string>
+      <key>one</key>
+      <string>%d folder</string>
+      <key>other</key>
+      <string>%d folders</string>
+    </dict>
+  </dict>
+</dict>
+</plist>

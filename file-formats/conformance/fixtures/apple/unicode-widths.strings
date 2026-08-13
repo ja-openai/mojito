@@ -1,0 +1,9 @@
+/* Foundation accepts zero through four hexadecimal digits after uppercase U. */
+"zero" = "\U!";
+"one" = "\U1!";
+"two" = "\U20!";
+"three" = "\U260!";
+"four" = "\U2603!";
+"lowercase" = "\u41!";
+"physical" = "north\
+south";

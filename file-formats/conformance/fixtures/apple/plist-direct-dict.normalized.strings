@@ -1,0 +1,4 @@
+// Ampersands and supplementary scalars remain native values.
+"direct.navigation" = "North & 🧭";
+// Direct dictionary roots load through real Foundation bundles.
+"direct.route" = "Direct %@ harbor";

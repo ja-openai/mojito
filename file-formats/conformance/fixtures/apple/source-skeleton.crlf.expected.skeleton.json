@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "encoding": "UTF-8",
+  "source": "/* Preserve this 🧭 comment, original layout, and Foundation grammar. */\r\n{\r\n  /* Keep double-quoted token delimiters. */\r\n  \"double.key\" = \"North \\\"pier\\\"\";\r\n\r\n  // Single-quoted values must retain their original delimiter.\r\n  'single.key' = 'Pilot\\'s \"quiet\" lane';\r\n\r\n  // Unquoted values become safely quoted only when translated.\r\n  unquoted.key = open_route;\r\n\r\n  // Foundation's key-only shortcut has a zero-width insertion slot.\r\n  \"shorthand.key\";\r\n\r\n  /* Punctuation in quoted keys must never become a structural delimiter. */\r\n  \"punct;=key\" = \"Wait // calmly\";\r\n\r\n  // Original Unicode-escape spelling belongs to the protected key skeleton.\r\n  \"escaped\\U002Ekey\" = \"Trail %1$@\";\r\n\r\n  \"line.break\" = \"North%nSouth\";\r\n}\r\n",
+  "slots": [
+    {
+      "id": "double.key",
+      "start": 143,
+      "end": 157
+    },
+    {
+      "id": "single.key",
+      "start": 246,
+      "end": 267
+    },
+    {
+      "id": "unquoted.key",
+      "start": 355,
+      "end": 365
+    },
+    {
+      "id": "shorthand.key",
+      "start": 457,
+      "end": 457
+    },
+    {
+      "id": "punct;=key",
+      "start": 558,
+      "end": 572
+    },
+    {
+      "id": "escaped.key",
+      "start": 680,
+      "end": 690
+    },
+    {
+      "id": "line.break",
+      "start": 714,
+      "end": 726
+    }
+  ]
+}

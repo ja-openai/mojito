@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\"><dict>\n  <key>harbor.device.🧭</key><dict>\n    <key>NSStringDeviceSpecificRuleType</key><dict>\n      <key>iphone</key><string>Touch %@%n quay</string>\n      <key>mac</key><string>Click %@%n protected dock</string>\n      <key>applewatch</key><string>Watch %@ protected pier</string>\n    </dict>\n  </dict>\n  <key>harbor.device.literal</key><dict>\n    <key>NSStringDeviceSpecificRuleType</key><dict>\n      <key>iphone</key><string>Touch %@%%n quay</string>\n      <key>mac</key><string>Click %@%%n protected dock</string>\n    </dict>\n  </dict>\n  <key>harbor.width</key><dict>\n    <key>NSStringVariableWidthRuleType</key><dict>\n      <key>8</key><string>Near%n</string>\n      <key>040</key><string>Follow%n%n the open tide</string>\n      <key>80</key><string>Follow%n%n the wider shoreline</string>\n    </dict>\n  </dict>\n  <key>harbor.width.line</key><dict>\n    <key>NSStringVariableWidthRuleType</key><dict>\n      <key>5</key><string>Low&#10;tide</string>\n      <key>18</key><string>Clear&#10;water ahead</string>\n    </dict>\n  </dict>\n  <key>harbor.width.literal</key><dict>\n    <key>NSStringVariableWidthRuleType</key><dict>\n      <key>4</key><string>A%%n</string>\n      <key>12</key><string>A%%n sheltered bay</string>\n    </dict>\n  </dict>\n</dict></plist>\n",
+  "slots": [
+    {
+      "id": "harbor.device.🧭",
+      "start": 291,
+      "end": 306
+    },
+    {
+      "id": "harbor.device.literal",
+      "start": 593,
+      "end": 609
+    },
+    {
+      "id": "harbor.width",
+      "start": 919,
+      "end": 949
+    },
+    {
+      "id": "harbor.width.line",
+      "start": 1144,
+      "end": 1165
+    },
+    {
+      "id": "harbor.width.literal",
+      "start": 1355,
+      "end": 1373
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "de-DE-u-co-phonebk.lproj/catalog.strings": {
+    "harbor.native.script.collision🧭": "Second catalog locale de-DE-u-co-phonebk"
+  },
+  "de-DE-u-co-phonebook.lproj/catalog.strings": {
+    "harbor.native.script.collision🧭": "First catalog locale de-DE-u-co-phonebook"
+  },
+  "en.lproj/catalog.strings": {
+    "harbor.native.script.collision🧭": "Source"
+  }
+}

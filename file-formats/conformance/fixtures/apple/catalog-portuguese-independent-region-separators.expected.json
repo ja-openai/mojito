@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "harbor.portuguese.region.separator🧭": {
+      "defaultMessage": "Source beacon {arg0}",
+      "description": "Underscore and hyphen regional bundles stay independent",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source beacon %@"
+          }
+        },
+        "sourceState": "translated",
+        "localizations": {
+          "de": {
+            "state": "needs_review",
+            "value": "Signal %@"
+          },
+          "pt-BR": {
+            "state": "translated",
+            "value": "Sinal hífen %@"
+          },
+          "pt_BR": {
+            "state": "translated",
+            "value": "Sinal sublinhado %@"
+          }
+        },
+        "appleLocalizationSources": {
+          "de": {
+            "stringUnit": {
+              "state": "needs_review",
+              "value": "Signal %@"
+            }
+          },
+          "pt-BR": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Sinal hífen %@"
+            }
+          },
+          "pt_BR": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Sinal sublinhado %@"
+            }
+          }
+        }
+      }
+    }
+  }
+}

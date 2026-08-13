@@ -1,0 +1,20 @@
+{
+  "typographic_quote": "’",
+  "superscript": "¹",
+  "unknown": "qx41",
+  "undefined_fe": "\u0000",
+  "ascii": "A",
+  "undefined_ff": "\u0000",
+  "capital": "À",
+  "vertical": "\u000b",
+  "accent": "ë",
+  "wrapped_zero": "\u0000",
+  "wrapped_one": "\u0001",
+  "division": "÷",
+  "nbsp": " ",
+  "ligature": "ﬁ",
+  "wrapped_undefined": "\u0000",
+  "short_octal_boundary": "\u001f8",
+  "bell": "\u0007",
+  "nextstep_full_table": " ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖÙÚÛÜÝÞµ×÷©¡¢£⁄¥ƒ§¤’“«‹›ﬁﬂ®–†‡·¦¶•‚„”»…‰¬¿¹ˋ´ˆ˜¯˘˙¨²˚¸³˝˛ˇ—±¼½¾àáâãäåçèéêëìÆíªîïðñŁØŒºòóôõöæùúûıüýłøœßþÿ\u0000\u0000"
+}

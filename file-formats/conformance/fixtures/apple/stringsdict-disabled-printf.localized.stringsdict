@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+  <dict>
+    <key>harbor.after</key>
+    <dict>
+      <key>NSStringLocalizedFormatKey</key><string>%#@count@ visible</string>
+      <key>count</key>
+      <dict>
+        <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+        <key>NSStringFormatValueTypeKey</key><string>d</string>
+        <key>one</key><string>%d%n balise</string>
+        <key>other</key><string>%d%n balises</string>
+      </dict>
+    </dict>
+    <key>harbor.literal</key>
+    <dict>
+      <key>NSStringLocalizedFormatKey</key><string>%#@count@ visible</string>
+      <key>count</key>
+      <dict>
+        <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+        <key>NSStringFormatValueTypeKey</key><string>d</string>
+        <key>one</key><string>%d%%n balise</string>
+        <key>other</key><string>%d%%n balises</string>
+      </dict>
+    </dict>
+    <key>harbor.mixed.🧭</key>
+    <dict>
+      <key>NSStringLocalizedFormatKey</key><string>%#@count@ visible</string>
+      <key>count</key>
+      <dict>
+        <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+        <key>NSStringFormatValueTypeKey</key><string>d</string>
+        <key>one</key><string>%d%n&#10;balise</string>
+        <key>other</key><string>%d%n&#10;balises</string>
+      </dict>
+    </dict>
+    <key>harbor.repeated</key>
+    <dict>
+      <key>NSStringLocalizedFormatKey</key><string>%#@count@ visible</string>
+      <key>count</key>
+      <dict>
+        <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+        <key>NSStringFormatValueTypeKey</key><string>d</string>
+        <key>one</key><string>%d%n%n balise</string>
+        <key>other</key><string>%d%n%n balises</string>
+      </dict>
+    </dict>
+  </dict>
+</plist>

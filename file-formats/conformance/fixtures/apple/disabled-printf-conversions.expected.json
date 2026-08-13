@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "escaped": {
+      "defaultMessage": "North%nSouth"
+    },
+    "mixed.🧭": {
+      "defaultMessage": "🧭Snow\nLine%n",
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 1,
+            "source": "%n"
+          }
+        ]
+      }
+    },
+    "physical": {
+      "defaultMessage": "North\nSouth"
+    },
+    "plain": {
+      "defaultMessage": "NorthSouth",
+      "description": "Foundation disables `%n`; a physical newline is a different runtime value.",
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 5,
+            "source": "%n"
+          }
+        ]
+      }
+    },
+    "positional": {
+      "defaultMessage": "WestEast",
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 4,
+            "source": "%2$n"
+          }
+        ]
+      }
+    },
+    "repeated": {
+      "defaultMessage": "StartEnd",
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 0,
+            "source": "%n"
+          },
+          {
+            "position": 5,
+            "source": "%n"
+          },
+          {
+            "position": 5,
+            "source": "%n"
+          },
+          {
+            "position": 8,
+            "source": "%n"
+          }
+        ]
+      }
+    }
+  }
+}

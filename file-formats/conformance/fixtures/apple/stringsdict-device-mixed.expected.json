@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "neutral.scalar-plural🧭": {
+      "defaultMessage": "Tap mobile coast",
+      "metadata": {
+        "deviceVariants": {
+          "iphone": "Tap mobile coast"
+        },
+        "defaultDevice": "iphone",
+        "deviceMixedVariants": {
+          "iphone": "Tap mobile coast",
+          "mac": {
+            "NSStringLocalizedFormatKey": "%#@lights@",
+            "lights": {
+              "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+              "NSStringFormatValueTypeKey": "lld",
+              "one": "%lld desktop beacon",
+              "other": "%lld desktop beacons"
+            }
+          }
+        }
+      }
+    },
+    "neutral.plural-scalar🧭": {
+      "defaultMessage": "{lights, plural, one {{lights} mobile lamp} other {{lights} mobile lamps}}",
+      "variants": {
+        "one": "{lights} mobile lamp",
+        "other": "{lights} mobile lamps"
+      },
+      "placeholders": [
+        {
+          "name": "lights",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@lights@",
+        "applePluralRules": {
+          "lights": {
+            "valueType": "lld",
+            "variants": {
+              "one": "%lld mobile lamp",
+              "other": "%lld mobile lamps"
+            }
+          }
+        },
+        "pluralVariable": "lights",
+        "valueType": "lld",
+        "defaultDevice": "iphone",
+        "deviceMixedVariants": {
+          "iphone": {
+            "NSStringLocalizedFormatKey": "%#@lights@",
+            "lights": {
+              "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+              "NSStringFormatValueTypeKey": "lld",
+              "one": "%lld mobile lamp",
+              "other": "%lld mobile lamps"
+            }
+          },
+          "mac": "Click desktop pier"
+        }
+      }
+    },
+    "neutral.scalar-width🧭": {
+      "defaultMessage": "Tap mobile quay",
+      "metadata": {
+        "deviceVariants": {
+          "iphone": "Tap mobile quay"
+        },
+        "defaultDevice": "iphone",
+        "deviceMixedVariants": {
+          "iphone": "Tap mobile quay",
+          "mac": {
+            "NSStringVariableWidthRuleType": {
+              "5": "Mac%n near",
+              "040": "Mac\nopen coast"
+            }
+          }
+        }
+      }
+    },
+    "neutral.width-scalar🧭": {
+      "defaultMessage": "Tap%n open tide",
+      "metadata": {
+        "widthVariants": {
+          "5": "Tap%n cove",
+          "040": "Tap%%n open tide"
+        },
+        "defaultWidth": 40,
+        "defaultWidthKey": "040",
+        "defaultDevice": "iphone",
+        "deviceMixedVariants": {
+          "iphone": {
+            "NSStringVariableWidthRuleType": {
+              "5": "Tap%n cove",
+              "040": "Tap%%n open tide"
+            }
+          },
+          "mac": "Click desktop harbor"
+        }
+      }
+    },
+    "neutral.plural-width🧭": {
+      "defaultMessage": "{lights, plural, one {{lights} mobile signal} other {{lights} mobile signals}}",
+      "variants": {
+        "one": "{lights} mobile signal",
+        "other": "{lights} mobile signals"
+      },
+      "placeholders": [
+        {
+          "name": "lights",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@lights@",
+        "applePluralRules": {
+          "lights": {
+            "valueType": "lld",
+            "variants": {
+              "one": "%lld mobile signal",
+              "other": "%lld mobile signals"
+            }
+          }
+        },
+        "pluralVariable": "lights",
+        "valueType": "lld",
+        "defaultDevice": "iphone",
+        "deviceMixedVariants": {
+          "iphone": {
+            "NSStringLocalizedFormatKey": "%#@lights@",
+            "lights": {
+              "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+              "NSStringFormatValueTypeKey": "lld",
+              "one": "%lld mobile signal",
+              "other": "%lld mobile signals"
+            }
+          },
+          "mac": {
+            "NSStringVariableWidthRuleType": {
+              "5": "West%n cove",
+              "040": "West\nopen shore"
+            }
+          }
+        }
+      }
+    },
+    "neutral.width-plural🧭": {
+      "defaultMessage": "East%n open bay",
+      "metadata": {
+        "widthVariants": {
+          "5": "East%n point",
+          "040": "East%%n open bay"
+        },
+        "defaultWidth": 40,
+        "defaultWidthKey": "040",
+        "defaultDevice": "iphone",
+        "deviceMixedVariants": {
+          "iphone": {
+            "NSStringVariableWidthRuleType": {
+              "5": "East%n point",
+              "040": "East%%n open bay"
+            }
+          },
+          "mac": {
+            "NSStringLocalizedFormatKey": "%#@lights@",
+            "lights": {
+              "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+              "NSStringFormatValueTypeKey": "lld",
+              "one": "%lld desktop buoy",
+              "other": "%lld desktop buoys"
+            }
+          }
+        }
+      }
+    },
+    "neutral.three-shapes🧭": {
+      "defaultMessage": "{lights, plural, one {{lights} mobile trail} other {{lights} mobile trails}}",
+      "variants": {
+        "one": "{lights} mobile trail",
+        "other": "{lights} mobile trails"
+      },
+      "placeholders": [
+        {
+          "name": "lights",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@lights@",
+        "applePluralRules": {
+          "lights": {
+            "valueType": "lld",
+            "variants": {
+              "one": "%lld mobile trail",
+              "other": "%lld mobile trails"
+            }
+          }
+        },
+        "pluralVariable": "lights",
+        "valueType": "lld",
+        "defaultDevice": "iphone",
+        "deviceMixedVariants": {
+          "iphone": {
+            "NSStringLocalizedFormatKey": "%#@lights@",
+            "lights": {
+              "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+              "NSStringFormatValueTypeKey": "lld",
+              "one": "%lld mobile trail",
+              "other": "%lld mobile trails"
+            }
+          },
+          "mac": {
+            "NSStringVariableWidthRuleType": {
+              "5": "Bay%n near",
+              "040": "Bay\nopen water"
+            }
+          },
+          "other": "Plain fallback harbor"
+        }
+      }
+    }
+  }
+}

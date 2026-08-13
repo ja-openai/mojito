@@ -1,0 +1,9 @@
+{
+  "double.key": "Sud \"quai\" 🙂",
+  "single.key": "L'équipage \"calme\"",
+  "unquoted.key": "Route ouest",
+  "shorthand.key": "Raccourci traduit",
+  "punct;=key": "Attendre /* sans commentaire */",
+  "escaped.key": "Chemin {arg0}",
+  "line.break": "NordSud"
+}

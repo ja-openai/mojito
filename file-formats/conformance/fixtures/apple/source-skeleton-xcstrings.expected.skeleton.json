@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"futureRoot\" : { \"signal\" : \"Protected 🧭 metadata\", \"priority\" : [3, 1] },\n  \"version\" : 2.5,\n  \"sourceLanguage\" : \"en_US\",\n  \"strings\" : {\n    \"escaped\\u002Eroute_🧭\" : {\n      \"comment\" : \"Preserve original JSON key escapes, spacing, and states.\",\n      \"futureDescriptor\" : { \"literal\" : \"Keep \\\\/ this exact source spelling\" },\n      \"localizations\" : {\n        \"fr_CA\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"Quai déjà traduit %@\" } },\n        \"en_US\" : {\n          \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"North \\\"pier\\\" \\/ \\u263A %@\" }\n        }\n      }\n    },\n\n    \"plural.count\" : {\n      \"extractionState\" : \"manual\",\n      \"localizations\" : {\n        \"en_US\" : {\n          \"variations\" : {\n            \"plural\" : {\n              \"other\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"%lld quiet signals\" } },\n              \"one\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%lld quiet signal\" } }\n            }\n          }\n        },\n        \"fr_CA\" : {\n          \"variations\" : {\n            \"plural\" : {\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld signal existant\" } },\n              \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld signaux existants\" } }\n            }\n          }\n        }\n      }\n    },\n\n    \"device.route\" : {\n      \"futureDescriptor\" : { \"color\" : \"amber\" },\n      \"localizations\" : {\n        \"en_US\" : {\n          \"variations\" : {\n            \"device\" : {\n              \"mac\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Click protected %@\" } },\n              \"iphone\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"Tap source %@\" } }\n            }\n          }\n        },\n        \"fr\" : {\n          \"variations\" : {\n            \"device\" : {\n              \"iphone\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Touchez la traduction %@\" } }\n            }\n          }\n        }\n      }\n    },\n\n    \"device.count\" : {\n      \"localizations\" : {\n        \"en_US\" : {\n          \"variations\" : {\n            \"device\" : {\n              \"mac\" : {\n                \"variations\" : {\n                  \"plural\" : {\n                    \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld protected desktop\" } },\n                    \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld protected desktops\" } }\n                  }\n                }\n              },\n              \"iphone\" : {\n                \"variations\" : {\n                  \"plural\" : {\n                    \"one\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%lld mobile route\" } },\n                    \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld mobile routes\" } }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n\n    \"do.not.translate\" : {\n      \"shouldTranslate\" : false,\n      \"localizations\" : { \"en_US\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Internal protected source\" } } }\n    }\n  }\n}\n",
+  "slots": [
+    {
+      "id": "escaped.route_🧭",
+      "start": 560,
+      "end": 587
+    },
+    {
+      "id": "plural.count",
+      "variant": "other",
+      "start": 860,
+      "end": 878
+    },
+    {
+      "id": "plural.count",
+      "variant": "one",
+      "start": 963,
+      "end": 980
+    },
+    {
+      "id": "device.route",
+      "start": 1709,
+      "end": 1722
+    },
+    {
+      "id": "device.count",
+      "variant": "one",
+      "start": 2658,
+      "end": 2675
+    },
+    {
+      "id": "device.count",
+      "variant": "other",
+      "start": 2766,
+      "end": 2784
+    }
+  ]
+}

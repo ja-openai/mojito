@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "bare_shortcut": {
+      "defaultMessage": "bare_shortcut"
+    },
+    "block_separator": {
+      "defaultMessage": "Stable context",
+      "description": "Unicode block comment spacing collapses consistently."
+    },
+    "line_separator_key": {
+      "defaultMessage": "Line boundary",
+      "description": "Unicode line context"
+    },
+    "paragraph_separator_key": {
+      "defaultMessage": "Paragraph boundary",
+      "description": "Unicode paragraph context"
+    },
+    "pilot's code": {
+      "defaultMessage": "crew's marker"
+    },
+    "quoted shortcut": {
+      "defaultMessage": "quoted shortcut",
+      "description": "A missing equals/value means the key itself is the value."
+    },
+    "single key": {
+      "defaultMessage": "Route \"north\"",
+      "description": "Single-quoted keys and values are accepted by Foundation."
+    },
+    "single shortcut": {
+      "defaultMessage": "single shortcut"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "neutral.signal": {
+      "localizations": "not a localization map"
+    }
+  }
+}

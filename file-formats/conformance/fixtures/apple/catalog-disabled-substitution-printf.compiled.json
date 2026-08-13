@@ -1,0 +1,77 @@
+{
+  "en.lproj/catalog.stringsdict": {
+    "harbor.device.🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "applewatch": {
+          "NSStringLocalizedFormatKey": "Watch %1$#@count@",
+          "count": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld%n mobile lane",
+            "other": "%lld%n%n mobile lanes"
+          }
+        },
+        "iphone": {
+          "NSStringLocalizedFormatKey": "Touch %1$#@count@",
+          "count": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld%n mobile lane",
+            "other": "%lld%n%n mobile lanes"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "Click %1$#@count@",
+          "count": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld%n mobile lane",
+            "other": "%lld%n%n mobile lanes"
+          }
+        }
+      }
+    },
+    "harbor.line": {
+      "NSStringLocalizedFormatKey": "Observe %1$#@count@",
+      "count": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld\nbeacon",
+        "other": "%lld\nbeacons"
+      }
+    },
+    "harbor.literal": {
+      "NSStringLocalizedFormatKey": "Observe %1$#@count@",
+      "count": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld%%n beacon",
+        "other": "%lld%%n beacons"
+      }
+    },
+    "harbor.zero": {
+      "NSStringLocalizedFormatKey": "Observe %1$#@count@",
+      "count": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld%n beacon",
+        "other": "%lld%n%n beacons"
+      }
+    }
+  },
+  "fr.lproj/catalog.stringsdict": {
+    "harbor.device.🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "Touchez %1$#@count@",
+          "count": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld voie protégée",
+            "other": "%lld voies protégées"
+          }
+        }
+      }
+    }
+  }
+}

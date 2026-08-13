@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "nullable.target": {
+      "defaultMessage": "Quiet source",
+      "metadata": {
+        "appleLocalizationSources": {
+          "es": {
+            "stringUnit": {
+              "state": "machine_translated",
+              "value": "Fuente silenciosa"
+            }
+          }
+        },
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "future_review",
+            "value": "Quiet source"
+          }
+        },
+        "localizations": {
+          "es": {
+            "state": "machine_translated",
+            "value": "Fuente silenciosa"
+          }
+        },
+        "sourceState": "future_review"
+      }
+    }
+  }
+}

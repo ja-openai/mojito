@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "encoding": "UTF-16LE-BOM",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\"><dict>\n  <key>neutral.harbor🧭</key><dict>\n    <key>NSStringDeviceSpecificRuleType</key><dict>\n      <key>iphone</key><dict>\n        <key>NSStringLocalizedFormatKey</key><string>%#@lights@</string>\n        <key>lights</key><dict>\n          <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>\n          <key>NSStringFormatValueTypeKey</key><string>lld</string>\n          <key>one</key><string>%lld mobile lantern</string>\n          <key>other</key><string>%lld mobile lanterns</string>\n        </dict>\n      </dict>\n      <key>mac</key><dict>\n        <key>NSStringLocalizedFormatKey</key><string>%#@lights@</string>\n        <key>lights</key><dict>\n          <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>\n          <key>NSStringFormatValueTypeKey</key><string>lld</string>\n          <key>one</key><string>%lld desktop beacon</string>\n          <key>other</key><string>%lld desktop beacons</string>\n        </dict>\n      </dict>\n    </dict>\n  </dict>\n</dict></plist>\n",
+  "slots": [
+    {
+      "id": "neutral.harbor🧭",
+      "selector": "@device=iphone",
+      "variant": "one",
+      "start": 1160,
+      "end": 1198
+    },
+    {
+      "id": "neutral.harbor🧭",
+      "selector": "@device=iphone",
+      "variant": "other",
+      "start": 1286,
+      "end": 1326
+    },
+    {
+      "id": "neutral.harbor🧭",
+      "selector": "@device=mac",
+      "variant": "one",
+      "start": 2042,
+      "end": 2080
+    },
+    {
+      "id": "neutral.harbor🧭",
+      "selector": "@device=mac",
+      "variant": "other",
+      "start": 2168,
+      "end": 2208
+    }
+  ]
+}

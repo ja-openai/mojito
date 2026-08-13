@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+  <key>neutral.width🧭</key>
+  <dict>
+    <key>NSStringDeviceSpecificRuleType</key>
+    <dict>
+      <key>iphone</key>
+      <dict>
+        <key>NSStringVariableWidthRuleType</key>
+        <dict>
+          <key>040</key>
+          <string>Tap%%n open tide</string>
+          <key>5</key>
+          <string>Tap%n cove</string>
+        </dict>
+      </dict>
+      <key>mac</key>
+      <dict>
+        <key>NSStringVariableWidthRuleType</key>
+        <dict>
+          <key>040</key>
+          <string>Mac
+open coast</string>
+          <key>5</key>
+          <string>Mac%n near</string>
+        </dict>
+      </dict>
+    </dict>
+  </dict>
+</dict>
+</plist>

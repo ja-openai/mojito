@@ -1,0 +1,401 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "signal.000": {
+      "defaultMessage": "Beacon 000"
+    },
+    "signal.001": {
+      "defaultMessage": "Beacon 001"
+    },
+    "signal.002": {
+      "defaultMessage": "Beacon 002"
+    },
+    "signal.003": {
+      "defaultMessage": "Beacon 003"
+    },
+    "signal.004": {
+      "defaultMessage": "Beacon 004"
+    },
+    "signal.005": {
+      "defaultMessage": "Beacon 005"
+    },
+    "signal.006": {
+      "defaultMessage": "Beacon 006"
+    },
+    "signal.007": {
+      "defaultMessage": "Beacon 007"
+    },
+    "signal.008": {
+      "defaultMessage": "Beacon 008"
+    },
+    "signal.009": {
+      "defaultMessage": "Beacon 009"
+    },
+    "signal.010": {
+      "defaultMessage": "Beacon 010"
+    },
+    "signal.011": {
+      "defaultMessage": "Beacon 011"
+    },
+    "signal.012": {
+      "defaultMessage": "Beacon 012"
+    },
+    "signal.013": {
+      "defaultMessage": "Beacon 013"
+    },
+    "signal.014": {
+      "defaultMessage": "Beacon 014"
+    },
+    "signal.015": {
+      "defaultMessage": "Beacon 015"
+    },
+    "signal.016": {
+      "defaultMessage": "Beacon 016"
+    },
+    "signal.017": {
+      "defaultMessage": "Beacon 017"
+    },
+    "signal.018": {
+      "defaultMessage": "Beacon 018"
+    },
+    "signal.019": {
+      "defaultMessage": "Beacon 019"
+    },
+    "signal.020": {
+      "defaultMessage": "Beacon 020"
+    },
+    "signal.021": {
+      "defaultMessage": "Beacon 021"
+    },
+    "signal.022": {
+      "defaultMessage": "Beacon 022"
+    },
+    "signal.023": {
+      "defaultMessage": "Beacon 023"
+    },
+    "signal.024": {
+      "defaultMessage": "Beacon 024"
+    },
+    "signal.025": {
+      "defaultMessage": "Beacon 025"
+    },
+    "signal.026": {
+      "defaultMessage": "Beacon 026"
+    },
+    "signal.027": {
+      "defaultMessage": "Beacon 027"
+    },
+    "signal.028": {
+      "defaultMessage": "Beacon 028"
+    },
+    "signal.029": {
+      "defaultMessage": "Beacon 029"
+    },
+    "signal.030": {
+      "defaultMessage": "Beacon 030"
+    },
+    "signal.031": {
+      "defaultMessage": "Beacon 031"
+    },
+    "signal.032": {
+      "defaultMessage": "Beacon 032"
+    },
+    "signal.033": {
+      "defaultMessage": "Beacon 033"
+    },
+    "signal.034": {
+      "defaultMessage": "Beacon 034"
+    },
+    "signal.035": {
+      "defaultMessage": "Beacon 035"
+    },
+    "signal.036": {
+      "defaultMessage": "Beacon 036"
+    },
+    "signal.037": {
+      "defaultMessage": "Beacon 037"
+    },
+    "signal.038": {
+      "defaultMessage": "Beacon 038"
+    },
+    "signal.039": {
+      "defaultMessage": "Beacon 039"
+    },
+    "signal.040": {
+      "defaultMessage": "Beacon 040"
+    },
+    "signal.041": {
+      "defaultMessage": "Beacon 041"
+    },
+    "signal.042": {
+      "defaultMessage": "Beacon 042"
+    },
+    "signal.043": {
+      "defaultMessage": "Beacon 043"
+    },
+    "signal.044": {
+      "defaultMessage": "Beacon 044"
+    },
+    "signal.045": {
+      "defaultMessage": "Beacon 045"
+    },
+    "signal.046": {
+      "defaultMessage": "Beacon 046"
+    },
+    "signal.047": {
+      "defaultMessage": "Beacon 047"
+    },
+    "signal.048": {
+      "defaultMessage": "Beacon 048"
+    },
+    "signal.049": {
+      "defaultMessage": "Beacon 049"
+    },
+    "signal.050": {
+      "defaultMessage": "Beacon 050"
+    },
+    "signal.051": {
+      "defaultMessage": "Beacon 051"
+    },
+    "signal.052": {
+      "defaultMessage": "Beacon 052"
+    },
+    "signal.053": {
+      "defaultMessage": "Beacon 053"
+    },
+    "signal.054": {
+      "defaultMessage": "Beacon 054"
+    },
+    "signal.055": {
+      "defaultMessage": "Beacon 055"
+    },
+    "signal.056": {
+      "defaultMessage": "Beacon 056"
+    },
+    "signal.057": {
+      "defaultMessage": "Beacon 057"
+    },
+    "signal.058": {
+      "defaultMessage": "Beacon 058"
+    },
+    "signal.059": {
+      "defaultMessage": "Beacon 059"
+    },
+    "signal.060": {
+      "defaultMessage": "Beacon 060"
+    },
+    "signal.061": {
+      "defaultMessage": "Beacon 061"
+    },
+    "signal.062": {
+      "defaultMessage": "Beacon 062"
+    },
+    "signal.063": {
+      "defaultMessage": "Beacon 063"
+    },
+    "signal.064": {
+      "defaultMessage": "Beacon 064"
+    },
+    "signal.065": {
+      "defaultMessage": "Beacon 065"
+    },
+    "signal.066": {
+      "defaultMessage": "Beacon 066"
+    },
+    "signal.067": {
+      "defaultMessage": "Beacon 067"
+    },
+    "signal.068": {
+      "defaultMessage": "Beacon 068"
+    },
+    "signal.069": {
+      "defaultMessage": "Beacon 069"
+    },
+    "signal.070": {
+      "defaultMessage": "Beacon 070"
+    },
+    "signal.071": {
+      "defaultMessage": "Beacon 071"
+    },
+    "signal.072": {
+      "defaultMessage": "Beacon 072"
+    },
+    "signal.073": {
+      "defaultMessage": "Beacon 073"
+    },
+    "signal.074": {
+      "defaultMessage": "Beacon 074"
+    },
+    "signal.075": {
+      "defaultMessage": "Beacon 075"
+    },
+    "signal.076": {
+      "defaultMessage": "Beacon 076"
+    },
+    "signal.077": {
+      "defaultMessage": "Beacon 077"
+    },
+    "signal.078": {
+      "defaultMessage": "Beacon 078"
+    },
+    "signal.079": {
+      "defaultMessage": "Beacon 079"
+    },
+    "signal.080": {
+      "defaultMessage": "Beacon 080"
+    },
+    "signal.081": {
+      "defaultMessage": "Beacon 081"
+    },
+    "signal.082": {
+      "defaultMessage": "Beacon 082"
+    },
+    "signal.083": {
+      "defaultMessage": "Beacon 083"
+    },
+    "signal.084": {
+      "defaultMessage": "Beacon 084"
+    },
+    "signal.085": {
+      "defaultMessage": "Beacon 085"
+    },
+    "signal.086": {
+      "defaultMessage": "Beacon 086"
+    },
+    "signal.087": {
+      "defaultMessage": "Beacon 087"
+    },
+    "signal.088": {
+      "defaultMessage": "Beacon 088"
+    },
+    "signal.089": {
+      "defaultMessage": "Beacon 089"
+    },
+    "signal.090": {
+      "defaultMessage": "Beacon 090"
+    },
+    "signal.091": {
+      "defaultMessage": "Beacon 091"
+    },
+    "signal.092": {
+      "defaultMessage": "Beacon 092"
+    },
+    "signal.093": {
+      "defaultMessage": "Beacon 093"
+    },
+    "signal.094": {
+      "defaultMessage": "Beacon 094"
+    },
+    "signal.095": {
+      "defaultMessage": "Beacon 095"
+    },
+    "signal.096": {
+      "defaultMessage": "Beacon 096"
+    },
+    "signal.097": {
+      "defaultMessage": "Beacon 097"
+    },
+    "signal.098": {
+      "defaultMessage": "Beacon 098"
+    },
+    "signal.099": {
+      "defaultMessage": "Beacon 099"
+    },
+    "signal.100": {
+      "defaultMessage": "Beacon 100"
+    },
+    "signal.101": {
+      "defaultMessage": "Beacon 101"
+    },
+    "signal.102": {
+      "defaultMessage": "Beacon 102"
+    },
+    "signal.103": {
+      "defaultMessage": "Beacon 103"
+    },
+    "signal.104": {
+      "defaultMessage": "Beacon 104"
+    },
+    "signal.105": {
+      "defaultMessage": "Beacon 105"
+    },
+    "signal.106": {
+      "defaultMessage": "Beacon 106"
+    },
+    "signal.107": {
+      "defaultMessage": "Beacon 107"
+    },
+    "signal.108": {
+      "defaultMessage": "Beacon 108"
+    },
+    "signal.109": {
+      "defaultMessage": "Beacon 109"
+    },
+    "signal.110": {
+      "defaultMessage": "Beacon 110"
+    },
+    "signal.111": {
+      "defaultMessage": "Beacon 111"
+    },
+    "signal.112": {
+      "defaultMessage": "Beacon 112"
+    },
+    "signal.113": {
+      "defaultMessage": "Beacon 113"
+    },
+    "signal.114": {
+      "defaultMessage": "Beacon 114"
+    },
+    "signal.115": {
+      "defaultMessage": "Beacon 115"
+    },
+    "signal.116": {
+      "defaultMessage": "Beacon 116"
+    },
+    "signal.117": {
+      "defaultMessage": "Beacon 117"
+    },
+    "signal.118": {
+      "defaultMessage": "Beacon 118"
+    },
+    "signal.119": {
+      "defaultMessage": "Beacon 119"
+    },
+    "signal.120": {
+      "defaultMessage": "Beacon 120"
+    },
+    "signal.121": {
+      "defaultMessage": "Beacon 121"
+    },
+    "signal.122": {
+      "defaultMessage": "Beacon 122"
+    },
+    "signal.123": {
+      "defaultMessage": "Beacon 123"
+    },
+    "signal.124": {
+      "defaultMessage": "Beacon 124"
+    },
+    "signal.125": {
+      "defaultMessage": "Beacon 125"
+    },
+    "signal.126": {
+      "defaultMessage": "Beacon 126"
+    },
+    "signal.127": {
+      "defaultMessage": "Beacon 127"
+    },
+    "signal.format": {
+      "defaultMessage": "Follow {arg0} through 🧭 water",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ]
+    }
+  }
+}

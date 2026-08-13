@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?route source="north"?>
+<!-- Preserve native preamble instructions before the trusted public declaration. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<?after-doctype owner="platform"?>
+<plist version="1.0">
+  <?plist-state mode="protected"?>
+  <dict>
+    <?dictionary-start signal="kept"?>
+    <!-- Explain the formatted harbor route to translators. -->
+    <?before-key owner="structure"?>
+    <key>harbor.route</key>
+    <?between-key-value owner="structure"?>
+    <string>Guide %1$@ across north water</string>
+    <?after-value owner="structure"?>
+
+    <!-- Keep an originally self-closing entry source-preserving. -->
+    <key>quiet.empty</key>
+    <?before-empty signal="stable"?>
+    <string custom="protected" />
+
+    <!-- Native CDATA and literal markup remain visible text. -->
+    <key>wrapped&amp;signal</key>
+    <?before-cdata signal="stable"?>
+    <string><![CDATA[<calm> & clear]]></string>
+    <?dictionary-end signal="kept"?>
+  </dict>
+  <?plist-end mode="protected"?>
+</plist>
+<?document-end source="north"?>

@@ -1,0 +1,18 @@
+[
+  {
+    "en.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "Source"
+    },
+    "nb-NO.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "First catalog locale no-NO"
+    }
+  },
+  {
+    "en.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "Source"
+    },
+    "nb-NO.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "Second catalog locale nb-NO"
+    }
+  }
+]

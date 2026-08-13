@@ -1,0 +1,4 @@
+{
+  "harbor.first.serbian.latin🧭": "{count, plural, few {{arg1} {count}  Латинични few} one {{arg1} {count}  Латинични one} other {{arg1} {count}  Латинични other}}",
+  "harbor.first.serbian.cyrillic🧭": "{count, plural, few {{arg1} {count}  Ћирилични few} one {{arg1} {count}  Ћирилични one} other {{arg1} {count}  Ћирилични other}}"
+}

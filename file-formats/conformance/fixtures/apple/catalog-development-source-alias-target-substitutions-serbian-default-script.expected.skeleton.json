@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"sourceLanguage\": \"sr\",\n  \"version\": \"1.0\",\n  \"strings\": {\n    \"harbor.target.substitution.scalar🧭\": {\n      \"comment\": \"Russian target definitions own plural categories independently\",\n      \"localizations\": {\n        \"sr-Cyrl\": {\n          \"stringUnit\": {\n            \"state\": \"needs_review\",\n            \"value\": \"Guide %3$@: %#@lanes@ beside %2$#@lights@\"\n          },\n          \"substitutions\": {\n            \"lanes\": {\n              \"argNum\": 1,\n              \"formatSpecifier\": \"lld\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"needs_review\",\n                      \"value\": \"%1$lld open lane\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%1$lld open lanes\"\n                    }\n                  }\n                }\n              }\n            },\n            \"lights\": {\n              \"argNum\": 2,\n              \"formatSpecifier\": \"d\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"needs_review\",\n                      \"value\": \"%2$d dock light\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%2$d dock lights\"\n                    }\n                  }\n                }\n              }\n            }\n          }\n        },\n        \"ru\": {\n          \"stringUnit\": {\n            \"state\": \"future_review\",\n            \"value\": \"Маршрут %3$@: %#@lanes@ рядом %2$#@lights@\"\n          },\n          \"substitutions\": {\n            \"lanes\": {\n              \"argNum\": 1,\n              \"formatSpecifier\": \"lld\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"needs_review\",\n                      \"value\": \"%1$lld %4$n полоса\"\n                    }\n                  },\n                  \"few\": {\n                    \"stringUnit\": {\n                      \"state\": \"new\",\n                      \"value\": \"%1$lld %4$n полосы\"\n                    }\n                  },\n                  \"many\": {\n                    \"stringUnit\": {\n                      \"state\": \"future_review\",\n                      \"value\": \"%1$lld %4$n полос\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%1$lld %4$n полосы\"\n                    }\n                  }\n                }\n              }\n            },\n            \"lights\": {\n              \"argNum\": 2,\n              \"formatSpecifier\": \"d\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"needs_review\",\n                      \"value\": \"%2$d %4$n огонь\"\n                    }\n                  },\n                  \"few\": {\n                    \"stringUnit\": {\n                      \"state\": \"new\",\n                      \"value\": \"%2$d %4$n огня\"\n                    }\n                  },\n                  \"many\": {\n                    \"stringUnit\": {\n                      \"state\": \"future_review\",\n                      \"value\": \"%2$d %4$n огней\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%2$d %4$n огня\"\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"harbor.target.substitution.device🧭\": {\n      \"comment\": \"Russian target substitutions are shared by iPhone and Mac roots\",\n      \"localizations\": {\n        \"sr-Cyrl\": {\n          \"substitutions\": {\n            \"lanes\": {\n              \"argNum\": 1,\n              \"formatSpecifier\": \"lld\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"needs_review\",\n                      \"value\": \"%1$lld open lane\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%1$lld open lanes\"\n                    }\n                  }\n                }\n              }\n            },\n            \"lights\": {\n              \"argNum\": 2,\n              \"formatSpecifier\": \"d\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"needs_review\",\n                      \"value\": \"%2$d dock light\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%2$d dock lights\"\n                    }\n                  }\n                }\n              }\n            }\n          },\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"Touch %3$@: %#@lanes@ beside %2$#@lights@\"\n                }\n              },\n              \"mac\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Click %3$@: %2$#@lights@ around %#@lanes@\"\n                }\n              }\n            }\n          }\n        },\n        \"ru\": {\n          \"substitutions\": {\n            \"lanes\": {\n              \"argNum\": 1,\n              \"formatSpecifier\": \"lld\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"needs_review\",\n                      \"value\": \"%1$lld %4$n полоса\"\n                    }\n                  },\n                  \"few\": {\n                    \"stringUnit\": {\n                      \"state\": \"new\",\n                      \"value\": \"%1$lld %4$n полосы\"\n                    }\n                  },\n                  \"many\": {\n                    \"stringUnit\": {\n                      \"state\": \"future_review\",\n                      \"value\": \"%1$lld %4$n полос\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%1$lld %4$n полосы\"\n                    }\n                  }\n                }\n              }\n            },\n            \"lights\": {\n              \"argNum\": 2,\n              \"formatSpecifier\": \"d\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"needs_review\",\n                      \"value\": \"%2$d %4$n огонь\"\n                    }\n                  },\n                  \"few\": {\n                    \"stringUnit\": {\n                      \"state\": \"new\",\n                      \"value\": \"%2$d %4$n огня\"\n                    }\n                  },\n                  \"many\": {\n                    \"stringUnit\": {\n                      \"state\": \"future_review\",\n                      \"value\": \"%2$d %4$n огней\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%2$d %4$n огня\"\n                    }\n                  }\n                }\n              }\n            }\n          },\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"stringUnit\": {\n                  \"state\": \"new\",\n                  \"value\": \"На iPhone %3$@: %#@lanes@ рядом %2$#@lights@\"\n                }\n              },\n              \"mac\": {\n                \"stringUnit\": {\n                  \"state\": \"future_review\",\n                  \"value\": \"На Mac %3$@: %2$#@lights@ вокруг %#@lanes@\"\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"Private target Russian substitution branches\": {\n      \"shouldTranslate\": false,\n      \"localizations\": {\n        \"sr-Cyrl\": {\n          \"stringUnit\": {\n            \"state\": \"needs_review\",\n            \"value\": \"Guide %3$@: %#@lanes@ beside %2$#@lights@\"\n          },\n          \"substitutions\": {\n            \"lanes\": {\n              \"argNum\": 1,\n              \"formatSpecifier\": \"lld\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"needs_review\",\n                      \"value\": \"%1$lld open lane\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%1$lld open lanes\"\n                    }\n                  }\n                }\n              }\n            },\n            \"lights\": {\n              \"argNum\": 2,\n              \"formatSpecifier\": \"d\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"needs_review\",\n                      \"value\": \"%2$d dock light\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%2$d dock lights\"\n                    }\n                  }\n                }\n              }\n            }\n          }\n        },\n        \"ru\": {\n          \"stringUnit\": {\n            \"state\": \"future_review\",\n            \"value\": \"Маршрут %3$@: %#@lanes@ рядом %2$#@lights@\"\n          },\n          \"substitutions\": {\n            \"lanes\": {\n              \"argNum\": 1,\n              \"formatSpecifier\": \"lld\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"needs_review\",\n                      \"value\": \"%1$lld %4$n полоса\"\n                    }\n                  },\n                  \"few\": {\n                    \"stringUnit\": {\n                      \"state\": \"new\",\n                      \"value\": \"%1$lld %4$n полосы\"\n                    }\n                  },\n                  \"many\": {\n                    \"stringUnit\": {\n                      \"state\": \"future_review\",\n                      \"value\": \"%1$lld %4$n полос\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%1$lld %4$n полосы\"\n                    }\n                  }\n                }\n              }\n            },\n            \"lights\": {\n              \"argNum\": 2,\n              \"formatSpecifier\": \"d\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"needs_review\",\n                      \"value\": \"%2$d %4$n огонь\"\n                    }\n                  },\n                  \"few\": {\n                    \"stringUnit\": {\n                      \"state\": \"new\",\n                      \"value\": \"%2$d %4$n огня\"\n                    }\n                  },\n                  \"many\": {\n                    \"stringUnit\": {\n                      \"state\": \"future_review\",\n                      \"value\": \"%2$d %4$n огней\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%2$d %4$n огня\"\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n",
+  "appleTargetLocale": "ru",
+  "slots": [
+    {
+      "id": "harbor.target.substitution.scalar🧭",
+      "start": 1736,
+      "end": 1790
+    },
+    {
+      "id": "harbor.target.substitution.scalar🧭",
+      "start": 2124,
+      "end": 2148,
+      "selector": "lanes",
+      "variant": "one"
+    },
+    {
+      "id": "harbor.target.substitution.scalar🧭",
+      "start": 2326,
+      "end": 2350,
+      "selector": "lanes",
+      "variant": "few"
+    },
+    {
+      "id": "harbor.target.substitution.scalar🧭",
+      "start": 2539,
+      "end": 2561,
+      "selector": "lanes",
+      "variant": "many"
+    },
+    {
+      "id": "harbor.target.substitution.scalar🧭",
+      "start": 2748,
+      "end": 2772,
+      "selector": "lanes",
+      "variant": "other"
+    },
+    {
+      "id": "harbor.target.substitution.scalar🧭",
+      "start": 3154,
+      "end": 3174,
+      "selector": "lights",
+      "variant": "one"
+    },
+    {
+      "id": "harbor.target.substitution.scalar🧭",
+      "start": 3352,
+      "end": 3370,
+      "selector": "lights",
+      "variant": "few"
+    },
+    {
+      "id": "harbor.target.substitution.scalar🧭",
+      "start": 3559,
+      "end": 3579,
+      "selector": "lights",
+      "variant": "many"
+    },
+    {
+      "id": "harbor.target.substitution.scalar🧭",
+      "start": 3766,
+      "end": 3784,
+      "selector": "lights",
+      "variant": "other"
+    },
+    {
+      "id": "harbor.target.substitution.device🧭",
+      "start": 6164,
+      "end": 6188,
+      "selector": "lanes",
+      "variant": "one"
+    },
+    {
+      "id": "harbor.target.substitution.device🧭",
+      "start": 6366,
+      "end": 6390,
+      "selector": "lanes",
+      "variant": "few"
+    },
+    {
+      "id": "harbor.target.substitution.device🧭",
+      "start": 6579,
+      "end": 6601,
+      "selector": "lanes",
+      "variant": "many"
+    },
+    {
+      "id": "harbor.target.substitution.device🧭",
+      "start": 6788,
+      "end": 6812,
+      "selector": "lanes",
+      "variant": "other"
+    },
+    {
+      "id": "harbor.target.substitution.device🧭",
+      "start": 7194,
+      "end": 7214,
+      "selector": "lights",
+      "variant": "one"
+    },
+    {
+      "id": "harbor.target.substitution.device🧭",
+      "start": 7392,
+      "end": 7410,
+      "selector": "lights",
+      "variant": "few"
+    },
+    {
+      "id": "harbor.target.substitution.device🧭",
+      "start": 7599,
+      "end": 7619,
+      "selector": "lights",
+      "variant": "many"
+    },
+    {
+      "id": "harbor.target.substitution.device🧭",
+      "start": 7806,
+      "end": 7824,
+      "selector": "lights",
+      "variant": "other"
+    },
+    {
+      "id": "harbor.target.substitution.device🧭",
+      "start": 8099,
+      "end": 8150,
+      "selector": "@device",
+      "variant": "iphone"
+    },
+    {
+      "id": "harbor.target.substitution.device🧭",
+      "start": 8314,
+      "end": 8364,
+      "selector": "@device",
+      "variant": "mac"
+    }
+  ]
+}

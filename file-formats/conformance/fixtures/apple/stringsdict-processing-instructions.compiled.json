@@ -1,0 +1,12 @@
+{
+  "dock.signals": {
+    "NSStringLocalizedFormatKey": "%#@signals@ near shore",
+    "futureRulePriority": 7,
+    "signals": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "ld",
+      "one": "%ld steady beacon",
+      "other": "%ld steady beacons"
+    }
+  }
+}

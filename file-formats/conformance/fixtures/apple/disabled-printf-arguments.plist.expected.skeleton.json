@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n  <key>harbor.implicit</key><string>North %n %@</string>\n  <key>harbor.middle</key><string>%@ dock %n %@</string>\n  <key>harbor.repeated</key><string>%n%n %@ port</string>\n  <key>harbor.explicit</key><string>%2$n %1$@ dock</string>\n  <key>harbor.mixed</key><string>%2$n %@ dock</string>\n  <key>harbor.overlap</key><string>%n %1$@ lane</string>\n  <key>harbor.integer</key><string>%n %d markers</string>\n  <key>harbor.escaped</key><string>%%n %@ tide</string>\n  <key>harbor.unicode.🧭</key><string>🧭%n %@ reef</string>\n</dict>\n</plist>\n",
+  "slots": [
+    {
+      "id": "harbor.implicit",
+      "start": 207,
+      "end": 218
+    },
+    {
+      "id": "harbor.middle",
+      "start": 262,
+      "end": 275
+    },
+    {
+      "id": "harbor.repeated",
+      "start": 321,
+      "end": 333
+    },
+    {
+      "id": "harbor.explicit",
+      "start": 379,
+      "end": 393
+    },
+    {
+      "id": "harbor.mixed",
+      "start": 436,
+      "end": 448
+    },
+    {
+      "id": "harbor.overlap",
+      "start": 493,
+      "end": 505
+    },
+    {
+      "id": "harbor.integer",
+      "start": 550,
+      "end": 563
+    },
+    {
+      "id": "harbor.escaped",
+      "start": 608,
+      "end": 619
+    },
+    {
+      "id": "harbor.unicode.🧭",
+      "start": 669,
+      "end": 683
+    }
+  ]
+}

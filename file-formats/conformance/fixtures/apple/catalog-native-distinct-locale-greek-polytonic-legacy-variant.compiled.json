@@ -1,0 +1,11 @@
+{
+  "el-polyton.lproj/catalog.strings": {
+    "harbor.native.script.collision🧭": "Second catalog locale el-polyton"
+  },
+  "el-polytoni.lproj/catalog.strings": {
+    "harbor.native.script.collision🧭": "First catalog locale el-POLYTONI"
+  },
+  "en.lproj/catalog.strings": {
+    "harbor.native.script.collision🧭": "Source"
+  }
+}

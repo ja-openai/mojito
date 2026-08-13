@@ -1,0 +1,110 @@
+{
+  "neutral.scalar-plural🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": "Tap mobile coast",
+      "mac": {
+        "NSStringLocalizedFormatKey": "%#@lights@",
+        "lights": {
+          "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+          "NSStringFormatValueTypeKey": "lld",
+          "one": "%lld desktop beacon",
+          "other": "%lld desktop beacons"
+        }
+      }
+    }
+  },
+  "neutral.plural-scalar🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringLocalizedFormatKey": "%#@lights@",
+        "lights": {
+          "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+          "NSStringFormatValueTypeKey": "lld",
+          "one": "%lld mobile lamp",
+          "other": "%lld mobile lamps"
+        }
+      },
+      "mac": "Click desktop pier"
+    }
+  },
+  "neutral.scalar-width🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": "Tap mobile quay",
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "Mac%n near",
+          "040": "Mac\nopen coast"
+        }
+      }
+    }
+  },
+  "neutral.width-scalar🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringVariableWidthRuleType": {
+          "5": "Tap%n cove",
+          "040": "Tap%%n open tide"
+        }
+      },
+      "mac": "Click desktop harbor"
+    }
+  },
+  "neutral.plural-width🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringLocalizedFormatKey": "%#@lights@",
+        "lights": {
+          "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+          "NSStringFormatValueTypeKey": "lld",
+          "one": "%lld mobile signal",
+          "other": "%lld mobile signals"
+        }
+      },
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "West%n cove",
+          "040": "West\nopen shore"
+        }
+      }
+    }
+  },
+  "neutral.width-plural🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringVariableWidthRuleType": {
+          "5": "East%n point",
+          "040": "East%%n open bay"
+        }
+      },
+      "mac": {
+        "NSStringLocalizedFormatKey": "%#@lights@",
+        "lights": {
+          "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+          "NSStringFormatValueTypeKey": "lld",
+          "one": "%lld desktop buoy",
+          "other": "%lld desktop buoys"
+        }
+      }
+    }
+  },
+  "neutral.three-shapes🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringLocalizedFormatKey": "%#@lights@",
+        "lights": {
+          "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+          "NSStringFormatValueTypeKey": "lld",
+          "one": "%lld mobile trail",
+          "other": "%lld mobile trails"
+        }
+      },
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "Bay%n near",
+          "040": "Bay\nopen water"
+        }
+      },
+      "other": "Plain fallback harbor"
+    }
+  }
+}

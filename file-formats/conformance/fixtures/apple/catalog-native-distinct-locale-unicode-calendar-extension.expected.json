@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "harbor.native.script.collision🧭": {
+      "defaultMessage": "Source",
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        },
+        "sourceState": "translated",
+        "localizations": {
+          "en-US-u-ca-gregory": {
+            "state": "translated",
+            "value": "First catalog locale en-US-u-ca-gregory"
+          },
+          "en-US": {
+            "state": "translated",
+            "value": "Second catalog locale en-US"
+          }
+        },
+        "appleLocalizationSources": {
+          "en-US-u-ca-gregory": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "First catalog locale en-US-u-ca-gregory"
+            }
+          },
+          "en-US": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Second catalog locale en-US"
+            }
+          }
+        }
+      }
+    }
+  }
+}

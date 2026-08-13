@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "device.future": {
+      "defaultMessage": "First device",
+      "metadata": {
+        "defaultDevice": "future_alpha",
+        "deviceVariants": {
+          "future_alpha": "First device",
+          "future_zeta": "Final device"
+        }
+      }
+    },
+    "plural.multiple": {
+      "defaultMessage": "{files, plural, one {{files} file} other {{files} files}} beside {ratios, plural, one {{ratios} ratio} other {{ratios} ratios}}",
+      "placeholders": [
+        {
+          "name": "files",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "ratios",
+          "source": "%0.1f",
+          "kind": "number",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@files@ beside %#@ratios@",
+        "applePluralRules": {
+          "files": {
+            "valueType": "lld",
+            "variants": {
+              "one": "%lld file",
+              "other": "%lld files"
+            }
+          },
+          "ratios": {
+            "valueType": "f",
+            "variants": {
+              "one": "%0.1f ratio",
+              "other": "%0.1f ratios"
+            }
+          }
+        },
+        "pluralVariables": [
+          "files",
+          "ratios"
+        ]
+      }
+    },
+    "plural.optional": {
+      "defaultMessage": "{signals, plural, one {{signals} marker & 40%} other {{signals} markers & 40%}} & 50%%",
+      "variants": {
+        "one": "{signals} marker & 40%",
+        "other": "{signals} markers & 40%"
+      },
+      "placeholders": [
+        {
+          "name": "signals",
+          "source": "%1$ld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@signals@ & 50%%",
+        "applePluralRules": {
+          "signals": {
+            "variants": {
+              "one": "%1$ld marker & 40%%",
+              "other": "%1$ld markers & 40%%"
+            }
+          }
+        },
+        "pluralVariable": "signals"
+      }
+    },
+    "private_": {
+      "defaultMessage": "Private marker",
+      "metadata": {
+        "defaultWidth": 3,
+        "widthVariants": {
+          "3": "Private marker"
+        }
+      }
+    },
+    "supplementary_😃": {
+      "defaultMessage": "Bright ☃",
+      "metadata": {
+        "defaultWidth": 3,
+        "widthVariants": {
+          "3": "Bright ☃"
+        }
+      }
+    },
+    "width.leading": {
+      "defaultMessage": "The extended status is ready",
+      "metadata": {
+        "defaultWidth": 48,
+        "defaultWidthKey": "048",
+        "widthVariants": {
+          "004": "Now",
+          "048": "The extended status is ready"
+        }
+      }
+    },
+    "xml.escape": {
+      "defaultMessage": "A & B < C \r end",
+      "metadata": {
+        "defaultWidth": 8,
+        "widthVariants": {
+          "8": "A & B < C \r end"
+        }
+      }
+    }
+  }
+}

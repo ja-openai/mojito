@@ -1,0 +1,4 @@
+{
+  "mixed": "%2$@ has %1$lld items (100%%)",
+  "simple": "Value"
+}

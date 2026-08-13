@@ -1,0 +1,112 @@
+{
+  "width.after🧭": {
+    "NSStringVariableWidthRuleType": {
+      "5": "%n %@ proche repère",
+      "040": "%n %@ large repère"
+    }
+  },
+  "width.middle": {
+    "NSStringVariableWidthRuleType": {
+      "5": "%@ %n %@ proche repère",
+      "040": "%@ %n %@ large repère"
+    }
+  },
+  "width.repeated": {
+    "NSStringVariableWidthRuleType": {
+      "5": "%n%n %@ proche repère",
+      "040": "%n%n %@ large repère"
+    }
+  },
+  "width.explicit": {
+    "NSStringVariableWidthRuleType": {
+      "5": "%2$n %1$@ proche repère",
+      "040": "%2$n %1$@ large repère"
+    }
+  },
+  "width.escaped": {
+    "NSStringVariableWidthRuleType": {
+      "5": "%%n %@ proche repère",
+      "040": "%%n %@ large repère"
+    }
+  },
+  "device.after🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%n %@ mobile proche repère",
+          "040": "%n %@ mobile large repère"
+        }
+      },
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%n %@ bureau proche repère",
+          "040": "%n %@ bureau large repère"
+        }
+      }
+    }
+  },
+  "device.middle": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%@ %n %@ mobile proche repère",
+          "040": "%@ %n %@ mobile large repère"
+        }
+      },
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%@ %n %@ bureau proche repère",
+          "040": "%@ %n %@ bureau large repère"
+        }
+      }
+    }
+  },
+  "device.repeated": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%n%n %@ mobile proche repère",
+          "040": "%n%n %@ mobile large repère"
+        }
+      },
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%n%n %@ bureau proche repère",
+          "040": "%n%n %@ bureau large repère"
+        }
+      }
+    }
+  },
+  "device.explicit": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%2$n %1$@ mobile proche repère",
+          "040": "%2$n %1$@ mobile large repère"
+        }
+      },
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%2$n %1$@ bureau proche repère",
+          "040": "%2$n %1$@ bureau large repère"
+        }
+      }
+    }
+  },
+  "device.escaped": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%%n %@ mobile proche repère",
+          "040": "%%n %@ mobile large repère"
+        }
+      },
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%%n %@ bureau proche repère",
+          "040": "%%n %@ bureau large repère"
+        }
+      }
+    }
+  }
+}

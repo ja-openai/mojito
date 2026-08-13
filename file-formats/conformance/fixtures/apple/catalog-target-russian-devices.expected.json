@@ -1,0 +1,368 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "harbor.target.device.plural🧭": {
+      "defaultMessage": "{count, plural, one {{count}  mobile beacon {arg1}} other {{count}  mobile beacons {arg1}}}",
+      "description": "Each target device independently owns its language-specific plurals",
+      "variants": {
+        "one": "{count}  mobile beacon {arg1}",
+        "other": "{count}  mobile beacons {arg1}"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%1$lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%2$@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ],
+            "other": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ]
+          }
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld %3$n mobile beacon %2$@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %3$n mobile beacons %2$@"
+                    }
+                  }
+                }
+              }
+            },
+            "mac": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld %3$n desktop beacon %2$@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %3$n desktop beacons %2$@"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "appleSourceLocalization": {
+          "variations": {
+            "device": {
+              "iphone": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%1$lld %3$n mobile beacon %2$@"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld %3$n mobile beacons %2$@"
+                      }
+                    }
+                  }
+                }
+              },
+              "mac": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%1$lld %3$n desktop beacon %2$@"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld %3$n desktop beacons %2$@"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourcePluralStates": {
+          "one": "needs_review",
+          "other": "translated"
+        },
+        "localizations": {
+          "ru": {
+            "variationAxes": {
+              "device": {
+                "iphone": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%2$@ %3$n %1$lld мобильный маяк"
+                        }
+                      },
+                      "few": {
+                        "stringUnit": {
+                          "state": "new",
+                          "value": "%2$@ %3$n %1$lld мобильный маяка"
+                        }
+                      },
+                      "many": {
+                        "stringUnit": {
+                          "state": "future_review",
+                          "value": "%2$@ %3$n %1$lld мобильный маяков"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%2$@ %3$n %1$lld мобильный маяка"
+                        }
+                      }
+                    }
+                  }
+                },
+                "mac": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%2$@ %3$n %1$lld настольный маяк"
+                        }
+                      },
+                      "few": {
+                        "stringUnit": {
+                          "state": "new",
+                          "value": "%2$@ %3$n %1$lld настольный маяка"
+                        }
+                      },
+                      "many": {
+                        "stringUnit": {
+                          "state": "future_review",
+                          "value": "%2$@ %3$n %1$lld настольный маяков"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%2$@ %3$n %1$lld настольный маяка"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleLocalizationSources": {
+          "ru": {
+            "variations": {
+              "device": {
+                "iphone": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%2$@ %3$n %1$lld мобильный маяк"
+                        }
+                      },
+                      "few": {
+                        "stringUnit": {
+                          "state": "new",
+                          "value": "%2$@ %3$n %1$lld мобильный маяка"
+                        }
+                      },
+                      "many": {
+                        "stringUnit": {
+                          "state": "future_review",
+                          "value": "%2$@ %3$n %1$lld мобильный маяков"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%2$@ %3$n %1$lld мобильный маяка"
+                        }
+                      }
+                    }
+                  }
+                },
+                "mac": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%2$@ %3$n %1$lld настольный маяк"
+                        }
+                      },
+                      "few": {
+                        "stringUnit": {
+                          "state": "new",
+                          "value": "%2$@ %3$n %1$lld настольный маяка"
+                        }
+                      },
+                      "many": {
+                        "stringUnit": {
+                          "state": "future_review",
+                          "value": "%2$@ %3$n %1$lld настольный маяков"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%2$@ %3$n %1$lld настольный маяка"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.target.device.scalar🧭": {
+      "defaultMessage": "Touch {arg0}  beacon",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 13,
+            "source": "%2$n"
+          }
+        ],
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "Touch %1$@ %2$n beacon"
+              }
+            },
+            "mac": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Click %1$@ %2$n beacon"
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "appleSourceLocalization": {
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Touch %1$@ %2$n beacon"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %1$@ %2$n beacon"
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "needs_review",
+        "localizations": {
+          "ru": {
+            "variationAxes": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Коснитесь %1$@ %2$n маяка"
+                  }
+                },
+                "mac": {
+                  "stringUnit": {
+                    "state": "future_review",
+                    "value": "Выберите %1$@ %2$n маяк"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleLocalizationSources": {
+          "ru": {
+            "variations": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Коснитесь %1$@ %2$n маяка"
+                  }
+                },
+                "mac": {
+                  "stringUnit": {
+                    "state": "future_review",
+                    "value": "Выберите %1$@ %2$n маяк"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "description": "Target languages own device-specific scalar text independently"
+    }
+  }
+}

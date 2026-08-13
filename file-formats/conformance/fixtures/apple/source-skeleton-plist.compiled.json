@@ -1,0 +1,12 @@
+{
+  "cdata<&>key": "<quiet> & calm",
+  "empty.key": "",
+  "escaped&key": "North & pier",
+  "explicit.empty": "",
+  "mixed.key": "North <quiet> & calm pier",
+  "newline.key": "North\rSouth",
+  "percent.literal": "Ready 50%%",
+  "percent.newline": "North%nSouth",
+  "placeholder.key": "Ready %1$@",
+  "unicode.🧭": "équipe"
+}

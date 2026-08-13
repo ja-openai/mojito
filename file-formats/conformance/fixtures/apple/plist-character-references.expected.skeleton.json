@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!-- A literal &#00000000065; inside a comment is not parsed as character data. -->\n<?platform protected=\"&#00000000065;\"?>\n<plist version=\"1.0\" neutral=\"&#00000000065;\">\n  <dict>\n    <!-- Eight-digit decimal and hexadecimal references remain valid native spellings. -->\n    <key>harbor&#00000046;route&#x00000026;east</key>\n    <string neutral=\"&#00000000065;\">Guide %1$@ toward &#00000065;, &#x00000042;, &#129517; &amp; &lt;north&gt; &quot;calm&quot; &apos;steady&apos;</string>\n\n    <!-- CDATA and escaped ampersands retain reference-looking literal source text. -->\n    <key>literal&amp;#000000065;</key>\n    <string><![CDATA[Literal &#00000000065; remains protected]]></string>\n\n    <key>line&#00000046;break</key>\n    <string>North&#00000010;South&#x00000009;East&#13;West</string>\n\n    <key>escaped.literal</key>\n    <string>A&amp;#00000000065;Z</string>\n  </dict>\n</plist>\n",
+  "slots": [
+    {
+      "id": "harbor.route&east",
+      "start": 401,
+      "end": 511
+    },
+    {
+      "id": "literal&#000000065;",
+      "start": 661,
+      "end": 713
+    },
+    {
+      "id": "line.break",
+      "start": 772,
+      "end": 818
+    },
+    {
+      "id": "escaped.literal",
+      "start": 872,
+      "end": 892
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "dock&signals": {
+    "NSStringLocalizedFormatKey": "%#@signals@ near north shore",
+    "futureFlags": [
+      true,
+      false,
+      "Protected <north> & steady",
+      7
+    ],
+    "futureRatio": 1.5,
+    "signals": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "ld",
+      "one": "%ld balise claire",
+      "other": "%ld balises claires"
+    }
+  }
+}

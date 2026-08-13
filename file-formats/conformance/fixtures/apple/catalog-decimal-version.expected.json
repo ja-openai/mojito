@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "decimal.version": {
+      "defaultMessage": "Fractional catalog revision",
+      "metadata": {
+        "appleCatalogVersion": 1.5,
+        "appleLocalizationSources": {
+          "fr": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Signal orbital neutre"
+            }
+          }
+        },
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "machine_translated",
+            "value": "Fractional catalog revision"
+          }
+        },
+        "localizations": {
+          "fr": {
+            "state": "translated",
+            "value": "Signal orbital neutre"
+          }
+        },
+        "sourceState": "machine_translated"
+      }
+    }
+  }
+}

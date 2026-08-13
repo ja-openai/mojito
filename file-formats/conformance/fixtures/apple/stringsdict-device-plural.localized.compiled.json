@@ -1,0 +1,24 @@
+{
+  "neutral.harbor🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringLocalizedFormatKey": "%#@lights@",
+        "lights": {
+          "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+          "NSStringFormatValueTypeKey": "lld",
+          "one": "%lld lanterne mobile",
+          "other": "%lld lanternes mobiles"
+        }
+      },
+      "mac": {
+        "NSStringLocalizedFormatKey": "%#@lights@",
+        "lights": {
+          "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+          "NSStringFormatValueTypeKey": "lld",
+          "one": "%lld balise bureau",
+          "other": "%lld balises bureau"
+        }
+      }
+    }
+  }
+}

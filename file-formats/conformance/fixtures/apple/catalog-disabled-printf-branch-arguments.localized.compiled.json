@@ -1,0 +1,49 @@
+{
+  "en.lproj/catalog.stringsdict": {
+    "harbor.after": {
+      "NSStringLocalizedFormatKey": "Suive %1$#@count@",
+      "count": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld%n %@ voie",
+        "other": "%lld%n %@ voies"
+      }
+    },
+    "harbor.escaped": {
+      "NSStringLocalizedFormatKey": "Suive %1$#@count@",
+      "count": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld%%n %@ voie",
+        "other": "%lld%%n %@ voies"
+      }
+    },
+    "harbor.explicit": {
+      "NSStringLocalizedFormatKey": "Suive %1$@ %2$#@count@",
+      "count": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%2$lld %3$n %4$@ voie",
+        "other": "%2$lld %3$n %4$@ voies"
+      }
+    },
+    "harbor.overlap": {
+      "NSStringLocalizedFormatKey": "Suive %1$#@count@",
+      "count": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld %2$n %@ voie",
+        "other": "%lld %2$n %@ voies"
+      }
+    },
+    "harbor.repeated": {
+      "NSStringLocalizedFormatKey": "Suive %1$#@count@",
+      "count": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld%n%n %@ voie",
+        "other": "%lld%n%n %@ voies"
+      }
+    }
+  }
+}

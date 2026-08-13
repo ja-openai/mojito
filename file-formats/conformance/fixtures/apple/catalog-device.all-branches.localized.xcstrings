@@ -1,0 +1,53 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "instruction": {
+      "comment": "Device-specific neutral instruction",
+      "localizations": {
+        "en": {
+          "variations": {
+            "device": {
+              "iphone": { "stringUnit": { "state": "translated", "value": "Touchez %@ rive mobile" } },
+              "mac": { "stringUnit": { "state": "translated", "value": "Cliquez %@ rive bureau" } }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "device": {
+              "iphone": { "stringUnit": { "state": "translated", "value": "Touchez %@" } },
+              "mac": { "stringUnit": { "state": "translated", "value": "Cliquez sur %@" } }
+            }
+          }
+        }
+      }
+    },
+    "device.counter": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "device": {
+              "iphone": {
+                "variations": {
+                  "plural": {
+                    "one": { "stringUnit": { "state": "translated", "value": "%lld signal mobile sûr" } },
+                    "other": { "stringUnit": { "state": "translated", "value": "%lld signaux mobiles sûrs" } }
+                  }
+                }
+              },
+              "mac": {
+                "variations": {
+                  "plural": {
+                    "one": { "stringUnit": { "state": "translated", "value": "%lld balise bureau calme" } },
+                    "other": { "stringUnit": { "state": "translated", "value": "%lld balises bureau calmes" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

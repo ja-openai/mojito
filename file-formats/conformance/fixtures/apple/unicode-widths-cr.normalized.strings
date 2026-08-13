@@ -1,0 +1,8 @@
+"four" = "☃!";
+"lowercase" = "u41!";
+"one" = "\U0001!";
+"physical" = "north\rsouth";
+"three" = "ɠ!";
+"two" = " !";
+// Foundation accepts zero through four hexadecimal digits after uppercase U.
+"zero" = "\U0000!";

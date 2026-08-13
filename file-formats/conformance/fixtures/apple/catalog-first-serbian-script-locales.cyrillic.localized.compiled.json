@@ -1,0 +1,73 @@
+{
+  "de.lproj/catalog.stringsdict": {
+    "harbor.first.serbian.cyrillic🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld Signal %2$@",
+        "other": "%1$lld Signale %2$@"
+      }
+    },
+    "harbor.first.serbian.latin🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld Signal %2$@",
+        "other": "%1$lld Signale %2$@"
+      }
+    }
+  },
+  "en.lproj/catalog.stringsdict": {
+    "Private Serbian script harbor": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld %3$n beacon %2$@",
+        "other": "%1$lld %3$n beacons %2$@"
+      }
+    },
+    "harbor.first.serbian.cyrillic🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld %3$n beacon %2$@",
+        "other": "%1$lld %3$n beacons %2$@"
+      }
+    },
+    "harbor.first.serbian.latin🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld %3$n beacon %2$@",
+        "other": "%1$lld %3$n beacons %2$@"
+      }
+    }
+  },
+  "sr.lproj/catalog.stringsdict": {
+    "harbor.first.serbian.cyrillic🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "few": "%2$@ %1$lld %3$n Ћирилични few",
+        "one": "%2$@ %1$lld %3$n Ћирилични one",
+        "other": "%2$@ %1$lld %3$n Ћирилични other"
+      }
+    },
+    "harbor.first.serbian.latin🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "few": "%2$@ %1$lld %3$n Латинични few",
+        "one": "%2$@ %1$lld %3$n Латинични one",
+        "other": "%2$@ %1$lld %3$n Латинични other"
+      }
+    }
+  }
+}

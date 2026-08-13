@@ -1,0 +1,11 @@
+{
+  "en-US-u-ca-gregorian.lproj/catalog.strings": {
+    "harbor.native.script.collision🧭": "First catalog locale en-US-u-ca-gregorian"
+  },
+  "en-US-u-ca-gregory.lproj/catalog.strings": {
+    "harbor.native.script.collision🧭": "Second catalog locale en-US-u-ca-gregory"
+  },
+  "en.lproj/catalog.strings": {
+    "harbor.native.script.collision🧭": "Source"
+  }
+}

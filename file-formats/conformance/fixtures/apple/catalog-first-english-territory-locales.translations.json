@@ -1,0 +1,4 @@
+{
+  "harbor.first.english.british.obsolete🧭": "{count, plural, one {{arg1} {count}  British one} other {{arg1} {count}  British other}}",
+  "harbor.first.english.world.numeric🧭": "{count, plural, one {{arg1} {count}  World one} other {{arg1} {count}  World other}}"
+}

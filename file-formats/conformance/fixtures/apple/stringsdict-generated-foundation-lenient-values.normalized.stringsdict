@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+  <key>files.remaining</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%#@files@ remaining</string>
+    <key>files</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>d</string>
+      <key>one</key>
+      <string>%d file</string>
+      <key>other</key>
+      <string>%d files</string>
+      <key>NSStringFutureRuleMetadata</key>
+      <string>Fresh &lt;rule&gt; &amp; annotation</string>
+      <key>futureRuleArray</key>
+      <array>
+        <string>rule text</string>
+        <false/>
+        <data>AP8=</data>
+        <real>2.50000000000000000e+0</real>
+      </array>
+      <key>futureRuleData</key>
+      <data>ZnJlc2ggbmV1dHJhbCBieXRlcw==</data>
+      <key>futureRuleDate</key>
+      <date>2004-05-06T07:08:09Z</date>
+      <key>futureRuleDictionary</key>
+      <dict>
+        <key>NSStringFormatSpecTypeKey</key>
+        <string>nested lookalike</string>
+        <key>count</key>
+        <integer>23</integer>
+        <key>enabled</key>
+        <false/>
+      </dict>
+      <key>futureRuleEnabled</key>
+      <true/>
+      <key>futureRuleNegative</key>
+      <integer>-19</integer>
+    </dict>
+    <key>futureArray</key>
+    <array>
+      <string>first neutral route</string>
+      <true/>
+      <integer>-12</integer>
+      <real>1.25000000000000000e-1</real>
+      <data>AA+A/w==</data>
+      <date>2026-03-06T04:40:39Z</date>
+      <dict>
+        <key>nested</key>
+        <array>
+          <false/>
+          <string>quiet harbor</string>
+          <real>-0.00000000000000000e+0</real>
+        </array>
+      </dict>
+      <array>
+      </array>
+    </array>
+    <key>futureData</key>
+    <data>AA==</data>
+    <key>futureDate</key>
+    <date>2026-08-11T12:34:56Z</date>
+    <key>futureDateBeforeAppleEpoch</key>
+    <date>1997-01-02T03:04:05Z</date>
+    <key>futureDisabled</key>
+    <false/>
+    <key>futureEmptyData</key>
+    <data></data>
+    <key>futureEmptyDictionary</key>
+    <dict>
+    </dict>
+    <key>futureEnabled</key>
+    <true/>
+    <key>futureHexadecimal</key>
+    <integer>255</integer>
+    <key>futureLabel</key>
+    <string>Fresh &lt;amber&gt; &amp; quiet harbor</string>
+    <key>futureMaximum</key>
+    <integer>18446744073709551615</integer>
+    <key>futureMinimum</key>
+    <integer>-9223372036854775808</integer>
+    <key>futureNegative</key>
+    <integer>-16</integer>
+    <key>futureNegativeInfinity</key>
+    <real>-infinity</real>
+    <key>futureNegativeZero</key>
+    <real>-0.00000000000000000e+0</real>
+    <key>futureNestedMetadata</key>
+    <dict>
+      <key>NSStringLocalizedFormatKey</key>
+      <string>reserved-looking nested value</string>
+      <key>child</key>
+      <dict>
+        <key>count</key>
+        <integer>-12</integer>
+        <key>enabled</key>
+        <false/>
+        <key>notes</key>
+        <string>A neutral &amp; original signal</string>
+      </dict>
+      <key></key>
+      <string>private-use sorting</string>
+      <key>🛰</key>
+      <string>supplementary sorting</string>
+    </dict>
+    <key>futureNotANumber</key>
+    <real>nan</real>
+    <key>futurePositive</key>
+    <integer>7</integer>
+    <key>futurePositiveInfinity</key>
+    <real>infinity</real>
+    <key>futurePreciseReal</key>
+    <real>1.23456789012345669e+0</real>
+    <key>futureReal</key>
+    <real>1.25000000000000000e-1</real>
+    <key>futureSentinelDictionary</key>
+    <dict>
+      <key>$applePlistType</key>
+      <string>real native field</string>
+      <key>bits</key>
+      <string>not an encoded number</string>
+      <key>nested</key>
+      <dict>
+        <key>$applePlistType</key>
+        <string>data native field</string>
+        <key>base64</key>
+        <string>not encoded metadata</string>
+      </dict>
+    </dict>
+    <key>futureTinyReal</key>
+    <real>1.00000000000000005e-250</real>
+    <key>futureUnknownRule</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringFutureRuleType</string>
+      <key>enabled</key>
+      <true/>
+    </dict>
+  </dict>
+</dict>
+</plist>

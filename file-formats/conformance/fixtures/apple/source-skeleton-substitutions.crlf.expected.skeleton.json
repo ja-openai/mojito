@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\r\n  \"sourceLanguage\" : \"en\",\r\n  \"projectFlag\" : { \"preserve\" : true, \"rank\" : 4 },\r\n  \"strings\" : {\r\n    \"harbor.route🧭\" : {\r\n      \"comment\" : \"Independent neutral harbor counters and a positional pilot.\",\r\n      \"customFlag\" : [ \"keep\", 9 ],\r\n      \"localizations\" : {\r\n        \"en\" : {\r\n          \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"Pilot %3$@ escorts %#@lanes@ beyond %2$#@lights@\" },\r\n          \"substitutions\" : {\r\n            \"lanes\" : {\r\n              \"argNum\" : 1,\r\n              \"formatSpecifier\" : \"lld\",\r\n              \"variations\" : { \"plural\" : {\r\n                \"one\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%lld quiet lane\" } },\r\n                \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld quiet lanes\" } }\r\n              } }\r\n            },\r\n            \"lights\" : {\r\n              \"argNum\" : 2,\r\n              \"formatSpecifier\" : \"d\",\r\n              \"variations\" : { \"plural\" : {\r\n                \"one\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"%d north light\" } },\r\n                \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%d north lights\" } }\r\n              } }\r\n            }\r\n          }\r\n        },\r\n        \"fr\" : {\r\n          \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"Pilote %3$@ escorte %#@lanes@ au-delà de %2$#@lights@\" },\r\n          \"substitutions\" : {\r\n            \"lanes\" : {\r\n              \"argNum\" : 1, \"formatSpecifier\" : \"lld\",\r\n              \"variations\" : { \"plural\" : {\r\n                \"one\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%lld voie calme\" } },\r\n                \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld voies calmes\" } }\r\n              } }\r\n            },\r\n            \"lights\" : {\r\n              \"argNum\" : 2, \"formatSpecifier\" : \"d\",\r\n              \"variations\" : { \"plural\" : {\r\n                \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%d feu nord\" } },\r\n                \"other\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"%d feux nord\" } }\r\n              } }\r\n            }\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"echo.route\" : {\r\n      \"localizations\" : {\r\n        \"en\" : {\r\n          \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%#@count@ before %1$#@count@\" },\r\n          \"substitutions\" : {\r\n            \"count\" : { \"argNum\" : 1, \"formatSpecifier\" : \"d\", \"variations\" : { \"plural\" : {\r\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%d echo\" } },\r\n              \"other\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%d echoes\" } }\r\n            } } }\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"unicode.route\" : {\r\n      \"localizations\" : {\r\n        \"en\" : {\r\n          \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Follow %#@信号@\" },\r\n          \"substitutions\" : {\r\n            \"信号\" : { \"argNum\" : 1, \"formatSpecifier\" : \"lld\", \"variations\" : { \"plural\" : {\r\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld soft pulse\" } },\r\n              \"other\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"%lld soft pulses\" } }\r\n            } } }\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"implicit.lane\" : {\r\n      \"localizations\" : {\r\n        \"en\" : {\r\n          \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"Observed %#@amount@\" },\r\n          \"substitutions\" : {\r\n            \"amount\" : { \"variations\" : { \"plural\" : {\r\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld green berth\" } },\r\n              \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld green berths\" } }\r\n            } } }\r\n          }\r\n        }\r\n      }\r\n    }\r\n  },\r\n  \"version\" : \"1.0\"\r\n}\r\n",
+  "slots": [
+    {
+      "id": "harbor.route🧭",
+      "start": 358,
+      "end": 406
+    },
+    {
+      "id": "harbor.route🧭",
+      "selector": "lanes",
+      "variant": "one",
+      "start": 664,
+      "end": 679
+    },
+    {
+      "id": "harbor.route🧭",
+      "selector": "lanes",
+      "variant": "other",
+      "start": 767,
+      "end": 783
+    },
+    {
+      "id": "harbor.route🧭",
+      "selector": "lights",
+      "variant": "one",
+      "start": 1051,
+      "end": 1065
+    },
+    {
+      "id": "harbor.route🧭",
+      "selector": "lights",
+      "variant": "other",
+      "start": 1153,
+      "end": 1168
+    },
+    {
+      "id": "echo.route",
+      "start": 2308,
+      "end": 2336
+    },
+    {
+      "id": "echo.route",
+      "selector": "count",
+      "variant": "one",
+      "start": 2543,
+      "end": 2550
+    },
+    {
+      "id": "echo.route",
+      "selector": "count",
+      "variant": "other",
+      "start": 2638,
+      "end": 2647
+    },
+    {
+      "id": "unicode.route",
+      "start": 2846,
+      "end": 2863
+    },
+    {
+      "id": "unicode.route",
+      "selector": "信号",
+      "variant": "one",
+      "start": 3073,
+      "end": 3088
+    },
+    {
+      "id": "unicode.route",
+      "selector": "信号",
+      "variant": "other",
+      "start": 3182,
+      "end": 3198
+    },
+    {
+      "id": "implicit.lane",
+      "start": 3399,
+      "end": 3418
+    },
+    {
+      "id": "implicit.lane",
+      "selector": "amount",
+      "variant": "one",
+      "start": 3587,
+      "end": 3603
+    },
+    {
+      "id": "implicit.lane",
+      "selector": "amount",
+      "variant": "other",
+      "start": 3689,
+      "end": 3706
+    }
+  ]
+}

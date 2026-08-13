@@ -1,0 +1,27 @@
+{
+  "en.lproj/catalog.strings": {
+    "harbor.future.device.fallback🧭": "Ordinary fallback %@",
+    "harbor.future.device🧭": "Fallback %@ harbor"
+  },
+  "en.lproj/catalog.stringsdict": {
+    "harbor.future.device.fallback🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "futurecar": "Future fallback %@"
+      }
+    },
+    "harbor.future.device.only🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "futurecar": "Future only %@"
+      }
+    },
+    "harbor.future.device🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "futurecar": "Future %@ harbor",
+        "iphone": "Phone %@ harbor",
+        "mac": "Mac %@ harbor",
+        "raft": "Private scalar %@ harbor",
+        "🧭raft": "Compass %@ harbor"
+      }
+    }
+  }
+}

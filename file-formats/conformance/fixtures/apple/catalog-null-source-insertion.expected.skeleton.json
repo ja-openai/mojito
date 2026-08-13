@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"sourceLanguage\": \"en\",\n  \"version\": \"1.0\",\n  \"strings\": {\n    \"harbor.null.plain🧭\": {\n      \"comment\": \"A neutral nullable source with existing review ownership\",\n      \"extractionState\": \"stale\",\n      \"localizations\": {\n        \"en\": null,\n        \"fr\": {\n          \"stringUnit\": {\n            \"state\": \"needs_review\",\n            \"value\": \"Abri existant\"\n          }\n        }\n      }\n    },\n    \"North %n %@ 🧭\": {\n      \"localizations\": {\n        \"en\": null,\n        \"fr\": {\n          \"stringUnit\": {\n            \"state\": \"machine_translated\",\n            \"value\": \"Nord %@ conservé\"\n          }\n        }\n      }\n    },\n    \"%@ %n %@ anchorage\": {\n      \"localizations\": {\n        \"en\": null,\n        \"fr\": {\n          \"stringUnit\": {\n            \"state\": \"future_review\",\n            \"value\": \"%@ %@ mouillage existant\"\n          }\n        }\n      }\n    },\n    \"West %2$n %1$@ pier\": {\n      \"localizations\": {\n        \"en\": null,\n        \"fr\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Ouest %1$@ jetée existante\"\n          }\n        }\n      }\n    },\n    \"Tide %%n %@ marker\": {\n      \"localizations\": {\n        \"en\": null,\n        \"fr\": {\n          \"stringUnit\": {\n            \"state\": \"needs_review\",\n            \"value\": \"Marée %%n %@ existante\"\n          }\n        }\n      }\n    },\n    \"owned.scalar\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"needs_review\",\n            \"value\": \"Steady %@ shore\"\n          }\n        },\n        \"fr\": {\n          \"stringUnit\": {\n            \"state\": \"stale\",\n            \"value\": \"Rive %@ protégée\"\n          }\n        }\n      }\n    },\n    \"Private null pier\": {\n      \"shouldTranslate\": false,\n      \"localizations\": {\n        \"en\": null,\n        \"fr\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Jetée privée protégée\"\n          }\n        }\n      }\n    }\n  }\n}\n",
+  "slots": [
+    {
+      "id": "harbor.null.plain🧭",
+      "start": 244,
+      "end": 248
+    },
+    {
+      "id": "North %n %@ 🧭",
+      "start": 468,
+      "end": 472
+    },
+    {
+      "id": "%@ %n %@ anchorage",
+      "start": 704,
+      "end": 708
+    },
+    {
+      "id": "West %2$n %1$@ pier",
+      "start": 943,
+      "end": 947
+    },
+    {
+      "id": "Tide %%n %@ marker",
+      "start": 1181,
+      "end": 1185
+    },
+    {
+      "id": "owned.scalar",
+      "start": 1498,
+      "end": 1513
+    }
+  ]
+}

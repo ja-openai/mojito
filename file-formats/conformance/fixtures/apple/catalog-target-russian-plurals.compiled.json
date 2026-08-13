@@ -1,0 +1,63 @@
+{
+  "de.lproj/catalog.stringsdict": {
+    "harbor.target.russian🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld Signal %2$@",
+        "other": "%1$lld Signale %2$@"
+      }
+    }
+  },
+  "en.lproj/catalog.strings": {
+    "harbor.target.russian.scalar": "Steady %@ shore"
+  },
+  "en.lproj/catalog.stringsdict": {
+    "Private target Russian plural": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld beacon %2$@",
+        "other": "%1$lld beacons %2$@"
+      }
+    },
+    "harbor.target.russian🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld beacon %2$@",
+        "other": "%1$lld beacons %2$@"
+      }
+    }
+  },
+  "ru.lproj/catalog.strings": {
+    "harbor.target.russian.scalar": "Старый %@ берег"
+  },
+  "ru.lproj/catalog.stringsdict": {
+    "Private target Russian plural": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "few": "%2$@ %3$n %1$lld маяка",
+        "many": "%2$@ %3$n %1$lld маяков",
+        "one": "%2$@ %3$n %1$lld маяк",
+        "other": "%2$@ %3$n %1$lld маяка"
+      }
+    },
+    "harbor.target.russian🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "few": "%2$@ %3$n %1$lld маяка",
+        "many": "%2$@ %3$n %1$lld маяков",
+        "one": "%2$@ %3$n %1$lld маяк",
+        "other": "%2$@ %3$n %1$lld маяка"
+      }
+    }
+  }
+}

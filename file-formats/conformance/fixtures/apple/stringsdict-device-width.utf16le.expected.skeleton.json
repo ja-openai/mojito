@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "encoding": "UTF-16LE-BOM",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\"><dict>\n  <key>neutral.width🧭</key><dict>\n    <key>NSStringDeviceSpecificRuleType</key><dict>\n      <key>iphone</key><dict>\n        <key>NSStringVariableWidthRuleType</key><dict>\n          <key>5</key><string>Tap%n cove</string>\n          <key>040</key><string>Tap%%n open tide</string>\n        </dict>\n      </dict>\n      <key>mac</key><dict>\n        <key>NSStringVariableWidthRuleType</key><dict>\n          <key>5</key><string>Mac%n near</string>\n          <key>040</key><string>Mac&#10;open coast</string>\n        </dict>\n      </dict>\n    </dict>\n  </dict>\n</dict></plist>\n",
+  "slots": [
+    {
+      "id": "neutral.width🧭",
+      "selector": "@device=iphone",
+      "variant": "5",
+      "start": 746,
+      "end": 766
+    },
+    {
+      "id": "neutral.width🧭",
+      "selector": "@device=iphone",
+      "variant": "040",
+      "start": 850,
+      "end": 882
+    },
+    {
+      "id": "neutral.width🧭",
+      "selector": "@device=mac",
+      "variant": "5",
+      "start": 1186,
+      "end": 1206
+    },
+    {
+      "id": "neutral.width🧭",
+      "selector": "@device=mac",
+      "variant": "040",
+      "start": 1290,
+      "end": 1326
+    }
+  ]
+}

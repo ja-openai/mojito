@@ -1,0 +1,4 @@
+<plist><dict>
+  <!-- Neither an XML declaration nor plist version is required. -->
+  <key>undeclared.route</key><string>Observed %@ beacon</string>
+</dict></plist>

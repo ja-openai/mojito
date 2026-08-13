@@ -1,0 +1,10 @@
+/* Greeting on the welcome screen */
+"welcome" = "Hello, %@!";
+
+// Counter label
+"count" = "%1$ld files";
+
+/* Punctuation in keys must not confuse the lexer. */
+"key=with;punctuation" = "A value; with = delimiters";
+
+bare_key = "Bare keys also exist";

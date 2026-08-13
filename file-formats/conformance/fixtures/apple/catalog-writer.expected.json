@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en-US",
+  "messages": {
+    "advanced": {
+      "defaultMessage": "Ready {arg0}, 50% complete",
+      "description": "Neutral catalog metadata and review state.",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleCatalogMetadata": {
+          "experimentalRoot": {
+            "label": "neutral",
+            "priority": 7
+          }
+        },
+        "appleCatalogVersion": "2.0",
+        "appleDescriptorMetadata": {
+          "experimentalDescriptor": {
+            "enabled": true,
+            "token": "original"
+          }
+        },
+        "appleLocalizationIdentifiers": {
+          "fr-CA": "fr_CA"
+        },
+        "appleLocalizationSources": {
+          "fr-CA": {
+            "stringUnit": {
+              "state": "needs_review",
+              "value": "Prêt %@, terminé à 40%%"
+            },
+            "translatorNote": "Retain unknown localization metadata"
+          }
+        },
+        "appleSourceLanguage": "en_US",
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ready %@, 50%% complete"
+          },
+          "substitutions": {
+            "person": {
+              "argNum": 1,
+              "formatSpecifier": "@",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "one person"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "many people"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "extractionState": "manual",
+        "localizations": {
+          "fr-CA": {
+            "state": "needs_review",
+            "value": "Prêt %@, terminé à 40%%"
+          }
+        },
+        "sourceState": "translated",
+        "sourceSubstitutions": {
+          "person": {
+            "argNum": 1,
+            "formatSpecifier": "@",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "one person"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "many people"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "private_": {
+      "defaultMessage": "Private value",
+      "metadata": {
+        "appleCatalogMetadata": {
+          "experimentalRoot": {
+            "label": "neutral",
+            "priority": 7
+          }
+        },
+        "appleCatalogVersion": "2.0",
+        "appleSourceLanguage": "en_US",
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private value"
+          }
+        },
+        "sourceState": "translated"
+      }
+    },
+    "supplementary_😃": {
+      "defaultMessage": "Bright ☃",
+      "metadata": {
+        "appleCatalogMetadata": {
+          "experimentalRoot": {
+            "label": "neutral",
+            "priority": 7
+          }
+        },
+        "appleCatalogVersion": "2.0",
+        "appleSourceLanguage": "en_US",
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bright ☃"
+          }
+        },
+        "sourceState": "translated"
+      }
+    }
+  }
+}

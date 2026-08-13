@@ -1,0 +1,7 @@
+<plist><dict><key>broken</key><dict>
+  <key>NSStringLocalizedFormatKey</key><string>%#@items@</string>
+  <key>items</key><dict>
+    <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+    <key>one</key><string>one</string>
+  </dict>
+</dict></dict></plist>

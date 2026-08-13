@@ -1,0 +1,13 @@
+{
+  "en.lproj/catalog.strings": {
+    "harbor.escaped": "%%n %@ mare",
+    "harbor.explicit": "%2$n %1$@ quai",
+    "harbor.implicit": "Ouest %n %@",
+    "harbor.integer": "%n %d balises",
+    "harbor.middle": "%@ quai %n %@",
+    "harbor.mixed": "%2$n %@ quai",
+    "harbor.overlap": "%n %1$@ voie",
+    "harbor.repeated": "%n%n %@ quai",
+    "harbor.unicode.🧭": "🧭%n %@ baie"
+  }
+}

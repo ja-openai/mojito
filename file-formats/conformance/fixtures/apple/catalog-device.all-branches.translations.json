@@ -1,0 +1,8 @@
+{
+  "instruction#@device#iphone": "Touchez {arg0} rive mobile",
+  "instruction#@device#mac": "Cliquez {arg0} rive bureau",
+  "device.counter#@device=iphone#one": "{count} signal mobile sûr",
+  "device.counter#@device=iphone#other": "{count} signaux mobiles sûrs",
+  "device.counter#@device=mac#one": "{count} balise bureau calme",
+  "device.counter#@device=mac#other": "{count} balises bureau calmes"
+}

@@ -1,0 +1,58 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "harbor.portuguese.region.separator🧭": {
+      "comment": "Underscore and hyphen regional bundles stay independent",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source beacon %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Signal %@"
+          }
+        },
+        "pt_BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sinal sublinhado %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sinal hífen %@"
+          }
+        }
+      }
+    },
+    "Private independent Portuguese separator": {
+      "shouldTranslate": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private source %@"
+          }
+        },
+        "pt_BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Sinal sublinhado %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Sinal hífen %@"
+          }
+        }
+      }
+    }
+  }
+}

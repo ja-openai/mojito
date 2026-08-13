@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>files.remaining</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@files@ remaining</string>
+		<key>files</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d file</string>
+			<key>other</key>
+			<string>%d files</string>
+			<key>NSStringFutureRuleMetadata</key>
+			<string>Fresh &lt;rule&gt; &amp; annotation</string>
+			<key>futureRuleEnabled</key>
+			<true/>
+			<key>futureRuleNegative</key>
+			<integer>-19</integer>
+			<key>futureRuleDictionary</key>
+			<dict>
+				<key>NSStringFormatSpecTypeKey</key>
+				<string>nested lookalike</string>
+				<key>enabled</key>
+				<false/>
+				<key>count</key>
+				<integer>23</integer>
+			</dict>
+			<key>futureRuleArray</key>
+			<array>
+				<string>rule text</string>
+				<false/>
+				<data>
+				AP8=
+				</data>
+				<real>2.5</real>
+			</array>
+			<key>futureRuleDate</key>
+			<date>2004-05-06T07:08:09Z</date>
+			<key>futureRuleData</key>
+			<data>
+			ZnJlc2ggbmV1dHJhbCBieXRlcw==
+			</data>
+		</dict>
+		<key>futureEnabled</key>
+		<true/>
+		<key>futureDisabled</key>
+		<false/>
+		<key>futureNegative</key>
+		<integer>-16</integer>
+		<key>futurePositive</key>
+		<integer>7</integer>
+		<key>futureHexadecimal</key>
+		<integer>255</integer>
+		<key>futureMinimum</key>
+		<integer>-9223372036854775808</integer>
+		<key>futureMaximum</key>
+		<integer>18446744073709551615</integer>
+		<key>futureLabel</key>
+		<string>Fresh &lt;amber&gt; &amp; quiet harbor</string>
+		<key>futureEmptyDictionary</key>
+		<dict/>
+		<key>futureNestedMetadata</key>
+		<dict>
+			<key>NSStringLocalizedFormatKey</key>
+			<string>reserved-looking nested value</string>
+			<key>child</key>
+			<dict>
+				<key>enabled</key>
+				<false/>
+				<key>count</key>
+				<integer>-12</integer>
+				<key>notes</key>
+				<string>A neutral &amp; original signal</string>
+			</dict>
+			<key></key>
+			<string>private-use sorting</string>
+			<key>🛰</key>
+			<string>supplementary sorting</string>
+		</dict>
+		<key>futureUnknownRule</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringFutureRuleType</string>
+			<key>enabled</key>
+			<true/>
+		</dict>
+		<key>futureArray</key>
+		<array>
+			<string>first neutral route</string>
+			<true/>
+			<integer>-12</integer>
+			<real>0.125</real>
+			<data>
+			AA+A/w==
+			</data>
+			<date>2026-08-11T12:34:56Z</date>
+			<dict>
+				<key>nested</key>
+				<array>
+					<false/>
+					<string>quiet harbor</string>
+					<real>-0.0</real>
+				</array>
+			</dict>
+			<array/>
+		</array>
+		<key>futureData</key>
+		<data>
+		AAECAwQFBgcICQoLDA0ODxAREhMUFRYX
+		</data>
+		<key>futureEmptyData</key>
+		<data>
+		</data>
+		<key>futureDate</key>
+		<date>2026-08-11T12:34:56Z</date>
+		<key>futureDateBeforeAppleEpoch</key>
+		<date>1997-01-02T03:04:05Z</date>
+		<key>futureReal</key>
+		<real>0.125</real>
+		<key>futurePreciseReal</key>
+		<real>1.2345678901234567</real>
+		<key>futureNegativeZero</key>
+		<real>-0.0</real>
+		<key>futureTinyReal</key>
+		<real>1e-250</real>
+		<key>futurePositiveInfinity</key>
+		<real>inf</real>
+		<key>futureNegativeInfinity</key>
+		<real>-inf</real>
+		<key>futureNotANumber</key>
+		<real>+nan</real>
+		<key>futureSentinelDictionary</key>
+		<dict>
+			<key>$applePlistType</key>
+			<string>real native field</string>
+			<key>bits</key>
+			<string>not an encoded number</string>
+			<key>nested</key>
+			<dict>
+				<key>$applePlistType</key>
+				<string>data native field</string>
+				<key>base64</key>
+				<string>not encoded metadata</string>
+			</dict>
+		</dict>
+	</dict>
+</dict>
+</plist>

@@ -1,0 +1,63 @@
+{
+  "en.lproj/catalog.stringsdict": {
+    "implicit.argument": {
+      "NSStringLocalizedFormatKey": "Observed %#@amount@",
+      "amount": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld beacon",
+        "other": "%lld beacons"
+      }
+    },
+    "independent.counts": {
+      "NSStringLocalizedFormatKey": "Operator %3$@ tracks %1$#@signals@ across %2$#@routes@",
+      "routes": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "d",
+        "one": "%d quiet route",
+        "other": "%d quiet routes"
+      },
+      "signals": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld orbital signal",
+        "other": "%lld orbital signals"
+      }
+    },
+    "repeated.substitution": {
+      "NSStringLocalizedFormatKey": "%1$#@count@ before %1$#@count@",
+      "count": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "d",
+        "one": "%d marker",
+        "other": "%d markers"
+      }
+    },
+    "unicode.substitution": {
+      "NSStringLocalizedFormatKey": "Received %1$#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld pulse",
+        "other": "%lld pulses"
+      }
+    }
+  },
+  "fr.lproj/catalog.stringsdict": {
+    "independent.counts": {
+      "NSStringLocalizedFormatKey": "Opérateur %3$@ suit %1$#@signals@ sur %2$#@routes@",
+      "routes": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "d",
+        "one": "%d route tranquille",
+        "other": "%d routes tranquilles"
+      },
+      "signals": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld signal orbital",
+        "other": "%lld signaux orbitaux"
+      }
+    }
+  }
+}

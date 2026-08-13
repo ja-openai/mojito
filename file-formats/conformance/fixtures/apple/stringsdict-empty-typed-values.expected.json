@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "dock.empty": {
+      "defaultMessage": "{signals, plural, one {{signals} visible beacon} other {{signals} visible beacons}} across the inlet",
+      "variants": {
+        "one": "{signals} visible beacon",
+        "other": "{signals} visible beacons"
+      },
+      "placeholders": [
+        {
+          "name": "signals",
+          "source": "%ld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@signals@ across the inlet",
+        "applePlistExtras": {
+          "futureEmptyArray": [],
+          "futureEmptyData": {
+            "$applePlistType": "data",
+            "base64": ""
+          },
+          "futureEmptyDictionary": {},
+          "futureEmptyString": "",
+          "futureExplicitArray": [],
+          "futureExplicitDictionary": {},
+          "futureExplicitString": "",
+          "futureFalse": false,
+          "futureLiteralMarker": "Literal <data/> remains visible",
+          "futurePayload": {
+            "$applePlistType": "data",
+            "base64": "YQ=="
+          },
+          "futureStructured": [
+            {
+              "$applePlistType": "data",
+              "base64": ""
+            },
+            {
+              "nestedEmptyData": {
+                "$applePlistType": "data",
+                "base64": ""
+              }
+            },
+            []
+          ],
+          "futureTrue": true,
+          "futureWhitespaceData": {
+            "$applePlistType": "data",
+            "base64": ""
+          }
+        },
+        "applePluralRules": {
+          "signals": {
+            "applePlistExtras": {
+              "futureRuleData": {
+                "$applePlistType": "data",
+                "base64": ""
+              }
+            },
+            "valueType": "ld",
+            "variants": {
+              "one": "%ld visible beacon",
+              "other": "%ld visible beacons"
+            }
+          }
+        },
+        "pluralVariable": "signals",
+        "valueType": "ld"
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "east": {
+      "defaultMessage": "steady"
+    },
+    "west": {
+      "defaultMessage": "steady"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "unstable": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": { "stringUnit": { "state": "translated", "value": "%lld signal" } },
+              "other": { "stringUnit": { "state": "translated", "value": "%lld signals" } }
+            },
+            "device": {
+              "iphone": { "stringUnit": { "state": "translated", "value": "phone signal" } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

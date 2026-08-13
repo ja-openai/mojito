@@ -1,0 +1,4 @@
+{
+  "harbor.first.brazilian.portuguese🧭": "{count, plural, many {{arg1} {count}  Brasil many} one {{arg1} {count}  Brasil one} other {{arg1} {count}  Brasil other}}",
+  "harbor.first.european.portuguese🧭": "{count, plural, many {{arg1} {count}  Portugal many} one {{arg1} {count}  Portugal one} other {{arg1} {count}  Portugal other}}"
+}

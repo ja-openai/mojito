@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "dock.entities": {
+      "defaultMessage": "{signals, plural, one {{signals} safe & B beacon} other {{signals} safe beacons &'#'00000000065;}} near A dock",
+      "variants": {
+        "one": "{signals} safe & B beacon",
+        "other": "{signals} safe beacons &#00000000065;"
+      },
+      "placeholders": [
+        {
+          "name": "signals",
+          "source": "%ld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@signals@ near A dock",
+        "applePlistExtras": {
+          "futureAttribute": "Untouched",
+          "futureFlags": [
+            true,
+            false
+          ],
+          "futureLiteral": "Protected &#00000000065;",
+          "futureRatio": {
+            "$applePlistType": "real",
+            "bits": "3ff8000000000000"
+          }
+        },
+        "applePluralRules": {
+          "signals": {
+            "applePlistExtras": {
+              "futureRuleRatio": {
+                "$applePlistType": "real",
+                "bits": "3ff4000000000000"
+              }
+            },
+            "valueType": "ld",
+            "variants": {
+              "one": "%ld safe & B beacon",
+              "other": "%ld safe beacons &#00000000065;"
+            }
+          }
+        },
+        "pluralVariable": "signals",
+        "valueType": "ld"
+      }
+    }
+  }
+}

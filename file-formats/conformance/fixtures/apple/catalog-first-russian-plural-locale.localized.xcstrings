@@ -1,0 +1,136 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "harbor.first.russian.missing🧭": {
+      "comment": "Pinned CLDR owns the first Russian plural localization",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld %3$n beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld %3$n beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld Signal %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "future_review",
+                  "value": "%1$lld Signale %2$@"
+                }
+              }
+            }
+          }
+        },"ru":{"variations":{"plural":{"few":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n маяка в проливе"}},"many":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n маяков в проливе"}},"one":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n маяк в проливе"}},"other":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n маяка в проливе"}}}}}
+      }
+    },
+    "harbor.first.russian.null🧭": {
+      "comment": "Pinned CLDR owns the first Russian plural localization",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld %3$n beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld %3$n beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld Signal %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "future_review",
+                  "value": "%1$lld Signale %2$@"
+                }
+              }
+            }
+          }
+        },
+        "ru": {"variations":{"plural":{"few":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n маяка у маяка"}},"many":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n маяков у маяка"}},"one":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n маяк у маяка"}},"other":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n маяка у маяка"}}}}}
+      }
+    },
+    "Private first missing Russian plural": {
+      "shouldTranslate": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld %3$n beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld %3$n beacons %2$@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Private first null Russian plural": {
+      "shouldTranslate": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld %3$n beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld %3$n beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "ru": null
+      }
+    }
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "harbor.first.brazilian.portuguese🧭": {
+      "comment": "Brazil and Portugal keep distinct zero-selection behavior",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld %3$n beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld %3$n beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld Signal %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "future_review",
+                  "value": "%1$lld Signale %2$@"
+                }
+              }
+            }
+          }
+        },
+        "pt_BR": null,"pt-PT":{"variations":{"plural":{"many":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n Brasil many"}},"one":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n Brasil one"}},"other":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n Brasil other"}}}}}
+      }
+    },
+    "harbor.first.european.portuguese🧭": {
+      "comment": "Brazil and Portugal keep distinct zero-selection behavior",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld %3$n beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld %3$n beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld Signal %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "future_review",
+                  "value": "%1$lld Signale %2$@"
+                }
+              }
+            }
+          }
+        },
+        "pt-PT": {"variations":{"plural":{"many":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n Portugal many"}},"one":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n Portugal one"}},"other":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n Portugal other"}}}}}
+      }
+    },
+    "Private regional Portuguese harbor": {
+      "shouldTranslate": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld %3$n beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld %3$n beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "pt_BR": null
+      }
+    }
+  }
+}

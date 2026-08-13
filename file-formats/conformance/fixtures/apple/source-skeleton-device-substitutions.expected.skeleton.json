@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"sourceLanguage\" : \"en\",\n  \"catalogMarker\" : { \"leave\" : \"untouched\" },\n  \"strings\" : {\n    \"device.harbor🧭\" : {\n      \"comment\" : \"Root-owned harbor substitutions shared by protected device branches.\",\n      \"customDeviceMetadata\" : [ 7, \"preserve\" ],\n      \"localizations\" : {\n        \"en\" : {\n          \"substitutions\" : {\n            \"lanes\" : {\n              \"argNum\" : 1,\n              \"formatSpecifier\" : \"lld\",\n              \"variations\" : { \"plural\" : {\n                \"one\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%lld open lane\" } },\n                \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld open lanes\" } }\n              } }\n            },\n            \"lights\" : {\n              \"argNum\" : 2,\n              \"formatSpecifier\" : \"d\",\n              \"variations\" : { \"plural\" : {\n                \"one\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"%d dock light\" } },\n                \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%d dock lights\" } }\n              } }\n            }\n          },\n          \"variations\" : { \"device\" : {\n            \"iphone\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"Touch %3$@: %#@lanes@ beside %2$#@lights@\" } },\n            \"mac\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Click %3$@: %2$#@lights@ around %#@lanes@\" } },\n            \"applewatch\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"Watch %3$@: %#@lanes@ / %2$#@lights@\" } }\n          } }\n        },\n        \"fr\" : {\n          \"substitutions\" : {\n            \"lanes\" : { \"argNum\" : 1, \"formatSpecifier\" : \"lld\", \"variations\" : { \"plural\" : {\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld voie protégée\" } },\n              \"other\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%lld voies protégées\" } }\n            } } },\n            \"lights\" : { \"argNum\" : 2, \"formatSpecifier\" : \"d\", \"variations\" : { \"plural\" : {\n              \"one\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"%d feu protégé\" } },\n              \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%d feux protégés\" } }\n            } } }\n          },\n          \"variations\" : { \"device\" : {\n            \"iphone\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"Touchez %3$@: %#@lanes@ près de %2$#@lights@\" } },\n            \"mac\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Cliquez %3$@: %2$#@lights@ vers %#@lanes@\" } }\n          } }\n        }\n      }\n    },\n    \"device.unicode\" : {\n      \"localizations\" : {\n        \"en\" : {\n          \"substitutions\" : {\n            \"信号\" : { \"argNum\" : 1, \"formatSpecifier\" : \"lld\", \"variations\" : { \"plural\" : {\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld soft signal\" } },\n              \"other\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%lld soft signals\" } }\n            } } }\n          },\n          \"variations\" : { \"device\" : {\n            \"ipad\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"Guide %#@信号@\" } },\n            \"mac\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Desktop %#@信号@\" } }\n          } }\n        }\n      }\n    },\n    \"device.echo\" : {\n      \"localizations\" : {\n        \"en\" : {\n          \"substitutions\" : {\n            \"count\" : { \"argNum\" : 1, \"formatSpecifier\" : \"d\", \"variations\" : { \"plural\" : {\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%d clear echo\" } },\n              \"other\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"%d clear echoes\" } }\n            } } }\n          },\n          \"variations\" : { \"device\" : {\n            \"iphone\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%#@count@ before %1$#@count@\" } },\n            \"mac\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%1$#@count@ after %#@count@\" } }\n          } }\n        }\n      }\n    }\n  },\n  \"version\" : \"1.0\"\n}\n",
+  "slots": [
+    {
+      "id": "device.harbor🧭",
+      "selector": "lanes",
+      "variant": "one",
+      "start": 550,
+      "end": 564
+    },
+    {
+      "id": "device.harbor🧭",
+      "selector": "lanes",
+      "variant": "other",
+      "start": 651,
+      "end": 666
+    },
+    {
+      "id": "device.harbor🧭",
+      "selector": "lights",
+      "variant": "one",
+      "start": 927,
+      "end": 940
+    },
+    {
+      "id": "device.harbor🧭",
+      "selector": "lights",
+      "variant": "other",
+      "start": 1027,
+      "end": 1041
+    },
+    {
+      "id": "device.harbor🧭",
+      "start": 1211,
+      "end": 1252
+    },
+    {
+      "id": "device.unicode",
+      "selector": "信号",
+      "variant": "one",
+      "start": 2844,
+      "end": 2860
+    },
+    {
+      "id": "device.unicode",
+      "selector": "信号",
+      "variant": "other",
+      "start": 2947,
+      "end": 2964
+    },
+    {
+      "id": "device.unicode",
+      "start": 3118,
+      "end": 3134
+    },
+    {
+      "id": "device.echo",
+      "selector": "count",
+      "variant": "one",
+      "start": 3542,
+      "end": 3555
+    },
+    {
+      "id": "device.echo",
+      "selector": "count",
+      "variant": "other",
+      "start": 3648,
+      "end": 3663
+    },
+    {
+      "id": "device.echo",
+      "start": 3817,
+      "end": 3845
+    }
+  ]
+}

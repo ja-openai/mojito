@@ -1,0 +1,511 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "device.after🧭": {
+      "defaultMessage": "{count, plural, one {{count} {arg2} pocket marker} other {{count} {arg2} pocket markers}}",
+      "variants": {
+        "one": "{count} {arg2} pocket marker",
+        "other": "{count} {arg2} pocket markers"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg2",
+          "source": "%@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "variations": {
+            "device": {
+              "iphone": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld%n %@ pocket marker"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld%n %@ pocket markers"
+                      }
+                    }
+                  }
+                }
+              },
+              "mac": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld%n %@ desktop marker"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld%n %@ desktop markers"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "sourcePluralStates": {
+          "one": "translated",
+          "other": "translated"
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%n %@ pocket marker"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%n %@ pocket markers"
+                    }
+                  }
+                }
+              }
+            },
+            "mac": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%n %@ desktop marker"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%n %@ desktop markers"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 2
+              }
+            ],
+            "other": [
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 2
+              }
+            ]
+          }
+        }
+      }
+    },
+    "device.escaped": {
+      "defaultMessage": "{count, plural, one {{count}%n {arg1} pocket marker} other {{count}%n {arg1} pocket markers}}",
+      "variants": {
+        "one": "{count}%n {arg1} pocket marker",
+        "other": "{count}%n {arg1} pocket markers"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "variations": {
+            "device": {
+              "iphone": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld%%n %@ pocket marker"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld%%n %@ pocket markers"
+                      }
+                    }
+                  }
+                }
+              },
+              "mac": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld%%n %@ desktop marker"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld%%n %@ desktop markers"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "sourcePluralStates": {
+          "one": "translated",
+          "other": "translated"
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%%n %@ pocket marker"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%%n %@ pocket markers"
+                    }
+                  }
+                }
+              }
+            },
+            "mac": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%%n %@ desktop marker"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%%n %@ desktop markers"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "device.explicit": {
+      "defaultMessage": "{count, plural, one {{count}  {arg1} pocket marker} other {{count}  {arg1} pocket markers}}",
+      "variants": {
+        "one": "{count}  {arg1} pocket marker",
+        "other": "{count}  {arg1} pocket markers"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%1$lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%2$@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "variations": {
+            "device": {
+              "iphone": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld %3$n %2$@ pocket marker"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld %3$n %2$@ pocket markers"
+                      }
+                    }
+                  }
+                }
+              },
+              "mac": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld %3$n %2$@ desktop marker"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld %3$n %2$@ desktop markers"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "sourcePluralStates": {
+          "one": "translated",
+          "other": "translated"
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %3$n %2$@ pocket marker"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %3$n %2$@ pocket markers"
+                    }
+                  }
+                }
+              }
+            },
+            "mac": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %3$n %2$@ desktop marker"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %3$n %2$@ desktop markers"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ],
+            "other": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ]
+          }
+        }
+      }
+    },
+    "device.repeated": {
+      "defaultMessage": "{count, plural, one {{count} {arg3} pocket marker} other {{count} {arg3} pocket markers}}",
+      "variants": {
+        "one": "{count} {arg3} pocket marker",
+        "other": "{count} {arg3} pocket markers"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg3",
+          "source": "%@",
+          "kind": "string",
+          "position": 4
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "variations": {
+            "device": {
+              "iphone": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld%n%n %@ pocket marker"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld%n%n %@ pocket markers"
+                      }
+                    }
+                  }
+                }
+              },
+              "mac": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld%n%n %@ desktop marker"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld%n%n %@ desktop markers"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "sourcePluralStates": {
+          "one": "translated",
+          "other": "translated"
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%n%n %@ pocket marker"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%n%n %@ pocket markers"
+                    }
+                  }
+                }
+              }
+            },
+            "mac": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%n%n %@ desktop marker"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%n%n %@ desktop markers"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 2
+              },
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 3
+              }
+            ],
+            "other": [
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 2
+              },
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 3
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

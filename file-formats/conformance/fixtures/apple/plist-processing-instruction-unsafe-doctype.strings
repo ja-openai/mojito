@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<?neutral source="safe-preamble"?>
+<!DOCTYPE plist [<!ENTITY outside SYSTEM "file:///private/tmp/mojito-forbidden">]>
+<plist version="1.0"><dict><key>dock</key><string>&outside;</string></dict></plist>

@@ -1,0 +1,28 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "harbor.native.script.collision🧭": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        },
+        "en-x-HARBOR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First catalog locale en-x-HARBOR"
+          }
+        },
+        "en-x-harbor": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Second catalog locale en-x-harbor"
+          }
+        }
+      }
+    }
+  }
+}

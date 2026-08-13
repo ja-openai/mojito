@@ -1,0 +1,5 @@
+{
+  "harbor.development.source.scalar🧭": "{arg1} {arg0} translated beacon",
+  "harbor.development.source.plural🧭#one": "{count} translated beacon {arg1}",
+  "harbor.development.source.plural🧭#other": "{count} translated beacons {arg1}"
+}

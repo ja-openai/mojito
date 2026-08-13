@@ -1,0 +1,52 @@
+{
+  "device.future": {
+    "NSStringDeviceSpecificRuleType": {
+      "future_alpha": "First device",
+      "future_zeta": "Final device"
+    }
+  },
+  "plural.multiple": {
+    "NSStringLocalizedFormatKey": "%#@files@ beside %#@ratios@",
+    "files": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "lld",
+      "one": "%lld file",
+      "other": "%lld files"
+    },
+    "ratios": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "f",
+      "one": "%0.1f ratio",
+      "other": "%0.1f ratios"
+    }
+  },
+  "plural.optional": {
+    "NSStringLocalizedFormatKey": "%#@signals@ & 50%%",
+    "signals": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "one": "%1$ld marker & 40%%",
+      "other": "%1$ld markers & 40%%"
+    }
+  },
+  "private_": {
+    "NSStringVariableWidthRuleType": {
+      "3": "Private marker"
+    }
+  },
+  "supplementary_😃": {
+    "NSStringVariableWidthRuleType": {
+      "3": "Bright ☃"
+    }
+  },
+  "width.leading": {
+    "NSStringVariableWidthRuleType": {
+      "004": "Now",
+      "048": "The extended status is ready"
+    }
+  },
+  "xml.escape": {
+    "NSStringVariableWidthRuleType": {
+      "8": "A & B < C \r end"
+    }
+  }
+}

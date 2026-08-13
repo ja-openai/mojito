@@ -1,0 +1,478 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "device.mixed": {
+      "defaultMessage": "Tap {arg0} for {beacons, plural, one {{beacons} soft beacon near {arg2}} other {{beacons} soft beacons near {arg2}}}",
+      "placeholders": [
+        {
+          "name": "beacons",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 2
+        },
+        {
+          "name": "arg2",
+          "source": "%@",
+          "kind": "string",
+          "position": 3
+        },
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleCatalogMetadata": {
+          "projectMarker": {
+            "keep": true
+          }
+        },
+        "appleSourceLocalization": {
+          "substitutions": {
+            "beacons": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld soft beacon near %@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%lld soft beacons near %@"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Tap %1$@ for %#@beacons@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %1$@ for %#@beacons@"
+                }
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "sourceState": "needs_review",
+        "sourceSubstitutions": {
+          "beacons": {
+            "argNum": 2,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld soft beacon near %@"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "%lld soft beacons near %@"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "Tap %1$@ for %#@beacons@"
+              }
+            },
+            "mac": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Click %1$@ for %#@beacons@"
+              }
+            }
+          }
+        }
+      }
+    },
+    "extra.numeric": {
+      "defaultMessage": "Pilot {arg0} counts {signals, plural, one {{signals} clear signal near {arg2} buoy} other {{signals} clear signals near {arg2} buoys}}",
+      "placeholders": [
+        {
+          "name": "signals",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 2
+        },
+        {
+          "name": "arg2",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 3
+        },
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleCatalogMetadata": {
+          "projectMarker": {
+            "keep": true
+          }
+        },
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pilot %1$@ counts %#@signals@"
+          },
+          "substitutions": {
+            "signals": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld clear signal near %lld buoy"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld clear signals near %lld buoys"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "translated",
+        "sourceSubstitutions": {
+          "signals": {
+            "argNum": 2,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld clear signal near %lld buoy"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld clear signals near %lld buoys"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "mixed.route": {
+      "defaultMessage": "Pilot {arg0} follows {lights, plural, one {{lights} pale light near {arg2}} other {{lights} pale lights near {arg2}}}",
+      "description": "Implicit substitution placeholders start at their assigned native argument.",
+      "placeholders": [
+        {
+          "name": "lights",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 2
+        },
+        {
+          "name": "arg2",
+          "source": "%@",
+          "kind": "string",
+          "position": 3
+        },
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleCatalogMetadata": {
+          "projectMarker": {
+            "keep": true
+          }
+        },
+        "appleLocalizationSources": {
+          "fr": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Pilote %1$@ suit %#@lights@"
+            },
+            "substitutions": {
+              "lights": {
+                "argNum": 2,
+                "formatSpecifier": "lld",
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%lld feu protégé près de %@"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld feux protégés près de %@"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pilot %1$@ follows %#@lights@"
+          },
+          "substitutions": {
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%lld pale light near %@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld pale lights near %@"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "localizations": {
+          "fr": {
+            "state": "translated",
+            "value": "Pilote %1$@ suit %#@lights@"
+          }
+        },
+        "sourceState": "needs_review",
+        "sourceSubstitutions": {
+          "lights": {
+            "argNum": 2,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "%lld pale light near %@"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld pale lights near %@"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "reversed.route": {
+      "defaultMessage": "Pilot {arg0} reports {routes, plural, one {{arg2} protects {routes} lane} other {{arg2} protects {routes} lanes}}",
+      "placeholders": [
+        {
+          "name": "arg2",
+          "source": "%3$@",
+          "kind": "string",
+          "position": 3
+        },
+        {
+          "name": "routes",
+          "source": "%2$lld",
+          "kind": "integer",
+          "position": 2
+        },
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleCatalogMetadata": {
+          "projectMarker": {
+            "keep": true
+          }
+        },
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pilot %1$@ reports %#@routes@"
+          },
+          "substitutions": {
+            "routes": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%3$@ protects %2$lld lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "machine_translated",
+                      "value": "%3$@ protects %2$lld lanes"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "translated",
+        "sourceSubstitutions": {
+          "routes": {
+            "argNum": 2,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%3$@ protects %2$lld lane"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "machine_translated",
+                    "value": "%3$@ protects %2$lld lanes"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "unicode.mixed": {
+      "defaultMessage": "{arg0} follows {信号, plural, one {{信号} blue pulse near {arg2}} other {{信号} blue pulses near {arg2}}}",
+      "placeholders": [
+        {
+          "name": "信号",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 2
+        },
+        {
+          "name": "arg2",
+          "source": "%@",
+          "kind": "string",
+          "position": 3
+        },
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleCatalogMetadata": {
+          "projectMarker": {
+            "keep": true
+          }
+        },
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ follows %#@信号@"
+          },
+          "substitutions": {
+            "信号": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld blue pulse near %@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld blue pulses near %@"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "translated",
+        "sourceSubstitutions": {
+          "信号": {
+            "argNum": 2,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld blue pulse near %@"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld blue pulses near %@"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

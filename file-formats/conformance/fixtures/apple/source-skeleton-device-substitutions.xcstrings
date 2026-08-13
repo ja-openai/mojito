@@ -1,0 +1,86 @@
+{
+  "sourceLanguage" : "en",
+  "catalogMarker" : { "leave" : "untouched" },
+  "strings" : {
+    "device.harbor🧭" : {
+      "comment" : "Root-owned harbor substitutions shared by protected device branches.",
+      "customDeviceMetadata" : [ 7, "preserve" ],
+      "localizations" : {
+        "en" : {
+          "substitutions" : {
+            "lanes" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : { "plural" : {
+                "one" : { "stringUnit" : { "state" : "needs_review", "value" : "%lld open lane" } },
+                "other" : { "stringUnit" : { "state" : "translated", "value" : "%lld open lanes" } }
+              } }
+            },
+            "lights" : {
+              "argNum" : 2,
+              "formatSpecifier" : "d",
+              "variations" : { "plural" : {
+                "one" : { "stringUnit" : { "state" : "machine_translated", "value" : "%d dock light" } },
+                "other" : { "stringUnit" : { "state" : "translated", "value" : "%d dock lights" } }
+              } }
+            }
+          },
+          "variations" : { "device" : {
+            "iphone" : { "stringUnit" : { "state" : "needs_review", "value" : "Touch %3$@: %#@lanes@ beside %2$#@lights@" } },
+            "mac" : { "stringUnit" : { "state" : "translated", "value" : "Click %3$@: %2$#@lights@ around %#@lanes@" } },
+            "applewatch" : { "stringUnit" : { "state" : "machine_translated", "value" : "Watch %3$@: %#@lanes@ / %2$#@lights@" } }
+          } }
+        },
+        "fr" : {
+          "substitutions" : {
+            "lanes" : { "argNum" : 1, "formatSpecifier" : "lld", "variations" : { "plural" : {
+              "one" : { "stringUnit" : { "state" : "translated", "value" : "%lld voie protégée" } },
+              "other" : { "stringUnit" : { "state" : "needs_review", "value" : "%lld voies protégées" } }
+            } } },
+            "lights" : { "argNum" : 2, "formatSpecifier" : "d", "variations" : { "plural" : {
+              "one" : { "stringUnit" : { "state" : "machine_translated", "value" : "%d feu protégé" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%d feux protégés" } }
+            } } }
+          },
+          "variations" : { "device" : {
+            "iphone" : { "stringUnit" : { "state" : "needs_review", "value" : "Touchez %3$@: %#@lanes@ près de %2$#@lights@" } },
+            "mac" : { "stringUnit" : { "state" : "translated", "value" : "Cliquez %3$@: %2$#@lights@ vers %#@lanes@" } }
+          } }
+        }
+      }
+    },
+    "device.unicode" : {
+      "localizations" : {
+        "en" : {
+          "substitutions" : {
+            "信号" : { "argNum" : 1, "formatSpecifier" : "lld", "variations" : { "plural" : {
+              "one" : { "stringUnit" : { "state" : "translated", "value" : "%lld soft signal" } },
+              "other" : { "stringUnit" : { "state" : "needs_review", "value" : "%lld soft signals" } }
+            } } }
+          },
+          "variations" : { "device" : {
+            "ipad" : { "stringUnit" : { "state" : "needs_review", "value" : "Guide %#@信号@" } },
+            "mac" : { "stringUnit" : { "state" : "translated", "value" : "Desktop %#@信号@" } }
+          } }
+        }
+      }
+    },
+    "device.echo" : {
+      "localizations" : {
+        "en" : {
+          "substitutions" : {
+            "count" : { "argNum" : 1, "formatSpecifier" : "d", "variations" : { "plural" : {
+              "one" : { "stringUnit" : { "state" : "translated", "value" : "%d clear echo" } },
+              "other" : { "stringUnit" : { "state" : "machine_translated", "value" : "%d clear echoes" } }
+            } } }
+          },
+          "variations" : { "device" : {
+            "iphone" : { "stringUnit" : { "state" : "translated", "value" : "%#@count@ before %1$#@count@" } },
+            "mac" : { "stringUnit" : { "state" : "needs_review", "value" : "%1$#@count@ after %#@count@" } }
+          } }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

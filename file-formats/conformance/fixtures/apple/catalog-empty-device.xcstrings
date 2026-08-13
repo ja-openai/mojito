@@ -1,0 +1,7 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "broken": { "localizations": { "en": { "variations": { "device": {} } } } }
+  },
+  "version": "1.0"
+}

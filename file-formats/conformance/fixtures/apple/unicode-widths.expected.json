@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "zero": {
+      "defaultMessage": "\u0000!",
+      "description": "Foundation accepts zero through four hexadecimal digits after uppercase U."
+    },
+    "one": { "defaultMessage": "\u0001!" },
+    "two": { "defaultMessage": " !" },
+    "three": { "defaultMessage": "ɠ!" },
+    "four": { "defaultMessage": "☃!" },
+    "lowercase": { "defaultMessage": "u41!" },
+    "physical": { "defaultMessage": "north\nsouth" }
+  }
+}

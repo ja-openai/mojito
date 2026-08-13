@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"sourceLanguage\" : \"en\",\n  \"projectFlag\" : { \"preserve\" : true, \"rank\" : 4 },\n  \"strings\" : {\n    \"harbor.route🧭\" : {\n      \"comment\" : \"Independent neutral harbor counters and a positional pilot.\",\n      \"customFlag\" : [ \"keep\", 9 ],\n      \"localizations\" : {\n        \"en\" : {\n          \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"Pilot %3$@ escorts %#@lanes@ beyond %2$#@lights@\" },\n          \"substitutions\" : {\n            \"lanes\" : {\n              \"argNum\" : 1,\n              \"formatSpecifier\" : \"lld\",\n              \"variations\" : { \"plural\" : {\n                \"one\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%lld quiet lane\" } },\n                \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld quiet lanes\" } }\n              } }\n            },\n            \"lights\" : {\n              \"argNum\" : 2,\n              \"formatSpecifier\" : \"d\",\n              \"variations\" : { \"plural\" : {\n                \"one\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"%d north light\" } },\n                \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%d north lights\" } }\n              } }\n            }\n          }\n        },\n        \"fr\" : {\n          \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"Pilote %3$@ escorte %#@lanes@ au-delà de %2$#@lights@\" },\n          \"substitutions\" : {\n            \"lanes\" : {\n              \"argNum\" : 1, \"formatSpecifier\" : \"lld\",\n              \"variations\" : { \"plural\" : {\n                \"one\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%lld voie calme\" } },\n                \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld voies calmes\" } }\n              } }\n            },\n            \"lights\" : {\n              \"argNum\" : 2, \"formatSpecifier\" : \"d\",\n              \"variations\" : { \"plural\" : {\n                \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%d feu nord\" } },\n                \"other\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"%d feux nord\" } }\n              } }\n            }\n          }\n        }\n      }\n    },\n    \"echo.route\" : {\n      \"localizations\" : {\n        \"en\" : {\n          \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%#@count@ before %1$#@count@\" },\n          \"substitutions\" : {\n            \"count\" : { \"argNum\" : 1, \"formatSpecifier\" : \"d\", \"variations\" : { \"plural\" : {\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%d echo\" } },\n              \"other\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%d echoes\" } }\n            } } }\n          }\n        }\n      }\n    },\n    \"unicode.route\" : {\n      \"localizations\" : {\n        \"en\" : {\n          \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Follow %#@信号@\" },\n          \"substitutions\" : {\n            \"信号\" : { \"argNum\" : 1, \"formatSpecifier\" : \"lld\", \"variations\" : { \"plural\" : {\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld soft pulse\" } },\n              \"other\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"%lld soft pulses\" } }\n            } } }\n          }\n        }\n      }\n    },\n    \"implicit.lane\" : {\n      \"localizations\" : {\n        \"en\" : {\n          \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"Observed %#@amount@\" },\n          \"substitutions\" : {\n            \"amount\" : { \"variations\" : { \"plural\" : {\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld green berth\" } },\n              \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld green berths\" } }\n            } } }\n          }\n        }\n      }\n    }\n  },\n  \"version\" : \"1.0\"\n}\n",
+  "slots": [
+    {
+      "id": "harbor.route🧭",
+      "start": 349,
+      "end": 397
+    },
+    {
+      "id": "harbor.route🧭",
+      "selector": "lanes",
+      "variant": "one",
+      "start": 649,
+      "end": 664
+    },
+    {
+      "id": "harbor.route🧭",
+      "selector": "lanes",
+      "variant": "other",
+      "start": 751,
+      "end": 767
+    },
+    {
+      "id": "harbor.route🧭",
+      "selector": "lights",
+      "variant": "one",
+      "start": 1028,
+      "end": 1042
+    },
+    {
+      "id": "harbor.route🧭",
+      "selector": "lights",
+      "variant": "other",
+      "start": 1129,
+      "end": 1144
+    },
+    {
+      "id": "echo.route",
+      "start": 2255,
+      "end": 2283
+    },
+    {
+      "id": "echo.route",
+      "selector": "count",
+      "variant": "one",
+      "start": 2487,
+      "end": 2494
+    },
+    {
+      "id": "echo.route",
+      "selector": "count",
+      "variant": "other",
+      "start": 2581,
+      "end": 2590
+    },
+    {
+      "id": "unicode.route",
+      "start": 2780,
+      "end": 2797
+    },
+    {
+      "id": "unicode.route",
+      "selector": "信号",
+      "variant": "one",
+      "start": 3004,
+      "end": 3019
+    },
+    {
+      "id": "unicode.route",
+      "selector": "信号",
+      "variant": "other",
+      "start": 3112,
+      "end": 3128
+    },
+    {
+      "id": "implicit.lane",
+      "start": 3320,
+      "end": 3339
+    },
+    {
+      "id": "implicit.lane",
+      "selector": "amount",
+      "variant": "one",
+      "start": 3505,
+      "end": 3521
+    },
+    {
+      "id": "implicit.lane",
+      "selector": "amount",
+      "variant": "other",
+      "start": 3606,
+      "end": 3623
+    }
+  ]
+}

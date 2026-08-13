@@ -1,0 +1,128 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "harbor.target.missing🧭": {
+      "comment": "A neutral target missing from its active localization map",
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Calm harbor 🧭"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "machine_translated",
+            "value": "Ruhiger Hafen"
+          }
+        }
+      }
+    },
+    "North %n %@ 🧭": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "North %n %@ 🧭"
+          }
+        },
+        "fr_CA": null,
+        "de": {
+          "stringUnit": {
+            "state": "future_review",
+            "value": "Nord %@ geschützt"
+          }
+        }
+      }
+    },
+    "%@ %n %@ anchorage": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ %n %@ anchorage"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ %@ mouillage distinct"
+          }
+        }
+      }
+    },
+    "West %2$n %1$@ pier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "machine_translated",
+            "value": "West %2$n %1$@ pier"
+          }
+        },
+        "fr_CA": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ancien %2$n %1$@ quai"
+          }
+        }
+      }
+    },
+    "Tide %%n %@ marker": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tide %%n %@ marker"
+          }
+        },
+        "fr_CA": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Marée %%n %@ existante"
+          }
+        }
+      }
+    },
+    "owned.scalar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Steady %@ shore"
+          }
+        },
+        "fr_CA": {
+          "stringUnit": {
+            "state": "future_review",
+            "value": "Rive %@ existante"
+          }
+        }
+      }
+    },
+    "Private target null pier": {
+      "shouldTranslate": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private %@ source"
+          }
+        },
+        "fr_CA": null
+      }
+    },
+    "Private target missing pier": {
+      "shouldTranslate": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private %@ missing source"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "en.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "Source"
+    },
+    "nv.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "First catalog locale i-navajo"
+    }
+  },
+  {
+    "en.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "Source"
+    },
+    "nv.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "Second catalog locale nv"
+    }
+  }
+]

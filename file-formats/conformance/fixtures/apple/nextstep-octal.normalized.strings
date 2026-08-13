@@ -1,0 +1,19 @@
+"accent" = "ë";
+// Octal bytes use Foundation's historic NextStep character set.
+"ascii" = "A";
+"bell" = "\U0007";
+"capital" = "À";
+"division" = "÷";
+"ligature" = "ﬁ";
+"nbsp" = " ";
+"nextstep_full_table" = " ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖÙÚÛÜÝÞµ×÷©¡¢£⁄¥ƒ§¤’“«‹›ﬁﬂ®–†‡·¦¶•‚„”»…‰¬¿¹ˋ´ˆ˜¯˘˙¨²˚¸³˝˛ˇ—±¼½¾àáâãäåçèéêëìÆíªîïðñŁØŒºòóôõöæùúûıüýłøœßþÿ\U0000\U0000";
+"short_octal_boundary" = "\U001F8";
+"superscript" = "¹";
+"typographic_quote" = "’";
+"undefined_fe" = "\U0000";
+"undefined_ff" = "\U0000";
+"unknown" = "qx41";
+"vertical" = "\U000B";
+"wrapped_one" = "\U0001";
+"wrapped_undefined" = "\U0000";
+"wrapped_zero" = "\U0000";

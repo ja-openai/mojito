@@ -1,0 +1,10 @@
+{
+  "paragraph_separator_key": "Paragraph boundary",
+  "line_separator_key": "Line boundary",
+  "block_separator": "Stable context",
+  "single key": "Route \"north\"",
+  "single shortcut": "single shortcut",
+  "bare_shortcut": "bare_shortcut",
+  "pilot's code": "crew's marker",
+  "quoted shortcut": "quoted shortcut"
+}

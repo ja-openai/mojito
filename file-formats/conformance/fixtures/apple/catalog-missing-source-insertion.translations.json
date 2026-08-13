@@ -1,0 +1,8 @@
+{
+  "harbor.missing.plain🧭": "Abri \"paisible\" 🧭",
+  "North %n %@ 🧭": "Ouest  {arg1} 🧭",
+  "%@ %n %@ anchorage": "{arg0}  {arg2} mouillage",
+  "West %2$n %1$@ pier": "Ouest  {arg0} jetée",
+  "Tide %%n %@ marker": "Marée %n {arg0} balise",
+  "owned.scalar": "Stable {arg0} rive"
+}

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "harbor.route": {
+      "defaultMessage": "Guide {arg0} across north water",
+      "description": "Explain the formatted harbor route to translators.",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ]
+    },
+    "quiet.empty": {
+      "defaultMessage": "",
+      "description": "Keep an originally self-closing entry source-preserving."
+    },
+    "wrapped&signal": {
+      "defaultMessage": "'<'calm> & clear",
+      "description": "Native CDATA and literal markup remain visible text.",
+      "metadata": {
+        "appleMarkupEscaping": "icu-quoted-angle"
+      }
+    }
+  }
+}

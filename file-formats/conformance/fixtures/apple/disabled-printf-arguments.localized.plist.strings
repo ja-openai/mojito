@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>harbor.implicit</key><string>Ouest %n %@</string>
+  <key>harbor.middle</key><string>%@ quai %n %@</string>
+  <key>harbor.repeated</key><string>%n%n %@ quai</string>
+  <key>harbor.explicit</key><string>%2$n %1$@ quai</string>
+  <key>harbor.mixed</key><string>%2$n %@ quai</string>
+  <key>harbor.overlap</key><string>%n %1$@ voie</string>
+  <key>harbor.integer</key><string>%n %d balises</string>
+  <key>harbor.escaped</key><string>%%n %@ mare</string>
+  <key>harbor.unicode.🧭</key><string>🧭%n %@ baie</string>
+</dict>
+</plist>

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"sourceLanguage\": \"en\",\n  \"version\": \"1.0\",\n  \"strings\": {\n    \"harbor.first.norwegian.bokmal.grandfathered🧭\": {\n      \"comment\": \"Grandfathered Bokmål/Nynorsk identifiers remain source-owned\",\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"%1$lld %3$n beacon %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld %3$n beacons %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"de\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld Signal %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"future_review\",\n                  \"value\": \"%1$lld Signale %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"no-bok\": null\n      }\n    },\n    \"harbor.first.norwegian.nynorsk.grandfathered🧭\": {\n      \"comment\": \"Grandfathered Bokmål/Nynorsk identifiers remain source-owned\",\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"%1$lld %3$n beacon %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld %3$n beacons %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"de\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld Signal %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"future_review\",\n                  \"value\": \"%1$lld Signale %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"no-nyn\": null\n      }\n    },\n    \"Private Norwegian language harbor\": {\n      \"shouldTranslate\": false,\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"%1$lld %3$n beacon %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld %3$n beacons %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"no-bok\": null,\n        \"no-nyn\": null\n      }\n    }\n  }\n}\n",
+  "appleTargetLocale": "no-bok",
+  "slots": [
+    {
+      "id": "harbor.first.norwegian.bokmal.grandfathered🧭",
+      "start": 1186,
+      "end": 1190
+    },
+    {
+      "id": "harbor.first.norwegian.nynorsk.grandfathered🧭",
+      "start": 2334,
+      "end": 2334
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+{
+  "beacon.shared#one": "{count} balise seule",
+  "beacon.shared#other": "{count} balises ensemble"
+}

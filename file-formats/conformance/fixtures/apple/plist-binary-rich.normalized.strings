@@ -1,0 +1,8 @@
+"route&east<north>🧭" = "Safe & visible 🧭";
+"route.attribute" = "Visible marker";
+"route.empty" = "";
+"route.format" = "Guide %1$@ through <amber> & quiet\rwater";
+"route.literal.apostrophe" = "It's <quiet> %@ harbor";
+"route.percent.newline" = "north%nwater";
+"route.positioned" = "Guide %2$@ past %1$ld steady signals";
+"route<&>" = "<!DOCTYPE plist> across <quiet> & %2$@";

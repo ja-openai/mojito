@@ -1,0 +1,11 @@
+{
+  "harbor.future.device🧭#@device#iphone": "Téléphone {arg0} quai",
+  "harbor.future.device🧭#@device#mac": "Bureau {arg0} quai",
+  "harbor.future.device🧭#@device#futurecar": "Vaisseau {arg0} quai",
+  "harbor.future.device🧭#@device#raft": "Privé {arg0} quai",
+  "harbor.future.device🧭#@device#🧭raft": "Boussole {arg0} quai",
+  "harbor.future.device🧭#@device#other": "Repli {arg0} quai",
+  "harbor.future.device.only🧭#@device#futurecar": "Futur seul {arg0}",
+  "harbor.future.device.fallback🧭#@device#futurecar": "Futur repli {arg0}",
+  "harbor.future.device.fallback🧭#@device#other": "Repli ordinaire {arg0}"
+}

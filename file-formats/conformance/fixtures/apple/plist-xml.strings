@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <!-- This root comment does not describe an individual translation. -->
+  <dict>
+    <!-- First translator context with normalized spacing. -->
+    <key>route.format</key>
+    <!-- This structural comment must not replace the translator note. -->
+    <string>Guide %1$@ through &lt;amber&gt; &amp; quiet&#13;water</string>
+
+    <!-- Positional arguments preserve original Foundation formatter spellings. -->
+    <key>route.positioned</key>
+    <string>Guide %2$@ past %1$ld steady signals</string>
+
+    <!-- ICU literal-angle quoting must not corrupt an ordinary apostrophe. -->
+    <key>route.literal.apostrophe</key>
+    <string>It's &lt;quiet&gt; %@ harbor</string>
+
+    <!-- XML entities and supplementary Unicode remain real message IDs. -->
+    <key>route&amp;east&lt;north&gt;&#x1F9ED;</key>
+    <string>Safe &amp; visible 🧭</string>
+
+    <!-- CDATA is text, not a second property-list declaration. -->
+    <key><![CDATA[route<&>]]></key>
+    <string><![CDATA[<!DOCTYPE plist> across <quiet> & %2$@]]></string>
+
+    <!-- Explicit XML attributes do not change Foundation string content. -->
+    <key>route.attribute</key>
+    <string custom="future">Visible marker</string>
+
+    <!-- Empty property-list string values remain translatable. -->
+    <key>route.empty</key><string/>
+
+    <!-- Native percent-newline formatting survives deterministic writing. -->
+    <key>route.percent.newline</key><string>north%nwater</string>
+  </dict>
+</plist>

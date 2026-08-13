@@ -1,0 +1,11 @@
+{
+  "harbor.review.0.new🧭": "Révisé new {arg0}",
+  "harbor.review.1.needs_review🧭": "Révisé needs_review {arg0}",
+  "harbor.review.2.translated🧭": "Révisé translated {arg0}",
+  "harbor.review.3.machine_translated🧭": "Révisé machine_translated {arg0}",
+  "harbor.review.4.stale🧭": "Révisé stale {arg0}",
+  "harbor.review.5.future_review🧭": "Révisé future_review {arg0}",
+  "harbor.review.6.untranslated🧭": "Révisé untranslated {arg0}",
+  "harbor.review.7.invalid_future_state🧭": "Révisé invalid_future_state {arg0}",
+  "harbor.review.source.new.automatic🧭": "Révisé automatic {arg0}"
+}

@@ -1,0 +1,201 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "device.counter": {
+      "defaultMessage": "{count, plural, one {{count} mobile signal} other {{count} mobile signals}}",
+      "variants": {
+        "one": "{count} mobile signal",
+        "other": "{count} mobile signals"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "variations": {
+            "device": {
+              "iphone": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld mobile signal"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld mobile signals"
+                      }
+                    }
+                  }
+                }
+              },
+              "mac": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld desktop signal"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld desktop signals"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "sourcePluralStates": {
+          "one": "translated",
+          "other": "translated"
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld mobile signal"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld mobile signals"
+                    }
+                  }
+                }
+              }
+            },
+            "mac": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld desktop signal"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld desktop signals"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "instruction": {
+      "defaultMessage": "Touch {arg0}",
+      "description": "Device-specific neutral instruction",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizationSources": {
+          "fr": {
+            "variations": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Touchez %@"
+                  }
+                },
+                "mac": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Cliquez sur %@"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleSourceLocalization": {
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Touch %@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %@"
+                }
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "localizations": {
+          "fr": {
+            "variationAxes": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Touchez %@"
+                  }
+                },
+                "mac": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Cliquez sur %@"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "translated",
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Touch %@"
+              }
+            },
+            "mac": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Click %@"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

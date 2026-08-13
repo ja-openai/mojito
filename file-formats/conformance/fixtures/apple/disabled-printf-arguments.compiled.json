@@ -1,0 +1,11 @@
+{
+  "harbor.implicit": "North %n %@",
+  "harbor.middle": "%@ dock %n %@",
+  "harbor.repeated": "%n%n %@ port",
+  "harbor.explicit": "%2$n %1$@ dock",
+  "harbor.mixed": "%2$n %@ dock",
+  "harbor.overlap": "%n %1$@ lane",
+  "harbor.integer": "%n %d markers",
+  "harbor.escaped": "%%n %@ tide",
+  "harbor.unicode.🧭": "🧭%n %@ reef"
+}

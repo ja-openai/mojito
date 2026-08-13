@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "files.remaining": {
+      "defaultMessage": "{files, plural, one {{files} file} other {{files} files}} remaining",
+      "variants": {
+        "one": "{files} file",
+        "other": "{files} files"
+      },
+      "placeholders": [
+        {
+          "name": "files",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@files@ remaining",
+        "applePluralRules": {
+          "files": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d file",
+              "other": "%d files"
+            }
+          }
+        },
+        "pluralVariable": "files",
+        "valueType": "d",
+        "applePlistExtras": {
+          "futureInteger": -7,
+          "futureEnabled": true
+        }
+      }
+    }
+  }
+}

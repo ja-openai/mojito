@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>device.after🧭</key>
+	<dict>
+		<key>NSStringDeviceSpecificRuleType</key>
+		<dict>
+			<key>iphone</key>
+			<dict>
+				<key>NSStringLocalizedFormatKey</key>
+				<string>%#@count@</string>
+				<key>count</key>
+				<dict>
+					<key>NSStringFormatSpecTypeKey</key>
+					<string>NSStringPluralRuleType</string>
+					<key>NSStringFormatValueTypeKey</key>
+					<string>lld</string>
+					<key>one</key>
+					<string>%lld%n %@ mobile repère</string>
+					<key>other</key>
+					<string>%lld%n %@ mobile repères</string>
+				</dict>
+			</dict>
+			<key>mac</key>
+			<dict>
+				<key>NSStringLocalizedFormatKey</key>
+				<string>%#@count@</string>
+				<key>count</key>
+				<dict>
+					<key>NSStringFormatSpecTypeKey</key>
+					<string>NSStringPluralRuleType</string>
+					<key>NSStringFormatValueTypeKey</key>
+					<string>lld</string>
+					<key>one</key>
+					<string>%lld%n %@ bureau repère</string>
+					<key>other</key>
+					<string>%lld%n %@ bureau repères</string>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+	<key>device.repeated</key>
+	<dict>
+		<key>NSStringDeviceSpecificRuleType</key>
+		<dict>
+			<key>iphone</key>
+			<dict>
+				<key>NSStringLocalizedFormatKey</key>
+				<string>%#@count@</string>
+				<key>count</key>
+				<dict>
+					<key>NSStringFormatSpecTypeKey</key>
+					<string>NSStringPluralRuleType</string>
+					<key>NSStringFormatValueTypeKey</key>
+					<string>lld</string>
+					<key>one</key>
+					<string>%lld%n%n %@ mobile repère</string>
+					<key>other</key>
+					<string>%lld%n%n %@ mobile repères</string>
+				</dict>
+			</dict>
+			<key>mac</key>
+			<dict>
+				<key>NSStringLocalizedFormatKey</key>
+				<string>%#@count@</string>
+				<key>count</key>
+				<dict>
+					<key>NSStringFormatSpecTypeKey</key>
+					<string>NSStringPluralRuleType</string>
+					<key>NSStringFormatValueTypeKey</key>
+					<string>lld</string>
+					<key>one</key>
+					<string>%lld%n%n %@ bureau repère</string>
+					<key>other</key>
+					<string>%lld%n%n %@ bureau repères</string>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+	<key>device.explicit</key>
+	<dict>
+		<key>NSStringDeviceSpecificRuleType</key>
+		<dict>
+			<key>iphone</key>
+			<dict>
+				<key>NSStringLocalizedFormatKey</key>
+				<string>%#@count@</string>
+				<key>count</key>
+				<dict>
+					<key>NSStringFormatSpecTypeKey</key>
+					<string>NSStringPluralRuleType</string>
+					<key>NSStringFormatValueTypeKey</key>
+					<string>lld</string>
+					<key>one</key>
+					<string>%1$lld %3$n %2$@ mobile repère</string>
+					<key>other</key>
+					<string>%1$lld %3$n %2$@ mobile repères</string>
+				</dict>
+			</dict>
+			<key>mac</key>
+			<dict>
+				<key>NSStringLocalizedFormatKey</key>
+				<string>%#@count@</string>
+				<key>count</key>
+				<dict>
+					<key>NSStringFormatSpecTypeKey</key>
+					<string>NSStringPluralRuleType</string>
+					<key>NSStringFormatValueTypeKey</key>
+					<string>lld</string>
+					<key>one</key>
+					<string>%1$lld %3$n %2$@ bureau repère</string>
+					<key>other</key>
+					<string>%1$lld %3$n %2$@ bureau repères</string>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+	<key>device.escaped</key>
+	<dict>
+		<key>NSStringDeviceSpecificRuleType</key>
+		<dict>
+			<key>iphone</key>
+			<dict>
+				<key>NSStringLocalizedFormatKey</key>
+				<string>%#@count@</string>
+				<key>count</key>
+				<dict>
+					<key>NSStringFormatSpecTypeKey</key>
+					<string>NSStringPluralRuleType</string>
+					<key>NSStringFormatValueTypeKey</key>
+					<string>lld</string>
+					<key>one</key>
+					<string>%lld%%n %@ mobile repère</string>
+					<key>other</key>
+					<string>%lld%%n %@ mobile repères</string>
+				</dict>
+			</dict>
+			<key>mac</key>
+			<dict>
+				<key>NSStringLocalizedFormatKey</key>
+				<string>%#@count@</string>
+				<key>count</key>
+				<dict>
+					<key>NSStringFormatSpecTypeKey</key>
+					<string>NSStringPluralRuleType</string>
+					<key>NSStringFormatValueTypeKey</key>
+					<string>lld</string>
+					<key>one</key>
+					<string>%lld%%n %@ bureau repère</string>
+					<key>other</key>
+					<string>%lld%%n %@ bureau repères</string>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+</dict>
+</plist>

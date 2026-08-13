@@ -1,0 +1,18 @@
+[
+  {
+    "en-x-harbor.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "First catalog locale en-x-HARBOR"
+    },
+    "en.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "Source"
+    }
+  },
+  {
+    "en-x-harbor.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "Second catalog locale en-x-harbor"
+    },
+    "en.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "Source"
+    }
+  }
+]

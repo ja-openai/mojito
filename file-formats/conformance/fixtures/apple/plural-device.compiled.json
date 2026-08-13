@@ -1,0 +1,15 @@
+{
+  "status": {
+    "NSStringLocalizedFormatKey": "%#@signals@ available",
+    "signals": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "ld",
+      "one": "%ld signal",
+      "other": "%ld signals"
+    },
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": "Touch signal list",
+      "applewatch": "Open signal list"
+    }
+  }
+}

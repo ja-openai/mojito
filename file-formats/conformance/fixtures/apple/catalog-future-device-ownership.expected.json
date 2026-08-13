@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "harbor.future.device.fallback🧭": {
+      "defaultMessage": "Ordinary fallback {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "variations": {
+            "device": {
+              "futurecar": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Future fallback %@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Ordinary fallback %@"
+                }
+              }
+            }
+          }
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "futurecar": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Future fallback %@"
+              }
+            },
+            "other": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Ordinary fallback %@"
+              }
+            }
+          }
+        },
+        "defaultDevice": "other",
+        "sourceState": "translated"
+      }
+    },
+    "harbor.future.device.only🧭": {
+      "defaultMessage": "Future only {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "variations": {
+            "device": {
+              "futurecar": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Future only %@"
+                }
+              }
+            }
+          }
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "futurecar": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Future only %@"
+              }
+            }
+          }
+        },
+        "defaultDevice": "futurecar",
+        "sourceState": "translated"
+      }
+    },
+    "harbor.future.device🧭": {
+      "defaultMessage": "Phone {arg0} harbor",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Phone %@ harbor"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Mac %@ harbor"
+                }
+              },
+              "futurecar": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Future %@ harbor"
+                }
+              },
+              "raft": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Private scalar %@ harbor"
+                }
+              },
+              "🧭raft": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Compass %@ harbor"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Fallback %@ harbor"
+                }
+              }
+            }
+          }
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Phone %@ harbor"
+              }
+            },
+            "mac": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Mac %@ harbor"
+              }
+            },
+            "futurecar": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Future %@ harbor"
+              }
+            },
+            "raft": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Private scalar %@ harbor"
+              }
+            },
+            "🧭raft": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Compass %@ harbor"
+              }
+            },
+            "other": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Fallback %@ harbor"
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "sourceState": "translated"
+      }
+    }
+  }
+}

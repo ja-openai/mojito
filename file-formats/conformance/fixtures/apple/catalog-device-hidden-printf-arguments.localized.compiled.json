@@ -1,0 +1,92 @@
+{
+  "en.lproj/catalog.stringsdict": {
+    "device.after🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld%n %@ mobile repère",
+            "other": "%lld%n %@ mobile repères"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld%n %@ bureau repère",
+            "other": "%lld%n %@ bureau repères"
+          }
+        }
+      }
+    },
+    "device.escaped": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld%%n %@ mobile repère",
+            "other": "%lld%%n %@ mobile repères"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld%%n %@ bureau repère",
+            "other": "%lld%%n %@ bureau repères"
+          }
+        }
+      }
+    },
+    "device.explicit": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n %2$@ mobile repère",
+            "other": "%1$lld %3$n %2$@ mobile repères"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n %2$@ bureau repère",
+            "other": "%1$lld %3$n %2$@ bureau repères"
+          }
+        }
+      }
+    },
+    "device.repeated": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld%n%n %@ mobile repère",
+            "other": "%lld%n%n %@ mobile repères"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld%n%n %@ bureau repère",
+            "other": "%lld%n%n %@ bureau repères"
+          }
+        }
+      }
+    }
+  }
+}

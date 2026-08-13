@@ -1,0 +1,369 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "harbor.after": {
+      "defaultMessage": "{count, plural, one {{count} {arg2} beacon} other {{count} {arg2} beacons}}",
+      "variants": {
+        "one": "{count} {arg2} beacon",
+        "other": "{count} {arg2} beacons"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg2",
+          "source": "%@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@count@",
+        "applePluralRules": {
+          "count": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d%n %@ beacon",
+              "other": "%d%n %@ beacons"
+            }
+          }
+        },
+        "pluralVariable": "count",
+        "valueType": "d",
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 2
+              }
+            ],
+            "other": [
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 2
+              }
+            ]
+          }
+        }
+      }
+    },
+    "harbor.escaped": {
+      "defaultMessage": "{count, plural, one {{count}%n {arg1} beacon} other {{count}%n {arg1} beacons}}",
+      "variants": {
+        "one": "{count}%n {arg1} beacon",
+        "other": "{count}%n {arg1} beacons"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@count@",
+        "applePluralRules": {
+          "count": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d%%n %@ beacon",
+              "other": "%d%%n %@ beacons"
+            }
+          }
+        },
+        "pluralVariable": "count",
+        "valueType": "d"
+      }
+    },
+    "harbor.explicit": {
+      "defaultMessage": "{count, plural, one {{count}  {arg1} beacon} other {{count}  {arg1} beacons}}",
+      "variants": {
+        "one": "{count}  {arg1} beacon",
+        "other": "{count}  {arg1} beacons"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%2$@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@count@",
+        "applePluralRules": {
+          "count": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d %3$n %2$@ beacon",
+              "other": "%d %3$n %2$@ beacons"
+            }
+          }
+        },
+        "pluralVariable": "count",
+        "valueType": "d",
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ],
+            "other": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ]
+          }
+        }
+      }
+    },
+    "harbor.overlap": {
+      "defaultMessage": "{count, plural, one {{count}  {arg1} beacon} other {{count}  {arg1} beacons}}",
+      "variants": {
+        "one": "{count}  {arg1} beacon",
+        "other": "{count}  {arg1} beacons"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@count@",
+        "applePluralRules": {
+          "count": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d %2$n %@ beacon",
+              "other": "%d %2$n %@ beacons"
+            }
+          }
+        },
+        "pluralVariable": "count",
+        "valueType": "d",
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 8,
+                "source": "%2$n",
+                "argumentPosition": 2
+              }
+            ],
+            "other": [
+              {
+                "position": 8,
+                "source": "%2$n",
+                "argumentPosition": 2
+              }
+            ]
+          }
+        }
+      }
+    },
+    "harbor.positioned": {
+      "defaultMessage": "{count, plural, one {{count} {arg2} beacon} other {{count} {arg2} beacons}}",
+      "variants": {
+        "one": "{count} {arg2} beacon",
+        "other": "{count} {arg2} beacons"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg2",
+          "source": "%3$@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@count@",
+        "applePluralRules": {
+          "count": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d%n %3$@ beacon",
+              "other": "%d%n %3$@ beacons"
+            }
+          }
+        },
+        "pluralVariable": "count",
+        "valueType": "d",
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 2
+              }
+            ],
+            "other": [
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 2
+              }
+            ]
+          }
+        }
+      }
+    },
+    "harbor.repeated": {
+      "defaultMessage": "{count, plural, one {{count} {arg3} beacon} other {{count} {arg3} beacons}}",
+      "variants": {
+        "one": "{count} {arg3} beacon",
+        "other": "{count} {arg3} beacons"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg3",
+          "source": "%@",
+          "kind": "string",
+          "position": 4
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@count@",
+        "applePluralRules": {
+          "count": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d%n%n %@ beacon",
+              "other": "%d%n%n %@ beacons"
+            }
+          }
+        },
+        "pluralVariable": "count",
+        "valueType": "d",
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 2
+              },
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 3
+              }
+            ],
+            "other": [
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 2
+              },
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 3
+              }
+            ]
+          }
+        }
+      }
+    },
+    "harbor.unicode.🧭": {
+      "defaultMessage": "{count, plural, one {{count} {arg2} 🧭} other {{count} {arg2} 🧭🧭}}",
+      "variants": {
+        "one": "{count} {arg2} 🧭",
+        "other": "{count} {arg2} 🧭🧭"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg2",
+          "source": "%@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@count@",
+        "applePluralRules": {
+          "count": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d%n %@ 🧭",
+              "other": "%d%n %@ 🧭🧭"
+            }
+          }
+        },
+        "pluralVariable": "count",
+        "valueType": "d",
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 2
+              }
+            ],
+            "other": [
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 2
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

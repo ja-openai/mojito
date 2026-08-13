@@ -1,0 +1,14 @@
+{
+  "harbor.device.🧭#@device#iphone": "Touchez {arg0} quai tranquille",
+  "harbor.device.🧭#@device#mac": "Cliquez {arg0} quai profond",
+  "harbor.device.🧭#@device#applewatch": "Suivez {arg0} montre",
+  "harbor.device.literal#@device#iphone": "Touchez {arg0}%n quai",
+  "harbor.device.literal#@device#mac": "Cliquez {arg0}%n port",
+  "harbor.width#@width#8": "Près",
+  "harbor.width#@width#040": "Suivez la rive calme",
+  "harbor.width#@width#80": "Suivez la vaste rive claire",
+  "harbor.width.line#@width#5": "Bas\nquai",
+  "harbor.width.line#@width#18": "Eau\ncalme devant",
+  "harbor.width.literal#@width#4": "B%n",
+  "harbor.width.literal#@width#12": "B%n baie calme"
+}

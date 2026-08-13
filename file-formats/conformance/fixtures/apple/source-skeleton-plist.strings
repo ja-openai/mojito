@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <!-- This root note does not describe a dictionary entry. -->
+  <dict>
+    <!-- Preserve the original entity spelling in this native key. -->
+    <key>escaped&amp;key</key>
+    <!-- Structural comments between key and value remain untouched. -->
+    <string>North &amp; pier</string>
+
+    <!-- Both the key and its source value use literal CDATA. -->
+    <key><![CDATA[cdata<&>key]]></key>
+    <string><![CDATA[<quiet> & calm]]></string>
+
+    <!-- Mixed XML text and CDATA retain their original boundaries. -->
+    <key>mixed.key</key><string>North <![CDATA[<quiet> & calm]]> pier</string>
+
+    <!-- A self-closing value expands without rewriting its attributes. -->
+    <key>empty.key</key><string custom="reserved" />
+
+    <!-- Explicit empty elements use a zero-width source slot. -->
+    <key>explicit.empty</key><string></string>
+
+    <!-- Numeric references and positional Foundation formatters remain native. -->
+    <key>newline.key</key><string>North&#13;South</string>
+    <key>placeholder.key</key><string>Ready %1$@</string>
+    <key>percent.newline</key><string>North%nSouth</string>
+    <key>percent.literal</key><string>Ready 50%%</string>
+
+    <!-- Supplementary characters precede later byte-owned values. -->
+    <key>unicode.🧭</key><string>équipe</string>
+  </dict>
+</plist>

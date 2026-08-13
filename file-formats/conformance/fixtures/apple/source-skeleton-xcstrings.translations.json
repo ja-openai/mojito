@@ -1,0 +1,8 @@
+{
+  "escaped.route_🧭": "Sud \"quai\" 🙂 {arg0}",
+  "plural.count#one": "{count} signal léger",
+  "plural.count#other": "{count} signaux légers",
+  "device.route": "Touchez {arg0}",
+  "device.count#one": "{count} route mobile",
+  "device.count#other": "{count} routes mobiles"
+}

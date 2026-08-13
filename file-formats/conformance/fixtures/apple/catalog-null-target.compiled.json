@@ -1,0 +1,8 @@
+{
+  "en.lproj/catalog.strings": {
+    "nullable.target": "Quiet source"
+  },
+  "es.lproj/catalog.strings": {
+    "nullable.target": "Fuente silenciosa"
+  }
+}

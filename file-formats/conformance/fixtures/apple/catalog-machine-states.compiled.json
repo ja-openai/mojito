@@ -1,0 +1,9 @@
+{
+  "en.lproj/catalog.strings": {
+    "machine.signal": "Orbital route %@"
+  },
+  "fr.lproj/catalog.strings": {
+    "machine.signal": "Trajet orbital %@",
+    "nullable.signal": "Port paisible"
+  }
+}

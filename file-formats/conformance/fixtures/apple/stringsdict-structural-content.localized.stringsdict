@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+  <!-- Structural comments belong to the container, never to scalar content. -->
+  <?native preserve="structure"?>
+  <dict>
+    <!-- A dictionary key may contain native CDATA text. -->
+    <key><![CDATA[dock&signals]]></key>
+    <!-- Comments between dictionary keys and values are valid. -->
+    <dict>
+      <!-- Literal and CDATA string fragments remain one native format. -->
+      <key>NSStringLocalizedFormatKey</key>
+      <string>%#@signals@<![CDATA[ near north shore]]></string>
+
+      <!-- Comments and processing instructions between plural fields are valid. -->
+      <key>signals</key>
+      <dict>
+        <!-- The required Foundation selector type is protected. -->
+        <key>NSStringFormatSpecTypeKey</key>
+        <string>NSStringPluralRuleType</string>
+        <key>NSStringFormatValueTypeKey</key>
+        <string>ld</string>
+        <key><![CDATA[one]]></key>
+        <string><![CDATA[%ld balise claire]]></string>
+        <!-- Preserve this structural note while replacing only owned categories. -->
+        <key>other</key>
+        <string>%ld balises claires</string>
+      </dict>
+
+      <!-- Typed future metadata has strict scalar and container boundaries. -->
+      <key>futureFlags</key>
+      <array>
+        <!-- Explicitly empty booleans are equivalent to self-closing booleans. -->
+        <true></true>
+        <?native preserve="array"?>
+        <false/>
+        <string><![CDATA[Protected <north> & steady]]></string>
+        <integer>7</integer>
+      </array>
+      <!-- Real numbers accept CDATA even though integers, dates, and data do not. -->
+      <key>futureRatio</key><real><![CDATA[1.5]]></real>
+    </dict>
+  </dict>
+</plist>

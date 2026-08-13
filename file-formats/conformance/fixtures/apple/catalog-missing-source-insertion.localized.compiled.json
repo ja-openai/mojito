@@ -1,0 +1,20 @@
+{
+  "en.lproj/catalog.strings": {
+    "%@ %n %@ anchorage": "%@ %n %@ mouillage",
+    "North %n %@ 🧭": "Ouest %n %@ 🧭",
+    "Tide %%n %@ marker": "Marée %%n %@ balise",
+    "West %2$n %1$@ pier": "Ouest %2$n %1$@ jetée",
+    "harbor.missing.plain🧭": "Abri \"paisible\" 🧭",
+    "owned.scalar": "Stable %@ rive"
+  },
+  "fr.lproj/catalog.strings": {
+    "%@ %n %@ anchorage": "%@ %@ mouillage existant",
+    "North %n %@ 🧭": "Nord %@ conservé",
+    "Private missing pier": "Anse privée protégée",
+    "Private null pier": "Jetée privée protégée",
+    "Tide %%n %@ marker": "Marée %%n %@ existante",
+    "West %2$n %1$@ pier": "Ouest %1$@ jetée existante",
+    "harbor.missing.plain🧭": "Abri existant",
+    "owned.scalar": "Rive %@ protégée"
+  }
+}

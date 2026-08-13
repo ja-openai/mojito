@@ -1,0 +1,579 @@
+{
+  "sourceLanguage": "sr",
+  "version": "1.0",
+  "strings": {
+    "harbor.first.substitution.missing.scalar🧭": {
+      "comment": "Pinned CLDR owns first-locale Xcode substitutions",
+      "localizations": {
+        "sr-Cyrl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guide %3$@: %#@lanes@ beside %2$#@lights@"
+          },
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guide %3$@: %#@lanes@ beside %2$#@lights@"
+          },
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.first.substitution.null.scalar🧭": {
+      "comment": "Pinned CLDR owns first-locale Xcode substitutions",
+      "localizations": {
+        "sr-Cyrl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guide %3$@: %#@lanes@ beside %2$#@lights@"
+          },
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guide %3$@: %#@lanes@ beside %2$#@lights@"
+          },
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "ru": null
+      }
+    },
+    "harbor.first.substitution.missing.device🧭": {
+      "comment": "Pinned CLDR owns first-locale Xcode substitutions",
+      "localizations": {
+        "sr-Cyrl": {
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.first.substitution.null.device🧭": {
+      "comment": "Pinned CLDR owns first-locale Xcode substitutions",
+      "localizations": {
+        "sr-Cyrl": {
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+                }
+              }
+            }
+          }
+        },
+        "ru": null
+      }
+    },
+    "Private first missing Russian substitution": {
+      "shouldTranslate": false,
+      "localizations": {
+        "sr-Cyrl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guide %3$@: %#@lanes@ beside %2$#@lights@"
+          },
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Private first null Russian substitution": {
+      "shouldTranslate": false,
+      "localizations": {
+        "sr-Cyrl": {
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+                }
+              }
+            }
+          }
+        },
+        "ru": null
+      }
+    }
+  }
+}

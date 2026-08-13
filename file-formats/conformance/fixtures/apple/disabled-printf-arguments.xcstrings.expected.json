@@ -1,0 +1,254 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "messages": {
+    "harbor.escaped": {
+      "defaultMessage": "%n {arg0} tide",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%%n %@ tide"
+          }
+        },
+        "sourceState": "translated"
+      }
+    },
+    "harbor.explicit": {
+      "defaultMessage": " {arg0} dock",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 0,
+            "source": "%2$n",
+            "argumentPosition": 2
+          }
+        ],
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$n %1$@ dock"
+          }
+        },
+        "sourceState": "translated"
+      }
+    },
+    "harbor.implicit": {
+      "defaultMessage": "North  {arg1}",
+      "placeholders": [
+        {
+          "name": "arg1",
+          "source": "%@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 6,
+            "source": "%n",
+            "argumentPosition": 1
+          }
+        ],
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "North %n %@"
+          }
+        },
+        "sourceState": "translated"
+      }
+    },
+    "harbor.integer": {
+      "defaultMessage": " {arg1} markers",
+      "placeholders": [
+        {
+          "name": "arg1",
+          "source": "%d",
+          "kind": "integer",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 0,
+            "source": "%n",
+            "argumentPosition": 1
+          }
+        ],
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%n %d markers"
+          }
+        },
+        "sourceState": "translated"
+      }
+    },
+    "harbor.middle": {
+      "defaultMessage": "{arg0} dock  {arg2}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        },
+        {
+          "name": "arg2",
+          "source": "%@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 12,
+            "source": "%n",
+            "argumentPosition": 2
+          }
+        ],
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ dock %n %@"
+          }
+        },
+        "sourceState": "translated"
+      }
+    },
+    "harbor.mixed": {
+      "defaultMessage": " {arg0} dock",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 0,
+            "source": "%2$n",
+            "argumentPosition": 2
+          }
+        ],
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$n %@ dock"
+          }
+        },
+        "sourceState": "translated"
+      }
+    },
+    "harbor.overlap": {
+      "defaultMessage": " {arg0} lane",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 0,
+            "source": "%n",
+            "argumentPosition": 1
+          }
+        ],
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%n %1$@ lane"
+          }
+        },
+        "sourceState": "translated"
+      }
+    },
+    "harbor.repeated": {
+      "defaultMessage": " {arg2} port",
+      "placeholders": [
+        {
+          "name": "arg2",
+          "source": "%@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 0,
+            "source": "%n",
+            "argumentPosition": 1
+          },
+          {
+            "position": 0,
+            "source": "%n",
+            "argumentPosition": 2
+          }
+        ],
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%n%n %@ port"
+          }
+        },
+        "sourceState": "translated"
+      }
+    },
+    "harbor.unicode.🧭": {
+      "defaultMessage": "🧭 {arg1} reef",
+      "placeholders": [
+        {
+          "name": "arg1",
+          "source": "%@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 1,
+            "source": "%n",
+            "argumentPosition": 1
+          }
+        ],
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🧭%n %@ reef"
+          }
+        },
+        "sourceState": "translated"
+      }
+    }
+  },
+  "locale": "en"
+}

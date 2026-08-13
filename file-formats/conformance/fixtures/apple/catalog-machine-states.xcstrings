@@ -1,0 +1,47 @@
+{
+  "sourceLanguage": "en",
+  "version": 7,
+  "nullableCatalogMetadata": null,
+  "rolloutRevision": 4,
+  "strings": {
+    "machine.signal": {
+      "comment": null,
+      "extractionState": "future_extraction",
+      "shouldTranslate": null,
+      "customDescriptorMetadata": null,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "machine_translated",
+            "value": "Orbital route %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "future_review",
+            "value": "Trajet orbital %@"
+          }
+        }
+      }
+    },
+    "nullable.signal": {
+      "comment": null,
+      "extractionState": null,
+      "shouldTranslate": null,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Quiet harbor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "machine_translated",
+            "value": "Port paisible"
+          }
+        }
+      }
+    }
+  }
+}

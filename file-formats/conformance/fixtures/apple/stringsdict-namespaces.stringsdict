@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist xmlns="urn:neutral:property-list"
+       xmlns:portable="urn:neutral:source-metadata"
+       portable:document="preserve"
+       version="1.0">
+  <dict portable:container="north">
+    <key portable:identity="message">dock.namespace</key>
+    <dict portable:ownership="protected">
+      <key portable:identity="format">NSStringLocalizedFormatKey</key>
+      <string portable:note="keep">%#@signals@ across sheltered water</string>
+      <key portable:identity="plural">signals</key>
+      <dict portable:ownership="plural">
+        <key portable:identity="type">NSStringFormatSpecTypeKey</key>
+        <string portable:note="platform">NSStringPluralRuleType</string>
+        <key portable:identity="value-type">NSStringFormatValueTypeKey</key>
+        <string portable:note="platform">ld</string>
+        <key portable:identity="singular">one</key>
+        <string portable:note="translate">%ld harbor signal</string>
+        <key portable:identity="plural">other</key>
+        <string portable:note="translate"><![CDATA[%ld harbor signals]]></string>
+        <key portable:identity="protected-rule">futureRulePriority</key>
+        <integer portable:note="rule-owned">11</integer>
+      </dict>
+
+      <key portable:identity="protected-message">futurePriority</key>
+      <integer portable:note="message-owned">7</integer>
+      <key portable:identity="protected-array">futureFlags</key>
+      <array portable:note="platform-owned">
+        <true portable:flag="first" />
+        <false portable:flag="second"></false>
+        <string portable:note="untouched">Protected &amp; stable</string>
+      </array>
+    </dict>
+  </dict>
+</plist>

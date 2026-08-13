@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "controls": {
+      "defaultMessage": "zero\u0000 one\u0001 bell\u0007 back\b form\f del"
+    },
+    "emoji🙂": {
+      "defaultMessage": "雪🙂"
+    },
+    "positioned": {
+      "defaultMessage": "{arg1} guides {arg0} routes at 75%",
+      "description": "Positional object and integer arguments retain their native spellings.",
+      "placeholders": [
+        {
+          "name": "arg1",
+          "source": "%2$@",
+          "kind": "string",
+          "position": 2
+        },
+        {
+          "name": "arg0",
+          "source": "%1$lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ]
+    },
+    "printf_line": {
+      "defaultMessage": "northready",
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 5,
+            "source": "%n"
+          }
+        ]
+      }
+    },
+    "punctuation\\\"=;key": {
+      "defaultMessage": "Pilot \"north\"\nDeck\tA\\B",
+      "description": "Translator context safely contains */ and /* without terminating a block."
+    },
+    "snow☃": {
+      "defaultMessage": "Quiet snow"
+    },
+    "-private": {
+      "defaultMessage": "Private-use sort boundary"
+    }
+  }
+}

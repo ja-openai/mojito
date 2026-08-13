@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?neutral owner="north"?>
+<plist xmlns="urn:neutral:property-list"
+       xmlns:portable="urn:neutral:source-metadata"
+       xml:lang="en"
+       portable:document="preserve"
+       version="1.0">
+  <dict xmlns="" portable:container="north">
+    <!-- Bound attributes and namespace declarations are platform-owned source bytes. -->
+    <key portable:identity="route">harbor.route</key>
+    <string portable:note="preserve" xml:space="preserve">Guide %1$@ across namespaced water</string>
+
+    <key portable:identity="empty">quiet.empty</key>
+    <string portable:note="protected" />
+
+    <key portable:identity="cdata"><![CDATA[signal&calm]]></key>
+    <string portable:note="literal"><![CDATA[<calm> & clear]]></string>
+  </dict>
+</plist>
+

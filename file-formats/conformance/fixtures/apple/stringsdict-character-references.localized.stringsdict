@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0" neutral="&#00000000065;">
+  <!-- Ignore long reference-looking text in comments and platform instructions. -->
+  <?platform protected="&#00000000065;"?>
+  <dict>
+    <key>dock&#00000046;entities</key>
+    <dict>
+      <key>NSStringLocalizedFormatKey</key>
+      <string>%#@signals@ near &#00000065; dock</string>
+      <key>sig&#00000110;als</key>
+      <dict>
+        <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+        <key>NSStringFormatValueTypeKey</key><string>ld</string>
+        <key>&#00000111;ne</key><string>%ld balise claire</string>
+        <key>&#x0000006F;ther</key><string><![CDATA[%ld balises claires]]></string>
+        <key>futureRuleRatio</key><real>&#x00000031;.25</real>
+      </dict>
+      <key>futureRatio</key><real>&#00000049;.5</real>
+      <key>futureLiteral</key><string><![CDATA[Protected &#00000000065;]]></string>
+      <key>futureAttribute</key><string neutral="&#00000000065;">Untouched</string>
+      <key>futureFlags</key><array><true/><false/></array>
+    </dict>
+  </dict>
+</plist>

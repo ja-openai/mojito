@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+  <key>status</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%#@signals@ available</string>
+    <key>signals</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%ld signal</string>
+      <key>other</key>
+      <string>%ld signals</string>
+    </dict>
+    <key>NSStringDeviceSpecificRuleType</key>
+    <dict>
+      <key>applewatch</key>
+      <string>Open signal list</string>
+      <key>iphone</key>
+      <string>Touch signal list</string>
+    </dict>
+  </dict>
+</dict>
+</plist>

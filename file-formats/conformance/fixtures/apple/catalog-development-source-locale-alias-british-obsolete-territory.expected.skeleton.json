@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"sourceLanguage\": \"en-GB\",\n  \"version\": \"1.0\",\n  \"strings\": {\n    \"harbor.development.source.scalar🧭\": {\n      \"comment\": \"Compiler-equivalent development localization owns source text\",\n      \"localizations\": {\n        \"en-UK\": {\n          \"stringUnit\": {\n            \"state\": \"needs_review\",\n            \"value\": \"%2$@ %1$lld original beacon\"\n          }\n        },\n        \"de\": {\n          \"stringUnit\": {\n            \"state\": \"future_review\",\n            \"value\": \"Deutscher geschützter Hafen\"\n          }\n        }\n      }\n    },\n    \"harbor.development.source.plural🧭\": {\n      \"comment\": \"Aliased development locale owns plural source and states\",\n      \"localizations\": {\n        \"en-UK\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"%1$lld original beacon %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld original beacons %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"de\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld Signal %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"future_review\",\n                  \"value\": \"%1$lld Signale %2$@\"\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"Private development-source harbor\": {\n      \"shouldTranslate\": false,\n      \"localizations\": {\n        \"en-UK\": {\n          \"stringUnit\": {\n            \"state\": \"needs_review\",\n            \"value\": \"Protected original source\"\n          }\n        },\n        \"de\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Geschützter Quellhafen\"\n          }\n        }\n      }\n    }\n  }\n}\n",
+  "slots": [
+    {
+      "id": "harbor.development.source.scalar🧭",
+      "start": 323,
+      "end": 350
+    },
+    {
+      "id": "harbor.development.source.plural🧭",
+      "start": 887,
+      "end": 914,
+      "variant": "one"
+    },
+    {
+      "id": "harbor.development.source.plural🧭",
+      "start": 1077,
+      "end": 1105,
+      "variant": "other"
+    }
+  ]
+}

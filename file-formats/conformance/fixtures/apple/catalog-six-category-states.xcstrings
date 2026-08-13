@@ -1,0 +1,70 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "orbital.count": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "machine_translated",
+                  "value": "%lld silent signals"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "new",
+                  "value": "%lld single signal"
+                }
+              },
+              "two": {
+                "stringUnit": {
+                  "state": "future_review",
+                  "value": "%lld paired signals"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld nearby signals"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "stale",
+                  "value": "%lld distant signals"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld orbital signals"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "machine_translated",
+                  "value": "%lld signal orbital"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "future_review",
+                  "value": "%lld signaux orbitaux"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "dock.namespace": {
+    "NSStringLocalizedFormatKey": "%#@signals@ across sheltered water",
+    "futureFlags": [
+      true,
+      false,
+      "Protected & stable"
+    ],
+    "futurePriority": 7,
+    "signals": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "ld",
+      "futureRulePriority": 11,
+      "one": "%ld balise calme",
+      "other": "%ld balises calmes"
+    }
+  }
+}

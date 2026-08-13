@@ -1,0 +1,33 @@
+{
+  "en.lproj/catalog.strings": {
+    "harbor.device": "Large\nquai",
+    "harbor.line": "Quai\ntranquille",
+    "harbor.literal": "Quai%%n tranquille",
+    "harbor.positioned.🧭": "🧭Cap vers%2$n le quai%n",
+    "harbor.zero": "Quai tra%nnquille"
+  },
+  "en.lproj/catalog.stringsdict": {
+    "harbor.device": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "Port m%nobile",
+        "mac": "Bureau%%n paisible"
+      }
+    },
+    "harbor.plural": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "d",
+        "one": "%d%n balise",
+        "other": "%d%n%n balises"
+      }
+    }
+  },
+  "fr.lproj/catalog.stringsdict": {
+    "harbor.device": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "Quai existant"
+      }
+    }
+  }
+}

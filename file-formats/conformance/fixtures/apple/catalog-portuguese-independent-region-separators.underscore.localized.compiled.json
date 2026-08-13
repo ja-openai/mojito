@@ -1,0 +1,17 @@
+{
+  "de.lproj/catalog.strings": {
+    "harbor.portuguese.region.separator🧭": "Signal %@"
+  },
+  "en.lproj/catalog.strings": {
+    "Private independent Portuguese separator": "Private source %@",
+    "harbor.portuguese.region.separator🧭": "Source beacon %@"
+  },
+  "pt-BR.lproj/catalog.strings": {
+    "Private independent Portuguese separator": "Private Sinal hífen %@",
+    "harbor.portuguese.region.separator🧭": "Sinal hífen %@"
+  },
+  "pt_BR.lproj/catalog.strings": {
+    "Private independent Portuguese separator": "Private Sinal sublinhado %@",
+    "harbor.portuguese.region.separator🧭": "Sinal sublinhado traduzido %@"
+  }
+}

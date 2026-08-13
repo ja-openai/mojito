@@ -1,0 +1,163 @@
+{
+  "files.remaining": {
+    "NSStringLocalizedFormatKey": "%#@files@ remaining",
+    "files": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "NSStringFutureRuleMetadata": "Fresh <rule> & annotation",
+      "futureRuleArray": [
+        "rule text",
+        false,
+        {
+          "$applePlistType": "data",
+          "base64": "AP8="
+        },
+        {
+          "$applePlistType": "real",
+          "bits": "4004000000000000"
+        }
+      ],
+      "futureRuleData": {
+        "$applePlistType": "data",
+        "base64": "ZnJlc2ggbmV1dHJhbCBieXRlcw=="
+      },
+      "futureRuleDate": {
+        "$applePlistType": "date",
+        "value": "2004-05-06T07:08:09Z"
+      },
+      "futureRuleDictionary": {
+        "NSStringFormatSpecTypeKey": "nested lookalike",
+        "count": 23,
+        "enabled": false
+      },
+      "futureRuleEnabled": true,
+      "futureRuleNegative": -19,
+      "one": "%d file",
+      "other": "%d files"
+    },
+    "futureArray": [
+      "first neutral route",
+      true,
+      -12,
+      {
+        "$applePlistType": "real",
+        "bits": "3fc0000000000000"
+      },
+      {
+        "$applePlistType": "data",
+        "base64": "AA+A/w=="
+      },
+      {
+        "$applePlistType": "date",
+        "value": "2026-03-06T04:40:39Z"
+      },
+      {
+        "nested": [
+          false,
+          "quiet harbor",
+          {
+            "$applePlistType": "real",
+            "bits": "8000000000000000"
+          }
+        ]
+      },
+      []
+    ],
+    "futureData": {
+      "$applePlistType": "data",
+      "base64": "AA=="
+    },
+    "futureDate": {
+      "$applePlistType": "date",
+      "value": "2026-08-11T12:34:56Z"
+    },
+    "futureDateBeforeAppleEpoch": {
+      "$applePlistType": "date",
+      "value": "1997-01-02T03:04:05Z"
+    },
+    "futureDisabled": false,
+    "futureEmptyData": {
+      "$applePlistType": "data",
+      "base64": ""
+    },
+    "futureEmptyDictionary": {},
+    "futureEnabled": true,
+    "futureHexadecimal": 255,
+    "futureLabel": "Fresh <amber> & quiet harbor",
+    "futureMaximum": 18446744073709551615,
+    "futureMinimum": -9223372036854775808,
+    "futureNegative": -16,
+    "futureNegativeInfinity": {
+      "$applePlistType": "real",
+      "bits": "fff0000000000000"
+    },
+    "futureNegativeZero": {
+      "$applePlistType": "real",
+      "bits": "8000000000000000"
+    },
+    "futureNestedMetadata": {
+      "NSStringLocalizedFormatKey": "reserved-looking nested value",
+      "child": {
+        "count": -12,
+        "enabled": false,
+        "notes": "A neutral & original signal"
+      },
+      "": "private-use sorting",
+      "🛰": "supplementary sorting"
+    },
+    "futureNotANumber": {
+      "$applePlistType": "real",
+      "bits": "7ff8000000000000"
+    },
+    "futurePositive": 7,
+    "futurePositiveInfinity": {
+      "$applePlistType": "real",
+      "bits": "7ff0000000000000"
+    },
+    "futurePreciseReal": {
+      "$applePlistType": "real",
+      "bits": "3ff3c0ca428c59fb"
+    },
+    "futureReal": {
+      "$applePlistType": "real",
+      "bits": "3fc0000000000000"
+    },
+    "futureSentinelDictionary": {
+      "$applePlistType": "dictionary",
+      "entries": [
+        {
+          "key": "$applePlistType",
+          "value": "real native field"
+        },
+        {
+          "key": "bits",
+          "value": "not an encoded number"
+        },
+        {
+          "key": "nested",
+          "value": {
+            "$applePlistType": "dictionary",
+            "entries": [
+              {
+                "key": "$applePlistType",
+                "value": "data native field"
+              },
+              {
+                "key": "base64",
+                "value": "not encoded metadata"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "futureTinyReal": {
+      "$applePlistType": "real",
+      "bits": "0c06e93f5da2824c"
+    },
+    "futureUnknownRule": {
+      "NSStringFormatSpecTypeKey": "NSStringFutureRuleType",
+      "enabled": true
+    }
+  }
+}

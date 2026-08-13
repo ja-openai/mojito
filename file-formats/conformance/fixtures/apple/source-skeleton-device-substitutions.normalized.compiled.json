@@ -1,0 +1,133 @@
+{
+  "en.lproj/catalog.stringsdict": {
+    "device.echo": {
+      "NSStringDeviceSpecificRuleType": {
+        "mac": {
+          "count": {
+            "one": "%d clear echo",
+            "other": "%d clear echoes",
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d"
+          },
+          "NSStringLocalizedFormatKey": "%1$#@count@ after %1$#@count@"
+        },
+        "iphone": {
+          "count": {
+            "one": "%d clear echo",
+            "other": "%d clear echoes",
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d"
+          },
+          "NSStringLocalizedFormatKey": "%1$#@count@ before %1$#@count@"
+        }
+      }
+    },
+    "device.unicode": {
+      "NSStringDeviceSpecificRuleType": {
+        "mac": {
+          "value": {
+            "one": "%lld soft signal",
+            "other": "%lld soft signals",
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld"
+          },
+          "NSStringLocalizedFormatKey": "Desktop %1$#@value@"
+        },
+        "ipad": {
+          "value": {
+            "one": "%lld soft signal",
+            "other": "%lld soft signals",
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld"
+          },
+          "NSStringLocalizedFormatKey": "Guide %1$#@value@"
+        }
+      }
+    },
+    "device.harbor🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "mac": {
+          "lanes": {
+            "one": "%lld open lane",
+            "other": "%lld open lanes",
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld"
+          },
+          "lights": {
+            "one": "%d dock light",
+            "other": "%d dock lights",
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d"
+          },
+          "NSStringLocalizedFormatKey": "Click %3$@: %2$#@lights@ around %1$#@lanes@"
+        },
+        "iphone": {
+          "lanes": {
+            "one": "%lld open lane",
+            "other": "%lld open lanes",
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld"
+          },
+          "lights": {
+            "one": "%d dock light",
+            "other": "%d dock lights",
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d"
+          },
+          "NSStringLocalizedFormatKey": "Touch %3$@: %1$#@lanes@ beside %2$#@lights@"
+        },
+        "applewatch": {
+          "lanes": {
+            "one": "%lld open lane",
+            "other": "%lld open lanes",
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld"
+          },
+          "lights": {
+            "one": "%d dock light",
+            "other": "%d dock lights",
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d"
+          },
+          "NSStringLocalizedFormatKey": "Watch %3$@: %1$#@lanes@ / %2$#@lights@"
+        }
+      }
+    }
+  },
+  "fr.lproj/catalog.stringsdict": {
+    "device.harbor🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "mac": {
+          "lanes": {
+            "one": "%lld voie protégée",
+            "other": "%lld voies protégées",
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld"
+          },
+          "lights": {
+            "one": "%d feu protégé",
+            "other": "%d feux protégés",
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d"
+          },
+          "NSStringLocalizedFormatKey": "Cliquez %3$@: %2$#@lights@ vers %1$#@lanes@"
+        },
+        "iphone": {
+          "lanes": {
+            "one": "%lld voie protégée",
+            "other": "%lld voies protégées",
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld"
+          },
+          "lights": {
+            "one": "%d feu protégé",
+            "other": "%d feux protégés",
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d"
+          },
+          "NSStringLocalizedFormatKey": "Touchez %3$@: %1$#@lanes@ près de %2$#@lights@"
+        }
+      }
+    }
+  }
+}

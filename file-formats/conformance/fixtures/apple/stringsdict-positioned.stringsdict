@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>positioned.board</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Operator %3$@ tracks %1$#@signals@ across %2$#@routes@</string>
+		<key>signals</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld orbital pulse</string>
+			<key>other</key>
+			<string>%lld orbital pulses</string>
+		</dict>
+		<key>routes</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d quiet corridor</string>
+			<key>other</key>
+			<string>%d quiet corridors</string>
+		</dict>
+	</dict>
+	<key>reordered.board</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Across %2$#@routes@, observe %1$#@signals@</string>
+		<key>routes</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d amber route</string>
+			<key>other</key>
+			<string>%d amber routes</string>
+		</dict>
+		<key>signals</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld clear signal</string>
+			<key>other</key>
+			<string>%lld clear signals</string>
+		</dict>
+	</dict>
+	<key>repeated.board</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%1$#@markers@ before %1$#@markers@</string>
+		<key>markers</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d blue marker</string>
+			<key>other</key>
+			<string>%d blue markers</string>
+		</dict>
+	</dict>
+	<key>implicit.board</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Observed %#@beacons@</string>
+		<key>beacons</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld active beacon</string>
+			<key>other</key>
+			<string>%lld active beacons</string>
+		</dict>
+	</dict>
+	<key>mixed.branch</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Brief %1$#@signals@</string>
+		<key>signals</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%1$d signal for %2$@</string>
+			<key>other</key>
+			<string>%1$d signals for %2$@</string>
+		</dict>
+	</dict>
+	<key>spelled.board</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Showing %1$#@signals@</string>
+		<key>signals</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>a lone signal</string>
+			<key>other</key>
+			<string>several signals</string>
+		</dict>
+	</dict>
+	<key>digit.board</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Counted %1$#@2signals@</string>
+		<key>2signals</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d numbered pulse</string>
+			<key>other</key>
+			<string>%d numbered pulses</string>
+		</dict>
+	</dict>
+	<key>underscore.board</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Tracked %1$#@_signals_2@</string>
+		<key>_signals_2</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d hidden route</string>
+			<key>other</key>
+			<string>%d hidden routes</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

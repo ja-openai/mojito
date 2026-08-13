@@ -1,0 +1,8 @@
+{
+  "en.lproj/catalog.strings": {
+    "harbor.native.script.collision🧭": "Source"
+  },
+  "en_GB.lproj/catalog.strings": {
+    "harbor.native.script.collision🧭": "Second catalog locale en_GB"
+  }
+}

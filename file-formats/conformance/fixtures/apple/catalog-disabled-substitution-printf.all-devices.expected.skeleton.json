@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"sourceLanguage\": \"en\",\n  \"strings\": {\n    \"harbor.zero\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Observe %#@count@\"\n          },\n          \"substitutions\": {\n            \"count\": {\n              \"argNum\": 1,\n              \"formatSpecifier\": \"lld\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld%n beacon\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld%n%n beacons\"\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"harbor.literal\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Observe %#@count@\"\n          },\n          \"substitutions\": {\n            \"count\": {\n              \"argNum\": 1,\n              \"formatSpecifier\": \"lld\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld%%n beacon\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld%%n beacons\"\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"harbor.line\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Observe %#@count@\"\n          },\n          \"substitutions\": {\n            \"count\": {\n              \"argNum\": 1,\n              \"formatSpecifier\": \"lld\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld\\nbeacon\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld\\nbeacons\"\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"harbor.device.🧭\": {\n      \"comment\": \"Root-owned native plural definitions shared by protected device branches.\",\n      \"localizations\": {\n        \"en\": {\n          \"substitutions\": {\n            \"count\": {\n              \"argNum\": 1,\n              \"formatSpecifier\": \"lld\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld%n mobile lane\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld%n%n mobile lanes\"\n                    }\n                  }\n                }\n              }\n            }\n          },\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"Touch %#@count@\"\n                }\n              },\n              \"mac\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Click %#@count@\"\n                }\n              },\n              \"applewatch\": {\n                \"stringUnit\": {\n                  \"state\": \"machine_translated\",\n                  \"value\": \"Watch %#@count@\"\n                }\n              }\n            }\n          }\n        },\n        \"fr\": {\n          \"substitutions\": {\n            \"count\": {\n              \"argNum\": 1,\n              \"formatSpecifier\": \"lld\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld voie protégée\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld voies protégées\"\n                    }\n                  }\n                }\n              }\n            }\n          },\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Touchez %#@count@\"\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  },\n  \"version\": \"1.0\"\n}\n",
+  "slots": [
+    {
+      "id": "harbor.zero",
+      "start": 188,
+      "end": 205
+    },
+    {
+      "id": "harbor.zero",
+      "start": 537,
+      "end": 550,
+      "selector": "count",
+      "variant": "one"
+    },
+    {
+      "id": "harbor.zero",
+      "start": 737,
+      "end": 753,
+      "selector": "count",
+      "variant": "other"
+    },
+    {
+      "id": "harbor.literal",
+      "start": 1030,
+      "end": 1047
+    },
+    {
+      "id": "harbor.literal",
+      "start": 1379,
+      "end": 1393,
+      "selector": "count",
+      "variant": "one"
+    },
+    {
+      "id": "harbor.literal",
+      "start": 1580,
+      "end": 1595,
+      "selector": "count",
+      "variant": "other"
+    },
+    {
+      "id": "harbor.line",
+      "start": 1869,
+      "end": 1886
+    },
+    {
+      "id": "harbor.line",
+      "start": 2218,
+      "end": 2230,
+      "selector": "count",
+      "variant": "one"
+    },
+    {
+      "id": "harbor.line",
+      "start": 2417,
+      "end": 2430,
+      "selector": "count",
+      "variant": "other"
+    },
+    {
+      "id": "harbor.device.🧭",
+      "start": 3039,
+      "end": 3057,
+      "selector": "count",
+      "variant": "one"
+    },
+    {
+      "id": "harbor.device.🧭",
+      "start": 3244,
+      "end": 3265,
+      "selector": "count",
+      "variant": "other"
+    },
+    {
+      "id": "harbor.device.🧭",
+      "selector": "@device",
+      "variant": "iphone",
+      "start": 3549,
+      "end": 3564
+    },
+    {
+      "id": "harbor.device.🧭",
+      "selector": "@device",
+      "variant": "mac",
+      "start": 3725,
+      "end": 3740
+    },
+    {
+      "id": "harbor.device.🧭",
+      "selector": "@device",
+      "variant": "applewatch",
+      "start": 3916,
+      "end": 3931
+    }
+  ]
+}

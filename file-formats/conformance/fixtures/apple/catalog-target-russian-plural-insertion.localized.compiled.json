@@ -1,0 +1,139 @@
+{
+  "de.lproj/catalog.stringsdict": {
+    "harbor.target.russian.missing🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld Signal %2$@",
+        "other": "%1$lld Signale %2$@"
+      }
+    },
+    "harbor.target.russian.null🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld Signal %2$@",
+        "other": "%1$lld Signale %2$@"
+      }
+    },
+    "harbor.target.russian🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld Signal %2$@",
+        "other": "%1$lld Signale %2$@"
+      }
+    }
+  },
+  "en.lproj/catalog.strings": {
+    "harbor.target.russian.scalar": "Steady %@ shore"
+  },
+  "en.lproj/catalog.stringsdict": {
+    "Private missing Russian plural": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld %3$n beacon %2$@",
+        "other": "%1$lld %3$n beacons %2$@"
+      }
+    },
+    "Private null Russian plural": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld %3$n beacon %2$@",
+        "other": "%1$lld %3$n beacons %2$@"
+      }
+    },
+    "Private target Russian plural": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld beacon %2$@",
+        "other": "%1$lld beacons %2$@"
+      }
+    },
+    "harbor.target.russian.missing🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld %3$n beacon %2$@",
+        "other": "%1$lld %3$n beacons %2$@"
+      }
+    },
+    "harbor.target.russian.null🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld %3$n beacon %2$@",
+        "other": "%1$lld %3$n beacons %2$@"
+      }
+    },
+    "harbor.target.russian🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld beacon %2$@",
+        "other": "%1$lld beacons %2$@"
+      }
+    }
+  },
+  "ru.lproj/catalog.strings": {
+    "harbor.target.russian.scalar": "У причала %@"
+  },
+  "ru.lproj/catalog.stringsdict": {
+    "Private target Russian plural": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "few": "%2$@ %3$n %1$lld маяка",
+        "many": "%2$@ %3$n %1$lld маяков",
+        "one": "%2$@ %3$n %1$lld маяк",
+        "other": "%2$@ %3$n %1$lld маяка"
+      }
+    },
+    "harbor.target.russian.missing🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "few": "%2$@ %1$lld %3$n маяка в гавани",
+        "many": "%2$@ %1$lld %3$n маяков в гавани",
+        "one": "%2$@ %1$lld %3$n маяк в гавани",
+        "other": "%2$@ %1$lld %3$n маяка в гавани"
+      }
+    },
+    "harbor.target.russian.null🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "few": "%2$@ %1$lld %3$n маяка у берега",
+        "many": "%2$@ %1$lld %3$n маяков у берега",
+        "one": "%2$@ %1$lld %3$n маяк у берега",
+        "other": "%2$@ %1$lld %3$n маяка у берега"
+      }
+    },
+    "harbor.target.russian🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "few": "%2$@ %3$n %1$lld маяка у причала",
+        "many": "%2$@ %3$n %1$lld маяков у причала",
+        "one": "%2$@ %3$n %1$lld маяк у причала",
+        "other": "%2$@ %3$n %1$lld маяка у причала"
+      }
+    }
+  }
+}

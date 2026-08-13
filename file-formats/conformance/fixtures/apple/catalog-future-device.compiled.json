@@ -1,0 +1,18 @@
+{
+  "en.lproj/catalog.stringsdict": {
+    "future.device": {
+      "NSStringDeviceSpecificRuleType": {
+        "future_": "Private orbital %@",
+        "future_😃": "Bright orbital %@"
+      }
+    }
+  },
+  "fr.lproj/catalog.stringsdict": {
+    "future.device": {
+      "NSStringDeviceSpecificRuleType": {
+        "future_": "Orbital privé %@",
+        "future_😃": "Orbital lumineux %@"
+      }
+    }
+  }
+}

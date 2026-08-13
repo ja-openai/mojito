@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "files.remaining": {
+      "defaultMessage": "{files, plural, one {{files} file} other {{files} files}} remaining",
+      "variants": {
+        "one": "{files} file",
+        "other": "{files} files"
+      },
+      "placeholders": [
+        {
+          "name": "files",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@files@ remaining",
+        "applePluralRules": {
+          "files": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d file",
+              "other": "%d files"
+            },
+            "applePlistExtras": {
+              "NSStringFutureRuleMetadata": "Fresh <rule> & annotation",
+              "futureRuleEnabled": true,
+              "futureRuleNegative": -19,
+              "futureRuleDictionary": {
+                "NSStringFormatSpecTypeKey": "nested lookalike",
+                "count": 23,
+                "enabled": false
+              }
+            }
+          }
+        },
+        "pluralVariable": "files",
+        "valueType": "d",
+        "applePlistExtras": {
+          "futureEnabled": true,
+          "futureDisabled": false,
+          "futureNegative": -16,
+          "futurePositive": 7,
+          "futureHexadecimal": 255,
+          "futureMinimum": -9223372036854775808,
+          "futureMaximum": 18446744073709551615,
+          "futureLabel": "Fresh <amber> & quiet harbor",
+          "futureEmptyDictionary": {},
+          "futureNestedMetadata": {
+            "NSStringLocalizedFormatKey": "reserved-looking nested value",
+            "child": {
+              "count": -12,
+              "enabled": false,
+              "notes": "A neutral & original signal"
+            },
+            "": "private-use sorting",
+            "🛰": "supplementary sorting"
+          },
+          "futureUnknownRule": {
+            "NSStringFormatSpecTypeKey": "NSStringFutureRuleType",
+            "enabled": true
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "dock.empty": {
+    "NSStringLocalizedFormatKey": "%#@signals@ across the inlet",
+    "futureEmptyArray": [],
+    "futureEmptyData": {
+      "$applePlistType": "data",
+      "base64": ""
+    },
+    "futureEmptyDictionary": {},
+    "futureEmptyString": "",
+    "futureExplicitArray": [],
+    "futureExplicitDictionary": {},
+    "futureExplicitString": "",
+    "futureFalse": false,
+    "futureLiteralMarker": "Literal <data/> remains visible",
+    "futurePayload": {
+      "$applePlistType": "data",
+      "base64": "YQ=="
+    },
+    "futureStructured": [
+      {
+        "$applePlistType": "data",
+        "base64": ""
+      },
+      {
+        "nestedEmptyData": {
+          "$applePlistType": "data",
+          "base64": ""
+        }
+      },
+      []
+    ],
+    "futureTrue": true,
+    "futureWhitespaceData": {
+      "$applePlistType": "data",
+      "base64": ""
+    },
+    "signals": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "ld",
+      "futureRuleData": {
+        "$applePlistType": "data",
+        "base64": ""
+      },
+      "one": "%ld visible beacon",
+      "other": "%ld visible beacons"
+    }
+  }
+}

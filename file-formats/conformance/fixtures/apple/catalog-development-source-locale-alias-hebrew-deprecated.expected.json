@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "he",
+  "messages": {
+    "harbor.development.source.plural🧭": {
+      "defaultMessage": "{count, plural, one {{count} original beacon {arg1}} other {{count} original beacons {arg1}}}",
+      "description": "Aliased development locale owns plural source and states",
+      "variants": {
+        "one": "{count} original beacon {arg1}",
+        "other": "{count} original beacons {arg1}"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%1$lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%2$@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalizationIdentifier": "iw",
+        "appleSourceLocalization": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld original beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld original beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "sourcePluralStates": {
+          "one": "needs_review",
+          "other": "translated"
+        },
+        "localizations": {
+          "de": {
+            "variants": {
+              "one": "%1$lld Signal %2$@",
+              "other": "%1$lld Signale %2$@"
+            },
+            "variantStates": {
+              "one": "translated",
+              "other": "future_review"
+            }
+          }
+        },
+        "appleLocalizationSources": {
+          "de": {
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%1$lld Signal %2$@"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "future_review",
+                    "value": "%1$lld Signale %2$@"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.development.source.scalar🧭": {
+      "defaultMessage": "{arg1} {arg0} original beacon",
+      "description": "Compiler-equivalent development localization owns source text",
+      "placeholders": [
+        {
+          "name": "arg1",
+          "source": "%2$@",
+          "kind": "string",
+          "position": 2
+        },
+        {
+          "name": "arg0",
+          "source": "%1$lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalizationIdentifier": "iw",
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%2$@ %1$lld original beacon"
+          }
+        },
+        "sourceState": "needs_review",
+        "localizations": {
+          "de": {
+            "value": "Deutscher geschützter Hafen",
+            "state": "future_review"
+          }
+        },
+        "appleLocalizationSources": {
+          "de": {
+            "stringUnit": {
+              "state": "future_review",
+              "value": "Deutscher geschützter Hafen"
+            }
+          }
+        }
+      }
+    }
+  }
+}

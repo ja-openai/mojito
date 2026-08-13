@@ -1,0 +1,51 @@
+{
+  "de.lproj/catalog.stringsdict": {
+    "harbor.first.hebrew.deprecated.region🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld Signal %2$@",
+        "other": "%1$lld Signale %2$@"
+      }
+    },
+    "harbor.first.hebrew.deprecated🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld Signal %2$@",
+        "other": "%1$lld Signale %2$@"
+      }
+    }
+  },
+  "en.lproj/catalog.stringsdict": {
+    "Private deprecated Hebrew harbor": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld %3$n beacon %2$@",
+        "other": "%1$lld %3$n beacons %2$@"
+      }
+    },
+    "harbor.first.hebrew.deprecated.region🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld %3$n beacon %2$@",
+        "other": "%1$lld %3$n beacons %2$@"
+      }
+    },
+    "harbor.first.hebrew.deprecated🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld %3$n beacon %2$@",
+        "other": "%1$lld %3$n beacons %2$@"
+      }
+    }
+  }
+}

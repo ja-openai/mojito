@@ -1,0 +1,34 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "neutral.signal": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "One quiet signal"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Many quiet signals"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signal orbital neutre"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1257 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "harbor.first.device.missing.plural🧭": {
+      "defaultMessage": "{count, plural, one {{count}  mobile beacon {arg1}} other {{count}  mobile beacons {arg1}}}",
+      "description": "Pinned CLDR owns first-locale Xcode device variations",
+      "variants": {
+        "one": "{count}  mobile beacon {arg1}",
+        "other": "{count}  mobile beacons {arg1}"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%1$lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%2$@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ],
+            "other": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ]
+          }
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld %3$n mobile beacon %2$@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %3$n mobile beacons %2$@"
+                    }
+                  }
+                }
+              }
+            },
+            "mac": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld %3$n desktop beacon %2$@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %3$n desktop beacons %2$@"
+                    }
+                  }
+                }
+              }
+            },
+            "futurecar": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld %3$n source-futurecar beacon %2$@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %3$n source-futurecar beacons %2$@"
+                    }
+                  }
+                }
+              }
+            },
+            "raft": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld %3$n source-raft beacon %2$@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %3$n source-raft beacons %2$@"
+                    }
+                  }
+                }
+              }
+            },
+            "🧭raft": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld %3$n source-🧭raft beacon %2$@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %3$n source-🧭raft beacons %2$@"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "appleSourceLocalization": {
+          "variations": {
+            "device": {
+              "iphone": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%1$lld %3$n mobile beacon %2$@"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld %3$n mobile beacons %2$@"
+                      }
+                    }
+                  }
+                }
+              },
+              "mac": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%1$lld %3$n desktop beacon %2$@"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld %3$n desktop beacons %2$@"
+                      }
+                    }
+                  }
+                }
+              },
+              "futurecar": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%1$lld %3$n source-futurecar beacon %2$@"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld %3$n source-futurecar beacons %2$@"
+                      }
+                    }
+                  }
+                }
+              },
+              "raft": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%1$lld %3$n source-raft beacon %2$@"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld %3$n source-raft beacons %2$@"
+                      }
+                    }
+                  }
+                }
+              },
+              "🧭raft": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%1$lld %3$n source-🧭raft beacon %2$@"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld %3$n source-🧭raft beacons %2$@"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourcePluralStates": {
+          "one": "needs_review",
+          "other": "translated"
+        },
+        "localizations": {
+          "de": {
+            "variationAxes": {
+              "device": {
+                "iphone": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n mobile beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n mobile beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                },
+                "mac": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n desktop beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n desktop beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                },
+                "futurecar": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n source-futurecar beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n source-futurecar beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                },
+                "raft": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n source-raft beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n source-raft beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                },
+                "🧭raft": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n source-🧭raft beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n source-🧭raft beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleLocalizationSources": {
+          "de": {
+            "variations": {
+              "device": {
+                "iphone": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n mobile beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n mobile beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                },
+                "mac": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n desktop beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n desktop beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                },
+                "futurecar": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n source-futurecar beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n source-futurecar beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                },
+                "raft": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n source-raft beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n source-raft beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                },
+                "🧭raft": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n source-🧭raft beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n source-🧭raft beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.first.device.missing.scalar🧭": {
+      "defaultMessage": "Touch {arg0}  beacon",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 13,
+            "source": "%2$n"
+          }
+        ],
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "Touch %1$@ %2$n beacon"
+              }
+            },
+            "mac": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Click %1$@ %2$n beacon"
+              }
+            },
+            "futurecar": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "Source futurecar %1$@ %2$n beacon"
+              }
+            },
+            "raft": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "Source raft %1$@ %2$n beacon"
+              }
+            },
+            "🧭raft": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "Source 🧭raft %1$@ %2$n beacon"
+              }
+            },
+            "other": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "Source other %1$@ %2$n beacon"
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "appleSourceLocalization": {
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Touch %1$@ %2$n beacon"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %1$@ %2$n beacon"
+                }
+              },
+              "futurecar": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Source futurecar %1$@ %2$n beacon"
+                }
+              },
+              "raft": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Source raft %1$@ %2$n beacon"
+                }
+              },
+              "🧭raft": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Source 🧭raft %1$@ %2$n beacon"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Source other %1$@ %2$n beacon"
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "needs_review",
+        "localizations": {
+          "de": {
+            "variationAxes": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Touch %1$@ %2$n beacon"
+                  }
+                },
+                "mac": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Click %1$@ %2$n beacon"
+                  }
+                },
+                "futurecar": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Source futurecar %1$@ %2$n beacon"
+                  }
+                },
+                "raft": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Source raft %1$@ %2$n beacon"
+                  }
+                },
+                "🧭raft": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Source 🧭raft %1$@ %2$n beacon"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Source other %1$@ %2$n beacon"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleLocalizationSources": {
+          "de": {
+            "variations": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Touch %1$@ %2$n beacon"
+                  }
+                },
+                "mac": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Click %1$@ %2$n beacon"
+                  }
+                },
+                "futurecar": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Source futurecar %1$@ %2$n beacon"
+                  }
+                },
+                "raft": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Source raft %1$@ %2$n beacon"
+                  }
+                },
+                "🧭raft": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Source 🧭raft %1$@ %2$n beacon"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Source other %1$@ %2$n beacon"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "description": "Pinned CLDR owns first-locale Xcode device variations"
+    },
+    "harbor.first.device.null.plural🧭": {
+      "defaultMessage": "{count, plural, one {{count}  mobile beacon {arg1}} other {{count}  mobile beacons {arg1}}}",
+      "description": "Pinned CLDR owns first-locale Xcode device variations",
+      "variants": {
+        "one": "{count}  mobile beacon {arg1}",
+        "other": "{count}  mobile beacons {arg1}"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%1$lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%2$@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ],
+            "other": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ]
+          }
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld %3$n mobile beacon %2$@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %3$n mobile beacons %2$@"
+                    }
+                  }
+                }
+              }
+            },
+            "mac": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld %3$n desktop beacon %2$@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %3$n desktop beacons %2$@"
+                    }
+                  }
+                }
+              }
+            },
+            "futurecar": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld %3$n source-futurecar beacon %2$@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %3$n source-futurecar beacons %2$@"
+                    }
+                  }
+                }
+              }
+            },
+            "raft": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld %3$n source-raft beacon %2$@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %3$n source-raft beacons %2$@"
+                    }
+                  }
+                }
+              }
+            },
+            "🧭raft": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld %3$n source-🧭raft beacon %2$@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %3$n source-🧭raft beacons %2$@"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "appleSourceLocalization": {
+          "variations": {
+            "device": {
+              "iphone": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%1$lld %3$n mobile beacon %2$@"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld %3$n mobile beacons %2$@"
+                      }
+                    }
+                  }
+                }
+              },
+              "mac": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%1$lld %3$n desktop beacon %2$@"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld %3$n desktop beacons %2$@"
+                      }
+                    }
+                  }
+                }
+              },
+              "futurecar": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%1$lld %3$n source-futurecar beacon %2$@"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld %3$n source-futurecar beacons %2$@"
+                      }
+                    }
+                  }
+                }
+              },
+              "raft": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%1$lld %3$n source-raft beacon %2$@"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld %3$n source-raft beacons %2$@"
+                      }
+                    }
+                  }
+                }
+              },
+              "🧭raft": {
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%1$lld %3$n source-🧭raft beacon %2$@"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld %3$n source-🧭raft beacons %2$@"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourcePluralStates": {
+          "one": "needs_review",
+          "other": "translated"
+        },
+        "localizations": {
+          "de": {
+            "variationAxes": {
+              "device": {
+                "iphone": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n mobile beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n mobile beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                },
+                "mac": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n desktop beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n desktop beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                },
+                "futurecar": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n source-futurecar beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n source-futurecar beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                },
+                "raft": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n source-raft beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n source-raft beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                },
+                "🧭raft": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n source-🧭raft beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n source-🧭raft beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleLocalizationSources": {
+          "de": {
+            "variations": {
+              "device": {
+                "iphone": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n mobile beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n mobile beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                },
+                "mac": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n desktop beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n desktop beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                },
+                "futurecar": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n source-futurecar beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n source-futurecar beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                },
+                "raft": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n source-raft beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n source-raft beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                },
+                "🧭raft": {
+                  "variations": {
+                    "plural": {
+                      "one": {
+                        "stringUnit": {
+                          "state": "needs_review",
+                          "value": "%1$lld %3$n source-🧭raft beacon %2$@"
+                        }
+                      },
+                      "other": {
+                        "stringUnit": {
+                          "state": "translated",
+                          "value": "%1$lld %3$n source-🧭raft beacons %2$@"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.first.device.null.scalar🧭": {
+      "defaultMessage": "Touch {arg0}  beacon",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 13,
+            "source": "%2$n"
+          }
+        ],
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "Touch %1$@ %2$n beacon"
+              }
+            },
+            "mac": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Click %1$@ %2$n beacon"
+              }
+            },
+            "futurecar": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "Source futurecar %1$@ %2$n beacon"
+              }
+            },
+            "raft": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "Source raft %1$@ %2$n beacon"
+              }
+            },
+            "🧭raft": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "Source 🧭raft %1$@ %2$n beacon"
+              }
+            },
+            "other": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "Source other %1$@ %2$n beacon"
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "appleSourceLocalization": {
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Touch %1$@ %2$n beacon"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %1$@ %2$n beacon"
+                }
+              },
+              "futurecar": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Source futurecar %1$@ %2$n beacon"
+                }
+              },
+              "raft": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Source raft %1$@ %2$n beacon"
+                }
+              },
+              "🧭raft": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Source 🧭raft %1$@ %2$n beacon"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Source other %1$@ %2$n beacon"
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "needs_review",
+        "localizations": {
+          "de": {
+            "variationAxes": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Touch %1$@ %2$n beacon"
+                  }
+                },
+                "mac": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Click %1$@ %2$n beacon"
+                  }
+                },
+                "futurecar": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Source futurecar %1$@ %2$n beacon"
+                  }
+                },
+                "raft": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Source raft %1$@ %2$n beacon"
+                  }
+                },
+                "🧭raft": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Source 🧭raft %1$@ %2$n beacon"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Source other %1$@ %2$n beacon"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleLocalizationSources": {
+          "de": {
+            "variations": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Touch %1$@ %2$n beacon"
+                  }
+                },
+                "mac": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Click %1$@ %2$n beacon"
+                  }
+                },
+                "futurecar": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Source futurecar %1$@ %2$n beacon"
+                  }
+                },
+                "raft": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Source raft %1$@ %2$n beacon"
+                  }
+                },
+                "🧭raft": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Source 🧭raft %1$@ %2$n beacon"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Source other %1$@ %2$n beacon"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "description": "Pinned CLDR owns first-locale Xcode device variations"
+    }
+  }
+}

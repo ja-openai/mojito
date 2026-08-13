@@ -1,0 +1,18 @@
+{
+  "neutral.width🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringVariableWidthRuleType": {
+          "5": "Sud%n quai",
+          "040": "Sud%%n vaste rive"
+        }
+      },
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "Sud%n doux",
+          "040": "Sud\nouest calme"
+        }
+      }
+    }
+  }
+}

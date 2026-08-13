@@ -1,0 +1,13 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "duplicate": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Source" } },
+        "fr_CA": { "stringUnit": { "state": "translated", "value": "First" } },
+        "fr-CA": { "stringUnit": { "state": "translated", "value": "Second" } }
+      }
+    }
+  }
+}

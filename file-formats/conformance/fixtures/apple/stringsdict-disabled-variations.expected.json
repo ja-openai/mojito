@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "harbor.device.literal": {
+      "defaultMessage": "Touch {arg0}%n quay",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "defaultDevice": "iphone",
+        "deviceVariants": {
+          "iphone": "Touch %@%%n quay",
+          "mac": "Click %@%%n protected dock"
+        }
+      }
+    },
+    "harbor.device.🧭": {
+      "defaultMessage": "Touch {arg0} quay",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 12,
+            "source": "%n"
+          }
+        ],
+        "defaultDevice": "iphone",
+        "deviceVariants": {
+          "iphone": "Touch %@%n quay",
+          "mac": "Click %@%n protected dock",
+          "applewatch": "Watch %@ protected pier"
+        }
+      }
+    },
+    "harbor.width": {
+      "defaultMessage": "Follow the wider shoreline",
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 6,
+            "source": "%n"
+          },
+          {
+            "position": 6,
+            "source": "%n"
+          }
+        ],
+        "defaultWidth": 80,
+        "widthVariants": {
+          "8": "Near%n",
+          "040": "Follow%n%n the open tide",
+          "80": "Follow%n%n the wider shoreline"
+        }
+      }
+    },
+    "harbor.width.line": {
+      "defaultMessage": "Clear\nwater ahead",
+      "metadata": {
+        "defaultWidth": 18,
+        "widthVariants": {
+          "5": "Low\ntide",
+          "18": "Clear\nwater ahead"
+        }
+      }
+    },
+    "harbor.width.literal": {
+      "defaultMessage": "A%n sheltered bay",
+      "metadata": {
+        "defaultWidth": 12,
+        "widthVariants": {
+          "4": "A%%n",
+          "12": "A%%n sheltered bay"
+        }
+      }
+    }
+  }
+}

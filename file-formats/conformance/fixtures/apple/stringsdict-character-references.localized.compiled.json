@@ -1,0 +1,19 @@
+{
+  "dock.entities": {
+    "NSStringLocalizedFormatKey": "%#@signals@ near A dock",
+    "futureAttribute": "Untouched",
+    "futureFlags": [
+      true,
+      false
+    ],
+    "futureLiteral": "Protected &#00000000065;",
+    "futureRatio": 1.5,
+    "signals": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "ld",
+      "futureRuleRatio": 1.25,
+      "one": "%ld balise claire",
+      "other": "%ld balises claires"
+    }
+  }
+}

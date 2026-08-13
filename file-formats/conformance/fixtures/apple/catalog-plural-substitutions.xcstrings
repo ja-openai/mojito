@@ -1,0 +1,122 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "independent.counts": {
+      "comment": "Two independent neutral plural substitutions and one positional operator.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Operator %3$@ tracks %#@signals@ across %#@routes@"
+          },
+          "substitutions": {
+            "signals": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": { "stringUnit": { "state": "translated", "value": "%lld orbital signal" } },
+                  "other": { "stringUnit": { "state": "translated", "value": "%lld orbital signals" } }
+                }
+              }
+            },
+            "routes": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": { "stringUnit": { "state": "needs_review", "value": "%d quiet route" } },
+                  "other": { "stringUnit": { "state": "translated", "value": "%d quiet routes" } }
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Opérateur %3$@ suit %#@signals@ sur %#@routes@"
+          },
+          "substitutions": {
+            "signals": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": { "stringUnit": { "state": "needs_review", "value": "%lld signal orbital" } },
+                  "other": { "stringUnit": { "state": "translated", "value": "%lld signaux orbitaux" } }
+                }
+              }
+            },
+            "routes": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": { "stringUnit": { "state": "translated", "value": "%d route tranquille" } },
+                  "other": { "stringUnit": { "state": "machine_translated", "value": "%d routes tranquilles" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "unicode.substitution": {
+      "localizations": {
+        "en": {
+          "stringUnit": { "state": "translated", "value": "Received %#@信号@" },
+          "substitutions": {
+            "信号": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": { "stringUnit": { "state": "translated", "value": "%lld pulse" } },
+                  "other": { "stringUnit": { "state": "translated", "value": "%lld pulses" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "repeated.substitution": {
+      "localizations": {
+        "en": {
+          "stringUnit": { "state": "translated", "value": "%#@count@ before %#@count@" },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": { "stringUnit": { "state": "translated", "value": "%d marker" } },
+                  "other": { "stringUnit": { "state": "translated", "value": "%d markers" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "implicit.argument": {
+      "localizations": {
+        "en": {
+          "stringUnit": { "state": "translated", "value": "Observed %#@amount@" },
+          "substitutions": {
+            "amount": {
+              "variations": {
+                "plural": {
+                  "one": { "stringUnit": { "state": "translated", "value": "%lld beacon" } },
+                  "other": { "stringUnit": { "state": "translated", "value": "%lld beacons" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

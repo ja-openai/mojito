@@ -1,0 +1,13 @@
+{
+  "dock&count🧭#zero": "Aucun signal & sûr",
+  "dock&count🧭#one": "{signals} lueur ]]> & sûre",
+  "dock&count🧭#other": "{signals} signaux & clairs",
+  "solo.count#one": "{lights} lueur",
+  "solo.count#other": "{lights} lueurs",
+  "paired.route#beacons#one": "{beacons} balise sûre",
+  "paired.route#beacons#other": "{beacons} balises sûres",
+  "paired.route#lanes#one": "{lanes} voie claire",
+  "paired.route#lanes#other": "{lanes} voies claires",
+  "width.route": "Large {arg0} & calme",
+  "device.route": "Touchez {arg0} & continuez"
+}

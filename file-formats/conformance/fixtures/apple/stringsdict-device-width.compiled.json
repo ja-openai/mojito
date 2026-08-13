@@ -1,0 +1,18 @@
+{
+  "neutral.width🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringVariableWidthRuleType": {
+          "5": "Tap%n cove",
+          "040": "Tap%%n open tide"
+        }
+      },
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "Mac%n near",
+          "040": "Mac\nopen coast"
+        }
+      }
+    }
+  }
+}

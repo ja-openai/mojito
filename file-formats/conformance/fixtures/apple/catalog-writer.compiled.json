@@ -1,0 +1,12 @@
+{
+  "en_US.lproj/catalog.strings": {
+    "private_": "Private value",
+    "supplementary_😃": "Bright ☃"
+  },
+  "en_US.lproj/catalog.stringsdict": {
+    "advanced": "Ready %@, 50%% complete"
+  },
+  "fr_CA.lproj/catalog.strings": {
+    "advanced": "Prêt %@, terminé à 40%%"
+  }
+}

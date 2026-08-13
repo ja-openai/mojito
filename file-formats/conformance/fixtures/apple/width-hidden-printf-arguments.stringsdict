@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>width.after🧭</key>
+	<dict>
+		<key>NSStringVariableWidthRuleType</key>
+		<dict>
+			<key>5</key>
+			<string>%n %@ near marker</string>
+			<key>040</key>
+			<string>%n %@ open marker</string>
+		</dict>
+	</dict>
+	<key>width.middle</key>
+	<dict>
+		<key>NSStringVariableWidthRuleType</key>
+		<dict>
+			<key>5</key>
+			<string>%@ %n %@ near marker</string>
+			<key>040</key>
+			<string>%@ %n %@ open marker</string>
+		</dict>
+	</dict>
+	<key>width.repeated</key>
+	<dict>
+		<key>NSStringVariableWidthRuleType</key>
+		<dict>
+			<key>5</key>
+			<string>%n%n %@ near marker</string>
+			<key>040</key>
+			<string>%n%n %@ open marker</string>
+		</dict>
+	</dict>
+	<key>width.explicit</key>
+	<dict>
+		<key>NSStringVariableWidthRuleType</key>
+		<dict>
+			<key>5</key>
+			<string>%2$n %1$@ near marker</string>
+			<key>040</key>
+			<string>%2$n %1$@ open marker</string>
+		</dict>
+	</dict>
+	<key>width.escaped</key>
+	<dict>
+		<key>NSStringVariableWidthRuleType</key>
+		<dict>
+			<key>5</key>
+			<string>%%n %@ near marker</string>
+			<key>040</key>
+			<string>%%n %@ open marker</string>
+		</dict>
+	</dict>
+	<key>device.after🧭</key>
+	<dict>
+		<key>NSStringDeviceSpecificRuleType</key>
+		<dict>
+			<key>iphone</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%n %@ pocket near marker</string>
+					<key>040</key>
+					<string>%n %@ pocket open marker</string>
+				</dict>
+			</dict>
+			<key>mac</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%n %@ desktop near marker</string>
+					<key>040</key>
+					<string>%n %@ desktop open marker</string>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+	<key>device.middle</key>
+	<dict>
+		<key>NSStringDeviceSpecificRuleType</key>
+		<dict>
+			<key>iphone</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%@ %n %@ pocket near marker</string>
+					<key>040</key>
+					<string>%@ %n %@ pocket open marker</string>
+				</dict>
+			</dict>
+			<key>mac</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%@ %n %@ desktop near marker</string>
+					<key>040</key>
+					<string>%@ %n %@ desktop open marker</string>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+	<key>device.repeated</key>
+	<dict>
+		<key>NSStringDeviceSpecificRuleType</key>
+		<dict>
+			<key>iphone</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%n%n %@ pocket near marker</string>
+					<key>040</key>
+					<string>%n%n %@ pocket open marker</string>
+				</dict>
+			</dict>
+			<key>mac</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%n%n %@ desktop near marker</string>
+					<key>040</key>
+					<string>%n%n %@ desktop open marker</string>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+	<key>device.explicit</key>
+	<dict>
+		<key>NSStringDeviceSpecificRuleType</key>
+		<dict>
+			<key>iphone</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%2$n %1$@ pocket near marker</string>
+					<key>040</key>
+					<string>%2$n %1$@ pocket open marker</string>
+				</dict>
+			</dict>
+			<key>mac</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%2$n %1$@ desktop near marker</string>
+					<key>040</key>
+					<string>%2$n %1$@ desktop open marker</string>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+	<key>device.escaped</key>
+	<dict>
+		<key>NSStringDeviceSpecificRuleType</key>
+		<dict>
+			<key>iphone</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%%n %@ pocket near marker</string>
+					<key>040</key>
+					<string>%%n %@ pocket open marker</string>
+				</dict>
+			</dict>
+			<key>mac</key>
+			<dict>
+				<key>NSStringVariableWidthRuleType</key>
+				<dict>
+					<key>5</key>
+					<string>%%n %@ desktop near marker</string>
+					<key>040</key>
+					<string>%%n %@ desktop open marker</string>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+</dict>
+</plist>

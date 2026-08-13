@@ -1,0 +1,25 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "collision.selector": {
+      "localizations": {
+        "en": {
+          "stringUnit": { "state": "translated", "value": "%1$@ follows %#@signals@" },
+          "substitutions": {
+            "signals": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": { "stringUnit": { "state": "translated", "value": "%@ sees %lld signal" } },
+                  "other": { "stringUnit": { "state": "translated", "value": "%@ sees %lld signals" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

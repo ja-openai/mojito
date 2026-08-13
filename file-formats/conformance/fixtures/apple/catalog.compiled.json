@@ -1,0 +1,12 @@
+{
+  "de.lproj/catalog.strings": {
+    "fallback.key": "Ersatz"
+  },
+  "en.lproj/catalog.strings": {
+    "not.translated": "Internal",
+    "welcome": "Hello, %@!"
+  },
+  "fr.lproj/catalog.strings": {
+    "welcome": "Bonjour, %@ !"
+  }
+}

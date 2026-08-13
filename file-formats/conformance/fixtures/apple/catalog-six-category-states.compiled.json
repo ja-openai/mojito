@@ -1,0 +1,28 @@
+{
+  "en.lproj/catalog.stringsdict": {
+    "orbital.count": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "few": "%lld nearby signals",
+        "many": "%lld distant signals",
+        "one": "%lld single signal",
+        "other": "%lld orbital signals",
+        "two": "%lld paired signals",
+        "zero": "%lld silent signals"
+      }
+    }
+  },
+  "fr.lproj/catalog.stringsdict": {
+    "orbital.count": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld signal orbital",
+        "other": "%lld signaux orbitaux"
+      }
+    }
+  }
+}

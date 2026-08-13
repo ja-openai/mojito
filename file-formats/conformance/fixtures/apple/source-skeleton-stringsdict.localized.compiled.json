@@ -1,0 +1,62 @@
+{
+  "device.route": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": "Touchez %@ & continuez",
+      "mac": "Keep desktop %@"
+    },
+    "futureDeviceMetadata": true
+  },
+  "dock&count🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": "Protected mobile instruction",
+      "mac": "Protected desktop instruction"
+    },
+    "NSStringLocalizedFormatKey": "%#@signals@ near harbor",
+    "futureMessageList": [
+      "Protected 🧭 metadata",
+      false
+    ],
+    "signals": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "ld",
+      "NSStringFutureRuleMetadata": "Keep & protect",
+      "futureRuleCount": 7,
+      "futureRuleEnabled": true,
+      "one": "%ld lueur ]]> & sûre",
+      "other": "%ld signaux & clairs",
+      "zero": "Aucun signal & sûr"
+    }
+  },
+  "paired.route": {
+    "NSStringLocalizedFormatKey": "%1$#@beacons@ across %2$#@lanes@",
+    "beacons": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "ld",
+      "one": "%1$ld balise sûre",
+      "other": "%1$ld balises sûres"
+    },
+    "futurePairedRule": true,
+    "lanes": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "ld",
+      "one": "%2$ld voie claire",
+      "other": "%2$ld voies claires"
+    }
+  },
+  "solo.count": {
+    "NSStringLocalizedFormatKey": "%#@lights@ near water",
+    "lights": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "ld",
+      "one": "%ld lueur",
+      "other": "%ld lueurs"
+    }
+  },
+  "width.route": {
+    "NSStringVariableWidthRuleType": {
+      "008": "Keep narrow %@",
+      "32": "Large %@ & calme"
+    },
+    "futureWidthMetadata": -16
+  }
+}

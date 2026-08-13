@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+  <key>dock.namespace</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%#@signals@ across sheltered water</string>
+    <key>signals</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%ld harbor signal</string>
+      <key>other</key>
+      <string>%ld harbor signals</string>
+      <key>futureRulePriority</key>
+      <integer>11</integer>
+    </dict>
+    <key>futureFlags</key>
+    <array>
+      <true/>
+      <false/>
+      <string>Protected &amp; stable</string>
+    </array>
+    <key>futurePriority</key>
+    <integer>7</integer>
+  </dict>
+</dict>
+</plist>

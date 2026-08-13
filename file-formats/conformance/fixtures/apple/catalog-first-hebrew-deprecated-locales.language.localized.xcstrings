@@ -1,0 +1,115 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "harbor.first.hebrew.deprecated🧭": {
+      "comment": "Deprecated Hebrew locale spelling remains source-owned",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld %3$n beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld %3$n beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld Signal %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "future_review",
+                  "value": "%1$lld Signale %2$@"
+                }
+              }
+            }
+          }
+        },
+        "iw": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n עברית one"}},"other":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n עברית other"}},"two":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n עברית two"}}}}}
+      }
+    },
+    "harbor.first.hebrew.deprecated.region🧭": {
+      "comment": "Deprecated Hebrew locale spelling remains source-owned",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld %3$n beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld %3$n beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld Signal %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "future_review",
+                  "value": "%1$lld Signale %2$@"
+                }
+              }
+            }
+          }
+        },
+        "iw-IL": null,"iw":{"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n ישראלית one"}},"other":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n ישראלית other"}},"two":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n ישראלית two"}}}}}
+      }
+    },
+    "Private deprecated Hebrew harbor": {
+      "shouldTranslate": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld %3$n beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld %3$n beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "iw": null,
+        "iw-IL": null
+      }
+    }
+  }
+}

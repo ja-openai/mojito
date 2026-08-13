@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<?neutral owner=\"north\"?>\n<plist xmlns=\"urn:neutral:property-list\"\n       xmlns:portable=\"urn:neutral:source-metadata\"\n       xml:lang=\"en\"\n       portable:document=\"preserve\"\n       version=\"1.0\">\n  <dict xmlns=\"\" portable:container=\"north\">\n    <!-- Bound attributes and namespace declarations are platform-owned source bytes. -->\n    <key portable:identity=\"route\">harbor.route</key>\n    <string portable:note=\"preserve\" xml:space=\"preserve\">Guide %1$@ across namespaced water</string>\n\n    <key portable:identity=\"empty\">quiet.empty</key>\n    <string portable:note=\"protected\" />\n\n    <key portable:identity=\"cdata\"><![CDATA[signal&calm]]></key>\n    <string portable:note=\"literal\"><![CDATA[<calm> & clear]]></string>\n  </dict>\n</plist>\n\n",
+  "slots": [
+    {
+      "id": "harbor.route",
+      "start": 484,
+      "end": 518
+    },
+    {
+      "id": "quiet.empty",
+      "start": 620,
+      "end": 622
+    },
+    {
+      "id": "signal&calm",
+      "start": 725,
+      "end": 751
+    }
+  ]
+}

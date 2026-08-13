@@ -1,0 +1,65 @@
+{
+  "harbor.after": {
+    "NSStringLocalizedFormatKey": "%#@count@",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%n %@ balise",
+      "other": "%d%n %@ balises"
+    }
+  },
+  "harbor.repeated": {
+    "NSStringLocalizedFormatKey": "%#@count@",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%n%n %@ balise",
+      "other": "%d%n%n %@ balises"
+    }
+  },
+  "harbor.explicit": {
+    "NSStringLocalizedFormatKey": "%#@count@",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d %3$n %2$@ balise",
+      "other": "%d %3$n %2$@ balises"
+    }
+  },
+  "harbor.overlap": {
+    "NSStringLocalizedFormatKey": "%#@count@",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d %2$n %@ balise",
+      "other": "%d %2$n %@ balises"
+    }
+  },
+  "harbor.positioned": {
+    "NSStringLocalizedFormatKey": "%#@count@",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%n %3$@ balise",
+      "other": "%d%n %3$@ balises"
+    }
+  },
+  "harbor.escaped": {
+    "NSStringLocalizedFormatKey": "%#@count@",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%%n %@ balise",
+      "other": "%d%%n %@ balises"
+    }
+  },
+  "harbor.unicode.🧭": {
+    "NSStringLocalizedFormatKey": "%#@count@",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%n %@ 🧭",
+      "other": "%d%n %@ 🧭🧭"
+    }
+  }
+}

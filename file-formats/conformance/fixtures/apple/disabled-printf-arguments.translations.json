@@ -1,0 +1,11 @@
+{
+  "harbor.implicit": "Ouest  {arg1}",
+  "harbor.middle": "{arg0} quai  {arg2}",
+  "harbor.repeated": " {arg2} quai",
+  "harbor.explicit": " {arg0} quai",
+  "harbor.mixed": " {arg0} quai",
+  "harbor.overlap": " {arg0} voie",
+  "harbor.integer": " {arg1} balises",
+  "harbor.escaped": "%n {arg0} mare",
+  "harbor.unicode.🧭": "🧭 {arg1} baie"
+}

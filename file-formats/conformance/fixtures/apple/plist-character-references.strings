@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A literal &#00000000065; inside a comment is not parsed as character data. -->
+<?platform protected="&#00000000065;"?>
+<plist version="1.0" neutral="&#00000000065;">
+  <dict>
+    <!-- Eight-digit decimal and hexadecimal references remain valid native spellings. -->
+    <key>harbor&#00000046;route&#x00000026;east</key>
+    <string neutral="&#00000000065;">Guide %1$@ toward &#00000065;, &#x00000042;, &#129517; &amp; &lt;north&gt; &quot;calm&quot; &apos;steady&apos;</string>
+
+    <!-- CDATA and escaped ampersands retain reference-looking literal source text. -->
+    <key>literal&amp;#000000065;</key>
+    <string><![CDATA[Literal &#00000000065; remains protected]]></string>
+
+    <key>line&#00000046;break</key>
+    <string>North&#00000010;South&#x00000009;East&#13;West</string>
+
+    <key>escaped.literal</key>
+    <string>A&amp;#00000000065;Z</string>
+  </dict>
+</plist>

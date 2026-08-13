@@ -1,0 +1,6 @@
+"escaped.literal" = "A&#00000000065;Z";
+// Eight-digit decimal and hexadecimal references remain valid native spellings.
+"harbor.route&east" = "Guide %1$@ toward A, B, 🧭 & <north> \"calm\" 'steady'";
+"line.break" = "North\nSouth\tEast\rWest";
+// CDATA and escaped ampersands retain reference-looking literal source text.
+"literal&#000000065;" = "Literal &#00000000065; remains protected";

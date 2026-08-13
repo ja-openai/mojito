@@ -1,0 +1,63 @@
+{
+  "en.lproj/catalog.stringsdict": {
+    "harbor.route🧭": {
+      "lanes": {
+        "one": "%lld voie légère",
+        "other": "%lld voies légères",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld"
+      },
+      "lights": {
+        "one": "%d lumière nord",
+        "other": "%d lumières nord",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "d"
+      },
+      "NSStringLocalizedFormatKey": "Pilote %3$@ suit %2$#@lights@ puis %1$#@lanes@"
+    },
+    "echo.route": {
+      "count": {
+        "one": "%d écho calme",
+        "other": "%d échos calmes",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "d"
+      },
+      "NSStringLocalizedFormatKey": "%1$#@count@ autour de %1$#@count@"
+    },
+    "implicit.lane": {
+      "amount": {
+        "one": "%lld place verte",
+        "other": "%lld places vertes",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld"
+      },
+      "NSStringLocalizedFormatKey": "Regardez %#@amount@"
+    },
+    "unicode.route": {
+      "value": {
+        "one": "%lld pulsation douce",
+        "other": "%lld pulsations douces",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld"
+      },
+      "NSStringLocalizedFormatKey": "Suivez %1$#@value@"
+    }
+  },
+  "fr.lproj/catalog.stringsdict": {
+    "harbor.route🧭": {
+      "lanes": {
+        "one": "%lld voie calme",
+        "other": "%lld voies calmes",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld"
+      },
+      "lights": {
+        "one": "%d feu nord",
+        "other": "%d feux nord",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "d"
+      },
+      "NSStringLocalizedFormatKey": "Pilote %3$@ escorte %1$#@lanes@ au-delà de %2$#@lights@"
+    }
+  }
+}
