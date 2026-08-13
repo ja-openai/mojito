@@ -6,6 +6,7 @@ import com.box.l10n.mojito.cli.command.param.Param;
 import com.box.l10n.mojito.cli.console.ConsoleWriter;
 import com.box.l10n.mojito.cli.filefinder.FileMatch;
 import com.box.l10n.mojito.cli.filefinder.file.FileType;
+import com.box.l10n.mojito.fileformat.LocalizationConverterSelection.Mode;
 import com.box.l10n.mojito.rest.client.RepositoryClient;
 import com.box.l10n.mojito.rest.entity.LeveragingType;
 import com.box.l10n.mojito.rest.entity.Repository;
@@ -70,6 +71,13 @@ public class PushCommand extends Command {
       required = false,
       description = Param.FILTER_OPTIONS_DESCRIPTION)
   List<String> filterOptionsParam;
+
+  @Parameter(
+      names = Param.CONVERTER_LONG,
+      arity = 1,
+      converter = LocalizationConverterModeConverter.class,
+      description = Param.CONVERTER_DESCRIPTION)
+  Mode converter = Mode.OKAPI;
 
   @Parameter(
       names = {Param.SOURCE_LOCALE_LONG, Param.SOURCE_LOCALE_SHORT},
@@ -236,7 +244,7 @@ public class PushCommand extends Command {
                       sourceFileMatch.getFileType().getFilterConfigIdOverride());
                   sourceAsset.setFilterOptions(
                       commandHelper.getFilterOptionsOrDefaults(
-                          sourceFileMatch.getFileType(), filterOptionsParam));
+                          sourceFileMatch.getFileType(), filterOptionsParam, converter));
                   sourceAsset.setLeveragingType(leveragingType);
 
                   return sourceAsset;

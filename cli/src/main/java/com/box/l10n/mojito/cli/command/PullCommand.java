@@ -7,6 +7,7 @@ import com.box.l10n.mojito.cli.command.param.Param;
 import com.box.l10n.mojito.cli.console.ConsoleWriter;
 import com.box.l10n.mojito.cli.filefinder.FileMatch;
 import com.box.l10n.mojito.cli.filefinder.file.FileType;
+import com.box.l10n.mojito.fileformat.LocalizationConverterSelection.Mode;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.rest.client.AssetClient;
 import com.box.l10n.mojito.rest.client.exception.AssetNotFoundException;
@@ -106,6 +107,13 @@ public class PullCommand extends Command {
       required = false,
       description = Param.FILTER_OPTIONS_DESCRIPTION)
   List<String> filterOptionsParam;
+
+  @Parameter(
+      names = Param.CONVERTER_LONG,
+      arity = 1,
+      converter = LocalizationConverterModeConverter.class,
+      description = Param.CONVERTER_DESCRIPTION)
+  Mode converter = Mode.OKAPI;
 
   @Parameter(
       names = {"--skip-empty-output"},
@@ -259,7 +267,7 @@ public class PullCommand extends Command {
 
         List<String> filterOptions =
             commandHelper.getFilterOptionsOrDefaults(
-                sourceFileMatch.getFileType(), filterOptionsParam);
+                sourceFileMatch.getFileType(), filterOptionsParam, converter);
 
         generateLocalizedFiles(repository, sourceFileMatch, filterOptions);
       }

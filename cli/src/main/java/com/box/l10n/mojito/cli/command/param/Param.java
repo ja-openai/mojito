@@ -111,6 +111,10 @@ public class Param {
   public static final String FILTER_OPTIONS_DESCRIPTION =
       "Filter options, can be a list. Format: \"option1=value1\" \"option2=value2\"";
 
+  public static final String CONVERTER_LONG = "--converter";
+  public static final String CONVERTER_DESCRIPTION =
+      "Localization converter: okapi (default) or portable. Values are case-insensitive.";
+
   public static final String SOURCE_REGEX_LONG = "--source-regex";
   public static final String SOURCE_REGEX_SHORT = "-sr";
   public static final String SOURCE_REGEX_DESCRIPTION =

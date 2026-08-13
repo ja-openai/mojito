@@ -1,8 +1,11 @@
 package com.box.l10n.mojito.cli.command;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
+import com.box.l10n.mojito.cldr.PluralRuleService;
 import com.box.l10n.mojito.cli.CLITestBase;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.PullRun;
@@ -10,6 +13,10 @@ import com.box.l10n.mojito.entity.PushRun;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
+import com.box.l10n.mojito.fileformat.LocalizationCatalog;
+import com.box.l10n.mojito.fileformat.LocalizationFileConverters;
+import com.box.l10n.mojito.fileformat.LocalizationFileFormat;
+import com.box.l10n.mojito.fileformat.LocalizationMessage;
 import com.box.l10n.mojito.rest.client.AssetClient;
 import com.box.l10n.mojito.rest.client.RepositoryClient;
 import com.box.l10n.mojito.rest.entity.Asset;
@@ -21,16 +28,22 @@ import com.box.l10n.mojito.service.delta.dtos.DeltaResponseDTO;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pullrun.PullRunRepository;
 import com.box.l10n.mojito.service.pullrun.PullRunTextUnitVariantRepository;
+import com.box.l10n.mojito.service.tm.TMImportService;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitVariantRepository;
 import com.google.common.collect.ImmutableList;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -57,6 +70,8 @@ public class PullCommandTest extends CLITestBase {
   @Autowired DeltaService deltaService;
 
   @Autowired TMService tmService;
+
+  @Autowired TMImportService portableTestImportService;
 
   @Autowired LocaleService localeService;
 
@@ -330,6 +345,306 @@ public class PullCommandTest extends CLITestBase {
             getTargetTestDir("target_modified").getAbsolutePath());
 
     checkExpectedGeneratedResources();
+  }
+
+  @Test
+  public void portableConverterReusesExistingPropertiesDataset() throws Exception {
+    assertPortableMatchesExistingDataset(
+        "pullProperties", "demo.properties", new String[0], new String[0]);
+  }
+
+  @Test
+  public void portableConverterReusesExistingJavaPropertiesDataset() throws Exception {
+    String[] options = {"-ft", "PROPERTIES_JAVA"};
+    assertPortableMatchesExistingDataset("pullPropertiesJava", "demo.properties", options, options);
+  }
+
+  @Test
+  public void portableConverterReusesExistingAndroidDataset() throws Exception {
+    Repository repository = createTestRepoUsingRepoService();
+    Path source = getTargetTestDir("source").toPath();
+    Path original =
+        Path.of(
+            "src/test/resources/com/box/l10n/mojito/cli/command/PullCommandTest_IO",
+            "pullAndroidStrings",
+            "input/source/res/values/strings.xml");
+    Path android = source.resolve("res/values/strings.xml");
+    Files.createDirectories(android.getParent());
+    Files.writeString(
+        android,
+        Files.readString(original)
+            .replace("100_character_description_", "character_description")
+            .replaceAll("name=\"([0-9])", "name=\"number_$1"));
+
+    getL10nJCommander()
+        .run(
+            "push", "-r", repository.getName(), "-s", source.toString(), "--converter", "portable");
+    Asset asset =
+        assetClient.getAssetByPathAndRepositoryId("res/values/strings.xml", repository.getId());
+    List<TMTextUnit> units = tmTextUnitRepository.findByTm_id(repository.getTm().getId());
+    assertEquals(5, units.size());
+    Locale french = localeService.findByBcp47Tag("fr-FR");
+    for (TMTextUnit unit : units) {
+      tmService.addCurrentTMTextUnitVariant(
+          unit.getId(), french.getId(), unit.getContent() + " traduit");
+    }
+
+    getL10nJCommander()
+        .run(
+            "pull",
+            "-r",
+            repository.getName(),
+            "-s",
+            source.toString(),
+            "-t",
+            getTargetTestDir("target").getAbsolutePath(),
+            "--converter",
+            "portable");
+    assertNotNull(asset);
+    String localized =
+        Files.readString(
+            getTargetTestDir("target").toPath().resolve("res/values-fr-rFR/strings.xml"));
+    assertTrue(localized.contains("15 min traduit"));
+    assertTrue(localized.contains("character_description"));
+    assertFalse(
+        "Android format placeholders must not be escaped twice", localized.contains("%%1$s"));
+  }
+
+  @Test
+  public void portableConverterReusesExistingAppleStringsDataset() throws Exception {
+    assertPortableMatchesExistingDataset(
+        "pullMacStrings", "en.lproj/Localizable.strings", new String[0], new String[0]);
+  }
+
+  @Test
+  public void portableConverterReusesExistingAppleStringsdictDataset() throws Exception {
+    assertPortableMatchesExistingDataset(
+        "pullMacStringsdict", "en.lproj/Localizable.stringsdict", new String[0], new String[0]);
+  }
+
+  @Test
+  public void portableConverterReusesExistingGettextDataset() throws Exception {
+    assertPortableMatchesExistingDataset(
+        "pullPo",
+        "LC_MESSAGES/messages.pot",
+        new String[0],
+        new String[] {"-lm", "fr:fr-FR,fr-CA:fr-CA,ja:ja-JP", "-lmt", "MAP_ONLY"});
+  }
+
+  @Test
+  public void portableConverterSupportsExpandedRussianGettextPlurals() throws Exception {
+    Repository repository = createTestRepoUsingRepoService();
+    repositoryService.addRepositoryLocale(repository, "ru-RU", null, true);
+    Path dataset =
+        Path.of(
+            "src/test/resources/com/box/l10n/mojito/cli/command/PullCommandTest_IO",
+            "recordPullPoPlural");
+    Path source = getTargetTestDir("source").toPath();
+    Path sourceAsset = source.resolve("LC_MESSAGES/messages.pot");
+    Files.createDirectories(sourceAsset.getParent());
+    Files.writeString(
+        sourceAsset,
+        Files.readString(dataset.resolve("input/source/LC_MESSAGES/messages.pot"))
+            + """
+                #. Test second plural
+                #: file.js:40
+                msgctxt "boat"
+                msgid "There is {number} boat"
+                msgid_plural "There are {number} boats"
+                msgstr[0] ""
+                msgstr[1] ""
+
+                """);
+    getL10nJCommander()
+        .run(
+            "push", "-r", repository.getName(), "-s", source.toString(), "--converter", "portable");
+    Asset asset =
+        assetClient.getAssetByPathAndRepositoryId("LC_MESSAGES/messages.pot", repository.getId());
+    Locale russian = localeService.findByBcp47Tag("ru-RU");
+    for (TMTextUnit unit : tmTextUnitRepository.findByTm_id(repository.getTm().getId())) {
+      String category = unit.getName().substring(unit.getName().lastIndexOf('_') + 1);
+      tmService.addCurrentTMTextUnitVariant(
+          unit.getId(), russian.getId(), category + "-" + unit.getContent());
+    }
+
+    getL10nJCommander()
+        .run(
+            "pull",
+            "-r",
+            repository.getName(),
+            "-s",
+            source.toString(),
+            "-t",
+            getTargetTestDir("target").getAbsolutePath(),
+            "-lm",
+            "ru-RU:ru-RU",
+            "-lmt",
+            "MAP_ONLY",
+            "--record-pull-run",
+            "--converter",
+            "portable");
+    String localized =
+        Files.readString(
+            getTargetTestDir("target").toPath().resolve("ru_RU/LC_MESSAGES/messages.po"));
+    assertTrue(localized.contains("msgstr[0] \"one-There is {number} car\""));
+    assertTrue(localized.contains("msgstr[1] \"few-There are {number} cars\""));
+    assertTrue(localized.contains("msgstr[2] \"many-There are {number} cars\""));
+    assertTrue(localized.contains("msgstr[0] \"one-There is {number} boat\""));
+    assertTrue(localized.contains("msgstr[1] \"few-There are {number} boats\""));
+    assertTrue(localized.contains("msgstr[2] \"many-There are {number} boats\""));
+    assertEquals(6, pullRunTextUnitVariantRepository.count());
+  }
+
+  @Test
+  public void portableConverterReusesExistingConfiguredJsonDataset() throws Exception {
+    String[] options = {
+      "-ft", "JSON", "-fo", "noteKeyPattern=note", "extractAllPairs=false", "exceptions=string"
+    };
+    assertPortableMatchesExistingDataset("pullJsonWithNote", "demo.json", options, options);
+  }
+
+  @Test
+  public void portableConverterReusesExistingChromeJsonDataset() throws Exception {
+    String[] options = {"-ft", "CHROME_EXT_JSON"};
+    assertPortableMatchesExistingDataset(
+        "pullJsonFromChromeExtension", "_locales/en/messages.json", options, options);
+  }
+
+  @Test
+  public void portableConverterReusesExistingFormatJsDataset() throws Exception {
+    assertPortableMatchesExistingDataset(
+        "pullJsonDefaultFormatJs",
+        "en.json",
+        new String[] {"-ft", "FORMATJS_JSON_NOBASENAME"},
+        new String[] {"-ft", "FORMATJS_JSON_NOBASENAME"});
+  }
+
+  @Test
+  public void portableConverterPreservesRemoveUntranslated() throws Exception {
+    assertPortableMatchesExistingDataset(
+        "pullJsonDefaultFormatJsRemoveUntranslated",
+        "en.json",
+        new String[] {"-ft", "FORMATJS_JSON_NOBASENAME"},
+        new String[] {
+          "-ft", "FORMATJS_JSON_NOBASENAME", "--inheritance-mode", "REMOVE_UNTRANSLATED"
+        });
+  }
+
+  @Test
+  public void portableConverterPreservesPullRunBookkeeping() throws Exception {
+    assertPortableMatchesExistingDataset(
+        "pullProperties", "demo.properties", new String[0], new String[] {"--record-pull-run"});
+    assertTrue(
+        "Recorded pull runs must retain their translated text-unit variants",
+        pullRunTextUnitVariantRepository.count() > 0);
+  }
+
+  @Test
+  public void portableConverterSupportsExistingAsyncPull() throws Exception {
+    assertPortableMatchesExistingDataset(
+        "pullProperties", "demo.properties", new String[0], new String[] {"--async-ws"});
+  }
+
+  @Test
+  public void portableConverterSupportsExistingParallelPull() throws Exception {
+    assertPortableMatchesExistingDataset(
+        "pullProperties", "demo.properties", new String[0], new String[] {"--parallel"});
+  }
+
+  private void assertPortableMatchesExistingDataset(
+      String dataset, String assetPath, String[] pushOptions, String[] pullOptions)
+      throws Exception {
+    Repository repository = createTestRepoUsingRepoService();
+    Path input =
+        Path.of("src/test/resources/com/box/l10n/mojito/cli/command/PullCommandTest_IO", dataset);
+    File source = input.resolve("input/source").toFile();
+    List<String> push = new ArrayList<>();
+    push.addAll(List.of("push", "-r", repository.getName(), "-s", source.getAbsolutePath()));
+    push.addAll(List.of(pushOptions));
+    push.addAll(List.of("--converter", "portable"));
+    getL10nJCommander().run(push.toArray(String[]::new));
+
+    Asset asset = assetClient.getAssetByPathAndRepositoryId(assetPath, repository.getId());
+    importTranslationsFromDataset(input, asset.getId(), "fr-FR");
+    importTranslationsFromDataset(input, asset.getId(), "ja-JP");
+
+    File output = getTargetTestDir("target");
+    List<String> pull = new ArrayList<>();
+    pull.addAll(
+        List.of(
+            "pull",
+            "-r",
+            repository.getName(),
+            "-s",
+            source.getAbsolutePath(),
+            "-t",
+            output.getAbsolutePath(),
+            "--converter",
+            "portable"));
+    pull.addAll(List.of(pullOptions));
+    getL10nJCommander().run(pull.toArray(String[]::new));
+    if (assetPath.endsWith(".properties")) {
+      assertEquivalentProperties(input.resolve("expected/target"), output.toPath());
+    } else if (assetPath.endsWith(".stringsdict")) {
+      assertEquivalentApplePluralResources(input.resolve("expected/target"), output.toPath());
+    } else {
+      checkDirectoriesContainSameContent(input.resolve("expected/target").toFile(), output);
+    }
+  }
+
+  private void assertEquivalentApplePluralResources(Path expected, Path actual) throws IOException {
+    try (var expectedFiles = Files.walk(expected)) {
+      for (Path expectedFile : expectedFiles.filter(Files::isRegularFile).toList()) {
+        Path actualFile = actual.resolve(expected.relativize(expectedFile));
+        assertTrue("Missing localized file: " + actualFile, Files.exists(actualFile));
+        LocalizationCatalog expectedCatalog =
+            LocalizationFileConverters.parse(
+                LocalizationFileFormat.APPLE_STRINGSDICT, Files.readAllBytes(expectedFile));
+        LocalizationCatalog actualCatalog =
+            LocalizationFileConverters.parse(
+                LocalizationFileFormat.APPLE_STRINGSDICT, Files.readAllBytes(actualFile));
+        assertEquals(
+            expectedFile.toString(),
+            expectedCatalog.messages().keySet(),
+            actualCatalog.messages().keySet());
+        String locale = expectedFile.getParent().getFileName().toString().replace(".lproj", "");
+        for (var entry : expectedCatalog.messages().entrySet()) {
+          LocalizationMessage expectedMessage = entry.getValue();
+          LocalizationMessage actualMessage = actualCatalog.messages().get(entry.getKey());
+          assertNotNull(actualMessage);
+          for (String category : PluralRuleService.getKeywordsForLanguageTag(locale)) {
+            assertEquals(
+                expectedFile + " " + entry.getKey() + "#" + category,
+                expectedMessage.variants().get(category),
+                actualMessage.variants().get(category));
+          }
+        }
+      }
+    }
+  }
+
+  private void assertEquivalentProperties(Path expected, Path actual) throws IOException {
+    try (var expectedFiles = Files.walk(expected)) {
+      for (Path expectedFile : expectedFiles.filter(Files::isRegularFile).toList()) {
+        Path actualFile = actual.resolve(expected.relativize(expectedFile));
+        assertTrue("Missing localized file: " + actualFile, Files.exists(actualFile));
+        Properties expectedValues = new Properties();
+        Properties actualValues = new Properties();
+        try (var reader = Files.newBufferedReader(expectedFile)) {
+          expectedValues.load(reader);
+        }
+        try (var reader = Files.newBufferedReader(actualFile)) {
+          actualValues.load(reader);
+        }
+        assertEquals(expectedFile.toString(), expectedValues, actualValues);
+      }
+    }
+  }
+
+  private void importTranslationsFromDataset(Path dataset, Long assetId, String locale)
+      throws IOException {
+    Path xliff = dataset.resolve("input/translations/source-xliff_" + locale + ".xliff");
+    portableTestImportService.importXLIFF(assetId, Files.readString(xliff), true);
   }
 
   @Test

@@ -9,6 +9,8 @@ import com.box.l10n.mojito.cli.filefinder.FileFinderException;
 import com.box.l10n.mojito.cli.filefinder.FileMatch;
 import com.box.l10n.mojito.cli.filefinder.file.FileType;
 import com.box.l10n.mojito.cli.filefinder.file.XcodeXliffFileType;
+import com.box.l10n.mojito.fileformat.LocalizationConverterSelection;
+import com.box.l10n.mojito.fileformat.LocalizationConverterSelection.Mode;
 import com.box.l10n.mojito.rest.client.PollableTaskClient;
 import com.box.l10n.mojito.rest.client.RepositoryClient;
 import com.box.l10n.mojito.rest.client.exception.PollableTaskException;
@@ -367,6 +369,14 @@ public class CommandHelper {
    */
   public List<String> getFilterOptionsOrDefaults(FileType fileType, List<String> filterOptions) {
     return filterOptions == null ? fileType.getDefaultFilterOptions() : filterOptions;
+  }
+
+  public List<String> getFilterOptionsOrDefaults(
+      FileType fileType, List<String> filterOptions, Mode converter) {
+    List<String> options = getFilterOptionsOrDefaults(fileType, filterOptions);
+    return converter == Mode.PORTABLE
+        ? LocalizationConverterSelection.usePortable(options)
+        : options;
   }
 
   /**

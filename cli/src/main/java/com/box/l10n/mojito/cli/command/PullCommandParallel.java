@@ -38,6 +38,7 @@ public class PullCommandParallel extends PullCommand {
     this.directoriesIncludePatterns = pullCommand.directoriesIncludePatterns;
     this.sourcePathFilterRegex = pullCommand.sourcePathFilterRegex;
     this.filterOptionsParam = pullCommand.filterOptionsParam;
+    this.converter = pullCommand.converter;
     this.sourceLocale = pullCommand.sourceLocale;
     this.fileTypes = pullCommand.fileTypes;
     this.localeMappingParam = pullCommand.localeMappingParam;
@@ -71,7 +72,7 @@ public class PullCommandParallel extends PullCommand {
 
       List<String> filterOptions =
           commandHelper.getFilterOptionsOrDefaults(
-              sourceFileMatch.getFileType(), filterOptionsParam);
+              sourceFileMatch.getFileType(), filterOptionsParam, converter);
 
       sendContentForLocalizedGeneration(sourceFileMatch, filterOptions);
     }
