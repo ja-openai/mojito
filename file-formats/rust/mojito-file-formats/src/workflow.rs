@@ -248,7 +248,12 @@ pub(crate) fn parse_import(
             extraction_options.push(option.clone());
         }
     }
-    let mut catalog = parse(format, source, &extraction_options)?;
+    let mut catalog = if matches!(format, FileFormat::Csv | FileFormat::CsvAdobeMagento) {
+        FilterOptions::parse(format, &extraction_options)?;
+        crate::csv::parse_import(format, &crate::decode(source, None)?)?
+    } else {
+        parse(format, source, &extraction_options)?
+    };
     if !copy_forms && target_comment.is_none() {
         return Ok(catalog);
     }

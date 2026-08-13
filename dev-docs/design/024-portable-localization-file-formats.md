@@ -3221,8 +3221,9 @@ to 59–66 ms after removing repeated rule-count scans and per-message list
 allocation. The temporary measurement harness was not retained in production
 or test code.
 
-The existing `push` and `pull` commands now accept `--converter portable`; the
-default remains `--converter okapi`. Selection travels through the existing
+The existing `push`, `pull`, and localized-asset `import` commands now accept
+`--converter portable`; the default remains `--converter okapi`. Selection
+travels through the existing
 filter-option list, including asynchronous and parallel requests, so no new
 commands, REST payload fields, persisted jobs, or duplicate CLI datasets are
 required. Server extraction projects canonical IDs, source text, descriptions,
@@ -3230,6 +3231,9 @@ plural forms, and usages into the existing translation-memory model. Translated
 output uses the original source content as its template, preserves current
 status filtering, parent inheritance, removal, and pull-run bookkeeping, and
 resolves canonical source-slot identities independently from legacy TM names.
+Native localized-asset import matches existing used source units, inherited
+translations, equal-target status policy, target comments, integrity checks,
+and translation-memory identities without entering the Okapi pipeline.
 GNU gettext output also expands each independent English two-slot plural into
 the target locale's native plural-slot count, retains the exact configured
 plural formula, and records only the TM variants actually written; Russian

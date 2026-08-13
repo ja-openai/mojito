@@ -1,9 +1,16 @@
 package com.box.l10n.mojito.cli.command;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertTrue;
+
 import com.box.l10n.mojito.cli.CLITestBase;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.service.locale.LocaleService;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +25,73 @@ public class ImportLocalizedAssetCommandTest extends CLITestBase {
   static Logger logger = LoggerFactory.getLogger(DropXliffImportCommandTest.class);
 
   @Autowired LocaleService localeService;
+
+  @Test
+  public void portableConverterReusesExistingCsvImportDataset() throws Exception {
+    assertPortableImportMatchesExistingDataset("importCsv", List.of());
+  }
+
+  @Test
+  public void portableConverterReusesExistingAdobeMagentoCsvImportDataset() throws Exception {
+    assertPortableImportMatchesExistingDataset(
+        "importCsvAdobeMagento", List.of("-ft", "CSV_ADOBE_MAGENTO", "-sl", "en_US"));
+  }
+
+  @Test
+  public void portableConverterReusesExistingPropertiesImportDataset() throws Exception {
+    assertPortableImportMatchesExistingDataset("importProperties", List.of());
+  }
+
+  @Test
+  public void portableConverterReusesExistingAppleStringsImportDataset() throws Exception {
+    assertPortableImportMatchesExistingDataset("importMacStrings", List.of());
+  }
+
+  @Test
+  public void portableConverterReusesExistingJsonImportDataset() throws Exception {
+    assertPortableImportMatchesExistingDataset("importJson", List.of("-ft", "JSON"));
+  }
+
+  private void assertPortableImportMatchesExistingDataset(
+      String dataset, List<String> formatOptions) throws Exception {
+    Repository repository = createTestRepoUsingRepoService();
+    Path fixture =
+        Path.of(
+            "src/test/resources/com/box/l10n/mojito/cli/command/ImportLocalizedAssetCommandTest_IO",
+            dataset);
+    Path source = fixture.resolve("input/source");
+    Path translated = fixture.resolve("input/translations");
+    Path output = getTargetTestDir().toPath();
+
+    runPortableCommand("push", repository.getName(), source, null, formatOptions);
+    runPortableCommand("import", repository.getName(), source, translated, formatOptions);
+    runPortableCommand("pull", repository.getName(), source, output, formatOptions);
+
+    Path expected = fixture.resolve("expected");
+    List<Path> files;
+    try (var paths = Files.walk(expected)) {
+      files = paths.filter(Files::isRegularFile).toList();
+    }
+    assertTrue("Existing import dataset must contain expected localized files", !files.isEmpty());
+    for (Path file : files) {
+      assertArrayEquals(
+          expected.relativize(file).toString(),
+          Files.readAllBytes(file),
+          Files.readAllBytes(output.resolve(expected.relativize(file))));
+    }
+  }
+
+  private void runPortableCommand(
+      String command, String repository, Path source, Path target, List<String> formatOptions) {
+    List<String> arguments = new ArrayList<>();
+    arguments.addAll(List.of(command, "-r", repository, "-s", source.toString()));
+    if (target != null) {
+      arguments.addAll(List.of("-t", target.toString()));
+    }
+    arguments.addAll(formatOptions);
+    arguments.addAll(List.of("--converter", "portable"));
+    getL10nJCommander().run(arguments.toArray(String[]::new));
+  }
 
   @Test
   public void importAndroidStrings() throws Exception {

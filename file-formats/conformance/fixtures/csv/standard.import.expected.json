@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "csv",
+  "messages": {
+    "harbor": {
+      "defaultMessage": "Bonjour, ami",
+      "description": "\"Shown to new sailors\"",
+      "metadata": { "mojitoTargetComment": "Approved by vendor" }
+    },
+    "plain": {
+      "defaultMessage": "Simple",
+      "metadata": { "mojitoTargetComment": "Approved by vendor" }
+    },
+    "quoted": {
+      "defaultMessage": "Dire \"\"bonjour\"\"",
+      "description": "\"Dialog detail\"",
+      "metadata": { "mojitoTargetComment": "Approved by vendor" }
+    },
+    "spaced": {
+      "defaultMessage": "padded target",
+      "description": "\"Keep comment spaces\"",
+      "metadata": { "mojitoTargetComment": "Approved by vendor" }
+    },
+    "missing_target": {
+      "defaultMessage": "Présent",
+      "metadata": { "mojitoTargetComment": "Approved by vendor" }
+    },
+    "empty": {
+      "defaultMessage": "keep",
+      "description": "Ignored",
+      "metadata": { "mojitoTargetComment": "Approved by vendor" }
+    }
+  }
+}

@@ -7,6 +7,7 @@ import com.box.l10n.mojito.cli.command.param.Param;
 import com.box.l10n.mojito.cli.console.ConsoleWriter;
 import com.box.l10n.mojito.cli.filefinder.FileMatch;
 import com.box.l10n.mojito.cli.filefinder.file.FileType;
+import com.box.l10n.mojito.fileformat.LocalizationConverterSelection.Mode;
 import com.box.l10n.mojito.rest.client.AssetClient;
 import com.box.l10n.mojito.rest.client.LocaleClient;
 import com.box.l10n.mojito.rest.client.RepositoryClient;
@@ -101,6 +102,13 @@ public class ImportLocalizedAssetCommand extends Command {
       required = false,
       description = Param.FILTER_OPTIONS_DESCRIPTION)
   List<String> filterOptionsParam;
+
+  @Parameter(
+      names = Param.CONVERTER_LONG,
+      arity = 1,
+      converter = LocalizationConverterModeConverter.class,
+      description = Param.CONVERTER_DESCRIPTION)
+  Mode converter = Mode.OKAPI;
 
   @Parameter(
       names = {Param.SOURCE_LOCALE_LONG, Param.SOURCE_LOCALE_SHORT},
@@ -252,7 +260,8 @@ public class ImportLocalizedAssetCommand extends Command {
           fileContent,
           statusForEqualTarget,
           fileMatch.getFileType().getFilterConfigIdOverride(),
-          commandHelper.getFilterOptionsOrDefaults(fileMatch.getFileType(), filterOptionsParam));
+          commandHelper.getFilterOptionsOrDefaults(
+              fileMatch.getFileType(), filterOptionsParam, converter));
     } catch (AssetNotFoundException ex) {
       if (continueOnError) {
         consoleWriter

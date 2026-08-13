@@ -15,6 +15,7 @@ import com.box.l10n.mojito.entity.TM;
 import com.box.l10n.mojito.entity.TMTextUnit;
 import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
+import com.box.l10n.mojito.entity.TMTextUnitVariantComment;
 import com.box.l10n.mojito.entity.TMXliff;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.fileformat.LocalizationCatalog;
@@ -53,9 +54,13 @@ import com.box.l10n.mojito.quartz.QuartzJobInfo;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.retry.DataIntegrityViolationExceptionRetryTemplate;
 import com.box.l10n.mojito.security.AuditorAwareImpl;
+import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.WordCountService;
 import com.box.l10n.mojito.service.asset.AssetRepository;
+import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckStep;
+import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckerFactory;
+import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.TextUnitIntegrityChecker;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pollableTask.InjectCurrentTask;
 import com.box.l10n.mojito.service.pollableTask.Pollable;
@@ -67,6 +72,8 @@ import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
+import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
+import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.box.l10n.mojito.xliff.XliffUtils;
 import com.google.common.base.Preconditions;
 import com.ibm.icu.text.MessageFormat;
@@ -76,12 +83,14 @@ import jakarta.persistence.EntityManager;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -166,6 +175,12 @@ public class TMService {
   @Autowired PullRunService pullRunService;
 
   @Autowired PullRunAssetService pullRunAssetService;
+
+  @Autowired TextUnitSearcher textUnitSearcher;
+
+  @Autowired IntegrityCheckerFactory integrityCheckerFactory;
+
+  @Autowired TMTextUnitVariantCommentService tmTextUnitVariantCommentService;
 
   @Autowired
   DataIntegrityViolationExceptionRetryTemplate dataIntegrityViolationExceptionRetryTemplate;
@@ -1555,6 +1570,18 @@ public class TMService {
         repositoryLocaleRepository.findByRepositoryIdAndLocaleId(
             asset.getRepository().getId(), localeId);
 
+    if (LocalizationConverterSelection.isPortable(
+        filterOptions, portableConverter, asset.getPath())) {
+      importLocalizedAssetPortable(
+          asset,
+          content,
+          repositoryLocale,
+          statusForEqualtarget,
+          filterConfigIdOverride,
+          filterOptions);
+      return;
+    }
+
     String bcp47Tag = repositoryLocale.getLocale().getBcp47Tag();
 
     logger.debug("Configuring pipeline to import localized file");
@@ -1594,6 +1621,156 @@ public class TMService {
 
     logger.debug("Start processing batch");
     processBatchInTransaction(driver);
+  }
+
+  @Transactional
+  void importLocalizedAssetPortable(
+      Asset asset,
+      String content,
+      RepositoryLocale repositoryLocale,
+      StatusForEqualTarget statusForEqualTarget,
+      FilterConfigIdOverride filterConfigIdOverride,
+      List<String> filterOptions) {
+    LocalizationFileFormat format =
+        LocalizationConverterSelection.format(asset.getPath(), filterConfigIdOverride);
+    boolean copyPluralForms =
+        format == LocalizationFileFormat.ANDROID
+            || format == LocalizationFileFormat.APPLE_STRINGSDICT
+            || format == LocalizationFileFormat.GETTEXT_PO;
+    LocalizationCatalog imported =
+        LocalizationFileConverters.parseForMojitoImport(
+            format,
+            content.getBytes(StandardCharsets.UTF_8),
+            LocalizationConverterSelection.platformOptions(filterOptions),
+            repositoryLocale.getLocale().getBcp47Tag(),
+            copyPluralForms);
+
+    TextUnitSearcherParameters parameters = new TextUnitSearcherParameters();
+    parameters.setAssetId(asset.getId());
+    parameters.setForRootLocale(true);
+    parameters.setPluralFormsFiltered(false);
+    List<TextUnitDTO> extracted = textUnitSearcher.search(parameters);
+    Map<Long, TMTextUnit> textUnitsById =
+        tmTextUnitRepository
+            .findByIdIn(
+                extracted.stream()
+                    .filter(TextUnitDTO::isUsed)
+                    .map(TextUnitDTO::getTmTextUnitId)
+                    .toList())
+            .stream()
+            .collect(Collectors.toMap(TMTextUnit::getId, unit -> unit));
+    Map<String, ArrayDeque<TMTextUnit>> usedTextUnits = new LinkedHashMap<>();
+    for (TextUnitDTO unit : extracted) {
+      if (unit.isUsed()) {
+        TMTextUnit textUnit = textUnitsById.get(unit.getTmTextUnitId());
+        if (textUnit != null) {
+          usedTextUnits
+              .computeIfAbsent(unit.getName(), ignored -> new ArrayDeque<>())
+              .add(textUnit);
+        }
+      }
+    }
+
+    TranslatorWithInheritance inherited =
+        new TranslatorWithInheritance(asset, repositoryLocale, InheritanceMode.USE_PARENT);
+    Set<TextUnitIntegrityChecker> checkers = integrityCheckerFactory.getTextUnitCheckers(asset);
+    ZonedDateTime created = ZonedDateTime.now();
+    User createdBy = auditorAwareImpl.getCurrentAuditor().orElse(null);
+    Long localeId = repositoryLocale.getLocale().getId();
+
+    for (var projected : LocalizationShadowComparator.projectTextUnitsWithIds(imported)) {
+      ArrayDeque<TMTextUnit> matching = usedTextUnits.get(projected.textUnit().getName());
+      if (matching == null || matching.isEmpty()) {
+        continue;
+      }
+      TMTextUnit source = matching.removeFirst();
+      String translation = projected.textUnit().getSource();
+      if (format == LocalizationFileFormat.GETTEXT_PO) {
+        String id = projected.canonicalId();
+        int plural = id.lastIndexOf('#');
+        LocalizationMessage message =
+            imported.messages().get(plural < 0 ? id : id.substring(0, plural));
+        translation =
+            plural < 0
+                ? message.defaultMessage()
+                : message.variants().get(id.substring(plural + 1));
+      }
+      if (translation == null || translation.isEmpty()) {
+        continue;
+      }
+
+      TextUnitDTO previous = inherited.getTextUnitDTO(source.getMd5());
+      String compared = NormalizationUtils.normalize(translation);
+      boolean same = compared.equals(previous == null ? source.getContent() : previous.getTarget());
+      TMTextUnitVariant.Status status = TMTextUnitVariant.Status.APPROVED;
+      if (same) {
+        if (!repositoryLocale.isToBeFullyTranslated()
+            || StatusForEqualTarget.SKIPPED.equals(statusForEqualTarget)) {
+          continue;
+        }
+        status =
+            switch (statusForEqualTarget) {
+              case TRANSLATION_NEEDED -> TMTextUnitVariant.Status.TRANSLATION_NEEDED;
+              case REVIEW_NEEDED -> TMTextUnitVariant.Status.REVIEW_NEEDED;
+              default -> TMTextUnitVariant.Status.APPROVED;
+            };
+        if (previous != null
+            && localeId.equals(previous.getLocaleId())
+            && status.equals(previous.getStatus())) {
+          continue;
+        }
+      }
+
+      List<String> errors = new ArrayList<>();
+      for (TextUnitIntegrityChecker checker : checkers) {
+        try {
+          checker.check(source.getContent(), translation);
+        } catch (IntegrityCheckException invalid) {
+          errors.add(invalid.getMessage());
+        }
+      }
+      if (!errors.isEmpty()) {
+        status = TMTextUnitVariant.Status.TRANSLATION_NEEDED;
+      }
+      LocalizationMessage descriptor = imported.messages().get(projected.canonicalId());
+      if (descriptor == null) {
+        descriptor =
+            imported
+                .messages()
+                .get(
+                    projected.canonicalId().substring(0, projected.canonicalId().lastIndexOf('#')));
+      }
+      String comment =
+          descriptor.metadata() != null
+                  && descriptor.metadata().get("mojitoTargetComment") instanceof String note
+              ? note
+              : null;
+      TMTextUnitCurrentVariant current =
+          tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
+              localeId, source.getId());
+      TMTextUnitVariant variant =
+          addTMTextUnitCurrentVariantWithResult(
+                  current,
+                  source.getTm().getId(),
+                  asset.getId(),
+                  source.getId(),
+                  localeId,
+                  translation,
+                  comment,
+                  status,
+                  errors.isEmpty(),
+                  created,
+                  createdBy)
+              .getTmTextUnitCurrentVariant()
+              .getTmTextUnitVariant();
+      for (String error : errors) {
+        tmTextUnitVariantCommentService.addComment(
+            variant,
+            TMTextUnitVariantComment.Type.INTEGRITY_CHECK,
+            TMTextUnitVariantComment.Severity.ERROR,
+            error);
+      }
+    }
   }
 
   @Transactional
