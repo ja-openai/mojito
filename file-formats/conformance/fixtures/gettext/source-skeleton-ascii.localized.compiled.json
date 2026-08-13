@@ -1,0 +1,12 @@
+{
+  "entries": {
+    "plain.empty\u0004Empty harbor": "Open harbor route",
+    "plain.signal\u0004Signal %s": "Safe signal %s"
+  },
+  "plurals": {
+    "plain.count\u0004Crate %d": {
+      "0": "One safe crate %d",
+      "1": "Several safe crates %d"
+    }
+  }
+}

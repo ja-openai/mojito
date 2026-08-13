@@ -1,0 +1,8 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: fr\n"
+
+msgctxt "invalid.charset"
+msgid "Quiet route"
+msgstr "Café"

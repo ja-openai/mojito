@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "messages": {
+    "Quiet bay": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "Quiet bay"
+      }
+    }
+  },
+  "locale": "en-US"
+}

@@ -1,0 +1,14 @@
+# Neutral coastal beacon fixture; formula separators are intentionally original.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=n!=1; plural=n==1;\n"
+
+#. Count the active beacons visible from the inlet.
+#, c-format
+msgctxt "harbor.beacon_count"
+msgid "%d coastal beacon"
+msgid_plural "%d coastal beacons"
+msgstr[0] "%d steady beacon"
+msgstr[1] "%d steady beacons"

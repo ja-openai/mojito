@@ -1,0 +1,17 @@
+{
+  "alpha": {
+    "entries": {
+      "route@domain=beta": "Literal identity"
+    }
+  },
+  "beta": {
+    "entries": {
+      "route": "Beta route"
+    }
+  },
+  "gamma": {
+    "entries": {
+      "route": "Gamma route"
+    }
+  }
+}

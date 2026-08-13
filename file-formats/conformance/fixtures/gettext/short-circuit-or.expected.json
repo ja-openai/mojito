@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "en",
+  "messages": {
+    "safe_threshold": {
+      "defaultMessage": "{arg0, plural, one {{arg0} active threshold} other {{arg0} active thresholds}}",
+      "variants": {
+        "one": "{arg0} active threshold",
+        "other": "{arg0} active thresholds"
+      },
+      "placeholders": [{ "name": "arg0", "source": "%d", "kind": "integer", "position": 1 }],
+      "metadata": {
+        "sourceMessage": "%d threshold",
+        "sourcePlural": "%d thresholds",
+        "context": "safe_threshold",
+        "gettextPluralIndexes": { "0": "one", "1": "other" },
+        "gettextPluralForms": { "nplurals": 2, "expression": "n == 0 || 1 / n != 1" }
+      }
+    }
+  }
+}

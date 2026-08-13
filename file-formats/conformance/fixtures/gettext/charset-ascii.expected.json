@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "en",
+  "messages": {
+    "plain.route": {
+      "defaultMessage": "Open route",
+      "metadata": {
+        "context": "plain.route",
+        "sourceMessage": "Quiet route"
+      }
+    }
+  }
+}

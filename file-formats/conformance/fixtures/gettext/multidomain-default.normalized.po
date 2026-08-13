@@ -1,0 +1,26 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en_US\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+
+#. The implicit messages domain owns its own English header.
+#, c-format
+msgid "%d signal"
+msgid_plural "%d signals"
+msgstr[0] "%d signal"
+msgstr[1] "%d signals"
+
+domain "navigation"
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: fr_FR\n"
+"Plural-Forms: nplurals=2; plural=n > 1;\n"
+
+#. The named domain keeps the same source and a different locale.
+#, c-format
+msgid "%d signal"
+msgid_plural "%d signals"
+msgstr[0] "%d signal"
+msgstr[1] "%d signaux"

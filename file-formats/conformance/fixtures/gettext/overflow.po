@@ -1,0 +1,9 @@
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(9223372036854775807 + 1) % 2;\n"
+
+msgid "%d reading"
+msgid_plural "%d readings"
+msgstr[0] "%d reading"
+msgstr[1] "%d readings"

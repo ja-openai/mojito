@@ -1,0 +1,32 @@
+{
+  "messages": {
+    "entries": {
+      "beacon.ready": "Balise prête"
+    },
+    "header": {
+      "locale": "fr-FR",
+      "fields": [
+        {
+          "name": "X-Route",
+          "value": "north"
+        },
+        {
+          "name": "X-Route",
+          "value": "south"
+        },
+        {
+          "name": "North Route",
+          "value": "visible at dusk"
+        },
+        {
+          "name": "",
+          "value": "anonymous native metadata"
+        },
+        {
+          "name": "X-Empty",
+          "value": ""
+        }
+      ]
+    }
+  }
+}

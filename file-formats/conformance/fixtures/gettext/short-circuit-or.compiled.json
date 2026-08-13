@@ -1,0 +1,8 @@
+{
+  "plurals": {
+    "safe_threshold\u0004%d threshold": {
+      "0": "%d active threshold",
+      "1": "%d active thresholds"
+    }
+  }
+}

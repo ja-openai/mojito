@@ -1,0 +1,5 @@
+{
+  "entries": {
+    "escaped\u0004bell\u0007 vertical\u000b hexA octalB": "bell\u0007 vertical\u000b hexC octalD"
+  }
+}

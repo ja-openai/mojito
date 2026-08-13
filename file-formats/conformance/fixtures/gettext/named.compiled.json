@@ -1,0 +1,6 @@
+{
+  "entries": {
+    "literal\u0004The value is %s and 50%%": "La valeur est %s et 50%%",
+    "welcome\u0004Hello %(user)s, you have %(count)d items": "Bonjour %(user)s, vous avez %(count)d éléments"
+  }
+}

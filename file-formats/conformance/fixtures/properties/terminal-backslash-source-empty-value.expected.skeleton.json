@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "java_properties",
+  "encoding": "UTF-8",
+  "source": "anchor=steady\nharbor.value=\\",
+  "slots": [
+    {
+      "id": "anchor",
+      "start": 7,
+      "end": 13
+    },
+    {
+      "id": "harbor.value",
+      "start": 27,
+      "end": 28
+    }
+  ]
+}

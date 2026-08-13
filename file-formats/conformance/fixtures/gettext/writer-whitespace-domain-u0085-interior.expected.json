@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "en-US",
+  "messages": {
+    "Quiet bay": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "Quiet bay",
+        "gettextDomain": "northdock",
+        "gettextDomainHeader": {
+          "locale": "en-US"
+        }
+      }
+    }
+  }
+}

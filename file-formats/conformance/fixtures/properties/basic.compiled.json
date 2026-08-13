@@ -1,0 +1,6 @@
+{
+  "welcome": "Hello, %s!",
+  "farewell": "Goodbye",
+  "whitespace_key": "value after whitespace delimiter",
+  "empty": ""
+}

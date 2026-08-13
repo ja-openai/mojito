@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "messages": {
+    "Current %s": {
+      "defaultMessage": "Actuel {arg0}",
+      "placeholders": [{ "name": "arg0", "source": "%s", "kind": "string", "position": 1 }],
+      "metadata": {
+        "sourceMessage": "Current %s",
+        "flags": ["fuzzy", "python-format"]
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "plurals": {
+    "french_beacon_groups\u0004%d hillside beacon": {
+      "0": "%d beacon: singular grouping",
+      "1": "%d beacons: million grouping",
+      "2": "%d beacons: ordinary grouping"
+    }
+  }
+}

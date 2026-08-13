@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "messages": {
+    "extract.u00a0": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "extract.u00a0"
+      },
+      "description": " neutral "
+    },
+    "extract-only.u00a0": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "extract-only.u00a0"
+      },
+      "description": " "
+    },
+    "translator.u00a0": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "translator.u00a0",
+        "translatorComments": [
+          " neutral "
+        ]
+      }
+    },
+    "translator-only.u00a0": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "translator-only.u00a0",
+        "translatorComments": [
+          " "
+        ]
+      }
+    },
+    "reference.u00a0": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "reference.u00a0",
+        "references": [
+          "first last"
+        ]
+      }
+    },
+    "reference-edge.u00a0": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "reference-edge.u00a0",
+        "references": [
+          " neutral "
+        ]
+      }
+    },
+    "flags.u00a0": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "flags.u00a0",
+        "flags": [
+          " no-c-format "
+        ]
+      }
+    }
+  },
+  "locale": "en-US"
+}

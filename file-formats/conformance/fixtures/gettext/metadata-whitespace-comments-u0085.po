@@ -1,0 +1,33 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en_US\n"
+
+#.neutral
+msgid "extract.u0085"
+msgstr "Port calme"
+
+#.
+msgid "extract-only.u0085"
+msgstr "Port calme"
+
+# neutral
+msgid "translator.u0085"
+msgstr "Port calme"
+
+# 
+msgid "translator-only.u0085"
+msgstr "Port calme"
+
+#:firstlast
+msgid "reference.u0085"
+msgstr "Port calme"
+
+#:neutral
+msgid "reference-edge.u0085"
+msgstr "Port calme"
+
+#, no-c-format
+msgid "flags.u0085"
+msgstr "Port calme"
+

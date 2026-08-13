@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "java_properties",
+  "messages": {
+    "escaped_b": {
+      "defaultMessage": "alphabomega"
+    },
+    "escaped_percent": {
+      "defaultMessage": "50%",
+      "metadata": {
+        "javaPropertiesEscapedPercents": [
+          2
+        ]
+      }
+    },
+    "raw_percent": {
+      "defaultMessage": "50%"
+    },
+    "unicode_line": {
+      "defaultMessage": "left middle end"
+    },
+    "visible": {
+      "defaultMessage": "entry",
+      "description": "A comment's final slash cannot capture the next property \\"
+    },
+    " nbsp": {
+      "defaultMessage": "narrow"
+    },
+    " #not_comment": {
+      "defaultMessage": "visible"
+    },
+    " wide": {
+      "defaultMessage": "value"
+    }
+  }
+}

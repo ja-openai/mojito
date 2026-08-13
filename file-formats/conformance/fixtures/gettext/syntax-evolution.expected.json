@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "en-US",
+  "messages": {
+    "default.route": {
+      "defaultMessage": "Ruta tranquila",
+      "description": "Adjacent directives, physical C continuations, and horizontal tabs are native syntax.",
+      "metadata": {
+        "sourceMessage": "Seaward signal",
+        "context": "default.route"
+      }
+    },
+    "current.signal": {
+      "defaultMessage": "{arg0, plural, one {Nueva {arg0} baliza} other {Nuevas {arg0} balizas}}",
+      "description": "Current sticky-flag spelling keeps previous context, singular, and plural history.",
+      "variants": {
+        "one": "Nueva {arg0} baliza",
+        "other": "Nuevas {arg0} balizas"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "sourceMessage": "Current %d beacon",
+        "sourcePlural": "Current %d beacons",
+        "gettextDomain": "harbor.signals",
+        "gettextPrevious": {
+          "context": "historic.signal",
+          "id": "Former %d beacon",
+          "plural": "Former %d beacons"
+        },
+        "flags": [
+          "c-format",
+          "no-wrap",
+          "x-project-signal",
+          "fuzzy",
+          "range: 1..7"
+        ],
+        "context": "current.signal",
+        "gettextPluralIndexes": {
+          "0": "one",
+          "1": "other"
+        },
+        "gettextPluralForms": {
+          "nplurals": 2,
+          "expression": "n != 1"
+        }
+      }
+    },
+    "literal.route": {
+      "defaultMessage": "Visible %s",
+      "description": "Last format polarity wins while project-owned sticky flags remain reversible.",
+      "metadata": {
+        "sourceMessage": "Literal %s",
+        "gettextDomain": "harbor.signals",
+        "flags": [
+          "x-project-review",
+          "no-c-format"
+        ],
+        "context": "literal.route"
+      }
+    },
+    "reset.signal": {
+      "defaultMessage": "Inicio",
+      "description": "An explicitly empty domain is distinct from an omitted domain directive.",
+      "metadata": {
+        "sourceMessage": "Reset",
+        "gettextDomain": "",
+        "gettextPrevious": {
+          "id": "Previous reset"
+        },
+        "context": "reset.signal"
+      }
+    }
+  }
+}

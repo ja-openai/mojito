@@ -1,0 +1,11 @@
+{
+  "entries": {
+    "quiet.café\u0004Quiet café": "Café déjà fermé"
+  },
+  "plurals": {
+    "entrée.count\u0004%d entrée": {
+      "0": "%d entrée discrète",
+      "1": "%d entrées discrètes"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+# Preserve this 🧭 catalog header and every project-owned field.
+msgid ""
+msgstr ""
+"Project-Id-Version: Neutral Harbor 7.4\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: fr_FR\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Project-Owner: lighthouse crew\n"
+
+# Translator notes, references, sticky flags, and previous history stay untouched.
+#. A signal with an ordinary native printf placeholder.
+#: navigation/deck.py:17
+#, c-format
+#| msgid "Earlier signal %s"
+msgctxt "harbor.signal"
+msgid "Signal %s"
+msgstr ""
+"Lueur"
+" %s"
+
+#. Plural native indexes must retain their original spelling and quote layout.
+#, c-format
+msgctxt "crate.count"
+msgid "%d crate"
+msgid_plural "%d crates"
+msgstr[0] "%d caisse légère"
+msgstr[1] ""
+"%d "
+"caisses lourdes"
+
+#. Quotes in source IDs and target values remain safe C strings.
+msgid "Dock \"North\""
+msgstr "Quai \"Sud\""
+
+msgctxt "route.lines"
+msgid "North\nSouth"
+msgstr ""
+"Ouest\n"
+"Est"
+
+# Empty native translations become active without losing their original quotes.
+msgid "untranslated.wave"
+msgstr "Vague activée"
+
+#~ msgctxt "retired.signal"
+#~ msgid "Retired beacon"
+#~ msgstr "Balise ancienne"

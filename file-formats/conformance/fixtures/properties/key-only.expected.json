@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "java_properties",
+  "messages": {
+    "key_only": { "defaultMessage": "", "description": "Key without a separator has an empty value." },
+    " leading key": { "defaultMessage": " leading value" },
+    "double_slash": { "defaultMessage": "value\\" }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  " leading key:=#!": " leading value   ",
+  "#not_comment": "#!=: start",
+  "controls": "first\nsecond\tthird\rend\fstop\u0001",
+  "emoji😃": "Snow ☃ / 😃",
+  "mixed_lines": "before\nafter%2$nend\nlast",
+  "percent_mixed": "raw 50% / escaped 25%% / %2$s",
+  "percent_n": "%%n / plain %n",
+  "printf_line": "north%nready",
+  "repeat": "%1$s and %1$s",
+  "scalar_percent": "😃 40%% then 20%% / %1$s",
+  "supplementary_😃": "bright",
+  "_private": "private use"
+}

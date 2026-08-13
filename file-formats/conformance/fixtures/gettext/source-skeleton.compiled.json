@@ -1,0 +1,13 @@
+{
+  "entries": {
+    "Dock \"North\"": "Quai \"Nord\"",
+    "harbor.signal\u0004Signal %s": "Port calme %s",
+    "route.lines\u0004North\nSouth": "Nord\nSud"
+  },
+  "plurals": {
+    "crate.count\u0004%d crate": {
+      "0": "%d caisse",
+      "1": "%d caisses"
+    }
+  }
+}

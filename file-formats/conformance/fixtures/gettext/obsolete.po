@@ -1,0 +1,6 @@
+#~ msgid "Old entry"
+#~ msgstr "Ancien"
+
+#, fuzzy, python-format
+msgid "Current %s"
+msgstr "Actuel %s"

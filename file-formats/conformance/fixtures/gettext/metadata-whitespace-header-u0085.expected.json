@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "messages": {
+    "Quiet bay": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "Quiet bay",
+        "gettextDomainHeader": {
+          "fields": [
+            {
+              "name": "X-Neutral",
+              "value": "harbor"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "plurals": {
+    "measurements\u0004%d measurement": {
+      "0": "%d meritev",
+      "1": "%d meritvi",
+      "2": "%d meritve",
+      "3": "%d meritev skupaj"
+    }
+  }
+}

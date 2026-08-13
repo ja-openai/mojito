@@ -1,0 +1,10 @@
+domain "north "
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=ISO-8859-1\n"
+"Language: en_US\n"
+
+#: north dock
+#,  
+msgid "Quiet bay"
+msgstr "Port calme"

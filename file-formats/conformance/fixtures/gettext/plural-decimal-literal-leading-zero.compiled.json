@@ -1,0 +1,8 @@
+{
+  "plurals": {
+    "harbor.beacon_count\u0004%d coastal beacon": {
+      "0": "%d steady beacon",
+      "1": "%d steady beacons"
+    }
+  }
+}

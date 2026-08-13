@@ -1,0 +1,3 @@
+msgctxt "escaped"
+msgid "bell\a vertical\v hex\x41 octal\102"
+msgstr "bell\a vertical\v hex\x43 octal\104"

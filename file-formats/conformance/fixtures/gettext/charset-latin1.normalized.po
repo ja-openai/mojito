@@ -1,0 +1,19 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: fr_FR\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#. Entrée count on a neutral route.
+#: source/route.py:28
+msgctxt "entrée.count"
+msgid "%d entrée"
+msgid_plural "%d entrées"
+msgstr[0] "%d entrée discrète"
+msgstr[1] "%d entrées discrètes"
+
+#. Café fermé near the neutral route.
+#: source/cafe.py:14
+msgctxt "quiet.café"
+msgid "Quiet café"
+msgstr "Café déjà fermé"

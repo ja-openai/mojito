@@ -1,0 +1,11 @@
+msgid ""
+msgstr ""
+"Language: es\n"
+"Plural-Forms: nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;\n"
+
+msgctxt "spanish_beacon_groups"
+msgid "%d desert beacon"
+msgid_plural "%d desert beacons"
+msgstr[0] "%d beacon: singular grouping"
+msgstr[1] "%d beacons: million grouping"
+msgstr[2] "%d beacons: ordinary grouping"

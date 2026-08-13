@@ -1,0 +1,9 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: fr\n"
+
+#. Original neutral escaped Latin-1 bytes.
+msgctxt "escaped.café"
+msgid "Quiet café"
+msgstr "Café prêt"

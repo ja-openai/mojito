@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "java_properties",
+  "encoding": "UTF-8",
+  "source": "# Preserve this 🧭 comment and its original punctuation.\n! A comment ending in an odd slash is still not continued. \\\nescaped\\ key\\:\\= : first harbor\nunicode\\u002Ekey = Ready %1$s\ncontinued.value = north \\\n    west pier\nwhitespace.key       before\nkey.only\nempty.colon :\nline.break = North%nSouth\nliteral.percent = 40%% ready\nkey.contin\\\n   ued = joined key\nvisible key = nonbreaking key\n",
+  "slots": [
+    {
+      "id": "escaped key:=",
+      "start": 139,
+      "end": 151
+    },
+    {
+      "id": "unicode.key",
+      "start": 171,
+      "end": 181
+    },
+    {
+      "id": "continued.value",
+      "start": 200,
+      "end": 221
+    },
+    {
+      "id": "whitespace.key",
+      "start": 243,
+      "end": 249
+    },
+    {
+      "id": "key.only",
+      "start": 258,
+      "end": 258
+    },
+    {
+      "id": "empty.colon",
+      "start": 272,
+      "end": 272
+    },
+    {
+      "id": "line.break",
+      "start": 286,
+      "end": 298
+    },
+    {
+      "id": "literal.percent",
+      "start": 317,
+      "end": 327
+    },
+    {
+      "id": "key.continued",
+      "start": 349,
+      "end": 359
+    },
+    {
+      "id": "visible key",
+      "start": 375,
+      "end": 390
+    }
+  ]
+}

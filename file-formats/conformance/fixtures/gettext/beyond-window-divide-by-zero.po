@@ -1,0 +1,9 @@
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=n == 1001 ? 1 / (n - 1001) : n != 1;\n"
+
+msgid "%d timing signal"
+msgid_plural "%d timing signals"
+msgstr[0] "%d signal"
+msgstr[1] "%d signals"

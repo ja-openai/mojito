@@ -1,0 +1,8 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=ISO_8859-1\n"
+"Language: es\n"
+
+msgctxt "alias.route"
+msgid "Señal tranquila"
+msgstr "Ruta señalada"

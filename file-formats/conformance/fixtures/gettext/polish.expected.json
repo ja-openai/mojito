@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "pl",
+  "messages": {
+    "alerts": {
+      "defaultMessage": "{arg0, plural, one {{arg0} sygnał} few {{arg0} sygnały} many {{arg0} sygnałów} other {{arg0} sygnałów}}",
+      "variants": {
+        "one": "{arg0} sygnał",
+        "few": "{arg0} sygnały",
+        "many": "{arg0} sygnałów",
+        "other": "{arg0} sygnałów"
+      },
+      "placeholders": [{ "name": "arg0", "source": "%d", "kind": "integer", "position": 1 }],
+      "metadata": {
+        "sourceMessage": "%d signal",
+        "sourcePlural": "%d signals",
+        "context": "alerts",
+        "gettextPluralIndexes": { "0": "one", "1": "few", "2": "many" },
+        "gettextPluralForms": {
+          "nplurals": 3,
+          "expression": "n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2"
+        }
+      }
+    }
+  }
+}

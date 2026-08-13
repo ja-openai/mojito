@@ -1,0 +1,7 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "One signal"
+msgstr "Una señal"
+msgstr "Otra señal"

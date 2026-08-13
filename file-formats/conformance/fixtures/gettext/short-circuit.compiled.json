@@ -1,0 +1,8 @@
+{
+  "plurals": {
+    "safe_ratio\u0004%d measurement": {
+      "0": "%d calibrated measurement",
+      "1": "%d calibrated measurements"
+    }
+  }
+}

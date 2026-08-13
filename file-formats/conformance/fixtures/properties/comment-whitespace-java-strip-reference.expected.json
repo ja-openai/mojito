@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "java_properties",
+  "messages": {
+    "space.u0009": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u000b": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u000c": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u0020": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u1680": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u2000": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u2001": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u2002": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u2003": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u2004": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u2005": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u2006": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u2008": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u2009": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u200a": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u2028": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u2029": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u205f": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    },
+    "space.u3000": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    }
+  }
+}

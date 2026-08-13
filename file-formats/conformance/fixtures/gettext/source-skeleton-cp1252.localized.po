@@ -1,0 +1,33 @@
+# Preserve original “smart” comments, € prices, obsolete entries, and wrapped slots.
+msgid ""
+msgstr ""
+"Project-Id-Version: Neutral – Harbor\n"
+"Content-Type: text/plain; charset=CP1252\n"
+"Language: fr_FR\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#. Translator notes retain the original Windows quotation marks.
+#, c-format
+msgctxt "prix.€"
+msgid "Invoice %1$s"
+msgstr ""
+"“Factur"
+"e” — € %1$s"
+
+#, c-format
+msgctxt "caisse.count"
+msgid "Crate %d"
+msgid_plural "Crates %d"
+msgstr[0] "“une” – %d"
+msgstr[1] "“plusieurs” — %d"
+
+msgctxt "escaped.euro"
+msgid "Escaped \x80"
+msgstr "Total € — “sûr”"
+
+msgctxt "empty.route"
+msgid "Empty harbor"
+msgstr "Route – ouverte"
+
+#~ msgid "Old – route"
+#~ msgstr "Ancienne — route"

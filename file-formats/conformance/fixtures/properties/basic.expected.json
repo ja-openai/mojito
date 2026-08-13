@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "java_properties",
+  "messages": {
+    "welcome": {
+      "defaultMessage": "Hello, {arg0}!",
+      "description": "Greeting shown on the dashboard",
+      "placeholders": [{ "name": "arg0", "source": "%s", "kind": "string", "position": 1 }]
+    },
+    "farewell": {
+      "defaultMessage": "Goodbye",
+      "description": "Another recognized comment marker"
+    },
+    "whitespace_key": { "defaultMessage": "value after whitespace delimiter" },
+    "empty": { "defaultMessage": "" }
+  }
+}

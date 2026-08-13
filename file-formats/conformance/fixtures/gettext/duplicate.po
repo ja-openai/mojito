@@ -1,0 +1,7 @@
+msgctxt "same"
+msgid "First"
+msgstr "Premier"
+
+msgctxt "same"
+msgid "Second"
+msgstr "Deuxième"

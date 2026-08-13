@@ -1,0 +1,9 @@
+#, python-format
+msgctxt "welcome"
+msgid "Hello %(user)s, you have %(count)d items"
+msgstr "Bonjour %(user)s, vous avez %(count)d éléments"
+
+#, no-c-format
+msgctxt "literal"
+msgid "The value is %s and 50%%"
+msgstr "La valeur est %s et 50%%"

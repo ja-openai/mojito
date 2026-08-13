@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "java_properties",
+  "encoding": "UTF-8",
+  "source": "#  north \r\nroute=Quiet bay\r\n!\u001f clear\u001f\r\nanchor=East quay\r\n",
+  "slots": [
+    {
+      "id": "route",
+      "start": 21,
+      "end": 30
+    },
+    {
+      "id": "anchor",
+      "start": 50,
+      "end": 59
+    }
+  ]
+}

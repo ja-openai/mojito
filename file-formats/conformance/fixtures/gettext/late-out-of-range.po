@@ -1,0 +1,9 @@
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=n == 1000 ? 2 : n != 1;\n"
+
+msgid "%d checkpoint"
+msgid_plural "%d checkpoints"
+msgstr[0] "%d checkpoint"
+msgstr[1] "%d checkpoints"

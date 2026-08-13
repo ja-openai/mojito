@@ -1,0 +1,12 @@
+{
+  "continued.value": "north west pier",
+  "empty.colon": "",
+  "escaped key:=": "first harbor",
+  "key.continued": "joined key",
+  "key.only": "",
+  "line.break": "North%nSouth",
+  "literal.percent": "40%% ready",
+  "unicode.key": "Ready %1$s",
+  "visible key": "nonbreaking key",
+  "whitespace.key": "before"
+}

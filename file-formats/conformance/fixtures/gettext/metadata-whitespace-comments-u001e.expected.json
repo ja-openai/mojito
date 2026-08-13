@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "messages": {
+    "extract.u001e": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "extract.u001e"
+      },
+      "description": "neutral"
+    },
+    "extract-only.u001e": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "extract-only.u001e"
+      }
+    },
+    "translator.u001e": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "translator.u001e",
+        "translatorComments": [
+          "neutral"
+        ]
+      }
+    },
+    "translator-only.u001e": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "translator-only.u001e"
+      }
+    },
+    "reference.u001e": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "reference.u001e",
+        "references": [
+          "first\u001elast"
+        ]
+      }
+    },
+    "reference-edge.u001e": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "reference-edge.u001e",
+        "references": [
+          "neutral"
+        ]
+      }
+    },
+    "flags.u001e": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "flags.u001e",
+        "flags": [
+          "no-c-format"
+        ]
+      }
+    }
+  },
+  "locale": "en-US"
+}

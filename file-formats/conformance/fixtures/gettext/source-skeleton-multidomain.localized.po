@@ -1,0 +1,75 @@
+# Keep the implicit domain, its original comments, and its project-owned fields.
+msgid ""
+msgstr ""
+"Project-Id-Version: Home pier 2.7\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en_GB\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Owner: home crew\n"
+
+#. The same context is translated separately in all three native domains.
+#: routes/home.py:12
+msgctxt "shared.route"
+msgid "Common route"
+msgstr ""
+"Main "
+"harbor"
+
+#, c-format
+msgid "%d signal"
+msgid_plural "%d signals"
+msgstr[0] "%d home beacon"
+msgstr[1] "%d home beacons"
+
+# Domain directives, local header spelling, and their order are source-owned.
+domain "north.fr"
+msgid ""
+msgstr ""
+"Project-Id-Version: Northern watch 3.1\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: fr_FR\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Owner: équipe nord\n"
+
+#. Identical contextual IDs cannot borrow the implicit-domain slot.
+msgctxt "shared.route"
+msgid "Common route"
+msgstr ""
+"Quai o"
+"uvert"
+
+#, c-format
+msgid "%d signal"
+msgid_plural "%d signals"
+msgstr[0] "%d balise claire"
+msgstr[1] ""
+"%d "
+"balises claires"
+
+# Percent-bearing native domain names remain reversible canonical identities.
+domain "stock%ru"
+msgid ""
+msgstr ""
+"Project-Id-Version: Southern stores 9.6\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: ru_RU\n"
+"Plural-Forms: nplurals=3; plural=n%10==1&&n%100!=11?0:n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?1:2;\n"
+"X-Owner: южная смена\n"
+
+#. The third collision owns a Russian target and its independent locale.
+msgctxt "shared.route"
+msgid "Common route"
+msgstr "Южный проход"
+
+#, c-format
+msgid "%d signal"
+msgid_plural "%d signals"
+msgstr[0] "%d южный маяк"
+msgstr[1] "%d южных маяка"
+msgstr[2] ""
+"%d "
+"южных маяков"
+
+#~ msgctxt "retired.route"
+#~ msgid "Closed channel"
+#~ msgstr "Закрытый путь"

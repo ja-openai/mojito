@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "it",
+  "messages": {
+    "italian_beacon_groups": {
+      "defaultMessage": "{arg0, plural, one {{arg0} beacon: singular grouping} many {{arg0} beacons: million grouping} other {{arg0} beacons: ordinary grouping}}",
+      "variants": {
+        "one": "{arg0} beacon: singular grouping",
+        "many": "{arg0} beacons: million grouping",
+        "other": "{arg0} beacons: ordinary grouping"
+      },
+      "placeholders": [{ "name": "arg0", "source": "%d", "kind": "integer", "position": 1 }],
+      "metadata": {
+        "sourceMessage": "%d mountain beacon",
+        "sourcePlural": "%d mountain beacons",
+        "context": "italian_beacon_groups",
+        "gettextPluralIndexes": { "0": "one", "1": "many", "2": "other" },
+        "gettextPluralForms": {
+          "nplurals": 3,
+          "expression": "n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2"
+        }
+      }
+    }
+  }
+}

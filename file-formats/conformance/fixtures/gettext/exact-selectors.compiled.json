@@ -1,0 +1,10 @@
+{
+  "plurals": {
+    "signal_strength\u0004%d signal": {
+      "0": "%d signals: idle",
+      "1": "%d signal: listening",
+      "2": "%d signals: paired",
+      "3": "%d signals: connected"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+msgid ""
+msgstr ""
+"Language: iw_IL\n"
+
+msgctxt "legacy_readings"
+msgid "%d sensor reading"
+msgid_plural "%d sensor readings"
+msgstr[0] "%d מדידה יחידה"
+msgstr[1] "%d שתי מדידות"
+msgstr[2] "%d מדידות"

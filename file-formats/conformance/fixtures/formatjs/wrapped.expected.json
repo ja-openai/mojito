@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "formatjs_json",
+  "locale": "fr-FR",
+  "messages": {
+    "files": {
+      "defaultMessage": "{count, plural, one {{count} fichier} other {{count} fichiers}}",
+      "description": "Number of files",
+      "variants": { "one": "{count} fichier", "other": "{count} fichiers" },
+      "placeholders": [{ "name": "count", "source": "%1$d", "kind": "integer", "position": 1 }],
+      "metadata": {
+        "original": "android",
+        "formatjs": { "custom": { "team": "localization" } }
+      }
+    }
+  }
+}

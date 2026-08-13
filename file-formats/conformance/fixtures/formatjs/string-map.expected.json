@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "formatjs_json",
+  "messages": {
+    "welcome": { "defaultMessage": "Hello" },
+    "markup": { "defaultMessage": "Click <link>here</link>" }
+  }
+}

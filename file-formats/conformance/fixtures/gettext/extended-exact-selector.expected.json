@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "en",
+  "messages": {
+    "boundary_pulse_groups": {
+      "defaultMessage": "{arg0, plural, one {{arg0} pulse: singular grouping} =1001 {{arg0} pulses: boundary override} other {{arg0} pulses: ordinary grouping}}",
+      "variants": {
+        "one": "{arg0} pulse: singular grouping",
+        "=1001": "{arg0} pulses: boundary override",
+        "other": "{arg0} pulses: ordinary grouping"
+      },
+      "placeholders": [{ "name": "arg0", "source": "%d", "kind": "integer", "position": 1 }],
+      "metadata": {
+        "sourceMessage": "%d relay pulse",
+        "sourcePlural": "%d relay pulses",
+        "context": "boundary_pulse_groups",
+        "gettextPluralIndexes": { "0": "one", "1": "=1001", "2": "other" },
+        "gettextPluralForms": {
+          "nplurals": 3,
+          "expression": "n == 1001 ? 1 : n == 1 ? 0 : 2"
+        }
+      }
+    }
+  }
+}

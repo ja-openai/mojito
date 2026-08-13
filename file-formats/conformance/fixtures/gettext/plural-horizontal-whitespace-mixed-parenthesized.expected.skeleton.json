@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "encoding": "UTF-8",
+  "source": "# Neutral coastal beacon fixture; formula separators are intentionally original.\nmsgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\"Language: en\\n\"\n\"Plural-Forms: nplurals=2; plural= \\t( n\\t!=\\t1 )\\t ;\\n\"\n\n#. Count the active beacons visible from the inlet.\n#, c-format\nmsgctxt \"harbor.beacon_count\"\nmsgid \"%d coastal beacon\"\nmsgid_plural \"%d coastal beacons\"\nmsgstr[0] \"%d steady beacon\"\nmsgstr[1] \"%d steady beacons\"\n",
+  "slots": [
+    {
+      "id": "harbor.beacon_count",
+      "start": 383,
+      "end": 401,
+      "variant": "one"
+    },
+    {
+      "id": "harbor.beacon_count",
+      "start": 412,
+      "end": 431,
+      "variant": "other"
+    }
+  ]
+}

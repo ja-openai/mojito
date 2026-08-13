@@ -1,0 +1,13 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgctxt "shared.signal"
+msgid "Implicit source"
+msgstr "Implicit translation"
+
+domain "messages"
+
+msgctxt "shared.signal"
+msgid "Explicit source"
+msgstr "Explicit translation"

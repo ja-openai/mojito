@@ -1,0 +1,10 @@
+msgid ""
+msgstr ""
+"Language: cy\n"
+"Plural-Forms: nplurals=2; plural=n == 1 ? 0 : 1;\n"
+
+msgctxt "welsh_navigation"
+msgid "%d route"
+msgid_plural "%d routes"
+msgstr[0] "%d route is active"
+msgstr[1] "%d routes are active"

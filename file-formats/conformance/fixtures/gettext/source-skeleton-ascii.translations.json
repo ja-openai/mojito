@@ -1,0 +1,6 @@
+{
+  "plain.signal": "Safe signal {arg0}",
+  "plain.count#one": "One safe crate {arg0}",
+  "plain.count#other": "Several safe crates {arg0}",
+  "plain.empty": "Open harbor route"
+}

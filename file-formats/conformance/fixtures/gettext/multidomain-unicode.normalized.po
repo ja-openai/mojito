@@ -1,0 +1,21 @@
+domain "north%wing"
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en_US\n"
+
+#. Literal percent bytes cannot collide with encoded domain suffixes.
+msgctxt "signal"
+msgid "Beacon"
+msgstr "North beacon"
+
+domain "北🧭"
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: zh_CN\n"
+
+#. Unicode native domain bytes require deterministic identity escaping.
+msgctxt "signal"
+msgid "Beacon"
+msgstr "北方灯塔"

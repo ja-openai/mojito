@@ -1,0 +1,4 @@
+{
+  "harbor.beacon_count#one": "{arg0} port beacon",
+  "harbor.beacon_count#other": "{arg0} port beacons"
+}

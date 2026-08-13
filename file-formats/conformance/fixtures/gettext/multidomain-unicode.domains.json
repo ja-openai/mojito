@@ -1,0 +1,18 @@
+{
+  "north%wing": {
+    "entries": {
+      "signal\u0004Beacon": "North beacon"
+    },
+    "header": {
+      "locale": "en-US"
+    }
+  },
+  "北🧭": {
+    "entries": {
+      "signal\u0004Beacon": "北方灯塔"
+    },
+    "header": {
+      "locale": "zh-CN"
+    }
+  }
+}

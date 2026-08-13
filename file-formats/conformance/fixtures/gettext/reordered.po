@@ -1,0 +1,10 @@
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=n == 1 ? 1 : 0;\n"
+
+msgctxt "inverted"
+msgid "%d sample"
+msgid_plural "%d samples"
+msgstr[0] "%d samples selected"
+msgstr[1] "%d sample selected"

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "en",
+  "messages": {
+    "safe_ratio": {
+      "defaultMessage": "{arg0, plural, one {{arg0} calibrated measurement} other {{arg0} calibrated measurements}}",
+      "variants": {
+        "one": "{arg0} calibrated measurement",
+        "other": "{arg0} calibrated measurements"
+      },
+      "placeholders": [{ "name": "arg0", "source": "%d", "kind": "integer", "position": 1 }],
+      "metadata": {
+        "sourceMessage": "%d measurement",
+        "sourcePlural": "%d measurements",
+        "context": "safe_ratio",
+        "gettextPluralIndexes": { "0": "one", "1": "other" },
+        "gettextPluralForms": { "nplurals": 2, "expression": "!(n != 0 && 1 / n == 1)" }
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "messages": {
+    "header": {
+      "locale": "en-US",
+      "pluralForms": {
+        "expression": "n != 1",
+        "nplurals": 2
+      }
+    },
+    "plurals": {
+      "%d signal": {
+        "0": "%d signal",
+        "1": "%d signals"
+      }
+    }
+  },
+  "navigation": {
+    "header": {
+      "locale": "fr-FR",
+      "pluralForms": {
+        "expression": "n > 1",
+        "nplurals": 2
+      }
+    },
+    "plurals": {
+      "%d signal": {
+        "0": "%d signal",
+        "1": "%d signaux"
+      }
+    }
+  }
+}

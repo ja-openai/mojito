@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "messages": {
+    "extract.u0085": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "extract.u0085"
+      },
+      "description": "neutral"
+    },
+    "extract-only.u0085": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "extract-only.u0085"
+      },
+      "description": ""
+    },
+    "translator.u0085": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "translator.u0085",
+        "translatorComments": [
+          "neutral"
+        ]
+      }
+    },
+    "translator-only.u0085": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "translator-only.u0085",
+        "translatorComments": [
+          ""
+        ]
+      }
+    },
+    "reference.u0085": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "reference.u0085",
+        "references": [
+          "firstlast"
+        ]
+      }
+    },
+    "reference-edge.u0085": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "reference-edge.u0085",
+        "references": [
+          "neutral"
+        ]
+      }
+    },
+    "flags.u0085": {
+      "defaultMessage": "Port calme",
+      "metadata": {
+        "sourceMessage": "flags.u0085",
+        "flags": [
+          "no-c-format"
+        ]
+      }
+    }
+  },
+  "locale": "en-US"
+}

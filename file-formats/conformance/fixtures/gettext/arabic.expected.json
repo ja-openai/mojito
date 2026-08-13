@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "ar-EG",
+  "messages": {
+    "signals": {
+      "defaultMessage": "{arg0, plural, zero {{arg0}: no signals} one {{arg0}: one signal} two {{arg0}: two signals} few {{arg0}: a few signals} many {{arg0}: many signals} other {{arg0}: other signals}}",
+      "description": "Activity counter in the neutral status panel",
+      "variants": {
+        "zero": "{arg0}: no signals",
+        "one": "{arg0}: one signal",
+        "two": "{arg0}: two signals",
+        "few": "{arg0}: a few signals",
+        "many": "{arg0}: many signals",
+        "other": "{arg0}: other signals"
+      },
+      "placeholders": [{ "name": "arg0", "source": "%d", "kind": "integer", "position": 1 }],
+      "metadata": {
+        "sourceMessage": "%d signal",
+        "sourcePlural": "%d signals",
+        "context": "signals",
+        "gettextPluralIndexes": {
+          "0": "zero",
+          "1": "one",
+          "2": "two",
+          "3": "few",
+          "4": "many",
+          "5": "other"
+        },
+        "gettextPluralForms": {
+          "nplurals": 6,
+          "expression": "n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5"
+        }
+      }
+    }
+  }
+}

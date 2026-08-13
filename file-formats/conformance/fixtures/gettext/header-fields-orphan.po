@@ -1,0 +1,8 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: fr_FR\n"
+"unexpected continuation of the native language\n"
+
+msgid "beacon.ready"
+msgstr "Balise prête"
