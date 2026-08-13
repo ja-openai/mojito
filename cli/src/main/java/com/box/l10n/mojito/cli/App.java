@@ -5,6 +5,7 @@ import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.xml.XmlParsingConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.Banner;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.WebApplicationType;
@@ -13,6 +14,7 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.aspectj.EnableSpringConfigured;
+import org.springframework.web.context.WebApplicationContext;
 
 @EnableSpringConfigured
 @ComponentScan(basePackages = "com.box.l10n.mojito")
@@ -21,6 +23,9 @@ public class App implements CommandLineRunner {
 
   /** logger */
   static Logger logger = LoggerFactory.getLogger(App.class);
+
+  @Autowired(required = false)
+  WebApplicationContext webApplicationContext;
 
   /**
    * Application entry point.
@@ -39,6 +44,9 @@ public class App implements CommandLineRunner {
 
   @Override
   public void run(String... args) throws Exception {
+    if (webApplicationContext != null) {
+      return;
+    }
     new L10nJCommander().run(args);
   }
 

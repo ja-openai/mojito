@@ -8,6 +8,7 @@ import com.box.l10n.mojito.cli.command.param.Param;
 import com.box.l10n.mojito.cli.console.ConsoleWriter;
 import com.box.l10n.mojito.cli.filefinder.FileMatch;
 import com.box.l10n.mojito.cli.filefinder.file.FileType;
+import com.box.l10n.mojito.fileformat.LocalizationConverterSelection.Mode;
 import java.util.ArrayList;
 import java.util.List;
 import org.fusesource.jansi.Ansi;
@@ -54,6 +55,13 @@ public class ExtractionCommand extends Command {
       required = false,
       description = Param.FILTER_OPTIONS_DESCRIPTION)
   List<String> filterOptionsParam;
+
+  @Parameter(
+      names = Param.CONVERTER_LONG,
+      arity = 1,
+      converter = LocalizationConverterModeConverter.class,
+      description = Param.CONVERTER_DESCRIPTION)
+  Mode converter = Mode.OKAPI;
 
   @Parameter(
       names = {Param.SOURCE_LOCALE_LONG, Param.SOURCE_LOCALE_SHORT},
@@ -131,7 +139,7 @@ public class ExtractionCommand extends Command {
       consoleWriter.a("Extracting: ").fg(Color.CYAN).a(sourceFileMatch.getSourcePath()).println();
       List<String> filterOptions =
           commandHelper.getFilterOptionsOrDefaults(
-              sourceFileMatch.getFileType(), filterOptionsParam);
+              sourceFileMatch.getFileType(), filterOptionsParam, converter);
       extractionService.fileMatchToAssetExtractionAndSaveToJsonFile(
           extractionPaths,
           filterOptions,

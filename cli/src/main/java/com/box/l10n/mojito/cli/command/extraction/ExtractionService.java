@@ -3,18 +3,25 @@ package com.box.l10n.mojito.cli.command.extraction;
 import com.box.l10n.mojito.cli.command.CommandException;
 import com.box.l10n.mojito.cli.command.CommandHelper;
 import com.box.l10n.mojito.cli.filefinder.FileMatch;
+import com.box.l10n.mojito.fileformat.LocalizationCatalog;
+import com.box.l10n.mojito.fileformat.LocalizationConverterSelection;
+import com.box.l10n.mojito.fileformat.LocalizationFileConverters;
+import com.box.l10n.mojito.fileformat.LocalizationFileFormat;
+import com.box.l10n.mojito.fileformat.LocalizationShadowComparator;
 import com.box.l10n.mojito.io.Files;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.okapi.FilterConfigIdOverride;
 import com.box.l10n.mojito.okapi.asset.UnsupportedAssetFilterTypeException;
 import com.box.l10n.mojito.okapi.extractor.AssetExtractor;
 import com.box.l10n.mojito.okapi.extractor.AssetExtractorTextUnit;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -30,6 +37,9 @@ public class ExtractionService {
   @Autowired CommandHelper commandHelper;
 
   @Autowired AssetExtractor assetExtractor;
+
+  @Value("${l10n.converter.portable:false}")
+  boolean portableConverter;
 
   public void fileMatchToAssetExtractionAndSaveToJsonFile(
       ExtractionPaths extractionPaths,
@@ -80,6 +90,17 @@ public class ExtractionService {
     String assetContent = commandHelper.getFileContentWithXcodePatch(sourceFileMatch);
     FilterConfigIdOverride filterConfigIdOverride =
         sourceFileMatch.getFileType().getFilterConfigIdOverride();
+
+    if (LocalizationConverterSelection.isPortable(filterOptions, portableConverter, sourcePath)) {
+      LocalizationFileFormat format =
+          LocalizationConverterSelection.format(sourcePath, filterConfigIdOverride);
+      LocalizationCatalog catalog =
+          LocalizationFileConverters.parseForMojito(
+              format,
+              assetContent.getBytes(StandardCharsets.UTF_8),
+              LocalizationConverterSelection.platformOptions(filterOptions));
+      return LocalizationShadowComparator.projectTextUnits(catalog);
+    }
 
     try {
       return assetExtractor.getAssetExtractorTextUnitsForAsset(
