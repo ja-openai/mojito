@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "signal": {
+      "defaultMessage": "Calm {arg0} bay",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ]
+    }
+  }
+}

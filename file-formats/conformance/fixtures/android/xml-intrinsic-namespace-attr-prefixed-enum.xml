@@ -1,0 +1,1 @@
+<resources><attr name="tone"><xml:enum name="hidden" value="1"/><enum name="visible" value="2"/></attr><string name="signal">Quiet bay</string></resources>

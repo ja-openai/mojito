@@ -1,0 +1,11 @@
+{
+  "signals": {
+    "count": {
+      "one": "%d beacon",
+      "other": "%d beacons",
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d"
+    },
+    "NSStringLocalizedFormatKey": "%#@count@"
+  }
+}

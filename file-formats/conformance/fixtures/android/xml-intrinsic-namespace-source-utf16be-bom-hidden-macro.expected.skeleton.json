@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-16BE-BOM",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-16BE\"?>\n<resources><xml:macro name=\"hidden\">Private</xml:macro><string name=\"signal\">Quiet bay</string></resources>\n",
+  "slots": [
+    {
+      "id": "signal",
+      "start": 240,
+      "end": 258
+    }
+  ]
+}

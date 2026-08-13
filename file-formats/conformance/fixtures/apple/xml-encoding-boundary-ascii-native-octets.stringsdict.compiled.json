@@ -1,0 +1,11 @@
+{
+  "files.remaining": {
+    "files": {
+      "one": "%d harbor",
+      "other": "%d harbors",
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d"
+    },
+    "NSStringLocalizedFormatKey": "%#@files@ remaining"
+  }
+}

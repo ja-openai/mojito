@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "files.remaining": {
+      "defaultMessage": "{files, plural, one {{files} harbor} other {{files} harbors}} remaining",
+      "variants": {
+        "one": "{files} harbor",
+        "other": "{files} harbors"
+      },
+      "placeholders": [
+        {
+          "name": "files",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@files@ remaining",
+        "applePluralRules": {
+          "files": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d harbor",
+              "other": "%d harbors"
+            }
+          }
+        },
+        "pluralVariable": "files",
+        "valueType": "d"
+      }
+    }
+  }
+}

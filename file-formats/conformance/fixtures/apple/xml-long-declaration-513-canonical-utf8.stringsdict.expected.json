@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "files.remaining": {
+      "defaultMessage": "{files, plural, one {{files} café} other {{files} cafés}} remaining",
+      "variants": {
+        "one": "{files} café",
+        "other": "{files} cafés"
+      },
+      "placeholders": [
+        {
+          "name": "files",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@files@ remaining",
+        "applePluralRules": {
+          "files": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d café",
+              "other": "%d cafés"
+            }
+          }
+        },
+        "pluralVariable": "files",
+        "valueType": "d"
+      }
+    }
+  }
+}

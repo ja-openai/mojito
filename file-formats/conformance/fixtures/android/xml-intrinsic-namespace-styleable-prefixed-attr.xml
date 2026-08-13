@@ -1,0 +1,1 @@
+<resources><declare-styleable name="Tone"><xml:attr name="hidden" format="string"/><attr name="visible" format="string"/></declare-styleable><string name="signal">Quiet bay</string></resources>

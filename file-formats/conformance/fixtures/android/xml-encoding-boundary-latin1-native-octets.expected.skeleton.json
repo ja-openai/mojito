@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "ISO-8859-1",
+  "source": "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n<resources><string name=\"signal\">Café tide</string></resources>\n",
+  "slots": [
+    {
+      "id": "signal",
+      "start": 77,
+      "end": 86
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "signal": {
+      "defaultMessage": "Calm <i>quiet</i> bay"
+    }
+  }
+}

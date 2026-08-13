@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "signal": {
+      "defaultMessage": "Default"
+    },
+    "signal@product=tablet": {
+      "defaultMessage": "Calm quiet",
+      "metadata": {
+        "androidProduct": "tablet"
+      }
+    }
+  }
+}

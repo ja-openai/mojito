@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "encoding": "ISO-8859-1",
+  "source": "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n<plist version=\"1.0\"><dict><key>signal</key><string>Café tide</string></dict></plist>\n",
+  "slots": [
+    {
+      "id": "signal",
+      "start": 96,
+      "end": 105
+    }
+  ]
+}

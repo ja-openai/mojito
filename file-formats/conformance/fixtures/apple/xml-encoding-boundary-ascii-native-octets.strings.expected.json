@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "signal": {
+      "defaultMessage": "Harbor tide"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<?route:bay:light channel?>\n<plist version=\"1.0\"><dict><key>signal</key><string>Café tide</string></dict></plist>\n",
+  "slots": [
+    {
+      "id": "signal",
+      "start": 119,
+      "end": 129
+    }
+  ]
+}

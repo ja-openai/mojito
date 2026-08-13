@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "signal": {
+      "defaultMessage": "Quiet bay",
+      "description": "neutral note"
+    }
+  }
+}
