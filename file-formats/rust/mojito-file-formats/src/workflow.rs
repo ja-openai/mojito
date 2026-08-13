@@ -731,6 +731,26 @@ pub(crate) fn localize(
             ));
         }
     }
+    if format == FileFormat::AppleStringsdict && remove_untranslated {
+        let mut missing_messages = catalog.messages.keys().cloned().collect::<BTreeSet<_>>();
+        for slot in &skeleton.slots {
+            if translations.contains_key(&slot.key()) {
+                missing_messages.remove(&slot.id);
+            }
+        }
+        if !missing_messages.is_empty() {
+            let removed_slots = skeleton
+                .slots
+                .iter()
+                .filter(|slot| missing_messages.contains(&slot.id))
+                .map(|slot| slot.key())
+                .collect::<BTreeSet<_>>();
+            let retained =
+                crate::source_skeleton::remove_stringsdict_messages(&skeleton, &missing_messages)?;
+            skeleton = crate::extract_skeleton(format, &retained)?;
+            selected.retain(|key, _| !removed_slots.contains(key));
+        }
+    }
     if remove_untranslated && matches!(format, FileFormat::Resx | FileFormat::Xtb) {
         let retained = crate::xml_resources::remove_entries(&skeleton, &untranslated_keys)?;
         skeleton = crate::extract_skeleton(format, &retained)?;

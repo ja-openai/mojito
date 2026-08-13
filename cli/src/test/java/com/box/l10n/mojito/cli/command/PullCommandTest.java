@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.box.l10n.mojito.cldr.PluralRuleService;
 import com.box.l10n.mojito.cli.CLITestBase;
@@ -45,6 +46,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.Set;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -610,6 +612,66 @@ public class PullCommandTest extends CLITestBase {
   public void portableConverterReusesExistingAppleStringsdictDataset() throws Exception {
     assertPortableMatchesExistingDataset(
         "pullMacStringsdict", "en.lproj/Localizable.stringsdict", new String[0], new String[0]);
+  }
+
+  @Test
+  public void portableConverterRemovesUntranslatedAppleStringsdictLikeOkapi() throws Exception {
+    Repository repository = createTestRepoUsingRepoService();
+    Path dataset =
+        Path.of(
+            "src/test/resources/com/box/l10n/mojito/cli/command/PullCommandTest_IO/pullMacStringsdict");
+    String original = dataset.resolve("input/source").toAbsolutePath().toString();
+    String modified = dataset.resolve("input/source_modified").toAbsolutePath().toString();
+    getL10nJCommander()
+        .run("push", "-r", repository.getName(), "-s", original, "--converter", "portable");
+    Asset asset =
+        assetClient.getAssetByPathAndRepositoryId(
+            "en.lproj/Localizable.stringsdict", repository.getId());
+    importTranslationsFromDataset(dataset, asset.getId(), "fr-FR");
+    importTranslationsFromDataset(dataset, asset.getId(), "ja-JP");
+
+    File legacy = getTargetTestDir("legacy");
+    File portable = getTargetTestDir("portable");
+    for (String backend : List.of("okapi", "portable")) {
+      getL10nJCommander()
+          .run(
+              "pull",
+              "-r",
+              repository.getName(),
+              "-s",
+              modified,
+              "-t",
+              ("okapi".equals(backend) ? legacy : portable).getAbsolutePath(),
+              "--inheritance-mode",
+              "REMOVE_UNTRANSLATED",
+              "--converter",
+              backend);
+    }
+    try (var outputs = Files.walk(portable.toPath())) {
+      for (Path actual : outputs.filter(Files::isRegularFile).toList()) {
+        LocalizationCatalog actualCatalog =
+            LocalizationFileConverters.parse(
+                LocalizationFileFormat.APPLE_STRINGSDICT, Files.readAllBytes(actual));
+        assertFalse(
+            "Source-modified untranslated plural must be removed",
+            actualCatalog.messages().containsKey("recipe_ingredients_with_count"));
+        if (actual.toString().contains("fr-CA")) {
+          assertTrue(
+              "Missing locale retains a valid empty dictionary",
+              actualCatalog.messages().isEmpty());
+        } else {
+          assertEquals(Set.of("plural_recipe_cook_hours"), actualCatalog.messages().keySet());
+        }
+        Path legacyOutput = legacy.toPath().resolve(portable.toPath().relativize(actual));
+        try {
+          LocalizationFileConverters.parse(
+              LocalizationFileFormat.APPLE_STRINGSDICT, Files.readAllBytes(legacyOutput));
+          fail("The existing customized stringsdict writer should expose its malformed cleanup");
+        } catch (LocalizationParseException expected) {
+          assertEquals("INVALID_XML", expected.code());
+        }
+      }
+    }
   }
 
   @Test

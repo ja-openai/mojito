@@ -267,7 +267,7 @@ def main() -> int:
         "against original and translated property-list snapshots."
     )
     print(
-        f"Foundation verified {workflow_count} configured Apple strings workflow "
+        f"Foundation verified {workflow_count} configured Apple strings/stringsdict workflow "
         "source and localized dictionaries."
     )
     return 0
@@ -280,11 +280,16 @@ def verify_workflow_outputs(
     cases = [
         case
         for case in manifest.get("workflowCases", [])
-        if case["format"] == "apple_strings" and case.get("localized")
+        if case["format"] in {"apple_strings", "apple_stringsdict"}
+        and case.get("localized")
+        and (case["format"] == "apple_strings" or case.get("removeUntranslated"))
     ]
     for case in cases:
         for kind in ("input", "localized"):
-            resource = directory / "workflows" / case["id"] / f"{kind}.strings"
+            extension = (
+                ".stringsdict" if case["format"] == "apple_stringsdict" else ".strings"
+            )
+            resource = directory / "workflows" / case["id"] / f"{kind}{extension}"
             resource.parent.mkdir(parents=True, exist_ok=True)
             resource.write_bytes((ROOT / case[kind]).read_bytes())
             result = subprocess.run(
@@ -299,12 +304,19 @@ def verify_workflow_outputs(
                 )
             actual = json.loads(result.stdout)
             if kind == "localized":
-                expected = case["translations"]
-                if actual != expected:
+                expected = (
+                    sorted({key.split("#", 1)[0] for key in case["translations"]})
+                    if case["format"] == "apple_stringsdict"
+                    else case["translations"]
+                )
+                actual_values = (
+                    sorted(actual) if case["format"] == "apple_stringsdict" else actual
+                )
+                if actual_values != expected:
                     raise SystemExit(
                         f"{case['id']}: configured Apple output changed translated values\n"
                         f"expected: {json.dumps(expected, ensure_ascii=False, indent=2)}\n"
-                        f"actual: {json.dumps(actual, ensure_ascii=False, indent=2)}"
+                        f"actual: {json.dumps(actual_values, ensure_ascii=False, indent=2)}"
                     )
     return len(cases)
 

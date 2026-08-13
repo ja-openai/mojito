@@ -597,6 +597,8 @@ fn extract_stringsdict_with_variations(
         encoding,
         expected: &expected,
         slots: Vec::new(),
+        removed: None,
+        removals: Vec::new(),
     };
     scanner.scan()?;
     if scanner.slots.len() != expected.len() {
@@ -1294,6 +1296,55 @@ struct StringsdictScanner<'a> {
     encoding: Encoding,
     expected: &'a HashMap<Vec<String>, StringsdictIdentity>,
     slots: Vec<SourceSlot>,
+    removed: Option<&'a BTreeSet<String>>,
+    removals: Vec<(usize, usize)>,
+}
+
+pub(crate) fn remove_stringsdict_messages(
+    skeleton: &SourceSkeleton,
+    removed: &BTreeSet<String>,
+) -> Result<Vec<u8>, ParseError> {
+    if skeleton.encoding == "BINARY_PLIST" {
+        return Err(error(
+            "UNSUPPORTED_SKELETON_SOURCE",
+            "Cannot safely remove messages from a binary Foundation strings dictionary",
+        ));
+    }
+    let encoding = Encoding::named(&skeleton.encoding)?;
+    let expected = HashMap::new();
+    let mut scanner = StringsdictScanner {
+        source: &skeleton.source,
+        encoding,
+        expected: &expected,
+        slots: Vec::new(),
+        removed: Some(removed),
+        removals: Vec::new(),
+    };
+    scanner.scan()?;
+    let mut result = String::with_capacity(skeleton.source.len());
+    let mut previous = 0;
+    for (opening, end) in scanner.removals {
+        let mut start = opening;
+        while start > previous && matches!(skeleton.source.as_bytes()[start - 1], b' ' | b'\t') {
+            start -= 1;
+        }
+        if start > previous && !matches!(skeleton.source.as_bytes()[start - 1], b'\n' | b'\r') {
+            start = opening;
+        }
+        result.push_str(&skeleton.source[previous..start]);
+        previous = end;
+        while matches!(skeleton.source.as_bytes().get(previous), Some(b' ' | b'\t')) {
+            previous += 1;
+        }
+        if skeleton.source.as_bytes().get(previous) == Some(&b'\r') {
+            previous += 1;
+        }
+        if skeleton.source.as_bytes().get(previous) == Some(&b'\n') {
+            previous += 1;
+        }
+    }
+    result.push_str(&skeleton.source[previous..]);
+    Ok(encoding.encode(&result))
 }
 
 impl StringsdictScanner<'_> {
@@ -1334,9 +1385,18 @@ impl StringsdictScanner<'_> {
                         &self.source[current.body_start..position]
                     );
                     let catalog = crate::apple::parse_strings(&fragment)?;
-                    stack.last_mut().unwrap().pending_key = catalog.messages.keys().next().cloned();
+                    let parent = stack.last_mut().unwrap();
+                    parent.pending_key = catalog.messages.keys().next().cloned();
+                    parent.pending_key_start = current.opening_start;
                 } else if current.name == "string" {
                     self.add(&current.path, current.body_start, position);
+                } else if current.name == "dict"
+                    && current.path.len() == 1
+                    && self
+                        .removed
+                        .is_some_and(|identities| identities.contains(&current.path[0]))
+                {
+                    self.removals.push((current.entry_start, end + 1));
                 }
             } else {
                 let empty = token.ends_with('/');
@@ -1346,6 +1406,12 @@ impl StringsdictScanner<'_> {
                 let name = token.split_whitespace().next().ok_or_else(|| {
                     error("INVALID_SKELETON", "Missing Foundation stringsdict XML tag")
                 })?;
+                let entry_start = stack
+                    .last()
+                    .filter(|parent| {
+                        parent.name == "dict" && parent.path.is_empty() && name != "key"
+                    })
+                    .map_or(usize::MAX, |parent| parent.pending_key_start);
                 let path = if let Some(parent) = stack.last_mut() {
                     if parent.name == "dict" && name != "key" {
                         let key = parent.pending_key.take().ok_or_else(|| {
@@ -1379,9 +1445,12 @@ impl StringsdictScanner<'_> {
                 } else {
                     stack.push(StringsdictXmlElement {
                         name,
+                        opening_start: position,
                         body_start: end + 1,
                         path,
                         pending_key: None,
+                        pending_key_start: usize::MAX,
+                        entry_start,
                     });
                 }
             }
@@ -1406,9 +1475,12 @@ impl StringsdictScanner<'_> {
 
 struct StringsdictXmlElement<'a> {
     name: &'a str,
+    opening_start: usize,
     body_start: usize,
     path: Vec<String>,
     pending_key: Option<String>,
+    pending_key_start: usize,
+    entry_start: usize,
 }
 
 fn extract_xcstrings(bytes: &[u8]) -> Result<SourceSkeleton, ParseError> {
