@@ -120,6 +120,14 @@ extraction for 5,000 HTML elements fell from 183 ms to 10.5 ms; complete
 parse/template rendering fell from 631 ms to 42.6 ms. These are warmed local
 measurements, not production-capacity guarantees.
 
+Rust's Android source-template offsets also previously recounted every UTF-16
+prefix independently. An incremental encoded-offset cursor now scans each
+mixed-width source character once, retains both UTF-16 byte orders and original
+BOM ownership, and safely resets when offsets arrive out of order. A 5,000-unit
+Android source template improved from 774.6 ms to 14.9 ms, with smaller 2,500-
+and 1,000-unit workloads improving from 175.0 ms to 7.2 ms and from 32.8 ms to
+2.9 ms. No full-source offset index or extra source copy is allocated.
+
 ## Required non-option behavior
 
 - The shared extraction pipeline suppresses any text unit whose effective
