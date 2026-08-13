@@ -272,6 +272,194 @@ describe('useReviewProjectMutations', () => {
     });
   });
 
+  it('does not start a second save while the first save is still in flight', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+    queryClient.setQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id], project);
+    const updatedTextUnit: ApiReviewProjectTextUnit = {
+      ...textUnit,
+      currentTmTextUnitVariant: {
+        id: 31,
+        content: 'Pagar agora',
+        status: 'APPROVED',
+        includedInLocalizedFile: true,
+        comment: 'Accepted',
+      },
+      reviewProjectTextUnitDecision: {
+        decisionState: 'DECIDED',
+        notes: null,
+        decisionTmTextUnitVariant: {
+          id: 31,
+          content: 'Pagar agora',
+          status: 'APPROVED',
+          includedInLocalizedFile: true,
+          comment: 'Accepted',
+        },
+      },
+    };
+    let resolveSave!: (value: ApiReviewProjectTextUnit) => void;
+    saveReviewProjectTextUnitDecisionMock.mockReturnValue(
+      new Promise<ApiReviewProjectTextUnit>((resolve) => {
+        resolveSave = resolve;
+      }),
+    );
+    const request = {
+      textUnitId: textUnit.id,
+      tmTextUnitId: null,
+      target: 'Pagar agora',
+      comment: 'Accepted',
+      status: 'APPROVED',
+      includedInLocalizedFile: true,
+      decisionState: 'DECIDED' as const,
+    };
+    const { result } = renderMutationsHook(queryClient);
+
+    act(() => {
+      result.current.onRequestSaveDecision(request);
+      result.current.onRequestSaveDecision(request);
+    });
+
+    await waitFor(() => {
+      expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledTimes(1);
+    });
+
+    act(() => {
+      resolveSave(updatedTextUnit);
+    });
+
+    await waitFor(() => {
+      const cachedProject = queryClient.getQueryData<ApiReviewProjectDetail>([
+        ...REVIEW_PROJECT_DETAIL_QUERY_KEY,
+        project.id,
+      ]);
+      expect(cachedProject?.reviewProjectTextUnits?.[0]).toStrictEqual(updatedTextUnit);
+      expect(result.current.isSaving).toBe(false);
+    });
+  });
+
+  it('reconciles a conflict when the same user already saved the requested decision', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+    queryClient.setQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id], project);
+    const alreadySavedTextUnit: ApiReviewProjectTextUnit = {
+      ...textUnit,
+      currentTmTextUnitVariant: {
+        id: 32,
+        content: 'Pagar agora',
+        status: 'APPROVED',
+        includedInLocalizedFile: true,
+        comment: 'Accepted',
+      },
+      reviewProjectTextUnitDecision: {
+        decisionState: 'DECIDED',
+        notes: 'Looks good',
+        lastModifiedByUsername: user.username,
+        decisionTmTextUnitVariant: {
+          id: 32,
+          content: 'Pagar agora',
+          status: 'APPROVED',
+          includedInLocalizedFile: true,
+          comment: 'Accepted',
+        },
+      },
+    };
+    const error = new Error('Conflict') as Error & {
+      status?: number;
+      data?: ApiReviewProjectTextUnit;
+    };
+    error.status = 409;
+    error.data = alreadySavedTextUnit;
+    saveReviewProjectTextUnitDecisionMock.mockRejectedValue(error);
+    const { result } = renderMutationsHook(queryClient);
+
+    act(() => {
+      result.current.onRequestSaveDecision({
+        textUnitId: textUnit.id,
+        tmTextUnitId: null,
+        target: 'Pagar agora',
+        comment: 'Accepted',
+        status: 'APPROVED',
+        includedInLocalizedFile: true,
+        decisionState: 'DECIDED',
+        decisionNotes: 'Looks good',
+      });
+    });
+
+    await waitFor(() => {
+      const cachedProject = queryClient.getQueryData<ApiReviewProjectDetail>([
+        ...REVIEW_PROJECT_DETAIL_QUERY_KEY,
+        project.id,
+      ]);
+      expect(cachedProject?.reviewProjectTextUnits?.[0]).toStrictEqual(alreadySavedTextUnit);
+      expect(result.current.activeTextUnitId).toBeNull();
+    });
+
+    expect(result.current.conflictTextUnit).toBeNull();
+    expect(result.current.errorMessage).toBeNull();
+  });
+
+  it('keeps the conflict visible when another user saved the same translation', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+    queryClient.setQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id], project);
+    const externallySavedTextUnit: ApiReviewProjectTextUnit = {
+      ...textUnit,
+      currentTmTextUnitVariant: {
+        id: 32,
+        content: 'Pagar agora',
+        status: 'APPROVED',
+        includedInLocalizedFile: true,
+        comment: 'Accepted',
+      },
+      reviewProjectTextUnitDecision: {
+        decisionState: 'DECIDED',
+        notes: null,
+        lastModifiedByUsername: 'another-translator',
+        decisionTmTextUnitVariant: {
+          id: 32,
+          content: 'Pagar agora',
+          status: 'APPROVED',
+          includedInLocalizedFile: true,
+          comment: 'Accepted',
+        },
+      },
+    };
+    const error = new Error('Conflict') as Error & {
+      status?: number;
+      data?: ApiReviewProjectTextUnit;
+    };
+    error.status = 409;
+    error.data = externallySavedTextUnit;
+    saveReviewProjectTextUnitDecisionMock.mockRejectedValue(error);
+    const { result } = renderMutationsHook(queryClient);
+
+    act(() => {
+      result.current.onRequestSaveDecision({
+        textUnitId: textUnit.id,
+        tmTextUnitId: null,
+        target: 'Pagar agora',
+        comment: 'Accepted',
+        status: 'APPROVED',
+        includedInLocalizedFile: true,
+        decisionState: 'DECIDED',
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.conflictTextUnit).toStrictEqual(externallySavedTextUnit);
+    });
+    expect(result.current.activeTextUnitId).toBe(textUnit.id);
+  });
+
   it('keeps the active text unit after a save conflict so row actions stay visible', async () => {
     const queryClient = new QueryClient({
       defaultOptions: {

@@ -164,12 +164,38 @@ export function shouldPreflightIntegrityCheckForAction(
   );
 }
 
+function isAlreadySavedByCurrentUser(
+  action: PendingAction,
+  textUnit: ApiReviewProjectTextUnit,
+  username: string,
+): boolean {
+  if (action.kind !== 'save-decision') {
+    return false;
+  }
+
+  const currentVariant = textUnit.currentTmTextUnitVariant;
+  const decision = textUnit.reviewProjectTextUnitDecision;
+
+  return (
+    currentVariant?.id != null &&
+    decision?.lastModifiedByUsername === username &&
+    decision.decisionTmTextUnitVariant?.id === currentVariant.id &&
+    decision.decisionState === action.request.decisionState &&
+    currentVariant.content === action.request.target &&
+    currentVariant.status === action.request.status &&
+    currentVariant.includedInLocalizedFile === action.request.includedInLocalizedFile &&
+    (currentVariant.comment ?? null) === (action.request.comment ?? null) &&
+    (decision.notes ?? null) === (action.request.decisionNotes ?? null)
+  );
+}
+
 export function useReviewProjectMutations(
   projectId: number | undefined,
 ): ReviewProjectMutationControls {
   const user = useUser();
   const queryClient = useQueryClient();
   const actionAttemptRef = useRef(0);
+  const inFlightActionAttemptRef = useRef<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activeTextUnitId, setActiveTextUnitId] = useState<number | null>(null);
   const [pendingTextUnitId, setPendingTextUnitId] = useState<number | null>(null);
@@ -399,10 +425,10 @@ export function useReviewProjectMutations(
       }
       try {
         const updated = await mutation.mutateAsync(action);
+        updateTextUnitInCache(updated);
         if (attemptId !== actionAttemptRef.current) {
           return;
         }
-        updateTextUnitInCache(updated);
         void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
         void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
         void queryClient.invalidateQueries({
@@ -424,6 +450,21 @@ export function useReviewProjectMutations(
         }
         const err = error as MutationError;
         if (err.status === 409 && err.data) {
+          if (isAlreadySavedByCurrentUser(action, err.data, user.username)) {
+            updateTextUnitInCache(err.data);
+            void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECTS_QUERY_KEY] });
+            void queryClient.invalidateQueries({ queryKey: [REVIEW_PROJECT_REQUESTS_QUERY_KEY] });
+            void queryClient.invalidateQueries({
+              queryKey: ['review-project-text-unit-history'],
+            });
+            setErrorMessage(null);
+            setConflictTextUnit(null);
+            setConflictAction(null);
+            setPendingValidationSave(null);
+            setActiveTextUnitId(null);
+            setPendingTextUnitId(null);
+            return;
+          }
           setPendingTextUnitId(null);
           void queryClient.invalidateQueries({
             queryKey: ['review-project-text-unit-history'],
@@ -475,6 +516,10 @@ export function useReviewProjectMutations(
           setConflictAction(null);
           setErrorMessage(err.message || 'Failed to save changes');
         }
+      } finally {
+        if (inFlightActionAttemptRef.current === attemptId) {
+          inFlightActionAttemptRef.current = null;
+        }
       }
     },
     [
@@ -484,15 +529,17 @@ export function useReviewProjectMutations(
       queryClient,
       updateTextUnitInCache,
       user.role,
+      user.username,
     ],
   );
 
   const performAction = useCallback(
     (action: PendingAction, skipIntegrityCheck = false) => {
-      if (projectId == null) {
+      if (projectId == null || inFlightActionAttemptRef.current != null) {
         return;
       }
       const attemptId = (actionAttemptRef.current += 1);
+      inFlightActionAttemptRef.current = attemptId;
       setActiveTextUnitId(action.request.textUnitId);
       setPendingTextUnitId(action.request.textUnitId);
       setErrorMessage(null);
@@ -510,6 +557,7 @@ export function useReviewProjectMutations(
               return;
             }
             if (result?.checkResult === false) {
+              inFlightActionAttemptRef.current = null;
               const detail = result.failureDetail?.trim();
               const reportUrl = action.request.reportUrl?.trim() || window.location.href;
               const report = buildIntegrityCheckErrorReport({
@@ -541,6 +589,7 @@ export function useReviewProjectMutations(
             if (attemptId !== actionAttemptRef.current) {
               return;
             }
+            inFlightActionAttemptRef.current = null;
             setActiveTextUnitId(null);
             setPendingTextUnitId(null);
             setPendingValidationSave({
@@ -659,6 +708,7 @@ export function useReviewProjectMutations(
 
   const onDismissValidationSave = useCallback(() => {
     actionAttemptRef.current += 1;
+    inFlightActionAttemptRef.current = null;
     setPendingValidationSave(null);
   }, []);
 
@@ -733,6 +783,7 @@ export function useReviewProjectMutations(
 
   useEffect(() => {
     actionAttemptRef.current += 1;
+    inFlightActionAttemptRef.current = null;
     setErrorMessage(null);
     setActiveTextUnitId(null);
     setPendingTextUnitId(null);

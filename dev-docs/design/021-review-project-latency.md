@@ -10,6 +10,11 @@ review latency so we can verify which subsystem is making translators wait.
 
 Normal text-unit saves patch the selected text unit into the review-project
 detail cache instead of invalidating and refetching the full project detail.
+Text-unit saves use a synchronous in-flight guard so repeated shortcuts cannot
+start duplicate requests before React updates its pending state. If a stale
+variant conflict returns the same user's already-saved decision with matching
+translation, status, comment, and notes, the client reconciles that response into
+the detail cache; changes saved by another user remain visible as conflicts.
 Glossary query invalidation is limited to terminology actions that can change
 glossary metadata or resolution state.
 
