@@ -501,11 +501,7 @@ final class MojitoLocalizationWorkflow {
   private static LocalizationCatalog applyExtractionPolicy(
       LocalizationCatalog original, byte[] source, LocalizationFilterOptions options) {
     Map<String, String> androidNotes =
-        options.format() == LocalizationFileFormat.ANDROID
-            ? androidNotes(
-                LocalizationFileConverters.decode(
-                    source, LocalizationFileConverters.xmlCharset(options.format(), source)))
-            : Map.of();
+        options.format() == LocalizationFileFormat.ANDROID ? androidNotes(source) : Map.of();
     Map<String, String> appleNotes =
         options.format() == LocalizationFileFormat.APPLE_STRINGS
             ? appleNotes(
@@ -602,6 +598,13 @@ final class MojitoLocalizationWorkflow {
       }
     }
     return notes;
+  }
+
+  private static Map<String, String> androidNotes(byte[] source) {
+    String decoded =
+        LocalizationFileConverters.decode(
+            source, LocalizationFileConverters.xmlCharset(LocalizationFileFormat.ANDROID, source));
+    return decoded.contains("<!--") ? androidNotes(decoded) : Map.of();
   }
 
   private static LocalizationCatalog parseConfiguredJson(

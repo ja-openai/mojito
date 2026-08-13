@@ -4,7 +4,31 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 /** Original byte-order marks and byte offsets shared by reversible resource skeletons. */
-record SourceSkeletonEncoding(String name, Charset charset, byte[] bom) {
+final class SourceSkeletonEncoding {
+
+  private final String name;
+  private final Charset charset;
+  private final byte[] bom;
+  private String indexedSource;
+  private int[] indexedOffsets;
+
+  private SourceSkeletonEncoding(String name, Charset charset, byte[] bom) {
+    this.name = name;
+    this.charset = charset;
+    this.bom = bom;
+  }
+
+  String name() {
+    return name;
+  }
+
+  Charset charset() {
+    return charset;
+  }
+
+  byte[] bom() {
+    return bom;
+  }
 
   static SourceSkeletonEncoding detect(byte[] bytes) {
     return detect(bytes, null);
@@ -64,7 +88,38 @@ record SourceSkeletonEncoding(String name, Charset charset, byte[] bom) {
   }
 
   int offset(String value, int index) {
-    return bom.length + value.substring(0, index).getBytes(charset).length;
+    if (index < 0 || index > value.length()) {
+      throw new StringIndexOutOfBoundsException(index);
+    }
+    if (StandardCharsets.UTF_16LE.equals(charset) || StandardCharsets.UTF_16BE.equals(charset)) {
+      return bom.length + index * 2;
+    }
+    if (!StandardCharsets.UTF_8.equals(charset)) {
+      return bom.length + index;
+    }
+    if (indexedSource != value) {
+      indexedSource = value;
+      indexedOffsets = new int[value.length() + 1];
+      int bytes = 0;
+      for (int position = 0; position < value.length(); position++) {
+        char current = value.charAt(position);
+        if (current <= 0x7f) {
+          bytes++;
+        } else if (current <= 0x7ff) {
+          bytes += 2;
+        } else if (Character.isHighSurrogate(current)
+            && position + 1 < value.length()
+            && Character.isLowSurrogate(value.charAt(position + 1))) {
+          indexedOffsets[position + 1] = bytes + 1;
+          bytes += 4;
+          position++;
+        } else {
+          bytes += Character.isSurrogate(current) ? 1 : 3;
+        }
+        indexedOffsets[position + 1] = bytes;
+      }
+    }
+    return bom.length + indexedOffsets[index];
   }
 
   byte[] encode(String source) {
