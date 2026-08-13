@@ -68,11 +68,13 @@ final class MojitoLocalizationWorkflow {
       LocalizationFileFormat format, byte[] source, List<String> filterOptions) {
     LocalizationFilterOptions options = LocalizationFilterOptions.parse(format, filterOptions);
     LocalizationCatalog catalog =
-        format == LocalizationFileFormat.FORMATJS_JSON
-                && (filterOptions != null && !filterOptions.isEmpty()
-                    || containsJsonComments(source))
-            ? parseConfiguredJson(source, options)
-            : LocalizationFileConverters.parse(format, source);
+        format == LocalizationFileFormat.YAML
+            ? YamlSourceFormat.parse(source, options)
+            : format == LocalizationFileFormat.FORMATJS_JSON
+                    && (filterOptions != null && !filterOptions.isEmpty()
+                        || containsJsonComments(source))
+                ? parseConfiguredJson(source, options)
+                : LocalizationFileConverters.parse(format, source);
     return applyExtractionPolicy(catalog, source, options);
   }
 
@@ -396,7 +398,12 @@ final class MojitoLocalizationWorkflow {
       return localizeJson(source, translations, options, removeUntranslated);
     }
     LocalizationCatalog catalog =
-        applyExtractionPolicy(LocalizationFileConverters.parse(format, source), source, options);
+        applyExtractionPolicy(
+            format == LocalizationFileFormat.YAML
+                ? YamlSourceFormat.parse(source, options)
+                : LocalizationFileConverters.parse(format, source),
+            source,
+            options);
     LocalizationSourceSkeleton skeleton =
         LocalizationFileConverters.extractSkeleton(format, source);
     Map<String, String> selected = new LinkedHashMap<>();

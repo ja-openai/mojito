@@ -1,0 +1,11 @@
+# Translator comments stay in the source template.
+welcome: 'Welcome: friend'
+duration: "1 jour"
+group:
+  prompt: plain invitation
+  block: |-
+    Une ligne
+  folded: >-
+    Folded
+    message
+  count: 42

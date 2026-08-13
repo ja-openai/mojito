@@ -239,7 +239,13 @@ public class OkapiLocalizationFileConvertersConformanceTest {
       assertEquals(id + ": configured custom-filter extraction", canonical, configured);
       checked++;
     }
-    assertEquals("Every configured custom-filter fixture must run", 11, checked);
+    int expected = 0;
+    for (JsonNode fixture : manifest.path("workflowCases")) {
+      if (fixture.has("legacyAssetPath")) {
+        expected++;
+      }
+    }
+    assertEquals("Every configured custom-filter fixture must run", expected, checked);
   }
 
   @Test

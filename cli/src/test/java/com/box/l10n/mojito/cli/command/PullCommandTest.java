@@ -520,6 +520,35 @@ public class PullCommandTest extends CLITestBase {
   }
 
   @Test
+  public void portableConverterReusesExistingYamlDataset() throws Exception {
+    assertPortableMatchesExistingDataset(
+        "pullYaml",
+        "demo.yaml",
+        new String[0],
+        new String[] {"-lm", "fr:fr-FR,ja:ja-JP", "-lmt", "MAP_ONLY"});
+  }
+
+  @Test
+  public void portableConverterReusesExistingConfiguredYamlDataset() throws Exception {
+    String[] options = {
+      "-fo", "extractAllPairs=false", "exceptions=1_day_duration|1_year_duration"
+    };
+    assertPortableMatchesExistingDataset(
+        "pullYamlWithFilterOptions",
+        "demo.yaml",
+        options,
+        new String[] {
+          "-lm",
+          "fr:fr-FR,ja:ja-JP",
+          "-lmt",
+          "MAP_ONLY",
+          "-fo",
+          "extractAllPairs=false",
+          "exceptions=1_day_duration|1_year_duration"
+        });
+  }
+
+  @Test
   public void portableConverterPreservesRemoveUntranslated() throws Exception {
     assertPortableMatchesExistingDataset(
         "pullJsonDefaultFormatJsRemoveUntranslated",

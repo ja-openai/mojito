@@ -15,7 +15,8 @@
         "apple_xcstrings",
         "gettext_po",
         "java_properties",
-        "formatjs_json"
+        "formatjs_json",
+        "yaml"
       ]
     },
     "locale": { "type": "string", "minLength": 1 },

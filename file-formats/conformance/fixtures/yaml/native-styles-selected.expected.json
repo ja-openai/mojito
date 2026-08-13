@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "yaml",
+  "messages": {
+    "duration": {
+      "defaultMessage": "1 day"
+    },
+    "group/block": {
+      "defaultMessage": "First line\nSecond line"
+    }
+  }
+}

@@ -38,7 +38,8 @@
         "apple_stringsdict",
         "apple_xcstrings",
         "gettext_po",
-        "java_properties"
+        "java_properties",
+        "yaml"
       ]
     },
     "encoding": {

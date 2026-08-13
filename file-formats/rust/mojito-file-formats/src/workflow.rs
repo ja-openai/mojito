@@ -99,17 +99,17 @@ impl FilterOptions {
         Ok(result)
     }
 
-    fn contains(&self, key: &str) -> bool {
+    pub(crate) fn contains(&self, key: &str) -> bool {
         self.values.contains_key(key)
     }
 
-    fn enabled(&self, key: &str) -> bool {
+    pub(crate) fn enabled(&self, key: &str) -> bool {
         self.values
             .get(key)
             .is_some_and(|value| value.eq_ignore_ascii_case("true"))
     }
 
-    fn pattern(&self, key: &str) -> Option<&Regex> {
+    pub(crate) fn pattern(&self, key: &str) -> Option<&Regex> {
         self.patterns.get(key)
     }
 
@@ -209,6 +209,7 @@ fn supported(format: FileFormat, key: &str) -> bool {
                 | "convertToHtmlCodes"
         ),
         FileFormat::AppleStrings => key == "removeComment",
+        FileFormat::Yaml => matches!(key, "useFullKeyPath" | "extractAllPairs" | "exceptions"),
         _ => false,
     }
 }
@@ -219,7 +220,9 @@ pub(crate) fn parse(
     options: &[String],
 ) -> Result<Catalog, ParseError> {
     let options = FilterOptions::parse(format, options)?;
-    let catalog = if format == FileFormat::FormatJsJson
+    let catalog = if format == FileFormat::Yaml {
+        crate::yaml::parse_configured_bytes(source, &options)?
+    } else if format == FileFormat::FormatJsJson
         && (!options.values.is_empty() || json_without_comments(source)?.is_some())
     {
         parse_configured_json(source, &options)?
@@ -628,7 +631,15 @@ pub(crate) fn localize(
     if format == FileFormat::FormatJsJson {
         return localize_json(source, translations, &options, remove_untranslated);
     }
-    let catalog = apply_extraction(crate::parse(format, source)?, source, &options)?;
+    let catalog = apply_extraction(
+        if format == FileFormat::Yaml {
+            crate::yaml::parse_configured_bytes(source, &options)?
+        } else {
+            crate::parse(format, source)?
+        },
+        source,
+        &options,
+    )?;
     let skeleton = crate::extract_skeleton(format, source)?;
     let mut selected = BTreeMap::new();
     let mut untranslated_keys = BTreeSet::new();

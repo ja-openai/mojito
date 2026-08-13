@@ -3345,6 +3345,11 @@ public class LocalizationFileConvertersConformanceTest {
             assertEquals("\u00a0", localized.messages().get("anchor").description());
           }
         }
+      } else if (format == LocalizationFileFormat.YAML) {
+        assertEquals("Bienvenue : amie", localized.messages().get("welcome").defaultMessage());
+        assertEquals(
+            "Première ligne\nDeuxième ligne",
+            localized.messages().get("group/block").defaultMessage());
       } else if ("ISO-8859-1".equals(encoding)) {
         assertEquals("prix 5 € 🙂", localized.messages().get("café").defaultMessage());
         assertEquals("crème {arg0}", localized.messages().get("escaped.key").defaultMessage());

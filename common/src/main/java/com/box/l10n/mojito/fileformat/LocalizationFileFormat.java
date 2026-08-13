@@ -8,7 +8,8 @@ public enum LocalizationFileFormat {
   APPLE_XCSTRINGS("apple_xcstrings"),
   GETTEXT_PO("gettext_po"),
   JAVA_PROPERTIES("java_properties"),
-  FORMATJS_JSON("formatjs_json");
+  FORMATJS_JSON("formatjs_json"),
+  YAML("yaml");
 
   private final String id;
 

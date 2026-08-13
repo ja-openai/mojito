@@ -4072,6 +4072,15 @@ fn all_shared_source_preserving_skeletons() {
                     );
                 }
             }
+        } else if format == FileFormat::Yaml {
+            assert_eq!(
+                parsed.messages["welcome"].default_message,
+                "Bienvenue : amie"
+            );
+            assert_eq!(
+                parsed.messages["group/block"].default_message,
+                "Première ligne\nDeuxième ligne"
+            );
         } else if encoding == Some("ISO-8859-1") {
             assert_eq!(parsed.messages["café"].default_message, "prix 5 € 🙂");
             assert_eq!(

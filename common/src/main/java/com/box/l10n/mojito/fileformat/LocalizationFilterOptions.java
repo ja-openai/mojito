@@ -58,6 +58,7 @@ public final class LocalizationFilterOptions {
         switch (format) {
           case ANDROID -> ANDROID_OPTIONS;
           case FORMATJS_JSON -> JSON_OPTIONS;
+          case YAML -> Set.of("useFullKeyPath", "extractAllPairs", "exceptions");
           case APPLE_STRINGS -> Set.of("removeComment");
           default -> Set.of();
         };

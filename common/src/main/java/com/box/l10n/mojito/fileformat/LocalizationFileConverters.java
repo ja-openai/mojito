@@ -206,6 +206,7 @@ public final class LocalizationFileConverters {
       case GETTEXT_PO -> new GettextPoParser(gettextCharset).parse(decoded);
       case JAVA_PROPERTIES -> new JavaPropertiesParser().parse(decoded);
       case FORMATJS_JSON -> parseFormatJs(decoded);
+      case YAML -> YamlSourceFormat.parse(decoded);
     };
   }
 
@@ -365,6 +366,7 @@ public final class LocalizationFileConverters {
       case APPLE_XCSTRINGS -> AppleXcstringsSourceSkeleton.extract(source);
       case GETTEXT_PO -> GettextPoSourceSkeleton.extract(source);
       case JAVA_PROPERTIES -> JavaPropertiesSourceSkeleton.extract(source, propertiesCharset);
+      case YAML -> YamlSourceFormat.extract(source);
       default ->
           throw new LocalizationParseException(
               "UNSUPPORTED_SKELETON_FORMAT",
@@ -421,6 +423,7 @@ public final class LocalizationFileConverters {
       case "apple_xcstrings" -> AppleXcstringsSourceSkeleton.render(skeleton, translations);
       case "gettext_po" -> GettextPoSourceSkeleton.render(skeleton, translations);
       case "java_properties" -> JavaPropertiesSourceSkeleton.render(skeleton, translations);
+      case "yaml" -> YamlSourceFormat.render(skeleton, translations);
       default ->
           throw new LocalizationParseException(
               "UNSUPPORTED_SKELETON_FORMAT", "Unsupported source-preserving skeleton format");
