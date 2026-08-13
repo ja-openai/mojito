@@ -1,0 +1,6 @@
+harbor,"Hello, friend","Hello, friend","Shown to new sailors"
+plain,Simple,Simple,
+quoted,"Say ""hello""","Say ""hello""","Dialog detail"
+spaced,  padded source  ,  padded target  ,"Keep comment spaces"
+missing_target,Missing target
+empty,,keep,Ignored

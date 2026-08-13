@@ -631,6 +631,9 @@ pub(crate) fn localize(
     if format == FileFormat::FormatJsJson {
         return localize_json(source, translations, &options, remove_untranslated);
     }
+    if matches!(format, FileFormat::Csv | FileFormat::CsvAdobeMagento) {
+        return crate::csv::localize(format, source, translations, remove_untranslated);
+    }
     let catalog = apply_extraction(
         if format == FileFormat::Yaml {
             crate::yaml::parse_configured_bytes(source, &options)?

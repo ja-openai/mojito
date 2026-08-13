@@ -13,6 +13,7 @@ mod apple_binary_skeleton;
 mod apple_stringsdict_writer;
 mod apple_writer;
 mod apple_xcstrings_writer;
+mod csv;
 mod gettext;
 mod gettext_plural;
 mod gettext_writer;
@@ -170,6 +171,7 @@ pub fn write(format: FileFormat, catalog: &Catalog) -> Result<String, ParseError
         FileFormat::AppleStrings => apple_writer::write(catalog),
         FileFormat::AppleStringsdict => apple_stringsdict_writer::write(catalog),
         FileFormat::AppleXcstrings => apple_xcstrings_writer::write(catalog),
+        FileFormat::Csv | FileFormat::CsvAdobeMagento => csv::write(format, catalog),
         FileFormat::GettextPo => gettext_writer::write(catalog),
         FileFormat::JavaProperties => properties_writer::write(catalog),
         FileFormat::Resx | FileFormat::Xtb => xml_resources::write(format, catalog),
@@ -422,12 +424,12 @@ pub fn parse_with_feature_flags(
         FileFormat::AppleStrings => apple::parse_strings(&source),
         FileFormat::AppleStringsdict => apple::parse_stringsdict(&source),
         FileFormat::AppleXcstrings => apple::parse_xcstrings(&source),
+        FileFormat::Csv | FileFormat::CsvAdobeMagento => csv::parse(format, &source),
         FileFormat::GettextPo => gettext::parse(&source, gettext_encoding.unwrap_or("UTF-8")),
         FileFormat::JavaProperties => properties::parse(&source),
         FileFormat::FormatJsJson => parse_formatjs(&source),
         FileFormat::Yaml => yaml::parse(&source),
         FileFormat::JavaScript | FileFormat::TypeScript => javascript::parse(format, &source),
-        FileFormat::Resx => xml_resources::parse(format, &source),
         FileFormat::Resx | FileFormat::Xtb => xml_resources::parse(format, &source),
     }
 }

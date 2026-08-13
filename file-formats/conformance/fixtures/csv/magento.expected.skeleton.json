@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "csv_adobe_magento",
+  "encoding": "UTF-8",
+  "source": "\"Hello, sailor\",\"Hello, sailor\"\n\"Say \"\"hello\"\"\",\"Say \"\"hello\"\"\"\nSimple,Simple\nMissing target\n",
+  "slots": [
+    {
+      "id": "\"Hello, sailor\"",
+      "start": 16,
+      "end": 31
+    },
+    {
+      "id": "\"Say \"\"hello\"\"\"",
+      "start": 48,
+      "end": 63
+    },
+    {
+      "id": "Simple",
+      "start": 71,
+      "end": 77
+    },
+    {
+      "id": "Missing target",
+      "start": 92,
+      "end": 92
+    }
+  ]
+}

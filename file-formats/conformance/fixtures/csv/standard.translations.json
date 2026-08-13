@@ -1,0 +1,8 @@
+{
+  "harbor": "Bonjour, ami",
+  "plain": "Simple",
+  "quoted": "Dire \"bonjour\"",
+  "spaced": "  padded target  ",
+  "missing_target": "Présent",
+  "empty": "keep"
+}

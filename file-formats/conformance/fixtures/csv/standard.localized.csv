@@ -1,0 +1,6 @@
+harbor,"Hello, friend","Bonjour, ami","Shown to new sailors"
+plain,Simple,Simple,
+quoted,"Say ""hello""","Dire ""bonjour""","Dialog detail"
+spaced,  padded source  ,  padded target  ,"Keep comment spaces"
+missing_target,Missing target,Présent
+empty,,keep,Ignored

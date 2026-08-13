@@ -19,6 +19,8 @@ FORMAT_NAMES = {
     "apple_strings": "Apple .strings",
     "apple_stringsdict": "Apple .stringsdict",
     "apple_xcstrings": "Xcode .xcstrings",
+    "csv": "CSV resources",
+    "csv_adobe_magento": "Adobe Magento CSV",
     "gettext_po": "GNU gettext PO",
     "java_properties": "Java properties",
     "formatjs_json": "FormatJS JSON",

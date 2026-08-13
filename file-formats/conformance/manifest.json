@@ -1010,6 +1010,69 @@
       },
       "removeUntranslated": false,
       "localized": "fixtures/xml-resources/google.localized.xtb"
+    },
+    {
+      "id": "csv-mojito-preserves-target-columns-comments-and-untranslated-rows",
+      "format": "csv",
+      "input": "fixtures/csv/standard.csv",
+      "expected": "fixtures/csv/standard.expected.json",
+      "filterOptions": [],
+      "translations": {
+        "harbor": "Bonjour, ami",
+        "quoted": "Dire \"bonjour\"",
+        "missing_target": "Présent"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/csv/standard.localized.csv"
+    },
+    {
+      "id": "csv-mojito-removes-only-untranslated-translatable-records",
+      "format": "csv",
+      "input": "fixtures/csv/standard.csv",
+      "filterOptions": [],
+      "translations": {
+        "harbor": "Bonjour, ami",
+        "quoted": "Dire \"bonjour\""
+      },
+      "removeUntranslated": true,
+      "localized": "fixtures/csv/standard.remove-untranslated.csv"
+    },
+    {
+      "id": "csv-adobe-magento-uses-source-as-stable-identity",
+      "format": "csv_adobe_magento",
+      "input": "fixtures/csv/magento.csv",
+      "expected": "fixtures/csv/magento.expected.json",
+      "filterOptions": [],
+      "translations": {
+        "\"Hello, sailor\"": "Bonjour, marin",
+        "\"Say \"\"hello\"\"\"": "Dire \"bonjour\"",
+        "Missing target": "Présent"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/csv/magento.localized.csv"
+    },
+    {
+      "id": "csv-adobe-magento-removes-untranslated-records",
+      "format": "csv_adobe_magento",
+      "input": "fixtures/csv/magento.csv",
+      "filterOptions": [],
+      "translations": {
+        "\"Hello, sailor\"": "Bonjour, marin"
+      },
+      "removeUntranslated": true,
+      "localized": "fixtures/csv/magento.remove-untranslated.csv"
+    },
+    {
+      "id": "csv-mojito-preserves-multiline-quoted-field-layout",
+      "format": "csv",
+      "input": "fixtures/csv/multiline.csv",
+      "expected": "fixtures/csv/multiline.expected.json",
+      "filterOptions": [],
+      "translations": {
+        "story": "Première ligne\nSeconde \"citée\" ligne"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/csv/multiline.localized.csv"
     }
   ],
   "cases": [
@@ -25640,6 +25703,36 @@
       "format": "xtb",
       "input": "fixtures/xml-resources/unsafe-internal.xtb",
       "error": "UNSAFE_XML"
+    },
+    {
+      "id": "csv-standard-fixed-columns-comments-and-quoted-values",
+      "format": "csv",
+      "input": "fixtures/csv/standard.csv",
+      "expected": "fixtures/csv/standard.expected.json"
+    },
+    {
+      "id": "csv-standard-multiline-and-doubled-quote-fields",
+      "format": "csv",
+      "input": "fixtures/csv/multiline.csv",
+      "expected": "fixtures/csv/multiline.expected.json"
+    },
+    {
+      "id": "csv-adobe-magento-source-owned-stable-identities",
+      "format": "csv_adobe_magento",
+      "input": "fixtures/csv/magento.csv",
+      "expected": "fixtures/csv/magento.expected.json"
+    },
+    {
+      "id": "csv-rejects-unterminated-quoted-fields",
+      "format": "csv",
+      "input": "fixtures/csv/invalid-quote.csv",
+      "error": "INVALID_CSV"
+    },
+    {
+      "id": "csv-adobe-magento-rejects-duplicate-source-identities",
+      "format": "csv_adobe_magento",
+      "input": "fixtures/csv/duplicate.csv",
+      "error": "DUPLICATE_MESSAGE_ID"
     }
   ],
   "androidOverlays": [
@@ -52572,6 +52665,22 @@
       "expected": "fixtures/xml-resources/google.expected.skeleton.json",
       "translations": "fixtures/xml-resources/google.translations.json",
       "localized": "fixtures/xml-resources/google.localized.xtb"
+    },
+    {
+      "id": "csv-source-skeleton-preserves-quoted-target-columns-and-extra-fields",
+      "format": "csv",
+      "input": "fixtures/csv/standard.csv",
+      "expected": "fixtures/csv/standard.expected.skeleton.json",
+      "translations": "fixtures/csv/standard.translations.json",
+      "localized": "fixtures/csv/standard.localized.csv"
+    },
+    {
+      "id": "csv-adobe-magento-source-skeleton-preserves-source-identities",
+      "format": "csv_adobe_magento",
+      "input": "fixtures/csv/magento.csv",
+      "expected": "fixtures/csv/magento.expected.skeleton.json",
+      "translations": "fixtures/csv/magento.translations.json",
+      "localized": "fixtures/csv/magento.localized.csv"
     }
   ],
   "appleBinarySourceSkeletons": [

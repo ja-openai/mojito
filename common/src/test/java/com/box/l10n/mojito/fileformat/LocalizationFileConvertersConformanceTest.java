@@ -3365,6 +3365,13 @@ public class LocalizationFileConvertersConformanceTest {
               entry.getValue(),
               localized.messages().get(entry.getKey()).defaultMessage());
         }
+      } else if (format == LocalizationFileFormat.CSV
+          || format == LocalizationFileFormat.CSV_ADOBE_MAGENTO) {
+        LocalizationCatalog originalCatalog = LocalizationFileConverters.parse(format, original);
+        assertEquals(
+            id + ": CSV source IDs are preserved",
+            originalCatalog.messages(),
+            localized.messages());
       } else if ("ISO-8859-1".equals(encoding)) {
         assertEquals("prix 5 € 🙂", localized.messages().get("café").defaultMessage());
         assertEquals("crème {arg0}", localized.messages().get("escaped.key").defaultMessage());

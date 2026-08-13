@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "csv_adobe_magento",
+  "messages": {
+    "\"Hello, sailor\"": {
+      "defaultMessage": "Hello, sailor"
+    },
+    "\"Say \"\"hello\"\"\"": {
+      "defaultMessage": "Say \"\"hello\"\""
+    },
+    "Simple": {
+      "defaultMessage": "Simple"
+    },
+    "Missing target": {
+      "defaultMessage": "Missing target"
+    }
+  }
+}

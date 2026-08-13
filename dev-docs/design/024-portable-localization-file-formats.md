@@ -3256,8 +3256,13 @@ plural formula, and records only the TM variants actually written; Russian
 three-form output and multiple plural messages are covered by the existing CLI
 dataset.
 Configured Android, Apple `.strings`/`.stringsdict`, gettext `.pot`, Java
-properties, generic/Chrome JSON, and FormatJS reuse the existing real CLI
-push/pull datasets. The legacy Android dataset has compiler-invalid numeric
+properties, generic/Chrome JSON, FormatJS, ordinary CSV, Adobe Magento CSV,
+Microsoft `.resx`/`.resw`, Google `.xtb`, JavaScript, TypeScript, and YAML
+reuse the existing real CLI push/pull datasets. Format-specific implementations
+preserve customized extraction identities, translator comments, protected
+content, source-owned markup, configured key selection, and exact original
+source templates instead of treating upstream Okapi defaults as the compatibility
+target. The legacy Android dataset has compiler-invalid numeric
 resource names, so its portable integration test repairs only those identifiers
 in a temporary copy. Existing source skeletons remain request-scoped rather
 than durably persisted. For Japanese `.stringsdict` files, portable rendering

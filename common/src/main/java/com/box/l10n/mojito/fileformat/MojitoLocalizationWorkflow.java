@@ -397,6 +397,10 @@ final class MojitoLocalizationWorkflow {
     if (format == LocalizationFileFormat.FORMATJS_JSON) {
       return localizeJson(source, translations, options, removeUntranslated);
     }
+    if (format == LocalizationFileFormat.CSV
+        || format == LocalizationFileFormat.CSV_ADOBE_MAGENTO) {
+      return CsvLocalizationFormat.localize(format, source, translations, removeUntranslated);
+    }
     LocalizationCatalog catalog =
         applyExtractionPolicy(
             format == LocalizationFileFormat.YAML

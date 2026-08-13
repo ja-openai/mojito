@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "csv",
+  "messages": {
+    "harbor": {
+      "defaultMessage": "Hello, friend",
+      "description": "\"Shown to new sailors\""
+    },
+    "plain": {
+      "defaultMessage": "Simple"
+    },
+    "quoted": {
+      "defaultMessage": "Say \"\"hello\"\"",
+      "description": "\"Dialog detail\""
+    },
+    "spaced": {
+      "defaultMessage": "padded source",
+      "description": "\"Keep comment spaces\""
+    },
+    "missing_target": {
+      "defaultMessage": "Missing target"
+    },
+    "empty": {
+      "defaultMessage": "",
+      "description": "Ignored"
+    }
+  }
+}

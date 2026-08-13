@@ -46,7 +46,10 @@ public final class LocalizationConverterSelection {
       String assetPath, FilterConfigIdOverride filterConfigIdOverride) {
     LocalizationFileFormat format = supportedFormat(assetPath);
     if (format != null) {
-      return format;
+      return format == LocalizationFileFormat.CSV
+              && filterConfigIdOverride == FilterConfigIdOverride.CSV_ADOBE_MAGENTO
+          ? LocalizationFileFormat.CSV_ADOBE_MAGENTO
+          : format;
     }
     String override =
         filterConfigIdOverride == null
@@ -97,6 +100,9 @@ public final class LocalizationConverterSelection {
     }
     if (path.endsWith(".ts")) {
       return LocalizationFileFormat.TYPESCRIPT;
+    }
+    if (path.endsWith(".csv")) {
+      return LocalizationFileFormat.CSV;
     }
     return null;
   }

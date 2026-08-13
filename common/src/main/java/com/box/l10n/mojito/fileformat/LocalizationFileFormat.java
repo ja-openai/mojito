@@ -6,6 +6,8 @@ public enum LocalizationFileFormat {
   APPLE_STRINGS("apple_strings"),
   APPLE_STRINGSDICT("apple_stringsdict"),
   APPLE_XCSTRINGS("apple_xcstrings"),
+  CSV("csv"),
+  CSV_ADOBE_MAGENTO("csv_adobe_magento"),
   GETTEXT_PO("gettext_po"),
   JAVA_PROPERTIES("java_properties"),
   FORMATJS_JSON("formatjs_json"),

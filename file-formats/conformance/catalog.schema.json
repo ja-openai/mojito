@@ -13,6 +13,8 @@
         "apple_strings",
         "apple_stringsdict",
         "apple_xcstrings",
+        "csv",
+        "csv_adobe_magento",
         "gettext_po",
         "java_properties",
         "formatjs_json",
