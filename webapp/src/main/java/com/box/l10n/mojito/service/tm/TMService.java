@@ -1263,6 +1263,33 @@ public class TMService {
                 target);
         if (sourceSlot != null) {
           translations.put(sourceSlot, target);
+          if (gettextIndex != null && lookup != projected) {
+            var additional = projected.textUnit();
+            String additionalMd5 =
+                textUnitUtils.computeTextUnitMD5(
+                    additional.getName(), additional.getSource(), additional.getComments());
+            TextUnitDTO additionalTranslation = translator.getTextUnitDTO(additionalMd5);
+            String additionalTarget =
+                translator.getTranslationFromTextUnitDTO(
+                    additionalTranslation, additional.getSource());
+            if (additionalTarget != null) {
+              additionalTarget =
+                  LocalizationFileConverters.normalizeMojitoTranslation(
+                      format,
+                      catalog.messages().get(messageId),
+                      additional.getPluralForm(),
+                      additionalTarget);
+              gettextAdditionalForms
+                  .computeIfAbsent(messageId, ignored -> new LinkedHashMap<>())
+                  .put(
+                      gettextIndex,
+                      LocalizationFileConverters.quoteGettextTranslation(
+                          catalog.messages().get(messageId), additionalTarget, gettextIndex));
+              if (pullRunName != null && additionalTranslation != null) {
+                usedVariants.add(additionalTranslation.getTmTextUnitVariantId());
+              }
+            }
+          }
         } else {
           gettextAdditionalForms
               .computeIfAbsent(messageId, ignored -> new LinkedHashMap<>())

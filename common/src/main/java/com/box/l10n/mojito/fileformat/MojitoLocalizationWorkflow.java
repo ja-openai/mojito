@@ -114,7 +114,13 @@ final class MojitoLocalizationWorkflow {
           CsvLocalizationFormat.parseImport(
               format, LocalizationFileConverters.decode(source, null));
     } else {
-      original = parse(format, source, extractionOptions);
+      original =
+          parse(
+              format,
+              format == LocalizationFileFormat.GETTEXT_PO && targetLocale != null
+                  ? gettextImportLocale(source, targetLocale)
+                  : source,
+              extractionOptions);
     }
     if (!copyFormsOnImport && targetComment == null) {
       return original;
@@ -191,7 +197,7 @@ final class MojitoLocalizationWorkflow {
       } else if (copyFormsOnImport && variants != null) {
         Set<String> required =
             format == LocalizationFileFormat.GETTEXT_PO
-                ? gettextImportCategories(metadata, targetLocale)
+                ? gettextImportCategories(metadata, variants, targetLocale)
                 : categories;
         Map<String, String> completed = completeVariants(variants, required, targetLocale, format);
         String selector = pluralSelector(message, metadata);
@@ -208,11 +214,12 @@ final class MojitoLocalizationWorkflow {
   }
 
   private static Set<String> gettextImportCategories(
-      Map<String, Object> metadata, String targetLocale) {
+      Map<String, Object> metadata, Map<String, String> variants, String targetLocale) {
     Set<String> categories = new LinkedHashSet<>();
     if (metadata.get("gettextPluralIndexes") instanceof Map<?, ?> indexes) {
       indexes.values().forEach(value -> categories.add(value.toString()));
     }
+    categories.addAll(variants.keySet());
     switch (language(targetLocale)) {
       case "cs", "sk", "lt" -> categories.add("many");
       case "ru", "uk", "be", "pl", "sl" -> categories.add("other");
@@ -226,6 +233,13 @@ final class MojitoLocalizationWorkflow {
       categories.add("other");
     }
     return categories;
+  }
+
+  private static byte[] gettextImportLocale(byte[] source, String targetLocale) {
+    String original = new String(source, StandardCharsets.ISO_8859_1);
+    String localized =
+        original.replace("\"Language: \\n\"", "\"Language: " + targetLocale + "\\n\"");
+    return localized.equals(original) ? source : localized.getBytes(StandardCharsets.ISO_8859_1);
   }
 
   private static Map<String, String> completeVariants(

@@ -3238,7 +3238,9 @@ GNU gettext output also expands each independent English two-slot plural into
 the target locale's native plural-slot count, retains the exact configured
 plural formula, and records only the TM variants actually written; Russian
 three-form output and multiple plural messages are covered by the existing CLI
-dataset.
+dataset. Localized gettext imports resolve blank `Language` headers against
+their actual target locale, retain every category owned by each native plural
+index, and emit all required French, Japanese, Russian, and Croatian forms.
 Configured Android, Apple `.strings`/`.stringsdict`, gettext `.pot`, Java
 properties, generic/Chrome JSON, FormatJS, ordinary CSV, Adobe Magento CSV,
 Microsoft `.resx`/`.resw`, Google `.xtb`, JavaScript, TypeScript, HTML, and YAML

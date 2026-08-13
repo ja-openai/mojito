@@ -52,9 +52,19 @@ public class ImportLocalizedAssetCommandTest extends CLITestBase {
     assertPortableImportMatchesExistingDataset("importJson", List.of("-ft", "JSON"));
   }
 
+  @Test
+  public void portableConverterReusesExistingGettextPluralImportDataset() throws Exception {
+    assertPortableImportMatchesExistingDataset(
+        "importPoPlural", List.of("-lm", "fr:fr-FR,fr-CA:fr-CA,ja:ja-JP,ru-RU:ru-RU,hr-HR:hr-HR"));
+  }
+
   private void assertPortableImportMatchesExistingDataset(
       String dataset, List<String> formatOptions) throws Exception {
     Repository repository = createTestRepoUsingRepoService();
+    if ("importPoPlural".equals(dataset)) {
+      repositoryService.addRepositoryLocale(repository, "ru-RU");
+      repositoryService.addRepositoryLocale(repository, "hr-HR");
+    }
     Path fixture =
         Path.of(
             "src/test/resources/com/box/l10n/mojito/cli/command/ImportLocalizedAssetCommandTest_IO",

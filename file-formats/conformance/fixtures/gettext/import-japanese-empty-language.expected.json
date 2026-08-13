@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "locale": "ja-JP",
+  "messages": {
+    "vessel": {
+      "defaultMessage": "{arg0, plural, other {{arg0} 隻}}",
+      "variants": { "other": "{arg0} 隻" },
+      "placeholders": [
+        { "name": "arg0", "source": "%d", "kind": "integer", "position": 1 }
+      ],
+      "metadata": {
+        "sourceMessage": "%d boat",
+        "sourcePlural": "%d boats",
+        "context": "vessel",
+        "gettextPluralIndexes": { "0": "other" },
+        "gettextPluralForms": { "nplurals": 1, "expression": "0" }
+      }
+    }
+  }
+}

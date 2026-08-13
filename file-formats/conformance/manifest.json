@@ -1214,6 +1214,17 @@
         "targetLocale": "fr-FR",
         "copyFormsOnImport": false
       }
+    },
+    {
+      "id": "gettext-mojito-import-uses-target-locale-when-po-language-header-is-empty",
+      "format": "gettext_po",
+      "input": "fixtures/gettext/import-japanese-empty-language.po",
+      "expected": "fixtures/gettext/import-japanese-empty-language.expected.json",
+      "filterOptions": [],
+      "importPolicy": {
+        "targetLocale": "ja-JP",
+        "copyFormsOnImport": true
+      }
     }
   ],
   "cases": [

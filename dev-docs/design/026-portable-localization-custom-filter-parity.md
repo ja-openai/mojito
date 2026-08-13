@@ -77,11 +77,14 @@ counting repeated definitions or silently dropping protected placeholders.
   source entries, original line endings, and source-owned target-column layout.
 - Microsoft `.resx` and `.resw` extract untyped `data/value` entries, respect
   the customized exclusion rules, preserve sibling comments and protected
-  placeholders, and render into the original XML source template.
+  placeholders, and render into the original XML source template. Missing
+  localized entries are removed before rendering without dropping retained
+  translator comments or producing malformed rootless XML.
 - Google `.xtb` preserves bundle language, translation IDs/descriptions,
   source-owned placeholders, and exact markup. Its one recognized harmless
   platform DOCTYPE is allowed; external and internal entity declarations are
-  rejected.
+  rejected. Untranslated placeholder-bearing entries are removed before
+  rendering while the valid source-owned bundle root remains intact.
 - JavaScript and TypeScript preserve the actual customized filter's quoted-key
   declarations, multiline backtick values, preceding translator comments,
   protected entries, escaping, and stable translation-memory identities.
@@ -91,6 +94,11 @@ counting repeated definitions or silently dropping protected placeholders.
 - YAML preserves nested source mappings, configured key-path selection, block
   scalars, comments, quoting, and original source-template bytes. Unsupported
   ambiguous sequence ownership fails closed.
+- Gettext localized import supplies the actual target locale when a PO header
+  leaves `Language` empty, preserves every CLDR category represented by one
+  native plural index, and renders all locale-owned output slots. The existing
+  import dataset remains byte-identical for French, French Canadian, Japanese,
+  Russian, and Croatian, including Croatian's third `msgstr[2]` branch.
 
 Configured inline-code rules are compiled and ordered once for each parsed option
 set, then reused for every extracted message. A warmed 20,000-message,
