@@ -98,6 +98,10 @@ public class L10nJCommander {
 
     Exception parsingException = null;
 
+    if (jCommander == null) {
+      createJCommanderForRun();
+    }
+
     try {
       logger.debug("Parse arguments");
       jCommander.parse(args);
