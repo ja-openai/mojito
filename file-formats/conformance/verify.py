@@ -33,6 +33,7 @@ FORMATS = {
     "typescript",
     "resx",
     "xtb",
+    "html",
 }
 ENCODINGS = {
     None,
@@ -703,6 +704,7 @@ def main() -> None:
                 "INVALID_FILTER_OPTION",
                 "UNSUPPORTED_FILTER_OPTION",
                 "INVALID_INLINE_CODE",
+                "INVALID_SKELETON_MARKUP",
                 "INVALID_IMPORT_LOCALE",
                 "INVALID_IMPORT_PLURAL",
                 "UNSUPPORTED_IMPORT_POLICY",
@@ -2973,6 +2975,7 @@ def main() -> None:
             "typescript",
             "resx",
             "xtb",
+            "html",
         }, f"{case_id}: unsupported source-skeleton format"
         assert case.get("encoding") in {
             None,

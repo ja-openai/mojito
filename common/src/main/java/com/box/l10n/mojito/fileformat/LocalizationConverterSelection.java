@@ -104,6 +104,9 @@ public final class LocalizationConverterSelection {
     if (path.endsWith(".csv")) {
       return LocalizationFileFormat.CSV;
     }
+    if (path.endsWith(".html") || path.endsWith(".htm")) {
+      return LocalizationFileFormat.HTML;
+    }
     return null;
   }
 }

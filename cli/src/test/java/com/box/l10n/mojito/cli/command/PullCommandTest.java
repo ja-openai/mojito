@@ -514,6 +514,22 @@ public class PullCommandTest extends CLITestBase {
   }
 
   @Test
+  public void portableConverterReusesExistingHtmlAlphaDataset() throws Exception {
+    String[] pushOptions = {"-ft", "HTML_ALPHA", "-fo", "processImageUrls=true"};
+    String[] pullOptions = {
+      "-ft",
+      "HTML_ALPHA",
+      "-fo",
+      "processImageUrls=true",
+      "-lm",
+      "fr:fr-FR,fr-CA:fr-CA,ja:ja-JP",
+      "-lmt",
+      "MAP_ONLY"
+    };
+    assertPortableMatchesExistingDataset("pullHtml", "demo.html", pushOptions, pullOptions);
+  }
+
+  @Test
   public void portableConverterReusesExistingAppleStringsdictDataset() throws Exception {
     assertPortableMatchesExistingDataset(
         "pullMacStringsdict", "en.lproj/Localizable.stringsdict", new String[0], new String[0]);

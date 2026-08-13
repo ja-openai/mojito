@@ -119,6 +119,9 @@ public class LocalizationConverterSelectionTest {
         LocalizationFileFormat.CSV_ADOBE_MAGENTO,
         LocalizationConverterSelection.format(
             "i18n/en_US.csv", FilterConfigIdOverride.CSV_ADOBE_MAGENTO));
+    assertEquals(
+        LocalizationFileFormat.HTML,
+        LocalizationConverterSelection.format("demo.HTML", FilterConfigIdOverride.HTML_ALPHA));
   }
 
   @Test

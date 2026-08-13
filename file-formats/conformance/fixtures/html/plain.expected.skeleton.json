@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "html",
+  "encoding": "UTF-8",
+  "source": "<!doctype html>\n<html>\n  <head>\n    <title>Harbor status</title>\n    <meta name=\"description\" content=\"Safe &amp; welcoming harbor\">\n  </head>\n  <body>\n    <p>North &amp; south</p>\n    <p>North &amp; south</p>\n  </body>\n</html>\n",
+  "slots": [
+    {
+      "id": "eedbdea4885092e36ff05dfa94535a00-d41d8cd98f00b204e9800998ecf8427e-1",
+      "start": 43,
+      "end": 56
+    },
+    {
+      "id": "90585a2f2b78582dd03a1c8d5b378b05-eedbdea4885092e36ff05dfa94535a00-1",
+      "start": 103,
+      "end": 130
+    },
+    {
+      "id": "938a1e915cb81c1fdb43e787db88eba8-90585a2f2b78582dd03a1c8d5b378b05-1",
+      "start": 159,
+      "end": 176
+    },
+    {
+      "id": "938a1e915cb81c1fdb43e787db88eba8-938a1e915cb81c1fdb43e787db88eba8-1",
+      "start": 188,
+      "end": 205
+    }
+  ]
+}

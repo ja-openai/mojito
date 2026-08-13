@@ -1191,7 +1191,7 @@ public class TMService {
     Map<String, Map<Integer, String>> gettextAdditionalForms = new LinkedHashMap<>();
     Map<String, String> sourceSlots = new LinkedHashMap<>();
     LocalizationSourceSkeleton sourceSkeleton = null;
-    if (format == LocalizationFileFormat.FORMATJS_JSON) {
+    if (format == LocalizationFileFormat.FORMATJS_JSON || format == LocalizationFileFormat.HTML) {
       for (String id : catalog.messages().keySet()) {
         sourceSlots.put(id, id);
       }

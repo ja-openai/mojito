@@ -3241,7 +3241,7 @@ three-form output and multiple plural messages are covered by the existing CLI
 dataset.
 Configured Android, Apple `.strings`/`.stringsdict`, gettext `.pot`, Java
 properties, generic/Chrome JSON, FormatJS, ordinary CSV, Adobe Magento CSV,
-Microsoft `.resx`/`.resw`, Google `.xtb`, JavaScript, TypeScript, and YAML
+Microsoft `.resx`/`.resw`, Google `.xtb`, JavaScript, TypeScript, HTML, and YAML
 reuse the existing real CLI push/pull datasets. Format-specific implementations
 preserve customized extraction identities, translator comments, protected
 content, source-owned markup, configured key selection, and exact original

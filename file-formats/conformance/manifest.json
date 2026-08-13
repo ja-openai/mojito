@@ -2,6 +2,93 @@
   "schemaVersion": 1,
   "workflowCases": [
     {
+      "id": "html-alpha-workflow-rejects-removed-inline-image",
+      "format": "html",
+      "input": "fixtures/html/harbor.html",
+      "filterOptions": [],
+      "translations": {
+        "6433ba9985b5e5e67694f302751890d4-dbbb48fc7172c312d0c94c65b31c925d-1": "Image supprimée"
+      },
+      "error": "INVALID_SKELETON_MARKUP"
+    },
+    {
+      "id": "html-alpha-workflow-rejects-duplicated-inline-image",
+      "format": "html",
+      "input": "fixtures/html/harbor.html",
+      "filterOptions": [],
+      "translations": {
+        "6433ba9985b5e5e67694f302751890d4-dbbb48fc7172c312d0c94c65b31c925d-1": "Image <br id='p1'/><br id='p1'/>"
+      },
+      "error": "INVALID_SKELETON_MARKUP"
+    },
+    {
+      "id": "html-alpha-workflow-rejects-unknown-inline-image",
+      "format": "html",
+      "input": "fixtures/html/harbor.html",
+      "filterOptions": [],
+      "translations": {
+        "6433ba9985b5e5e67694f302751890d4-dbbb48fc7172c312d0c94c65b31c925d-1": "Image <br id='p2'/>"
+      },
+      "error": "INVALID_SKELETON_MARKUP"
+    },
+    {
+      "id": "html-alpha-workflow-preserves-inline-image-markup-and-alt-text",
+      "format": "html",
+      "input": "fixtures/html/harbor.html",
+      "expected": "fixtures/html/harbor.expected.json",
+      "filterOptions": [],
+      "translations": {
+        "eedbdea4885092e36ff05dfa94535a00-d41d8cd98f00b204e9800998ecf8427e-1": "Statut du port",
+        "90585a2f2b78582dd03a1c8d5b378b05-eedbdea4885092e36ff05dfa94535a00-1": "Port accueillant",
+        "4f1d71b4f4ae40c6b74b31293471350f-90585a2f2b78582dd03a1c8d5b378b05-1": "Chenal nord",
+        "4f1d71b4f4ae40c6b74b31293471350f-4f1d71b4f4ae40c6b74b31293471350f-1": "Passage nord",
+        "dbbb48fc7172c312d0c94c65b31c925d-4f1d71b4f4ae40c6b74b31293471350f-2": "Image de balise",
+        "6433ba9985b5e5e67694f302751890d4-dbbb48fc7172c312d0c94c65b31c925d-1": "Surveillez <br id='p1'/> près du quai.",
+        "3feb3cab8a7f5b9587450ef4fa19ec26-8df6fbcc43d31d99e5112eb009ed8a2d-1": "Chenal de nuit"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/html/harbor.localized.html"
+    },
+    {
+      "id": "html-alpha-workflow-option-extracts-and-localizes-image-urls",
+      "format": "html",
+      "input": "fixtures/html/harbor.html",
+      "expected": "fixtures/html/harbor.images.expected.json",
+      "filterOptions": [
+        "processImageUrls=true"
+      ],
+      "translations": {
+        "eedbdea4885092e36ff05dfa94535a00-d41d8cd98f00b204e9800998ecf8427e-1": "Statut du port",
+        "90585a2f2b78582dd03a1c8d5b378b05-eedbdea4885092e36ff05dfa94535a00-1": "Port accueillant",
+        "4f1d71b4f4ae40c6b74b31293471350f-90585a2f2b78582dd03a1c8d5b378b05-1": "Chenal nord",
+        "4f1d71b4f4ae40c6b74b31293471350f-4f1d71b4f4ae40c6b74b31293471350f-1": "Passage nord",
+        "dbbb48fc7172c312d0c94c65b31c925d-4f1d71b4f4ae40c6b74b31293471350f-2": "Image de balise",
+        "357013937d42d251e1951979c55cb9aa-dbbb48fc7172c312d0c94c65b31c925d-1": "fr/images/balise.png",
+        "6433ba9985b5e5e67694f302751890d4-357013937d42d251e1951979c55cb9aa-1": "Surveillez <br id='p1'/> près du quai.",
+        "3feb3cab8a7f5b9587450ef4fa19ec26-8df6fbcc43d31d99e5112eb009ed8a2d-1": "Chenal de nuit"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/html/harbor.images.localized.html"
+    },
+    {
+      "id": "html-alpha-workflow-option-retains-nonbreaking-space-units",
+      "format": "html",
+      "input": "fixtures/html/harbor.html",
+      "expected": "fixtures/html/harbor.empty.expected.json",
+      "filterOptions": [
+        "emptyAndNbspNotTranslatable=false"
+      ]
+    },
+    {
+      "id": "html-alpha-workflow-rejects-invalid-image-option",
+      "format": "html",
+      "input": "fixtures/html/harbor.html",
+      "filterOptions": [
+        "processImageUrls=maybe"
+      ],
+      "error": "INVALID_FILTER_OPTION"
+    },
+    {
       "id": "javascript-mojito-preserves-notes-protected-values-and-source-layout",
       "format": "javascript",
       "input": "fixtures/javascript/harbor.js",
@@ -1110,6 +1197,24 @@
     }
   ],
   "cases": [
+    {
+      "id": "html-alpha-preserves-customized-context-aware-inline-identities",
+      "format": "html",
+      "input": "fixtures/html/harbor.html",
+      "expected": "fixtures/html/harbor.expected.json"
+    },
+    {
+      "id": "html-alpha-preserves-duplicate-source-context",
+      "format": "html",
+      "input": "fixtures/html/plain.html",
+      "expected": "fixtures/html/plain.expected.json"
+    },
+    {
+      "id": "html-alpha-rejects-unterminated-quoted-markup",
+      "format": "html",
+      "input": "fixtures/html/invalid.html",
+      "error": "INVALID_HTML"
+    },
     {
       "id": "javascript-customized-mojito-quoted-keys-and-template-values",
       "format": "javascript",
@@ -29263,6 +29368,14 @@
     }
   ],
   "sourceSkeletons": [
+    {
+      "id": "html-alpha-source-skeleton-preserves-exact-document-and-entity-spelling",
+      "format": "html",
+      "input": "fixtures/html/plain.html",
+      "expected": "fixtures/html/plain.expected.skeleton.json",
+      "translations": "fixtures/html/plain.translations.json",
+      "localized": "fixtures/html/plain.localized.html"
+    },
     {
       "id": "javascript-source-skeleton-preserves-comments-and-template-escaping",
       "format": "javascript",

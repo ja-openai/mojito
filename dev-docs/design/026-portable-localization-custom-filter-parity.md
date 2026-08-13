@@ -48,8 +48,8 @@ differential.
 | YAML | `useFullKeyPath` | Select full YAML key-path identities. | Implemented independently in Java and Rust and verified against the existing configured CLI dataset. |
 | YAML | `extractAllPairs` | Select every scalar or only configured exceptions. | Implemented for nested YAML mappings and safe scalar extraction. |
 | YAML | `exceptions` | Select configured YAML key/path patterns. | Implemented with the same validated portable regular-expression policy as JSON. |
-| HTML | `processImageUrls` | Expose image URLs as protected adaptation units. | Out of scope until HTML has a portable format contract. |
-| HTML | `emptyAndNbspNotTranslatable` | Suppress empty and nonbreaking-space-only HTML units. | Out of scope until HTML has a portable format contract. |
+| HTML | `processImageUrls` | Expose image URLs as protected adaptation units. | Implemented with the customized filter's exact image URL/ALT ordering and stable contextual identities. |
+| HTML | `emptyAndNbspNotTranslatable` | Suppress empty and nonbreaking-space-only HTML units. | Implemented without resetting the following message's legacy contextual stable identity. |
 | Translation import | `targetComment` | Attach the configured note while importing translations. | Implemented only by explicit Java/Rust import APIs as `metadata.mojitoTargetComment`; source descriptions and TM source identity remain unchanged. |
 
 Options are supplied as `key=value`; duplicate keys use the final value. Existing
@@ -85,6 +85,9 @@ counting repeated definitions or silently dropping protected placeholders.
 - JavaScript and TypeScript preserve the actual customized filter's quoted-key
   declarations, multiline backtick values, preceding translator comments,
   protected entries, escaping, and stable translation-memory identities.
+- HTML preserves actual customized `HTML_ALPHA` document-part placeholders,
+  decoded-entity MD5 identities, context-dependent neighboring identities,
+  image URL/ALT adaptation, nonbreaking-space suppression, and original markup.
 - YAML preserves nested source mappings, configured key-path selection, block
   scalars, comments, quoting, and original source-template bytes. Unsupported
   ambiguous sequence ownership fails closed.
@@ -393,5 +396,5 @@ Rollout controls, durable skeleton transport, complete valid plural-import
 coverage, and enrollment of source file types not yet discovered by the CLI
 remain separate future work. Standalone Java and Rust must continue to provide
 executable, shared contracts for every supported extraction and output policy.
-YAML has its own verified format contract; HTML remains pending its independent
-format contract, and bilingual XLIFF remains intentionally deferred.
+YAML and HTML each have independently verified format contracts; bilingual
+XLIFF remains intentionally deferred.

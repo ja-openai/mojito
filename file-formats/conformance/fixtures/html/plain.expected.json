@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "html",
+  "messages": {
+    "eedbdea4885092e36ff05dfa94535a00-d41d8cd98f00b204e9800998ecf8427e-1": {
+      "defaultMessage": "Harbor status"
+    },
+    "90585a2f2b78582dd03a1c8d5b378b05-eedbdea4885092e36ff05dfa94535a00-1": {
+      "defaultMessage": "Safe &amp; welcoming harbor"
+    },
+    "938a1e915cb81c1fdb43e787db88eba8-90585a2f2b78582dd03a1c8d5b378b05-1": {
+      "defaultMessage": "North & south"
+    },
+    "938a1e915cb81c1fdb43e787db88eba8-938a1e915cb81c1fdb43e787db88eba8-1": {
+      "defaultMessage": "North & south"
+    }
+  }
+}
