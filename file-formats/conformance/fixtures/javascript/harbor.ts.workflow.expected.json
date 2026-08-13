@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "typescript",
+  "messages": {
+    "harbor.status🧭": {
+      "defaultMessage": "Ready for \"Aurora\"\nat berth `north`",
+      "description": "Navigation status shown on the bridge",
+      "metadata": {
+        "javascriptTemplate": true
+      }
+    },
+    "harbor.welcome": {
+      "defaultMessage": "Welcome ${captain}",
+      "description": "The placeholder remains literal JavaScript template text"
+    }
+  }
+}

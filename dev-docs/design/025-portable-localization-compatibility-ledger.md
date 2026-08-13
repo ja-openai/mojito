@@ -29,8 +29,8 @@ compatibility contracts. The complete option and behavior inventory lives in
 
 ## What the measurements do and do not mean
 
-The corpus currently contains **225 real Okapi comparisons**:
-2 matching, 58 deliberately different,
+The corpus currently contains **227 real Okapi comparisons**:
+3 matching, 59 deliberately different,
 5 valid platform inputs rejected by Okapi,
 159 unsupported production routes, and
 1 platform-invalid input nevertheless extracted by Okapi.
@@ -118,6 +118,8 @@ parity, including header preservation and inheritance cleanup.
 | GNU gettext PO | 3 | different: 2, unsupported: 1 | 2 | 7 | 7 |
 | Java properties | 4 | different: 4 | 4 | 11 | 11 |
 | FormatJS JSON | 2 | different: 1, match: 1 | 2 | 4 | 5 |
+| JavaScript source | 1 | different: 1 | 0 | 0 | 0 |
+| TypeScript source | 1 | match: 1 | 0 | 0 | 0 |
 
 ## Confirmed Okapi failures by format
 
@@ -758,6 +760,8 @@ and must remain specific when a new incompatibility is added.
 
 | Format | Manifest fixture | Policy | Canonical / legacy | Measured shadow differences | Legacy failure or incompatibility |
 | --- | --- | --- | --- | --- | --- |
+| JavaScript source | `javascript-customized-mojito-quoted-keys-and-template-values` | `different` | — | — | Mojito's business-policy step suppresses DO NOT TRANSLATE resources after raw JavaScript extraction. |
+| TypeScript source | `typescript-customized-mojito-quoted-keys-and-template-values` | `match` | — | — | Native-shaped extraction matches. |
 | Android resources | `android-basic` | `different` | 5 / 5 | comment_mismatch: 1, source_mismatch: 1 | Legacy extraction retains platform printf and inline-code spellings instead of canonical FormatJS placeholders. |
 | Android resources | `android-escapes` | `different` | 6 / 6 | source_mismatch: 1 | Legacy Android escaping and comments must be recorded before a safe extraction cutover. |
 | Android resources | `android-aapt2-literal-hashes-preserve-plural-text-and-generic-color-ownership` | `different` | 86 / 78 | comment_mismatch: 1, duplicate_legacy: 6, legacy_projection_collision: 6, missing_legacy: 8, source_mismatch: 41 | AAPT2 owns leading hash-color primitives while preserving literal, escaped, styled, protected, and product-qualified plural hashes; legacy Okapi exposes different native resource units. |

@@ -69,6 +69,9 @@ pub(crate) fn extract(
         FileFormat::GettextPo => extract_gettext(bytes),
         FileFormat::JavaProperties => extract_properties(bytes, properties_encoding),
         FileFormat::Yaml => crate::yaml::extract(bytes),
+        FileFormat::JavaScript | FileFormat::TypeScript => {
+            crate::javascript::extract(format, bytes)
+        }
         _ => Err(error(
             "UNSUPPORTED_SKELETON_FORMAT",
             "Source skeletons are not available for this resource format",
@@ -293,6 +296,7 @@ pub(crate) fn render(
         "gettext_po" => render_gettext(skeleton, translations),
         "java_properties" => render_properties(skeleton, translations),
         "yaml" => crate::yaml::render(skeleton, translations),
+        "javascript" | "typescript" => crate::javascript::render(skeleton, translations),
         _ => Err(error(
             "UNSUPPORTED_SKELETON_FORMAT",
             "Unsupported source-preserving skeleton format",
@@ -5969,7 +5973,7 @@ pub(crate) enum Encoding {
 }
 
 impl Encoding {
-    fn detect(bytes: &[u8]) -> Self {
+    pub(crate) fn detect(bytes: &[u8]) -> Self {
         Self::detect_declared(bytes, None)
     }
 
@@ -6008,7 +6012,7 @@ impl Encoding {
         }
     }
 
-    fn name(self) -> &'static str {
+    pub(crate) fn name(self) -> &'static str {
         match self {
             Self::Utf8 => "UTF-8",
             Self::Utf8Bom => "UTF-8-BOM",
@@ -6022,7 +6026,7 @@ impl Encoding {
         }
     }
 
-    fn offset(self, value: &str, index: usize) -> usize {
+    pub(crate) fn offset(self, value: &str, index: usize) -> usize {
         match self {
             Self::Utf8 => index,
             Self::Utf8Bom => index + 3,
@@ -6054,7 +6058,7 @@ impl Encoding {
         output
     }
 
-    fn encode_without_bom(self, value: &str) -> Vec<u8> {
+    pub(crate) fn encode_without_bom(self, value: &str) -> Vec<u8> {
         match self {
             Self::Utf8 | Self::Utf8Bom => value.as_bytes().to_vec(),
             Self::Utf16Le | Self::Utf16LeBare => {

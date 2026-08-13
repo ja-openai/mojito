@@ -9,7 +9,9 @@ public enum LocalizationFileFormat {
   GETTEXT_PO("gettext_po"),
   JAVA_PROPERTIES("java_properties"),
   FORMATJS_JSON("formatjs_json"),
-  YAML("yaml");
+  YAML("yaml"),
+  JAVASCRIPT("javascript"),
+  TYPESCRIPT("typescript");
 
   private final String id;
 

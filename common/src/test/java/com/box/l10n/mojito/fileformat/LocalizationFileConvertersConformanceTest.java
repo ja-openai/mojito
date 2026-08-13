@@ -3344,6 +3344,14 @@ public class LocalizationFileConvertersConformanceTest {
         assertEquals(
             "Première ligne\nDeuxième ligne",
             localized.messages().get("group/block").defaultMessage());
+      } else if (format == LocalizationFileFormat.JAVASCRIPT
+          || format == LocalizationFileFormat.TYPESCRIPT) {
+        for (Map.Entry<String, String> entry : translations.entrySet()) {
+          assertEquals(
+              id + ": translated JavaScript source identity " + entry.getKey(),
+              entry.getValue(),
+              localized.messages().get(entry.getKey()).defaultMessage());
+        }
       } else if ("ISO-8859-1".equals(encoding)) {
         assertEquals("prix 5 € 🙂", localized.messages().get("café").defaultMessage());
         assertEquals("crème {arg0}", localized.messages().get("escaped.key").defaultMessage());

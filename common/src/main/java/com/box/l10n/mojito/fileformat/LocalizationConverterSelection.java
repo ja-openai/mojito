@@ -86,6 +86,12 @@ public final class LocalizationConverterSelection {
     if (path.endsWith(".yaml") || path.endsWith(".yml")) {
       return LocalizationFileFormat.YAML;
     }
+    if (path.endsWith(".js")) {
+      return LocalizationFileFormat.JAVASCRIPT;
+    }
+    if (path.endsWith(".ts")) {
+      return LocalizationFileFormat.TYPESCRIPT;
+    }
     return null;
   }
 }

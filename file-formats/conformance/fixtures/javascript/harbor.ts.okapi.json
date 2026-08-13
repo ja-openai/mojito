@@ -1,0 +1,15 @@
+{
+  "filterConfigId": "okf_regex@mojito-js",
+  "units": [
+    {
+      "name": "harbor.status🧭",
+      "source": "Ready for \"Aurora\"\nat berth `north`",
+      "comments": "Navigation status shown on the bridge"
+    },
+    {
+      "name": "harbor.welcome",
+      "source": "Welcome ${captain}",
+      "comments": "The placeholder remains literal JavaScript template text"
+    }
+  ]
+}

@@ -4078,6 +4078,13 @@ fn all_shared_source_preserving_skeletons() {
                 parsed.messages["group/block"].default_message,
                 "Première ligne\nDeuxième ligne"
             );
+        } else if matches!(format, FileFormat::JavaScript | FileFormat::TypeScript) {
+            for (key, translation) in &translations {
+                assert_eq!(
+                    parsed.messages[key].default_message, *translation,
+                    "{id}: translated JavaScript source identity {key}"
+                );
+            }
         } else if encoding == Some("ISO-8859-1") {
             assert_eq!(parsed.messages["café"].default_message, "prix 5 € 🙂");
             assert_eq!(

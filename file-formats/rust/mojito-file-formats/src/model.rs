@@ -13,6 +13,8 @@ pub enum FileFormat {
     JavaProperties,
     FormatJsJson,
     Yaml,
+    JavaScript,
+    TypeScript,
 }
 
 impl FileFormat {
@@ -26,6 +28,8 @@ impl FileFormat {
             "java_properties" => Self::JavaProperties,
             "formatjs_json" => Self::FormatJsJson,
             "yaml" => Self::Yaml,
+            "javascript" => Self::JavaScript,
+            "typescript" => Self::TypeScript,
             _ => return None,
         })
     }
@@ -40,6 +44,8 @@ impl FileFormat {
             Self::JavaProperties => "java_properties",
             Self::FormatJsJson => "formatjs_json",
             Self::Yaml => "yaml",
+            Self::JavaScript => "javascript",
+            Self::TypeScript => "typescript",
         }
     }
 }

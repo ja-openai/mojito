@@ -39,7 +39,9 @@
         "apple_xcstrings",
         "gettext_po",
         "java_properties",
-        "yaml"
+        "yaml",
+        "javascript",
+        "typescript"
       ]
     },
     "encoding": {
