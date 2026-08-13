@@ -282,8 +282,8 @@ final class HtmlSourceFormat {
       int search = position;
       StringBuilder text = new StringBuilder();
       while (search < boundary) {
-        int imageStart = indexOfIgnoreCase(source, "<img", search);
-        if (imageStart < 0 || imageStart >= boundary) {
+        int imageStart = indexOfIgnoreCase(source, "<img", search, boundary);
+        if (imageStart < 0) {
           text.append(source, search, boundary);
           break;
         }
@@ -449,7 +449,11 @@ final class HtmlSourceFormat {
   }
 
   private static int indexOfIgnoreCase(String source, String match, int start) {
-    for (int index = start; index <= source.length() - match.length(); index++) {
+    return indexOfIgnoreCase(source, match, start, source.length());
+  }
+
+  private static int indexOfIgnoreCase(String source, String match, int start, int end) {
+    for (int index = start; index <= end - match.length(); index++) {
       if (source.regionMatches(true, index, match, 0, match.length())) {
         return index;
       }

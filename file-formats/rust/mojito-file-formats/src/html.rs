@@ -337,8 +337,7 @@ fn entries(
         let mut search = position;
         let mut text = String::new();
         while search < boundary {
-            let Some(image_start) =
-                index_of_ignore_case(source, "<img", search).filter(|start| *start < boundary)
+            let Some(image_start) = index_of_ignore_case_until(source, "<img", search, boundary)
             else {
                 text.push_str(&source[search..boundary]);
                 break;
@@ -570,7 +569,16 @@ fn tag(source: &str, start: usize) -> Result<Tag<'_>, ParseError> {
 }
 
 fn index_of_ignore_case(source: &str, query: &str, start: usize) -> Option<usize> {
-    source.as_bytes()[start..]
+    index_of_ignore_case_until(source, query, start, source.len())
+}
+
+fn index_of_ignore_case_until(
+    source: &str,
+    query: &str,
+    start: usize,
+    end: usize,
+) -> Option<usize> {
+    source.as_bytes()[start..end]
         .windows(query.len())
         .position(|window| window.eq_ignore_ascii_case(query.as_bytes()))
         .map(|relative| start + relative)
