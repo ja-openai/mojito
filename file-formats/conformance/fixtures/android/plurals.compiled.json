@@ -1,0 +1,13 @@
+{
+  "plurals": {
+    "files": {
+      "one": "%1$d file",
+      "other": "%1$d files"
+    },
+    "plain": {
+      "zero": "Nothing",
+      "one": "One thing",
+      "other": "Many things"
+    }
+  }
+}

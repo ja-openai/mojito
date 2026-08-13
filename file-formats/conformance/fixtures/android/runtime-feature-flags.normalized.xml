@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+  <string name="inverse_route" android:featureFlag="!neutral.flags.mutable">"An inverse harbor route"</string>
+  <item type="string" name="mutable_beacon" android:featureFlag="neutral.flags.mutable">"A mutable harbor beacon"</item>
+  <string name="mutable_route" android:featureFlag="neutral.flags.mutable">"A mutable harbor route"</string>
+  <plurals name="mutable_signals" android:featureFlag="neutral.flags.mutable">
+    <item quantity="one">"One harbor signal"</item>
+    <item quantity="other">"Several harbor signals"</item>
+  </plurals>
+  <string name="open_route">"An open harbor route"</string>
+</resources>

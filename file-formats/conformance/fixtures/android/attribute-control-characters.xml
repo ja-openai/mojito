@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:code="urn:oasis:names:tc:xliff:document:1.2">
+  <!-- XML character references preserve controls that literal attributes normalize. -->
+  <string name="tab" description="North&#9;deck">Visible harbor</string>
+  <string name="line" description="North&#10;deck">Visible pier</string>
+  <string name="carriage" description="North&#13;deck">Visible lane</string>
+  <string name="carriage_line" description="North&#13;&#10;deck">Visible signal</string>
+  <string name="literal_tab" description="North	deck">Literal tab becomes a space</string>
+  <string name="literal_line" description="North
+deck">Literal line becomes a space</string>
+  <item type="string" name="generic" description="Generic&#9;north&#10;deck">Generic route</item>
+  <string name="protected">Captain <code:g id="captain" example="A&#9;B&#10;C&#13;D">%1$s</code:g></string>
+  <string name="literal_example">Pilot <code:g id="pilot" example="A	B
+C">%1$s</code:g></string>
+  <string name="styled"><annotation route="north&#9;middle&#10;end&#13;finish">Visible style</annotation></string>
+
+  <string-array name="routes">
+    <item description="Route&#9;deck">First route</item>
+    <item description="Second&#10;deck">Guide <code:g id="navigator" example="P&#9;7&#10;8">%1$s</code:g></item>
+  </string-array>
+  <array name="mixed">
+    <item description="Mixed&#13;&#10;deck">Mixed route</item>
+  </array>
+  <plurals name="signals" description="Count&#9;lights&#10;visible">
+    <item quantity="one">One <code:g id="marker" example="M&#9;1&#10;2&#13;3">%1$s</code:g></item>
+    <item quantity="other">%1$d visible lights</item>
+  </plurals>
+</resources>

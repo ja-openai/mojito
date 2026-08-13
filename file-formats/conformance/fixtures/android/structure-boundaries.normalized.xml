@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="North.Path-7" description="The latest Android resource comment wins.">"Visible ridge marker"</string>
+  <string name="_underway" product="tablet">"Tablet tide signal"</string>
+  <string name="harbor.pad">"Padded harbor marker"</string>
+  <array name="mixed.route">
+    <item>17</item>
+    <item description="Mixed collection context.">"Visible mixed route"</item>
+    <item>@string/harbor.pad</item>
+  </array>
+  <string-array name="route.list">
+    <item description="Route collection context.">"North channel"</item>
+    <item description="Route collection context.">"South channel"</item>
+  </string-array>
+  <plurals name="tide.signals" description="Plural collection context.">
+    <item quantity="one">"One coastal signal"</item>
+    <item quantity="other">"Many coastal signals"</item>
+  </plurals>
+  <string name="éclat" description="Context survives an ignored foreign wrapper.">"Coastal shimmer"</string>
+</resources>

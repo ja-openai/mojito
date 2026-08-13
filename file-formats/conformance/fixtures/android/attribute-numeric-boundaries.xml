@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="decimal_window" format="integer" min="-0000000000000008" max="0000000000000009" />
+    <attr name="hex_window" format="integer" min="0xffffffff" max="0x80000000" />
+    <attr name="decimal_modes" format="integer|enum">
+        <enum name="count_ten" value="010" />
+        <enum name="count_eight" value="08" />
+        <enum name="count_negative" value="-0008" />
+        <enum name="count_maximum" value="000000000002147483647" />
+        <enum name="count_minimum" value="-2147483648" />
+        <enum name="bits_unsigned" value="0xffffffff" />
+        <enum name="bits_signed" value="0x80000000" />
+        <enum name="shared_first" value="09" />
+        <enum name="shared_second" value="9" />
+    </attr>
+    <attr name="route_flags" format="integer|flags">
+        <flag name="route_low" value="0001" />
+        <flag name="route_high" value="0x80000000" />
+        <flag name="route_all" value="0xffffffff" />
+    </attr>
+    <attr name="empty_enum" format="enum" />
+    <attr name="empty_flags" format="flags" />
+    <attr name="empty_choice" format="enum|flags" />
+    <declare-styleable name="NumericCompass">
+        <attr name="weak_window" format="integer" min="09" max="00010" />
+        <attr name="weak_mode" format="integer|enum">
+            <enum name="weak_ten" value="010" />
+            <enum name="weak_eight" value="08" />
+        </attr>
+        <attr name="empty_enum" />
+    </declare-styleable>
+    <string-array name="numeric_routes">
+        <item>?attr/decimal_window</item>
+        <item>?attr/hex_window</item>
+        <item>?attr/decimal_modes</item>
+        <item>?attr/route_flags</item>
+        <item>?attr/empty_enum</item>
+        <item>?attr/empty_flags</item>
+        <item>?attr/empty_choice</item>
+        <item>?attr/weak_window</item>
+        <item>?attr/weak_mode</item>
+        <item>A decimal route with leading zeroes</item>
+    </string-array>
+</resources>

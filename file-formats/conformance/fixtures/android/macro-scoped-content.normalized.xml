@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="anchor">"A steady harbor marker"</string>
+  <string-array name="harbor_routes">
+    <item>@string/anchor</item>
+    <item>@string/anchor</item>
+    <item>@string/anchor</item>
+    <item>@string/anchor</item>
+    <item>@string/anchor</item>
+    <item>"A visible harbor lane"</item>
+  </string-array>
+  <plurals name="harbor_signals">
+    <item quantity="one">@string/anchor</item>
+    <item quantity="other">"A visible harbor signal"</item>
+  </plurals>
+  <string name="ignored_foreign_style">"A wrapped harbor crossing"</string>
+  <string name="scoped_signal">"Signal "<xliff:g id="marker" example="M-7">%1$s</xliff:g></string>
+</resources>

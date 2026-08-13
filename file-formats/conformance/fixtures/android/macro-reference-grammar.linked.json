@@ -1,0 +1,44 @@
+{
+  "arrays": {
+    "harbor_routes": [
+      "A quiet harbor crossing",
+      "A quiet harbor crossing",
+      "A quiet harbor crossing"
+    ]
+  },
+  "plurals": {
+    "harbor_signals": {
+      "one": "A quiet harbor crossing",
+      "other": "A quiet harbor crossing"
+    }
+  },
+  "strings": {
+    "auto_chained_route": "A quiet harbor crossing",
+    "auto_route": "A quiet harbor crossing",
+    "escaped_route": "@macro/harbor_phrase",
+    "generic_route": "A quiet harbor crossing",
+    "literal_star_colon_route": "@*:macro/harbor_phrase",
+    "local_route": "A quiet harbor crossing",
+    "package_alias_route": "A quiet harbor crossing",
+    "package_chained_route": "A quiet harbor crossing",
+    "package_route": "A quiet harbor crossing",
+    "private_alias_route": "A quiet harbor crossing",
+    "private_chained_route": "A quiet harbor crossing",
+    "private_package_route": "A quiet harbor crossing",
+    "private_route": "A quiet harbor crossing",
+    "protected_package_route": "Signal %1$s",
+    "scoped_chained_route": "A quiet harbor crossing",
+    "styled_private_route": "A steady harbor light"
+  },
+  "styledSpans": {
+    "strings": {
+      "styled_private_route": [
+        {
+          "name": "b",
+          "start": 2,
+          "end": 7
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="invalid_negative_height"><font height="-2147483649">Pier</font></string>
+</resources>

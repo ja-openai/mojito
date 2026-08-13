@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "sources": [
+    {
+      "sourceSet": "library",
+      "resourcePath": "src/library/res/values/strings.xml",
+      "skeleton": {
+        "schemaVersion": 1,
+        "sourceFormat": "android",
+        "encoding": "UTF-8",
+        "source": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:marker=\"urn:oasis:names:tc:xliff:document:1.2\">\n  <!-- Every dependency declaration is shadowed and its entire file remains untouched. -->\n  <string name=\"shared_signal\">Library <marker:g id=\"pilot\" example=\"L-0\">%1$s</marker:g></string>\n  <string name=\"masked_signal\">Library coast</string>\n  <string name=\"product_signal\" product=\"default\">Library default beacon</string>\n  <string name=\"product_signal\" product=\"tablet\">Library tablet beacon</string>\n  <string-array name=\"product_routes\" product=\"default\">\n    <item>Library default route</item>\n  </string-array>\n  <string-array name=\"product_routes\" product=\"tablet\">\n    <item>Library tablet route</item>\n  </string-array>\n  <plurals name=\"product_lights\" product=\"default\">\n    <item quantity=\"one\">%1$d library default light</item>\n    <item quantity=\"other\">%1$d library default lights</item>\n  </plurals>\n  <plurals name=\"product_lights\" product=\"tablet\">\n    <item quantity=\"one\">%1$d library tablet light</item>\n    <item quantity=\"other\">%1$d library tablet lights</item>\n  </plurals>\n  <string-array name=\"routes\">\n    <item>Library north</item>\n    <item>Library south</item>\n  </string-array>\n  <plurals name=\"lights\">\n    <item quantity=\"one\">%1$d library light</item>\n    <item quantity=\"other\">%1$d library lights</item>\n  </plurals>\n</resources>\n",
+        "androidResourcePath": "src/library/res/values/strings.xml",
+        "slots": []
+      }
+    },
+    {
+      "sourceSet": "main",
+      "resourcePath": "src/main/res/values/strings.xml",
+      "skeleton": {
+        "schemaVersion": 1,
+        "sourceFormat": "android",
+        "encoding": "UTF-8",
+        "source": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:marker=\"urn:oasis:names:tc:xliff:document:1.2\">\n  <!-- Lower-priority declarations stay byte-for-byte untouched. -->\n  <string name=\"shared_signal\">Main <marker:g id=\"pilot\" example=\"M-1\">%1$s</marker:g></string>\n  <string name=\"main_anchor\">Main &amp; harbor</string>\n  <string name=\"masked_signal\">Lower coast</string>\n  <string name=\"product_signal\" product=\"default\">Main default beacon</string>\n  <string name=\"product_signal\" product=\"tablet\">Main tablet beacon</string>\n  <string-array name=\"product_routes\" product=\"default\">\n    <item>Main default route</item>\n  </string-array>\n  <string-array name=\"product_routes\" product=\"tablet\">\n    <item>Main tablet route</item>\n  </string-array>\n  <plurals name=\"product_lights\" product=\"default\">\n    <item quantity=\"one\">%1$d main default light</item>\n    <item quantity=\"other\">%1$d main default lights</item>\n  </plurals>\n  <plurals name=\"product_lights\" product=\"tablet\">\n    <item quantity=\"one\">%1$d main tablet light</item>\n    <item quantity=\"other\">%1$d main tablet lights</item>\n  </plurals>\n  <string-array name=\"routes\">\n    <item>Main north</item>\n    <item>Main south</item>\n  </string-array>\n  <plurals name=\"lights\">\n    <item quantity=\"one\">%1$d main light</item>\n    <item quantity=\"other\">%1$d main lights</item>\n  </plurals>\n</resources>\n",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "slots": [
+          {
+            "id": "main_anchor",
+            "start": 298,
+            "end": 315
+          }
+        ]
+      }
+    },
+    {
+      "sourceSet": "build_type",
+      "resourcePath": "src/debug/res/values/strings.xml",
+      "skeleton": {
+        "schemaVersion": 1,
+        "sourceFormat": "android",
+        "encoding": "UTF-8",
+        "source": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:marker=\"urn:oasis:names:tc:xliff:document:1.2\">\n  <!-- Upper-priority lexical formatting and protected attributes remain owned. -->\n  <string name=\"shared_signal\">Debug <marker:g id=\"pilot\" example=\"D&amp;2\">%1$s</marker:g></string>\n  <string translatable=\"false\" name=\"masked_signal\">Protected upper coast</string>\n  <string name=\"product_signal\" product=\"tablet\">Upper tablet beacon</string>\n  <string-array name=\"product_routes\" product=\"tablet\">\n    <item>Upper tablet route</item>\n  </string-array>\n  <plurals name=\"product_lights\" product=\"tablet\">\n    <item quantity=\"one\">%1$d upper tablet light</item>\n    <item quantity=\"other\">%1$d upper tablet lights</item>\n  </plurals>\n  <string-array name=\"routes\">\n    <item>Debug <b lane=\"north\">north</b></item>\n    <item>Debug south</item>\n  </string-array>\n  <plurals name=\"lights\">\n    <item quantity=\"one\">%1$d upper light</item>\n    <item quantity=\"other\">%1$d upper lights</item>\n  </plurals>\n  <string name=\"debug_anchor\">Upper only</string>\n</resources>\n",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "slots": [
+          {
+            "id": "shared_signal",
+            "start": 219,
+            "end": 279
+          },
+          {
+            "id": "product_signal@product=tablet",
+            "start": 421,
+            "end": 440
+          },
+          {
+            "id": "product_routes@product=tablet[0]",
+            "start": 516,
+            "end": 534
+          },
+          {
+            "id": "product_lights@product=tablet",
+            "variant": "one",
+            "start": 636,
+            "end": 659
+          },
+          {
+            "id": "product_lights@product=tablet",
+            "variant": "other",
+            "start": 694,
+            "end": 718
+          },
+          {
+            "id": "routes[0]",
+            "start": 780,
+            "end": 811
+          },
+          {
+            "id": "routes[1]",
+            "start": 829,
+            "end": 840
+          },
+          {
+            "id": "lights",
+            "variant": "one",
+            "start": 917,
+            "end": 933
+          },
+          {
+            "id": "lights",
+            "variant": "other",
+            "start": 968,
+            "end": 985
+          },
+          {
+            "id": "debug_anchor",
+            "start": 1036,
+            "end": 1046
+          }
+        ]
+      }
+    }
+  ],
+  "androidSelectedProducts": [
+    "tablet"
+  ],
+  "androidRuntimeSlotOwners": {
+    "debug_anchor": "debug_anchor",
+    "lights#one": "lights#one",
+    "lights#other": "lights#other",
+    "main_anchor": "main_anchor",
+    "product_lights#one": "product_lights@product=tablet#one",
+    "product_lights#other": "product_lights@product=tablet#other",
+    "product_routes[0]": "product_routes@product=tablet[0]",
+    "product_signal": "product_signal@product=tablet",
+    "routes[0]": "routes[0]",
+    "routes[1]": "routes[1]",
+    "shared_signal": "shared_signal"
+  }
+}

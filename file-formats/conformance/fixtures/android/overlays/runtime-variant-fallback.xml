@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="harbor_route">A fallback harbor route</string>
+    <plurals name="harbor_signals">
+        <item quantity="one">One fallback signal</item>
+        <item quantity="other">Several fallback signals</item>
+    </plurals>
+    <string-array name="harbor_lanes">
+        <item>A fallback harbor lane</item>
+    </string-array>
+</resources>

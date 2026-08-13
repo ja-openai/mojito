@@ -1,0 +1,15 @@
+{
+  "messages": {
+    "inverse_route": {
+      "defaultMessage": "An inverse harbor route",
+      "metadata": {
+        "androidFeatureFlag": "!neutral.flags.mutable"
+      }
+    },
+    "open_route": {
+      "defaultMessage": "An open harbor route"
+    }
+  },
+  "schemaVersion": 1,
+  "sourceFormat": "android"
+}

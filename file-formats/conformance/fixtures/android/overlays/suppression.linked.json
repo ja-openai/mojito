@@ -1,0 +1,16 @@
+{
+  "arrays": {
+    "hidden": [
+      "Internal north"
+    ]
+  },
+  "plurals": {
+    "paused": {
+      "other": "Internal bells"
+    }
+  },
+  "strings": {
+    "muted": "Internal signal",
+    "retained": "Visible lantern"
+  }
+}

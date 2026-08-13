@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<resources>\n  <string name=\"_route\">Underscored channel</string>\n  <string name=\"Éclat\">Accented coastal light</string>\n  <string name=\"e&#x0301;cho\">Combining coastal echo</string>\n  <string name=\"route&#x00b7;north\">Middle-dot coastal route</string>\n  <item type=\"str&#x69;ng\" name=\"generic&#x00b7;route\">Generic encoded route</item>\n  <string name=\"渡り.route-2\">Crossing channel</string>\n</resources>\n",
+  "slots": [
+    {
+      "id": "_route",
+      "start": 36,
+      "end": 55
+    },
+    {
+      "id": "Éclat",
+      "start": 89,
+      "end": 111
+    },
+    {
+      "id": "écho",
+      "start": 151,
+      "end": 173
+    },
+    {
+      "id": "route·north",
+      "start": 219,
+      "end": 243
+    },
+    {
+      "id": "generic·route",
+      "start": 308,
+      "end": 329
+    },
+    {
+      "id": "渡り.route-2",
+      "start": 369,
+      "end": 385
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+<resources>
+  <string name="display" product="default">Regular panel</string>
+  <string name="display" product="tablet">Original wide panel</string>
+  <string name="retained">Common switch</string>
+</resources>

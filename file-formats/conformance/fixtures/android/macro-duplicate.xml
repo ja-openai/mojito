@@ -1,0 +1,4 @@
+<resources>
+    <macro name="harbor_phrase">The first harbor route</macro>
+    <item type="macro" name="harbor_phrase">The second harbor route</item>
+</resources>

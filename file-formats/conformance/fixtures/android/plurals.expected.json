@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "files": {
+      "defaultMessage": "{arg0, plural, one {{arg0} file} other {{arg0} files}}",
+      "description": "Number of files selected",
+      "variants": { "one": "{arg0} file", "other": "{arg0} files" },
+      "placeholders": [{ "name": "arg0", "source": "%1$d", "kind": "integer", "position": 1 }]
+    },
+    "plain": {
+      "defaultMessage": "{count, plural, zero {Nothing} one {One thing} other {Many things}}",
+      "variants": { "zero": "Nothing", "one": "One thing", "other": "Many things" }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "anchor.route": "Ancre française",
+  "route": "Passage français",
+  "route@product=tablet": "Passage tablette français",
+  "beacon": "Balise française",
+  "lanes[0]": "Nord <clair> & sûr",
+  "lanes[2]": "Sud français",
+  "signals#one": "{arg0} signal français",
+  "signals#other": "{arg0} signaux français"
+}

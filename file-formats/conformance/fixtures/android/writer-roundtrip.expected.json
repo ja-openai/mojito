@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "locale": "fr-CA",
+  "messages": {
+    "checkpoints@product=watch": {
+      "defaultMessage": "{arg0, plural, one {{arg0} stop} other {{arg0} stops}}",
+      "description": "Count & inspect",
+      "variants": {
+        "one": "{arg0} stop",
+        "other": "{arg0} stops"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidProduct": "watch",
+        "androidResourcePath": "res/values-fr-rCA/strings.xml",
+        "androidResourceQualifiers": [
+          "fr",
+          "rCA"
+        ]
+      }
+    },
+    "compass@product=tablet[0]": {
+      "defaultMessage": " east  ",
+      "metadata": {
+        "androidProduct": "tablet",
+        "androidResourcePath": "res/values-fr-rCA/strings.xml",
+        "androidResourceQualifiers": [
+          "fr",
+          "rCA"
+        ],
+        "arrayIndex": 0,
+        "arrayName": "compass"
+      }
+    },
+    "compass@product=tablet[1]": {
+      "defaultMessage": "'<'font color=\"#336699\">west🙂'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidProduct": "tablet",
+        "androidResourcePath": "res/values-fr-rCA/strings.xml",
+        "androidResourceQualifiers": [
+          "fr",
+          "rCA"
+        ],
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff336699",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "#336699"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 1,
+        "arrayName": "compass"
+      }
+    },
+    "edge_whitespace": {
+      "defaultMessage": "  left <b> center isn't  </b> right  ",
+      "description": "Pilot \"north\" & deck",
+      "metadata": {
+        "androidResourcePath": "res/values-fr-rCA/strings.xml",
+        "androidResourceQualifiers": [
+          "fr",
+          "rCA"
+        ]
+      }
+    },
+    "empty": {
+      "defaultMessage": "",
+      "metadata": {
+        "androidResourcePath": "res/values-fr-rCA/strings.xml",
+        "androidResourceQualifiers": [
+          "fr",
+          "rCA"
+        ]
+      }
+    },
+    "escaped_literal": {
+      "defaultMessage": "Visible <marker>plain</marker>",
+      "metadata": {
+        "androidLiteralMarkup": true,
+        "androidResourcePath": "res/values-fr-rCA/strings.xml",
+        "androidResourceQualifiers": [
+          "fr",
+          "rCA"
+        ]
+      }
+    },
+    "leading_reference": {
+      "defaultMessage": "@dock ?query #tone",
+      "metadata": {
+        "androidResourcePath": "res/values-fr-rCA/strings.xml",
+        "androidResourceQualifiers": [
+          "fr",
+          "rCA"
+        ]
+      }
+    },
+    "literal_percent": {
+      "defaultMessage": "Value 50%% and %1$s",
+      "metadata": {
+        "androidResourcePath": "res/values-fr-rCA/strings.xml",
+        "androidResourceQualifiers": [
+          "fr",
+          "rCA"
+        ],
+        "formatted": false
+      }
+    },
+    "named_example": {
+      "defaultMessage": "Guide {pilot} safely",
+      "placeholders": [
+        {
+          "name": "pilot",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1,
+          "example": "A \"N\" & B"
+        }
+      ],
+      "metadata": {
+        "androidResourcePath": "res/values-fr-rCA/strings.xml",
+        "androidResourceQualifiers": [
+          "fr",
+          "rCA"
+        ]
+      }
+    },
+    "printf_line": {
+      "defaultMessage": "North\nSouth",
+      "metadata": {
+        "androidPrintfLineSeparator": true,
+        "androidResourcePath": "res/values-fr-rCA/strings.xml",
+        "androidResourceQualifiers": [
+          "fr",
+          "rCA"
+        ]
+      }
+    }
+  }
+}

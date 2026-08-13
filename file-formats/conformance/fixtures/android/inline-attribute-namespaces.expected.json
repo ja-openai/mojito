@@ -1,0 +1,116 @@
+{
+  "sourceFormat" : "android",
+  "messages" : {
+    "scalar_space" : {
+      "defaultMessage" : "north west"
+    },
+    "scalar_default_space" : {
+      "defaultMessage" : "north east"
+    },
+    "space_style" : {
+      "defaultMessage" : "'<'b space=\"preserve\"> northern passage '<'/b>",
+      "metadata" : {
+        "androidMarkupEscaping" : "icu-quoted-angle"
+      }
+    },
+    "language_style" : {
+      "defaultMessage" : "'<'b lang=\"fr\">Harbor signal'<'/b>",
+      "metadata" : {
+        "androidMarkupEscaping" : "icu-quoted-angle"
+      }
+    },
+    "foreign_annotation" : {
+      "defaultMessage" : "'<'annotation route=\"north\tdock\">Harbor signal'<'/annotation>",
+      "metadata" : {
+        "androidMarkupEscaping" : "icu-quoted-angle"
+      }
+    },
+    "font_effect" : {
+      "defaultMessage" : "'<'font color=\"red\" size=\"12\">Harbor glow'<'/font>",
+      "metadata" : {
+        "androidRuntimeStyles" : [ {
+          "span" : 0,
+          "effects" : [ {
+            "kind" : "size",
+            "attribute" : "size",
+            "value" : "12"
+          }, {
+            "kind" : "foreground",
+            "attribute" : "color",
+            "value" : "red",
+            "color" : {
+              "mode" : "literal",
+              "argb" : "#ffff0000"
+            }
+          } ]
+        } ],
+        "androidMarkupEscaping" : "icu-quoted-angle"
+      }
+    },
+    "ordered_namespaces" : {
+      "defaultMessage" : "'<'b alpha=\"A\" bravo=\"B\" charlie=\"C\" delta=\"D\">Harbor order'<'/b>",
+      "metadata" : {
+        "androidMarkupEscaping" : "icu-quoted-angle"
+      }
+    },
+    "inline_namespace" : {
+      "defaultMessage" : "'<'b route=\"quiet\">Harbor route'<'/b>",
+      "metadata" : {
+        "androidMarkupEscaping" : "icu-quoted-angle"
+      }
+    },
+    "generic_style" : {
+      "defaultMessage" : "'<'font size=\"8\">Harbor guide'<'/font>",
+      "metadata" : {
+        "androidGenericString" : true,
+        "androidGenericFormat" : "string",
+        "androidMarkupEscaping" : "icu-quoted-angle"
+      }
+    },
+    "routes[0]" : {
+      "defaultMessage" : "'<'annotation key=\"private\">Harbor route'<'/annotation>",
+      "metadata" : {
+        "arrayIndex" : 0,
+        "arrayName" : "routes",
+        "androidMarkupEscaping" : "icu-quoted-angle"
+      }
+    },
+    "routes[1]" : {
+      "defaultMessage" : "'<'font color=\"#112233\">Harbor light'<'/font>",
+      "metadata" : {
+        "arrayIndex" : 1,
+        "arrayName" : "routes",
+        "androidRuntimeStyles" : [ {
+          "span" : 0,
+          "effects" : [ {
+            "kind" : "foreground",
+            "attribute" : "color",
+            "value" : "#112233",
+            "color" : {
+              "mode" : "literal",
+              "argb" : "#ff112233"
+            }
+          } ]
+        } ],
+        "androidMarkupEscaping" : "icu-quoted-angle"
+      }
+    },
+    "signals" : {
+      "defaultMessage" : "{arg0, plural, one {'<'font size=\"9\">{arg0} harbor beacon'<'/font>} other {'<'annotation key=\"beacon\">{arg0} harbor beacons'<'/annotation>}}",
+      "variants" : {
+        "one" : "'<'font size=\"9\">{arg0} harbor beacon'<'/font>",
+        "other" : "'<'annotation key=\"beacon\">{arg0} harbor beacons'<'/annotation>"
+      },
+      "placeholders" : [ {
+        "name" : "arg0",
+        "source" : "%1$d",
+        "kind" : "integer",
+        "position" : 1
+      } ],
+      "metadata" : {
+        "androidMarkupEscaping" : "icu-quoted-angle"
+      }
+    }
+  },
+  "schemaVersion" : 1
+}

@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": {
+      "defaultMessage": "Harbor marker"
+    },
+    "forced_routes[0]": {
+      "defaultMessage": "17",
+      "metadata": {
+        "androidArrayFormat": "string",
+        "androidArrayReferences": {
+          "3": "@string/anchor"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 0,
+        "arrayName": "forced_routes"
+      }
+    },
+    "forced_routes[1]": {
+      "defaultMessage": "true",
+      "metadata": {
+        "androidArrayFormat": "string",
+        "androidArrayReferences": {
+          "3": "@string/anchor"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 1,
+        "arrayName": "forced_routes"
+      }
+    },
+    "forced_routes[2]": {
+      "defaultMessage": "#AABBCC",
+      "metadata": {
+        "androidArrayFormat": "string",
+        "androidArrayReferences": {
+          "3": "@string/anchor"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 2,
+        "arrayName": "forced_routes"
+      }
+    },
+    "forced_routes[4]": {
+      "defaultMessage": "{arg0} beside {arg1}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%s",
+          "kind": "string",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%d",
+          "kind": "integer",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "androidArrayFormat": "string",
+        "androidArrayReferences": {
+          "3": "@string/anchor"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 4,
+        "arrayName": "forced_routes"
+      }
+    },
+    "mixed_routes[0]": {
+      "defaultMessage": "Sail toward {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidArrayPrimitives": {
+          "1": "17",
+          "2": "true",
+          "3": "#112233",
+          "4": "4dp",
+          "5": "1.5",
+          "6": "25%"
+        },
+        "androidArrayReferences": {
+          "7": "@string/anchor",
+          "8": "?attr/harbor"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 0,
+        "arrayName": "mixed_routes"
+      }
+    },
+    "mixed_routes[10]": {
+      "defaultMessage": "#112233",
+      "metadata": {
+        "androidArrayPrimitives": {
+          "1": "17",
+          "2": "true",
+          "3": "#112233",
+          "4": "4dp",
+          "5": "1.5",
+          "6": "25%"
+        },
+        "androidArrayReferences": {
+          "7": "@string/anchor",
+          "8": "?attr/harbor"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 10,
+        "arrayName": "mixed_routes"
+      }
+    },
+    "mixed_routes[11]": {
+      "defaultMessage": "{arg0} beside {arg1}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%s",
+          "kind": "string",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%d",
+          "kind": "integer",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "androidArrayPrimitives": {
+          "1": "17",
+          "2": "true",
+          "3": "#112233",
+          "4": "4dp",
+          "5": "1.5",
+          "6": "25%"
+        },
+        "androidArrayReferences": {
+          "7": "@string/anchor",
+          "8": "?attr/harbor"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 11,
+        "arrayName": "mixed_routes"
+      }
+    },
+    "mixed_routes[9]": {
+      "defaultMessage": "17",
+      "metadata": {
+        "androidArrayPrimitives": {
+          "1": "17",
+          "2": "true",
+          "3": "#112233",
+          "4": "4dp",
+          "5": "1.5",
+          "6": "25%"
+        },
+        "androidArrayReferences": {
+          "7": "@string/anchor",
+          "8": "?attr/harbor"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 9,
+        "arrayName": "mixed_routes"
+      }
+    }
+  }
+}

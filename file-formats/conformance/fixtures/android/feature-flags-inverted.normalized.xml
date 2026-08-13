@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+  <string name="anchor">"Quiet harbor anchor"</string>
+  <bag type="plurals" name="bag_signals" android:featureFlag="neutral.flags.disabled">
+    <item quantity="one">"One hidden bag beacon"</item>
+    <item quantity="other">"Several hidden bag beacons"</item>
+  </bag>
+  <string name="disabled" android:featureFlag="neutral.flags.disabled">"Disabled harbor route"</string>
+  <string name="exclusive" android:featureFlag="!neutral.flags.enabled">"Disabled exclusive lane"</string>
+  <item type="string" name="generic_disabled" android:featureFlag="neutral.flags.disabled" format="string">"Disabled generic signal"</item>
+  <array name="mixed_routes">
+    <item android:featureFlag="neutral.flags.disabled">7</item>
+    <item>17</item>
+    <item android:featureFlag="neutral.flags.disabled">"Hidden typed passage"</item>
+    <item>"Final typed passage"</item>
+  </array>
+  <plurals name="signals_disabled" android:featureFlag="neutral.flags.disabled">
+    <item quantity="one">"One disabled beacon"</item>
+    <item quantity="other">"Several disabled beacons"</item>
+  </plurals>
+</resources>

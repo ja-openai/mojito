@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:g="http://schemas.android.com/apk/res/android">
+  <string name="fallback_scalar" g:featureFlag="neutral.flags.disabled">Disabled upper harbor</string>
+  <string name="enabled_scalar" g:featureFlag="neutral.flags.enabled">Enabled upper harbor</string>
+  <string-array name="conditional_routes">
+    <item g:featureFlag="neutral.flags.disabled">Disabled upper lane</item>
+    <item g:featureFlag="neutral.flags.enabled">Enabled upper lane</item>
+    <item>Final upper lane</item>
+  </string-array>
+  <plurals name="fallback_signals" g:featureFlag="neutral.flags.disabled">
+    <item quantity="one">One disabled upper beacon</item>
+    <item quantity="other">Several disabled upper beacons</item>
+  </plurals>
+  <array name="fallback_array" g:featureFlag="neutral.flags.disabled">
+    <item>Disabled upper typed fallback</item>
+  </array>
+</resources>

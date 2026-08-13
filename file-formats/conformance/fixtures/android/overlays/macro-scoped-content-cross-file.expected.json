@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": {
+      "defaultMessage": "An overlay harbor marker",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/definitions.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "shared_routes[1]": {
+      "defaultMessage": "A visible overlay lane",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "@string/anchor"
+        },
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 1,
+        "arrayName": "shared_routes"
+      }
+    },
+    "shared_signal": {
+      "defaultMessage": "Overlay {marker}",
+      "placeholders": [
+        {
+          "name": "marker",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1,
+          "example": "O-4"
+        }
+      ],
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": []
+      }
+    }
+  }
+}

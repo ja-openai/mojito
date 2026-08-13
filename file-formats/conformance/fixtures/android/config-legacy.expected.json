@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "locale": "en-US",
+  "messages": {
+    "route@product=tablet": {
+      "defaultMessage": "Navigate {arg0}",
+      "placeholders": [{ "name": "arg0", "source": "%1$s", "kind": "string", "position": 1 }],
+      "metadata": {
+        "androidProduct": "tablet",
+        "androidResourcePath": "res/values-en-rUS-land-night-v21/strings.xml",
+        "androidResourceQualifiers": ["en", "rUS", "land", "night", "v21"]
+      }
+    },
+    "signals": {
+      "defaultMessage": "{arg0, plural, one {{arg0} signal} other {{arg0} signals}}",
+      "variants": { "one": "{arg0} signal", "other": "{arg0} signals" },
+      "placeholders": [{ "name": "arg0", "source": "%1$d", "kind": "integer", "position": 1 }],
+      "metadata": {
+        "androidResourcePath": "res/values-en-rUS-land-night-v21/strings.xml",
+        "androidResourceQualifiers": ["en", "rUS", "land", "night", "v21"]
+      }
+    },
+    "checkpoints[0]": {
+      "defaultMessage": "north",
+      "metadata": {
+        "arrayIndex": 0,
+        "arrayName": "checkpoints",
+        "androidResourcePath": "res/values-en-rUS-land-night-v21/strings.xml",
+        "androidResourceQualifiers": ["en", "rUS", "land", "night", "v21"]
+      }
+    }
+  }
+}

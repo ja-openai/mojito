@@ -1,0 +1,30 @@
+{
+  "strings": {
+    "duplicate": "Signal"
+  },
+  "styledSpans": {
+    "strings": {
+      "duplicate": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 5,
+          "attributes": {
+            "lang": "foreign"
+          },
+          "encodedTag": "annotation;lang=fr;lang=foreign",
+          "runtimeAnnotations": [
+            {
+              "key": "lang",
+              "value": "fr"
+            },
+            {
+              "key": "lang",
+              "value": "foreign"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

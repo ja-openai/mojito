@@ -1,0 +1,8 @@
+<resources>
+  <array name="routes">
+    <item>Updated %1$s</item>
+    <item>17</item>
+    <item>@string/anchor</item>
+    <item>"17"</item>
+  </array>
+</resources>

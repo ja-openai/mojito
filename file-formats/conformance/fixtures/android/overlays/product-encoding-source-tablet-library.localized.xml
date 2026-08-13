@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-16LE"?>
+<resources xmlns:marker="urn:oasis:names:tc:xliff:document:1.2">
+  <!-- Every dependency declaration is shadowed and its entire file remains untouched. -->
+  <string name="shared_signal">Library <marker:g id="pilot" example="L-0">%1$s</marker:g></string>
+  <string name="masked_signal">Library coast</string>
+  <string name="product_signal" product="default">Library default beacon</string>
+  <string name="product_signal" product="tablet">Library tablet beacon</string>
+  <string-array name="product_routes" product="default">
+    <item>Library default route</item>
+  </string-array>
+  <string-array name="product_routes" product="tablet">
+    <item>Library tablet route</item>
+  </string-array>
+  <plurals name="product_lights" product="default">
+    <item quantity="one">%1$d library default light</item>
+    <item quantity="other">%1$d library default lights</item>
+  </plurals>
+  <plurals name="product_lights" product="tablet">
+    <item quantity="one">%1$d library tablet light</item>
+    <item quantity="other">%1$d library tablet lights</item>
+  </plurals>
+  <string-array name="routes">
+    <item>Library north</item>
+    <item>Library south</item>
+  </string-array>
+  <plurals name="lights">
+    <item quantity="one">%1$d library light</item>
+    <item quantity="other">%1$d library lights</item>
+  </plurals>
+</resources>

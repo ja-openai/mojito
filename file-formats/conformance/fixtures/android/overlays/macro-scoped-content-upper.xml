@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="anchor">A brighter overlay marker</string>
+    <macro name="scoped_pointer" xmlns:lane="http://schemas.android.com/apk/res/neutral.scoped.overlay">@lane:string/anchor</macro>
+</resources>

@@ -1,0 +1,35 @@
+{
+  "arrays": {
+    "routes": [
+      "Route visible",
+      "Guide %1$s"
+    ]
+  },
+  "plurals": {
+    "signals": {
+      "one": "Une balise %1$s",
+      "other": "%1$d balises visibles"
+    }
+  },
+  "strings": {
+    "generic": "Voie générale",
+    "protected": "Capitaine %1$s",
+    "scalar": "Port calme",
+    "styled": "Style visible",
+    "untouched": "Protected original"
+  },
+  "styledSpans": {
+    "strings": {
+      "styled": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 12,
+          "attributes": {
+            "route": "north\tmiddle\nend\rfinish"
+          }
+        }
+      ]
+    }
+  }
+}

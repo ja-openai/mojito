@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "locale": "en",
+  "messages": {
+    "route": {
+      "defaultMessage": "Waypoint",
+      "metadata": {
+        "androidResourcePath": "res/values-en-feminine-v1/strings.xml",
+        "androidResourceQualifiers": [
+          "en",
+          "feminine",
+          "v1"
+        ]
+      }
+    }
+  }
+}

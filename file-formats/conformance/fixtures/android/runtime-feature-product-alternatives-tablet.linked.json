@@ -1,0 +1,17 @@
+{
+  "conditionalStrings": {
+    "harbor_route": [
+      {
+        "condition": "neutral.flags.first",
+        "value": "A conditional default harbor route"
+      },
+      {
+        "condition": "neutral.flags.second",
+        "value": "A conditional tablet harbor route"
+      }
+    ]
+  },
+  "strings": {
+    "harbor_route": "A tablet harbor route"
+  }
+}

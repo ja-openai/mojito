@@ -1,0 +1,1 @@
+<resources><attr name="harbor_signal"><enum name="calm" value="0" /><flag name="surge" value="1" /></attr><string name="visible">Visible harbor</string></resources>

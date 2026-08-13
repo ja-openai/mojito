@@ -1,0 +1,26 @@
+<resources>
+  <string name="anchor">Harbor marker</string>
+  <item type="string" name="default_text">Sailing %1$s</item>
+  <item type="string" name="default_ignored_flags" formatted="uncertain" translatable="FALSE">%s near %d</item>
+  <item type="string" name="default_quoted_integer">"17"</item>
+  <item type="string" name="default_escaped_color">\#112233</item>
+  <item type="string" name="empty_format" format="" formatted="uncertain">Quiet tide</item>
+  <item type="string" name="strict_text" format="string">Compass %1$s</item>
+  <item type="string" name="strict_padded" format=" string ">Beacon %1$s</item>
+  <item type="string" name="strict_literal" format="string" formatted="false">%s near %d</item>
+  <item type="string" name="strict_hidden" format="string" translatable=" FALSE ">%s near %d</item>
+  <item type="string" name="default_integer">17</item>
+  <item type="string" name="default_boolean">true</item>
+  <item type="string" name="default_color">#112233</item>
+  <item type="string" name="default_dimension">4dp</item>
+  <item type="string" name="default_float">1.5</item>
+  <item type="string" name="default_fraction">25%</item>
+  <item type="string" name="typed_integer" format="integer">0x1f</item>
+  <item type="string" name="typed_boolean" format="boolean">TRUE</item>
+  <item type="string" name="typed_color" format="color">#A1B2C3</item>
+  <item type="string" name="typed_dimension" format="dimension">8sp</item>
+  <item type="string" name="typed_float" format="float">2.25</item>
+  <item type="string" name="typed_fraction" format="fraction">50%</item>
+  <item type="string" name="typed_reference" format="reference">@string/anchor</item>
+  <item type="string" name="strict_reference" format="string">?attr/harbor</item>
+</resources>

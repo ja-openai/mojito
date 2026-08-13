@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "foreign_gate": {
+      "defaultMessage": "Foreign namespace remains visible"
+    },
+    "unqualified_gate": {
+      "defaultMessage": "Unqualified gate remains visible"
+    },
+    "empty_gate": {
+      "defaultMessage": "Empty gate remains visible"
+    },
+    "whitespace_gate": {
+      "defaultMessage": "Whitespace gate remains visible"
+    },
+    "open_routes[0]": {
+      "defaultMessage": "First open harbor passage",
+      "metadata": {
+        "arrayIndex": 0,
+        "arrayName": "open_routes"
+      }
+    },
+    "open_routes[1]": {
+      "defaultMessage": "Second open harbor passage",
+      "metadata": {
+        "arrayIndex": 1,
+        "arrayName": "open_routes"
+      }
+    },
+    "open_routes[2]": {
+      "defaultMessage": "Foreign item gate remains visible",
+      "metadata": {
+        "arrayIndex": 2,
+        "arrayName": "open_routes"
+      }
+    },
+    "open_routes[3]": {
+      "defaultMessage": "Unqualified item gate remains visible",
+      "metadata": {
+        "arrayIndex": 3,
+        "arrayName": "open_routes"
+      }
+    },
+    "plural_gate": {
+      "defaultMessage": "{count, plural, one {One visible beacon} other {Several visible beacons}}",
+      "variants": {
+        "one": "One visible beacon",
+        "other": "Several visible beacons"
+      }
+    }
+  }
+}

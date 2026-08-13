@@ -1,0 +1,10 @@
+{
+  "scalar": "Quai \"nord\" et \"calme\"",
+  "styled": "Port <b lane=\"harbor&quot;side\">\"doux\"</b> sûr",
+  "protected": "Pilote {pilot} vers \"nord\"",
+  "commented": "Port \"bleu\" calme",
+  "routes[0]": "Quai \"ouest, calme\"",
+  "routes[1]": "Port <i lane=\"water&quot;side\">\"stable\"</i> sûr",
+  "signals#one": "Une \"lumière\" sûre",
+  "signals#other": "{arg0} <b>\"lumières\"</b> sûres"
+}

@@ -1,0 +1,221 @@
+{
+  "arrays": {
+    "routes": [
+      "Harbor route",
+      "Harbor light"
+    ]
+  },
+  "styledSpans": {
+    "arrays": {
+      "routes": {
+        "0": [
+          {
+            "name": "annotation",
+            "start": 0,
+            "end": 11,
+            "attributes": {
+              "key": "private"
+            },
+            "encodedTag": "annotation;key=private",
+            "runtimeAnnotations": [
+              {
+                "key": "key",
+                "value": "private"
+              }
+            ]
+          }
+        ],
+        "1": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 11,
+            "attributes": {
+              "color": "#112233"
+            },
+            "encodedTag": "font;color=#112233",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "#112233",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ff112233"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "plurals": {
+      "signals": {
+        "one": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 17,
+            "attributes": {
+              "size": "9"
+            },
+            "encodedTag": "font;size=9",
+            "runtimeStyles": [
+              {
+                "kind": "size",
+                "attribute": "size",
+                "value": "9"
+              }
+            ]
+          }
+        ],
+        "other": [
+          {
+            "name": "annotation",
+            "start": 0,
+            "end": 18,
+            "attributes": {
+              "key": "beacon"
+            },
+            "encodedTag": "annotation;key=beacon",
+            "runtimeAnnotations": [
+              {
+                "key": "key",
+                "value": "beacon"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "strings": {
+      "font_effect": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 10,
+          "attributes": {
+            "color": "red",
+            "size": "12"
+          },
+          "encodedTag": "font;color=red;size=12",
+          "runtimeStyles": [
+            {
+              "kind": "size",
+              "attribute": "size",
+              "value": "12"
+            },
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "red",
+              "color": {
+                "mode": "literal",
+                "argb": "#ffff0000"
+              }
+            }
+          ]
+        }
+      ],
+      "foreign_annotation": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 12,
+          "attributes": {
+            "route": "north\tdock"
+          },
+          "encodedTag": "annotation;route=north\tdock",
+          "runtimeAnnotations": [
+            {
+              "key": "route",
+              "value": "north\tdock"
+            }
+          ]
+        }
+      ],
+      "generic_style": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 11,
+          "attributes": {
+            "size": "8"
+          },
+          "encodedTag": "font;size=8",
+          "runtimeStyles": [
+            {
+              "kind": "size",
+              "attribute": "size",
+              "value": "8"
+            }
+          ]
+        }
+      ],
+      "inline_namespace": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 11,
+          "attributes": {
+            "route": "quiet"
+          },
+          "encodedTag": "b;route=quiet"
+        }
+      ],
+      "language_style": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 12,
+          "attributes": {
+            "lang": "fr"
+          },
+          "encodedTag": "b;lang=fr"
+        }
+      ],
+      "ordered_namespaces": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 11,
+          "attributes": {
+            "alpha": "A",
+            "bravo": "B",
+            "charlie": "C",
+            "delta": "D"
+          },
+          "encodedTag": "b;alpha=A;bravo=B;charlie=C;delta=D"
+        }
+      ],
+      "space_style": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 17,
+          "attributes": {
+            "space": "preserve"
+          },
+          "encodedTag": "b;space=preserve"
+        }
+      ]
+    }
+  },
+  "plurals": {
+    "signals": {
+      "one": "%1$d harbor beacon",
+      "other": "%1$d harbor beacons"
+    }
+  },
+  "strings": {
+    "font_effect": "Harbor glow",
+    "foreign_annotation": "Harbor signal",
+    "generic_style": "Harbor guide",
+    "inline_namespace": "Harbor route",
+    "language_style": "Harbor signal",
+    "ordered_namespaces": "Harbor order",
+    "scalar_default_space": "north east",
+    "scalar_space": "north west",
+    "space_style": " northern passage "
+  }
+}

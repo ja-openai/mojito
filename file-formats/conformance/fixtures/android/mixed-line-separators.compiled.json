@@ -1,0 +1,57 @@
+{
+  "arrays": {
+    "route_stages": [
+      "Arrival\nnorth%nberth",
+      "Departure%nsouth\nchannel",
+      "Literal %%n buoy"
+    ]
+  },
+  "plurals": {
+    "legacy_signals": {
+      "one": "%1$d beacon%nnear",
+      "other": "%1$d beacons%nnear"
+    },
+    "mixed_signals": {
+      "one": "%1$d beacon\nnorth%nready",
+      "other": "%1$d beacons%nnorth\nready"
+    },
+    "split_signals": {
+      "one": "%1$d buoy\nnear",
+      "other": "%1$d buoys%nnear"
+    }
+  },
+  "strings": {
+    "alternating_routes": "A%nB\nC%nD\nE",
+    "default_signal": "North%npier\nclear",
+    "disabled_newlines": "Harbor\nnorth%nopen",
+    "escaped_percent_route": "Charge 80%%\nreserve%nready",
+    "legacy_printf_only": "Lighthouse%nwatch",
+    "literal_percent_n": "Marker %%n",
+    "native_only": "Lighthouse\nwatch",
+    "native_then_printf": "Harbor\nnorth%nopen",
+    "printf_then_native": "Harbor%nnorth\nopen",
+    "raw_percent_route": "Berth %\nreserve%nready",
+    "strict_signal": "%1$s\ndeparture%nready",
+    "styled_route": "North\npier%nclear",
+    "supplementary_route": "🧭\nnorth%nwest"
+  },
+  "styledSpans": {
+    "strings": {
+      "styled_route": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 16,
+          "attributes": {
+            "note": "lantern-%%"
+          }
+        },
+        {
+          "name": "b",
+          "start": 0,
+          "end": 9
+        }
+      ]
+    }
+  }
+}

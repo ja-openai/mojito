@@ -1,0 +1,6 @@
+{
+  "configuration": "en-rUS-land-night-v21",
+  "strings": { "route": "Navigate %1$s" },
+  "plurals": { "signals": { "one": "%1$d signal", "other": "%1$d signals" } },
+  "arrays": { "checkpoints": ["north"] }
+}

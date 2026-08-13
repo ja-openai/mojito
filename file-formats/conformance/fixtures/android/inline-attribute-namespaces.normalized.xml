@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="font_effect"><font color="red" size="12">"Harbor glow"</font></string>
+  <string name="foreign_annotation"><annotation route="north&#9;dock">"Harbor signal"</annotation></string>
+  <item type="string" name="generic_style" format="string"><font size="8">"Harbor guide"</font></item>
+  <string name="inline_namespace"><b route="quiet">"Harbor route"</b></string>
+  <string name="language_style"><b lang="fr">"Harbor signal"</b></string>
+  <string name="ordered_namespaces"><b alpha="A" bravo="B" charlie="C" delta="D">"Harbor order"</b></string>
+  <string-array name="routes">
+    <item><annotation key="private">"Harbor route"</annotation></item>
+    <item><font color="#112233">"Harbor light"</font></item>
+  </string-array>
+  <string name="scalar_default_space">"north east"</string>
+  <string name="scalar_space">"north west"</string>
+  <plurals name="signals">
+    <item quantity="one"><font size="9">"%1$d harbor beacon"</font></item>
+    <item quantity="other"><annotation key="beacon">"%1$d harbor beacons"</annotation></item>
+  </plurals>
+  <string name="space_style"><b space="preserve">" northern passage "</b></string>
+</resources>

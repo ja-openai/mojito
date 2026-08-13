@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "literal": { "defaultMessage": "Visible <!DOCTYPE neutral> text" },
+    "commented": { "defaultMessage": "Before after" }
+  }
+}

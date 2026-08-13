@@ -1,0 +1,6 @@
+<resources>
+  <string name="navigation_hint">Base harbor route</string>
+  <plurals name="navigation_signals">
+    <item quantity="other">%1$d base harbor signals</item>
+  </plurals>
+</resources>

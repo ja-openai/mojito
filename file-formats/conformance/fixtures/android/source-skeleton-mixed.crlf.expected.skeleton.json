@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\"?>\r\n<resources xmlns:code=\"urn:oasis:names:tc:xliff:document:1.2\">\r\n  <!-- Neutral original fixtures keep every odd lexical spelling. -->\r\n  <string description='Empty \"harbor\"' name=\"empty_scalar\"/>\r\n  <item type=\"string\" name='empty_generic' />\r\n  <string name=\"commented\">North<!-- preserve this exact inline comment --> pier</string>\r\n  <string name=\"cdata\"><![CDATA[<quiet> & calm]]></string>\r\n  <string name=\"cdata_split\">North <![CDATA[<quiet> & calm]]> pier</string>\r\n  <string translatable=\"false\" name=\"ignored_empty\"/>\r\n\r\n  <string-array name=\"routes\">\r\n    <item/>\r\n    <item>West<!-- keep original array marker --> pier</item>\r\n    <item><![CDATA[<blue> & mild]]></item>\r\n  </string-array>\r\n\r\n  <plurals name=\"visits\">\r\n    <item quantity='one'/>\r\n    <item quantity=\"other\">%1$d<!-- keep native plural marker --> visits</item>\r\n  </plurals>\r\n</resources>\r\n",
+  "slots": [
+    {
+      "id": "empty_scalar",
+      "start": 216,
+      "end": 218
+    },
+    {
+      "id": "empty_generic",
+      "start": 263,
+      "end": 265
+    },
+    {
+      "id": "commented",
+      "start": 294,
+      "end": 347
+    },
+    {
+      "id": "cdata",
+      "start": 381,
+      "end": 407
+    },
+    {
+      "id": "cdata_split",
+      "start": 447,
+      "end": 484
+    },
+    {
+      "id": "routes[0]",
+      "start": 593,
+      "end": 595
+    },
+    {
+      "id": "routes[1]",
+      "start": 607,
+      "end": 651
+    },
+    {
+      "id": "routes[2]",
+      "start": 670,
+      "end": 695
+    },
+    {
+      "id": "visits",
+      "start": 776,
+      "end": 778,
+      "variant": "one"
+    },
+    {
+      "id": "visits",
+      "start": 807,
+      "end": 852,
+      "variant": "other"
+    }
+  ]
+}

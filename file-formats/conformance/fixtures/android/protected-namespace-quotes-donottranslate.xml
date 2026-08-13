@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<resources xmlns:f="urn:neutral:foreign-protected"
+    xmlns:x="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="private_scalar">"Private <f:veil>it's</f:veil> coast"</string>
+  <item name="private_generic" type="string" format="string">"Private <x:note>it's</x:note> route"</item>
+  <string-array name="private_routes"><item>"Private <f:veil>it's</f:veil> lane"</item></string-array>
+  <plurals name="private_counts"><item quantity="other">"Private <x:note>it's</x:note> signals"</item></plurals>
+</resources>

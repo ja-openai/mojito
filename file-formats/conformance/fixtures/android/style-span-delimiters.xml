@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="semicolon_plain"><annotation route="north;west">Pier</annotation></string>
+    <string name="semicolon_assignment"><annotation route="north;alert=west">Pier</annotation></string>
+    <string name="semicolon_double"><annotation route="north;;alert=west">Pier</annotation></string>
+    <string name="semicolon_terminal"><annotation route="north;">Pier</annotation></string>
+    <string name="equals_value"><annotation route="north=west=harbor">Pier</annotation></string>
+    <string name="colon_comma"><annotation route="north:1,2west">Pier</annotation></string>
+    <string name="comma_value"><annotation route="north,west">Pier</annotation></string>
+    <string name="ordered_attributes"><annotation zone="west" lane="north" alert="ready">Pier</annotation></string>
+    <string name="injected_duplicate"><annotation route="north;zone=shadow" zone="actual">Pier</annotation></string>
+    <string name="empty_value"><annotation zone="" route="north">Pier</annotation></string>
+    <string name="quoted_value"><annotation route="north&quot;west">Pier</annotation></string>
+    <string name="ampersand_value"><annotation route="north&amp;west">Pier</annotation></string>
+    <string name="angle_value"><annotation route="north&lt;west">Pier</annotation></string>
+    <string name="nested_injection"><annotation route="north;alert=west"><b>🧭 Pier</b></annotation></string>
+    <string-array name="delimiter_routes">
+        <item><annotation zone="west" lane="north;alert=ready">Pier</annotation></item>
+        <item><annotation route="north;lost">Pier</annotation></item>
+    </string-array>
+    <plurals name="delimiter_signals">
+        <item quantity="one"><annotation zone="west" lane="north;alert=ready">%1$d beacon</annotation></item>
+        <item quantity="other"><annotation zone="east" lane="south;alert=clear">%1$d beacons</annotation></item>
+    </plurals>
+</resources>

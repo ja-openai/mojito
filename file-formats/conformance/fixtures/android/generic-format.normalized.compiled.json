@@ -1,0 +1,13 @@
+{
+  "strings": {
+    "anchor": "Harbor marker",
+    "default_escaped_color": "#112233",
+    "default_ignored_flags": "%s near %d",
+    "default_quoted_integer": "17",
+    "default_text": "Sailing %1$s",
+    "empty_format": "Quiet tide",
+    "strict_literal": "%s near %d",
+    "strict_padded": "Beacon %1$s",
+    "strict_text": "Compass %1$s"
+  }
+}

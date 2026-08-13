@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="middle_bullet">north <li>pier</li> west</string>
+    <string name="middle_line_bullet">first\nleft <li>🧭 pier</li> right\nlast</string>
+    <string name="line_start_bullet">first\n<li>pier</li> right\nlast</string>
+    <string name="line_end_bullet">first\nleft <li>pier</li>\nlast</string>
+    <string name="whole_line_bullet">first\n<li>pier</li>\nlast</string>
+    <string name="multiline_bullet">first\nleft <li>pier\ninner</li> right\nlast</string>
+    <string name="empty_bullet">first<li></li>last</string>
+    <string name="empty_line_bullet">first\n<li></li>\nlast</string>
+    <string name="supplementary_prefix">🧭 north <li>東🙂</li> west</string>
+    <string name="unicode_separator">first left <li>pier</li> right</string>
+    <string name="attributed_bullet">north <li route="west">pier</li> east</string>
+    <string name="middle_height">north <font height="18">pier</font> west</string>
+    <string name="injected_height">north <font route="west;height=18">pier</font> west</string>
+    <string name="line_height">first\nleft <font height="18">🧭 pier</font> right\nlast</string>
+    <string name="nested_height"><b>north <font height="18">pier</font> west</b></string>
+    <string name="nested_bullet_height">north <li><font height="18">pier</font></li> west</string>
+    <string-array name="paragraph_routes">
+        <item>north <li>pier</li> west</item>
+        <item>first\nleft <font height="18">🧭 pier</font> right</item>
+    </string-array>
+    <plurals name="paragraph_signals">
+        <item quantity="one">first\nleft <li>beacon</li> right</item>
+        <item quantity="other">first\nleft <font height="18">beacons</font> right</item>
+    </plurals>
+</resources>

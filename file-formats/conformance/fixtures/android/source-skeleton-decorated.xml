@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<resources xmlns:code="urn:oasis:names:tc:xliff:document:1.2"
+           xmlns:hint="http://schemas.android.com/tools"
+           hint:locale="fr_CA">
+  <!-- Every root comment and protected native declaration remains untouched. -->
+  <string name="private_route" translatable="false">Original protected channel</string>
+
+  <string name="styled_comments">North<!-- root-before --> <b shade='north'>clear<!-- bold-inside --><![CDATA[bright & safe]]></b><!-- root-between --> then <i tone="east"><![CDATA[east & soft]]><!-- italic-inside --></i><!-- root-after --></string>
+  <string name="protected_comments">First<!-- first-marker --> <code:g example='P-7' id="pilot">%1$s</code:g><!-- between-markers --> then <![CDATA[second & clear]]><code:g id='radar' example="R-2">%2$s</code:g><!-- last-marker --></string>
+  <string name="nested_comments"><b class='outer'>Outer<!-- outer-marker --><u lane="inner"><![CDATA[inner & quiet]]><!-- inner-marker --></u></b><!-- sibling-marker --><i mood='calm'>East<!-- calm-marker --></i></string>
+  <string name="comment_only"><b lane='north'><!-- empty-bold-marker --></b><!-- between-empty --><i lane="south"><![CDATA[south & mild]]></i></string>
+
+  <string-array name="routes">
+    <item>First<!-- array-before --><b path='one'><![CDATA[north & calm]]></b><!-- array-between --><i path="two">south<!-- array-inside --></i></item>
+    <item>Captain<!-- captain-marker --><code:g id='captain' example="C-3">%1$s</code:g><!-- deck-marker --><code:g example='D-4' id="deck">%2$s</code:g></item>
+  </string-array>
+
+  <plurals name="signals">
+    <item quantity="one"><b tone='first'>%1$d<!-- count-marker --> north</b><!-- plural-between --><i tone="second"><![CDATA[south & calm]]></i></item>
+    <item quantity="other"><b tone="many">%1$d<![CDATA[ north & far]]></b><!-- plural-many --><i tone='far'>south<!-- many-inside --></i></item>
+  </plurals>
+</resources>

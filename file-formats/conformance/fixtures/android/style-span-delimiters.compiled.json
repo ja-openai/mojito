@@ -1,0 +1,423 @@
+{
+  "arrays": {
+    "delimiter_routes": [
+      "Pier",
+      "Pier"
+    ]
+  },
+  "styledSpans": {
+    "arrays": {
+      "delimiter_routes": {
+        "0": [
+          {
+            "name": "annotation",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "lane": "north",
+              "alert": "ready",
+              "zone": "west"
+            },
+            "encodedTag": "annotation;lane=north;alert=ready;zone=west",
+            "runtimeAnnotations": [
+              {
+                "key": "lane",
+                "value": "north"
+              },
+              {
+                "key": "alert",
+                "value": "ready"
+              },
+              {
+                "key": "zone",
+                "value": "west"
+              }
+            ]
+          }
+        ],
+        "1": [
+          {
+            "name": "annotation",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "route": "north"
+            },
+            "encodedTag": "annotation;route=north;lost",
+            "runtimeAnnotations": [
+              {
+                "key": "route",
+                "value": "north"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "plurals": {
+      "delimiter_signals": {
+        "one": [
+          {
+            "name": "annotation",
+            "start": 0,
+            "end": 10,
+            "attributes": {
+              "lane": "north",
+              "alert": "ready",
+              "zone": "west"
+            },
+            "encodedTag": "annotation;lane=north;alert=ready;zone=west",
+            "runtimeAnnotations": [
+              {
+                "key": "lane",
+                "value": "north"
+              },
+              {
+                "key": "alert",
+                "value": "ready"
+              },
+              {
+                "key": "zone",
+                "value": "west"
+              }
+            ]
+          }
+        ],
+        "other": [
+          {
+            "name": "annotation",
+            "start": 0,
+            "end": 11,
+            "attributes": {
+              "lane": "south",
+              "alert": "clear",
+              "zone": "east"
+            },
+            "encodedTag": "annotation;lane=south;alert=clear;zone=east",
+            "runtimeAnnotations": [
+              {
+                "key": "lane",
+                "value": "south"
+              },
+              {
+                "key": "alert",
+                "value": "clear"
+              },
+              {
+                "key": "zone",
+                "value": "east"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "strings": {
+      "ampersand_value": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north&west"
+          },
+          "encodedTag": "annotation;route=north&west",
+          "runtimeAnnotations": [
+            {
+              "key": "route",
+              "value": "north&west"
+            }
+          ]
+        }
+      ],
+      "angle_value": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north<west"
+          },
+          "encodedTag": "annotation;route=north<west",
+          "runtimeAnnotations": [
+            {
+              "key": "route",
+              "value": "north<west"
+            }
+          ]
+        }
+      ],
+      "colon_comma": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north:1,2west"
+          },
+          "encodedTag": "annotation;route=north:1,2west",
+          "runtimeAnnotations": [
+            {
+              "key": "route",
+              "value": "north:1,2west"
+            }
+          ]
+        }
+      ],
+      "comma_value": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north,west"
+          },
+          "encodedTag": "annotation;route=north,west",
+          "runtimeAnnotations": [
+            {
+              "key": "route",
+              "value": "north,west"
+            }
+          ]
+        }
+      ],
+      "empty_value": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north",
+            "zone": ""
+          },
+          "encodedTag": "annotation;route=north;zone=",
+          "runtimeAnnotations": [
+            {
+              "key": "route",
+              "value": "north"
+            },
+            {
+              "key": "zone",
+              "value": ""
+            }
+          ]
+        }
+      ],
+      "equals_value": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north=west=harbor"
+          },
+          "encodedTag": "annotation;route=north=west=harbor",
+          "runtimeAnnotations": [
+            {
+              "key": "route",
+              "value": "north=west=harbor"
+            }
+          ]
+        }
+      ],
+      "injected_duplicate": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north",
+            "zone": "actual"
+          },
+          "encodedTag": "annotation;route=north;zone=shadow;zone=actual",
+          "runtimeAnnotations": [
+            {
+              "key": "route",
+              "value": "north"
+            },
+            {
+              "key": "zone",
+              "value": "shadow"
+            },
+            {
+              "key": "zone",
+              "value": "actual"
+            }
+          ]
+        }
+      ],
+      "nested_injection": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 6,
+          "attributes": {
+            "route": "north",
+            "alert": "west"
+          },
+          "encodedTag": "annotation;route=north;alert=west",
+          "runtimeAnnotations": [
+            {
+              "key": "route",
+              "value": "north"
+            },
+            {
+              "key": "alert",
+              "value": "west"
+            }
+          ]
+        },
+        {
+          "name": "b",
+          "start": 0,
+          "end": 6,
+          "encodedTag": "b"
+        }
+      ],
+      "ordered_attributes": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "alert": "ready",
+            "lane": "north",
+            "zone": "west"
+          },
+          "encodedTag": "annotation;alert=ready;lane=north;zone=west",
+          "runtimeAnnotations": [
+            {
+              "key": "alert",
+              "value": "ready"
+            },
+            {
+              "key": "lane",
+              "value": "north"
+            },
+            {
+              "key": "zone",
+              "value": "west"
+            }
+          ]
+        }
+      ],
+      "quoted_value": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north\"west"
+          },
+          "encodedTag": "annotation;route=north\"west",
+          "runtimeAnnotations": [
+            {
+              "key": "route",
+              "value": "north\"west"
+            }
+          ]
+        }
+      ],
+      "semicolon_assignment": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north",
+            "alert": "west"
+          },
+          "encodedTag": "annotation;route=north;alert=west",
+          "runtimeAnnotations": [
+            {
+              "key": "route",
+              "value": "north"
+            },
+            {
+              "key": "alert",
+              "value": "west"
+            }
+          ]
+        }
+      ],
+      "semicolon_double": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north",
+            ";alert": "west"
+          },
+          "encodedTag": "annotation;route=north;;alert=west",
+          "runtimeAnnotations": [
+            {
+              "key": "route",
+              "value": "north"
+            },
+            {
+              "key": ";alert",
+              "value": "west"
+            }
+          ]
+        }
+      ],
+      "semicolon_plain": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north"
+          },
+          "encodedTag": "annotation;route=north;west",
+          "runtimeAnnotations": [
+            {
+              "key": "route",
+              "value": "north"
+            }
+          ]
+        }
+      ],
+      "semicolon_terminal": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north"
+          },
+          "encodedTag": "annotation;route=north;",
+          "runtimeAnnotations": [
+            {
+              "key": "route",
+              "value": "north"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "plurals": {
+    "delimiter_signals": {
+      "one": "%1$d beacon",
+      "other": "%1$d beacons"
+    }
+  },
+  "strings": {
+    "ampersand_value": "Pier",
+    "angle_value": "Pier",
+    "colon_comma": "Pier",
+    "comma_value": "Pier",
+    "empty_value": "Pier",
+    "equals_value": "Pier",
+    "injected_duplicate": "Pier",
+    "nested_injection": "🧭 Pier",
+    "ordered_attributes": "Pier",
+    "quoted_value": "Pier",
+    "semicolon_assignment": "Pier",
+    "semicolon_double": "Pier",
+    "semicolon_plain": "Pier",
+    "semicolon_terminal": "Pier"
+  }
+}

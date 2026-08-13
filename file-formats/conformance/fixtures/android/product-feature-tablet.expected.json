@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "active": {
+      "defaultMessage": "Tablet beacon passage",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.enabled"
+      }
+    },
+    "anchor": {
+      "defaultMessage": "Neutral harbor anchor"
+    },
+    "conditional": {
+      "defaultMessage": "Tablet conditional signal",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.enabled"
+      }
+    },
+    "fallback": {
+      "defaultMessage": "Default sheltered passage"
+    },
+    "inverse": {
+      "defaultMessage": "Tablet inverse passage",
+      "metadata": {
+        "androidFeatureFlag": "!neutral.flags.disabled"
+      }
+    },
+    "lanes[2]": {
+      "defaultMessage": "Tablet open channel",
+      "metadata": {
+        "androidArrayFeatureFlags": {
+          "0": "neutral.flags.enabled"
+        },
+        "androidArrayPrimitives": {
+          "1": "41"
+        },
+        "androidArrayReferences": {
+          "0": "@string/anchor"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 2,
+        "arrayName": "lanes"
+      }
+    },
+    "mode": {
+      "defaultMessage": "Tablet navigation mode"
+    },
+    "signals": {
+      "defaultMessage": "{count, plural, one {One tablet signal} other {Several tablet signals}}",
+      "variants": {
+        "one": "One tablet signal",
+        "other": "Several tablet signals"
+      },
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.enabled"
+      }
+    }
+  }
+}

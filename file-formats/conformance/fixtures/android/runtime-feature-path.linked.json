@@ -1,0 +1,12 @@
+{
+  "conditionalStrings": {
+    "harbor_anchor": {
+      "condition": "neutral.flags.mutable",
+      "value": "A conditional harbor anchor"
+    },
+    "harbor_dock": {
+      "condition": "neutral.flags.mutable",
+      "value": "A conditional harbor dock"
+    }
+  }
+}

@@ -1,0 +1,5 @@
+<resources xmlns:platform="http://schemas.android.com/apk/res/android">
+  <style name="HarborTheme">
+    <item name="android:text" platform:featureFlag="neutral.path.enabled">Conflicting harbor style</item>
+  </style>
+</resources>

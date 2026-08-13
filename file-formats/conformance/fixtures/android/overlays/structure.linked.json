@@ -1,0 +1,17 @@
+{
+  "arrays": {
+    "route.bundle": [
+      "17",
+      "Updated channel"
+    ]
+  },
+  "arrayPrimitiveValues": {
+    "route.bundle": {
+      "0": "17"
+    }
+  },
+  "strings": {
+    "foreign_shadow": "Original protected marker",
+    "route.marker": "Updated coastal marker"
+  }
+}

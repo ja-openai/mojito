@@ -1,0 +1,547 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "conventional_examples": {
+      "defaultMessage": "{arg0, plural, one {{arg0}/{arg0} '#'east} other {{arg0}/{arg0} '##'east}}",
+      "variants": {
+        "one": "{arg0}/{arg0} #east",
+        "other": "{arg0}/{arg0} ##east"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1,
+          "example": ""
+        }
+      ],
+      "metadata": {
+        "androidPluralPlaceholderExamples": {
+          "one": {
+            "arg0": [
+              null,
+              ""
+            ]
+          }
+        },
+        "androidPluralProtectedPlaceholderOccurrences": {
+          "one": {
+            "arg0": [
+              {},
+              {
+                "example": ""
+              }
+            ]
+          },
+          "other": {
+            "arg0": [
+              {
+                "example": ""
+              },
+              {}
+            ]
+          }
+        }
+      }
+    },
+    "conventional_routes[0]": {
+      "defaultMessage": "{arg0} #north",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidProtectedPlaceholderOccurrences": {
+          "arg0": [
+            {}
+          ]
+        },
+        "arrayIndex": 0,
+        "arrayName": "conventional_routes"
+      }
+    },
+    "conventional_routes[1]": {
+      "defaultMessage": "{arg0} / {arg0} ##south",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidProtectedPlaceholderOccurrences": {
+          "arg0": [
+            null,
+            {}
+          ]
+        },
+        "arrayIndex": 1,
+        "arrayName": "conventional_routes"
+      }
+    },
+    "conventional_signals": {
+      "defaultMessage": "{arg0, plural, one {{arg0} '#'bridge} other {{arg0} / {arg0} '##'bridges}}",
+      "variants": {
+        "one": "{arg0} #bridge",
+        "other": "{arg0} / {arg0} ##bridges"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidPluralProtectedPlaceholderOccurrences": {
+          "one": {
+            "arg0": [
+              {}
+            ]
+          },
+          "other": {
+            "arg0": [
+              null,
+              {}
+            ]
+          }
+        }
+      }
+    },
+    "empty_examples": {
+      "defaultMessage": "{count, plural, one {{count} empty '#'west} other {{count} absent '##'west}}",
+      "variants": {
+        "one": "{count} empty #west",
+        "other": "{count} absent ##west"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1,
+          "example": ""
+        },
+        {
+          "name": "count",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidPluralPlaceholderExamples": {
+          "one": {
+            "count": [
+              ""
+            ]
+          },
+          "other": {
+            "count": [
+              null
+            ]
+          }
+        }
+      }
+    },
+    "entity_hash": {
+      "defaultMessage": "Dock #9"
+    },
+    "escaped_color": {
+      "defaultMessage": "#abc",
+      "metadata": {
+        "androidGenericString": true
+      }
+    },
+    "escaped_hash": {
+      "defaultMessage": "Dock #8"
+    },
+    "escaped_signals": {
+      "defaultMessage": "{arg0, plural, one {{arg0} route '#'west} other {{arg0} routes '#'west}}",
+      "variants": {
+        "one": "{arg0} route #west",
+        "other": "{arg0} routes #west"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ]
+    },
+    "hash_routes[0]": {
+      "defaultMessage": "#lane north",
+      "metadata": {
+        "arrayIndex": 0,
+        "arrayName": "hash_routes"
+      }
+    },
+    "hash_routes[1]": {
+      "defaultMessage": "Dock #lane south",
+      "metadata": {
+        "arrayIndex": 1,
+        "arrayName": "hash_routes"
+      }
+    },
+    "hash_routes[2]": {
+      "defaultMessage": "Dock #lane east",
+      "metadata": {
+        "arrayIndex": 2,
+        "arrayName": "hash_routes"
+      }
+    },
+    "mixed_conventional": {
+      "defaultMessage": "{arg0} / {arg0} / {arg0} #signal",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        },
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1,
+          "example": ""
+        }
+      ],
+      "metadata": {
+        "androidProtectedPlaceholderOccurrences": {
+          "arg0": [
+            {},
+            null,
+            {
+              "example": ""
+            }
+          ]
+        }
+      }
+    },
+    "mixed_hashes[1]": {
+      "defaultMessage": "#abc",
+      "description": "Untyped array colors remain protected slots; escaped colors stay editable.",
+      "metadata": {
+        "androidArrayPrimitives": {
+          "0": "#abc"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 1,
+        "arrayName": "mixed_hashes"
+      }
+    },
+    "mixed_hashes[2]": {
+      "defaultMessage": "#abc",
+      "description": "Untyped array colors remain protected slots; escaped colors stay editable.",
+      "metadata": {
+        "androidArrayPrimitives": {
+          "0": "#abc"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 2,
+        "arrayName": "mixed_hashes"
+      }
+    },
+    "mixed_hashes[3]": {
+      "defaultMessage": "Dock ##4",
+      "description": "Untyped array colors remain protected slots; escaped colors stay editable.",
+      "metadata": {
+        "androidArrayPrimitives": {
+          "0": "#abc"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 3,
+        "arrayName": "mixed_hashes"
+      }
+    },
+    "mixed_hashes[4]": {
+      "defaultMessage": "Dock #5",
+      "description": "Untyped array colors remain protected slots; escaped colors stay editable.",
+      "metadata": {
+        "androidArrayPrimitives": {
+          "0": "#abc"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 4,
+        "arrayName": "mixed_hashes"
+      }
+    },
+    "optional_examples": {
+      "defaultMessage": "{count, plural, one {{count} omitted '#'north} other {{count} supplied '##'north}}",
+      "variants": {
+        "one": "{count} omitted #north",
+        "other": "{count} supplied ##north"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "count",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1,
+          "example": "#many"
+        }
+      ],
+      "metadata": {
+        "androidPluralPlaceholderExamples": {
+          "one": {
+            "count": [
+              null
+            ]
+          },
+          "other": {
+            "count": [
+              "#many"
+            ]
+          }
+        }
+      }
+    },
+    "product_signals": {
+      "defaultMessage": "{arg0, plural, one {{arg0} default '#'signal} other {{arg0} default '##'signals}}",
+      "variants": {
+        "one": "{arg0} default #signal",
+        "other": "{arg0} default ##signals"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidProduct": "default"
+      }
+    },
+    "product_signals@product=tablet": {
+      "defaultMessage": "{arg0, plural, one {{arg0} tablet '#'signal} other {{arg0} tablet '##'signals}}",
+      "variants": {
+        "one": "{arg0} tablet #signal",
+        "other": "{arg0} tablet ##signals"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidProduct": "tablet"
+      }
+    },
+    "protected_conventional": {
+      "defaultMessage": "{arg0} #harbor",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidProtectedPlaceholderOccurrences": {
+          "arg0": [
+            {}
+          ]
+        }
+      }
+    },
+    "protected_signals": {
+      "defaultMessage": "{count, plural, one {{count} protected '#'lane} other {{count} protected '##'lanes}}",
+      "variants": {
+        "one": "{count} protected #lane",
+        "other": "{count} protected ##lanes"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1,
+          "example": "#1"
+        },
+        {
+          "name": "count",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1,
+          "example": "#2"
+        }
+      ],
+      "metadata": {
+        "androidPluralPlaceholderExamples": {
+          "one": {
+            "count": [
+              "#1"
+            ]
+          },
+          "other": {
+            "count": [
+              "#2"
+            ]
+          }
+        }
+      }
+    },
+    "quoted_color": {
+      "defaultMessage": "#abc",
+      "metadata": {
+        "androidGenericString": true
+      }
+    },
+    "raw_signals": {
+      "defaultMessage": "{arg0, plural, one {{arg0} route '#'north} other {{arg0} routes '##'north}}",
+      "variants": {
+        "one": "{arg0} route #north",
+        "other": "{arg0} routes ##north"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ]
+    },
+    "repeated_examples": {
+      "defaultMessage": "{count, plural, one {{count}/{count} repeated '#'east} other {{count}/{count} repeated '##'east}}",
+      "variants": {
+        "one": "{count}/{count} repeated #east",
+        "other": "{count}/{count} repeated ##east"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1,
+          "example": "#lead"
+        },
+        {
+          "name": "count",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1,
+          "example": "#tail"
+        },
+        {
+          "name": "count",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1,
+          "example": "#tail"
+        },
+        {
+          "name": "count",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1,
+          "example": "#lead"
+        }
+      ],
+      "metadata": {
+        "androidPluralPlaceholderExamples": {
+          "one": {
+            "count": [
+              "#lead",
+              "#tail"
+            ]
+          },
+          "other": {
+            "count": [
+              "#tail",
+              "#lead"
+            ]
+          }
+        }
+      }
+    },
+    "scalar_hash": {
+      "defaultMessage": "Dock #7",
+      "description": "Hash spellings are original neutral cases, not platform examples."
+    },
+    "strict_color": {
+      "defaultMessage": "#abc",
+      "metadata": {
+        "androidGenericFormat": "string",
+        "androidGenericString": true
+      }
+    },
+    "styled_conventional": {
+      "defaultMessage": "'<'b lane=\"#signal\">{arg0}'<'/b> / {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidProtectedPlaceholderOccurrences": {
+          "arg0": [
+            {},
+            null
+          ]
+        }
+      }
+    },
+    "styled_signals": {
+      "defaultMessage": "{arg0, plural, one {{arg0} '<'b lane=\"'#'inner\">'#'blue'<'/b> route} other {{arg0} '<'i lane=\"hash'#'inner\">'##'blue'<'/i> routes}}",
+      "variants": {
+        "one": "{arg0} '<'b lane=\"#inner\">#blue'<'/b> route",
+        "other": "{arg0} '<'i lane=\"hash#inner\">##blue'<'/i> routes"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "unicode_color": {
+      "defaultMessage": "#abc",
+      "metadata": {
+        "androidGenericString": true
+      }
+    },
+    "unicode_hash": {
+      "defaultMessage": "Dock #10"
+    }
+  }
+}

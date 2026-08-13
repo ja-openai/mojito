@@ -1,0 +1,35 @@
+{
+  "arrays": {
+    "routes": [
+      "@string/anchor",
+      "@string/anchor",
+      "Original harbor instruction",
+      "Visible route"
+    ]
+  },
+  "arrayReferences": {
+    "routes": {
+      "0": "@string/anchor",
+      "1": "@string/anchor"
+    }
+  },
+  "plurals": {
+    "signals": {
+      "two": "Original harbor instruction",
+      "other": "%1$d visible signals"
+    }
+  },
+  "pluralReferences": {
+    "signals": {
+      "one": "@string/anchor"
+    }
+  },
+  "strings": {
+    "anchor": "Quiet harbor",
+    "double_macro": "Original harbor instruction",
+    "escaped": "@@string/anchor",
+    "quoted": "@@string/anchor",
+    "single_macro": "Original harbor instruction",
+    "triple": "@@@string/anchor"
+  }
+}

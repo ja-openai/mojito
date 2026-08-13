@@ -1,0 +1,5 @@
+<resources>
+  <bag type="integer-array" name="routes.bag">
+    <item>Invalid coastal integer</item>
+  </bag>
+</resources>

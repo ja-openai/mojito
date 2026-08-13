@@ -1,0 +1,233 @@
+{
+  "arrays": {
+    "routes": [
+      "Route du port",
+      "Lumière du port"
+    ]
+  },
+  "styledSpans": {
+    "arrays": {
+      "routes": {
+        "0": [
+          {
+            "name": "annotation",
+            "start": 0,
+            "end": 12,
+            "attributes": {
+              "key": "private"
+            },
+            "encodedTag": "annotation;key=private",
+            "runtimeAnnotations": [
+              {
+                "key": "key",
+                "value": "private"
+              }
+            ]
+          }
+        ],
+        "1": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 14,
+            "attributes": {
+              "color": "#112233"
+            },
+            "encodedTag": "font;color=#112233",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "#112233",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ff112233"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "plurals": {
+      "signals": {
+        "one": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 18,
+            "attributes": {
+              "size": "9"
+            },
+            "encodedTag": "font;size=9",
+            "runtimeStyles": [
+              {
+                "kind": "size",
+                "attribute": "size",
+                "value": "9"
+              }
+            ]
+          }
+        ],
+        "other": [
+          {
+            "name": "annotation",
+            "start": 0,
+            "end": 19,
+            "attributes": {
+              "key": "beacon"
+            },
+            "encodedTag": "annotation;key=beacon",
+            "runtimeAnnotations": [
+              {
+                "key": "key",
+                "value": "beacon"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "strings": {
+      "font_effect": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 12,
+          "attributes": {
+            "size": "12",
+            "color": "red"
+          },
+          "encodedTag": "font;size=12;color=red",
+          "runtimeStyles": [
+            {
+              "kind": "size",
+              "attribute": "size",
+              "value": "12"
+            },
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "red",
+              "color": {
+                "mode": "literal",
+                "argb": "#ffff0000"
+              }
+            }
+          ]
+        }
+      ],
+      "foreign_annotation": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 13,
+          "attributes": {
+            "route": "north\tdock"
+          },
+          "encodedTag": "annotation;route=north\tdock",
+          "runtimeAnnotations": [
+            {
+              "key": "route",
+              "value": "north\tdock"
+            }
+          ]
+        }
+      ],
+      "generic_style": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 12,
+          "attributes": {
+            "size": "8"
+          },
+          "encodedTag": "font;size=8",
+          "runtimeStyles": [
+            {
+              "kind": "size",
+              "attribute": "size",
+              "value": "8"
+            }
+          ]
+        }
+      ],
+      "inline_namespace": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 12,
+          "attributes": {
+            "route": "quiet"
+          },
+          "encodedTag": "b;route=quiet"
+        }
+      ],
+      "language_style": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 13,
+          "attributes": {
+            "lang": "fr"
+          },
+          "encodedTag": "b;lang=fr"
+        }
+      ],
+      "ordered_namespaces": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 12,
+          "attributes": {
+            "alpha": "A",
+            "bravo": "B",
+            "charlie": "C",
+            "delta": "D"
+          },
+          "encodedTag": "b;alpha=A;bravo=B;charlie=C;delta=D"
+        }
+      ],
+      "protected": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 13,
+          "attributes": {
+            "route": "protected"
+          },
+          "encodedTag": "b;route=protected"
+        }
+      ],
+      "space_style": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 11,
+          "attributes": {
+            "space": "preserve"
+          },
+          "encodedTag": "b;space=preserve"
+        }
+      ]
+    }
+  },
+  "plurals": {
+    "signals": {
+      "one": "%1$d balise du port",
+      "other": "%1$d balises du port"
+    }
+  },
+  "strings": {
+    "font_effect": "Éclat du port",
+    "foreign_annotation": "Signal du port",
+    "generic_style": "Guide du port",
+    "inline_namespace": "Route du port",
+    "language_style": "Signal du port",
+    "ordered_namespaces": "Ordre du port",
+    "protected": "Private harbor",
+    "scalar_default_space": "Nord est",
+    "scalar_space": "Nord ouest",
+    "space_style": "Passage nord"
+  }
+}

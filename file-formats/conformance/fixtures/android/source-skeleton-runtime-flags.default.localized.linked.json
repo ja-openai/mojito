@@ -1,0 +1,63 @@
+{
+  "arrayReferences": {
+    "gate.lanes": {
+      "1": "@string/anchor"
+    }
+  },
+  "arrays": {
+    "gate.lanes": [
+      "Voie nord ouverte",
+      "@string/anchor"
+    ]
+  },
+  "conditionalArrays": {
+    "gate.lanes": {
+      "condition": "neutral.flags.second",
+      "values": [
+        "Voie <nord> mutable",
+        "@0x7f030000"
+      ]
+    }
+  },
+  "conditionalPlurals": {
+    "gate.count": {
+      "condition": "neutral.flags.first",
+      "variants": {
+        "one": "%1$d balise mutable",
+        "other": "%1$d balises mutables"
+      }
+    }
+  },
+  "conditionalStrings": {
+    "gate.route": [
+      {
+        "condition": "neutral.flags.first",
+        "value": "Premier passage mutable"
+      },
+      {
+        "condition": "!neutral.flags.first",
+        "value": "Inverse <calme> & sûr"
+      },
+      {
+        "condition": "neutral.flags.second",
+        "value": "Passage tablette mutable"
+      }
+    ],
+    "gate.signal": {
+      "condition": "neutral.flags.first",
+      "value": "Signal premier mutable"
+    }
+  },
+  "plurals": {
+    "gate.count": {
+      "one": "%1$d balise ouverte",
+      "other": "%1$d balises ouvertes"
+    }
+  },
+  "strings": {
+    "anchor": "Ancre ouverte",
+    "gate.private": "Protected private signal",
+    "gate.route": "Passage ouvert",
+    "gate.signal": "Signal ouvert"
+  }
+}

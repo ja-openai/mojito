@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:p="http://schemas.android.com/apk/res/android">
+  <string name="harbor" translatable="false" p:featureFlag="neutral.harbor.active">Hidden harbor</string>
+</resources>

@@ -1,0 +1,13 @@
+{
+  "plurals": {
+    "mutable_signals": {
+      "one": "One harbor signal",
+      "other": "Several harbor signals"
+    }
+  },
+  "strings": {
+    "mutable_beacon": "A mutable harbor beacon",
+    "mutable_route": "A mutable harbor route",
+    "open_route": "An open harbor route"
+  }
+}

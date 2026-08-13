@@ -1,0 +1,552 @@
+{
+  "arrays": {
+    "runtime_style_routes": [
+      "Pier",
+      "Pier"
+    ]
+  },
+  "styledSpans": {
+    "arrays": {
+      "runtime_style_routes": {
+        "0": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "route": "north",
+              "fgcolor": "#123456"
+            },
+            "encodedTag": "font;route=north;fgcolor=#123456",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "fgcolor",
+                "value": "#123456",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ff123456"
+                }
+              }
+            ]
+          }
+        ],
+        "1": [
+          {
+            "name": "a",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "route": "south",
+              "href": "https://neutral.invalid/r"
+            },
+            "encodedTag": "a;route=south;href=https://neutral.invalid/r",
+            "runtimeStyles": [
+              {
+                "kind": "link",
+                "attribute": "href",
+                "value": "https://neutral.invalid/r"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "plurals": {
+      "runtime_style_signals": {
+        "one": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 10,
+            "attributes": {
+              "route": "north",
+              "size": "18"
+            },
+            "encodedTag": "font;route=north;size=18",
+            "runtimeStyles": [
+              {
+                "kind": "size",
+                "attribute": "size",
+                "value": "18"
+              }
+            ]
+          }
+        ],
+        "other": [
+          {
+            "name": "a",
+            "start": 0,
+            "end": 11,
+            "attributes": {
+              "route": "south",
+              "href": "https://neutral.invalid/beacons"
+            },
+            "encodedTag": "a;route=south;href=https://neutral.invalid/beacons",
+            "runtimeStyles": [
+              {
+                "kind": "link",
+                "attribute": "href",
+                "value": "https://neutral.invalid/beacons"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "strings": {
+      "arabic_decimal_size": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "size": "١٤"
+          },
+          "encodedTag": "font;size=١٤",
+          "runtimeStyles": [
+            {
+              "kind": "size",
+              "attribute": "size",
+              "value": "١٤"
+            }
+          ]
+        }
+      ],
+      "color_injects_background": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "#112233",
+            "bgcolor": "#abcdef"
+          },
+          "encodedTag": "font;color=#112233;bgcolor=#abcdef",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "#112233",
+              "color": {
+                "mode": "literal",
+                "argb": "#ff112233"
+              }
+            },
+            {
+              "kind": "background",
+              "attribute": "bgcolor",
+              "value": "#abcdef",
+              "color": {
+                "mode": "literal",
+                "argb": "#ffabcdef"
+              }
+            }
+          ]
+        }
+      ],
+      "duplicate_size": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north",
+            "size": "27"
+          },
+          "encodedTag": "font;route=north;size=18;size=27",
+          "runtimeStyles": [
+            {
+              "kind": "size",
+              "attribute": "size",
+              "value": "18"
+            }
+          ]
+        }
+      ],
+      "face_injects_color": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "face": "harbor",
+            "color": "#123456"
+          },
+          "encodedTag": "font;face=harbor;color=#123456",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "#123456",
+              "color": {
+                "mode": "literal",
+                "argb": "#ff123456"
+              }
+            },
+            {
+              "kind": "face",
+              "attribute": "face",
+              "value": "harbor"
+            }
+          ]
+        }
+      ],
+      "fullwidth_decimal_height": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "height": "１２"
+          },
+          "encodedTag": "font;height=１２",
+          "runtimeStyles": [
+            {
+              "kind": "height",
+              "attribute": "height",
+              "value": "１２"
+            }
+          ],
+          "runtimeParagraph": {
+            "kind": "height",
+            "sourceStart": 0,
+            "sourceEnd": 4,
+            "start": 0,
+            "end": 4
+          }
+        }
+      ],
+      "leading_zero_size": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "size": "0014"
+          },
+          "encodedTag": "font;size=0014",
+          "runtimeStyles": [
+            {
+              "kind": "size",
+              "attribute": "size",
+              "value": "0014"
+            }
+          ]
+        }
+      ],
+      "link_first_wins": [
+        {
+          "name": "a",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "href": "https://neutral.invalid/shadow",
+            "route": "north"
+          },
+          "encodedTag": "a;href=https://neutral.invalid/direct;route=north;href=https://neutral.invalid/shadow",
+          "runtimeStyles": [
+            {
+              "kind": "link",
+              "attribute": "href",
+              "value": "https://neutral.invalid/direct"
+            }
+          ]
+        }
+      ],
+      "link_injected": [
+        {
+          "name": "a",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north",
+            "href": "https://neutral.invalid/p"
+          },
+          "encodedTag": "a;route=north;href=https://neutral.invalid/p",
+          "runtimeStyles": [
+            {
+              "kind": "link",
+              "attribute": "href",
+              "value": "https://neutral.invalid/p"
+            }
+          ]
+        }
+      ],
+      "link_missing": [
+        {
+          "name": "a",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north"
+          },
+          "encodedTag": "a;route=north",
+          "runtimeStyles": []
+        }
+      ],
+      "link_truncated": [
+        {
+          "name": "a",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "href": "https://neutral.invalid/p",
+            "lane": "west"
+          },
+          "encodedTag": "a;href=https://neutral.invalid/p;lane=west",
+          "runtimeStyles": [
+            {
+              "kind": "link",
+              "attribute": "href",
+              "value": "https://neutral.invalid/p"
+            }
+          ]
+        }
+      ],
+      "maximum_decimal_size": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "size": "2147483647"
+          },
+          "encodedTag": "font;size=2147483647",
+          "runtimeStyles": [
+            {
+              "kind": "size",
+              "attribute": "size",
+              "value": "2147483647"
+            }
+          ]
+        }
+      ],
+      "minimum_arabic_decimal_height": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "height": "-٢١٤٧٤٨٣٦٤٨"
+          },
+          "encodedTag": "font;height=-٢١٤٧٤٨٣٦٤٨",
+          "runtimeStyles": [
+            {
+              "kind": "height",
+              "attribute": "height",
+              "value": "-٢١٤٧٤٨٣٦٤٨"
+            }
+          ],
+          "runtimeParagraph": {
+            "kind": "height",
+            "sourceStart": 0,
+            "sourceEnd": 4,
+            "start": 0,
+            "end": 4
+          }
+        }
+      ],
+      "mixed_decimal_scripts": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "size": "١4"
+          },
+          "encodedTag": "font;size=١4",
+          "runtimeStyles": [
+            {
+              "kind": "size",
+              "attribute": "size",
+              "value": "١4"
+            }
+          ]
+        }
+      ],
+      "multiple_foregrounds": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "#123456",
+            "fgcolor": "#abcdef"
+          },
+          "encodedTag": "font;color=#123456;fgcolor=#abcdef",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "fgcolor",
+              "value": "#abcdef",
+              "color": {
+                "mode": "literal",
+                "argb": "#ffabcdef"
+              }
+            },
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "#123456",
+              "color": {
+                "mode": "literal",
+                "argb": "#ff123456"
+              }
+            }
+          ]
+        }
+      ],
+      "negative_height": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "height": "-7"
+          },
+          "encodedTag": "font;height=-7",
+          "runtimeStyles": [
+            {
+              "kind": "height",
+              "attribute": "height",
+              "value": "-7"
+            }
+          ],
+          "runtimeParagraph": {
+            "kind": "height",
+            "sourceStart": 0,
+            "sourceEnd": 4,
+            "start": 0,
+            "end": 4
+          }
+        }
+      ],
+      "nested_styles": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 6,
+          "attributes": {
+            "route": "north",
+            "size": "18"
+          },
+          "encodedTag": "font;route=north;size=18",
+          "runtimeStyles": [
+            {
+              "kind": "size",
+              "attribute": "size",
+              "value": "18"
+            }
+          ]
+        },
+        {
+          "name": "a",
+          "start": 0,
+          "end": 6,
+          "attributes": {
+            "route": "west",
+            "href": "https://neutral.invalid/p"
+          },
+          "encodedTag": "a;route=west;href=https://neutral.invalid/p",
+          "runtimeStyles": [
+            {
+              "kind": "link",
+              "attribute": "href",
+              "value": "https://neutral.invalid/p"
+            }
+          ]
+        }
+      ],
+      "signed_size": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "size": "+14"
+          },
+          "encodedTag": "font;size=+14",
+          "runtimeStyles": [
+            {
+              "kind": "size",
+              "attribute": "size",
+              "value": "+14"
+            }
+          ]
+        }
+      ],
+      "unknown_injects_many": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north",
+            "face": "serif",
+            "size": "12"
+          },
+          "encodedTag": "font;route=north;face=serif;size=12",
+          "runtimeStyles": [
+            {
+              "kind": "size",
+              "attribute": "size",
+              "value": "12"
+            },
+            {
+              "kind": "face",
+              "attribute": "face",
+              "value": "serif"
+            }
+          ]
+        }
+      ],
+      "unknown_injects_size": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north",
+            "size": "18"
+          },
+          "encodedTag": "font;route=north;size=18",
+          "runtimeStyles": [
+            {
+              "kind": "size",
+              "attribute": "size",
+              "value": "18"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "plurals": {
+    "runtime_style_signals": {
+      "one": "%1$d beacon",
+      "other": "%1$d beacons"
+    }
+  },
+  "strings": {
+    "arabic_decimal_size": "Pier",
+    "color_injects_background": "Pier",
+    "duplicate_size": "Pier",
+    "face_injects_color": "Pier",
+    "fullwidth_decimal_height": "Pier",
+    "leading_zero_size": "Pier",
+    "link_first_wins": "Pier",
+    "link_injected": "Pier",
+    "link_missing": "Pier",
+    "link_truncated": "Pier",
+    "maximum_decimal_size": "Pier",
+    "minimum_arabic_decimal_height": "Pier",
+    "mixed_decimal_scripts": "Pier",
+    "multiple_foregrounds": "Pier",
+    "negative_height": "Pier",
+    "nested_styles": "🧭 Pier",
+    "signed_size": "Pier",
+    "unknown_injects_many": "Pier",
+    "unknown_injects_size": "Pier"
+  }
+}

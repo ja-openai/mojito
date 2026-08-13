@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Android's framework name splitter consumes one additional leading @. -->
+  <string name="anchor">Quiet harbor</string>
+  <color name="shade">#112233</color>
+  <macro name="shortcut">A neutral harbor</macro>
+  <macro name="indirect">@@macro/shortcut</macro>
+
+  <string name="single">@string/anchor</string>
+  <string name="double">@@string/anchor</string>
+  <string name="double_entity">&#64;&#64;string/anchor</string>
+  <string name="double_mixed_entity">@&#64;string/anchor</string>
+  <string name="double_cdata"><![CDATA[@@string/anchor]]></string>
+  <string name="double_comment">@<!-- preserve the split marker -->@string/anchor</string>
+  <string name="double_color">@@color/shade</string>
+  <string name="triple">@@@string/anchor</string>
+  <string name="escaped">\@@string/anchor</string>
+  <string name="quoted">"@@string/anchor"</string>
+  <string name="unknown">@@unknown/anchor</string>
+  <string name="null_literal">@@null</string>
+  <string name="create_literal">@@+id/marker</string>
+  <string name="single_macro">@macro/shortcut</string>
+  <string name="double_macro">@@macro/shortcut</string>
+  <string name="double_chain">@@macro/indirect</string>
+
+  <item type="string" name="generic">@@string/anchor</item>
+  <item type="string" format="string" name="generic_strict">@@string/anchor</item>
+
+  <string-array name="routes">
+    <item>@string/anchor</item>
+    <item>@@string/anchor</item>
+    <item>@@@string/anchor</item>
+    <item>\@@string/anchor</item>
+    <item>"@@string/anchor"</item>
+    <item>@@macro/shortcut</item>
+    <item>Actual route</item>
+  </string-array>
+  <array name="mixed">
+    <item>@@string/anchor</item>
+    <item>Visible mixed route</item>
+  </array>
+
+  <plurals name="signals">
+    <item quantity="one">@@string/anchor</item>
+    <item quantity="two">@@macro/shortcut</item>
+    <item quantity="other">%1$d visible signals</item>
+  </plurals>
+</resources>

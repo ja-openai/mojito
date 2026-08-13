@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <!-- Ignored resources must not leak their comments into the next message. -->
+  <string name="internal" translatable="false">Hidden</string>
+
+  <!-- Greeting on the home screen -->
+  <string name="welcome" description="Welcome screen greeting">Hello %1$s!</string>
+
+  <!-- The markup is real XML, not escaped text. -->
+  <string name="rich">Tap <b>Continue</b> &amp; go</string>
+
+  <string name="named">Hi <xliff:g id="person" example="Ada">%1$s</xliff:g>!</string>
+
+  <!-- Day picker labels -->
+  <string-array name="days">
+    <item>Monday</item>
+    <item>Tuesday</item>
+  </string-array>
+</resources>

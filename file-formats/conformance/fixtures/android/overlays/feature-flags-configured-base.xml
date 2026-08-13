@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="fallback_scalar">Main fallback harbor</string>
+  <string name="enabled_scalar">Main replaceable harbor</string>
+  <string-array name="conditional_routes">
+    <item>Main first lane</item>
+    <item>Main second lane</item>
+  </string-array>
+  <plurals name="fallback_signals">
+    <item quantity="one">One main beacon</item>
+    <item quantity="other">Several main beacons</item>
+  </plurals>
+  <array name="fallback_array">
+    <item>Main typed fallback</item>
+  </array>
+</resources>

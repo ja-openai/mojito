@@ -1,0 +1,20 @@
+<resources>
+  <string name="supplementary_pair">left\uD83D\uDE80right</string>
+  <string name="isolated_high">left\uD83Dright</string>
+  <string name="isolated_low">left\uDE80right</string>
+  <string name="five_hex_digits">wide \u1F680</string>
+  <string name="zero_hex_digits">tail\u</string>
+  <string name="one_hex_digit">tail\u1</string>
+  <string name="two_hex_digits">tail\u41</string>
+  <string name="three_hex_digits">tail\u041</string>
+  <string name="unknown_escapes">left\r\x41\f\v\101 right</string>
+  <string name="trailing_backslash">trail\</string>
+  <string name="trailing_before_style">trail\<b>west</b></string>
+  <string name="supplementary_before_style">A\uD83D\uDE80<b>west</b></string>
+  <string name="short_before_style">lead\u1<b>rest</b></string>
+  <string name="escaped_nul">left\u0000right</string>
+  <string name="escaped_control">left\u0001right</string>
+  <string name="escaped_tab">left\u0009right</string>
+  <string name="escaped_newline">left\u000Aright</string>
+  <string name="escaped_carriage_return">left\u000Dright</string>
+</resources>

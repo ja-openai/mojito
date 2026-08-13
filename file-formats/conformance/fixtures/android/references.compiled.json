@@ -1,0 +1,30 @@
+{
+  "strings": {
+    "anchor": "Quiet harbor",
+    "escaped_alias": "@string/anchor",
+    "quoted_alias": "@string/anchor"
+  },
+  "arrays": {
+    "routes": [
+      "@string/anchor",
+      "Silent beacon",
+      "@null",
+      "Across %1$s",
+      "@empty",
+      "?attr/title",
+      "@string/anchor"
+    ]
+  },
+  "arrayReferences": {
+    "routes": {
+      "0": "@string/anchor",
+      "2": "@null",
+      "4": "@empty",
+      "5": "?attr/title"
+    }
+  },
+  "plurals": { "signals": { "other": "%1$d signals" } },
+  "pluralReferences": {
+    "signals": { "one": "@string/anchor", "many": "@null" }
+  }
+}

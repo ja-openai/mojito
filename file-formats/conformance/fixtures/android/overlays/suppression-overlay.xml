@@ -1,0 +1,9 @@
+<resources>
+  <string name="muted" translatable="false">Internal signal</string>
+  <string-array name="hidden" translatable="false">
+    <item>Internal north</item>
+  </string-array>
+  <plurals name="paused" translatable="false">
+    <item quantity="other">Internal bells</item>
+  </plurals>
+</resources>

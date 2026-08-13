@@ -1,0 +1,7 @@
+<resources>
+  <string name="  route.marker  ">Original coastal marker</string>
+  <string name="foreign_shadow">Original protected marker</string>
+  <string-array name="  route.bundle  ">
+    <item>Original channel</item>
+  </string-array>
+</resources>

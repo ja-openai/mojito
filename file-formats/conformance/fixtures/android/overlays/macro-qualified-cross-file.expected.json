@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "package_route": {
+      "defaultMessage": "A shared harbor crossing",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "private_route": {
+      "defaultMessage": "A shared harbor crossing",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "shared_routes[0]": {
+      "defaultMessage": "A shared harbor crossing",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 0,
+        "arrayName": "shared_routes"
+      }
+    },
+    "shared_routes[1]": {
+      "defaultMessage": "A shared harbor crossing",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 1,
+        "arrayName": "shared_routes"
+      }
+    }
+  }
+}

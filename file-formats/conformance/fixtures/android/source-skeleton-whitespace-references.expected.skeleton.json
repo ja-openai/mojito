@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n  <!-- Source templates must never rewrite opaque native reference bytes. -->\n  <string name=\"space\">@string/north pier</string>\n  <string name=\"line\">@string/north<!-- literal marker boundary -->&#10;pier</string>\n  <string name=\"carriage\">@string/north&#13;pier</string>\n  <string name=\"double_tab\">@@string/north&#9;pier</string>\n  <string name=\"visible\">A calm harbor</string>\n  <string name=\"quoted\">\"@string/north pier\"</string>\n  <string name=\"escaped\">\\@string/north pier</string>\n\n  <string-array name=\"routes\">\n    <item>@string/north pier</item>\n    <item>@string/north&#9;pier</item>\n    <item>@string/north&#10;pier</item>\n    <item>@string/north&#13;pier</item>\n    <item>@string/north&#13;&#10;pier</item>\n    <item>@string/north&#160;pier</item>\n    <item>Visible route</item>\n  </string-array>\n  <plurals name=\"signals\">\n    <item quantity=\"zero\">@string/north&#13;pier</item>\n    <item quantity=\"one\">@string/north pier</item>\n    <item quantity=\"two\">@string/north&#9;pier</item>\n    <item quantity=\"few\">@string/north&#10;pier</item>\n    <item quantity=\"many\">@string/north&#160;pier</item>\n    <item quantity=\"other\">%1$d visible lights</item>\n  </plurals>\n  <string name=\"untouched\" translatable=\"false\">@string/north pier</string>\n</resources>\n",
+  "slots": [
+    {
+      "id": "visible",
+      "start": 409,
+      "end": 422
+    },
+    {
+      "id": "quoted",
+      "start": 456,
+      "end": 476
+    },
+    {
+      "id": "escaped",
+      "start": 511,
+      "end": 530
+    },
+    {
+      "id": "routes[6]",
+      "start": 823,
+      "end": 836
+    },
+    {
+      "id": "signals",
+      "variant": "other",
+      "start": 1189,
+      "end": 1208
+    }
+  ]
+}

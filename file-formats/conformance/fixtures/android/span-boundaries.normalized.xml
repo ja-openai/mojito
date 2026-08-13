@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="before_style">"alpha "<b>" beta "</b>" omega"</string>
+  <string name="empty_span">"north "<b></b>" south"</string>
+  <string name="inside_quote">"  alpha "<b>" beta "</b>" omega "</string>
+  <string name="quote_after_span"><b>"  echo  "</b>" tail"</string>
+  <string name="unknown_boundary">"north soft south"</string>
+</resources>

@@ -1,0 +1,35 @@
+{
+  "arrays": {
+    "mixed.route": [
+      "17",
+      "Visible mixed route",
+      "@string/harbor.pad"
+    ],
+    "route.list": [
+      "North channel",
+      "South channel"
+    ]
+  },
+  "arrayPrimitiveValues": {
+    "mixed.route": {
+      "0": "17"
+    }
+  },
+  "arrayReferences": {
+    "mixed.route": {
+      "2": "@string/harbor.pad"
+    }
+  },
+  "plurals": {
+    "tide.signals": {
+      "one": "One coastal signal",
+      "other": "Many coastal signals"
+    }
+  },
+  "strings": {
+    "North.Path-7": "Visible ridge marker",
+    "_underway": "Tablet tide signal",
+    "harbor.pad": "Padded harbor marker",
+    "éclat": "Coastal shimmer"
+  }
+}

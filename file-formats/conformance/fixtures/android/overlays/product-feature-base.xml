@@ -1,0 +1,22 @@
+<resources>
+  <string name="anchor">Shared overlay anchor</string>
+  <string name="route">Main default harbor route</string>
+  <string name="route" product="tablet">Main tablet harbor route</string>
+  <string name="active">Main default beacon</string>
+  <string name="active" product="tablet">Main tablet beacon</string>
+  <string name="fallback">Main universal fallback</string>
+  <plurals name="signals">
+    <item quantity="one">One main default signal</item>
+    <item quantity="other">Several main default signals</item>
+  </plurals>
+  <plurals name="signals" product="tablet">
+    <item quantity="one">One main tablet signal</item>
+    <item quantity="other">Several main tablet signals</item>
+  </plurals>
+  <array name="lanes">
+    <item>Main default channel</item>
+  </array>
+  <array name="lanes" product="tablet">
+    <item>Main tablet channel</item>
+  </array>
+</resources>

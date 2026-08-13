@@ -1,0 +1,27 @@
+{
+  "arrayReferences": {
+    "lanes": {
+      "1": "@string/anchor.route"
+    }
+  },
+  "arrays": {
+    "lanes": [
+      "North <safe> & clear",
+      "@string/anchor.route",
+      "South night lane"
+    ]
+  },
+  "configuration": "fr-night-v8",
+  "plurals": {
+    "signals": {
+      "one": "%1$d quiet signal",
+      "other": "%1$d quiet signals"
+    }
+  },
+  "strings": {
+    "anchor.route": "North harbor anchor",
+    "beacon": "Night beacon",
+    "private": "Keep private night note",
+    "route": "Default night passage"
+  }
+}

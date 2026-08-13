@@ -1,0 +1,28 @@
+{
+  "arrays": {
+    "routes.bag": [
+      "17",
+      "Updated coastal route",
+      "@string/anchor"
+    ]
+  },
+  "arrayPrimitiveValues": {
+    "routes.bag": {
+      "0": "17"
+    }
+  },
+  "arrayReferences": {
+    "routes.bag": {
+      "2": "@string/anchor"
+    }
+  },
+  "plurals": {
+    "signals.bag": {
+      "one": "One updated signal",
+      "other": "Many updated signals"
+    }
+  },
+  "strings": {
+    "anchor": "Original overlay anchor"
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "angle_attribute": {
+      "defaultMessage": "'<'annotation note=\"A > B\">steady'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "annotated": {
+      "defaultMessage": "'<'annotation role=\"navigator\" tone=\"pilot''s cue\">North'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "apostrophe_text": {
+      "defaultMessage": "'<'annotation tone=\"clear\">pilot isn''t ready'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "attribute_placeholder": {
+      "defaultMessage": "'<'annotation tone=\"%1$s\">{arg0}'<'/annotation>",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "nested": {
+      "defaultMessage": "Proceed '<'a href=\"https://neutral.invalid/r?step=1&amp;lane=2\"><b>{arg0}</b>'<'/a>",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "notices": {
+      "defaultMessage": "{arg0, plural, one {'<'annotation tone=\"quiet\">{arg0} notice'<'/annotation>} other {'<'annotation tone=\"quiet\">{arg0} notices'<'/annotation>}}",
+      "variants": {
+        "one": "'<'annotation tone=\"quiet\">{arg0} notice'<'/annotation>",
+        "other": "'<'annotation tone=\"quiet\">{arg0} notices'<'/annotation>"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "unicode_span": {
+      "defaultMessage": "🧭 '<'annotation role=\"route\">東🙂'<'/annotation> fin",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "waypoints[0]": {
+      "defaultMessage": "'<'font color=\"#204080\">East'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff204080",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "#204080"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 0,
+        "arrayName": "waypoints"
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+<resources xmlns:drift="urn:neutral:drifting-resource">
+  <string-array name="routes">
+    <item>North channel</item>
+    <drift:item>Never expose this invalid namespace</drift:item>
+  </string-array>
+</resources>

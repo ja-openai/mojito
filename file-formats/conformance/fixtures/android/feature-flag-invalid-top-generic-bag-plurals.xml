@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:p="http://schemas.android.com/apk/res/android">
+  <bag type="plurals" name="signals" p:featureFlag="neutral.harbor.active"><item quantity="one">One harbor</item><item quantity="other">Many harbors</item></bag>
+</resources>

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "locale": "pt-BR",
+  "messages": {
+    "general": {
+      "defaultMessage": "Signal {arg0}",
+      "description": "Generic declarations retain their translator notes.",
+      "placeholders": [{ "name": "arg0", "source": "%1$s", "kind": "string", "position": 1 }],
+      "metadata": { "androidGenericString": true }
+    },
+    "wrapped": { "defaultMessage": "keep this part visible" },
+    "literal_hash": { "defaultMessage": "#flag" },
+    "literal_question": { "defaultMessage": "?question" },
+    "literal_at": { "defaultMessage": "@named" },
+    "quote_boundaries": { "defaultMessage": "start  mid  end" },
+    "signals[0]": {
+      "defaultMessage": "",
+      "metadata": {
+        "arrayIndex": 0,
+        "arrayName": "signals",
+        "androidArrayReferences": { "2": "@string/general" }
+      }
+    },
+    "signals[1]": {
+      "defaultMessage": "  held  ",
+      "metadata": {
+        "arrayIndex": 1,
+        "arrayName": "signals",
+        "androidArrayReferences": { "2": "@string/general" }
+      }
+    }
+  }
+}

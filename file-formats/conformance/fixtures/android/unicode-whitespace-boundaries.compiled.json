@@ -1,0 +1,53 @@
+{
+  "strings": {
+    "boundary_byte_order_mark": "&#literal ﻿ west ﻿",
+    "boundary_em_space": "&#literal   west  ",
+    "boundary_en_quad": "&#literal   west  ",
+    "boundary_figure": "&#literal   west  ",
+    "boundary_hair": "&#literal   west  ",
+    "boundary_ideographic": "&#literal 　 west 　",
+    "boundary_line_separator": "&#literal   west  ",
+    "boundary_medium_math": "&#literal   west  ",
+    "boundary_mongolian": "&#literal ᠎ west ᠎",
+    "boundary_narrow_no_break": "&#literal   west  ",
+    "boundary_next_line": "&#literal  west ",
+    "boundary_no_break": "&#literal   west  ",
+    "boundary_ogham": "&#literal   west  ",
+    "boundary_paragraph_separator": "&#literal   west  ",
+    "boundary_punctuation": "&#literal   west  ",
+    "boundary_zero_width": "&#literal ​ west ​",
+    "entity_byte_order_mark": "north﻿ west",
+    "entity_em_space": "north  west",
+    "entity_en_quad": "north  west",
+    "entity_figure": "north  west",
+    "entity_hair": "north  west",
+    "entity_ideographic": "north　 west",
+    "entity_line_separator": "north  west",
+    "entity_medium_math": "north  west",
+    "entity_mongolian": "north᠎ west",
+    "entity_narrow_no_break": "north  west",
+    "entity_next_line": "north west",
+    "entity_no_break": "north  west",
+    "entity_ogham": "north  west",
+    "entity_paragraph_separator": "north  west",
+    "entity_punctuation": "north  west",
+    "entity_zero_width": "north​ west",
+    "escaped_byte_order_mark": "north﻿ west",
+    "escaped_em_space": "north  west",
+    "escaped_en_quad": "north  west",
+    "escaped_figure": "north  west",
+    "escaped_hair": "north  west",
+    "escaped_ideographic": "north　 west",
+    "escaped_line_separator": "north  west",
+    "escaped_medium_math": "north  west",
+    "escaped_mongolian": "north᠎ west",
+    "escaped_narrow_no_break": "north  west",
+    "escaped_next_line": "north west",
+    "escaped_no_break": "north  west",
+    "escaped_ogham": "north  west",
+    "escaped_paragraph_separator": "north  west",
+    "escaped_punctuation": "north  west",
+    "escaped_zero_width": "north​ west",
+    "quoted_unicode": "      west    "
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "arrays": {
+    "routes": [
+      "North\"pier and \"quiet\" water",
+      "West \"pier, quiet\" water",
+      "East \"steady\" water"
+    ]
+  },
+  "styledSpans": {
+    "arrays": {
+      "routes": {
+        "2": [
+          {
+            "name": "i",
+            "start": 5,
+            "end": 12
+          }
+        ]
+      }
+    },
+    "plurals": {
+      "styled_signals": {
+        "one": [
+          {
+            "name": "b",
+            "start": 4,
+            "end": 10
+          }
+        ],
+        "other": [
+          {
+            "name": "b",
+            "start": 5,
+            "end": 11
+          }
+        ]
+      }
+    },
+    "strings": {
+      "styled": [
+        {
+          "name": "b",
+          "start": 6,
+          "end": 12,
+          "attributes": {
+            "lane": "harbor\"side"
+          }
+        }
+      ]
+    }
+  },
+  "plurals": {
+    "signals": {
+      "one": "One \"quiet\" beacon",
+      "other": "%1$d \"quiet\" beacons"
+    },
+    "styled_signals": {
+      "one": "One \"quiet\" beacon",
+      "other": "%1$d \"quiet\" beacons"
+    }
+  },
+  "strings": {
+    "anchor": "Quiet harbor",
+    "entity_quote": "North\"pier near \"quiet\" water",
+    "escaped_entity_alias": "@string/anchor",
+    "placeholder": "Guide %1$s to \"north\"",
+    "scalar": "North\"pier and \"quiet\" water",
+    "styled": "North \"quiet\" pier"
+  },
+  "references": {
+    "entity_alias": "@string/anchor"
+  }
+}

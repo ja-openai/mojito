@@ -1,0 +1,22 @@
+{
+  "strings": {
+    "invalid_whitespace_size": "Pier"
+  },
+  "styledSpans": {
+    "strings": {
+      "invalid_whitespace_size": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "size": " 14"
+          },
+          "encodedTag": "font;size= 14",
+          "runtimeStyles": [],
+          "runtimeError": "NumberFormatException"
+        }
+      ]
+    }
+  }
+}

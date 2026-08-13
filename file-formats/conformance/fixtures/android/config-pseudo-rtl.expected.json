@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "locale": "ar-XB",
+  "messages": {
+    "route": {
+      "defaultMessage": "Waypoint",
+      "metadata": {
+        "androidResourcePath": "res/values-ar-rXB/strings.xml",
+        "androidResourceQualifiers": ["ar", "rXB"]
+      }
+    }
+  }
+}

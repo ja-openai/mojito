@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <macro name="harbor_phrase">A quiet harbor crossing</macro>
+    <string name="foreign_route">@neutral.distant.app:macro/harbor_phrase</string>
+</resources>

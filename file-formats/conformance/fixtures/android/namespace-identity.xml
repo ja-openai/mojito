@@ -1,0 +1,8 @@
+<resources xmlns:real="urn:oasis:names:tc:xliff:document:1.2"
+    xmlns:decoy="urn:mojito:neutral:foreign">
+  <string name="real_alias">Value <real:g id="actual" example="R7">R7</real:g></string>
+  <string name="foreign_alias">Value <decoy:g id="foreign">F4</decoy:g></string>
+  <string name="bare_style">Value <g id="plain">B2</g></string>
+  <string name="inline_foreign">One <decoy:note role="quiet">two <b>three</b></decoy:note> four</string>
+  <string name="real_without_id">Before <real:g>middle</real:g> after</string>
+</resources>

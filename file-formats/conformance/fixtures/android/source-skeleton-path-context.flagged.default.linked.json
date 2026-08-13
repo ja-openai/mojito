@@ -1,0 +1,39 @@
+{
+  "conditionalArrays": {
+    "lanes": {
+      "condition": "neutral.flags.path",
+      "values": [
+        "North <safe> & clear",
+        "@0x7f030000",
+        "South night lane"
+      ]
+    }
+  },
+  "conditionalPlurals": {
+    "signals": {
+      "condition": "neutral.flags.path",
+      "variants": {
+        "one": "%1$d quiet signal",
+        "other": "%1$d quiet signals"
+      }
+    }
+  },
+  "conditionalStrings": {
+    "anchor.route": {
+      "condition": "neutral.flags.path",
+      "value": "North harbor anchor"
+    },
+    "beacon": {
+      "condition": "neutral.flags.path",
+      "value": "Night beacon"
+    },
+    "private": {
+      "condition": "neutral.flags.path",
+      "value": "Keep private night note"
+    },
+    "route": {
+      "condition": "neutral.flags.path",
+      "value": "Tablet night passage"
+    }
+  }
+}

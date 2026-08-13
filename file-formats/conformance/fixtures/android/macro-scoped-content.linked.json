@@ -1,0 +1,36 @@
+{
+  "arrays": {
+    "harbor_routes": [
+      "@string/anchor",
+      "@string/anchor",
+      "@string/anchor",
+      "@string/anchor",
+      "@string/anchor",
+      "A visible harbor lane"
+    ]
+  },
+  "arrayReferences": {
+    "harbor_routes": {
+      "0": "@string/anchor",
+      "1": "@string/anchor",
+      "2": "@string/anchor",
+      "3": "@string/anchor",
+      "4": "@string/anchor"
+    }
+  },
+  "plurals": {
+    "harbor_signals": {
+      "other": "A visible harbor signal"
+    }
+  },
+  "pluralReferences": {
+    "harbor_signals": {
+      "one": "@string/anchor"
+    }
+  },
+  "strings": {
+    "anchor": "A steady harbor marker",
+    "ignored_foreign_style": "A wrapped harbor crossing",
+    "scoped_signal": "Signal %1$s"
+  }
+}

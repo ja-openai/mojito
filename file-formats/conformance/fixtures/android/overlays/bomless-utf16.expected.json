@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "signal": {
+      "defaultMessage": "Debug 🌊",
+      "metadata": {
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "build_type"
+      }
+    },
+    "library_only": {
+      "defaultMessage": "Distant 🧭",
+      "metadata": {
+        "androidResourcePath": "libraries/neutral/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "library"
+      }
+    },
+    "route": {
+      "defaultMessage": "Quiet café",
+      "metadata": {
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "main"
+      }
+    }
+  }
+}

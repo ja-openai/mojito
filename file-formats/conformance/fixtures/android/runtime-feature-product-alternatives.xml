@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <string name="harbor_route" product="default">A default harbor route</string>
+    <string name="harbor_route" product="tablet">A tablet harbor route</string>
+    <string name="harbor_route" product="default" android:featureFlag="neutral.flags.first">A conditional default harbor route</string>
+    <string name="harbor_route" product="tablet" android:featureFlag="neutral.flags.second">A conditional tablet harbor route</string>
+</resources>

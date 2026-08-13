@@ -1,0 +1,9 @@
+<resources xmlns:drift="urn:neutral:drifting-resource">
+  <drift:string name="foreign_shadow">Never shadow the protected marker</drift:string>
+  <string name="route.marker">Updated coastal marker</string>
+  <array name="route.bundle">
+    <skip/>
+    <item>17</item>
+    <item>Updated channel</item>
+  </array>
+</resources>

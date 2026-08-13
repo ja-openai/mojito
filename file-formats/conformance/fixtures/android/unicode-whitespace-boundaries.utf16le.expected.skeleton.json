@@ -1,0 +1,253 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-16LE-BOM",
+  "source": "<?xml version=\"1.0\"?>\n<resources>\n  <string name=\"entity_next_line\">north&#x85;   west</string>\n  <string name=\"escaped_next_line\">north\\u0085   west</string>\n  <string name=\"boundary_next_line\">   &amp;#literal \\u0085   west   \\u0085   </string>\n  <string name=\"entity_no_break\">north&#xA0;   west</string>\n  <string name=\"escaped_no_break\">north\\u00A0   west</string>\n  <string name=\"boundary_no_break\">   &amp;#literal \\u00A0   west   \\u00A0   </string>\n  <string name=\"entity_ogham\">north&#x1680;   west</string>\n  <string name=\"escaped_ogham\">north\\u1680   west</string>\n  <string name=\"boundary_ogham\">   &amp;#literal \\u1680   west   \\u1680   </string>\n  <string name=\"entity_mongolian\">north&#x180E;   west</string>\n  <string name=\"escaped_mongolian\">north\\u180E   west</string>\n  <string name=\"boundary_mongolian\">   &amp;#literal \\u180E   west   \\u180E   </string>\n  <string name=\"entity_en_quad\">north&#x2000;   west</string>\n  <string name=\"escaped_en_quad\">north\\u2000   west</string>\n  <string name=\"boundary_en_quad\">   &amp;#literal \\u2000   west   \\u2000   </string>\n  <string name=\"entity_em_space\">north&#x2003;   west</string>\n  <string name=\"escaped_em_space\">north\\u2003   west</string>\n  <string name=\"boundary_em_space\">   &amp;#literal \\u2003   west   \\u2003   </string>\n  <string name=\"entity_figure\">north&#x2007;   west</string>\n  <string name=\"escaped_figure\">north\\u2007   west</string>\n  <string name=\"boundary_figure\">   &amp;#literal \\u2007   west   \\u2007   </string>\n  <string name=\"entity_punctuation\">north&#x2008;   west</string>\n  <string name=\"escaped_punctuation\">north\\u2008   west</string>\n  <string name=\"boundary_punctuation\">   &amp;#literal \\u2008   west   \\u2008   </string>\n  <string name=\"entity_hair\">north&#x200A;   west</string>\n  <string name=\"escaped_hair\">north\\u200A   west</string>\n  <string name=\"boundary_hair\">   &amp;#literal \\u200A   west   \\u200A   </string>\n  <string name=\"entity_zero_width\">north&#x200B;   west</string>\n  <string name=\"escaped_zero_width\">north\\u200B   west</string>\n  <string name=\"boundary_zero_width\">   &amp;#literal \\u200B   west   \\u200B   </string>\n  <string name=\"entity_line_separator\">north&#x2028;   west</string>\n  <string name=\"escaped_line_separator\">north\\u2028   west</string>\n  <string name=\"boundary_line_separator\">   &amp;#literal \\u2028   west   \\u2028   </string>\n  <string name=\"entity_paragraph_separator\">north&#x2029;   west</string>\n  <string name=\"escaped_paragraph_separator\">north\\u2029   west</string>\n  <string name=\"boundary_paragraph_separator\">   &amp;#literal \\u2029   west   \\u2029   </string>\n  <string name=\"entity_narrow_no_break\">north&#x202F;   west</string>\n  <string name=\"escaped_narrow_no_break\">north\\u202F   west</string>\n  <string name=\"boundary_narrow_no_break\">   &amp;#literal \\u202F   west   \\u202F   </string>\n  <string name=\"entity_medium_math\">north&#x205F;   west</string>\n  <string name=\"escaped_medium_math\">north\\u205F   west</string>\n  <string name=\"boundary_medium_math\">   &amp;#literal \\u205F   west   \\u205F   </string>\n  <string name=\"entity_ideographic\">north&#x3000;   west</string>\n  <string name=\"escaped_ideographic\">north\\u3000   west</string>\n  <string name=\"boundary_ideographic\">   &amp;#literal \\u3000   west   \\u3000   </string>\n  <string name=\"entity_byte_order_mark\">north&#xFEFF;   west</string>\n  <string name=\"escaped_byte_order_mark\">north\\uFEFF   west</string>\n  <string name=\"boundary_byte_order_mark\">   &amp;#literal \\uFEFF   west   \\uFEFF   </string>\n  <string name=\"quoted_unicode\">\"  &#x2003;   west &#xA0;  \"</string>\n</resources>\n",
+  "slots": [
+    {
+      "id": "entity_next_line",
+      "start": 138,
+      "end": 174
+    },
+    {
+      "id": "escaped_next_line",
+      "start": 264,
+      "end": 300
+    },
+    {
+      "id": "boundary_next_line",
+      "start": 392,
+      "end": 476
+    },
+    {
+      "id": "entity_no_break",
+      "start": 562,
+      "end": 598
+    },
+    {
+      "id": "escaped_no_break",
+      "start": 686,
+      "end": 722
+    },
+    {
+      "id": "boundary_no_break",
+      "start": 812,
+      "end": 896
+    },
+    {
+      "id": "entity_ogham",
+      "start": 976,
+      "end": 1016
+    },
+    {
+      "id": "escaped_ogham",
+      "start": 1098,
+      "end": 1134
+    },
+    {
+      "id": "boundary_ogham",
+      "start": 1218,
+      "end": 1302
+    },
+    {
+      "id": "entity_mongolian",
+      "start": 1390,
+      "end": 1430
+    },
+    {
+      "id": "escaped_mongolian",
+      "start": 1520,
+      "end": 1556
+    },
+    {
+      "id": "boundary_mongolian",
+      "start": 1648,
+      "end": 1732
+    },
+    {
+      "id": "entity_en_quad",
+      "start": 1816,
+      "end": 1856
+    },
+    {
+      "id": "escaped_en_quad",
+      "start": 1942,
+      "end": 1978
+    },
+    {
+      "id": "boundary_en_quad",
+      "start": 2066,
+      "end": 2150
+    },
+    {
+      "id": "entity_em_space",
+      "start": 2236,
+      "end": 2276
+    },
+    {
+      "id": "escaped_em_space",
+      "start": 2364,
+      "end": 2400
+    },
+    {
+      "id": "boundary_em_space",
+      "start": 2490,
+      "end": 2574
+    },
+    {
+      "id": "entity_figure",
+      "start": 2656,
+      "end": 2696
+    },
+    {
+      "id": "escaped_figure",
+      "start": 2780,
+      "end": 2816
+    },
+    {
+      "id": "boundary_figure",
+      "start": 2902,
+      "end": 2986
+    },
+    {
+      "id": "entity_punctuation",
+      "start": 3078,
+      "end": 3118
+    },
+    {
+      "id": "escaped_punctuation",
+      "start": 3212,
+      "end": 3248
+    },
+    {
+      "id": "boundary_punctuation",
+      "start": 3344,
+      "end": 3428
+    },
+    {
+      "id": "entity_hair",
+      "start": 3506,
+      "end": 3546
+    },
+    {
+      "id": "escaped_hair",
+      "start": 3626,
+      "end": 3662
+    },
+    {
+      "id": "boundary_hair",
+      "start": 3744,
+      "end": 3828
+    },
+    {
+      "id": "entity_zero_width",
+      "start": 3918,
+      "end": 3958
+    },
+    {
+      "id": "escaped_zero_width",
+      "start": 4050,
+      "end": 4086
+    },
+    {
+      "id": "boundary_zero_width",
+      "start": 4180,
+      "end": 4264
+    },
+    {
+      "id": "entity_line_separator",
+      "start": 4362,
+      "end": 4402
+    },
+    {
+      "id": "escaped_line_separator",
+      "start": 4502,
+      "end": 4538
+    },
+    {
+      "id": "boundary_line_separator",
+      "start": 4640,
+      "end": 4724
+    },
+    {
+      "id": "entity_paragraph_separator",
+      "start": 4832,
+      "end": 4872
+    },
+    {
+      "id": "escaped_paragraph_separator",
+      "start": 4982,
+      "end": 5018
+    },
+    {
+      "id": "boundary_paragraph_separator",
+      "start": 5130,
+      "end": 5214
+    },
+    {
+      "id": "entity_narrow_no_break",
+      "start": 5314,
+      "end": 5354
+    },
+    {
+      "id": "escaped_narrow_no_break",
+      "start": 5456,
+      "end": 5492
+    },
+    {
+      "id": "boundary_narrow_no_break",
+      "start": 5596,
+      "end": 5680
+    },
+    {
+      "id": "entity_medium_math",
+      "start": 5772,
+      "end": 5812
+    },
+    {
+      "id": "escaped_medium_math",
+      "start": 5906,
+      "end": 5942
+    },
+    {
+      "id": "boundary_medium_math",
+      "start": 6038,
+      "end": 6122
+    },
+    {
+      "id": "entity_ideographic",
+      "start": 6214,
+      "end": 6254
+    },
+    {
+      "id": "escaped_ideographic",
+      "start": 6348,
+      "end": 6384
+    },
+    {
+      "id": "boundary_ideographic",
+      "start": 6480,
+      "end": 6564
+    },
+    {
+      "id": "entity_byte_order_mark",
+      "start": 6664,
+      "end": 6704
+    },
+    {
+      "id": "escaped_byte_order_mark",
+      "start": 6806,
+      "end": 6842
+    },
+    {
+      "id": "boundary_byte_order_mark",
+      "start": 6946,
+      "end": 7030
+    },
+    {
+      "id": "quoted_unicode",
+      "start": 7114,
+      "end": 7170
+    }
+  ]
+}

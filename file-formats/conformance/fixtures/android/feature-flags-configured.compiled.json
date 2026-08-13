@@ -1,0 +1,79 @@
+{
+  "arrays": {
+    "bag_routes": [
+      "Hidden bag passage",
+      "Visible bag passage",
+      "Final bag passage"
+    ],
+    "mixed_routes": [
+      "7",
+      "17",
+      "Visible typed passage",
+      "Hidden typed passage",
+      "@string/anchor",
+      "31",
+      "Final typed passage"
+    ],
+    "routes": [
+      "Always first passage",
+      "Enabled passage",
+      "Disabled passage",
+      "Negated passage",
+      "@string/anchor",
+      "@string/anchor",
+      "@string/anchor",
+      "Final open passage"
+    ]
+  },
+  "arrayPrimitiveValues": {
+    "mixed_routes": {
+      "0": "7",
+      "1": "17",
+      "5": "31"
+    }
+  },
+  "arrayReferences": {
+    "mixed_routes": {
+      "4": "@string/anchor"
+    },
+    "routes": {
+      "4": "@string/anchor",
+      "5": "@string/anchor",
+      "6": "@string/anchor"
+    }
+  },
+  "plurals": {
+    "bag_signals": {
+      "one": "One hidden bag beacon",
+      "other": "Several hidden bag beacons"
+    },
+    "signals_disabled": {
+      "one": "One disabled beacon",
+      "other": "Several disabled beacons"
+    },
+    "signals_enabled": {
+      "one": "One enabled beacon",
+      "other": "Several enabled beacons"
+    }
+  },
+  "strings": {
+    "anchor": "Quiet harbor anchor",
+    "enabled": "Enabled harbor route",
+    "generic_enabled": "Enabled generic signal",
+    "negative": "Negated harbor route"
+  },
+  "productVariants": {
+    "disabled": [
+      "Disabled harbor route",
+      "Disabled harbor route"
+    ],
+    "exclusive": [
+      "Enabled exclusive lane",
+      "Disabled exclusive lane"
+    ],
+    "generic_disabled": [
+      "Disabled generic signal",
+      "Disabled generic signal"
+    ]
+  }
+}

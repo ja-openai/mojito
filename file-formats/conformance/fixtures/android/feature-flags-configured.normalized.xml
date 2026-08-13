@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+  <string name="anchor">"Quiet harbor anchor"</string>
+  <bag type="string-array" name="bag_routes" android:featureFlag="!neutral.flags.disabled">
+    <item android:featureFlag="neutral.flags.enabled">"Visible bag passage"</item>
+    <item>"Final bag passage"</item>
+  </bag>
+  <string name="enabled" android:featureFlag="neutral.flags.enabled">"Enabled harbor route"</string>
+  <string name="exclusive" android:featureFlag="neutral.flags.enabled">"Enabled exclusive lane"</string>
+  <item type="string" name="generic_enabled" android:featureFlag="neutral.flags.enabled" format="string">"Enabled generic signal"</item>
+  <array name="mixed_routes">
+    <item>17</item>
+    <item android:featureFlag="neutral.flags.enabled">"Visible typed passage"</item>
+    <item android:featureFlag="!neutral.flags.disabled">@string/anchor</item>
+    <item android:featureFlag="neutral.flags.enabled">31</item>
+    <item>"Final typed passage"</item>
+  </array>
+  <string name="negative" android:featureFlag="!neutral.flags.disabled">"Negated harbor route"</string>
+  <string-array name="routes" android:featureFlag="!neutral.flags.disabled">
+    <item>"Always first passage"</item>
+    <item android:featureFlag="neutral.flags.enabled">"Enabled passage"</item>
+    <item android:featureFlag="!neutral.flags.disabled">"Negated passage"</item>
+    <item>@string/anchor</item>
+    <item android:featureFlag="neutral.flags.enabled">@string/anchor</item>
+    <item>"Final open passage"</item>
+  </string-array>
+  <plurals name="signals_enabled" android:featureFlag="neutral.flags.enabled">
+    <item quantity="one">"One enabled beacon"</item>
+    <item quantity="other">"Several enabled beacons"</item>
+  </plurals>
+</resources>

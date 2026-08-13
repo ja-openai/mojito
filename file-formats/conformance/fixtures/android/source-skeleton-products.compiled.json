@@ -1,0 +1,35 @@
+{
+  "arrayReferences": {
+    "harbor.lanes": {
+      "1": "@string/anchor"
+    }
+  },
+  "arrays": {
+    "harbor.lanes": [
+      "Default north lane",
+      "@string/anchor",
+      "Default south lane"
+    ]
+  },
+  "plurals": {
+    "tide.count": {
+      "one": "",
+      "other": "%1$d tablet beacons"
+    }
+  },
+  "productVariants": {
+    "harbor.route": [
+      "Open harbor passage",
+      "Tablet harbor passage",
+      "Watch <quiet> & clear"
+    ],
+    "harbor.signal": [
+      "Default harbor signal",
+      ""
+    ]
+  },
+  "strings": {
+    "anchor": "Safe harbor anchor",
+    "private.route": "Protected private route"
+  }
+}

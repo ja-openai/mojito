@@ -1,0 +1,60 @@
+{
+  "arrayReferences": {
+    "harbor_routes": {
+      "0": "@macro/scoped_signal",
+      "1": "?attr/passage",
+      "2": "?attr/direction",
+      "3": "?attr/distance",
+      "4": "?attr/open_water"
+    }
+  },
+  "arrays": {
+    "harbor_routes": [
+      "@macro/scoped_signal",
+      "?attr/passage",
+      "?attr/direction",
+      "?attr/distance",
+      "?attr/open_water",
+      "A charted passage",
+      "Another charted passage"
+    ]
+  },
+  "attributes": {
+    "direction": {
+      "format": "flags",
+      "symbols": {
+        "east": "0x00000001",
+        "west": "0x00000002"
+      }
+    },
+    "distance": {
+      "format": "integer"
+    },
+    "open_water": {
+      "format": "any"
+    },
+    "passage": {
+      "format": "enum",
+      "symbols": {
+        "bright": "0x00000002",
+        "quiet": "0x00000000"
+      }
+    },
+    "signal": {
+      "format": "reference|string"
+    }
+  },
+  "macros": [
+    "scoped_signal"
+  ],
+  "pluralReferences": {
+    "harbor_signals": {
+      "one": "?attr/distance"
+    }
+  },
+  "plurals": {
+    "harbor_signals": {
+      "other": "%d visible signals"
+    }
+  }
+}

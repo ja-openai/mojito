@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<resources>
+  <string name="anchor">Shared café anchor</string>
+  <string name="route">Main default café route</string>
+  <string name="route" product="tablet">Main tablet café route</string>
+  <string name="active">Main default café beacon</string>
+  <string name="active" product="tablet">Main tablet café beacon</string>
+  <string name="fallback">Main café fallback</string>
+  <plurals name="signals">
+    <item quantity="one">One main default café signal</item>
+    <item quantity="other">Several main default café signals</item>
+  </plurals>
+  <plurals name="signals" product="tablet">
+    <item quantity="one">One main tablet café signal</item>
+    <item quantity="other">Several main tablet café signals</item>
+  </plurals>
+  <array name="lanes">
+    <item>Main default café channel</item>
+  </array>
+  <array name="lanes" product="tablet">
+    <item>Main tablet café channel</item>
+  </array>
+</resources>

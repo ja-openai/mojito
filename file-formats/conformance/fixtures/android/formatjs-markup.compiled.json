@@ -1,0 +1,67 @@
+{
+  "strings": {
+    "angle_attribute": "steady",
+    "annotated": "North",
+    "apostrophe_text": "pilot isn't ready",
+    "attribute_placeholder": "%1$s",
+    "nested": "Proceed %1$s",
+    "unicode_span": "🧭 東🙂 fin"
+  },
+  "arrays": {
+    "waypoints": ["East"]
+  },
+  "plurals": {
+    "notices": {
+      "one": "%1$d notice",
+      "other": "%1$d notices"
+    }
+  },
+  "styledSpans": {
+    "strings": {
+      "angle_attribute": [
+        { "name": "annotation", "start": 0, "end": 5, "attributes": { "note": "A > B" } }
+      ],
+      "annotated": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 4,
+          "attributes": { "role": "navigator", "tone": "pilot's cue" }
+        }
+      ],
+      "apostrophe_text": [
+        { "name": "annotation", "start": 0, "end": 16, "attributes": { "tone": "clear" } }
+      ],
+      "attribute_placeholder": [
+        { "name": "annotation", "start": 0, "end": 3, "attributes": { "tone": "%1$s" } }
+      ],
+      "nested": [
+        {
+          "name": "a",
+          "start": 8,
+          "end": 11,
+          "attributes": { "href": "https://neutral.invalid/r?step=1&lane=2" }
+        },
+        { "name": "b", "start": 8, "end": 11 }
+      ],
+      "unicode_span": [
+        { "name": "annotation", "start": 3, "end": 5, "attributes": { "role": "route" } }
+      ]
+    },
+    "arrays": {
+      "waypoints": {
+        "0": [{ "name": "font", "start": 0, "end": 3, "attributes": { "color": "#204080" } }]
+      }
+    },
+    "plurals": {
+      "notices": {
+        "one": [
+          { "name": "annotation", "start": 0, "end": 10, "attributes": { "tone": "quiet" } }
+        ],
+        "other": [
+          { "name": "annotation", "start": 0, "end": 11, "attributes": { "tone": "quiet" } }
+        ]
+      }
+    }
+  }
+}

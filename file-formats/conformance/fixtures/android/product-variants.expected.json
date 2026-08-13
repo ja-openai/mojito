@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "button": {
+      "defaultMessage": "Open",
+      "metadata": { "androidProduct": "default" }
+    },
+    "button@product=tablet": {
+      "defaultMessage": "Launch",
+      "metadata": { "androidProduct": "tablet" }
+    },
+    "button@product=watch": {
+      "defaultMessage": "Begin",
+      "metadata": { "androidProduct": "watch" }
+    },
+    "solo@product=tablet": {
+      "defaultMessage": "Tablet signal",
+      "metadata": { "androidProduct": "tablet" }
+    },
+    "alerts@product=tablet": {
+      "defaultMessage": "{arg0, plural, one {{arg0} tablet alert} other {{arg0} tablet alerts}}",
+      "variants": {
+        "one": "{arg0} tablet alert",
+        "other": "{arg0} tablet alerts"
+      },
+      "placeholders": [{ "name": "arg0", "source": "%1$d", "kind": "integer", "position": 1 }],
+      "metadata": { "androidProduct": "tablet" }
+    },
+    "labels@product=watch[0]": {
+      "defaultMessage": "Compact",
+      "metadata": { "arrayIndex": 0, "arrayName": "labels", "androidProduct": "watch" }
+    },
+    "labels@product=watch[1]": {
+      "defaultMessage": "Quick",
+      "metadata": { "arrayIndex": 1, "arrayName": "labels", "androidProduct": "watch" }
+    }
+  }
+}

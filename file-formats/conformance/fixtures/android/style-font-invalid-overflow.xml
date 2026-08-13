@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="invalid_overflow_size"><font size="2147483648">Pier</font></string>
+</resources>

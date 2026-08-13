@@ -1,0 +1,366 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "arabic_decimal_size": {
+      "defaultMessage": "'<'font size=\"١٤\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "color_injects_background": {
+      "defaultMessage": "'<'font color=\"#112233;bgcolor=#abcdef\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff112233",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "#112233"
+              },
+              {
+                "attribute": "bgcolor",
+                "color": {
+                  "argb": "#ffabcdef",
+                  "mode": "literal"
+                },
+                "kind": "background",
+                "value": "#abcdef"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "duplicate_size": {
+      "defaultMessage": "'<'font route=\"north;size=18;size=27\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "size",
+                "kind": "size",
+                "value": "18"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "face_injects_color": {
+      "defaultMessage": "'<'font face=\"harbor;color=#123456\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff123456",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "#123456"
+              },
+              {
+                "attribute": "face",
+                "kind": "face",
+                "value": "harbor"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "fullwidth_decimal_height": {
+      "defaultMessage": "'<'font height=\"１２\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "leading_zero_size": {
+      "defaultMessage": "'<'font size=\"0014\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "link_first_wins": {
+      "defaultMessage": "'<'a href=\"https://neutral.invalid/direct\" route=\"north;href=https://neutral.invalid/shadow\">Pier'<'/a>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "link_injected": {
+      "defaultMessage": "'<'a route=\"north;href=https://neutral.invalid/p\">Pier'<'/a>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "href",
+                "kind": "link",
+                "value": "https://neutral.invalid/p"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "link_missing": {
+      "defaultMessage": "'<'a route=\"north\">Pier'<'/a>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "link_truncated": {
+      "defaultMessage": "'<'a href=\"https://neutral.invalid/p;lane=west\">Pier'<'/a>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "href",
+                "kind": "link",
+                "value": "https://neutral.invalid/p"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "maximum_decimal_size": {
+      "defaultMessage": "'<'font size=\"2147483647\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "minimum_arabic_decimal_height": {
+      "defaultMessage": "'<'font height=\"-٢١٤٧٤٨٣٦٤٨\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "mixed_decimal_scripts": {
+      "defaultMessage": "'<'font size=\"١4\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "multiple_foregrounds": {
+      "defaultMessage": "'<'font color=\"#123456\" fgcolor=\"#abcdef\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "fgcolor",
+                "color": {
+                  "argb": "#ffabcdef",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "#abcdef"
+              },
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff123456",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "#123456"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "negative_height": {
+      "defaultMessage": "'<'font height=\"-7\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "nested_styles": {
+      "defaultMessage": "'<'font route=\"north;size=18\">'<'a route=\"west;href=https://neutral.invalid/p\">🧭 Pier'<'/a>'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "size",
+                "kind": "size",
+                "value": "18"
+              }
+            ],
+            "span": 0
+          },
+          {
+            "effects": [
+              {
+                "attribute": "href",
+                "kind": "link",
+                "value": "https://neutral.invalid/p"
+              }
+            ],
+            "span": 1
+          }
+        ]
+      }
+    },
+    "runtime_style_routes[0]": {
+      "defaultMessage": "'<'font route=\"north;fgcolor=#123456\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "fgcolor",
+                "color": {
+                  "argb": "#ff123456",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "#123456"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 0,
+        "arrayName": "runtime_style_routes"
+      }
+    },
+    "runtime_style_routes[1]": {
+      "defaultMessage": "'<'a route=\"south;href=https://neutral.invalid/r\">Pier'<'/a>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "href",
+                "kind": "link",
+                "value": "https://neutral.invalid/r"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 1,
+        "arrayName": "runtime_style_routes"
+      }
+    },
+    "runtime_style_signals": {
+      "defaultMessage": "{arg0, plural, one {'<'font route=\"north;size=18\">{arg0} beacon'<'/font>} other {'<'a route=\"south;href=https://neutral.invalid/beacons\">{arg0} beacons'<'/a>}}",
+      "variants": {
+        "one": "'<'font route=\"north;size=18\">{arg0} beacon'<'/font>",
+        "other": "'<'a route=\"south;href=https://neutral.invalid/beacons\">{arg0} beacons'<'/a>"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidPluralRuntimeStyles": {
+          "one": [
+            {
+              "effects": [
+                {
+                  "attribute": "size",
+                  "kind": "size",
+                  "value": "18"
+                }
+              ],
+              "span": 0
+            }
+          ],
+          "other": [
+            {
+              "effects": [
+                {
+                  "attribute": "href",
+                  "kind": "link",
+                  "value": "https://neutral.invalid/beacons"
+                }
+              ],
+              "span": 0
+            }
+          ]
+        }
+      }
+    },
+    "signed_size": {
+      "defaultMessage": "'<'font size=\"+14\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "unknown_injects_many": {
+      "defaultMessage": "'<'font route=\"north;face=serif;size=12\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "size",
+                "kind": "size",
+                "value": "12"
+              },
+              {
+                "attribute": "face",
+                "kind": "face",
+                "value": "serif"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "unknown_injects_size": {
+      "defaultMessage": "'<'font route=\"north;size=18\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "size",
+                "kind": "size",
+                "value": "18"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    }
+  }
+}

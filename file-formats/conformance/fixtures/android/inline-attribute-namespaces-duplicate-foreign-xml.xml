@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<resources xmlns:f="urn:neutral:span-attributes" xmlns:android="http://schemas.android.com/apk/res/android">
+  <string name="duplicate"><annotation f:lang="foreign" xml:lang="fr">Signal</annotation></string>
+</resources>

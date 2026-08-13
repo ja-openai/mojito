@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": {
+      "defaultMessage": "Quiet harbor anchor"
+    },
+    "bag_signals": {
+      "defaultMessage": "{count, plural, one {One hidden bag beacon} other {Several hidden bag beacons}}",
+      "variants": {
+        "one": "One hidden bag beacon",
+        "other": "Several hidden bag beacons"
+      },
+      "metadata": {
+        "androidBagType": "plurals",
+        "androidFeatureFlag": "neutral.flags.disabled"
+      }
+    },
+    "disabled": {
+      "defaultMessage": "Disabled harbor route",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.disabled"
+      }
+    },
+    "exclusive": {
+      "defaultMessage": "Disabled exclusive lane",
+      "metadata": {
+        "androidFeatureFlag": "!neutral.flags.enabled"
+      }
+    },
+    "generic_disabled": {
+      "defaultMessage": "Disabled generic signal",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.disabled",
+        "androidGenericFormat": "string",
+        "androidGenericString": true
+      }
+    },
+    "mixed_routes[2]": {
+      "defaultMessage": "Hidden typed passage",
+      "metadata": {
+        "androidArrayFeatureFlags": {
+          "0": "neutral.flags.disabled",
+          "2": "neutral.flags.disabled"
+        },
+        "androidArrayPrimitives": {
+          "0": "7",
+          "1": "17"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 2,
+        "arrayName": "mixed_routes"
+      }
+    },
+    "mixed_routes[3]": {
+      "defaultMessage": "Final typed passage",
+      "metadata": {
+        "androidArrayFeatureFlags": {
+          "0": "neutral.flags.disabled",
+          "2": "neutral.flags.disabled"
+        },
+        "androidArrayPrimitives": {
+          "0": "7",
+          "1": "17"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 3,
+        "arrayName": "mixed_routes"
+      }
+    },
+    "signals_disabled": {
+      "defaultMessage": "{count, plural, one {One disabled beacon} other {Several disabled beacons}}",
+      "variants": {
+        "one": "One disabled beacon",
+        "other": "Several disabled beacons"
+      },
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.disabled"
+      }
+    }
+  }
+}

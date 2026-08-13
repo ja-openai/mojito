@@ -1,0 +1,3 @@
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <macro name="harbor_phrase" android:featureFlag="neutral.flags.missing">A harbor with an undefined condition</macro>
+</resources>

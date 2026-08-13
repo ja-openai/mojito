@@ -1,0 +1,11 @@
+<resources>
+  <string name="anchor">Base harbor</string>
+  <string-array name="routes">
+    <item>@string/anchor</item>
+    <item>Base channel</item>
+  </string-array>
+  <plurals name="signals">
+    <item quantity="one">@string/anchor</item>
+    <item quantity="other">%1$d base signals</item>
+  </plurals>
+</resources>

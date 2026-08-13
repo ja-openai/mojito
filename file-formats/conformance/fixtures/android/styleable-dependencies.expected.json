@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "harbor_routes[5]": {
+      "defaultMessage": "A charted styleable passage",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "?attr/route_signal",
+          "1": "?attr/depth_scale",
+          "2": "?attr/passage_mode",
+          "3": "?attr/beam_direction",
+          "4": "?attr/shared_signal"
+        },
+        "androidAttributeDependencies": [
+          {
+            "format": "flags",
+            "name": "beam_direction",
+            "symbols": [
+              {
+                "kind": "flag",
+                "name": "east",
+                "value": 1
+              },
+              {
+                "kind": "flag",
+                "name": "west",
+                "value": 2
+              }
+            ],
+            "weak": true
+          },
+          {
+            "format": "integer",
+            "max": 32,
+            "min": -3,
+            "name": "depth_scale",
+            "weak": true
+          },
+          {
+            "format": "enum",
+            "name": "passage_mode",
+            "symbols": [
+              {
+                "kind": "enum",
+                "name": "bright",
+                "value": 2
+              },
+              {
+                "kind": "enum",
+                "name": "quiet",
+                "value": 0
+              }
+            ],
+            "weak": true
+          },
+          {
+            "format": "reference|string",
+            "name": "route_signal",
+            "weak": true
+          },
+          {
+            "format": "string",
+            "name": "shared_signal"
+          }
+        ],
+        "androidStyleableDependencies": [
+          {
+            "attributes": [
+              {
+                "format": "reference|string",
+                "name": "route_signal"
+              },
+              {
+                "format": "flags",
+                "name": "beam_direction",
+                "symbols": [
+                  {
+                    "kind": "flag",
+                    "name": "east",
+                    "value": 1
+                  },
+                  {
+                    "kind": "flag",
+                    "name": "west",
+                    "value": 2
+                  }
+                ]
+              }
+            ],
+            "generic": true,
+            "name": "HarborBeacon"
+          },
+          {
+            "attributes": [
+              {
+                "format": "reference|string",
+                "name": "route_signal"
+              },
+              {
+                "format": "integer",
+                "max": 32,
+                "min": -3,
+                "name": "depth_scale"
+              },
+              {
+                "format": "enum",
+                "name": "passage_mode",
+                "symbols": [
+                  {
+                    "kind": "enum",
+                    "name": "bright",
+                    "value": 2
+                  },
+                  {
+                    "kind": "enum",
+                    "name": "quiet",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "name": "shared_signal"
+              },
+              {
+                "format": "reference|string",
+                "name": "route_signal"
+              }
+            ],
+            "name": "HarborCompass"
+          }
+        ],
+        "arrayIndex": 5,
+        "arrayName": "harbor_routes"
+      }
+    },
+    "harbor_signals": {
+      "defaultMessage": "{arg0, plural, other {{arg0} visible styleable signals}}",
+      "variants": {
+        "other": "{arg0} visible styleable signals"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidAttributeDependencies": [
+          {
+            "format": "enum",
+            "name": "passage_mode",
+            "symbols": [
+              {
+                "kind": "enum",
+                "name": "bright",
+                "value": 2
+              },
+              {
+                "kind": "enum",
+                "name": "quiet",
+                "value": 0
+              }
+            ],
+            "weak": true
+          }
+        ],
+        "androidPluralReferences": {
+          "one": "?attr/passage_mode"
+        },
+        "androidStyleableDependencies": [
+          {
+            "attributes": [
+              {
+                "format": "reference|string",
+                "name": "route_signal"
+              },
+              {
+                "format": "integer",
+                "max": 32,
+                "min": -3,
+                "name": "depth_scale"
+              },
+              {
+                "format": "enum",
+                "name": "passage_mode",
+                "symbols": [
+                  {
+                    "kind": "enum",
+                    "name": "bright",
+                    "value": 2
+                  },
+                  {
+                    "kind": "enum",
+                    "name": "quiet",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "name": "shared_signal"
+              },
+              {
+                "format": "reference|string",
+                "name": "route_signal"
+              }
+            ],
+            "name": "HarborCompass"
+          }
+        ]
+      }
+    }
+  }
+}

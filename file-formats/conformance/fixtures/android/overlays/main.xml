@@ -1,0 +1,10 @@
+<resources>
+  <string name="signal">Main signal</string>
+  <string name="main_only">Main lantern</string>
+  <string-array name="directions">
+    <item>Main east</item>
+  </string-array>
+  <plurals name="alerts">
+    <item quantity="other">Main bells</item>
+  </plurals>
+</resources>

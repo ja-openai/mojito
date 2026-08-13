@@ -1,0 +1,5 @@
+<resources>
+  <bag type="nebula" name="routes.bag">
+    <item>Unknown coastal channel</item>
+  </bag>
+</resources>

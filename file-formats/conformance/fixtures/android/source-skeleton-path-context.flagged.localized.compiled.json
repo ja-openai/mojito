@@ -1,0 +1,32 @@
+{
+  "arrayReferences": {
+    "lanes": {
+      "1": "@string/anchor.route"
+    }
+  },
+  "arrays": {
+    "lanes": [
+      "Nord <clair> & sûr",
+      "@string/anchor.route",
+      "Sud français"
+    ]
+  },
+  "configuration": "fr-night-v8",
+  "plurals": {
+    "signals": {
+      "one": "%1$d signal français",
+      "other": "%1$d signaux français"
+    }
+  },
+  "productVariants": {
+    "route": [
+      "Passage français",
+      "Passage tablette français"
+    ]
+  },
+  "strings": {
+    "anchor.route": "Ancre française",
+    "beacon": "Balise française",
+    "private": "Keep private night note"
+  }
+}

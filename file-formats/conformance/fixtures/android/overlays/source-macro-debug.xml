@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:signal="urn:oasis:names:tc:xliff:document:1.2">
+  <!-- Higher-priority definitions replace dependencies without rewriting their sources. -->
+  <macro name="harbor_phrase">An upper harbor</macro>
+  <macro name="styled_phrase">Upper <b tone="bright">harbor</b></macro>
+  <macro name="protected_phrase">Upper <signal:g id="pilot" example="D&amp;7">%1$s</signal:g></macro>
+  <macro name="scoped_chain" xmlns:route="http://schemas.android.com/apk/res-auto">@route:macro/harbor_phrase</macro>
+</resources>

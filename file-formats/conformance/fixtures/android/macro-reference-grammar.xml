@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:auto="http://schemas.android.com/apk/res-auto"
+    xmlns:harbor="http://schemas.android.com/apk/res/neutral.harbor.app"
+    xmlns:privateharbor="http://schemas.android.com/apk/prv/res/neutral.harbor.app"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <macro name="harbor_phrase">A quiet harbor crossing</macro>
+    <macro name="styled_phrase">A <b>steady</b> harbor light</macro>
+    <macro name="protected_phrase">Signal <xliff:g id="marker" example="Q-7">%1$s</xliff:g></macro>
+    <macro name="auto_chain">@auto:macro/harbor_phrase</macro>
+    <macro name="package_chain">@neutral.harbor.app:macro/harbor_phrase</macro>
+    <macro name="private_chain">@*neutral.harbor.app:macro/harbor_phrase</macro>
+    <macro name="scoped_chain" xmlns:route="http://schemas.android.com/apk/res-auto">@route:macro/harbor_phrase</macro>
+    <string name="local_route">@macro/harbor_phrase</string>
+    <string name="private_route">@*macro/harbor_phrase</string>
+    <string name="package_route">@neutral.harbor.app:macro/harbor_phrase</string>
+    <string name="private_package_route">@*neutral.harbor.app:macro/harbor_phrase</string>
+    <string name="auto_route">@auto:macro/harbor_phrase</string>
+    <string name="package_alias_route">@harbor:macro/harbor_phrase</string>
+    <string name="private_alias_route">@privateharbor:macro/harbor_phrase</string>
+    <string name="auto_chained_route">@macro/auto_chain</string>
+    <string name="package_chained_route">@macro/package_chain</string>
+    <string name="private_chained_route">@macro/private_chain</string>
+    <string name="scoped_chained_route">@macro/scoped_chain</string>
+    <string name="styled_private_route">@*macro/styled_phrase</string>
+    <string name="protected_package_route">@harbor:macro/protected_phrase</string>
+    <string name="escaped_route">\@macro/harbor_phrase</string>
+    <string name="literal_star_colon_route">@*:macro/harbor_phrase</string>
+    <item type="string" name="generic_route">@auto:macro/harbor_phrase</item>
+    <string-array name="harbor_routes">
+        <item>@*macro/harbor_phrase</item>
+        <item>@harbor:macro/harbor_phrase</item>
+        <item>@macro/scoped_chain</item>
+    </string-array>
+    <plurals name="harbor_signals">
+        <item quantity="one">@*neutral.harbor.app:macro/harbor_phrase</item>
+        <item quantity="other">@auto:macro/harbor_phrase</item>
+    </plurals>
+</resources>

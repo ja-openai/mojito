@@ -1,0 +1,15 @@
+{
+  "strings": {
+    "solo": "Tablet signal"
+  },
+  "productVariants": {
+    "button": ["Open", "Launch", "Begin"]
+  },
+  "plurals": {
+    "alerts": {
+      "one": "%1$d tablet alert",
+      "other": "%1$d tablet alerts"
+    }
+  },
+  "arrays": { "labels": ["Compact", "Quick"] }
+}

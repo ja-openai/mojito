@@ -1,0 +1,54 @@
+{
+  "arrays": {
+    "harbor_routes": [
+      "@*macro/harbor_phrase",
+      "@neutral.harbor.app:macro/harbor_phrase",
+      "@macro/scoped_chain"
+    ]
+  },
+  "arrayReferences": {
+    "harbor_routes": {
+      "0": "@*macro/harbor_phrase",
+      "1": "@neutral.harbor.app:macro/harbor_phrase",
+      "2": "@macro/scoped_chain"
+    }
+  },
+  "macros": [
+    "auto_chain",
+    "harbor_phrase",
+    "package_chain",
+    "private_chain",
+    "protected_phrase",
+    "scoped_chain",
+    "styled_phrase"
+  ],
+  "plurals": {
+    "harbor_signals": {}
+  },
+  "pluralReferences": {
+    "harbor_signals": {
+      "one": "@*neutral.harbor.app:macro/harbor_phrase",
+      "other": "@*macro/harbor_phrase"
+    }
+  },
+  "references": {
+    "auto_chained_route": "@macro/auto_chain",
+    "auto_route": "@*macro/harbor_phrase",
+    "generic_route": "@*macro/harbor_phrase",
+    "local_route": "@macro/harbor_phrase",
+    "package_alias_route": "@neutral.harbor.app:macro/harbor_phrase",
+    "package_chained_route": "@macro/package_chain",
+    "package_route": "@neutral.harbor.app:macro/harbor_phrase",
+    "private_alias_route": "@*neutral.harbor.app:macro/harbor_phrase",
+    "private_chained_route": "@macro/private_chain",
+    "private_package_route": "@*neutral.harbor.app:macro/harbor_phrase",
+    "private_route": "@*macro/harbor_phrase",
+    "protected_package_route": "@neutral.harbor.app:macro/protected_phrase",
+    "scoped_chained_route": "@macro/scoped_chain",
+    "styled_private_route": "@*macro/styled_phrase"
+  },
+  "strings": {
+    "escaped_route": "@macro/harbor_phrase",
+    "literal_star_colon_route": "@*:macro/harbor_phrase"
+  }
+}

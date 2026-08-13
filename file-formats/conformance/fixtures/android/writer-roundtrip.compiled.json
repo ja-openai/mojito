@@ -1,0 +1,49 @@
+{
+  "configuration": "fr-rCA",
+  "arrays": {
+    "compass": [
+      " east  ",
+      "west🙂"
+    ]
+  },
+  "styledSpans": {
+    "arrays": {
+      "compass": {
+        "1": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 5,
+            "attributes": {
+              "color": "#336699"
+            }
+          }
+        ]
+      }
+    },
+    "strings": {
+      "edge_whitespace": [
+        {
+          "name": "b",
+          "start": 7,
+          "end": 21
+        }
+      ]
+    }
+  },
+  "plurals": {
+    "checkpoints": {
+      "one": "%1$d stop",
+      "other": "%1$d stops"
+    }
+  },
+  "strings": {
+    "edge_whitespace": "  left  center isn't   right  ",
+    "empty": "",
+    "escaped_literal": "Visible <marker>plain</marker>",
+    "leading_reference": "@dock ?query #tone",
+    "literal_percent": "Value 50%% and %1$s",
+    "named_example": "Guide %1$s safely",
+    "printf_line": "North%nSouth"
+  }
+}

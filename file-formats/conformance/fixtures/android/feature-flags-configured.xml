@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:gate="http://schemas.android.com/apk/res/android">
+  <string name="anchor">Quiet harbor anchor</string>
+  <string name="enabled" gate:featureFlag=" neutral.flags.enabled ">Enabled harbor route</string>
+  <string name="disabled" gate:featureFlag="neutral.flags.disabled">Disabled harbor route</string>
+  <string name="negative" gate:featureFlag="!neutral.flags.disabled">Negated harbor route</string>
+  <item type="string" format="string" name="generic_enabled" gate:featureFlag="neutral.flags.enabled">Enabled generic signal</item>
+  <item type="string" format="string" name="generic_disabled" gate:featureFlag="neutral.flags.disabled">Disabled generic signal</item>
+  <string name="exclusive" gate:featureFlag="neutral.flags.enabled">Enabled exclusive lane</string>
+  <string name="exclusive" gate:featureFlag="!neutral.flags.enabled">Disabled exclusive lane</string>
+  <plurals name="signals_enabled" gate:featureFlag="neutral.flags.enabled">
+    <item quantity="one">One enabled beacon</item>
+    <item quantity="other">Several enabled beacons</item>
+  </plurals>
+  <plurals name="signals_disabled" gate:featureFlag="neutral.flags.disabled">
+    <item quantity="one">One disabled beacon</item>
+    <item quantity="other">Several disabled beacons</item>
+  </plurals>
+  <string-array name="routes" gate:featureFlag="!neutral.flags.disabled">
+    <item>Always first passage</item>
+    <item gate:featureFlag="neutral.flags.enabled">Enabled passage</item>
+    <item gate:featureFlag="neutral.flags.disabled">Disabled passage</item>
+    <item gate:featureFlag="!neutral.flags.disabled">Negated passage</item>
+    <item>@string/anchor</item>
+    <item gate:featureFlag="neutral.flags.disabled">@string/anchor</item>
+    <item gate:featureFlag="neutral.flags.enabled">@string/anchor</item>
+    <item>Final open passage</item>
+  </string-array>
+  <array name="mixed_routes">
+    <item gate:featureFlag="neutral.flags.disabled">7</item>
+    <item>17</item>
+    <item gate:featureFlag="neutral.flags.enabled">Visible typed passage</item>
+    <item gate:featureFlag="neutral.flags.disabled">Hidden typed passage</item>
+    <item gate:featureFlag="!neutral.flags.disabled">@string/anchor</item>
+    <item gate:featureFlag="neutral.flags.enabled">31</item>
+    <item>Final typed passage</item>
+  </array>
+  <bag type="string-array" name="bag_routes" gate:featureFlag="!neutral.flags.disabled">
+    <item gate:featureFlag="neutral.flags.disabled">Hidden bag passage</item>
+    <item gate:featureFlag="neutral.flags.enabled">Visible bag passage</item>
+    <item>Final bag passage</item>
+  </bag>
+  <bag type="plurals" name="bag_signals" gate:featureFlag="neutral.flags.disabled">
+    <item quantity="one">One hidden bag beacon</item>
+    <item quantity="other">Several hidden bag beacons</item>
+  </bag>
+  <color name="hidden_color" gate:featureFlag="neutral.flags.disabled">#314159</color>
+</resources>

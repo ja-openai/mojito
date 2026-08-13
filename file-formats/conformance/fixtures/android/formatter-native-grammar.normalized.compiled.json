@@ -1,0 +1,21 @@
+{
+  "strings": {
+    "escaped_percent": "Dock %% then %1$s",
+    "formatting_disabled": "Dock %_ then %1$s",
+    "native_newline": "Dock %n then %1$s",
+    "strict_generic_time": "Inspect %W then %s",
+    "time_lower_hour": "Depart %k and follow %s",
+    "time_lower_month": "Depart %m and follow %s",
+    "time_lower_weekday": "Depart %w and follow %s",
+    "time_lower_year": "Depart %y and follow %s",
+    "time_lower_zone": "Depart %z and follow %s",
+    "time_positional": "Depart %1$tY and dock %1$tm",
+    "time_shortcut_after_argument": "Follow %s until %M",
+    "time_upper_day": "Depart %D and follow %s",
+    "time_upper_full_date": "Depart %F and follow %s",
+    "time_upper_hour": "Depart %K and follow %s",
+    "time_upper_minute": "Depart %M and follow %s",
+    "time_upper_week": "Depart %W and follow %s",
+    "time_upper_zone": "Depart %Z and follow %s"
+  }
+}

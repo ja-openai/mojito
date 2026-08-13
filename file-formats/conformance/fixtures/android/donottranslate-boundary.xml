@@ -1,0 +1,12 @@
+<resources>
+  <string name="visible.plain">Visible filename-boundary marker</string>
+  <string name="visible.explicit" translatable="true">Visible explicit marker</string>
+  <item type="string" name="visible.generic">Visible generic marker</item>
+  <string-array name="visible.routes">
+    <item>Visible northern route</item>
+  </string-array>
+  <plurals name="visible.signals">
+    <item quantity="one">One visible signal</item>
+    <item quantity="other">Several visible signals</item>
+  </plurals>
+</resources>

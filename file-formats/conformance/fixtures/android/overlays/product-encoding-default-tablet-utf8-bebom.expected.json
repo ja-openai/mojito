@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "active": {
+      "defaultMessage": "Upper café beacon",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.enabled",
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "anchor": {
+      "defaultMessage": "Shared café anchor",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "fallback": {
+      "defaultMessage": "Upper café fallback",
+      "metadata": {
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "lanes[1]": {
+      "defaultMessage": "Upper visible café channel",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "@string/anchor"
+        },
+        "androidFeatureFlag": "neutral.flags.enabled",
+        "androidGenericArray": true,
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 1,
+        "arrayName": "lanes"
+      }
+    },
+    "route": {
+      "defaultMessage": "Main tablet café route",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "signals": {
+      "defaultMessage": "{count, plural, one {One main tablet café signal} other {Several main tablet café signals}}",
+      "variants": {
+        "one": "One main tablet café signal",
+        "other": "Several main tablet café signals"
+      },
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    }
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": {
+      "defaultMessage": "Harbor marker"
+    },
+    "default_escaped_color": {
+      "defaultMessage": "#112233",
+      "metadata": {
+        "androidGenericString": true
+      }
+    },
+    "default_ignored_flags": {
+      "defaultMessage": "{arg0} near {arg1}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%s",
+          "kind": "string",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%d",
+          "kind": "integer",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "androidGenericString": true
+      }
+    },
+    "default_quoted_integer": {
+      "defaultMessage": "17",
+      "metadata": {
+        "androidGenericString": true
+      }
+    },
+    "default_text": {
+      "defaultMessage": "Sailing {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidGenericString": true
+      }
+    },
+    "empty_format": {
+      "defaultMessage": "Quiet tide",
+      "metadata": {
+        "androidGenericString": true
+      }
+    },
+    "strict_literal": {
+      "defaultMessage": "%s near %d",
+      "metadata": {
+        "androidGenericFormat": "string",
+        "androidGenericString": true,
+        "formatted": false
+      }
+    },
+    "strict_padded": {
+      "defaultMessage": "Beacon {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidGenericFormat": "string",
+        "androidGenericString": true
+      }
+    },
+    "strict_text": {
+      "defaultMessage": "Compass {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidGenericFormat": "string",
+        "androidGenericString": true
+      }
+    }
+  }
+}

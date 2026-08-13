@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<resources>
+  <!-- Macro declarations and every single/doubled alias stay source-owned. -->
+  <macro name='shortcut'>Original harbor instruction</macro>
+  <macro name="indirect">@@macro/shortcut</macro>
+  <string name="anchor">"Abri calme"</string>
+  <string name='single_alias'>@string/anchor</string>
+  <string name="double_alias">@@string/anchor</string>
+  <item type="string" name='generic_alias'>&#64;&#64;string/anchor</item>
+  <string name="double_comment">@<!-- original alias boundary -->@string/anchor</string>
+  <string name="escaped">"Texte @@ protégé"</string>
+  <string name="quoted">"Texte @@ cité"</string>
+  <string name="triple">"Texte @@@ distinct"</string>
+  <string name="single_macro">"Instruction directe traduite"</string>
+  <string name="double_macro">"Instruction indirecte traduite"</string>
+  <string translatable="false" name="untouched">@@string/anchor</string>
+
+  <string-array name="routes">
+    <item>@string/anchor</item>
+    <item>@@string/anchor</item>
+    <item>"Route macro traduite"</item>
+    <item>"Route visible traduite"</item>
+  </string-array>
+
+  <plurals name="signals">
+    <item quantity='one'>@@string/anchor</item>
+    <item quantity="two">"Deux instructions traduites"</item>
+    <item quantity="other">"%1$d signaux traduits"</item>
+  </plurals>
+</resources>

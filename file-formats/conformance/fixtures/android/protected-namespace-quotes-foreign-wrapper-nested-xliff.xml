@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<resources xmlns:f="urn:neutral:foreign-protected" xmlns:x="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="protected" translatable="false"><f:veil><x:g id="a"><x:g id="b">%1$s</x:g></x:g></f:veil></string>
+</resources>

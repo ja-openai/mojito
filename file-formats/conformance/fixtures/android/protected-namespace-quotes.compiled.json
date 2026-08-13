@@ -1,0 +1,43 @@
+{
+  "arrays": {
+    "protected_bag_routes": [
+      "Inner it's route",
+      "Outer it's route"
+    ],
+    "protected_routes": [
+      "West it's passage",
+      "South it's bay",
+      "Near it's shore",
+      "Far it's lane",
+      "Old it's bay's harbor",
+      "Clear quiet passage"
+    ]
+  },
+  "styledSpans": {
+    "arrays": {
+      "protected_routes": {
+        "5": [
+          {
+            "name": "b",
+            "start": 6,
+            "end": 10
+          }
+        ]
+      }
+    }
+  },
+  "plurals": {
+    "protected_bag_counts": {
+      "other": "Two beacon's routes"
+    },
+    "protected_counts": {
+      "one": "One beacon's signal",
+      "other": "Many beacon's signals"
+    }
+  },
+  "strings": {
+    "protected_generic": "East it's inlet",
+    "protected_scalar": "North it's coast",
+    "visible": "Visible northern pier"
+  }
+}

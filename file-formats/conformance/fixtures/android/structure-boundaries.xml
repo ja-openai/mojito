@@ -1,0 +1,51 @@
+<resources xmlns:drift="urn:neutral:drifting-resource">
+  <!-- Discarded before the Android control element. -->
+  <skip>
+    <string name="buried_control">Never expose this signal</string>
+  </skip>
+  <string name="  harbor.pad  ">Padded harbor marker</string>
+
+  <!-- Earlier context must not leak into the next resource. -->
+  <!-- The latest Android resource comment wins. -->
+  <drift:string name="foreign_marker">Never expose this namespace</drift:string>
+  <string name="North.Path-7">Visible ridge marker</string>
+
+  <!-- Context survives an ignored foreign wrapper. -->
+  <drift:wrapper>
+    <string name="foreign_nested">Never expose this wrapper</string>
+  </drift:wrapper>
+  <string name="éclat">Coastal shimmer</string>
+
+  <!-- This comment is deliberately eaten. -->
+  <eat-comment/>
+  <string name="_underway" product=" tablet ">Tablet tide signal</string>
+
+  <!-- Route collection context. -->
+  <string-array name="  route.list  ">
+    Ignored text between array entries.
+    <skip>
+      <item>Never expose this skipped lane</item>
+    </skip>
+    <item>North channel</item>
+    <eat-comment/>
+    <item>South channel</item>
+  </string-array>
+
+  <!-- Mixed collection context. -->
+  <array name="&#9;mixed.route&#10;">
+    <skip/>
+    <item>17</item>
+    <item>Visible mixed route</item>
+    <eat-comment/>
+    <item>@string/harbor.pad</item>
+  </array>
+
+  <!-- Plural collection context. -->
+  <plurals name="  tide.signals  ">
+    Ignored text between plural entries.
+    <skip/>
+    <item quantity="one">One coastal signal</item>
+    <eat-comment/>
+    <item quantity="other">Many coastal signals</item>
+  </plurals>
+</resources>

@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\"?>\r\n<resources xmlns:gate=\"http://schemas.android.com/apk/res/android\"\r\n           xmlns:tools=\"http://schemas.android.com/tools\"\r\n           gate:featureFlag=\"neutral.ignored.root\">\r\n  <!-- Fixed conditions compact native positions; mutable positions remain conditional. -->\r\n  <string name=\"anchor\">Harbor anchor</string>\r\n  <string-array name=\"lanes\" product=\" default \">\r\n    <item gate:featureFlag=\"neutral.flags.hidden\">Protected hidden north</item>\r\n    <item gate:featureFlag=\"neutral.flags.visible\">Visible north route</item>\r\n    <item gate:featureFlag=\"neutral.flags.mutable\">Mutable east route</item>\r\n    <item gate:featureFlag=\"!neutral.flags.mutable\"><![CDATA[Inverse <west> & safe]]></item>\r\n    <item gate:featureFlag=\"neutral.flags.hidden\">@string/anchor</item>\r\n    <item gate:featureFlag=\"neutral.flags.visible\">@string/anchor</item>\r\n    <item>Open south route</item>\r\n    <item gate:featureFlag=\"neutral.flags.hidden\" tools:ignore=\"Protected\" />\r\n    <item gate:featureFlag=\"neutral.flags.mutable\" />\r\n  </string-array>\r\n  <string-array name=\"lanes\" product=\" tablet \">\r\n    <item gate:featureFlag=\"neutral.flags.hidden\">Protected hidden tablet</item>\r\n    <item gate:featureFlag=\"neutral.flags.visible\">Visible tablet route</item>\r\n    <item gate:featureFlag=\"!neutral.flags.mutable\">Inverse tablet route</item>\r\n  </string-array>\r\n  <array name=\"cargo\">\r\n    <item gate:featureFlag=\"neutral.flags.hidden\">7</item>\r\n    <item>17</item>\r\n    <item gate:featureFlag=\"neutral.flags.mutable\">Mutable cargo route</item>\r\n    <item gate:featureFlag=\"neutral.flags.hidden\">Protected hidden cargo</item>\r\n    <item gate:featureFlag=\"neutral.flags.visible\">@string/anchor</item>\r\n    <item gate:featureFlag=\"!neutral.flags.mutable\">Inverse cargo route</item>\r\n    <item>31</item>\r\n    <item>Final cargo route</item>\r\n  </array>\r\n  <bag type=\"string-array\" name=\"bag.lanes\">\r\n    <item gate:featureFlag=\"neutral.flags.hidden\">Protected hidden bag</item>\r\n    <item gate:featureFlag=\"neutral.flags.mutable\">Mutable bag route</item>\r\n    <item>Open bag route</item>\r\n  </bag>\r\n  <plurals name=\"signals\">\r\n    <item quantity=\"one\" gate:featureFlag=\"neutral.ignored.one\">%1$d quiet signal</item>\r\n    <item quantity=\"other\" gate:featureFlag=\"neutral.ignored.other\">%1$d quiet signals</item>\r\n  </plurals>\r\n  <string translatable=\"false\" name=\"private\">Protected private route</string>\r\n</resources>\r\n",
+  "androidResourcePath": "src/main/res/values-v10000/strings.xml",
+  "androidFeatureFlags": [
+    {
+      "name": "neutral.flags.hidden",
+      "readOnly": true,
+      "value": false
+    },
+    {
+      "name": "neutral.flags.visible",
+      "readOnly": true,
+      "value": true
+    },
+    {
+      "name": "neutral.flags.mutable",
+      "readOnly": false,
+      "value": null
+    }
+  ],
+  "slots": [
+    {
+      "id": "anchor",
+      "start": 320,
+      "end": 333
+    },
+    {
+      "id": "lanes[0]",
+      "start": 527,
+      "end": 546
+    },
+    {
+      "id": "lanes[1]",
+      "start": 606,
+      "end": 624
+    },
+    {
+      "id": "lanes[2]",
+      "start": 685,
+      "end": 718
+    },
+    {
+      "id": "lanes[4]",
+      "start": 884,
+      "end": 900
+    },
+    {
+      "id": "lanes[5]",
+      "start": 1039,
+      "end": 1041
+    },
+    {
+      "id": "lanes@product=tablet[0]",
+      "start": 1245,
+      "end": 1265
+    },
+    {
+      "id": "lanes@product=tablet[1]",
+      "start": 1326,
+      "end": 1346
+    },
+    {
+      "id": "cargo[1]",
+      "start": 1530,
+      "end": 1549
+    },
+    {
+      "id": "cargo[3]",
+      "start": 1765,
+      "end": 1784
+    },
+    {
+      "id": "cargo[5]",
+      "start": 1824,
+      "end": 1841
+    },
+    {
+      "id": "bag.lanes[0]",
+      "start": 2038,
+      "end": 2055
+    },
+    {
+      "id": "bag.lanes[1]",
+      "start": 2074,
+      "end": 2088
+    },
+    {
+      "id": "signals",
+      "variant": "one",
+      "start": 2199,
+      "end": 2216
+    },
+    {
+      "id": "signals",
+      "variant": "other",
+      "start": 2293,
+      "end": 2311
+    }
+  ]
+}

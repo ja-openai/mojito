@@ -1,0 +1,9 @@
+{
+  "strings": {
+    "real_alias": "Value R7",
+    "foreign_alias": "Value F4",
+    "bare_style": "Value B2",
+    "inline_foreign": "One two three four",
+    "real_without_id": "Before middle after"
+  }
+}

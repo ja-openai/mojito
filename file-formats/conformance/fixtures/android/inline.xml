@@ -1,0 +1,5 @@
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="styled">A <a title="help &amp; tips" href="https://example.com"><b>bold</b> link</a><br/></string>
+  <string name="protected">Use <xliff:g id="product">Mojito</xliff:g> today</string>
+  <string name="numeric">&#x1F600; costs %1$0.2f credits</string>
+</resources>

@@ -1,0 +1,12 @@
+<resources>
+  <string name="muted">Public signal</string>
+  <string name="retained">Visible lantern</string>
+  <string-array name="hidden">
+    <item>Visible north</item>
+    <item>Visible south</item>
+  </string-array>
+  <plurals name="paused">
+    <item quantity="one">One visible bell</item>
+    <item quantity="other">Visible bells</item>
+  </plurals>
+</resources>

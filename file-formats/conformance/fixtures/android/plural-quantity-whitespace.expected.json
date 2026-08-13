@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "signals": {
+      "defaultMessage": "{arg0, plural, one {One signal} other {{arg0} signals}}",
+      "variants": { "one": "One signal", "other": "{arg0} signals" },
+      "placeholders": [
+        { "name": "arg0", "source": "%1$d", "kind": "integer", "position": 1 }
+      ]
+    }
+  }
+}

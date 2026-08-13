@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<resources xmlns:gate="http://schemas.android.com/apk/res/android"
+           xmlns:tools="http://schemas.android.com/tools"
+           gate:featureFlag="neutral.ignored.root">
+  <!-- Fixed conditions compact native positions; mutable positions remain conditional. -->
+  <string name="anchor">"Ancre sûre"</string>
+  <string-array name="lanes" product=" default ">
+    <item gate:featureFlag="neutral.flags.hidden">Protected hidden north</item>
+    <item gate:featureFlag="neutral.flags.visible">"Route nord visible"</item>
+    <item gate:featureFlag="neutral.flags.mutable">"Route est mutable"</item>
+    <item gate:featureFlag="!neutral.flags.mutable"><![CDATA["Inverse <ouest> & sûr"]]></item>
+    <item gate:featureFlag="neutral.flags.hidden">@string/anchor</item>
+    <item gate:featureFlag="neutral.flags.visible">@string/anchor</item>
+    <item>"Route sud ouverte"</item>
+    <item gate:featureFlag="neutral.flags.hidden" tools:ignore="Protected" />
+    <item gate:featureFlag="neutral.flags.mutable" >"Route vide ajoutée"</item>
+  </string-array>
+  <string-array name="lanes" product=" tablet ">
+    <item gate:featureFlag="neutral.flags.hidden">Protected hidden tablet</item>
+    <item gate:featureFlag="neutral.flags.visible">"Route tablette visible"</item>
+    <item gate:featureFlag="!neutral.flags.mutable">"Route tablette inverse"</item>
+  </string-array>
+  <array name="cargo">
+    <item gate:featureFlag="neutral.flags.hidden">7</item>
+    <item>17</item>
+    <item gate:featureFlag="neutral.flags.mutable">"Cargaison mutable"</item>
+    <item gate:featureFlag="neutral.flags.hidden">Protected hidden cargo</item>
+    <item gate:featureFlag="neutral.flags.visible">@string/anchor</item>
+    <item gate:featureFlag="!neutral.flags.mutable">"Cargaison inverse"</item>
+    <item>31</item>
+    <item>"Dernière cargaison"</item>
+  </array>
+  <bag type="string-array" name="bag.lanes">
+    <item gate:featureFlag="neutral.flags.hidden">Protected hidden bag</item>
+    <item gate:featureFlag="neutral.flags.mutable">"Sac mutable"</item>
+    <item>"Sac ouvert"</item>
+  </bag>
+  <plurals name="signals">
+    <item quantity="one" gate:featureFlag="neutral.ignored.one">"%1$d signal calme"</item>
+    <item quantity="other" gate:featureFlag="neutral.ignored.other">"%1$d signaux calmes"</item>
+  </plurals>
+  <string translatable="false" name="private">Protected private route</string>
+</resources>

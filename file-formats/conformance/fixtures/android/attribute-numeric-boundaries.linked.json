@@ -1,0 +1,78 @@
+{
+  "arrays": {
+    "numeric_routes": [
+      "?attr/decimal_window",
+      "?attr/hex_window",
+      "?attr/decimal_modes",
+      "?attr/route_flags",
+      "?attr/empty_enum",
+      "?attr/empty_flags",
+      "?attr/empty_choice",
+      "?attr/weak_window",
+      "?attr/weak_mode",
+      "A decimal route with leading zeroes"
+    ]
+  },
+  "arrayReferences": {
+    "numeric_routes": {
+      "0": "?attr/decimal_window",
+      "1": "?attr/hex_window",
+      "2": "?attr/decimal_modes",
+      "3": "?attr/route_flags",
+      "4": "?attr/empty_enum",
+      "5": "?attr/empty_flags",
+      "6": "?attr/empty_choice",
+      "7": "?attr/weak_window",
+      "8": "?attr/weak_mode"
+    }
+  },
+  "attributes": {
+    "decimal_modes": {
+      "format": "integer|enum",
+      "symbols": {
+        "bits_signed": "0x80000000",
+        "bits_unsigned": "0xffffffff",
+        "count_eight": "0x00000008",
+        "count_maximum": "0x7fffffff",
+        "count_minimum": "0x80000000",
+        "count_negative": "0xfffffff8",
+        "count_ten": "0x0000000a",
+        "shared_first": "0x00000009",
+        "shared_second": "0x00000009"
+      }
+    },
+    "decimal_window": {
+      "format": "integer"
+    },
+    "empty_choice": {
+      "format": "enum|flags"
+    },
+    "empty_enum": {
+      "format": "enum"
+    },
+    "empty_flags": {
+      "format": "flags"
+    },
+    "hex_window": {
+      "format": "integer"
+    },
+    "route_flags": {
+      "format": "integer|flags",
+      "symbols": {
+        "route_all": "0xffffffff",
+        "route_high": "0x80000000",
+        "route_low": "0x00000001"
+      }
+    },
+    "weak_mode": {
+      "format": "integer|enum",
+      "symbols": {
+        "weak_eight": "0x00000008",
+        "weak_ten": "0x0000000a"
+      }
+    },
+    "weak_window": {
+      "format": "integer"
+    }
+  }
+}

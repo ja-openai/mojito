@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:platform="http://schemas.android.com/apk/res/android">
+    <string name="blocked_arrival" platform:featureFlag="neutral.harbor.arrivals">Reserved arrival lane</string>
+    <string name="blocked_departure" platform:featureFlag="!neutral.harbor.departures">Reserved departure lane</string>
+    <item type="string" name="blocked_dispatch" platform:featureFlag="neutral.harbor.dispatch">Private dispatch notice</item>
+    <string-array name="blocked_routes">
+        <item platform:featureFlag="neutral.harbor.route">Restricted shipping channel</item>
+        <item>Public shipping channel</item>
+    </string-array>
+    <plurals name="blocked_signals" platform:featureFlag="neutral.harbor.signals">
+        <item quantity="one">One restricted beacon</item>
+        <item quantity="other">Several restricted beacons</item>
+    </plurals>
+    <bag type="string-array" name="blocked_bag" platform:featureFlag="neutral.harbor.bag">
+        <item>Private bag channel</item>
+    </bag>
+    <color name="blocked_color" platform:featureFlag="neutral.harbor.color">#314159</color>
+</resources>

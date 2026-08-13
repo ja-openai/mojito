@@ -1,0 +1,27 @@
+{
+  "strings": {
+    "quote_segments": "north   quiet   zone   south",
+    "entity_spaces": "left   right",
+    "quoted_entity_spaces": "    ",
+    "escaped_entity_spaces": "left  right",
+    "quoted_apostrophe": "the signal isn't ready",
+    "escaped_apostrophe": "the signal isn't ready",
+    "hash_and_controls": "#code\n\t@mark?\\",
+    "escaped_markup": "<strong>%1$s</strong> / %2$d",
+    "rich_annotation": "A steady state",
+    "named_literal": "Label: ZX-4",
+    "named_format": "Reading %1$d",
+    "repeated_format": "%1$s then %1$s",
+    "line_separator": "north%nready"
+  },
+  "plurals": {
+    "all_quantities": {
+      "zero": "%1$d signals: none",
+      "one": "%1$d signal",
+      "two": "%1$d signals: pair",
+      "few": "%1$d signals: few",
+      "many": "%1$d signals: many",
+      "other": "%1$d signals"
+    }
+  }
+}

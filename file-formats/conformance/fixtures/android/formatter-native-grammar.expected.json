@@ -1,0 +1,280 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "escaped_percent": {
+      "defaultMessage": "Dock % then {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ]
+    },
+    "formatting_disabled": {
+      "defaultMessage": "Dock %_ then %1$s",
+      "metadata": {
+        "formatted": false
+      }
+    },
+    "native_newline": {
+      "defaultMessage": "Dock \n then {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidPrintfLineSeparator": true
+      }
+    },
+    "strict_generic_time": {
+      "defaultMessage": "Inspect {arg0} then {arg1}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%W",
+          "kind": "value",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%s",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "androidGenericFormat": "string",
+        "androidGenericString": true
+      }
+    },
+    "time_lower_hour": {
+      "defaultMessage": "Depart {arg0} and follow {arg1}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%k",
+          "kind": "value",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%s",
+          "kind": "string",
+          "position": 2
+        }
+      ]
+    },
+    "time_lower_month": {
+      "defaultMessage": "Depart {arg0} and follow {arg1}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%m",
+          "kind": "value",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%s",
+          "kind": "string",
+          "position": 2
+        }
+      ]
+    },
+    "time_lower_weekday": {
+      "defaultMessage": "Depart {arg0} and follow {arg1}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%w",
+          "kind": "value",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%s",
+          "kind": "string",
+          "position": 2
+        }
+      ]
+    },
+    "time_lower_year": {
+      "defaultMessage": "Depart {arg0} and follow {arg1}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%y",
+          "kind": "value",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%s",
+          "kind": "string",
+          "position": 2
+        }
+      ]
+    },
+    "time_lower_zone": {
+      "defaultMessage": "Depart {arg0} and follow {arg1}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%z",
+          "kind": "value",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%s",
+          "kind": "string",
+          "position": 2
+        }
+      ]
+    },
+    "time_positional": {
+      "defaultMessage": "Depart {arg0} and dock {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$tY",
+          "kind": "value",
+          "position": 1
+        },
+        {
+          "name": "arg0",
+          "source": "%1$tm",
+          "kind": "value",
+          "position": 1
+        }
+      ]
+    },
+    "time_shortcut_after_argument": {
+      "defaultMessage": "Follow {arg0} until {arg1}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%s",
+          "kind": "string",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%M",
+          "kind": "value",
+          "position": 2
+        }
+      ]
+    },
+    "time_upper_day": {
+      "defaultMessage": "Depart {arg0} and follow {arg1}",
+      "description": "AAPT2 exempts unmistakable legacy Time.format directives from positional checks.",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%D",
+          "kind": "value",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%s",
+          "kind": "string",
+          "position": 2
+        }
+      ]
+    },
+    "time_upper_full_date": {
+      "defaultMessage": "Depart {arg0} and follow {arg1}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%F",
+          "kind": "number",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%s",
+          "kind": "string",
+          "position": 2
+        }
+      ]
+    },
+    "time_upper_hour": {
+      "defaultMessage": "Depart {arg0} and follow {arg1}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%K",
+          "kind": "value",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%s",
+          "kind": "string",
+          "position": 2
+        }
+      ]
+    },
+    "time_upper_minute": {
+      "defaultMessage": "Depart {arg0} and follow {arg1}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%M",
+          "kind": "value",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%s",
+          "kind": "string",
+          "position": 2
+        }
+      ]
+    },
+    "time_upper_week": {
+      "defaultMessage": "Depart {arg0} and follow {arg1}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%W",
+          "kind": "value",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%s",
+          "kind": "string",
+          "position": 2
+        }
+      ]
+    },
+    "time_upper_zone": {
+      "defaultMessage": "Depart {arg0} and follow {arg1}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%Z",
+          "kind": "value",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%s",
+          "kind": "string",
+          "position": 2
+        }
+      ]
+    }
+  }
+}

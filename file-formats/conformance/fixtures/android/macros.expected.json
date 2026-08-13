@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": { "defaultMessage": "North harbor marker" },
+    "chained_macro": { "defaultMessage": "A quiet harbor route" },
+    "direct_macro": { "defaultMessage": "A quiet harbor route" },
+    "disabled_macro": { "defaultMessage": "A fixed-flag macro still expands" },
+    "empty_macro": { "defaultMessage": "" },
+    "generic_macro": {
+      "defaultMessage": "A quiet harbor route",
+      "metadata": { "androidGenericString": true }
+    },
+    "macro_routes[0]": {
+      "defaultMessage": "A quiet harbor route",
+      "metadata": { "arrayIndex": 0, "arrayName": "macro_routes" }
+    },
+    "macro_routes[1]": {
+      "defaultMessage": "A direct harbor lane",
+      "metadata": { "arrayIndex": 1, "arrayName": "macro_routes" }
+    },
+    "macro_routes[2]": {
+      "defaultMessage": "A quiet harbor route",
+      "metadata": { "arrayIndex": 2, "arrayName": "macro_routes" }
+    },
+    "macro_signals": {
+      "defaultMessage": "{arg0, plural, one {{arg0} harbor signal} other {{arg0} harbor signals}}",
+      "variants": {
+        "one": "{arg0} harbor signal",
+        "other": "{arg0} harbor signals"
+      },
+      "placeholders": [
+        { "name": "arg0", "source": "%1$d", "kind": "integer", "position": 1 }
+      ]
+    },
+    "mutable_macro": { "defaultMessage": "A runtime-flag macro still expands" },
+    "protected_macro": {
+      "defaultMessage": "Reading {signal}",
+      "placeholders": [
+        {
+          "name": "signal",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1,
+          "example": "AB-9"
+        }
+      ]
+    },
+    "styled_macro": { "defaultMessage": "A <b>steady</b> harbor beacon" },
+    "typed_macro_routes[0]": {
+      "defaultMessage": "A quiet harbor route",
+      "metadata": {
+        "arrayIndex": 0,
+        "arrayName": "typed_macro_routes",
+        "androidGenericArray": true,
+        "androidArrayPrimitives": { "1": "17" },
+        "androidArrayReferences": { "2": "@string/anchor" }
+      }
+    },
+    "typed_macro_routes[3]": {
+      "defaultMessage": "A final harbor lane",
+      "metadata": {
+        "arrayIndex": 3,
+        "arrayName": "typed_macro_routes",
+        "androidGenericArray": true,
+        "androidArrayPrimitives": { "1": "17" },
+        "androidArrayReferences": { "2": "@string/anchor" }
+      }
+    }
+  }
+}

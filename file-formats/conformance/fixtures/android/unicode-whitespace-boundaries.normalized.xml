@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="boundary_byte_order_mark">"&amp;#literal ﻿ west ﻿"</string>
+  <string name="boundary_em_space">"&amp;#literal   west  "</string>
+  <string name="boundary_en_quad">"&amp;#literal   west  "</string>
+  <string name="boundary_figure">"&amp;#literal   west  "</string>
+  <string name="boundary_hair">"&amp;#literal   west  "</string>
+  <string name="boundary_ideographic">"&amp;#literal 　 west 　"</string>
+  <string name="boundary_line_separator">"&amp;#literal   west  "</string>
+  <string name="boundary_medium_math">"&amp;#literal   west  "</string>
+  <string name="boundary_mongolian">"&amp;#literal ᠎ west ᠎"</string>
+  <string name="boundary_narrow_no_break">"&amp;#literal   west  "</string>
+  <string name="boundary_next_line">"&amp;#literal  west "</string>
+  <string name="boundary_no_break">"&amp;#literal   west  "</string>
+  <string name="boundary_ogham">"&amp;#literal   west  "</string>
+  <string name="boundary_paragraph_separator">"&amp;#literal   west  "</string>
+  <string name="boundary_punctuation">"&amp;#literal   west  "</string>
+  <string name="boundary_zero_width">"&amp;#literal ​ west ​"</string>
+  <string name="entity_byte_order_mark">"north﻿ west"</string>
+  <string name="entity_em_space">"north  west"</string>
+  <string name="entity_en_quad">"north  west"</string>
+  <string name="entity_figure">"north  west"</string>
+  <string name="entity_hair">"north  west"</string>
+  <string name="entity_ideographic">"north　 west"</string>
+  <string name="entity_line_separator">"north  west"</string>
+  <string name="entity_medium_math">"north  west"</string>
+  <string name="entity_mongolian">"north᠎ west"</string>
+  <string name="entity_narrow_no_break">"north  west"</string>
+  <string name="entity_next_line">"north west"</string>
+  <string name="entity_no_break">"north  west"</string>
+  <string name="entity_ogham">"north  west"</string>
+  <string name="entity_paragraph_separator">"north  west"</string>
+  <string name="entity_punctuation">"north  west"</string>
+  <string name="entity_zero_width">"north​ west"</string>
+  <string name="escaped_byte_order_mark">"north﻿ west"</string>
+  <string name="escaped_em_space">"north  west"</string>
+  <string name="escaped_en_quad">"north  west"</string>
+  <string name="escaped_figure">"north  west"</string>
+  <string name="escaped_hair">"north  west"</string>
+  <string name="escaped_ideographic">"north　 west"</string>
+  <string name="escaped_line_separator">"north  west"</string>
+  <string name="escaped_medium_math">"north  west"</string>
+  <string name="escaped_mongolian">"north᠎ west"</string>
+  <string name="escaped_narrow_no_break">"north  west"</string>
+  <string name="escaped_next_line">"north west"</string>
+  <string name="escaped_no_break">"north  west"</string>
+  <string name="escaped_ogham">"north  west"</string>
+  <string name="escaped_paragraph_separator">"north  west"</string>
+  <string name="escaped_punctuation">"north  west"</string>
+  <string name="escaped_zero_width">"north​ west"</string>
+  <string name="quoted_unicode">"      west    "</string>
+</resources>

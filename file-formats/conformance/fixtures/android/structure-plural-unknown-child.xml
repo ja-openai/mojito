@@ -1,0 +1,7 @@
+<resources>
+  <plurals name="signals">
+    <item quantity="one">One coastal signal</item>
+    <lane>Never expose this invalid lane</lane>
+    <item quantity="other">Many coastal signals</item>
+  </plurals>
+</resources>

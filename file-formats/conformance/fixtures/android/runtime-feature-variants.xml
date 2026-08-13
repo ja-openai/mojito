@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <string name="harbor_route">An open harbor route</string>
+    <string name="harbor_route" android:featureFlag="neutral.flags.first">A first conditional harbor route</string>
+    <string name="harbor_route" android:featureFlag="!neutral.flags.first">An inverse conditional harbor route</string>
+    <string name="harbor_route" android:featureFlag="neutral.flags.second">A second conditional harbor route</string>
+    <item type="string" name="harbor_beacon">An open harbor beacon</item>
+    <item type="string" name="harbor_beacon" android:featureFlag="neutral.flags.first">A conditional harbor beacon</item>
+    <plurals name="harbor_signals">
+        <item quantity="one">One open harbor signal</item>
+        <item quantity="other">Several open harbor signals</item>
+    </plurals>
+    <plurals name="harbor_signals" android:featureFlag="neutral.flags.first">
+        <item quantity="one">One conditional harbor signal</item>
+        <item quantity="other">Several conditional harbor signals</item>
+    </plurals>
+    <string-array name="harbor_lanes">
+        <item>An open harbor lane</item>
+    </string-array>
+    <string-array name="harbor_lanes" android:featureFlag="neutral.flags.second">
+        <item>A conditional harbor lane</item>
+    </string-array>
+</resources>

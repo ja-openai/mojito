@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="anchor">"Quiet harbor"</string>
+  <string name="em_padding">" @string/anchor "</string>
+  <string name="nbsp_padding">" @string/anchor "</string>
+</resources>

@@ -1,0 +1,17 @@
+{
+  "arrays": {
+    "harbor_lanes": [
+      "An open harbor lane"
+    ]
+  },
+  "plurals": {
+    "harbor_signals": {
+      "one": "One open harbor signal",
+      "other": "Several open harbor signals"
+    }
+  },
+  "strings": {
+    "harbor_beacon": "An open harbor beacon",
+    "harbor_route": "An open harbor route"
+  }
+}

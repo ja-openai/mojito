@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="FirstCompass"><attr name="signal" format="string" /></declare-styleable>
+    <declare-styleable name="SecondCompass"><attr name="signal" format="integer" /></declare-styleable>
+</resources>

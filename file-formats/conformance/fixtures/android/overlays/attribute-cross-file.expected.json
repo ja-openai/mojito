@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "overlay_routes[2]": {
+      "defaultMessage": "A cross-file passage",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "?attr/overlay_signal",
+          "1": "?attr/overlay_route"
+        },
+        "androidAttributeDependencies": [
+          {
+            "format": "enum",
+            "name": "overlay_route",
+            "symbols": [
+              {
+                "kind": "enum",
+                "name": "bright",
+                "value": 2
+              },
+              {
+                "kind": "enum",
+                "name": "quiet",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "format": "reference|string",
+            "name": "overlay_signal"
+          }
+        ],
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 2,
+        "arrayName": "overlay_routes"
+      }
+    }
+  }
+}

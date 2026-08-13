@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": {
+      "defaultMessage": "Calm harbor"
+    },
+    "at_literal": {
+      "defaultMessage": "@not_a_reference"
+    },
+    "escaped_theme": {
+      "defaultMessage": "?android:attr/title"
+    },
+    "invalid_create_literal": {
+      "defaultMessage": "@+string/harbor"
+    },
+    "invalid_private_create_literal": {
+      "defaultMessage": "@+*android:id/harbor"
+    },
+    "invalid_theme_type_literal": {
+      "defaultMessage": "?string/harbor"
+    },
+    "numeric_literal": {
+      "defaultMessage": "@0"
+    },
+    "quoted_package": {
+      "defaultMessage": "@com.neutral.port:string/anchor"
+    },
+    "routes[10]": {
+      "defaultMessage": "@com.neutral.port:string/anchor",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "@com.neutral.port:string/anchor",
+          "1": "@*android:string/anchor",
+          "2": "?android:attr/title",
+          "3": "?title",
+          "4": "@color/harbor",
+          "5": "@+id/harbor",
+          "6": "@macro/harbor",
+          "7": "?android:title",
+          "8": "@string/quiet-harbor"
+        },
+        "arrayIndex": 10,
+        "arrayName": "routes"
+      }
+    },
+    "routes[11]": {
+      "defaultMessage": "?android:attr/title",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "@com.neutral.port:string/anchor",
+          "1": "@*android:string/anchor",
+          "2": "?android:attr/title",
+          "3": "?title",
+          "4": "@color/harbor",
+          "5": "@+id/harbor",
+          "6": "@macro/harbor",
+          "7": "?android:title",
+          "8": "@string/quiet-harbor"
+        },
+        "arrayIndex": 11,
+        "arrayName": "routes"
+      }
+    },
+    "routes[9]": {
+      "defaultMessage": "Quiet {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "@com.neutral.port:string/anchor",
+          "1": "@*android:string/anchor",
+          "2": "?android:attr/title",
+          "3": "?title",
+          "4": "@color/harbor",
+          "5": "@+id/harbor",
+          "6": "@macro/harbor",
+          "7": "?android:title",
+          "8": "@string/quiet-harbor"
+        },
+        "arrayIndex": 9,
+        "arrayName": "routes"
+      }
+    },
+    "signals": {
+      "defaultMessage": "{arg0, plural, other {{arg0} quiet signals}}",
+      "variants": {
+        "other": "{arg0} quiet signals"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidPluralReferences": {
+          "few": "@color/harbor",
+          "many": "@+id/harbor",
+          "one": "?android:attr/title",
+          "two": "?title",
+          "zero": "@*com.neutral.port:string/anchor"
+        }
+      }
+    },
+    "unicode_padded": {
+      "defaultMessage": " @com.neutral.port:string/anchor "
+    },
+    "unknown_type_literal": {
+      "defaultMessage": "@unknown/harbor"
+    }
+  }
+}

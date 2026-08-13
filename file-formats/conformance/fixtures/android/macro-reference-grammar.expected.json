@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "auto_chained_route": {
+      "defaultMessage": "A quiet harbor crossing"
+    },
+    "auto_route": {
+      "defaultMessage": "A quiet harbor crossing"
+    },
+    "escaped_route": {
+      "defaultMessage": "@macro/harbor_phrase"
+    },
+    "generic_route": {
+      "defaultMessage": "A quiet harbor crossing",
+      "metadata": {
+        "androidGenericString": true
+      }
+    },
+    "harbor_routes[0]": {
+      "defaultMessage": "A quiet harbor crossing",
+      "metadata": {
+        "arrayIndex": 0,
+        "arrayName": "harbor_routes"
+      }
+    },
+    "harbor_routes[1]": {
+      "defaultMessage": "A quiet harbor crossing",
+      "metadata": {
+        "arrayIndex": 1,
+        "arrayName": "harbor_routes"
+      }
+    },
+    "harbor_routes[2]": {
+      "defaultMessage": "A quiet harbor crossing",
+      "metadata": {
+        "arrayIndex": 2,
+        "arrayName": "harbor_routes"
+      }
+    },
+    "harbor_signals": {
+      "defaultMessage": "{count, plural, one {A quiet harbor crossing} other {A quiet harbor crossing}}",
+      "variants": {
+        "one": "A quiet harbor crossing",
+        "other": "A quiet harbor crossing"
+      }
+    },
+    "literal_star_colon_route": {
+      "defaultMessage": "@*:macro/harbor_phrase"
+    },
+    "local_route": {
+      "defaultMessage": "A quiet harbor crossing"
+    },
+    "package_alias_route": {
+      "defaultMessage": "A quiet harbor crossing"
+    },
+    "package_chained_route": {
+      "defaultMessage": "A quiet harbor crossing"
+    },
+    "package_route": {
+      "defaultMessage": "A quiet harbor crossing"
+    },
+    "private_alias_route": {
+      "defaultMessage": "A quiet harbor crossing"
+    },
+    "private_chained_route": {
+      "defaultMessage": "A quiet harbor crossing"
+    },
+    "private_package_route": {
+      "defaultMessage": "A quiet harbor crossing"
+    },
+    "private_route": {
+      "defaultMessage": "A quiet harbor crossing"
+    },
+    "protected_package_route": {
+      "defaultMessage": "Signal {marker}",
+      "placeholders": [
+        {
+          "name": "marker",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1,
+          "example": "Q-7"
+        }
+      ]
+    },
+    "scoped_chained_route": {
+      "defaultMessage": "A quiet harbor crossing"
+    },
+    "styled_private_route": {
+      "defaultMessage": "A <b>steady</b> harbor light"
+    }
+  }
+}

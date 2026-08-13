@@ -1,0 +1,12 @@
+{
+  "empty_scalar": "Nouveau & quai",
+  "empty_generic": "Voie douce & claire",
+  "commented": "Sud abri",
+  "cdata": "Port ]]> <doux> & sûr",
+  "cdata_split": "Sud <doux> & sûr quai",
+  "routes[0]": "Première route",
+  "routes[1]": "Ouest calme",
+  "routes[2]": "Signal <bleu> & doux",
+  "visits#one": "{arg0} visite",
+  "visits#other": "{arg0} visites"
+}

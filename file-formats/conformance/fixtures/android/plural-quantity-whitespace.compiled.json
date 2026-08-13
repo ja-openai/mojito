@@ -1,0 +1,5 @@
+{
+  "plurals": {
+    "signals": { "one": "One signal", "other": "%1$d signals" }
+  }
+}

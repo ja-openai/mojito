@@ -1,0 +1,317 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "attributed_bullet": {
+      "defaultMessage": "north '<'li route=\"west\">pier'<'/li> east",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "empty_bullet": {
+      "defaultMessage": "first<li></li>last",
+      "metadata": {
+        "androidRuntimeParagraphSpans": [
+          {
+            "end": 9,
+            "kind": "bullet",
+            "sourceEnd": 5,
+            "sourceStart": 5,
+            "span": 0,
+            "start": 0
+          }
+        ]
+      }
+    },
+    "empty_line_bullet": {
+      "defaultMessage": "first\n<li></li>\nlast"
+    },
+    "injected_height": {
+      "defaultMessage": "north '<'font route=\"west;height=18\">pier'<'/font> west",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeParagraphSpans": [
+          {
+            "end": 15,
+            "kind": "height",
+            "sourceEnd": 10,
+            "sourceStart": 6,
+            "span": 0,
+            "start": 0
+          }
+        ],
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "height",
+                "kind": "height",
+                "value": "18"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "line_end_bullet": {
+      "defaultMessage": "first\nleft <li>pier</li>\nlast",
+      "metadata": {
+        "androidRuntimeParagraphSpans": [
+          {
+            "end": 16,
+            "kind": "bullet",
+            "sourceEnd": 15,
+            "sourceStart": 11,
+            "span": 0,
+            "start": 6
+          }
+        ]
+      }
+    },
+    "line_height": {
+      "defaultMessage": "first\nleft '<'font height=\"18\">🧭 pier'<'/font> right\nlast",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeParagraphSpans": [
+          {
+            "end": 25,
+            "kind": "height",
+            "sourceEnd": 18,
+            "sourceStart": 11,
+            "span": 0,
+            "start": 6
+          }
+        ]
+      }
+    },
+    "line_start_bullet": {
+      "defaultMessage": "first\n<li>pier</li> right\nlast",
+      "metadata": {
+        "androidRuntimeParagraphSpans": [
+          {
+            "end": 17,
+            "kind": "bullet",
+            "sourceEnd": 10,
+            "sourceStart": 6,
+            "span": 0,
+            "start": 6
+          }
+        ]
+      }
+    },
+    "middle_bullet": {
+      "defaultMessage": "north <li>pier</li> west",
+      "metadata": {
+        "androidRuntimeParagraphSpans": [
+          {
+            "end": 15,
+            "kind": "bullet",
+            "sourceEnd": 10,
+            "sourceStart": 6,
+            "span": 0,
+            "start": 0
+          }
+        ]
+      }
+    },
+    "middle_height": {
+      "defaultMessage": "north '<'font height=\"18\">pier'<'/font> west",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeParagraphSpans": [
+          {
+            "end": 15,
+            "kind": "height",
+            "sourceEnd": 10,
+            "sourceStart": 6,
+            "span": 0,
+            "start": 0
+          }
+        ]
+      }
+    },
+    "middle_line_bullet": {
+      "defaultMessage": "first\nleft <li>🧭 pier</li> right\nlast",
+      "metadata": {
+        "androidRuntimeParagraphSpans": [
+          {
+            "end": 25,
+            "kind": "bullet",
+            "sourceEnd": 18,
+            "sourceStart": 11,
+            "span": 0,
+            "start": 6
+          }
+        ]
+      }
+    },
+    "multiline_bullet": {
+      "defaultMessage": "first\nleft <li>pier\ninner</li> right\nlast",
+      "metadata": {
+        "androidRuntimeParagraphSpans": [
+          {
+            "end": 28,
+            "kind": "bullet",
+            "sourceEnd": 21,
+            "sourceStart": 11,
+            "span": 0,
+            "start": 6
+          }
+        ]
+      }
+    },
+    "nested_bullet_height": {
+      "defaultMessage": "north <li>'<'font height=\"18\">pier'<'/font></li> west",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeParagraphSpans": [
+          {
+            "end": 15,
+            "kind": "bullet",
+            "sourceEnd": 10,
+            "sourceStart": 6,
+            "span": 0,
+            "start": 0
+          },
+          {
+            "end": 15,
+            "kind": "height",
+            "sourceEnd": 10,
+            "sourceStart": 6,
+            "span": 1,
+            "start": 0
+          }
+        ]
+      }
+    },
+    "nested_height": {
+      "defaultMessage": "<b>north '<'font height=\"18\">pier'<'/font> west</b>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeParagraphSpans": [
+          {
+            "end": 15,
+            "kind": "height",
+            "sourceEnd": 10,
+            "sourceStart": 6,
+            "span": 1,
+            "start": 0
+          }
+        ]
+      }
+    },
+    "paragraph_routes[0]": {
+      "defaultMessage": "north <li>pier</li> west",
+      "metadata": {
+        "androidRuntimeParagraphSpans": [
+          {
+            "end": 15,
+            "kind": "bullet",
+            "sourceEnd": 10,
+            "sourceStart": 6,
+            "span": 0,
+            "start": 0
+          }
+        ],
+        "arrayIndex": 0,
+        "arrayName": "paragraph_routes"
+      }
+    },
+    "paragraph_routes[1]": {
+      "defaultMessage": "first\nleft '<'font height=\"18\">🧭 pier'<'/font> right",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeParagraphSpans": [
+          {
+            "end": 24,
+            "kind": "height",
+            "sourceEnd": 18,
+            "sourceStart": 11,
+            "span": 0,
+            "start": 6
+          }
+        ],
+        "arrayIndex": 1,
+        "arrayName": "paragraph_routes"
+      }
+    },
+    "paragraph_signals": {
+      "defaultMessage": "{count, plural, one {first\nleft <li>beacon</li> right} other {first\nleft '<'font height=\"18\">beacons'<'/font> right}}",
+      "variants": {
+        "one": "first\nleft <li>beacon</li> right",
+        "other": "first\nleft '<'font height=\"18\">beacons'<'/font> right"
+      },
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidPluralRuntimeParagraphSpans": {
+          "one": [
+            {
+              "end": 23,
+              "kind": "bullet",
+              "sourceEnd": 17,
+              "sourceStart": 11,
+              "span": 0,
+              "start": 6
+            }
+          ],
+          "other": [
+            {
+              "end": 24,
+              "kind": "height",
+              "sourceEnd": 18,
+              "sourceStart": 11,
+              "span": 0,
+              "start": 6
+            }
+          ]
+        }
+      }
+    },
+    "supplementary_prefix": {
+      "defaultMessage": "🧭 north <li>東🙂</li> west",
+      "metadata": {
+        "androidRuntimeParagraphSpans": [
+          {
+            "end": 17,
+            "kind": "bullet",
+            "sourceEnd": 12,
+            "sourceStart": 9,
+            "span": 0,
+            "start": 0
+          }
+        ]
+      }
+    },
+    "unicode_separator": {
+      "defaultMessage": "first left <li>pier</li> right",
+      "metadata": {
+        "androidRuntimeParagraphSpans": [
+          {
+            "end": 21,
+            "kind": "bullet",
+            "sourceEnd": 15,
+            "sourceStart": 11,
+            "span": 0,
+            "start": 0
+          }
+        ]
+      }
+    },
+    "whole_line_bullet": {
+      "defaultMessage": "first\n<li>pier</li>\nlast",
+      "metadata": {
+        "androidRuntimeParagraphSpans": [
+          {
+            "end": 11,
+            "kind": "bullet",
+            "sourceEnd": 10,
+            "sourceStart": 6,
+            "span": 0,
+            "start": 6
+          }
+        ]
+      }
+    }
+  }
+}

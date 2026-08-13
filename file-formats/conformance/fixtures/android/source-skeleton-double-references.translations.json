@@ -1,0 +1,12 @@
+{
+  "anchor": "Abri calme",
+  "escaped": "Texte @@ protégé",
+  "quoted": "Texte @@ cité",
+  "triple": "Texte @@@ distinct",
+  "single_macro": "Instruction directe traduite",
+  "double_macro": "Instruction indirecte traduite",
+  "routes[2]": "Route macro traduite",
+  "routes[3]": "Route visible traduite",
+  "signals#two": "Deux instructions traduites",
+  "signals#other": "{arg0} signaux traduits"
+}

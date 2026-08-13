@@ -1,0 +1,45 @@
+{
+  "arrayReferences": {
+    "routes": {
+      "1": "@string/harbor"
+    }
+  },
+  "arrays": {
+    "routes": [
+      "Quai est",
+      "@string/harbor",
+      "Quai ouest"
+    ]
+  },
+  "macros": [
+    "private_route"
+  ],
+  "plurals": {
+    "visits": {
+      "one": "%1$d visite",
+      "other": "%1$d visites"
+    }
+  },
+  "strings": {
+    "generic": "Voie 🙂 tranquille",
+    "harbor": "Quai & abri sûr",
+    "internal": "Do not replace this value",
+    "protected": "Bonjour %1$s !",
+    "rich": "Marchez au nord maintenant"
+  },
+  "styledSpans": {
+    "strings": {
+      "rich": [
+        {
+          "attributes": {
+            "class": "quiet",
+            "route": "east"
+          },
+          "end": 14,
+          "name": "b",
+          "start": 8
+        }
+      ]
+    }
+  }
+}

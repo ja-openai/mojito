@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "signal": {
+      "defaultMessage": "Café 🧭",
+      "description": "Original neutral navigation note."
+    },
+    "route": {
+      "defaultMessage": "East 🌊 shore"
+    }
+  }
+}

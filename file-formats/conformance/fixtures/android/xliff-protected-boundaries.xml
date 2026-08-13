@@ -1,0 +1,23 @@
+<resources xmlns:x="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="anonymous_literal">Orbit <x:g>ZX-4</x:g> ready</string>
+  <string name="anonymous_formatter">Harbor <x:g>%1$s</x:g> clear</string>
+  <string name="empty_identifier">Quiet <x:g id="" example="Q&amp;7">Q-7</x:g> route</string>
+  <string name="empty_formatter">Seen <x:g id="">%1$d</x:g> times</string>
+  <string name="numeric_identifier">Dock <x:g id="42">ZX</x:g> open</string>
+  <string name="accented_identifier">Port <x:g id="orbité">ZX</x:g> calme</string>
+  <string name="cjk_identifier">Status <x:g id="信号">ZX</x:g> ready</string>
+  <string name="emoji_identifier">Link <x:g id="🛰">ZX</x:g> active</string>
+  <string name="combining_identifier">Mark <x:g id="ñ">ZX</x:g> set</string>
+  <string name="unknown_xliff_wrapper">Nested <x:note><x:g>ZX</x:g></x:note> trace</string>
+  <string name="adjacent_anonymous"><x:g>ONE</x:g> then <x:g>TWO</x:g></string>
+  <string name="repeated_same_source"><x:g id="repeat" example="stable">ZX</x:g> then <x:g id="interlude">YY</x:g> then <x:g id="repeat" example="stable">ZX</x:g></string>
+  <string name="conventional_with_example"><x:g id="arg0" example="neutral">%1$s</x:g> follows</string>
+  <string-array name="protected_routes">
+    <item>Gate <x:g>NW</x:g> ready</item>
+    <item>Gate <x:g id="入口">%1$s</x:g> ready</item>
+  </string-array>
+  <plurals name="protected_count">
+    <item quantity="one"><x:g id="数量">%1$d</x:g> orbital signal</item>
+    <item quantity="other"><x:g id="数量">%1$d</x:g> orbital signals</item>
+  </plurals>
+</resources>

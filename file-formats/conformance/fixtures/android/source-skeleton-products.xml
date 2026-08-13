@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<resources xmlns:drift="urn:neutral:protected-variant" xmlns:tools="http://schemas.android.com/tools">
+  <!-- All product spellings, surrounding spacing, and comments remain original. -->
+  <string name="anchor">Safe harbor anchor</string>
+  <string name=" harbor.route " product=" default ">Open harbor passage</string>
+  <string name="harbor.route" product=" tablet ">Tablet harbor passage</string>
+  <string name="harbor.route" product="watch"><![CDATA[Watch <quiet> & clear]]></string>
+
+  <!-- Foreign-namespace declarations must never claim a native message slot. -->
+  <drift:string name="harbor.route" product="tablet">Protected foreign passage</drift:string>
+  <item type="string" name="harbor.signal" product="default">Default harbor signal</item>
+  <item type="string" name=" harbor.signal " product=" tablet " tools:ignore="Protected" />
+  <string translatable="false" name="private.route">Protected private route</string>
+
+  <string-array name=" harbor.lanes " product=" default ">
+    <item>Default north lane</item>
+    <item>@string/anchor</item>
+    <item>Default south lane</item>
+  </string-array>
+  <string-array name="harbor.lanes" product=" tablet ">
+    <item><![CDATA[Tablet <north> & safe]]></item>
+    <item>@string/anchor</item>
+    <item>Tablet<!-- keep this exact product marker --> south lane</item>
+  </string-array>
+
+  <plurals name=" tide.count " product=" default ">
+    <item quantity="one">%1$d default beacon</item>
+    <item quantity="other">%1$d default beacons</item>
+  </plurals>
+  <plurals name="tide.count" product=" tablet ">
+    <item quantity="one" tools:ignore="Protected" />
+    <item quantity="other">%1$d tablet beacons</item>
+  </plurals>
+</resources>

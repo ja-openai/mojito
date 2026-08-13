@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="bare_style">"Value "<g id="plain">"B2"</g></string>
+  <string name="foreign_alias">"Value F4"</string>
+  <string name="inline_foreign">"One two "<b>"three"</b>" four"</string>
+  <string name="real_alias">"Value "<xliff:g id="actual" example="R7">R7</xliff:g></string>
+  <string name="real_without_id">"Before "<xliff:g id="_xliff0">middle</xliff:g>" after"</string>
+</resources>

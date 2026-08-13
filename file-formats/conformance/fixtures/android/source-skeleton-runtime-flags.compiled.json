@@ -1,0 +1,34 @@
+{
+  "arrayReferences": {
+    "gate.lanes": {
+      "1": "@string/anchor"
+    }
+  },
+  "arrays": {
+    "gate.lanes": [
+      "Open north lane",
+      "@string/anchor"
+    ]
+  },
+  "plurals": {
+    "gate.count": {
+      "one": "%1$d open beacon",
+      "other": "%1$d open beacons"
+    }
+  },
+  "productVariants": {
+    "gate.disabled": [
+      "Protected disabled passage",
+      "Protected disabled passage"
+    ],
+    "gate.route": [
+      "Open harbor passage",
+      "Tablet mutable passage"
+    ]
+  },
+  "strings": {
+    "anchor": "Open harbor anchor",
+    "gate.private": "Protected private signal",
+    "gate.signal": "Open harbor signal"
+  }
+}

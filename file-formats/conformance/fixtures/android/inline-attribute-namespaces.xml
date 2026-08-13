@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<resources xmlns:f="urn:neutral:span-attributes"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xml:space="preserve" xml:lang="en">
+  <string name="scalar_space" xml:space="preserve">  north   west  </string>
+  <string name="scalar_default_space" xml:space="default">  north   east  </string>
+  <string name="space_style"><b xml:space="preserve">  northern   passage  </b></string>
+  <string name="language_style"><b xml:lang="fr">Harbor signal</b></string>
+  <string name="foreign_annotation"><annotation f:route="north&#9;dock">Harbor signal</annotation></string>
+  <string name="font_effect"><font android:size="12" f:color="red">Harbor glow</font></string>
+  <string name="ordered_namespaces"><b alpha="A" android:bravo="B" xml:charlie="C" f:delta="D">Harbor order</b></string>
+  <string name="inline_namespace"><b xmlns:inner="urn:neutral:inline" inner:route="quiet">Harbor route</b></string>
+  <item name="generic_style" type="string" format="string"><font android:size="8">Harbor guide</font></item>
+  <string-array name="routes">
+    <item><annotation f:key="private">Harbor route</annotation></item>
+    <item><font f:color="#112233">Harbor light</font></item>
+  </string-array>
+  <plurals name="signals">
+    <item quantity="one"><font android:size="9">%1$d harbor beacon</font></item>
+    <item quantity="other"><annotation f:key="beacon">%1$d harbor beacons</annotation></item>
+  </plurals>
+  <string name="protected" translatable="false"><b f:route="protected">Private harbor</b></string>
+</resources>

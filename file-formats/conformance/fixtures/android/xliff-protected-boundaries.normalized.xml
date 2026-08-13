@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="accented_identifier">"Port "<xliff:g id="orbité">ZX</xliff:g>" calme"</string>
+  <string name="adjacent_anonymous"><xliff:g id="_xliff0">ONE</xliff:g>" then "<xliff:g id="_xliff1">TWO</xliff:g></string>
+  <string name="anonymous_formatter">"Harbor "<xliff:g id="_xliff0">%1$s</xliff:g>" clear"</string>
+  <string name="anonymous_literal">"Orbit "<xliff:g id="_xliff0">ZX-4</xliff:g>" ready"</string>
+  <string name="cjk_identifier">"Status "<xliff:g id="信号">ZX</xliff:g>" ready"</string>
+  <string name="combining_identifier">"Mark "<xliff:g id="ñ">ZX</xliff:g>" set"</string>
+  <string name="conventional_with_example"><xliff:g id="arg0" example="neutral">%1$s</xliff:g>" follows"</string>
+  <string name="emoji_identifier">"Link "<xliff:g id="🛰">ZX</xliff:g>" active"</string>
+  <string name="empty_formatter">"Seen "<xliff:g id="_xliff0">%1$d</xliff:g>" times"</string>
+  <string name="empty_identifier">"Quiet "<xliff:g id="_xliff0" example="Q&amp;7">Q-7</xliff:g>" route"</string>
+  <string name="numeric_identifier">"Dock "<xliff:g id="42">ZX</xliff:g>" open"</string>
+  <plurals name="protected_count">
+    <item quantity="one"><xliff:g id="数量">%1$d</xliff:g>" orbital signal"</item>
+    <item quantity="other"><xliff:g id="数量">%1$d</xliff:g>" orbital signals"</item>
+  </plurals>
+  <string-array name="protected_routes">
+    <item>"Gate "<xliff:g id="_xliff0">NW</xliff:g>" ready"</item>
+    <item>"Gate "<xliff:g id="入口">%1$s</xliff:g>" ready"</item>
+  </string-array>
+  <string name="repeated_same_source"><xliff:g id="repeat" example="stable">ZX</xliff:g>" then "<xliff:g id="interlude">YY</xliff:g>" then "<xliff:g id="repeat" example="stable">ZX</xliff:g></string>
+  <string name="unknown_xliff_wrapper">"Nested "<xliff:g id="_xliff0">ZX</xliff:g>" trace"</string>
+</resources>

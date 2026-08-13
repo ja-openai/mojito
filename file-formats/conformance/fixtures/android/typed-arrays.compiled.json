@@ -1,0 +1,80 @@
+{
+  "arrays": {
+    "forced_routes": [
+      "17",
+      "true",
+      "#AABBCC",
+      "@string/anchor",
+      "%s beside %d"
+    ],
+    "hidden_routes": [
+      "Hidden harbor"
+    ],
+    "integer_only": [
+      "21",
+      "@integer/harbor"
+    ],
+    "mixed_routes": [
+      "Sail toward %1$s",
+      "17",
+      "true",
+      "#ff112233",
+      "4.000000dp",
+      "1.5",
+      "0.250000%",
+      "@string/anchor",
+      "?attr/harbor",
+      "17",
+      "#112233",
+      "%s beside %d"
+    ],
+    "numeric_only": [
+      "17",
+      "0x0000001f",
+      "@integer/harbor"
+    ],
+    "reference_only": [
+      "@string/anchor",
+      "?attr/harbor"
+    ]
+  },
+  "arrayReferences": {
+    "forced_routes": {
+      "3": "@string/anchor"
+    },
+    "integer_only": {
+      "1": "@integer/harbor"
+    },
+    "mixed_routes": {
+      "7": "@string/anchor",
+      "8": "?attr/harbor"
+    },
+    "numeric_only": {
+      "2": "@integer/harbor"
+    },
+    "reference_only": {
+      "0": "@string/anchor",
+      "1": "?attr/harbor"
+    }
+  },
+  "arrayPrimitiveValues": {
+    "integer_only": {
+      "0": "21"
+    },
+    "mixed_routes": {
+      "1": "17",
+      "2": "true",
+      "3": "#ff112233",
+      "4": "4.000000dp",
+      "5": "1.5",
+      "6": "0.250000%"
+    },
+    "numeric_only": {
+      "0": "17",
+      "1": "0x0000001f"
+    }
+  },
+  "strings": {
+    "anchor": "Harbor marker"
+  }
+}

@@ -1,0 +1,7 @@
+<resources>
+  <string name="anchor">%1$d signals</string>
+  <plurals name="signals">
+    <item quantity="one">One signal</item>
+    <item quantity="other">@string/anchor</item>
+  </plurals>
+</resources>

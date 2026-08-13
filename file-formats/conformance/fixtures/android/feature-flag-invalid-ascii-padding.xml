@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:p="http://schemas.android.com/apk/res/android">
+  <string name="harbor" p:featureFlag=" &#x9; neutral.harbor.active &#x9; ">Padded harbor</string>
+</resources>

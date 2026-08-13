@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "visible[0]": { "defaultMessage": "No", "metadata": { "arrayIndex": 0, "arrayName": "visible" } },
+    "visible[1]": { "defaultMessage": "Yes", "metadata": { "arrayIndex": 1, "arrayName": "visible" } },
+    "escaped": { "defaultMessage": "@string/original" },
+    "empty": { "defaultMessage": "" }
+  }
+}

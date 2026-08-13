@@ -1,0 +1,40 @@
+{
+  "configuration": "fr-night-v8",
+  "arrays": {
+    "localized_routes": [
+      "?attr/localized_route",
+      "?attr/localized_signal",
+      "Un passage localisé"
+    ]
+  },
+  "arrayReferences": {
+    "localized_routes": {
+      "0": "?attr/localized_route",
+      "1": "?attr/localized_signal"
+    }
+  },
+  "attributes": {
+    "localized_route": {
+      "format": "integer"
+    },
+    "localized_signal": {
+      "format": "enum",
+      "symbols": {
+        "local_eight": "0x00000008",
+        "local_ten": "0x0000000a"
+      }
+    }
+  },
+  "attributeConfigurations": {
+    "localized_route": "",
+    "localized_signal": ""
+  },
+  "styleables": {
+    "LocalizedCompass": [
+      "localized_signal"
+    ]
+  },
+  "styleableConfigurations": {
+    "LocalizedCompass": ""
+  }
+}

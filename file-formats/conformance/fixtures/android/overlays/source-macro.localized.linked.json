@@ -1,0 +1,80 @@
+{
+  "products": {
+    "default": {
+      "arrays": {
+        "macro_routes": [
+          "Voie éloignée",
+          "Voie supérieure"
+        ]
+      },
+      "plurals": {
+        "macro_lights": {
+          "one": "%1$d lanterne proche",
+          "other": "%1$d lanternes proches"
+        }
+      },
+      "strings": {
+        "macro_chain": "Port transitif",
+        "macro_private": "Voie privée",
+        "macro_product": "Traversée générale",
+        "macro_protected": "Pilote %1$s",
+        "macro_qualified": "Port qualifié",
+        "macro_scoped": "Voie d'alias",
+        "macro_signal": "Un port lumineux",
+        "macro_styled": "Port lumineux"
+      },
+      "styledSpans": {
+        "strings": {
+          "macro_styled": [
+            {
+              "attributes": {
+                "tone": "bright"
+              },
+              "end": 12,
+              "name": "b",
+              "start": 5
+            }
+          ]
+        }
+      }
+    },
+    "tablet": {
+      "arrays": {
+        "macro_routes": [
+          "Voie éloignée",
+          "Voie supérieure"
+        ]
+      },
+      "plurals": {
+        "macro_lights": {
+          "one": "%1$d lanterne proche",
+          "other": "%1$d lanternes proches"
+        }
+      },
+      "strings": {
+        "macro_chain": "Port transitif",
+        "macro_private": "Voie privée",
+        "macro_product": "Traversée tablette",
+        "macro_protected": "Pilote %1$s",
+        "macro_qualified": "Port qualifié",
+        "macro_scoped": "Voie d'alias",
+        "macro_signal": "Un port lumineux",
+        "macro_styled": "Port lumineux"
+      },
+      "styledSpans": {
+        "strings": {
+          "macro_styled": [
+            {
+              "attributes": {
+                "tone": "bright"
+              },
+              "end": 12,
+              "name": "b",
+              "start": 5
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <plurals name="files" description="Number of files selected">
+    <item quantity="one">"%1$d file"</item>
+    <item quantity="other">"%1$d files"</item>
+  </plurals>
+  <plurals name="plain">
+    <item quantity="zero">"Nothing"</item>
+    <item quantity="one">"One thing"</item>
+    <item quantity="other">"Many things"</item>
+  </plurals>
+</resources>

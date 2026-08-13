@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<resources xmlns:code="urn:oasis:names:tc:xliff:document:1.2"
+           xmlns:hint="http://schemas.android.com/tools"
+           hint:locale="fr_CA">
+  <!-- Lexical attributes, aliases, quote styles, and nontranslatable values never move. -->
+  <string name="private_route" translatable="false">Protected original channel</string>
+
+  <string name="styled_route">Before <b tone='north' marker="N">north</b> beside <i shade="east">east</i>.</string>
+  <string name="nested_route"><b class='outer'><u lane="inner">center</u></b> versus <i mood='calm'>outer</i></string>
+  <string name="protected_route">Pilot <code:g example='P-7' id="pilot">%1$s</code:g> meets radar <code:g id='radar' example="R-2">%2$s</code:g></string>
+  <string name="mixed_route"><b class='pilot'>Lead <code:g example="P-7" id='pilot'>%1$s</code:g></b> near <i class="radar">Scan <code:g id="radar" example='R-2'>%2$s</code:g></i></string>
+  <string name="repeated_style"><b lane='north'>north</b> / <b lane="south">south</b></string>
+
+  <string-array name="routes">
+    <item>First <b path='one'>north</b> after <i path="two">south</i></item>
+    <item>Captain <code:g id='captain' example="C-3">%1$s</code:g> beside <code:g example='D-4' id="deck">%2$s</code:g></item>
+  </string-array>
+
+  <plurals name="signals">
+    <item quantity="one"><b tone='first'>%1$d north</b> then <i tone="second">south</i></item>
+    <item quantity="other"><b tone="many">%1$d north</b> then <i tone='far'>south</i></item>
+  </plurals>
+</resources>

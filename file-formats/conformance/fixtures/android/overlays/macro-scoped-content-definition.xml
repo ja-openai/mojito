@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="anchor">An overlay harbor marker</string>
+    <macro name="scoped_pointer" xmlns:lane="http://schemas.android.com/apk/res-auto">@lane:string/anchor</macro>
+    <macro name="scoped_message" xmlns:signal="urn:oasis:names:tc:xliff:document:1.2">Overlay <signal:g id="marker" example="O-4">%1$s</signal:g></macro>
+</resources>

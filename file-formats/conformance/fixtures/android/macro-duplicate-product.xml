@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <macro name="harbor_phrase">A default harbor crossing</macro>
+    <macro name="harbor_phrase" product="tablet">A tablet harbor crossing</macro>
+    <macro name="harbor_phrase" product="tablet">A second tablet crossing</macro>
+    <string name="unsafe_route">@macro/harbor_phrase</string>
+</resources>

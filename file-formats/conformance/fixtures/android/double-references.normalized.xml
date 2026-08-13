@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="anchor" description="Android's framework name splitter consumes one additional leading @.">"Quiet harbor"</string>
+  <string name="create_literal">"@@+id/marker"</string>
+  <string name="double_chain">"A neutral harbor"</string>
+  <string name="double_macro">"A neutral harbor"</string>
+  <string name="escaped">"@@string/anchor"</string>
+  <array name="mixed">
+    <item>@@string/anchor</item>
+    <item>"Visible mixed route"</item>
+  </array>
+  <string name="null_literal">"@@null"</string>
+  <string name="quoted">"@@string/anchor"</string>
+  <string-array name="routes">
+    <item>@string/anchor</item>
+    <item>@@string/anchor</item>
+    <item>"@@@string/anchor"</item>
+    <item>"@@string/anchor"</item>
+    <item>"@@string/anchor"</item>
+    <item>"A neutral harbor"</item>
+    <item>"Actual route"</item>
+  </string-array>
+  <plurals name="signals">
+    <item quantity="one">@@string/anchor</item>
+    <item quantity="two">"A neutral harbor"</item>
+    <item quantity="other">"%1$d visible signals"</item>
+  </plurals>
+  <string name="single_macro">"A neutral harbor"</string>
+  <string name="triple">"@@@string/anchor"</string>
+  <string name="unknown">"@@unknown/anchor"</string>
+</resources>

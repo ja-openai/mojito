@@ -1,0 +1,4 @@
+<resources>
+  <string name="harbor" product=" tablet ">Padded tablet marker</string>
+  <string name="harbor" product="tablet">Duplicate tablet marker</string>
+</resources>

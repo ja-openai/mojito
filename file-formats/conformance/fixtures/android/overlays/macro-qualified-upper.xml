@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <macro name="harbor_phrase">A brighter harbor crossing</macro>
+    <string name="upper_route">@*neutral.overlay.harbor:macro/harbor_phrase</string>
+</resources>

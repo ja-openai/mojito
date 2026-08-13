@@ -1,0 +1,6 @@
+<resources>
+  <item type="string" name="navigation_hint" translatable="fAlSe">Generic orbital route</item>
+  <plurals name="navigation_signals" translatable="fAlSe">
+    <item quantity="other">%1$d replacement orbital signals</item>
+  </plurals>
+</resources>

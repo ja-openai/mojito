@@ -1,0 +1,5 @@
+{
+  "plurals": {
+    "signals": {"one": "Signal visible", "other": "Signaux visibles"}
+  }
+}

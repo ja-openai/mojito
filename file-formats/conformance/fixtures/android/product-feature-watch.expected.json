@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "active": {
+      "defaultMessage": "Default beacon passage"
+    },
+    "anchor": {
+      "defaultMessage": "Neutral harbor anchor"
+    },
+    "fallback": {
+      "defaultMessage": "Watch sheltered passage"
+    },
+    "inverse": {
+      "defaultMessage": "Default inverse passage"
+    },
+    "lanes[1]": {
+      "defaultMessage": "Default inlet",
+      "metadata": {
+        "androidArrayPrimitives": {
+          "0": "13"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 1,
+        "arrayName": "lanes"
+      }
+    },
+    "lanes[2]": {
+      "defaultMessage": "Default outlet",
+      "metadata": {
+        "androidArrayPrimitives": {
+          "0": "13"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 2,
+        "arrayName": "lanes"
+      }
+    },
+    "mode": {
+      "defaultMessage": "Watch navigation mode"
+    },
+    "route": {
+      "defaultMessage": "Default harbor route"
+    },
+    "signals": {
+      "defaultMessage": "{count, plural, one {One default signal} other {Several default signals}}",
+      "variants": {
+        "one": "One default signal",
+        "other": "Several default signals"
+      }
+    }
+  }
+}

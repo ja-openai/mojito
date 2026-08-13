@@ -1,0 +1,23 @@
+{
+  "arrays": {
+    "routes": [
+      "",
+      "West pier",
+      "<blue> & mild"
+    ]
+  },
+  "plurals": {
+    "visits": {
+      "one": "",
+      "other": "%1$d visits"
+    }
+  },
+  "strings": {
+    "cdata": "<quiet> & calm",
+    "cdata_split": "North <quiet> & calm pier",
+    "commented": "North pier",
+    "empty_generic": "",
+    "empty_scalar": "",
+    "ignored_empty": ""
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "navigation_hint": {
+      "defaultMessage": "Generic orbital route",
+      "metadata": {
+        "androidGenericString": true,
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "navigation_signals": {
+      "defaultMessage": "{arg0, plural, other {{arg0} replacement orbital signals}}",
+      "variants": {
+        "other": "{arg0} replacement orbital signals"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    }
+  }
+}

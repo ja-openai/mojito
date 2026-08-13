@@ -1,0 +1,7 @@
+<resources>
+  <string name="anchor">Overlay harbor</string>
+  <string-array name="routes">
+    <item>Original harbor</item>
+    <item>Original beacon</item>
+  </string-array>
+</resources>

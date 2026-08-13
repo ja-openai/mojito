@@ -1,0 +1,24 @@
+{
+  "messages": {
+    "harbor_anchor@flag=neutral.flags.mutable": {
+      "defaultMessage": "A conditional harbor anchor",
+      "metadata": {
+        "androidPathFeatureFlag": "neutral.flags.mutable",
+        "androidPathFeatureFlagMode": "read_write",
+        "androidResourcePath": "src/main/res/flag(neutral.flags.mutable)/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "harbor_dock@flag=neutral.flags.mutable": {
+      "defaultMessage": "A conditional harbor dock",
+      "metadata": {
+        "androidPathFeatureFlag": "neutral.flags.mutable",
+        "androidPathFeatureFlagMode": "read_write",
+        "androidResourcePath": "src/main/res/flag(neutral.flags.mutable)/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    }
+  },
+  "schemaVersion": 1,
+  "sourceFormat": "android"
+}

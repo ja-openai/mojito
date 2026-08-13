@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+  <string name="anchor">"Path-protected harbor anchor"</string>
+  <bag type="string-array" name="bag_lanes">
+    <item>"Visible bag lane"</item>
+  </bag>
+  <string name="display">"Tablet path display"</string>
+  <array name="lanes">
+    <item android:featureFlag="neutral.path.enabled">@string/anchor</item>
+    <item>37</item>
+    <item>"Visible path lane"</item>
+  </array>
+  <string name="route">"Path-protected harbor route"</string>
+  <plurals name="signals">
+    <item quantity="one">"One visible path signal"</item>
+    <item quantity="other">"Several visible path signals"</item>
+  </plurals>
+</resources>

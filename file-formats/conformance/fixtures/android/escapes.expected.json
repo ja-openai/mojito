@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "quoted": { "defaultMessage": "  keep   these spaces  " },
+    "collapsed": { "defaultMessage": "one two three" },
+    "escapes": { "defaultMessage": "Line\nTab\tQuote'\" At@ Question? Slash\\" },
+    "unicode": { "defaultMessage": "A B" },
+    "percent": {
+      "defaultMessage": "Save 50% for {arg1} items",
+      "placeholders": [{ "name": "arg1", "source": "%2$d", "kind": "integer", "position": 2 }]
+    },
+    "entity": { "defaultMessage": "Fish & chips < 5" }
+  }
+}

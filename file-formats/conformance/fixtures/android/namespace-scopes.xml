@@ -1,0 +1,8 @@
+<resources xmlns:x="urn:oasis:names:tc:xliff:document:1.2"
+    xmlns:hint="http://schemas.android.com/tools"
+    hint:locale="es_MX">
+  <string name="outer">Outer <x:g id="outer">A1</x:g></string>
+  <string name="shadowed_foreign">Hidden <x:g xmlns:x="urn:mojito:neutral:shadow" id="inner">B2</x:g></string>
+  <string name="restored">Again <x:g id="again">C3</x:g></string>
+  <string name="local_alias">Local <z:g xmlns:z="urn:oasis:names:tc:xliff:document:1.2" id="local">D4</z:g></string>
+</resources>

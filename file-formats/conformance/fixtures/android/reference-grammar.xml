@@ -1,0 +1,49 @@
+<resources>
+  <string name="anchor">Calm harbor</string>
+  <string name="package_alias">@com.neutral.port:string/anchor</string>
+  <string name="private_platform">@*android:string/anchor</string>
+  <string name="private_package">@*com.neutral.port:string/anchor</string>
+  <string name="qualified_theme">?android:attr/title</string>
+  <string name="package_theme">?com.neutral.port:attr/title</string>
+  <string name="private_theme">?*android:attr/title</string>
+  <string name="package_short_theme">?android:title</string>
+  <string name="shorthand_theme">?title</string>
+  <string name="color_alias">@color/harbor</string>
+  <string name="macro_alias">@macro/harbor</string>
+  <string name="raw_alias">@raw/harbor</string>
+  <string name="style_alias">@style/harbor</string>
+  <string name="dotted_entry">@string/harbor.deck</string>
+  <string name="dashed_entry">@string/quiet-harbor</string>
+  <string name="created_identity">@+id/harbor</string>
+  <string name="numeric_literal">@0</string>
+  <string name="at_literal">@not_a_reference</string>
+  <string name="unknown_type_literal">@unknown/harbor</string>
+  <string name="invalid_create_literal">@+string/harbor</string>
+  <string name="invalid_private_create_literal">@+*android:id/harbor</string>
+  <string name="invalid_theme_type_literal">?string/harbor</string>
+  <string name="quoted_package">"@com.neutral.port:string/anchor"</string>
+  <string name="escaped_theme">\?android:attr/title</string>
+  <string name="unicode_padded">&#x2003;@com.neutral.port:string/anchor&#x2003;</string>
+  <string-array name="routes">
+    <item>@com.neutral.port:string/anchor</item>
+    <item>@*android:string/anchor</item>
+    <item>?android:attr/title</item>
+    <item>?title</item>
+    <item>@color/harbor</item>
+    <item>@+id/harbor</item>
+    <item>@macro/harbor</item>
+    <item>?android:title</item>
+    <item>@string/quiet-harbor</item>
+    <item>Quiet %1$s</item>
+    <item>"@com.neutral.port:string/anchor"</item>
+    <item>\?android:attr/title</item>
+  </string-array>
+  <plurals name="signals">
+    <item quantity="zero">@*com.neutral.port:string/anchor</item>
+    <item quantity="one">?android:attr/title</item>
+    <item quantity="two">?title</item>
+    <item quantity="few">@color/harbor</item>
+    <item quantity="many">@+id/harbor</item>
+    <item quantity="other">%1$d quiet signals</item>
+  </plurals>
+</resources>

@@ -1,0 +1,53 @@
+{
+  "arrayPrimitiveValues": {
+    "typed_macro_routes": {
+      "1": "17"
+    }
+  },
+  "arrayReferences": {
+    "typed_macro_routes": {
+      "2": "@string/anchor"
+    }
+  },
+  "arrays": {
+    "macro_routes": [
+      "A quiet harbor route",
+      "A direct harbor lane",
+      "A quiet harbor route"
+    ],
+    "typed_macro_routes": [
+      "A quiet harbor route",
+      "17",
+      "@string/anchor",
+      "A final harbor lane"
+    ]
+  },
+  "plurals": {
+    "macro_signals": {
+      "one": "%1$d harbor signal",
+      "other": "%1$d harbor signals"
+    }
+  },
+  "strings": {
+    "anchor": "North harbor marker",
+    "chained_macro": "A quiet harbor route",
+    "direct_macro": "A quiet harbor route",
+    "disabled_macro": "A fixed-flag macro still expands",
+    "empty_macro": "",
+    "generic_macro": "A quiet harbor route",
+    "mutable_macro": "A runtime-flag macro still expands",
+    "protected_macro": "Reading %1$s",
+    "styled_macro": "A steady harbor beacon"
+  },
+  "styledSpans": {
+    "strings": {
+      "styled_macro": [
+        {
+          "end": 7,
+          "name": "b",
+          "start": 2
+        }
+      ]
+    }
+  }
+}

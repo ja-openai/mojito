@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "calendar": {
+      "defaultMessage": "{arg0}-{arg0}-{arg0}",
+      "placeholders": [
+        { "name": "arg0", "source": "%1$tY", "kind": "value", "position": 1 },
+        { "name": "arg0", "source": "%1$tm", "kind": "value", "position": 1 },
+        { "name": "arg0", "source": "%1$td", "kind": "value", "position": 1 }
+      ]
+    },
+    "number": {
+      "defaultMessage": "{arg0} units",
+      "placeholders": [{ "name": "arg0", "source": "%1$,.2f", "kind": "number", "position": 1 }]
+    },
+    "adjacent": {
+      "defaultMessage": "% {arg0} %",
+      "placeholders": [{ "name": "arg0", "source": "%1$d", "kind": "integer", "position": 1 }]
+    }
+  }
+}

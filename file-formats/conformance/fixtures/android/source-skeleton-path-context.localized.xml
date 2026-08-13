@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="de_DE">
+  <!-- Directory qualifiers, not this design-time annotation, own the locale. -->
+  <string name=" anchor.route ">"Ancre française"</string>
+  <string name="route" product=" default ">"Passage français"</string>
+  <string name="route" product=" tablet ">"Passage tablette français"</string>
+  <item type="string" name="beacon">"Balise française"</item>
+  <string-array name="lanes">
+    <item><![CDATA["Nord <clair> & sûr"]]></item>
+    <item>@string/anchor.route</item>
+    <item>"Sud français"</item>
+  </string-array>
+  <plurals name="signals">
+    <item quantity="one">"%1$d signal français"</item>
+    <item quantity="other">"%1$d signaux français"</item>
+  </plurals>
+  <string translatable="false" name="private">Keep private night note</string>
+</resources>

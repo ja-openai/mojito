@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-16BE"?>
+<resources xmlns:marker="urn:oasis:names:tc:xliff:document:1.2">
+  <!-- Upper-priority lexical formatting and protected attributes remain owned. -->
+  <string name="shared_signal">"Pilote "<marker:g id="pilot" example="D&amp;2">%1$s</marker:g></string>
+  <string translatable="false" name="masked_signal">Protected upper coast</string>
+  <string name="product_signal" product="tablet">"Balise tablette sélectionnée"</string>
+  <string-array name="product_routes" product="tablet">
+    <item>"Route tablette sélectionnée"</item>
+  </string-array>
+  <plurals name="product_lights" product="tablet">
+    <item quantity="one">"%1$d feu tablette sélectionné"</item>
+    <item quantity="other">"%1$d feux tablette sélectionnés"</item>
+  </plurals>
+  <string-array name="routes">
+    <item>"Débogage "<b lane="north">"nord"</b></item>
+    <item>"Débogage sud"</item>
+  </string-array>
+  <plurals name="lights">
+    <item quantity="one">"%1$d feu supérieur"</item>
+    <item quantity="other">"%1$d feux supérieurs"</item>
+  </plurals>
+  <string name="debug_anchor">"Débogage seul"</string>
+</resources>

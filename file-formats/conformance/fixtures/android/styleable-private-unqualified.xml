@@ -1,0 +1,1 @@
+<resources><declare-styleable name="Harbor"><attr name="*signal" format="string" /></declare-styleable></resources>

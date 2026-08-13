@@ -1,0 +1,16 @@
+{
+  "products": {
+    "default": {
+      "strings": {
+        "display": "Regular panel",
+        "retained": "Common switch"
+      }
+    },
+    "tablet": {
+      "strings": {
+        "display": "Updated wide panel",
+        "retained": "Common switch"
+      }
+    }
+  }
+}

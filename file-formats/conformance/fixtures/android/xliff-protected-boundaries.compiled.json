@@ -1,0 +1,29 @@
+{
+  "arrays": {
+    "protected_routes": [
+      "Gate NW ready",
+      "Gate %1$s ready"
+    ]
+  },
+  "plurals": {
+    "protected_count": {
+      "one": "%1$d orbital signal",
+      "other": "%1$d orbital signals"
+    }
+  },
+  "strings": {
+    "accented_identifier": "Port ZX calme",
+    "adjacent_anonymous": "ONE then TWO",
+    "anonymous_formatter": "Harbor %1$s clear",
+    "anonymous_literal": "Orbit ZX-4 ready",
+    "cjk_identifier": "Status ZX ready",
+    "combining_identifier": "Mark ZX set",
+    "conventional_with_example": "%1$s follows",
+    "emoji_identifier": "Link ZX active",
+    "empty_formatter": "Seen %1$d times",
+    "empty_identifier": "Quiet Q-7 route",
+    "numeric_identifier": "Dock ZX open",
+    "repeated_same_source": "ZX then YY then ZX",
+    "unknown_xliff_wrapper": "Nested ZX trace"
+  }
+}

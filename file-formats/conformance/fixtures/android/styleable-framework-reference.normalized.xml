@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <declare-styleable name="FrameworkCompass">
+    <attr name="android:label" />
+    <attr name="local_signal" format="string" />
+  </declare-styleable>
+  <string-array name="framework_routes">
+    <item>?attr/local_signal</item>
+    <item>"A framework-aware crossing"</item>
+  </string-array>
+</resources>

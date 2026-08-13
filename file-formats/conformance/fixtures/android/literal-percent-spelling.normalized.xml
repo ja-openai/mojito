@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="escaped_before_terminal">"Harbor signal 80%% beside 30%"</string>
+  <item type="string" name="generic_fragment">"Gauge %_ for %1$s"</item>
+  <string name="only_percent">"%"</string>
+  <string name="raw_before_escaped">"Harbor signal %_ beside 80%%"</string>
+  <string-array name="raw_routes">
+    <item>"North %_ for %1$s"</item>
+    <item>"South 80%% and 30%"</item>
+  </string-array>
+  <plurals name="raw_signals">
+    <item quantity="one">"%_ at %1$d signal"</item>
+    <item quantity="other">"80%% and %_ at %1$d signals"</item>
+  </plurals>
+  <string name="solitary_fragment">"Harbor signal %_"</string>
+  <item type="string" name="strict_terminal" format="string">"Gauge ends at 30%"</item>
+  <string name="styled_attribute"><annotation role="50%%">"Signal %_"</annotation>" for %1$s"</string>
+  <string name="styled_fragment"><b>"Signal %_"</b>" for %1$s"</string>
+  <string name="supplementary_percent">"🧭 %_ beside 80%%"</string>
+  <string name="terminal_percent">"Fuel remaining: 80%"</string>
+  <string name="unformatted_percent" formatted="false">"Gauge %_ for %1$s and 80%%"</string>
+</resources>

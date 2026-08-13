@@ -1,0 +1,40 @@
+{
+  "arrays": {
+    "protected_bag_routes": [
+      "Bay's quiet"
+    ],
+    "protected_routes": [
+      "South's pier",
+      "East's calm",
+      "North %1$s lane",
+      "%1$s"
+    ]
+  },
+  "styledSpans": {
+    "arrays": {
+      "protected_routes": {
+        "3": [
+          {
+            "name": "b",
+            "start": 0,
+            "end": 3
+          }
+        ]
+      }
+    }
+  },
+  "plurals": {
+    "protected_bag_counts": {
+      "other": "Two beacon's lane"
+    },
+    "protected_counts": {
+      "one": "One signal's shore",
+      "other": "%s then %d"
+    }
+  },
+  "strings": {
+    "protected_generic": "West's A quay",
+    "protected_scalar": "Harbor's  quiet %s %d",
+    "visible": "Port visible"
+  }
+}

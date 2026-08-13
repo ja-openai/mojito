@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "attribute_and_visible_newlines": {
+      "defaultMessage": "'<'annotation route=\"north%nwest\">Pier\ninner\nopen'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidPrintfLineSeparator": true,
+        "androidPrintfLineSeparators": [
+          1
+        ]
+      }
+    },
+    "attribute_escaped_percent_n": {
+      "defaultMessage": "'<'annotation route=\"north%%nwest\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "attribute_literal_backslash": {
+      "defaultMessage": "'<'annotation route=\"north\\nwest\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "attribute_malformed_percent": {
+      "defaultMessage": "'<'annotation route=\"%_\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "attribute_only_positional_token": {
+      "defaultMessage": "'<'annotation route=\"%1$s\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "attribute_percent_alignment": {
+      "defaultMessage": "'<'annotation route=\"%n%%\">Berth %_ and 80%'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRawPercentOccurrences": [
+          0
+        ]
+      }
+    },
+    "attribute_positional_token": {
+      "defaultMessage": "'<'annotation route=\"%1$s\">Pier {arg0}'<'/annotation>",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "attribute_printf_newline": {
+      "defaultMessage": "'<'annotation route=\"north%nwest\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "attribute_routes[0]": {
+      "defaultMessage": "'<'annotation route=\"%n\">North'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "arrayIndex": 0,
+        "arrayName": "attribute_routes"
+      }
+    },
+    "attribute_routes[1]": {
+      "defaultMessage": "'<'annotation route=\"%%n\">South\nopen'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidPrintfLineSeparator": true,
+        "arrayIndex": 1,
+        "arrayName": "attribute_routes"
+      }
+    },
+    "attribute_signals": {
+      "defaultMessage": "{arg0, plural, one {'<'annotation route=\"%n\">{arg0} signal\nnear'<'/annotation>} other {'<'annotation route=\"%%n\">{arg0} signals\nnear'<'/annotation>}}",
+      "variants": {
+        "one": "'<'annotation route=\"%n\">{arg0} signal\nnear'<'/annotation>",
+        "other": "'<'annotation route=\"%%n\">{arg0} signals\nnear'<'/annotation>"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidPluralPrintfLineSeparators": {
+          "other": [
+            0
+          ]
+        },
+        "androidPrintfLineSeparator": true
+      }
+    },
+    "attribute_solitary_percent": {
+      "defaultMessage": "'<'annotation route=\"north%west\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "attribute_supplementary": {
+      "defaultMessage": "'<'annotation route=\"🧭%n東\">北🙂'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "attribute_xml_carriage": {
+      "defaultMessage": "'<'annotation route=\"north\rwest\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "attribute_xml_newline": {
+      "defaultMessage": "'<'annotation route=\"north\nwest\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "attribute_xml_tab": {
+      "defaultMessage": "'<'annotation route=\"north\twest\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "font_attribute_newline": {
+      "defaultMessage": "'<'font color=\"%n\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff000000",
+                  "mode": "fallback"
+                },
+                "kind": "foreground",
+                "value": "%n"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "nested_attribute_newline": {
+      "defaultMessage": "'<'annotation route=\"%n\"><b>North</b>'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "strict_attribute": {
+      "defaultMessage": "'<'annotation route=\"%n\">{arg0} ready'<'/annotation>",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidGenericFormat": "string",
+        "androidGenericString": true,
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "unformatted_attribute": {
+      "defaultMessage": "'<'annotation route=\"%n\">Pier%nopen'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "formatted": false
+      }
+    }
+  }
+}

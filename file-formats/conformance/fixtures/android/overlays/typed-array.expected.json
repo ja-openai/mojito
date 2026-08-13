@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": {
+      "defaultMessage": "Overlay harbor",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "routes[0]": {
+      "defaultMessage": "Updated {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidArrayPrimitives": {
+          "1": "17"
+        },
+        "androidArrayReferences": {
+          "2": "@string/anchor"
+        },
+        "androidGenericArray": true,
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 0,
+        "arrayName": "routes"
+      }
+    },
+    "routes[3]": {
+      "defaultMessage": "17",
+      "metadata": {
+        "androidArrayPrimitives": {
+          "1": "17"
+        },
+        "androidArrayReferences": {
+          "2": "@string/anchor"
+        },
+        "androidGenericArray": true,
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 3,
+        "arrayName": "routes"
+      }
+    }
+  }
+}

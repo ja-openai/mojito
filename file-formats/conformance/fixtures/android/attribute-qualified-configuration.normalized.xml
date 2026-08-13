@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="fr">
+  <attr name="localized_route" format="integer" min="8" max="9" />
+  <declare-styleable name="LocalizedCompass">
+    <attr name="localized_signal" format="enum">
+      <enum name="local_eight" value="8" />
+      <enum name="local_ten" value="10" />
+    </attr>
+  </declare-styleable>
+  <string-array name="localized_routes">
+    <item>?attr/localized_route</item>
+    <item>?attr/localized_signal</item>
+    <item>"Un passage localisé"</item>
+  </string-array>
+</resources>

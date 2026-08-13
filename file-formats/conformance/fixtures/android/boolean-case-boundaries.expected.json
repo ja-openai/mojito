@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "generic_ignored_flags": {
+      "defaultMessage": "Generic flags are ignored",
+      "metadata": {
+        "androidGenericString": true
+      }
+    },
+    "ignored_invalid_plural": {
+      "defaultMessage": "{arg0, plural, other {{arg0} visible ignored signals}}",
+      "variants": {
+        "other": "{arg0} visible ignored signals"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ]
+    },
+    "ignored_mixed_plural": {
+      "defaultMessage": "{arg0, plural, one {{arg0} visible mixed signal} other {{arg0} visible mixed signals}}",
+      "variants": {
+        "one": "{arg0} visible mixed signal",
+        "other": "{arg0} visible mixed signals"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ]
+    },
+    "padded_enabled": {
+      "defaultMessage": "{arg0} harbor route",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ]
+    },
+    "title_array[0]": {
+      "defaultMessage": "Title-case array signal",
+      "metadata": {
+        "arrayIndex": 0,
+        "arrayName": "title_array"
+      }
+    },
+    "title_enabled": {
+      "defaultMessage": "{arg0} quiet beacons",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ]
+    },
+    "title_unformatted": {
+      "defaultMessage": "%s %d retained",
+      "metadata": {
+        "formatted": false
+      }
+    },
+    "upper_array[0]": {
+      "defaultMessage": "Uppercase array signal",
+      "metadata": {
+        "arrayIndex": 0,
+        "arrayName": "upper_array"
+      }
+    },
+    "upper_enabled": {
+      "defaultMessage": "{arg0} orbital route",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ]
+    },
+    "uppercase_unformatted": {
+      "defaultMessage": "%s %d preserved",
+      "metadata": {
+        "formatted": false
+      }
+    }
+  }
+}

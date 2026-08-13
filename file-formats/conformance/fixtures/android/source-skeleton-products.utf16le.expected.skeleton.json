@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-16LE-BOM",
+  "source": "<?xml version=\"1.0\"?>\n<resources xmlns:drift=\"urn:neutral:protected-variant\" xmlns:tools=\"http://schemas.android.com/tools\">\n  <!-- All product spellings, surrounding spacing, and comments remain original. -->\n  <string name=\"anchor\">Safe harbor anchor</string>\n  <string name=\" harbor.route \" product=\" default \">Open harbor passage</string>\n  <string name=\"harbor.route\" product=\" tablet \">Tablet harbor passage</string>\n  <string name=\"harbor.route\" product=\"watch\"><![CDATA[Watch <quiet> & clear]]></string>\n\n  <!-- Foreign-namespace declarations must never claim a native message slot. -->\n  <drift:string name=\"harbor.route\" product=\"tablet\">Protected foreign passage</drift:string>\n  <item type=\"string\" name=\"harbor.signal\" product=\"default\">Default harbor signal</item>\n  <item type=\"string\" name=\" harbor.signal \" product=\" tablet \" tools:ignore=\"Protected\" />\n  <string translatable=\"false\" name=\"private.route\">Protected private route</string>\n\n  <string-array name=\" harbor.lanes \" product=\" default \">\n    <item>Default north lane</item>\n    <item>@string/anchor</item>\n    <item>Default south lane</item>\n  </string-array>\n  <string-array name=\"harbor.lanes\" product=\" tablet \">\n    <item><![CDATA[Tablet <north> & safe]]></item>\n    <item>@string/anchor</item>\n    <item>Tablet<!-- keep this exact product marker --> south lane</item>\n  </string-array>\n\n  <plurals name=\" tide.count \" product=\" default \">\n    <item quantity=\"one\">%1$d default beacon</item>\n    <item quantity=\"other\">%1$d default beacons</item>\n  </plurals>\n  <plurals name=\"tide.count\" product=\" tablet \">\n    <item quantity=\"one\" tools:ignore=\"Protected\" />\n    <item quantity=\"other\">%1$d tablet beacons</item>\n  </plurals>\n</resources>\n",
+  "slots": [
+    {
+      "id": "anchor",
+      "start": 470,
+      "end": 506
+    },
+    {
+      "id": "harbor.route",
+      "start": 630,
+      "end": 668
+    },
+    {
+      "id": "harbor.route@product=tablet",
+      "start": 786,
+      "end": 828
+    },
+    {
+      "id": "harbor.route@product=watch",
+      "start": 940,
+      "end": 1006
+    },
+    {
+      "id": "harbor.signal",
+      "start": 1502,
+      "end": 1544
+    },
+    {
+      "id": "harbor.signal@product=tablet",
+      "start": 1738,
+      "end": 1742
+    },
+    {
+      "id": "harbor.lanes[0]",
+      "start": 2054,
+      "end": 2090
+    },
+    {
+      "id": "harbor.lanes[2]",
+      "start": 2190,
+      "end": 2226
+    },
+    {
+      "id": "harbor.lanes@product=tablet[0]",
+      "start": 2410,
+      "end": 2476
+    },
+    {
+      "id": "harbor.lanes@product=tablet[2]",
+      "start": 2576,
+      "end": 2688
+    },
+    {
+      "id": "tide.count",
+      "variant": "one",
+      "start": 2896,
+      "end": 2934
+    },
+    {
+      "id": "tide.count",
+      "variant": "other",
+      "start": 3004,
+      "end": 3044
+    },
+    {
+      "id": "tide.count@product=tablet",
+      "variant": "one",
+      "start": 3284,
+      "end": 3288
+    },
+    {
+      "id": "tide.count@product=tablet",
+      "variant": "other",
+      "start": 3344,
+      "end": 3382
+    }
+  ]
+}

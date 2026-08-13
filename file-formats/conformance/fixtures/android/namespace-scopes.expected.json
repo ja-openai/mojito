@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "locale": "es-MX",
+  "messages": {
+    "outer": {
+      "defaultMessage": "Outer {outer}",
+      "placeholders": [{ "name": "outer", "source": "A1", "kind": "string" }]
+    },
+    "shadowed_foreign": { "defaultMessage": "Hidden B2" },
+    "restored": {
+      "defaultMessage": "Again {again}",
+      "placeholders": [{ "name": "again", "source": "C3", "kind": "string" }]
+    },
+    "local_alias": {
+      "defaultMessage": "Local {local}",
+      "placeholders": [{ "name": "local", "source": "D4", "kind": "string" }]
+    }
+  }
+}

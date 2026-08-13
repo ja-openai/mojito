@@ -1,0 +1,10 @@
+<resources>
+  <string name="anchor">Original overlay anchor</string>
+  <string-array name="routes.bag">
+    <item>Original coastal route</item>
+  </string-array>
+  <plurals name="signals.bag">
+    <item quantity="one">One original signal</item>
+    <item quantity="other">Many original signals</item>
+  </plurals>
+</resources>

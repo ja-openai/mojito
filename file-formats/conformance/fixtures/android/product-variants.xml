@@ -1,0 +1,14 @@
+<resources>
+  <string name="button" product="default">Open</string>
+  <string name="button" product="tablet">Launch</string>
+  <string name="button" product="watch">Begin</string>
+  <string name="solo" product="tablet">Tablet signal</string>
+  <plurals name="alerts" product="tablet">
+    <item quantity="one">%1$d tablet alert</item>
+    <item quantity="other">%1$d tablet alerts</item>
+  </plurals>
+  <string-array name="labels" product="watch">
+    <item>Compact</item>
+    <item>Quick</item>
+  </string-array>
+</resources>

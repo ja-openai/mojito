@@ -1,0 +1,9 @@
+{
+  "strings": {
+    "before_style": "alpha  beta  omega",
+    "inside_quote": "  alpha  beta  omega ",
+    "quote_after_span": "  echo   tail",
+    "empty_span": "north  south",
+    "unknown_boundary": "north soft south"
+  }
+}

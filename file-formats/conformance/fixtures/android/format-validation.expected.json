@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "styled": {
+      "defaultMessage": "<b>{arg0}</b> then {arg1}",
+      "placeholders": [
+        { "name": "arg0", "source": "%s", "kind": "string", "position": 1 },
+        { "name": "arg1", "source": "%d", "kind": "integer", "position": 2 }
+      ]
+    },
+    "styled_relative": {
+      "defaultMessage": "<i>{arg0}</i> then {arg0}",
+      "placeholders": [
+        { "name": "arg0", "source": "%s", "kind": "string", "position": 1 },
+        { "name": "arg0", "source": "%<s", "kind": "string", "position": 1 }
+      ]
+    },
+    "literal_pair": {
+      "defaultMessage": "%s then %d",
+      "metadata": { "formatted": false }
+    },
+    "generic": {
+      "defaultMessage": "{arg0} then {arg1}",
+      "placeholders": [
+        { "name": "arg0", "source": "%s", "kind": "string", "position": 1 },
+        { "name": "arg1", "source": "%d", "kind": "integer", "position": 2 }
+      ],
+      "metadata": { "androidGenericString": true }
+    },
+    "routes[0]": {
+      "defaultMessage": "{arg0} then {arg1}",
+      "placeholders": [
+        { "name": "arg0", "source": "%s", "kind": "string", "position": 1 },
+        { "name": "arg1", "source": "%d", "kind": "integer", "position": 2 }
+      ],
+      "metadata": { "arrayIndex": 0, "arrayName": "routes" }
+    },
+    "routes[1]": {
+      "defaultMessage": "Next {arg0} then {arg1}",
+      "placeholders": [
+        { "name": "arg0", "source": "%s", "kind": "string", "position": 1 },
+        { "name": "arg1", "source": "%d", "kind": "integer", "position": 2 }
+      ],
+      "metadata": { "arrayIndex": 1, "arrayName": "routes" }
+    },
+    "signals": {
+      "defaultMessage": "{arg1, plural, one {{arg0} then {arg1}} other {{arg0} then {arg1}}}",
+      "variants": {
+        "one": "{arg0} then {arg1}",
+        "other": "{arg0} then {arg1}"
+      },
+      "placeholders": [
+        { "name": "arg0", "source": "%s", "kind": "string", "position": 1 },
+        { "name": "arg1", "source": "%d", "kind": "integer", "position": 2 }
+      ]
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "before_style": { "defaultMessage": "alpha <b> beta </b> omega" },
+    "inside_quote": { "defaultMessage": "  alpha <b> beta </b> omega " },
+    "quote_after_span": { "defaultMessage": "<b>  echo  </b> tail" },
+    "empty_span": { "defaultMessage": "north <b></b> south" },
+    "unknown_boundary": { "defaultMessage": "north soft south" }
+  }
+}

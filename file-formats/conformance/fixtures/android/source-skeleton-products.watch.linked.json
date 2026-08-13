@@ -1,0 +1,26 @@
+{
+  "arrayReferences": {
+    "harbor.lanes": {
+      "1": "@string/anchor"
+    }
+  },
+  "arrays": {
+    "harbor.lanes": [
+      "Default north lane",
+      "@string/anchor",
+      "Default south lane"
+    ]
+  },
+  "plurals": {
+    "tide.count": {
+      "one": "%1$d default beacon",
+      "other": "%1$d default beacons"
+    }
+  },
+  "strings": {
+    "anchor": "Safe harbor anchor",
+    "harbor.route": "Watch <quiet> & clear",
+    "harbor.signal": "Default harbor signal",
+    "private.route": "Protected private route"
+  }
+}

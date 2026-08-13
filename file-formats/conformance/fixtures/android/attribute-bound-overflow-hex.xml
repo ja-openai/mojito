@@ -1,0 +1,1 @@
+<resources><attr name="harbor_signal" format="integer" max="0x100000000" /></resources>

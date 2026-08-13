@@ -1,0 +1,2 @@
+<!DOCTYPE resources [<!ENTITY secret SYSTEM "file:///etc/passwd">]>
+<resources><string name="secret">&secret;</string></resources>

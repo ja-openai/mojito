@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:code=\"urn:oasis:names:tc:xliff:document:1.2\">\n  <!-- Hash spellings are original neutral cases, not platform examples. -->\n  <string name=\"scalar_hash\">Dock #7</string>\n  <string name=\"escaped_hash\">Dock \\#8</string>\n  <string name=\"entity_hash\">Dock &#35;9</string>\n  <string name=\"unicode_hash\">Dock \\u002310</string>\n  <string name=\"protected_conventional\"><code:g id=\"arg0\">%1$s</code:g> #harbor</string>\n  <string name=\"mixed_conventional\"><code:g id=\"arg0\">%1$s</code:g> / %1$s / <code:g id=\"arg0\" example=\"\">%1$s</code:g> #signal</string>\n  <string name=\"styled_conventional\"><b lane=\"#signal\"><code:g id=\"arg0\">%1$s</code:g></b> / %1$s</string>\n\n  <!-- Generic TYPE_ANY recognizes an unescaped leading color as a primitive. -->\n  <item type=\"string\" name=\"primitive_color\">#abc</item>\n  <item type=\"string\" name=\"escaped_color\">\\#abc</item>\n  <item type=\"string\" name=\"unicode_color\">\\u0023abc</item>\n  <item type=\"string\" name=\"quoted_color\">\"#abc\"</item>\n  <item type=\"string\" name=\"strict_color\" format=\"string\">#abc</item>\n\n  <!-- Untyped array colors remain protected slots; escaped colors stay editable. -->\n  <array name=\"mixed_hashes\">\n    <item>#abc</item>\n    <item>\\#abc</item>\n    <item>\"#abc\"</item>\n    <item>Dock ##4</item>\n    <item>Dock &#35;5</item>\n  </array>\n\n  <string-array name=\"hash_routes\">\n    <item>#lane north</item>\n    <item>Dock \\#lane south</item>\n    <item>Dock &#35;lane east</item>\n  </string-array>\n\n  <string-array name=\"conventional_routes\">\n    <item><code:g id=\"arg0\">%1$s</code:g> #north</item>\n    <item>%1$s / <code:g id=\"arg0\">%1$s</code:g> ##south</item>\n  </string-array>\n\n  <plurals name=\"raw_signals\">\n    <item quantity=\"one\">%1$d route #north</item>\n    <item quantity=\"other\">%1$d routes ##north</item>\n  </plurals>\n  <plurals name=\"escaped_signals\">\n    <item quantity=\"one\">%1$d route \\#west</item>\n    <item quantity=\"other\">%1$d routes &#35;west</item>\n  </plurals>\n  <plurals name=\"styled_signals\">\n    <item quantity=\"one\">%1$d <b lane=\"&#35;inner\">#blue</b> route</item>\n    <item quantity=\"other\">%1$d <i lane=\"hash#inner\">##blue</i> routes</item>\n  </plurals>\n  <plurals name=\"protected_signals\">\n    <item quantity=\"one\"><code:g id=\"count\" example=\"#1\">%1$d</code:g> protected #lane</item>\n    <item quantity=\"other\"><code:g id=\"count\" example=\"#2\">%1$d</code:g> protected ##lanes</item>\n  </plurals>\n  <plurals name=\"optional_examples\">\n    <item quantity=\"one\"><code:g id=\"count\">%1$d</code:g> omitted #north</item>\n    <item quantity=\"other\"><code:g id=\"count\" example=\"#many\">%1$d</code:g> supplied ##north</item>\n  </plurals>\n  <plurals name=\"empty_examples\">\n    <item quantity=\"one\"><code:g id=\"count\" example=\"\">%1$d</code:g> empty #west</item>\n    <item quantity=\"other\"><code:g id=\"count\">%1$d</code:g> absent ##west</item>\n  </plurals>\n  <plurals name=\"repeated_examples\">\n    <item quantity=\"one\"><code:g id=\"count\" example=\"#lead\">%1$d</code:g>/<code:g id=\"count\" example=\"#tail\">%1$d</code:g> repeated #east</item>\n    <item quantity=\"other\"><code:g id=\"count\" example=\"#tail\">%1$d</code:g>/<code:g id=\"count\" example=\"#lead\">%1$d</code:g> repeated ##east</item>\n  </plurals>\n  <plurals name=\"conventional_signals\">\n    <item quantity=\"one\"><code:g id=\"arg0\">%1$d</code:g> #bridge</item>\n    <item quantity=\"other\">%1$d / <code:g id=\"arg0\">%1$d</code:g> ##bridges</item>\n  </plurals>\n  <plurals name=\"conventional_examples\">\n    <item quantity=\"one\"><code:g id=\"arg0\">%1$d</code:g>/<code:g id=\"arg0\" example=\"\">%1$d</code:g> #east</item>\n    <item quantity=\"other\"><code:g id=\"arg0\" example=\"\">%1$d</code:g>/<code:g id=\"arg0\">%1$d</code:g> ##east</item>\n  </plurals>\n\n  <plurals name=\"product_signals\" product=\"default\">\n    <item quantity=\"one\">%1$d default #signal</item>\n    <item quantity=\"other\">%1$d default ##signals</item>\n  </plurals>\n  <plurals name=\"product_signals\" product=\"tablet\">\n    <item quantity=\"one\">%1$d tablet #signal</item>\n    <item quantity=\"other\">%1$d tablet ##signals</item>\n  </plurals>\n\n  <string translatable=\"false\" name=\"protected_private\">Keep #protected</string>\n</resources>\n",
+  "slots": [
+    {
+      "id": "scalar_hash",
+      "start": 208,
+      "end": 215
+    },
+    {
+      "id": "escaped_hash",
+      "start": 255,
+      "end": 263
+    },
+    {
+      "id": "entity_hash",
+      "start": 302,
+      "end": 313
+    },
+    {
+      "id": "unicode_hash",
+      "start": 353,
+      "end": 366
+    },
+    {
+      "id": "protected_conventional",
+      "start": 416,
+      "end": 455
+    },
+    {
+      "id": "mixed_conventional",
+      "start": 501,
+      "end": 592
+    },
+    {
+      "id": "styled_conventional",
+      "start": 639,
+      "end": 699
+    },
+    {
+      "id": "escaped_color",
+      "start": 892,
+      "end": 897
+    },
+    {
+      "id": "unicode_color",
+      "start": 948,
+      "end": 957
+    },
+    {
+      "id": "quoted_color",
+      "start": 1007,
+      "end": 1013
+    },
+    {
+      "id": "strict_color",
+      "start": 1079,
+      "end": 1083
+    },
+    {
+      "id": "mixed_hashes[1]",
+      "start": 1240,
+      "end": 1245
+    },
+    {
+      "id": "mixed_hashes[2]",
+      "start": 1263,
+      "end": 1269
+    },
+    {
+      "id": "mixed_hashes[3]",
+      "start": 1287,
+      "end": 1295
+    },
+    {
+      "id": "mixed_hashes[4]",
+      "start": 1313,
+      "end": 1324
+    },
+    {
+      "id": "hash_routes[0]",
+      "start": 1390,
+      "end": 1401
+    },
+    {
+      "id": "hash_routes[1]",
+      "start": 1419,
+      "end": 1436
+    },
+    {
+      "id": "hash_routes[2]",
+      "start": 1454,
+      "end": 1473
+    },
+    {
+      "id": "conventional_routes[0]",
+      "start": 1554,
+      "end": 1592
+    },
+    {
+      "id": "conventional_routes[1]",
+      "start": 1610,
+      "end": 1656
+    },
+    {
+      "id": "raw_signals",
+      "variant": "one",
+      "start": 1739,
+      "end": 1756
+    },
+    {
+      "id": "raw_signals",
+      "variant": "other",
+      "start": 1791,
+      "end": 1810
+    },
+    {
+      "id": "escaped_signals",
+      "variant": "one",
+      "start": 1891,
+      "end": 1908
+    },
+    {
+      "id": "escaped_signals",
+      "variant": "other",
+      "start": 1943,
+      "end": 1964
+    },
+    {
+      "id": "styled_signals",
+      "variant": "one",
+      "start": 2044,
+      "end": 2085
+    },
+    {
+      "id": "styled_signals",
+      "variant": "other",
+      "start": 2120,
+      "end": 2163
+    },
+    {
+      "id": "protected_signals",
+      "variant": "one",
+      "start": 2246,
+      "end": 2307
+    },
+    {
+      "id": "protected_signals",
+      "variant": "other",
+      "start": 2342,
+      "end": 2405
+    },
+    {
+      "id": "optional_examples",
+      "variant": "one",
+      "start": 2488,
+      "end": 2535
+    },
+    {
+      "id": "optional_examples",
+      "variant": "other",
+      "start": 2570,
+      "end": 2635
+    },
+    {
+      "id": "empty_examples",
+      "variant": "one",
+      "start": 2715,
+      "end": 2770
+    },
+    {
+      "id": "empty_examples",
+      "variant": "other",
+      "start": 2805,
+      "end": 2851
+    },
+    {
+      "id": "repeated_examples",
+      "variant": "one",
+      "start": 2934,
+      "end": 3046
+    },
+    {
+      "id": "repeated_examples",
+      "variant": "other",
+      "start": 3081,
+      "end": 3194
+    },
+    {
+      "id": "conventional_signals",
+      "variant": "one",
+      "start": 3280,
+      "end": 3319
+    },
+    {
+      "id": "conventional_signals",
+      "variant": "other",
+      "start": 3354,
+      "end": 3402
+    },
+    {
+      "id": "conventional_examples",
+      "variant": "one",
+      "start": 3489,
+      "end": 3569
+    },
+    {
+      "id": "conventional_examples",
+      "variant": "other",
+      "start": 3604,
+      "end": 3685
+    },
+    {
+      "id": "product_signals",
+      "variant": "one",
+      "start": 3785,
+      "end": 3805
+    },
+    {
+      "id": "product_signals",
+      "variant": "other",
+      "start": 3840,
+      "end": 3862
+    },
+    {
+      "id": "product_signals@product=tablet",
+      "variant": "one",
+      "start": 3960,
+      "end": 3979
+    },
+    {
+      "id": "product_signals@product=tablet",
+      "variant": "other",
+      "start": 4014,
+      "end": 4035
+    }
+  ]
+}

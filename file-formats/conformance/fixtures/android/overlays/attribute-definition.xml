@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="overlay_signal" format="string | reference" />
+    <attr name="overlay_route"><enum name="quiet" value="0" /><enum name="bright" value="2" /></attr>
+</resources>

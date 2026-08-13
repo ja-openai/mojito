@@ -1,0 +1,22 @@
+{
+  "strings": {
+    "invalid_supplementary_size": "Pier"
+  },
+  "styledSpans": {
+    "strings": {
+      "invalid_supplementary_size": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "size": "𝟙𝟜"
+          },
+          "encodedTag": "font;size=𝟙𝟜",
+          "runtimeStyles": [],
+          "runtimeError": "NumberFormatException"
+        }
+      ]
+    }
+  }
+}

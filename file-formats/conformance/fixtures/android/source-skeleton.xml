@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<resources xmlns:code="urn:oasis:names:tc:xliff:document:1.2"
+    xmlns:hint="http://schemas.android.com/tools"
+    hint:locale="fr_CA">
+  <!-- Preserve this exact spacing, order, and original namespace aliases. -->
+  <macro name="private_route">A 🧭 route that stays exactly where it was</macro>
+  <string translatable="false" name="internal">Do not replace this value</string>
+
+  <!-- Keep attribute order, quote style, and entity spelling. -->
+  <string description='A neutral "harbor" label' name="harbor">North &amp; pier</string>
+  <string name="rich">Walk <b class="quiet" route='east'>north</b> now</string>
+  <string name="protected">Hello <code:g example="R-9" id="pilot">%1$s</code:g>!</string>
+  <item format="string" name="generic" type="string">Ordinary lane</item>
+
+  <string-array name="routes">
+    <item>East pier</item>
+    <item>@string/harbor</item>
+    <item>West pier</item>
+  </string-array>
+
+  <plurals name="visits">
+    <item quantity="one">%1$d visit</item>
+    <item quantity="other">%1$d visits</item>
+  </plurals>
+</resources>

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "visible.explicit": {
+      "defaultMessage": "Visible explicit marker",
+      "metadata": {
+        "androidResourcePath": "src/main/res/values/donotTranslate_harbor.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "visible.generic": {
+      "defaultMessage": "Visible generic marker",
+      "metadata": {
+        "androidResourcePath": "src/main/res/values/donotTranslate_harbor.xml",
+        "androidResourceQualifiers": [],
+        "androidGenericString": true
+      }
+    },
+    "visible.plain": {
+      "defaultMessage": "Visible filename-boundary marker",
+      "metadata": {
+        "androidResourcePath": "src/main/res/values/donotTranslate_harbor.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "visible.routes[0]": {
+      "defaultMessage": "Visible northern route",
+      "metadata": {
+        "androidResourcePath": "src/main/res/values/donotTranslate_harbor.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 0,
+        "arrayName": "visible.routes"
+      }
+    },
+    "visible.signals": {
+      "defaultMessage": "{count, plural, one {One visible signal} other {Several visible signals}}",
+      "variants": {
+        "one": "One visible signal",
+        "other": "Several visible signals"
+      },
+      "metadata": {
+        "androidResourcePath": "src/main/res/values/donotTranslate_harbor.xml",
+        "androidResourceQualifiers": []
+      }
+    }
+  }
+}

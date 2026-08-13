@@ -1,0 +1,11 @@
+{
+  "styled_route": "Après <i shade=\"east\">est</i> puis <b tone=\"north\" marker=\"N\">nord</b>.",
+  "nested_route": "Avant <i mood=\"calm\">extérieur</i> puis <b class=\"outer\"><u lane=\"inner\">centre</u></b>",
+  "protected_route": "Radar {radar} puis pilote {pilot}",
+  "mixed_route": "<i class=\"radar\">Radar {radar}</i> puis <b class=\"pilot\">Pilote {pilot}</b>",
+  "repeated_style": "<b lane=\"south\">sud</b> puis <b lane=\"north\">nord</b>",
+  "routes[0]": "Après <i path=\"two\">sud</i> puis <b path=\"one\">nord</b>",
+  "routes[1]": "Pont {deck} puis capitaine {captain}",
+  "signals#one": "<i tone=\"second\">sud</i> puis <b tone=\"first\">{arg0} nord</b>",
+  "signals#other": "<i tone=\"far\">sud</i> puis <b tone=\"many\">{arg0} nord</b>"
+}

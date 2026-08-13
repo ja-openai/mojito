@@ -1,0 +1,23 @@
+{
+  "arrays": {
+    "routes": [
+      "Updated %1$s",
+      "17",
+      "@string/anchor",
+      "17"
+    ]
+  },
+  "arrayPrimitiveValues": {
+    "routes": {
+      "1": "17"
+    }
+  },
+  "arrayReferences": {
+    "routes": {
+      "2": "@string/anchor"
+    }
+  },
+  "strings": {
+    "anchor": "Overlay harbor"
+  }
+}

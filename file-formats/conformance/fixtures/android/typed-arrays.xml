@@ -1,0 +1,40 @@
+<resources>
+  <string name="anchor">Harbor marker</string>
+  <array name="mixed_routes">
+    <item>Sail toward %1$s</item>
+    <item>17</item>
+    <item>true</item>
+    <item>#112233</item>
+    <item>4dp</item>
+    <item>1.5</item>
+    <item>25%</item>
+    <item>@string/anchor</item>
+    <item>?attr/harbor</item>
+    <item>"17"</item>
+    <item>\#112233</item>
+    <item translatable="FALSE">%s beside %d</item>
+  </array>
+  <array name="forced_routes" format=" string " formatted="uncertain">
+    <item>17</item>
+    <item>true</item>
+    <item>\#AABBCC</item>
+    <item>@string/anchor</item>
+    <item>%s beside %d</item>
+  </array>
+  <array name="numeric_only" format="integer">
+    <item>17</item>
+    <item>0x1f</item>
+    <item>@integer/harbor</item>
+  </array>
+  <array name="reference_only" format="reference">
+    <item>@string/anchor</item>
+    <item>?attr/harbor</item>
+  </array>
+  <integer-array name="integer_only">
+    <item>21</item>
+    <item>@integer/harbor</item>
+  </integer-array>
+  <array name="hidden_routes" translatable=" FALSE ">
+    <item>Hidden harbor</item>
+  </array>
+</resources>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:lane="http://schemas.android.com/apk/res/neutral.wrong.harbor">
+    <string name="shared_signal">@macro/scoped_message</string>
+    <string-array name="shared_routes">
+        <item>@macro/scoped_pointer</item>
+        <item>A visible overlay lane</item>
+    </string-array>
+</resources>

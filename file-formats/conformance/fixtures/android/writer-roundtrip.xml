@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:code="urn:oasis:names:tc:xliff:document:1.2"
+    xmlns:hint="http://schemas.android.com/tools"
+    hint:locale="fr_CA">
+  <string name="edge_whitespace" description="Pilot &quot;north&quot; &amp; deck">"  left "<b>" center isn't  "</b>" right  "</string>
+  <string name="escaped_literal">"Visible &lt;marker&gt;plain&lt;/marker&gt;"</string>
+  <string name="leading_reference">"@dock ?query #tone"</string>
+  <string name="named_example">Guide <code:g id="pilot" example="A &quot;N&quot; &amp; B">%1$s</code:g> safely</string>
+  <string name="literal_percent" formatted="false">Value 50%% and %1$s</string>
+  <string name="empty"></string>
+  <string name="printf_line">North%nSouth</string>
+  <string-array name="compass" product="tablet">
+    <item>" east  "</item>
+    <item><font color="#336699">west🙂</font></item>
+  </string-array>
+  <plurals name="checkpoints" product="watch" description="Count &amp; inspect">
+    <item quantity="one">%1$d stop</item>
+    <item quantity="other">%1$d stops</item>
+  </plurals>
+</resources>

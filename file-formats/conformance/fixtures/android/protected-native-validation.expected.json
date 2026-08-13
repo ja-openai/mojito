@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "visible": {
+      "defaultMessage": "Visible harbor"
+    }
+  }
+}

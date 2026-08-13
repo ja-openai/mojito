@@ -1,0 +1,94 @@
+{
+  "arrays": {
+    "conventional_routes": [
+      "%1$s #north",
+      "%1$s / %1$s ##south"
+    ],
+    "hash_routes": [
+      "#lane north",
+      "Dock #lane south",
+      "Dock #lane east"
+    ],
+    "mixed_hashes": [
+      "#ffaabbcc",
+      "#abc",
+      "#abc",
+      "Dock ##4",
+      "Dock #5"
+    ]
+  },
+  "arrayPrimitiveValues": {
+    "mixed_hashes": {
+      "0": "#ffaabbcc"
+    }
+  },
+  "plurals": {
+    "conventional_examples": {
+      "one": "%1$d/%1$d #east",
+      "other": "%1$d/%1$d ##east"
+    },
+    "conventional_signals": {
+      "one": "%1$d #bridge",
+      "other": "%1$d / %1$d ##bridges"
+    },
+    "empty_examples": {
+      "one": "%1$d empty #west",
+      "other": "%1$d absent ##west"
+    },
+    "escaped_signals": {
+      "one": "%1$d route #west",
+      "other": "%1$d routes #west"
+    },
+    "optional_examples": {
+      "one": "%1$d omitted #north",
+      "other": "%1$d supplied ##north"
+    },
+    "product_signals": {
+      "one": "%1$d tablet #signal",
+      "other": "%1$d tablet ##signals"
+    },
+    "protected_signals": {
+      "one": "%1$d protected #lane",
+      "other": "%1$d protected ##lanes"
+    },
+    "raw_signals": {
+      "one": "%1$d route #north",
+      "other": "%1$d routes ##north"
+    },
+    "repeated_examples": {
+      "one": "%1$d/%1$d repeated #east",
+      "other": "%1$d/%1$d repeated ##east"
+    },
+    "styled_signals": {
+      "one": "%1$d #blue route",
+      "other": "%1$d ##blue routes"
+    }
+  },
+  "strings": {
+    "entity_hash": "Dock #9",
+    "escaped_color": "#abc",
+    "escaped_hash": "Dock #8",
+    "mixed_conventional": "%1$s / %1$s / %1$s #signal",
+    "protected_conventional": "%1$s #harbor",
+    "quoted_color": "#abc",
+    "scalar_hash": "Dock #7",
+    "strict_color": "#abc",
+    "styled_conventional": "%1$s / %1$s",
+    "unicode_color": "#abc",
+    "unicode_hash": "Dock #10"
+  },
+  "styledSpans": {
+    "strings": {
+      "styled_conventional": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "lane": "#signal"
+          }
+        }
+      ]
+    }
+  }
+}

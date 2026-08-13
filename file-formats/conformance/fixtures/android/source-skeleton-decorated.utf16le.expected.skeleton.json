@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-16LE-BOM",
+  "source": "<?xml version=\"1.0\"?>\n<resources xmlns:code=\"urn:oasis:names:tc:xliff:document:1.2\"\n           xmlns:hint=\"http://schemas.android.com/tools\"\n           hint:locale=\"fr_CA\">\n  <!-- Every root comment and protected native declaration remains untouched. -->\n  <string name=\"private_route\" translatable=\"false\">Original protected channel</string>\n\n  <string name=\"styled_comments\">North<!-- root-before --> <b shade='north'>clear<!-- bold-inside --><![CDATA[bright & safe]]></b><!-- root-between --> then <i tone=\"east\"><![CDATA[east & soft]]><!-- italic-inside --></i><!-- root-after --></string>\n  <string name=\"protected_comments\">First<!-- first-marker --> <code:g example='P-7' id=\"pilot\">%1$s</code:g><!-- between-markers --> then <![CDATA[second & clear]]><code:g id='radar' example=\"R-2\">%2$s</code:g><!-- last-marker --></string>\n  <string name=\"nested_comments\"><b class='outer'>Outer<!-- outer-marker --><u lane=\"inner\"><![CDATA[inner & quiet]]><!-- inner-marker --></u></b><!-- sibling-marker --><i mood='calm'>East<!-- calm-marker --></i></string>\n  <string name=\"comment_only\"><b lane='north'><!-- empty-bold-marker --></b><!-- between-empty --><i lane=\"south\"><![CDATA[south & mild]]></i></string>\n\n  <string-array name=\"routes\">\n    <item>First<!-- array-before --><b path='one'><![CDATA[north & calm]]></b><!-- array-between --><i path=\"two\">south<!-- array-inside --></i></item>\n    <item>Captain<!-- captain-marker --><code:g id='captain' example=\"C-3\">%1$s</code:g><!-- deck-marker --><code:g example='D-4' id=\"deck\">%2$s</code:g></item>\n  </string-array>\n\n  <plurals name=\"signals\">\n    <item quantity=\"one\"><b tone='first'>%1$d<!-- count-marker --> north</b><!-- plural-between --><i tone=\"second\"><![CDATA[south & calm]]></i></item>\n    <item quantity=\"other\"><b tone=\"many\">%1$d<![CDATA[ north & far]]></b><!-- plural-many --><i tone='far'>south<!-- many-inside --></i></item>\n  </plurals>\n</resources>\n",
+  "slots": [
+    {
+      "id": "styled_comments",
+      "start": 756,
+      "end": 1170
+    },
+    {
+      "id": "protected_comments",
+      "start": 1262,
+      "end": 1652
+    },
+    {
+      "id": "nested_comments",
+      "start": 1738,
+      "end": 2096
+    },
+    {
+      "id": "comment_only",
+      "start": 2176,
+      "end": 2400
+    },
+    {
+      "id": "routes[0]",
+      "start": 2504,
+      "end": 2772
+    },
+    {
+      "id": "routes[1]",
+      "start": 2808,
+      "end": 3094
+    },
+    {
+      "id": "signals",
+      "variant": "one",
+      "start": 3252,
+      "end": 3490
+    },
+    {
+      "id": "signals",
+      "variant": "other",
+      "start": 3560,
+      "end": 3780
+    }
+  ]
+}

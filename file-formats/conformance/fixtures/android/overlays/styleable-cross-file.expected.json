@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "overlay_styleable_routes[2]": {
+      "defaultMessage": "A cross-file styleable passage",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "?attr/overlay_signal",
+          "1": "?attr/overlay_route"
+        },
+        "androidAttributeDependencies": [
+          {
+            "format": "enum",
+            "name": "overlay_route",
+            "symbols": [
+              {
+                "kind": "enum",
+                "name": "bright",
+                "value": 2
+              },
+              {
+                "kind": "enum",
+                "name": "quiet",
+                "value": 0
+              }
+            ],
+            "weak": true
+          },
+          {
+            "format": "reference|string",
+            "name": "overlay_signal",
+            "weak": true
+          }
+        ],
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": [],
+        "androidStyleableDependencies": [
+          {
+            "attributes": [
+              {
+                "format": "reference|string",
+                "name": "overlay_signal"
+              },
+              {
+                "format": "enum",
+                "name": "overlay_route",
+                "symbols": [
+                  {
+                    "kind": "enum",
+                    "name": "bright",
+                    "value": 2
+                  },
+                  {
+                    "kind": "enum",
+                    "name": "quiet",
+                    "value": 0
+                  }
+                ]
+              }
+            ],
+            "name": "OverlayCompass"
+          }
+        ],
+        "arrayIndex": 2,
+        "arrayName": "overlay_styleable_routes"
+      }
+    }
+  }
+}

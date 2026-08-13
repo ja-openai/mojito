@@ -1,0 +1,47 @@
+{
+  "arrays": {
+    "routes": [
+      "@string/anchor",
+      "@string/anchor",
+      "@macro/shortcut",
+      "Visible route"
+    ]
+  },
+  "arrayReferences": {
+    "routes": {
+      "0": "@string/anchor",
+      "1": "@string/anchor",
+      "2": "@macro/shortcut"
+    }
+  },
+  "macros": [
+    "indirect",
+    "shortcut"
+  ],
+  "plurals": {
+    "signals": {
+      "other": "%1$d visible signals"
+    }
+  },
+  "pluralReferences": {
+    "signals": {
+      "one": "@string/anchor",
+      "two": "@macro/shortcut"
+    }
+  },
+  "strings": {
+    "anchor": "Quiet harbor",
+    "escaped": "@@string/anchor",
+    "quoted": "@@string/anchor",
+    "triple": "@@@string/anchor"
+  },
+  "references": {
+    "double_alias": "@string/anchor",
+    "double_comment": "@string/anchor",
+    "double_macro": "@macro/indirect",
+    "generic_alias": "@string/anchor",
+    "single_alias": "@string/anchor",
+    "single_macro": "@macro/shortcut",
+    "untouched": "@string/anchor"
+  }
+}

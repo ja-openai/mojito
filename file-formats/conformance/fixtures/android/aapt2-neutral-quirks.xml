@@ -1,0 +1,23 @@
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="quote_segments">north   "  quiet   zone  "   south</string>
+  <string name="entity_spaces">left&#32;&#8195;&#8200;right</string>
+  <string name="quoted_entity_spaces">&quot; &#8195;&#8200; &quot;</string>
+  <string name="escaped_entity_spaces">left\u2003\u2008right</string>
+  <string name="quoted_apostrophe">"the signal isn't ready"</string>
+  <string name="escaped_apostrophe">the signal isn\'t ready</string>
+  <string name="hash_and_controls">\#code\n\t\@mark\?\\</string>
+  <string name="escaped_markup">&lt;strong&gt;%1$s&lt;/strong&gt; / %2$d</string>
+  <string name="rich_annotation">A <annotation role="signal" tone="soft"><b>steady</b></annotation> state</string>
+  <string name="named_literal">Label: <xliff:g id="token" example="ZX-4">ZX-4</xliff:g></string>
+  <string name="named_format">Reading <xliff:g id="amount" example="18">%1$d</xliff:g></string>
+  <string name="repeated_format">%1$s then %1$s</string>
+  <string name="line_separator">north%nready</string>
+  <plurals name="all_quantities">
+    <item quantity="zero">%1$d signals: none</item>
+    <item quantity="one">%1$d signal</item>
+    <item quantity="two">%1$d signals: pair</item>
+    <item quantity="few">%1$d signals: few</item>
+    <item quantity="many">%1$d signals: many</item>
+    <item quantity="other">%1$d signals</item>
+  </plurals>
+</resources>

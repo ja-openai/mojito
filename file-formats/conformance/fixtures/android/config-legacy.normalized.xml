@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="en-US">
+  <string-array name="checkpoints">
+    <item>"north"</item>
+  </string-array>
+  <string name="route" product="tablet">"Navigate %1$s"</string>
+  <plurals name="signals">
+    <item quantity="one">"%1$d signal"</item>
+    <item quantity="other">"%1$d signals"</item>
+  </plurals>
+</resources>

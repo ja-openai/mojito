@@ -1,0 +1,7 @@
+<resources xmlns:drift="urn:neutral:drifting-resource">
+  <plurals name="signals">
+    <item quantity="one">One coastal signal</item>
+    <drift:item quantity="few">Never expose this invalid namespace</drift:item>
+    <item quantity="other">Many coastal signals</item>
+  </plurals>
+</resources>

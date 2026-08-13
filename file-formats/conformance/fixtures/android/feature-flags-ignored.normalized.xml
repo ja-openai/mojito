@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="empty_gate">"Empty gate remains visible"</string>
+  <string name="foreign_gate">"Foreign namespace remains visible"</string>
+  <string-array name="open_routes">
+    <item>"First open harbor passage"</item>
+    <item>"Second open harbor passage"</item>
+    <item>"Foreign item gate remains visible"</item>
+    <item>"Unqualified item gate remains visible"</item>
+  </string-array>
+  <plurals name="plural_gate">
+    <item quantity="one">"One visible beacon"</item>
+    <item quantity="other">"Several visible beacons"</item>
+  </plurals>
+  <string name="unqualified_gate">"Unqualified gate remains visible"</string>
+  <string name="whitespace_gate">"Whitespace gate remains visible"</string>
+</resources>

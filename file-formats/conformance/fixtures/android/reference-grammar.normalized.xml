@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="anchor">"Calm harbor"</string>
+  <string name="at_literal">"@not_a_reference"</string>
+  <string name="escaped_theme">"?android:attr/title"</string>
+  <string name="invalid_create_literal">"@+string/harbor"</string>
+  <string name="invalid_private_create_literal">"@+*android:id/harbor"</string>
+  <string name="invalid_theme_type_literal">"?string/harbor"</string>
+  <string name="numeric_literal">"@0"</string>
+  <string name="quoted_package">"@com.neutral.port:string/anchor"</string>
+  <string-array name="routes">
+    <item>@com.neutral.port:string/anchor</item>
+    <item>@*android:string/anchor</item>
+    <item>?android:attr/title</item>
+    <item>?title</item>
+    <item>@color/harbor</item>
+    <item>@+id/harbor</item>
+    <item>@macro/harbor</item>
+    <item>?android:title</item>
+    <item>@string/quiet-harbor</item>
+    <item>"Quiet %1$s"</item>
+    <item>"@com.neutral.port:string/anchor"</item>
+    <item>"?android:attr/title"</item>
+  </string-array>
+  <plurals name="signals">
+    <item quantity="zero">@*com.neutral.port:string/anchor</item>
+    <item quantity="one">?android:attr/title</item>
+    <item quantity="two">?title</item>
+    <item quantity="few">@color/harbor</item>
+    <item quantity="many">@+id/harbor</item>
+    <item quantity="other">"%1$d quiet signals"</item>
+  </plurals>
+  <string name="unicode_padded">" @com.neutral.port:string/anchor "</string>
+  <string name="unknown_type_literal">"@unknown/harbor"</string>
+</resources>

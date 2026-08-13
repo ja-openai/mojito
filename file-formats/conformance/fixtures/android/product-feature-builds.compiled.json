@@ -1,0 +1,52 @@
+{
+  "arrays": {
+    "lanes": [
+      "13",
+      "Default inlet",
+      "Default outlet"
+    ]
+  },
+  "arrayPrimitiveValues": {
+    "lanes": {
+      "0": "13"
+    }
+  },
+  "plurals": {
+    "signals": {
+      "one": "One tablet signal",
+      "other": "Several tablet signals"
+    }
+  },
+  "productVariants": {
+    "active": [
+      "Default beacon passage",
+      "Tablet beacon passage"
+    ],
+    "conditional": [
+      "Hidden default signal",
+      "Tablet conditional signal",
+      "Hidden default signal"
+    ],
+    "fallback": [
+      "Default sheltered passage",
+      "Watch sheltered passage"
+    ],
+    "inverse": [
+      "Default inverse passage",
+      "Tablet inverse passage"
+    ],
+    "mode": [
+      "Default navigation mode",
+      "Tablet navigation mode",
+      "Watch navigation mode"
+    ],
+    "route": [
+      "Default harbor route",
+      "Hidden tablet harbor route",
+      "Hidden tablet harbor route"
+    ]
+  },
+  "strings": {
+    "anchor": "Neutral harbor anchor"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "arrays": {
+    "overlay_styleable_routes": [
+      "?attr/overlay_signal",
+      "?attr/overlay_route",
+      "?attr/overlay_direction",
+      "A higher-priority styleable passage"
+    ]
+  },
+  "arrayReferences": {
+    "overlay_styleable_routes": {
+      "0": "?attr/overlay_signal",
+      "1": "?attr/overlay_route",
+      "2": "?attr/overlay_direction"
+    }
+  },
+  "attributes": {
+    "overlay_direction": {
+      "format": "flags",
+      "symbols": {
+        "east": "0x00000001",
+        "west": "0x00000002"
+      }
+    },
+    "overlay_route": {
+      "format": "enum",
+      "symbols": {
+        "bright": "0x00000002",
+        "quiet": "0x00000000"
+      }
+    },
+    "overlay_signal": {
+      "format": "reference|string"
+    }
+  }
+}

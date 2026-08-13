@@ -1,0 +1,35 @@
+{
+  "arrayReferences": {
+    "harbor.lanes": {
+      "1": "@string/anchor"
+    }
+  },
+  "arrays": {
+    "harbor.lanes": [
+      "Voie nord commune",
+      "@string/anchor",
+      "Voie sud commune"
+    ]
+  },
+  "plurals": {
+    "tide.count": {
+      "one": "%1$d balise tablette",
+      "other": "%1$d balises tablette"
+    }
+  },
+  "productVariants": {
+    "harbor.route": [
+      "Passage commun sûr",
+      "Passage tablette & calme",
+      "Montre <calme> & claire"
+    ],
+    "harbor.signal": [
+      "Signal commun prêt",
+      "Signal tablette & prêt"
+    ]
+  },
+  "strings": {
+    "anchor": "Ancre sûre",
+    "private.route": "Protected private route"
+  }
+}

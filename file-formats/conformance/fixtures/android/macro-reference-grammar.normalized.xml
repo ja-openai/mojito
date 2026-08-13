@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="auto_chained_route">"A quiet harbor crossing"</string>
+  <string name="auto_route">"A quiet harbor crossing"</string>
+  <string name="escaped_route">"@macro/harbor_phrase"</string>
+  <item type="string" name="generic_route">"A quiet harbor crossing"</item>
+  <string-array name="harbor_routes">
+    <item>"A quiet harbor crossing"</item>
+    <item>"A quiet harbor crossing"</item>
+    <item>"A quiet harbor crossing"</item>
+  </string-array>
+  <plurals name="harbor_signals">
+    <item quantity="one">"A quiet harbor crossing"</item>
+    <item quantity="other">"A quiet harbor crossing"</item>
+  </plurals>
+  <string name="literal_star_colon_route">"@*:macro/harbor_phrase"</string>
+  <string name="local_route">"A quiet harbor crossing"</string>
+  <string name="package_alias_route">"A quiet harbor crossing"</string>
+  <string name="package_chained_route">"A quiet harbor crossing"</string>
+  <string name="package_route">"A quiet harbor crossing"</string>
+  <string name="private_alias_route">"A quiet harbor crossing"</string>
+  <string name="private_chained_route">"A quiet harbor crossing"</string>
+  <string name="private_package_route">"A quiet harbor crossing"</string>
+  <string name="private_route">"A quiet harbor crossing"</string>
+  <string name="protected_package_route">"Signal "<xliff:g id="marker" example="Q-7">%1$s</xliff:g></string>
+  <string name="scoped_chained_route">"A quiet harbor crossing"</string>
+  <string name="styled_private_route">"A "<b>"steady"</b>" harbor light"</string>
+</resources>

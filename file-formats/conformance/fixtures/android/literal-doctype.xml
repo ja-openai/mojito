@@ -1,0 +1,4 @@
+<resources>
+  <string name="literal"><![CDATA[Visible <!DOCTYPE neutral> text]]></string>
+  <string name="commented">Before<!-- <!DOCTYPE hidden> --> after</string>
+</resources>

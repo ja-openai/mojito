@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "alternating_routes": {
+      "defaultMessage": "A\nB\nC\nD\nE",
+      "metadata": {
+        "androidPrintfLineSeparator": true,
+        "androidPrintfLineSeparators": [
+          0,
+          2
+        ]
+      }
+    },
+    "default_signal": {
+      "defaultMessage": "North\npier\nclear",
+      "metadata": {
+        "androidGenericString": true,
+        "androidPrintfLineSeparator": true,
+        "androidPrintfLineSeparators": [
+          0
+        ]
+      }
+    },
+    "disabled_newlines": {
+      "defaultMessage": "Harbor\nnorth%nopen",
+      "metadata": {
+        "formatted": false
+      }
+    },
+    "escaped_percent_route": {
+      "defaultMessage": "Charge 80%\nreserve\nready",
+      "metadata": {
+        "androidPrintfLineSeparator": true,
+        "androidPrintfLineSeparators": [
+          1
+        ]
+      }
+    },
+    "legacy_printf_only": {
+      "defaultMessage": "Lighthouse\nwatch",
+      "metadata": {
+        "androidPrintfLineSeparator": true
+      }
+    },
+    "legacy_signals": {
+      "defaultMessage": "{arg0, plural, one {{arg0} beacon\nnear} other {{arg0} beacons\nnear}}",
+      "variants": {
+        "one": "{arg0} beacon\nnear",
+        "other": "{arg0} beacons\nnear"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidPrintfLineSeparator": true
+      }
+    },
+    "literal_percent_n": {
+      "defaultMessage": "Marker %n"
+    },
+    "mixed_signals": {
+      "defaultMessage": "{arg0, plural, one {{arg0} beacon\nnorth\nready} other {{arg0} beacons\nnorth\nready}}",
+      "variants": {
+        "one": "{arg0} beacon\nnorth\nready",
+        "other": "{arg0} beacons\nnorth\nready"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidPluralPrintfLineSeparators": {
+          "one": [
+            1
+          ],
+          "other": [
+            0
+          ]
+        },
+        "androidPrintfLineSeparator": true
+      }
+    },
+    "native_only": {
+      "defaultMessage": "Lighthouse\nwatch"
+    },
+    "native_then_printf": {
+      "defaultMessage": "Harbor\nnorth\nopen",
+      "metadata": {
+        "androidPrintfLineSeparator": true,
+        "androidPrintfLineSeparators": [
+          1
+        ]
+      }
+    },
+    "printf_then_native": {
+      "defaultMessage": "Harbor\nnorth\nopen",
+      "metadata": {
+        "androidPrintfLineSeparator": true,
+        "androidPrintfLineSeparators": [
+          0
+        ]
+      }
+    },
+    "raw_percent_route": {
+      "defaultMessage": "Berth %\nreserve\nready",
+      "metadata": {
+        "androidPrintfLineSeparator": true,
+        "androidPrintfLineSeparators": [
+          1
+        ],
+        "androidRawPercentOccurrences": [
+          0
+        ]
+      }
+    },
+    "route_stages[0]": {
+      "defaultMessage": "Arrival\nnorth\nberth",
+      "metadata": {
+        "androidPrintfLineSeparator": true,
+        "androidPrintfLineSeparators": [
+          1
+        ],
+        "arrayIndex": 0,
+        "arrayName": "route_stages"
+      }
+    },
+    "route_stages[1]": {
+      "defaultMessage": "Departure\nsouth\nchannel",
+      "metadata": {
+        "androidPrintfLineSeparator": true,
+        "androidPrintfLineSeparators": [
+          0
+        ],
+        "arrayIndex": 1,
+        "arrayName": "route_stages"
+      }
+    },
+    "route_stages[2]": {
+      "defaultMessage": "Literal %n buoy",
+      "metadata": {
+        "arrayIndex": 2,
+        "arrayName": "route_stages"
+      }
+    },
+    "split_signals": {
+      "defaultMessage": "{arg0, plural, one {{arg0} buoy\nnear} other {{arg0} buoys\nnear}}",
+      "variants": {
+        "one": "{arg0} buoy\nnear",
+        "other": "{arg0} buoys\nnear"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidPluralPrintfLineSeparators": {
+          "other": [
+            0
+          ]
+        },
+        "androidPrintfLineSeparator": true
+      }
+    },
+    "strict_signal": {
+      "defaultMessage": "{arg0}\ndeparture\nready",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidGenericFormat": "string",
+        "androidGenericString": true,
+        "androidPrintfLineSeparator": true,
+        "androidPrintfLineSeparators": [
+          1
+        ]
+      }
+    },
+    "styled_route": {
+      "defaultMessage": "'<'annotation note=\"lantern-%%\"><b>North\npier</b>\nclear'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidPrintfLineSeparator": true,
+        "androidPrintfLineSeparators": [
+          1
+        ]
+      }
+    },
+    "supplementary_route": {
+      "defaultMessage": "🧭\nnorth\nwest",
+      "metadata": {
+        "androidPrintfLineSeparator": true,
+        "androidPrintfLineSeparators": [
+          1
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "macro_signal": "Un port lumineux",
+  "macro_styled": "Port <b tone=\"bright\">lumineux</b>",
+  "macro_protected": "Pilote {pilot}",
+  "macro_qualified": "Port qualifié",
+  "macro_private": "Voie privée",
+  "macro_scoped": "Voie d'alias",
+  "macro_chain": "Port transitif",
+  "macro_routes[0]": "Voie éloignée",
+  "macro_routes[1]": "Voie supérieure",
+  "macro_lights#one": "{arg0} lanterne proche",
+  "macro_lights#other": "{arg0} lanternes proches",
+  "macro_product": "Traversée tablette choisie"
+}

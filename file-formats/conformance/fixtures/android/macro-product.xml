@@ -1,0 +1,4 @@
+<resources>
+    <macro name="harbor_phrase" product="tablet">A tablet-only harbor</macro>
+    <string name="tablet_route">@macro/harbor_phrase</string>
+</resources>

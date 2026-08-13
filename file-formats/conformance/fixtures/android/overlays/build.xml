@@ -1,0 +1,4 @@
+<resources>
+  <string name="signal">Build signal</string>
+  <string name="build_only">Build lantern</string>
+</resources>

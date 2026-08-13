@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<resources>
+  <string name="entity_next_line">"sud ouest"</string>
+  <string name="escaped_next_line">"sud ouest"</string>
+  <string name="boundary_next_line">"quai &amp;  ouest "</string>
+  <string name="entity_no_break">"sud  ouest"</string>
+  <string name="escaped_no_break">"sud  ouest"</string>
+  <string name="boundary_no_break">"quai &amp;   ouest  "</string>
+  <string name="entity_ogham">"sud  ouest"</string>
+  <string name="escaped_ogham">"sud  ouest"</string>
+  <string name="boundary_ogham">"quai &amp;   ouest  "</string>
+  <string name="entity_mongolian">"sud᠎ ouest"</string>
+  <string name="escaped_mongolian">"sud᠎ ouest"</string>
+  <string name="boundary_mongolian">"quai &amp; ᠎ ouest ᠎"</string>
+  <string name="entity_en_quad">"sud  ouest"</string>
+  <string name="escaped_en_quad">"sud  ouest"</string>
+  <string name="boundary_en_quad">"quai &amp;   ouest  "</string>
+  <string name="entity_em_space">"sud  ouest"</string>
+  <string name="escaped_em_space">"sud  ouest"</string>
+  <string name="boundary_em_space">"quai &amp;   ouest  "</string>
+  <string name="entity_figure">"sud  ouest"</string>
+  <string name="escaped_figure">"sud  ouest"</string>
+  <string name="boundary_figure">"quai &amp;   ouest  "</string>
+  <string name="entity_punctuation">"sud  ouest"</string>
+  <string name="escaped_punctuation">"sud  ouest"</string>
+  <string name="boundary_punctuation">"quai &amp;   ouest  "</string>
+  <string name="entity_hair">"sud  ouest"</string>
+  <string name="escaped_hair">"sud  ouest"</string>
+  <string name="boundary_hair">"quai &amp;   ouest  "</string>
+  <string name="entity_zero_width">"sud​ ouest"</string>
+  <string name="escaped_zero_width">"sud​ ouest"</string>
+  <string name="boundary_zero_width">"quai &amp; ​ ouest ​"</string>
+  <string name="entity_line_separator">"sud  ouest"</string>
+  <string name="escaped_line_separator">"sud  ouest"</string>
+  <string name="boundary_line_separator">"quai &amp;   ouest  "</string>
+  <string name="entity_paragraph_separator">"sud  ouest"</string>
+  <string name="escaped_paragraph_separator">"sud  ouest"</string>
+  <string name="boundary_paragraph_separator">"quai &amp;   ouest  "</string>
+  <string name="entity_narrow_no_break">"sud  ouest"</string>
+  <string name="escaped_narrow_no_break">"sud  ouest"</string>
+  <string name="boundary_narrow_no_break">"quai &amp;   ouest  "</string>
+  <string name="entity_medium_math">"sud  ouest"</string>
+  <string name="escaped_medium_math">"sud  ouest"</string>
+  <string name="boundary_medium_math">"quai &amp;   ouest  "</string>
+  <string name="entity_ideographic">"sud　 ouest"</string>
+  <string name="escaped_ideographic">"sud　 ouest"</string>
+  <string name="boundary_ideographic">"quai &amp; 　 ouest 　"</string>
+  <string name="entity_byte_order_mark">"sud﻿ ouest"</string>
+  <string name="escaped_byte_order_mark">"sud﻿ ouest"</string>
+  <string name="boundary_byte_order_mark">"quai &amp; ﻿ ouest ﻿"</string>
+  <string name="quoted_unicode">"      ouest    "</string>
+</resources>

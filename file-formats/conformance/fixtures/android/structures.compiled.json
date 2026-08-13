@@ -1,0 +1,13 @@
+{
+  "strings": {
+    "general": "Signal %1$s",
+    "wrapped": "keep this part visible",
+    "literal_hash": "#flag",
+    "literal_question": "?question",
+    "literal_at": "@named",
+    "quote_boundaries": "start  mid  end"
+  },
+  "references": { "null_value": "@null", "empty_value": "@empty" },
+  "arrays": { "signals": ["", "  held  ", "@string/general"] },
+  "arrayReferences": { "signals": { "2": "@string/general" } }
+}

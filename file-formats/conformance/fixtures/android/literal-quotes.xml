@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:code="urn:oasis:names:tc:xliff:document:1.2">
+  <!-- Every quote spelling and resource value is original to this neutral fixture. -->
+  <string name="anchor">Quiet harbor</string>
+  <string name="scalar">North\"pier and \"quiet\" water</string>
+  <string name="entity_quote">North\&#34;pier near \&quot;quiet\&quot; water</string>
+  <string name="styled">North <b lane="harbor&quot;side">\"quiet\"</b> pier</string>
+  <string name="placeholder">Guide <code:g id="pilot" example="A&quot;7">%1$s</code:g> to \"north\"</string>
+  <string name="entity_alias">&#64;string/anchor</string>
+  <string name="escaped_entity_alias">\&#64;string/anchor</string>
+
+  <string-array name="routes">
+    <item>North\"pier and \"quiet\" water</item>
+    <item>West \"pier, quiet\" water</item>
+    <item>East <i>\"steady\"</i> water</item>
+  </string-array>
+
+  <plurals name="signals">
+    <item quantity="one">One \"quiet\" beacon</item>
+    <item quantity="other">%1$d \"quiet\" beacons</item>
+  </plurals>
+  <plurals name="styled_signals">
+    <item quantity="one">One <b>\"quiet\"</b> beacon</item>
+    <item quantity="other">%1$d <b>\"quiet\"</b> beacons</item>
+  </plurals>
+</resources>

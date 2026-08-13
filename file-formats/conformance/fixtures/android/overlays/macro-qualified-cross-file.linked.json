@@ -1,0 +1,12 @@
+{
+  "arrays": {
+    "shared_routes": [
+      "A shared harbor crossing",
+      "A shared harbor crossing"
+    ]
+  },
+  "strings": {
+    "package_route": "A shared harbor crossing",
+    "private_route": "A shared harbor crossing"
+  }
+}

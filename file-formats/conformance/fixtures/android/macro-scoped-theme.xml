@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="beacon" format="string" />
+    <macro name="theme_reference" xmlns:route="http://schemas.android.com/apk/res/neutral.scoped.harbor">?route:attr/beacon</macro>
+    <string-array name="harbor_routes">
+        <item>@macro/theme_reference</item>
+        <item>A visible theme lane</item>
+    </string-array>
+</resources>

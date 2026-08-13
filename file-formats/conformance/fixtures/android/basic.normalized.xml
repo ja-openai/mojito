@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <string-array name="days">
+    <item description="Day picker labels">"Monday"</item>
+    <item description="Day picker labels">"Tuesday"</item>
+  </string-array>
+  <string name="named">"Hi "<xliff:g id="person" example="Ada">%1$s</xliff:g>"!"</string>
+  <string name="rich" description="The markup is real XML, not escaped text.">"Tap "<b>"Continue"</b>" &amp; go"</string>
+  <string name="welcome" description="Welcome screen greeting">"Hello %1$s!"</string>
+</resources>

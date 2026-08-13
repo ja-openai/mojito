@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "harbor_routes[1]": {
+      "defaultMessage": "A visible theme lane",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "?attr/beacon"
+        },
+        "androidAttributeDependencies": [
+          {
+            "format": "string",
+            "name": "beacon"
+          }
+        ],
+        "arrayIndex": 1,
+        "arrayName": "harbor_routes"
+      }
+    }
+  }
+}

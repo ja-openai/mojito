@@ -1,0 +1,10 @@
+{
+  "arrays": {
+    "harbor_lanes": [
+      "A mutable harbor lane",
+      "An inverse harbor lane",
+      "An open harbor lane"
+    ]
+  },
+  "configuration": "v10000"
+}

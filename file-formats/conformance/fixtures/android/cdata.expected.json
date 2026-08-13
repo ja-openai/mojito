@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "cdata": {
+      "defaultMessage": "<i>literal</i> & value",
+      "metadata": { "androidLiteralMarkup": true }
+    },
+    "literal_percent": {
+      "defaultMessage": "50%% and %1$s",
+      "metadata": { "formatted": false }
+    },
+    "annotation": {
+      "defaultMessage": "'<'annotation key=\"tone\">Stay calm'<'/annotation>",
+      "metadata": { "androidMarkupEscaping": "icu-quoted-angle" }
+    }
+  }
+}

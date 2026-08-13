@@ -1,0 +1,11 @@
+<resources>
+  <string name="route">Main unflagged harbor route</string>
+  <string name="retained">Main retained harbor route</string>
+  <plurals name="signals">
+    <item quantity="one">One main harbor signal</item>
+    <item quantity="other">Several main harbor signals</item>
+  </plurals>
+  <string-array name="lanes">
+    <item>Main harbor lane</item>
+  </string-array>
+</resources>

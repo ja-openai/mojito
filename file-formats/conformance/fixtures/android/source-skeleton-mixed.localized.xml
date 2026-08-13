@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<resources xmlns:code="urn:oasis:names:tc:xliff:document:1.2">
+  <!-- Neutral original fixtures keep every odd lexical spelling. -->
+  <string description='Empty "harbor"' name="empty_scalar">"Nouveau &amp; quai"</string>
+  <item type="string" name='empty_generic' >"Voie douce &amp; claire"</item>
+  <string name="commented">"Sud <!-- preserve this exact inline comment -->abri"</string>
+  <string name="cdata"><![CDATA["Port ]]]]><![CDATA[> <doux> & sûr"]]></string>
+  <string name="cdata_split">"Sud &lt;<![CDATA[doux> & sûr qu]]>ai"</string>
+  <string translatable="false" name="ignored_empty"/>
+
+  <string-array name="routes">
+    <item>"Première route"</item>
+    <item>"Oue<!-- keep original array marker -->st calme"</item>
+    <item><![CDATA["Signal <bleu> & doux"]]></item>
+  </string-array>
+
+  <plurals name="visits">
+    <item quantity='one'>"%1$d visite"</item>
+    <item quantity="other">"%1$<!-- keep native plural marker -->d visites"</item>
+  </plurals>
+</resources>

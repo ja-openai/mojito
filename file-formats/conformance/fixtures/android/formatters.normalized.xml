@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="adjacent">"%% %1$d %%"</string>
+  <string name="calendar">"%1$tY-%1$tm-%1$td"</string>
+  <string name="number">"%1$,.2f units"</string>
+</resources>

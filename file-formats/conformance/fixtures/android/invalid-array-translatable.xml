@@ -1,0 +1,5 @@
+<resources>
+  <string-array name="signals" translatable="not-a-boolean">
+    <item>Steady</item>
+  </string-array>
+</resources>

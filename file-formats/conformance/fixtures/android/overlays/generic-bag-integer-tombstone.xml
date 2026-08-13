@@ -1,0 +1,6 @@
+<resources>
+  <bag type="integer-array" name="routes.bag">
+    <item>7</item>
+    <item>13</item>
+  </bag>
+</resources>

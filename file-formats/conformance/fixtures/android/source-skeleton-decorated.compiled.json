@@ -1,0 +1,149 @@
+{
+  "arrays": {
+    "routes": [
+      "Firstnorth & calmsouth",
+      "Captain%1$s%2$s"
+    ]
+  },
+  "styledSpans": {
+    "arrays": {
+      "routes": {
+        "0": [
+          {
+            "name": "b",
+            "start": 5,
+            "end": 16,
+            "attributes": {
+              "path": "one"
+            }
+          },
+          {
+            "name": "i",
+            "start": 17,
+            "end": 21,
+            "attributes": {
+              "path": "two"
+            }
+          }
+        ]
+      }
+    },
+    "plurals": {
+      "signals": {
+        "one": [
+          {
+            "name": "b",
+            "start": 0,
+            "end": 9,
+            "attributes": {
+              "tone": "first"
+            }
+          },
+          {
+            "name": "i",
+            "start": 10,
+            "end": 21,
+            "attributes": {
+              "tone": "second"
+            }
+          }
+        ],
+        "other": [
+          {
+            "name": "b",
+            "start": 0,
+            "end": 15,
+            "attributes": {
+              "tone": "many"
+            }
+          },
+          {
+            "name": "i",
+            "start": 16,
+            "end": 20,
+            "attributes": {
+              "tone": "far"
+            }
+          }
+        ]
+      }
+    },
+    "strings": {
+      "comment_only": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 4294967295,
+          "attributes": {
+            "lane": "north"
+          }
+        },
+        {
+          "name": "i",
+          "start": 0,
+          "end": 11,
+          "attributes": {
+            "lane": "south"
+          }
+        }
+      ],
+      "nested_comments": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 17,
+          "attributes": {
+            "class": "outer"
+          }
+        },
+        {
+          "name": "u",
+          "start": 5,
+          "end": 17,
+          "attributes": {
+            "lane": "inner"
+          }
+        },
+        {
+          "name": "i",
+          "start": 18,
+          "end": 21,
+          "attributes": {
+            "mood": "calm"
+          }
+        }
+      ],
+      "styled_comments": [
+        {
+          "name": "b",
+          "start": 6,
+          "end": 23,
+          "attributes": {
+            "shade": "north"
+          }
+        },
+        {
+          "name": "i",
+          "start": 30,
+          "end": 40,
+          "attributes": {
+            "tone": "east"
+          }
+        }
+      ]
+    }
+  },
+  "plurals": {
+    "signals": {
+      "one": "%1$d northsouth & calm",
+      "other": "%1$d north & farsouth"
+    }
+  },
+  "strings": {
+    "comment_only": "south & mild",
+    "nested_comments": "Outerinner & quietEast",
+    "private_route": "Original protected channel",
+    "protected_comments": "First %1$s then second & clear%2$s",
+    "styled_comments": "North clearbright & safe then east & soft"
+  }
+}

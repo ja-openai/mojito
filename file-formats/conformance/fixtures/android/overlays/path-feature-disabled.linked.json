@@ -1,0 +1,17 @@
+{
+  "arrays": {
+    "lanes": [
+      "Main harbor lane"
+    ]
+  },
+  "plurals": {
+    "signals": {
+      "one": "One main harbor signal",
+      "other": "Several main harbor signals"
+    }
+  },
+  "strings": {
+    "retained": "Main retained harbor route",
+    "route": "Main unflagged harbor route"
+  }
+}

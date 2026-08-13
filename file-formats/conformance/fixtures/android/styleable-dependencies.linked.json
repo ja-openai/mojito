@@ -1,0 +1,56 @@
+{
+  "arrays": {
+    "harbor_routes": [
+      "?attr/route_signal",
+      "?attr/depth_scale",
+      "?attr/passage_mode",
+      "?attr/beam_direction",
+      "?attr/shared_signal",
+      "A charted styleable passage"
+    ]
+  },
+  "arrayReferences": {
+    "harbor_routes": {
+      "0": "?attr/route_signal",
+      "1": "?attr/depth_scale",
+      "2": "?attr/passage_mode",
+      "3": "?attr/beam_direction",
+      "4": "?attr/shared_signal"
+    }
+  },
+  "attributes": {
+    "beam_direction": {
+      "format": "flags",
+      "symbols": {
+        "east": "0x00000001",
+        "west": "0x00000002"
+      }
+    },
+    "depth_scale": {
+      "format": "integer"
+    },
+    "passage_mode": {
+      "format": "enum",
+      "symbols": {
+        "bright": "0x00000002",
+        "quiet": "0x00000000"
+      }
+    },
+    "route_signal": {
+      "format": "reference|string"
+    },
+    "shared_signal": {
+      "format": "string"
+    }
+  },
+  "plurals": {
+    "harbor_signals": {
+      "other": "%d visible styleable signals"
+    }
+  },
+  "pluralReferences": {
+    "harbor_signals": {
+      "one": "?attr/passage_mode"
+    }
+  }
+}

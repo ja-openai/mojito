@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="escaped">"@string/north pier"</string>
+  <array name="mixed">
+    <item>?attr/north	pier</item>
+    <item>@string/north&#13;pier</item>
+    <item>"Visible mixed route"</item>
+  </array>
+  <string name="quoted">"@string/north pier"</string>
+  <string-array name="routes">
+    <item>@string/north pier</item>
+    <item>@string/north	pier</item>
+    <item>@string/north
+pier</item>
+    <item>@string/north&#13;pier</item>
+    <item>@string/north&#13;
+pier</item>
+    <item>@string/north pier</item>
+    <item>@@string/north pier</item>
+    <item>"Visible route"</item>
+  </string-array>
+  <plurals name="signals">
+    <item quantity="zero">@string/north&#13;pier</item>
+    <item quantity="one">@string/north pier</item>
+    <item quantity="two">@string/north	pier</item>
+    <item quantity="few">@string/north
+pier</item>
+    <item quantity="many">@string/north pier</item>
+    <item quantity="other">"%1$d visible lights"</item>
+  </plurals>
+  <string name="visible">"A visible harbor"</string>
+</resources>

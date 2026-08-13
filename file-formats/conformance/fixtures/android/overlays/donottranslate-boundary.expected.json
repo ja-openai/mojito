@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "private.anchor": {
+      "defaultMessage": "Private overriding anchor",
+      "metadata": {
+        "androidResourcePath": "src/debug/res/values/harbor_donottranslate.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "build_type"
+      }
+    },
+    "private.routes[0]": {
+      "defaultMessage": "Private overriding route",
+      "metadata": {
+        "androidResourcePath": "src/debug/res/values/harbor_donottranslate.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 0,
+        "arrayName": "private.routes",
+        "androidBagType": "array",
+        "androidArrayPrimitives": {
+          "1": "17"
+        },
+        "androidGenericArray": true,
+        "androidOverlaySourceSet": "build_type"
+      }
+    },
+    "private.signals": {
+      "defaultMessage": "{count, plural, one {One private overriding signal} other {Several private overriding signals}}",
+      "variants": {
+        "one": "One private overriding signal",
+        "other": "Several private overriding signals"
+      },
+      "metadata": {
+        "androidResourcePath": "src/debug/res/values/harbor_donottranslate.xml",
+        "androidResourceQualifiers": [],
+        "androidBagType": "plurals",
+        "androidOverlaySourceSet": "build_type"
+      }
+    },
+    "retained.anchor": {
+      "defaultMessage": "Visible unaffected anchor",
+      "metadata": {
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "main"
+      }
+    }
+  }
+}

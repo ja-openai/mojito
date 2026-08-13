@@ -1,0 +1,23 @@
+{
+  "arrays": {
+    "routes": [
+      "Première route",
+      "Ouest calme",
+      "Signal <bleu> & doux"
+    ]
+  },
+  "plurals": {
+    "visits": {
+      "one": "%1$d visite",
+      "other": "%1$d visites"
+    }
+  },
+  "strings": {
+    "cdata": "Port ]]> <doux> & sûr",
+    "cdata_split": "Sud <doux> & sûr quai",
+    "commented": "Sud abri",
+    "empty_generic": "Voie douce & claire",
+    "empty_scalar": "Nouveau & quai",
+    "ignored_empty": ""
+  }
+}

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <string name="harbor_route" android:featureFlag="neutral.flags.first">A replacement conditional harbor route</string>
+    <plurals name="harbor_signals" android:featureFlag="neutral.flags.first">
+        <item quantity="one">One replacement conditional signal</item>
+        <item quantity="other">Several replacement conditional signals</item>
+    </plurals>
+    <string-array name="harbor_lanes" android:featureFlag="neutral.flags.first">
+        <item>A replacement conditional harbor lane</item>
+    </string-array>
+</resources>

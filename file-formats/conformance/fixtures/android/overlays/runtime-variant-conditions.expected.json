@@ -1,0 +1,108 @@
+{
+  "messages": {
+    "harbor_lanes@flag=neutral.flags.first[0]": {
+      "defaultMessage": "A first conditional harbor lane",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.first",
+        "androidFeatureFlagMode": "read_write",
+        "androidOverlaySourceSet": "product_flavor",
+        "androidResourcePath": "src/flavor/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 0,
+        "arrayName": "harbor_lanes"
+      }
+    },
+    "harbor_lanes@flag=neutral.flags.second[0]": {
+      "defaultMessage": "A second conditional harbor lane",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.second",
+        "androidFeatureFlagMode": "read_write",
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 0,
+        "arrayName": "harbor_lanes"
+      }
+    },
+    "harbor_lanes[0]": {
+      "defaultMessage": "A fallback harbor lane",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 0,
+        "arrayName": "harbor_lanes"
+      }
+    },
+    "harbor_route": {
+      "defaultMessage": "A fallback harbor route",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "harbor_route@flag=neutral.flags.first": {
+      "defaultMessage": "A first conditional harbor route",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.first",
+        "androidFeatureFlagMode": "read_write",
+        "androidOverlaySourceSet": "product_flavor",
+        "androidResourcePath": "src/flavor/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "harbor_route@flag=neutral.flags.second": {
+      "defaultMessage": "A second conditional harbor route",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.second",
+        "androidFeatureFlagMode": "read_write",
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "harbor_signals": {
+      "defaultMessage": "{count, plural, one {One fallback signal} other {Several fallback signals}}",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      },
+      "variants": {
+        "one": "One fallback signal",
+        "other": "Several fallback signals"
+      }
+    },
+    "harbor_signals@flag=neutral.flags.first": {
+      "defaultMessage": "{count, plural, one {One first conditional signal} other {Several first conditional signals}}",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.first",
+        "androidFeatureFlagMode": "read_write",
+        "androidOverlaySourceSet": "product_flavor",
+        "androidResourcePath": "src/flavor/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      },
+      "variants": {
+        "one": "One first conditional signal",
+        "other": "Several first conditional signals"
+      }
+    },
+    "harbor_signals@flag=neutral.flags.second": {
+      "defaultMessage": "{count, plural, one {One second conditional signal} other {Several second conditional signals}}",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.second",
+        "androidFeatureFlagMode": "read_write",
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      },
+      "variants": {
+        "one": "One second conditional signal",
+        "other": "Several second conditional signals"
+      }
+    }
+  },
+  "schemaVersion": 1,
+  "sourceFormat": "android"
+}

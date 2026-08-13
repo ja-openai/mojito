@@ -1,0 +1,54 @@
+{
+  "arrays": {
+    "harbor_lanes": [
+      "An open harbor lane"
+    ]
+  },
+  "conditionalArrays": {
+    "harbor_lanes": {
+      "condition": "neutral.flags.second",
+      "values": [
+        "A conditional harbor lane"
+      ]
+    }
+  },
+  "conditionalPlurals": {
+    "harbor_signals": {
+      "condition": "neutral.flags.first",
+      "variants": {
+        "one": "One conditional harbor signal",
+        "other": "Several conditional harbor signals"
+      }
+    }
+  },
+  "conditionalStrings": {
+    "harbor_beacon": {
+      "condition": "neutral.flags.first",
+      "value": "A conditional harbor beacon"
+    },
+    "harbor_route": [
+      {
+        "condition": "neutral.flags.first",
+        "value": "A first conditional harbor route"
+      },
+      {
+        "condition": "!neutral.flags.first",
+        "value": "An inverse conditional harbor route"
+      },
+      {
+        "condition": "neutral.flags.second",
+        "value": "A second conditional harbor route"
+      }
+    ]
+  },
+  "plurals": {
+    "harbor_signals": {
+      "one": "One open harbor signal",
+      "other": "Several open harbor signals"
+    }
+  },
+  "strings": {
+    "harbor_beacon": "An open harbor beacon",
+    "harbor_route": "An open harbor route"
+  }
+}

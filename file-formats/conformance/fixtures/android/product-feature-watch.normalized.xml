@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="active">"Default beacon passage"</string>
+  <string name="anchor">"Neutral harbor anchor"</string>
+  <string name="fallback">"Watch sheltered passage"</string>
+  <string name="inverse">"Default inverse passage"</string>
+  <array name="lanes">
+    <item>13</item>
+    <item>"Default inlet"</item>
+    <item>"Default outlet"</item>
+  </array>
+  <string name="mode">"Watch navigation mode"</string>
+  <string name="route">"Default harbor route"</string>
+  <plurals name="signals">
+    <item quantity="one">"One default signal"</item>
+    <item quantity="other">"Several default signals"</item>
+  </plurals>
+</resources>

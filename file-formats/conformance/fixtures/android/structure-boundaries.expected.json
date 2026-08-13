@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "harbor.pad": {
+      "defaultMessage": "Padded harbor marker"
+    },
+    "North.Path-7": {
+      "defaultMessage": "Visible ridge marker",
+      "description": "The latest Android resource comment wins."
+    },
+    "éclat": {
+      "defaultMessage": "Coastal shimmer",
+      "description": "Context survives an ignored foreign wrapper."
+    },
+    "_underway@product=tablet": {
+      "defaultMessage": "Tablet tide signal",
+      "metadata": { "androidProduct": "tablet" }
+    },
+    "route.list[0]": {
+      "defaultMessage": "North channel",
+      "description": "Route collection context.",
+      "metadata": { "arrayIndex": 0, "arrayName": "route.list" }
+    },
+    "route.list[1]": {
+      "defaultMessage": "South channel",
+      "description": "Route collection context.",
+      "metadata": { "arrayIndex": 1, "arrayName": "route.list" }
+    },
+    "mixed.route[1]": {
+      "defaultMessage": "Visible mixed route",
+      "description": "Mixed collection context.",
+      "metadata": {
+        "androidArrayPrimitives": { "0": "17" },
+        "androidArrayReferences": { "2": "@string/harbor.pad" },
+        "androidGenericArray": true,
+        "arrayIndex": 1,
+        "arrayName": "mixed.route"
+      }
+    },
+    "tide.signals": {
+      "defaultMessage": "{count, plural, one {One coastal signal} other {Many coastal signals}}",
+      "description": "Plural collection context.",
+      "variants": {
+        "one": "One coastal signal",
+        "other": "Many coastal signals"
+      }
+    }
+  }
+}

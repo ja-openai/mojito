@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="_route">"Underscored channel"</string>
+  <string name="écho">"Combining coastal echo"</string>
+  <item type="string" name="generic·route">"Generic encoded route"</item>
+  <string name="route·north">"Middle-dot coastal route"</string>
+  <string name="Éclat">"Accented coastal light"</string>
+  <string name="渡り.route-2">"Crossing channel"</string>
+</resources>
