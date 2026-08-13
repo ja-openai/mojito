@@ -183,6 +183,27 @@
       "localized": "fixtures/workflow/xtb-remove-untranslated.localized.xtb"
     },
     {
+      "id": "apple-mojito-removes-entire-fully-untranslated-plural-dictionaries",
+      "format": "apple_stringsdict",
+      "input": "fixtures/workflow/apple-stringsdict-remove-untranslated.stringsdict",
+      "filterOptions": [],
+      "translations": {
+        "retained#one": "{signals} signal au quai",
+        "retained#other": "{signals} signaux au quai"
+      },
+      "removeUntranslated": true,
+      "localized": "fixtures/workflow/apple-stringsdict-remove-untranslated.localized.stringsdict"
+    },
+    {
+      "id": "apple-mojito-preserves-valid-empty-plist-when-every-plural-is-untranslated",
+      "format": "apple_stringsdict",
+      "input": "fixtures/workflow/apple-stringsdict-remove-untranslated.stringsdict",
+      "filterOptions": [],
+      "translations": {},
+      "removeUntranslated": true,
+      "localized": "fixtures/workflow/apple-stringsdict-remove-all-untranslated.localized.stringsdict"
+    },
+    {
       "id": "android-mojito-import-copies-arabic-plural-categories-and-target-comments",
       "format": "android",
       "input": "fixtures/workflow/import-android-plurals.xml",

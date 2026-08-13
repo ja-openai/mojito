@@ -21,6 +21,8 @@ final class AppleStringsdictSourceSkeleton {
   private final SourceSkeletonEncoding encoding;
   private final Map<List<String>, SlotIdentity> expected;
   private final List<LocalizationSourceSlot> slots = new ArrayList<>();
+  private Set<String> removedMessages = Set.of();
+  private final List<Removal> removals = new ArrayList<>();
 
   private AppleStringsdictSourceSkeleton(
       String source, SourceSkeletonEncoding encoding, Map<List<String>, SlotIdentity> expected) {
@@ -135,6 +137,47 @@ final class AppleStringsdictSourceSkeleton {
     }
     result.write(original, previous, original.length - previous);
     return result.toByteArray();
+  }
+
+  static byte[] removeMessages(LocalizationSourceSkeleton skeleton, Set<String> removed) {
+    if ("BINARY_PLIST".equals(skeleton.encoding())) {
+      throw invalid(
+          "UNSUPPORTED_SKELETON_SOURCE",
+          "Cannot safely remove messages from a binary Foundation strings dictionary");
+    }
+    SourceSkeletonEncoding encoding = SourceSkeletonEncoding.named(skeleton.encoding());
+    AppleStringsdictSourceSkeleton scanner =
+        new AppleStringsdictSourceSkeleton(skeleton.source(), encoding, Map.of());
+    scanner.removedMessages = removed;
+    scanner.scan();
+    String source = skeleton.source();
+    StringBuilder result = new StringBuilder(source.length());
+    int previous = 0;
+    for (Removal removal : scanner.removals) {
+      int start = removal.start();
+      while (start > previous
+          && (source.charAt(start - 1) == ' ' || source.charAt(start - 1) == '\t')) {
+        start--;
+      }
+      if (start > previous
+          && source.charAt(start - 1) != '\n'
+          && source.charAt(start - 1) != '\r') {
+        start = removal.start();
+      }
+      result.append(source, previous, start);
+      previous = removal.end();
+      while (previous < source.length()
+          && (source.charAt(previous) == ' ' || source.charAt(previous) == '\t')) {
+        previous++;
+      }
+      if (previous < source.length() && source.charAt(previous) == '\r') {
+        previous++;
+      }
+      if (previous < source.length() && source.charAt(previous) == '\n') {
+        previous++;
+      }
+    }
+    return encoding.encode(result.append(source, previous, source.length()).toString());
   }
 
   static byte[] retainPluralCategories(byte[] original, Set<String> categories) {
@@ -540,8 +583,13 @@ final class AppleStringsdictSourceSkeleton {
         XmlElement parent = stack.peek();
         if ("key".equals(current.name) && parent != null && "dict".equals(parent.name)) {
           parent.pendingKey = xmlKey(source.substring(current.bodyStart, position));
+          parent.pendingKeyStart = current.openingStart;
         } else if ("string".equals(current.name)) {
           addSlot(current.path, current.bodyStart, position);
+        } else if ("dict".equals(current.name)
+            && current.path.size() == 1
+            && removedMessages.contains(current.path.get(0))) {
+          removals.add(new Removal(current.entryStart, end + 1));
         }
       } else {
         boolean empty = token.endsWith("/");
@@ -550,13 +598,20 @@ final class AppleStringsdictSourceSkeleton {
         }
         String name = token.split("\\s+", 2)[0];
         XmlElement parent = stack.peek();
+        int entryStart =
+            parent != null
+                    && "dict".equals(parent.name)
+                    && parent.path.isEmpty()
+                    && !"key".equals(name)
+                ? parent.pendingKeyStart
+                : -1;
         List<String> path = valuePath(parent, name);
         if (empty) {
           if ("string".equals(name)) {
             addSlot(path, source.lastIndexOf('/', end), end + 1);
           }
         } else {
-          stack.push(new XmlElement(name, end + 1, path));
+          stack.push(new XmlElement(name, position, end + 1, path, entryStart));
         }
       }
       position = end + 1;
@@ -624,17 +679,25 @@ final class AppleStringsdictSourceSkeleton {
 
   record SlotIdentity(String id, String selector, String variant) {}
 
+  private record Removal(int start, int end) {}
+
   private static final class XmlElement {
 
     private final String name;
+    private final int openingStart;
     private final int bodyStart;
     private final List<String> path;
+    private final int entryStart;
     private String pendingKey;
+    private int pendingKeyStart;
 
-    private XmlElement(String name, int bodyStart, List<String> path) {
+    private XmlElement(
+        String name, int openingStart, int bodyStart, List<String> path, int entryStart) {
       this.name = name;
+      this.openingStart = openingStart;
       this.bodyStart = bodyStart;
       this.path = path;
+      this.entryStart = entryStart;
     }
   }
 }

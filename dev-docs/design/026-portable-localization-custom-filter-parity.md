@@ -161,6 +161,15 @@ measurements, not production-capacity guarantees.
   that source-owned context. When every RESX or XTB translation is missing,
   Okapi emits malformed orphan closing tags; portable output retains a valid
   empty root, including XTB's original harmless declaration.
+- The actual customized Apple `.stringsdict` writer also emits malformed XML
+  when `REMOVE_UNTRANSLATED` removes plural text units. Java and Rust instead
+  remove only fully untranslated top-level dictionary messages, preserving all
+  translated category metadata, UTF-16 source encoding, comments, and a valid
+  empty root when no translations remain. Existing CLI datasets demonstrate
+  every malformed legacy locale, while real Foundation validates both original
+  and portable localized native dictionaries. Partially translated plural
+  categories retain their existing behavior until a separate policy is defined;
+  binary dictionaries fail safely when complete-message removal is required.
 - AAPT2 itself accepts and retains Android plural bags with no `other`, but a
   canonical ICU/FormatJS plural cannot safely represent them. Independent Java
   and Rust readers/writers reject these bags instead of inventing a fallback;

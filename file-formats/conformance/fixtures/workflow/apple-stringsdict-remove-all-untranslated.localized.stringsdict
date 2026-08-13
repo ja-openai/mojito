@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+  <dict>
+    <!-- Preserve native metadata for the retained plural entry. -->
+    <!-- Keep unrelated source comments around removed messages. -->
+  </dict>
+</plist>

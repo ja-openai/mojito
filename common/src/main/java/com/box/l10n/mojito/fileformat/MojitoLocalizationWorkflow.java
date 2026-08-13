@@ -485,6 +485,25 @@ final class MojitoLocalizationWorkflow {
             "UNKNOWN_SKELETON_SLOT", "Translation has no translatable source slot: " + key);
       }
     }
+    if (format == LocalizationFileFormat.APPLE_STRINGSDICT && removeUntranslated) {
+      Set<String> missingMessages = new LinkedHashSet<>(catalog.messages().keySet());
+      for (LocalizationSourceSkeleton.LocalizationSourceSlot slot : skeleton.slots()) {
+        if (translations.containsKey(slot.translationKey())) {
+          missingMessages.remove(slot.id());
+        }
+      }
+      if (!missingMessages.isEmpty()) {
+        Set<String> removedSlots = new LinkedHashSet<>();
+        for (LocalizationSourceSkeleton.LocalizationSourceSlot slot : skeleton.slots()) {
+          if (missingMessages.contains(slot.id())) {
+            removedSlots.add(slot.translationKey());
+          }
+        }
+        byte[] retained = AppleStringsdictSourceSkeleton.removeMessages(skeleton, missingMessages);
+        skeleton = LocalizationFileConverters.extractSkeleton(format, retained);
+        selected.keySet().removeAll(removedSlots);
+      }
+    }
     if (removeUntranslated
         && (format == LocalizationFileFormat.RESX || format == LocalizationFileFormat.XTB)) {
       byte[] retained = XmlResourceSourceSkeleton.removeEntries(skeleton, untranslatedKeys);

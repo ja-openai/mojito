@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+  <dict>
+    <!-- Preserve native metadata for the retained plural entry. -->
+    <key>retained</key>
+    <dict>
+      <key>NSStringLocalizedFormatKey</key>
+      <string>%#@signals@ anchored</string>
+      <key>signals</key>
+      <dict>
+        <key>NSStringFormatSpecTypeKey</key>
+        <string>NSStringPluralRuleType</string>
+        <key>NSStringFormatValueTypeKey</key>
+        <string>d</string>
+        <key>one</key><string>%d signal</string>
+        <key>other</key><string>%d signals</string>
+      </dict>
+    </dict>
+    <!-- Keep unrelated source comments around removed messages. -->
+    <key>missing</key>
+    <dict>
+      <key>NSStringLocalizedFormatKey</key>
+      <string>%#@beacons@ visible</string>
+      <key>beacons</key>
+      <dict>
+        <key>NSStringFormatSpecTypeKey</key>
+        <string>NSStringPluralRuleType</string>
+        <key>NSStringFormatValueTypeKey</key>
+        <string>d</string>
+        <key>one</key><string>%d beacon</string>
+        <key>other</key><string>%d beacons</string>
+      </dict>
+    </dict>
+  </dict>
+</plist>
