@@ -360,6 +360,57 @@ public class PullCommandTest extends CLITestBase {
   }
 
   @Test
+  public void portableConverterRemovesUntranslatedPropertiesLikeOkapi() throws Exception {
+    Repository repository = createTestRepoUsingRepoService();
+    Path dataset =
+        Path.of(
+            "src/test/resources/com/box/l10n/mojito/cli/command/PullCommandTest_IO/pullProperties");
+    String original = dataset.resolve("input/source").toAbsolutePath().toString();
+    String modified = dataset.resolve("input/source_modified").toAbsolutePath().toString();
+    getL10nJCommander()
+        .run("push", "-r", repository.getName(), "-s", original, "--converter", "portable");
+    Asset asset = assetClient.getAssetByPathAndRepositoryId("demo.properties", repository.getId());
+    importTranslationsFromDataset(dataset, asset.getId(), "fr-FR");
+    importTranslationsFromDataset(dataset, asset.getId(), "ja-JP");
+
+    File legacy = getTargetTestDir("legacy");
+    getL10nJCommander()
+        .run(
+            "pull",
+            "-r",
+            repository.getName(),
+            "-s",
+            modified,
+            "-t",
+            legacy.getAbsolutePath(),
+            "--inheritance-mode",
+            "REMOVE_UNTRANSLATED",
+            "--converter",
+            "okapi");
+    File portable = getTargetTestDir("portable");
+    getL10nJCommander()
+        .run(
+            "pull",
+            "-r",
+            repository.getName(),
+            "-s",
+            modified,
+            "-t",
+            portable.getAbsolutePath(),
+            "--inheritance-mode",
+            "REMOVE_UNTRANSLATED",
+            "--converter",
+            "portable");
+
+    assertEquivalentProperties(legacy.toPath(), portable.toPath());
+    try (var outputs = Files.walk(portable.toPath())) {
+      for (Path output : outputs.filter(Files::isRegularFile).toList()) {
+        assertFalse(output.toString(), Files.readString(output).contains("@#$untranslated$#@"));
+      }
+    }
+  }
+
+  @Test
   public void portableConverterReusesExistingResxDataset() throws Exception {
     assertPortableMatchesExistingDataset("pullResx", "Test.resx", new String[0], new String[0]);
   }

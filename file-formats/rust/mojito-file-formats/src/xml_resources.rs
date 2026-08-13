@@ -232,10 +232,7 @@ pub(crate) fn extract_skeleton(
         let end = tag_end(&source, position)?;
         let token = source[position + 1..end].trim();
         if token.starts_with('!')
-            && !(format == FileFormat::Xtb
-                && Regex::new(r"^!DOCTYPE\s+translationbundle\s*$")
-                    .expect("valid XTB doctype")
-                    .is_match(token))
+            && !(format == FileFormat::Xtb && safe_xtb_doctype().is_match(token))
         {
             return Err(error(
                 "UNSUPPORTED_SKELETON_MARKUP",
@@ -565,16 +562,14 @@ fn render_xtb(
                         "Missing source-owned XTB placeholder",
                     )
                 })?
+        } else if let Some(example) = &placeholder.example {
+            format!(
+                "{} example=\"{}\"/>",
+                placeholder.source.trim_end_matches("/>"),
+                escape_attribute(example)
+            )
         } else {
-            if let Some(example) = &placeholder.example {
-                format!(
-                    "{} example=\"{}\"/>",
-                    placeholder.source.trim_end_matches("/>"),
-                    escape_attribute(example)
-                )
-            } else {
-                placeholder.source.clone()
-            }
+            placeholder.source.clone()
         };
         result = result.replace(&marker, &native);
     }
@@ -583,6 +578,13 @@ fn render_xtb(
 
 fn error(code: &'static str, message: impl Into<String>) -> ParseError {
     ParseError::new(code, message)
+}
+
+fn safe_xtb_doctype() -> &'static Regex {
+    static DOCTYPE: OnceLock<Regex> = OnceLock::new();
+    DOCTYPE.get_or_init(|| {
+        Regex::new(r"^!DOCTYPE\s+translationbundle\s*$").expect("valid XTB doctype")
+    })
 }
 
 struct OpenElement {
