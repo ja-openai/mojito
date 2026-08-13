@@ -1700,6 +1700,7 @@ public class TMService {
 
     TranslatorWithInheritance inherited =
         new TranslatorWithInheritance(asset, repositoryLocale, InheritanceMode.USE_PARENT);
+    boolean hasTranslationWithoutInheritance = inherited.hasTranslationWithoutInheritance();
     Set<TextUnitIntegrityChecker> checkers = integrityCheckerFactory.getTextUnitCheckers(asset);
     ZonedDateTime created = ZonedDateTime.now();
     User createdBy = auditorAwareImpl.getCurrentAuditor().orElse(null);
@@ -1773,8 +1774,8 @@ public class TMService {
               ? note
               : null;
       TMTextUnitCurrentVariant current =
-          tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
-              localeId, source.getId());
+          currentVariantForPortableImport(
+              hasTranslationWithoutInheritance, localeId, source.getId());
       TMTextUnitVariant variant =
           addTMTextUnitCurrentVariantWithResult(
                   current,
@@ -1798,6 +1799,13 @@ public class TMService {
             error);
       }
     }
+  }
+
+  TMTextUnitCurrentVariant currentVariantForPortableImport(
+      boolean hasTranslationWithoutInheritance, Long localeId, Long textUnitId) {
+    return hasTranslationWithoutInheritance
+        ? tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(localeId, textUnitId)
+        : null;
   }
 
   @Transactional
