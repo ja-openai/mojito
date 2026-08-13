@@ -9,8 +9,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.TMTextUnit;
@@ -22,6 +25,7 @@ import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTestData;
+import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantDTO;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantService;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
@@ -87,6 +91,66 @@ public class TextUnitDTOsCacheServiceTest extends ServiceTestBase {
             tuple("zuora_error_message_verify_state_province", APPROVED, true),
             tuple("TEST2", APPROVED, true),
             tuple("TEST3", APPROVED, false));
+  }
+
+  @Test
+  public void unchangedWatermarkAvoidsRescanningAllTextUnits() {
+    TMTestData tmTestData = new TMTestData(testIdWatcher);
+    textUnitDTOsCacheService.getTextUnitDTOsForAssetAndLocale(
+        tmTestData.asset.getId(), tmTestData.frFR.getId(), false, UpdateType.ALWAYS);
+
+    TextUnitDTOsCacheService cacheServiceSpy = spy(textUnitDTOsCacheService);
+    ImmutableList<TextUnitDTO> unchanged =
+        cacheServiceSpy.getTextUnitDTOsForAssetAndLocale(
+            tmTestData.asset.getId(), tmTestData.frFR.getId(), false, UpdateType.ALWAYS);
+
+    assertThat(unchanged).hasSize(3);
+    verify(cacheServiceSpy, never()).getIdsOfAllTextUnits(anyLong());
+    assertThat(
+            textUnitDTOsCacheBlobStorage
+                .getCacheEntry(tmTestData.asset.getId(), tmTestData.frFR.getId())
+                .orElseThrow()
+                .getCacheState())
+        .isNotNull();
+  }
+
+  @Test
+  public void watermarkChangeFeedIncludesDeletedTranslations() {
+    TMTestData tmTestData = new TMTestData(testIdWatcher);
+    textUnitDTOsCacheService.getTextUnitDTOsForAssetAndLocale(
+        tmTestData.asset.getId(), tmTestData.frFR.getId(), false, UpdateType.ALWAYS);
+    TextUnitDTOsCacheState cacheState =
+        textUnitDTOsCacheBlobStorage
+            .getCacheEntry(tmTestData.asset.getId(), tmTestData.frFR.getId())
+            .orElseThrow()
+            .getCacheState();
+
+    Long currentVariantId =
+        tmTextUnitCurrentVariantRepository
+            .findByLocale_IdAndTmTextUnit_Id(
+                tmTestData.frFR.getId(), tmTestData.addTMTextUnit3.getId())
+            .getId();
+    tmTextUnitCurrentVariantService.removeCurrentVariant(currentVariantId);
+
+    assertThat(
+            tmTextUnitCurrentVariantRepository.findChangesByTmIdAndLocaleIdAndAssetIdSince(
+                tmTestData.tm.getId(),
+                tmTestData.frFR.getId(),
+                tmTestData.asset.getId(),
+                cacheState.lastModifiedDate()))
+        .extracting(
+            TMTextUnitCurrentVariantDTO::getTmTextUnitId,
+            TMTextUnitCurrentVariantDTO::getLocaleId,
+            TMTextUnitCurrentVariantDTO::getTmTextUnitVariantId)
+        .contains(tuple(tmTestData.addTMTextUnit3.getId(), tmTestData.frFR.getId(), null));
+
+    assertThat(
+            textUnitDTOsCacheService.getTextUnitDTOsForAssetAndLocale(
+                tmTestData.asset.getId(), tmTestData.frFR.getId(), false, UpdateType.ALWAYS))
+        .filteredOn(
+            textUnitDTO -> textUnitDTO.getTmTextUnitId().equals(tmTestData.addTMTextUnit3.getId()))
+        .extracting(TextUnitDTO::getTarget, TextUnitDTO::getTmTextUnitVariantId)
+        .containsExactly(tuple(null, null));
   }
 
   @Test
@@ -281,8 +345,10 @@ public class TextUnitDTOsCacheServiceTest extends ServiceTestBase {
         mock(TextUnitDTOsCacheBlobStorage.class);
     textUnitDTOsCacheService.textUnitDTOsCacheBlobStorage = textUnitDTOsCacheBlobStorageMock;
 
-    when(textUnitDTOsCacheBlobStorageMock.getTextUnitDTOs(any(), any()))
-        .thenReturn(Optional.of(ImmutableList.of(new TextUnitDTO(), new TextUnitDTO())));
+    TextUnitDTOsCacheBlobStorageJson cachedTextUnits = new TextUnitDTOsCacheBlobStorageJson();
+    cachedTextUnits.setTextUnitDTOs(ImmutableList.of(new TextUnitDTO(), new TextUnitDTO()));
+    when(textUnitDTOsCacheBlobStorageMock.getCacheEntry(any(), any()))
+        .thenReturn(Optional.of(cachedTextUnits));
 
     TextUnitDTO textUnitDTO1 = new TextUnitDTO();
     textUnitDTO1.setName("name1");

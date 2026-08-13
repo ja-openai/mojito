@@ -77,6 +77,7 @@ export function UserMenu() {
         { label: 'Database monitoring', path: '/monitoring' },
         { label: 'Azure Storage', path: '/monitoring/azure-storage' },
         { label: 'Redis', path: '/monitoring/redis' },
+        { label: 'Search index', path: '/monitoring/search-index' },
       ]
     : [];
 

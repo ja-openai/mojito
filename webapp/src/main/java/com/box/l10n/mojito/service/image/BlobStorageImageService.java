@@ -40,6 +40,10 @@ public class BlobStorageImageService implements ImageService {
     blobStorage.put(getPath(name), content);
   }
 
+  public boolean imageExists(String name) {
+    return blobStorage.exists(getPath(name));
+  }
+
   String getPath(String name) {
     return pathPrefix + "/" + name;
   }

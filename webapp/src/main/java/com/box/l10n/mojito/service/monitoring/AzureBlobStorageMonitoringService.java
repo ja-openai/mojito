@@ -1,12 +1,14 @@
 package com.box.l10n.mojito.service.monitoring;
 
-import com.azure.core.util.BinaryData;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.models.BlobStorageException;
 import com.box.l10n.mojito.azure.blobstorage.AzureBlobStorageConfigurationProperties;
 import com.box.l10n.mojito.service.blobstorage.BlobStorageConfigurationProperties;
+import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
+import com.box.l10n.mojito.service.blobstorage.azure.AzureBlobStorage;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +31,7 @@ public class AzureBlobStorageMonitoringService {
       azureStorageProperties;
   private final BlobStorageConfigurationProperties blobStorageProperties;
   private final Environment environment;
+  private final MeterRegistry meterRegistry;
 
   public AzureBlobStorageMonitoringService(
       ObjectProvider<BlobContainerClient> blobContainerClientProvider,
@@ -36,12 +39,14 @@ public class AzureBlobStorageMonitoringService {
       com.box.l10n.mojito.service.blobstorage.azure.AzureBlobStorageConfigurationProperties
           azureStorageProperties,
       BlobStorageConfigurationProperties blobStorageProperties,
-      Environment environment) {
+      Environment environment,
+      MeterRegistry meterRegistry) {
     this.blobContainerClientProvider = blobContainerClientProvider;
     this.azureConfigurationProperties = azureConfigurationProperties;
     this.azureStorageProperties = azureStorageProperties;
     this.blobStorageProperties = blobStorageProperties;
     this.environment = environment;
+    this.meterRegistry = meterRegistry;
   }
 
   public AzureStorageSnapshot getStatus() {
@@ -78,15 +83,18 @@ public class AzureBlobStorageMonitoringService {
       return snapshot(true, client, "UNAVAILABLE", checks);
     }
 
-    String probeName = azureStorageProperties.getPrefix() + "/_monitoring/" + UUID.randomUUID();
-    BlobClient blobClient = client.getBlobClient(probeName);
+    String probeName = "_monitoring/" + UUID.randomUUID();
+    BlobClient blobClient =
+        client.getBlobClient(azureStorageProperties.getPrefix() + "/" + probeName);
+    AzureBlobStorage azureBlobStorage =
+        new AzureBlobStorage(client, azureStorageProperties, meterRegistry);
     boolean uploaded = false;
     try {
       AzureStorageCheck writeCheck =
           runCheck(
               "Write probe",
               () -> {
-                blobClient.upload(BinaryData.fromString(PROBE_CONTENT), true);
+                azureBlobStorage.put(probeName, PROBE_CONTENT, Retention.MIN_1_DAY);
                 return true;
               });
       checks.add(writeCheck);

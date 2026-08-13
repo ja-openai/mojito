@@ -30,8 +30,10 @@ import { ReviewProjectFindReplacePage } from './page/review-project-find-replace
 import { ReviewProjectCreatePage } from './page/review-projects/ReviewProjectCreatePage';
 import { ReviewProjectsPage } from './page/review-projects/ReviewProjectsPage';
 import { ScreenshotsDropzonePage } from './page/screenshots/ScreenshotsDropzonePage';
+import { SearchIndexPage } from './page/search-index/SearchIndexPage';
 import { AdminAiTranslateAutomationPage } from './page/settings/AdminAiTranslateAutomationPage';
 import { AdminAiTranslatePromptsPage } from './page/settings/AdminAiTranslatePromptsPage';
+import { AdminBlobCleanupPage } from './page/settings/AdminBlobCleanupPage';
 import { AdminGlossaryDetailPage } from './page/settings/AdminGlossaryDetailPage';
 import { AdminGlossaryWorkflowPage } from './page/settings/AdminGlossaryWorkflowPage';
 import { AdminJsonConfigLocalizationPage } from './page/settings/AdminJsonConfigLocalizationPage';
@@ -183,6 +185,7 @@ export function App() {
             <Route path="/monitoring" element={<MonitoringPage />} />
             <Route path="/monitoring/azure-storage" element={<AzureStorageMonitoringPage />} />
             <Route path="/monitoring/redis" element={<RedisMonitoringPage />} />
+            <Route path="/monitoring/search-index" element={<SearchIndexPage />} />
             <Route path="/statistics" element={<StatisticsPage />} />
             <Route path="/review-projects/new" element={<ReviewProjectCreatePage />} />
             <Route path="/translation-incidents" element={<AdminTranslationIncidentsPage />} />
@@ -232,6 +235,7 @@ export function App() {
               path="/settings/system/ai-translate"
               element={<AdminAiTranslateAutomationPage />}
             />
+            <Route path="/settings/system/blob-cleanup" element={<AdminBlobCleanupPage />} />
             <Route path="/settings/admin/review-features" element={<AdminReviewFeaturesPage />} />
             <Route path="/settings/system/review-features" element={<AdminReviewFeaturesPage />} />
             <Route

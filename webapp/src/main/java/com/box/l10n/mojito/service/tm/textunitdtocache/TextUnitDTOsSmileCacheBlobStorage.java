@@ -24,10 +24,14 @@ public class TextUnitDTOsSmileCacheBlobStorage extends TextUnitDTOsCacheBlobStor
     return "asset/" + assetId + "/locale/" + localeId + ".smile";
   }
 
-  Optional<ImmutableList<TextUnitDTO>> getTextUnitsFromCache(Long assetId, Long localeId) {
+  String getFormat() {
+    return "smile";
+  }
+
+  Optional<TextUnitDTOsCacheBlobStorageJson> getCacheEntryFromCache(Long assetId, Long localeId) {
     Optional<byte[]> bytes =
         structuredBlobStorage.getBytes(TEXT_UNIT_DTOS_CACHE, getName(assetId, localeId));
-    return bytes.map(this::convertToListOrEmptyList);
+    return bytes.map(this::convertToCacheEntryOrEmpty);
   }
 
   void writeTextUnitDTOsToCache(
@@ -40,14 +44,19 @@ public class TextUnitDTOsSmileCacheBlobStorage extends TextUnitDTOsCacheBlobStor
   }
 
   ImmutableList<TextUnitDTO> convertToListOrEmptyList(byte[] s) {
+    return ImmutableList.copyOf(convertToCacheEntryOrEmpty(s).getTextUnitDTOs());
+  }
+
+  TextUnitDTOsCacheBlobStorageJson convertToCacheEntryOrEmpty(byte[] s) {
     try {
-      return ImmutableList.copyOf(
-          objectMapper.readValue(s, TextUnitDTOsCacheBlobStorageJson.class).getTextUnitDTOs());
+      return objectMapper.readValue(s, TextUnitDTOsCacheBlobStorageJson.class);
     } catch (Exception e) {
       logger.error(
           "Can't convert the content into TextUnitDTOsCacheBlobStorageJson, return an empty list instead",
           e);
-      return ImmutableList.of();
+      TextUnitDTOsCacheBlobStorageJson emptyCacheEntry = new TextUnitDTOsCacheBlobStorageJson();
+      emptyCacheEntry.setTextUnitDTOs(ImmutableList.of());
+      return emptyCacheEntry;
     }
   }
 }

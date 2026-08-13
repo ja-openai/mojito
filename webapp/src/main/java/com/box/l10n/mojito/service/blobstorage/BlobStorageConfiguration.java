@@ -76,10 +76,13 @@ public class BlobStorageConfiguration {
 
     @Autowired AzureBlobStorageConfigurationProperties azureBlobStorageConfigurationProperties;
 
+    @Autowired MeterRegistry meterRegistry;
+
     @Bean
     public AzureBlobStorage azureBlobStorage() {
       logger.info("Configure AzureBlobStorage");
-      return new AzureBlobStorage(blobContainerClient, azureBlobStorageConfigurationProperties);
+      return new AzureBlobStorage(
+          blobContainerClient, azureBlobStorageConfigurationProperties, meterRegistry);
     }
   }
 
@@ -182,7 +185,7 @@ public class BlobStorageConfiguration {
                           .bind("l10n.blob-storage.type", BlobStorageType.class)
                           .orElse(BlobStorageType.DATABASE));
 
-      if (blobStorageType == defaultType) {
+      if (isRequiredBy(defaultType)) {
         return true;
       }
 
@@ -191,7 +194,16 @@ public class BlobStorageConfiguration {
               "l10n.blob-storage.routing.prefixes",
               Bindable.mapOf(String.class, BlobStorageType.class))
           .orElse(Map.of())
-          .containsValue(blobStorageType);
+          .values()
+          .stream()
+          .anyMatch(this::isRequiredBy);
+    }
+
+    private boolean isRequiredBy(BlobStorageType configuredType) {
+      return configuredType == blobStorageType
+          || (configuredType == BlobStorageType.AZURE_WITH_DATABASE_FALLBACK
+              && (blobStorageType == BlobStorageType.AZURE
+                  || blobStorageType == BlobStorageType.DATABASE));
     }
   }
 }

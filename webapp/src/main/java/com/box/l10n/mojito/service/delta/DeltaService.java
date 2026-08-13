@@ -65,7 +65,7 @@ public class DeltaService {
       ZonedDateTime fromDate,
       ZonedDateTime toDate,
       Pageable pageable) {
-    if (locales == null || locales.size() == 0) {
+    if (locales == null || locales.isEmpty()) {
       locales =
           repositoryService.getRepositoryLocalesWithoutRootLocale(repository).stream()
               .map(RepositoryLocale::getLocale)

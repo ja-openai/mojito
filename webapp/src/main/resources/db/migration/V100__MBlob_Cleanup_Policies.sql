@@ -1,0 +1,21 @@
+create table mblob_cleanup_policy (
+    id bigint not null auto_increment,
+    created_date datetime default null,
+    last_modified_date datetime default null,
+    prefix varchar(255) not null,
+    enabled bit not null default false,
+    retention_days int not null default 3,
+    batch_size int not null default 250,
+    max_batches_per_run int not null default 0,
+    pause_millis int not null default 250,
+    max_retries int not null default 5,
+    stop_requested bit not null default false,
+    status varchar(32) not null default 'IDLE',
+    last_started_date datetime default null,
+    last_finished_date datetime default null,
+    last_deleted_count bigint not null default 0,
+    total_deleted_count bigint not null default 0,
+    last_error varchar(2048) default null,
+    primary key (id),
+    constraint UK__MBLOB_CLEANUP_POLICY__PREFIX unique (prefix)
+);

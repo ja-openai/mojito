@@ -2,6 +2,7 @@ package com.box.l10n.mojito.service.image;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -50,5 +51,13 @@ public class BlobStorageImageServiceTest {
   public void testUploadImageToBlobStorage() {
     blobStorageImageService.uploadImage("testImage", imageContent);
     verify(blobStorage, times(1)).put("image/testImage", imageContent);
+  }
+
+  @Test
+  public void testImageExistsInBlobStorage() {
+    when(blobStorage.exists("image/testImage")).thenReturn(true);
+
+    assertTrue(blobStorageImageService.imageExists("testImage"));
+    verify(blobStorage).exists("image/testImage");
   }
 }

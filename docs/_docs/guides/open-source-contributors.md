@@ -1,354 +1,333 @@
 ---
 layout: doc
-title:  "Open Source Contributors"
-date:   2016-02-17 15:25:25 -0800
+title: "Contributor Quick Start"
+date: 2026-08-07 00:00:00 -0700
 categories: guides
 permalink: /docs/guides/open-source-contributors/
 ---
-## Prerequisites
 
-The following requirements are needed to develop on {{ site.mojito_green }}: 
+This guide explains how to set up and develop
+[Mojito](https://github.com/ja-openai/mojito) using its Java, Spring Boot,
+React, and Vite toolchain.
 
-1. [Git](https://git-scm.com/about)
-2. [JDK 21](https://adoptium.net/temurin/releases/?version=21) 
-3. [Maven](https://maven.apache.org/download.cgi), or use the project Maven wrapper `mvnw` (version `3.8`)
-4. Optional but highly recommended, [MySQL 8](https://dev.mysql.com/downloads/mysql/8.html) 
+## Minimal setup
 
-Next are instructions to setup the developer environment on Mac OS and Ubuntu. Both have instructions to install 
-`Mysql 8` that can be skipped but it is highly recommended to work with a production like environment and persistent
-data. Note that `8` is the only version tested at the moment.
+The fastest way to run Mojito requires only:
 
-Skip to the [build section](#build) if you already have everything setup!
+- Git.
+- A Java 21 JDK. Verify it with `java -version`.
+- Internet access for the initial Maven and npm dependency downloads.
 
-You can also get started by using a [docker image](#docker-image) that has the build dependencies but without `Mysql`. 
+Maven does not need to be installed globally: the repository includes the
+`./mvnw` wrapper. You do not need to install Node.js or npm separately: the
+first build installs the versions pinned by the project.
 
-### Install on Mac OS
+MySQL, Docker, Redis, and OpenSearch are **not required**. Mojito starts with an
+embedded, in-memory HSQLDB database, and the Maven build provides the frontend
+toolchain.
 
-Install `brew` following the website instructions: https://brew.sh/
+### Install Java 21
 
-
-Install `java 21`:
+On macOS, Homebrew can install Java 21:
 
 ```sh
 brew install openjdk@21
+export JAVA_HOME="$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home"
+export PATH="$JAVA_HOME/bin:$PATH"
 ```
 
-Check that `java 21` is now in use with `java -version`. If you need multiple versions of `java` consider using 
-something like `jenv` (don't forget the plugins: `jenv enable-plugin maven` & `jenv enable-plugin export` ) or `sdkman`.
-    
-Install `maven` (latest version should be fine):
-    
-```sh
-brew install maven
-```
-          
-Optionally, install `Mysql 8`
+Make sure your shell actually selects that JDK before continuing:
 
 ```sh
-brew install mysql@8.0
+java -version
 ```
 
-Note, to install the exact same `maven` version as the wrapper: `brew install maven@3.8` (check the instructions since it is key-only) .
-
- 
-### Install on Ubuntu 18.4 LTS
-
-Install `java 21` from `OpenJDK`:
+### Clone and build
 
 ```sh
-sudo apt-get install openjdk-21-jdk
+git clone https://github.com/ja-openai/mojito.git
+cd mojito
+./mvnw -Pno-local-config -DskipTests install
 ```
-Check that `java 21` is now in use with `java -version`. If not you, can set it as default with 
-`sudo update-java-alternatives -s /usr/lib/jvm/java-1.21.0-openjdk-amd64` (To check the list
-`sudo update-java-alternatives -l`). If you need multiple versions of `java` 
-consider using something like `jenv` or `sdkman`.
 
-Install `maven` (latest version should be fine):
-    
+The first build downloads dependencies, installs the repository-managed Node.js
+and npm under `webapp/node`, installs frontend dependencies, and builds both the
+Spring Boot application and React frontend.
+
+The `no-local-config` profile prevents Maven tests from inheriting unrelated
+configuration under `~/.l10n`. It is useful when a local MySQL configuration
+exists but MySQL is not running.
+
+### Start Mojito
+
+From the repository root:
+
 ```sh
-sudo apt-get install maven
+java -jar webapp/target/mojito-webapp-*-exec.jar
 ```
 
-Install `git` 
+Open [http://localhost:8080/login](http://localhost:8080/login) and sign in with:
 
-```sh    
-sudo apt-get install git
+```text
+Username: admin
+Password: ChangeMe
 ```
-    
-Optionally, install `Mysql 8`
- 
+
+The packaged application includes the built frontend. Its in-memory database is
+reset each time the application stops.
+
+## Optional: persistent MySQL
+
+Use MySQL 8 when you need data to survive application restarts, want to exercise
+Flyway migrations, or need behavior closer to a production database. You can use
+an existing local MySQL installation or run MySQL in Docker.
+
+### MySQL in Docker
+
+The following command starts MySQL 8, publishes it only on localhost, and keeps
+its data in a named Docker volume:
+
 ```sh
-sudo apt-get install mysql-server
-```       
-  
-## Create Mysql Databases & configuration files
-
-If you've decided to use `Mysql` the server needs to be configured for better Unicode support. This section also describes 
-how to create 2 databases along with spring configurations to setup 2 environments that will make development easier.
-
-Configure the server to use `utf-8` on `4 bytes` by default by appending these configurations to 
-`/usr/local/etc/my.cnf` or `/opt/homebrew/etc/my.cnf` (arm brew) file on Mac and to `/etc/mysql/my.cnf` file on Ubuntu:
-
-```properties
-[client]
-default-character-set = utf8mb4
-    
-[mysqld]
-character-set-server = utf8mb4
-    
-[mysqld]
-max_allowed_packet = 256M
-
-[mysqld]
-default-time-zone = '+00:00'
+docker run --name mojito-mysql \
+  --publish 127.0.0.1:3306:3306 \
+  --env MYSQL_ROOT_PASSWORD=ChangeMe \
+  --env MYSQL_DATABASE=mojito \
+  --env MYSQL_USER=mojito \
+  --env MYSQL_PASSWORD=ChangeMe \
+  --volume mojito-mysql-data:/var/lib/mysql \
+  --detach mysql:8.0.34 \
+  --character-set-server=utf8mb4 \
+  --collation-server=utf8mb4_bin
 ```
 
-The server needs to be started/restarted. 
-```sh
-# On Mac
-mysql.server start
+The `ChangeMe` credentials are examples for a local-only development instance.
+Do not reuse them in shared or production environments.
 
-# On Ubuntu
-sudo service mysql restart
-```
+### Existing local MySQL
 
-We're going to create two test databases, so connect to MySQL DB as root user 
-```sh
-# On Mac 
-mysql -u root
+If MySQL 8 is already running on your machine, create the same database and
+local development user:
 
-On Ubuntu 
-sudo mysql -u root
-```
-
-The first database is to run the automation tests during developpment. Tests can also be run using `HSQL` in-memory
- DB but it is sometimes intersting to test with Mysql. This environment can also be used to work on the 
- generation of DB update schema. 
-
-The second database is used to run a local instance of the application with data persisted to do frontend or CLI testing. 
-Of course this is a suggestion and you can change the configuration to recreate the DB each time the server is started.
-
-Run the following commands to create the databases. Change the user name, database name and password as needed. If you do
- so you'll have to update the configuration files accordingly later.
-   
 ```sql
-CREATE USER 'mojito'@'localhost' IDENTIFIED BY 'mojito';
-CREATE DATABASE IF NOT EXISTS mojito CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
-CREATE DATABASE IF NOT EXISTS mojito_dev CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
+CREATE USER IF NOT EXISTS 'mojito'@'localhost' IDENTIFIED BY 'ChangeMe';
+CREATE DATABASE IF NOT EXISTS mojito CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
 GRANT ALL PRIVILEGES ON mojito.* TO 'mojito'@'localhost';
-GRANT ALL PRIVILEGES ON mojito_dev.* TO 'mojito'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-Now will create 2 configuration files, one for each environment/database.
-First create the directory where the files will be stored: `mkdir -p ~/.l10n/config/webapp` 
+### Configure Mojito to use MySQL
 
-Then create the first file: `.l10n/config/webapp/application.properties` with following content
-
-```properties
-spring.flyway.enabled=true
-spring.jpa.defer-datasource-initialization=false
-l10n.flyway.clean=true
-spring.datasource.url=jdbc:mysql://localhost:3306/mojito?characterEncoding=UTF-8&useUnicode=true
-spring.datasource.username=mojito
-spring.datasource.password=mojito
-spring.datasource.driverClassName=com.mysql.cj.jdbc.Driver
-
-l10n.org.quartz.jobStore.useProperties=true
-l10n.org.quartz.scheduler.instanceId=AUTO
-l10n.org.quartz.jobStore.isClustered=true
-l10n.org.quartz.threadPool.threadCount=10
-l10n.org.quartz.jobStore.class=org.quartz.impl.jdbcjobstore.JobStoreTX
-l10n.org.quartz.jobStore.driverDelegateClass=org.quartz.impl.jdbcjobstore.StdJDBCDelegate
-l10n.org.quartz.jobStore.dataSource=myDS
-l10n.org.quartz.dataSource.myDS.provider=hikaricp
-l10n.org.quartz.dataSource.myDS.driver=com.mysql.cj.jdbc.Driver
-l10n.org.quartz.dataSource.myDS.URL=jdbc:mysql://localhost:3306/mojito?characterEncoding=UTF-8&useUnicode=true
-l10n.org.quartz.dataSource.myDS.user=mojito
-l10n.org.quartz.dataSource.myDS.password=mojito
-l10n.org.quartz.dataSource.myDS.maxConnections=12
-l10n.org.quartz.dataSource.myDS.validationQuery=select 1
-```
-
-In the second file: `.l10n/config/webapp/application-npm.properties`, override the database URLs,
-keep data between server runs, and enable header auth for the Vite dev proxy:
-```properties
-l10n.flyway.clean=false
-spring.datasource.url=jdbc:mysql://localhost:3306/mojito_dev?characterEncoding=UTF-8&useUnicode=true
-l10n.org.quartz.dataSource.myDS.URL=jdbc:mysql://localhost:3306/mojito_dev?characterEncoding=UTF-8&useUnicode=true
-l10n.security.authenticationType=HEADER,DATABASE
-```
-    
-## Build
-
-Now the basic setup is done the project can be built
+Create the local configuration directory:
 
 ```sh
-git clone https://github.com/box/mojito.git ${PROJECT_DIR}
-cd ${PROJECT_DIR}
-git config blame.ignoreRevsFile .git-blame-ignore-revs
-mvn clean install -DskipTests=true
+mkdir -p ~/.l10n/config/webapp
 ```
-    
-## Setup `npm`
 
-It is advised to reuse the `npm` version that was downloaded during {{ site.mojito_green }}'s build.
+Then create `~/.l10n/config/webapp/application.properties` with:
+
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/mojito?characterEncoding=UTF-8&useUnicode=true
+spring.datasource.username=mojito
+spring.datasource.password=ChangeMe
+spring.datasource.driverClassName=com.mysql.cj.jdbc.Driver
+spring.flyway.enabled=true
+spring.flyway.clean-disabled=true
+l10n.flyway.clean=false
+spring.jpa.defer-datasource-initialization=false
+spring.jpa.hibernate.ddl-auto=none
+```
+
+Start the packaged application with that additional configuration:
+
+```sh
+java -jar webapp/target/mojito-webapp-*-exec.jar \
+  --spring.config.additional-location="file:${HOME}/.l10n/config/webapp/"
+```
+
+This makes application data persistent while retaining the normal local Quartz
+scheduler. Never enable Flyway clean against a database whose contents you need
+to preserve.
+
+## Optional: Docker Compose and OpenSearch
+
+For a more production-like local environment, the API/worker Docker Compose
+stack builds Mojito inside its Java 21 container, so this path requires Docker
+but does not require Java or Maven to be installed on the host. It includes:
+
+- MySQL 8 with a persistent named volume.
+- OpenSearch with the analysis plugins used by Mojito.
+- The Mojito API and background workers running on Java 21.
+
+Start the complete stack from the repository root:
+
+```sh
+docker compose -f docker/docker-compose-api-worker.yml up -d --build
+```
+
+The first Docker build downloads its own Java, Maven, npm, and container-image
+dependencies, so it is slower than starting an already-built local application.
+
+The application runs at [http://localhost:8080/login](http://localhost:8080/login)
+with `admin` / `ChangeMe`. OpenSearch is available only on
+[http://127.0.0.1:9200](http://127.0.0.1:9200).
+
+Stop the containers while preserving the named MySQL and OpenSearch volumes:
+
+```sh
+docker compose -f docker/docker-compose-api-worker.yml down
+```
+
+If you only need OpenSearch alongside an otherwise local Mojito instance, start
+that one service:
+
+```sh
+docker compose -f docker/docker-compose-api-worker.yml up -d --build opensearch
+```
+
+Then enable the search index when starting the local application:
+
+```sh
+java -jar webapp/target/mojito-webapp-*-exec.jar \
+  --l10n.search-index.enabled=true \
+  --l10n.search-index.base-url=http://127.0.0.1:9200
+```
+
+The search index is optional. See `dev-docs/design/022-search-index.md` for its
+configuration and current limitations. Prefer
+`docker/docker-compose-api-worker.yml` for a complete stack; the older
+`docker/docker-compose.yml` still uses MySQL 5.7 and an outdated Java image.
+
+## Frontend development with Vite
+
+For live frontend reloads, stop the packaged application if it is already
+running and restart it with both local login and development-header
+authentication enabled:
+
+```sh
+java -jar webapp/target/mojito-webapp-*-exec.jar \
+  --l10n.security.authenticationType=HEADER,DATABASE
+```
+
+In a second terminal, from the repository root:
+
+```sh
+source webapp/use_local_npm.sh
+npm --prefix webapp/frontend run dev
+```
+
+Open [http://localhost:5173/](http://localhost:5173/). Vite proxies `/api/*` to
+the Spring Boot server on port 8080 and authenticates the proxied requests as
+the local `admin` user.
+
+The Maven build already installs frontend dependencies. If you need to reinstall
+them later, use the repository-managed toolchain:
 
 ```sh
 source webapp/use_local_npm.sh
 npm --prefix webapp/frontend install
 ```
-    
-Else, make sure the global `npm` is compatible.
- 
-## Run {{ site.mojito_green }}
 
-To run the packaged app from the built frontend assets:
+## Run from source
+
+After the initial build, run the Spring Boot backend directly without rebuilding
+the frontend on every start:
 
 ```sh
-cd ${PROJECT_DIR}/webapp
-npm run start-server
+./mvnw -pl webapp -P=-frontend spring-boot:run \
+  -Dspring-boot.run.arguments=--l10n.security.authenticationType=HEADER,DATABASE
 ```
 
-{{ site.mojito_green }} should be running on [http://localhost:8080/login](http://localhost:8080/login).  You can login with admin/ChangeMe.
+Use the separate Vite command above when developing the frontend.
 
-For frontend development, run the backend without rebuilding frontend assets, then start the Vite dev server in a second terminal:
+## Tests and formatting
+
+Run all Java tests with the embedded database:
 
 ```sh
-cd ${PROJECT_DIR}/webapp
-npm run start-server-nofe
+./mvnw -Pno-local-config test
 ```
 
+Run one backend test class:
+
 ```sh
-cd ${PROJECT_DIR}
-npm --prefix webapp/frontend run dev
+./mvnw -pl webapp -Pno-local-config -Dtest=YourTestClass test
 ```
 
-The Vite app runs on [http://localhost:5173/](http://localhost:5173/) and proxies `/api/*` to the backend. The dev proxy sends `x-forwarded-user: admin`, so the backend dev profile should use header authentication.
-
-If you didn't [configure Mysql](#create-mysql-databases--configuration-files) previously, {{ site.mojito_green }} will be running 
-with in-memory `HSQL DB`. When you restart the server, all data will be lost. For persistent data you need to setup `Mysql`.
-
-## Add Demo Data in {{ site.mojito_green }}
-Make sure {{ site.mojito_green }} is up and running.
+For frontend changes:
 
 ```sh
-cd ${PROJECT_DIR}/webapp
-npm run create-demo-data
-```
-    
-This creates `Demo` repository in {{ site.mojito_green }} with 21 languages.  17 languages are fully translated.  A Demo directory is created in ${Project_DIR} with source file.
-
-## Alias for the CLI
-
-To easily run `CLI` commands using the latest code, you can create an alias that point to the `jar` that was previously built. 
-
-```sh
-alias mojito='java -Dspring.config.additional-location=optional:~/.l10n/config/cli/application.properties -jar ${PROJECT_DIR}/cli/target/mojito-cli-*-SNAPSHOT-exec.jar '
+source webapp/use_local_npm.sh
+npm --prefix webapp/frontend run tsc
+npm --prefix webapp/frontend run lint
+npm --prefix webapp/frontend run test
 ```
 
-For example to create Demo data, you can now run: `mojito demo-create -n DemoCLI`.
+Before submitting Java changes, apply the repository's Google Java Format
+configuration:
 
-Alternatively, install the CLI using the [install scripts]({{ site.url }}/docs/guides/install/#cli-install-script).
-
-## Run Unit Tests
-   
 ```sh
-cd ${PROJECT_DIR}
-mvn test
+./mvnw spotless:apply
 ```
 
-## Style guide
-Mojito uses the [Google Java Format](https://github.com/google/google-java-format) style guidelines, which is integrated to run alongside Maven's compile phase with [spotless](https://github.com/diffplug/spotless/tree/main/plugin-maven).
+## Repository map
 
-If you use IntelliJ, we recommend to either import the [XML styleguide](https://github.com/google/styleguide/blob/gh-pages/intellij-java-google-style.xml) into the IDE or to install the [google-java-format plugin](https://plugins.jetbrains.com/plugin/8527-google-java-format) and use that for re-formatting code.
- 
-## DB migration
-DB migration is done with Flyway, and Default DB setup with MySql. The default app configuration uses HSQL hence Flyway is disabled.
+- `webapp/src/main/java`: Spring Boot application, REST endpoints, services,
+  persistence, and scheduled jobs.
+- `webapp/frontend/src`: React, TypeScript, and Vite frontend.
+- `webapp/src/test/java`: backend tests.
+- `webapp/frontend/src`: frontend components and colocated Vitest tests.
+- `common`: shared Java functionality.
+- `cli`: command-line client.
+- `dev-docs/design`: design notes for active product and architecture work.
+- `AGENTS.md`: repository conventions and commands for contributors and coding
+  assistants.
 
-When using MySql, Flyway must be turned on with `spring.flyway.enabled=true` (for dev or in production). and it also 
-requires `spring.jpa.defer-datasource-initialization=false` to override an HSQL setting
+## Set up with Codex
 
-### Clean the DB
-Set the properties `l10n.flyway.clean=true` (and have `spring.flyway.clean-disabled=false`) to have Flyway clean the schema first 
-and then recreate it from the migration files. This will allow during development to do have a similar behavior as `spring.jpa.hibernate.ddl-auto=create`.
+Open the cloned repository in Codex and use a prompt such as:
 
-### Repair Flyway metadata
-For local development only, set `l10n.flyway.repair=true` to run `flyway.repair()` before migration. This repairs Flyway's schema history metadata, not the application schema itself, and is rejected when the database has `flyway_clean_protection` enabled.
-
-### When working on Jpa entities
-- Set `spring.jpa.hibernate.ddl-auto=update` so that Hibernate will update the DB schema as you keep doing changes
-- Flyway is be used to create or just update the schema depending if the flags were set to clean the DB 
-(`l10n.flyway.clean` and `spring.flyway.clean-disabled`)
-
-### To Generate the final migration script before committing code
-- Set `l10n.flyway.clean=true` (and `spring.flyway.clean-disabled=false`), Flyway will drop the database and recreate the previous version
-- Set `spring.jpa.hibernate.ddl-auto=none` so that Hibernate won't perform any change on the DB schema
-- Run DDLGenerator to generate the baseline schema to update the database.
-- The generated code in: `target/db/migration/Vx__yy_zz.sql` must be adapted (eg. if renaming a column, hibernate will add one, so the statements must be changed)
-- Move the update file to: `src/main/resources/db/migration`, rename the file (`x` is the version, `yy_zz` to provide a description: `yy zz`)
-- Test the migration script
-
-## Docker image
-
-The `aurambaj/mojito-dev` docker image comes with Java, Maven and some other build dependencies required to build the project easily.
-
-Build reusing host Maven repository (Recommanded):
-
-```sh
-cd ${PROJECT_DIR}
-docker run -v $(pwd):/mnt/mojito -v ~/.m2:/root/.m2 -it aurambaj/mojito-dev mvn install -DskipTests
-```    
-   
-Or start the container and run build commands in it
-
-```sh
-docker run -v $(pwd):/mnt/mojito -v ~/.m2:/root/.m2 -p 8080:8080 -it aurambaj/mojito-dev bash
-    
-# and then build commands
-mvn install -DskipTests
-cd webapp/
-npm run start-server
+```text
+Read AGENTS.md and docs/_docs/guides/open-source-contributors.md. Prepare this
+checkout for Mojito development. Verify that Java 21 is selected,
+run ./mvnw -Pno-local-config -DskipTests install, start the application with its
+embedded HSQLDB database, and verify the login page. If I will be doing frontend
+work, also enable HEADER,DATABASE authentication and start the Vite development
+server. Run a relevant test and tell me which URLs and commands to use. Do not
+install MySQL, Docker, Redis, or OpenSearch unless I explicitly ask.
 ```
-    
-To build from a clean slate:
+
+Codex can inspect the repository, run the build, diagnose common setup issues,
+and start development servers. Depending on local security settings, you may
+still need to approve dependency downloads, writes outside the checkout,
+package-manager commands, or access to the network. Codex cannot provide missing
+repository access, credentials, or administrator permissions.
+
+For a repeatable team workflow, the Codex desktop app also supports
+repository-shared local-environment setup scripts and actions. A suitable setup
+script for this repository is:
 
 ```sh
-docker run -v $(pwd):/mnt/mojito -it aurambaj/mojito-dev mvn install -DskipTests
-```    
-   
+./mvnw -Pno-local-config -DskipTests install
+```
+
 ## Troubleshooting
 
-### Check Java version 
+**The build selects the wrong Java version.** Run `java -version` and
+`./mvnw -version`; both must report Java 21. Select the correct `JAVA_HOME` in
+your shell or IDE, then retry.
 
-Make sure you have Java 21 installed:
+**A test unexpectedly connects to MySQL.** Run the command with
+`-Pno-local-config` to ignore configuration under `~/.l10n` and use the embedded
+HSQLDB defaults.
 
-```sh
-[11:05:13] ~/code/mojito $ java -version
-openjdk version "21.0.8" 2025-07-15
-OpenJDK Runtime Environment Homebrew (build 21.0.8)
-OpenJDK 64-Bit Server VM Homebrew (build 21.0.8, mixed mode, sharing)
-```
+**Port 8080 or 5173 is occupied.** Stop the existing process or choose another
+port. The packaged backend accepts `--server.port=18080`; Vite accepts
+`VITE_PORT=15173`. Its API proxy targets port 8080, so update
+`webapp/frontend/vite.config.ts` locally if the backend also uses another port.
 
-### Check Maven version
+**`node` or `npm` has the wrong version.** Run the initial Maven build and then
+`source webapp/use_local_npm.sh`; the frontend pins Node.js and npm in
+`webapp/frontend/package.json`.
 
-Maven 3.9+ should work fine. Consider trying the Maven wrapper `mvnw` from the project if you have any issue with Maven or don't want to install it.
-    
-If you have multiple version of Java installed, make sure Maven uses the right version (forth line):
-
-```sh
-[01:21:31] ~ $  mvn -version
-Apache Maven 3.9.15
-Maven home: ~/.m2/wrapper/dists/apache-maven-3.9.15-bin
-Java version: 21.0.8, vendor: Homebrew, runtime: /opt/homebrew/Cellar/openjdk@21/21.0.8/libexec/openjdk.jdk/Contents/Home
-Default locale: en_US, platform encoding: UTF-8
-OS name: "mac os x", version: "15.5", arch: "aarch64", family: "mac"
-```
-
-### Caused by: java.lang.NoClassDefFoundError: javax/xml/bind/ValidationException
-
-If you see an error like: 
-
-`Caused by: java.lang.NoClassDefFoundError: javax/xml/bind/ValidationException`
-
-you most likely have a wrong version of Java. Java 21 is required. See [Check Java version](#check-java-version)
+**An old guide mentions `npm run start-server`.** Those scripts belonged to the
+removed `webapp/package.json`; use the commands in this guide instead.

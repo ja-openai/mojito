@@ -242,6 +242,26 @@ export function AdminSettingsPage() {
               </button>
             </div>
           </section>
+
+          <section className="settings-card" aria-labelledby="settings-operations">
+            <div className="settings-card__header">
+              <h2 id="settings-operations">Operations</h2>
+            </div>
+            <div className="settings-directory">
+              <button
+                type="button"
+                className="settings-directory__card"
+                onClick={() => {
+                  void navigate('/settings/system/blob-cleanup');
+                }}
+              >
+                <div className="settings-directory__title">Database blob cleanup</div>
+                <div className="settings-directory__description">
+                  Configure, run, and monitor prefix-based database blob cleanup.
+                </div>
+              </button>
+            </div>
+          </section>
         </>
       ) : null}
 

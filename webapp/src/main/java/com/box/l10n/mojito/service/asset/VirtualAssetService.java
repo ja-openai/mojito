@@ -48,6 +48,7 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.ParameterExpression;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -355,6 +356,7 @@ public class VirtualAssetService {
   public void deleteTextUnits(Asset asset, List<String> names) {
 
     Long assetExtractionId = asset.getLastSuccessfulAssetExtraction().getId();
+    boolean textUnitsDeleted = false;
 
     for (String name : names) {
       logger.debug("Try deleting text units with name: {} from asset: {}", name, asset.getPath());
@@ -369,7 +371,14 @@ public class VirtualAssetService {
             asset.getPath());
         assetTextUnitToTMTextUnitRepository.deleteByAssetTextUnitId(assetTextUnit.getId());
         assetTextUnitRepository.delete(assetTextUnit);
+        textUnitsDeleted = true;
       }
+    }
+
+    if (textUnitsDeleted) {
+      AssetExtraction assetExtraction = asset.getLastSuccessfulAssetExtraction();
+      assetExtraction.setLastModifiedDate(ZonedDateTime.now());
+      assetExtractionRepository.save(assetExtraction);
     }
   }
 

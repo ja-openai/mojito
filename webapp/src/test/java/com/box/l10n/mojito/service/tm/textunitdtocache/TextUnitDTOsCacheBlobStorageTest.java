@@ -8,6 +8,8 @@ import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
 import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.google.common.collect.ImmutableList;
+import io.micrometer.core.instrument.MeterRegistry;
+import java.time.ZonedDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +21,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class TextUnitDTOsCacheBlobStorageTest extends ServiceTestBase {
 
   @Autowired TextUnitDTOsCacheBlobStorage textUnitDTOsCacheBlobStorage;
+
+  @Autowired MeterRegistry meterRegistry;
 
   @Test
   public void readInvalidData() {
@@ -43,9 +47,11 @@ public class TextUnitDTOsCacheBlobStorageTest extends ServiceTestBase {
     long localeId = 234L;
     textUnitDTOsCacheBlobStorage.structuredBlobStorage.delete(
         TEXT_UNIT_DTOS_CACHE, textUnitDTOsCacheBlobStorage.getName(assetId, localeId));
+    double missesBefore = cacheLookupCount("json", "miss");
     Optional<ImmutableList<TextUnitDTO>> textUnitDTOS =
         textUnitDTOsCacheBlobStorage.getTextUnitDTOs(assetId, localeId);
     assertFalse(textUnitDTOS.isPresent());
+    assertEquals(missesBefore + 1, cacheLookupCount("json", "miss"), 0);
   }
 
   @Test
@@ -54,12 +60,30 @@ public class TextUnitDTOsCacheBlobStorageTest extends ServiceTestBase {
     textUnitDTO.setName(UUID.randomUUID().toString());
     ImmutableList<TextUnitDTO> textUnitDTOSToWrite = ImmutableList.of(textUnitDTO);
     textUnitDTOsCacheBlobStorage.putTextUnitDTOs(12345L, 12345L, textUnitDTOSToWrite);
+    double hitsBefore = cacheLookupCount("json", "hit");
     List<TextUnitDTO> readTextUnitDTOS =
         textUnitDTOsCacheBlobStorage.getTextUnitDTOs(12345L, 12345L).get();
 
     Assertions.assertThat(readTextUnitDTOS)
         .usingFieldByFieldElementComparator()
         .containsExactlyElementsOf(textUnitDTOSToWrite);
+    assertEquals(hitsBefore + 1, cacheLookupCount("json", "hit"), 0);
+  }
+
+  @Test
+  public void writeAndReadWatermark() {
+    TextUnitDTO textUnitDTO = new TextUnitDTO();
+    textUnitDTO.setName(UUID.randomUUID().toString());
+    TextUnitDTOsCacheState cacheState =
+        new TextUnitDTOsCacheState(7L, 3L, false, ZonedDateTime.parse("2026-08-10T15:00:00Z"), 11L);
+    textUnitDTOsCacheBlobStorage.putTextUnitDTOs(
+        12345L, 67890L, ImmutableList.of(textUnitDTO), cacheState);
+
+    TextUnitDTOsCacheBlobStorageJson cacheEntry =
+        textUnitDTOsCacheBlobStorage.getCacheEntry(12345L, 67890L).orElseThrow();
+
+    assertEquals(cacheState, cacheEntry.getCacheState());
+    assertEquals(1, cacheEntry.getTextUnitDTOs().size());
   }
 
   @Test
@@ -73,5 +97,12 @@ public class TextUnitDTOsCacheBlobStorageTest extends ServiceTestBase {
     ImmutableList<TextUnitDTO> textUnitDTOS =
         textUnitDTOsCacheBlobStorage.convertToListOrEmptyList("some bad content for testing");
     assertEquals(ImmutableList.of(), textUnitDTOS);
+  }
+
+  private double cacheLookupCount(String format, String result) {
+    return meterRegistry
+        .counter(
+            TextUnitDTOsCacheBlobStorage.CACHE_LOOKUP_METRIC, "format", format, "result", result)
+        .count();
   }
 }

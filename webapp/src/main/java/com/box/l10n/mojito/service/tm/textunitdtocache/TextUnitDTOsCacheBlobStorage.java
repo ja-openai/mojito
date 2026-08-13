@@ -8,6 +8,7 @@ import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.google.common.collect.ImmutableList;
 import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,9 +24,13 @@ import org.springframework.stereotype.Component;
     matchIfMissing = true)
 class TextUnitDTOsCacheBlobStorage {
 
+  static final String CACHE_LOOKUP_METRIC = "TextUnitDTOsCacheBlobStorage.lookup";
+
   static Logger logger = LoggerFactory.getLogger(TextUnitDTOsCacheBlobStorage.class);
 
   @Autowired StructuredBlobStorage structuredBlobStorage;
+
+  @Autowired MeterRegistry meterRegistry;
 
   @Autowired
   @Qualifier("fail_on_unknown_properties_false")
@@ -42,14 +47,37 @@ class TextUnitDTOsCacheBlobStorage {
    */
   @Timed("TextUnitDTOsCacheBlobStorage.getTextUnitDTOs")
   public Optional<ImmutableList<TextUnitDTO>> getTextUnitDTOs(Long assetId, Long localeId) {
+    return getCacheEntry(assetId, localeId)
+        .map(cacheEntry -> ImmutableList.copyOf(cacheEntry.getTextUnitDTOs()));
+  }
+
+  public Optional<TextUnitDTOsCacheBlobStorageJson> getCacheEntry(Long assetId, Long localeId) {
     logger.debug(
         "Get TextUnitDTOs from Blob Storage for assetId: {}, localeId: {}", assetId, localeId);
-    return getTextUnitsFromCache(assetId, localeId);
+    Optional<TextUnitDTOsCacheBlobStorageJson> cacheEntry =
+        getCacheEntryFromCache(assetId, localeId);
+    meterRegistry
+        .counter(
+            CACHE_LOOKUP_METRIC,
+            "format",
+            getFormat(),
+            "result",
+            cacheEntry.isPresent() ? "hit" : "miss")
+        .increment();
+    return cacheEntry;
   }
 
   @Timed("TextUnitDTOsCacheBlobStorage.putTextUnitDTOs")
   public void putTextUnitDTOs(
       Long assetId, Long localeId, ImmutableList<TextUnitDTO> textUnitDTOs) {
+    putTextUnitDTOs(assetId, localeId, textUnitDTOs, null);
+  }
+
+  void putTextUnitDTOs(
+      Long assetId,
+      Long localeId,
+      ImmutableList<TextUnitDTO> textUnitDTOs,
+      TextUnitDTOsCacheState cacheState) {
     logger.debug(
         "Put TextUnitDTOs to Blob Storage for assetId: {}, localeId: {}, count: {}",
         assetId,
@@ -58,6 +86,7 @@ class TextUnitDTOsCacheBlobStorage {
     TextUnitDTOsCacheBlobStorageJson textUnitDTOsCacheBlobStorageJson =
         new TextUnitDTOsCacheBlobStorageJson();
     textUnitDTOsCacheBlobStorageJson.setTextUnitDTOs(textUnitDTOs);
+    textUnitDTOsCacheBlobStorageJson.setCacheState(cacheState);
     writeTextUnitDTOsToCache(assetId, localeId, textUnitDTOsCacheBlobStorageJson);
   }
 
@@ -65,25 +94,32 @@ class TextUnitDTOsCacheBlobStorage {
     return "asset/" + assetId + "/locale/" + localeId;
   }
 
+  String getFormat() {
+    return "json";
+  }
+
   ImmutableList<TextUnitDTO> convertToListOrEmptyList(String s) {
+    return ImmutableList.copyOf(convertToCacheEntryOrEmpty(s).getTextUnitDTOs());
+  }
+
+  TextUnitDTOsCacheBlobStorageJson convertToCacheEntryOrEmpty(String s) {
     try {
-      return ImmutableList.copyOf(
-          objectMapper
-              .readValueUnchecked(s, TextUnitDTOsCacheBlobStorageJson.class)
-              .getTextUnitDTOs());
+      return objectMapper.readValueUnchecked(s, TextUnitDTOsCacheBlobStorageJson.class);
     } catch (Exception e) {
       logger.error("Convert: %s".formatted(s));
       logger.error(
           "Can't convert the content into TextUnitDTOsCacheBlobStorageJson, return an empty list instead",
           e);
-      return ImmutableList.of();
+      TextUnitDTOsCacheBlobStorageJson emptyCacheEntry = new TextUnitDTOsCacheBlobStorageJson();
+      emptyCacheEntry.setTextUnitDTOs(ImmutableList.of());
+      return emptyCacheEntry;
     }
   }
 
-  Optional<ImmutableList<TextUnitDTO>> getTextUnitsFromCache(Long assetId, Long localeId) {
+  Optional<TextUnitDTOsCacheBlobStorageJson> getCacheEntryFromCache(Long assetId, Long localeId) {
     Optional<String> asString =
         structuredBlobStorage.getString(TEXT_UNIT_DTOS_CACHE, getName(assetId, localeId));
-    return asString.map(this::convertToListOrEmptyList);
+    return asString.map(this::convertToCacheEntryOrEmpty);
   }
 
   void writeTextUnitDTOsToCache(

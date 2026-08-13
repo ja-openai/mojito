@@ -177,6 +177,11 @@ class AiTranslateLegacyBatchService {
         getTextUnitDTOS(
             repository, sourceTextMaxCountPerLocale, tmTextUnitIds, repositoryLocale, statusFilter);
 
+    if (textUnitDTOWithVariantCommentsList.isEmpty()) {
+      logger.debug("Nothing to translate, don't create a legacy batch");
+      return null;
+    }
+
     GlossaryTrie glossaryTrie =
         getGlossaryTrieForLocale(
             repository,
@@ -189,44 +194,39 @@ class AiTranslateLegacyBatchService {
             glossaryTermDoNotTranslate,
             glossaryTermCaseSensitive);
 
-    CreateBatchResponse createBatchResponse = null;
-    if (textUnitDTOWithVariantCommentsList.isEmpty()) {
-      logger.debug("Nothing to translate, don't create a legacy batch");
-    } else {
-      logger.debug("Save the TextUnitDTOs in blob storage for later batch import");
-      String batchId =
-          "%s_%s".formatted(repositoryLocale.getLocale().getBcp47Tag(), UUID.randomUUID());
-      structuredBlobStorage.put(
-          StructuredBlobStorage.Prefix.AI_TRANSLATE_WS,
-          batchId,
-          objectMapper.writeValueAsStringUnchecked(
-              new AiTranslateService.AiTranslateBlobStorage(textUnitDTOWithVariantCommentsList)),
-          Retention.MIN_1_DAY);
+    logger.debug("Save the TextUnitDTOs in blob storage for later batch import");
+    String batchId =
+        "%s_%s".formatted(repositoryLocale.getLocale().getBcp47Tag(), UUID.randomUUID());
+    structuredBlobStorage.put(
+        StructuredBlobStorage.Prefix.AI_TRANSLATE_WS,
+        batchId,
+        objectMapper.writeValueAsStringUnchecked(
+            new AiTranslateService.AiTranslateBlobStorage(textUnitDTOWithVariantCommentsList)),
+        Retention.MIN_1_DAY);
 
-      logger.debug("Generate the legacy batch file content");
-      String batchFileContent =
-          generateBatchFileContent(
-              textUnitDTOWithVariantCommentsList,
-              model,
-              promptSuffix,
-              aiTranslateType,
-              relatedStringsProvider,
-              glossaryTrie,
-              glossaryOnlyMatchedTextUnits);
+    logger.debug("Generate the legacy batch file content");
+    String batchFileContent =
+        generateBatchFileContent(
+            textUnitDTOWithVariantCommentsList,
+            model,
+            promptSuffix,
+            aiTranslateType,
+            relatedStringsProvider,
+            glossaryTrie,
+            glossaryOnlyMatchedTextUnits);
 
-      UploadFileResponse uploadFileResponse =
-          getOpenAIClient()
-              .uploadFile(
-                  UploadFileRequest.forBatch("%s.jsonl".formatted(batchId), batchFileContent));
+    UploadFileResponse uploadFileResponse =
+        getOpenAIClient()
+            .uploadFile(
+                UploadFileRequest.forBatch("%s.jsonl".formatted(batchId), batchFileContent));
 
-      logger.debug("Create the legacy batch using file: {}", uploadFileResponse);
-      createBatchResponse =
-          getOpenAIClient()
-              .createBatch(
-                  forChatCompletion(
-                      uploadFileResponse.id(),
-                      Map.of(AiTranslateService.METADATA__TEXT_UNIT_DTOS__BLOB_ID, batchId)));
-    }
+    logger.debug("Create the legacy batch using file: {}", uploadFileResponse);
+    CreateBatchResponse createBatchResponse =
+        getOpenAIClient()
+            .createBatch(
+                forChatCompletion(
+                    uploadFileResponse.id(),
+                    Map.of(AiTranslateService.METADATA__TEXT_UNIT_DTOS__BLOB_ID, batchId)));
 
     logger.info(
         "Created legacy batch for locale: {} with {} text units",

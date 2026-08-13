@@ -1,51 +1,64 @@
-Mojito 
-====
+# Mojito
 
-[![Join the chat at https://gitter.im/box/mojito](https://badges.gitter.im/box/mojito.svg)](https://gitter.im/box/mojito?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Project Status](http://opensource.box.com/badges/active.svg)](http://opensource.box.com/badges)
-[![Build Status](https://travis-ci.org/box/mojito.svg?branch=master)](https://travis-ci.org/box/mojito/branches)
+Mojito is a continuous localization platform for collecting source strings,
+managing translations, reviewing localized content, and generating translated
+resources.
 
-Mojito is a continuous localization platform. Rely on continuous integration to collect all of your software strings in one place. Check what products need localization in real time. Create and import translation packages with a single click. Search and edit translations across all products and languages! And if you have a small dedicated translation team, they can work directly in mojito.
+## Minimal setup
 
-### Features:
-- Extract (push) strings from your repository to be translated
-- Generates localized files from translated strings (pull)
-- Includes quality checks of the translated content (placeholder validation, etc)
-- Uses previous translations to support refactoring (basic leveraging - no fuzzy)
-- Generates XLIFFs - files that translators know how to use
+Install a Java 21 JDK, then run:
 
-## [Getting Started](http://opensource.box.com/mojito/docs/guides/getting-started/)
-For instruction to jump start
+```sh
+git clone https://github.com/ja-openai/mojito.git
+cd mojito
+./mvnw -Pno-local-config -DskipTests install
+java -jar webapp/target/mojito-webapp-*-exec.jar
+```
 
-## [Full Documentation](http://opensource.box.com/mojito/docs/)
-For full documentation, examples, and other information.
+Open [http://localhost:8080/login](http://localhost:8080/login) and sign in with
+`admin` / `ChangeMe`.
 
-## Support
+The Maven wrapper downloads the project's pinned Node.js and npm versions and
+builds the frontend. Mojito uses an in-memory database by default; MySQL and
+Docker are not required to get started.
 
-Need to contact us directly? 
-- [![Join the chat at https://gitter.im/box/mojito](https://badges.gitter.im/box/mojito.svg)](https://gitter.im/box/mojito?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-- [GitHub Issues](https://github.com/Box/Mojito/issues)
-- [Email Discussion Group](mailto:mojito-global@googlegroups.com)
+For persistent MySQL, OpenSearch, or the complete Docker Compose API/worker
+stack, see the optional setup in the
+[contributor quick start](docs/_docs/guides/open-source-contributors.md).
 
-### Team
-- Hanna Kanabiajeuskaja (@hkanabiajeuskaja)
-- Jean Aurambault (@aurambaj)
-- Jee Yi (@jeeyi)
-- Adrien Loison (@adrilo)
-- Will Yau (@willyau)
+For live frontend development, restart the application with
+`--l10n.security.authenticationType=HEADER,DATABASE`, then run:
 
-## Copyright and License
+```sh
+source webapp/use_local_npm.sh
+npm --prefix webapp/frontend run dev
+```
 
-Copyright 2016 Box, Inc. All rights reserved.
+The Vite frontend is available at
+[http://localhost:5173/](http://localhost:5173/).
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+The same guide covers development commands, tests, and optional Codex-assisted
+setup.
 
-   http://www.apache.org/licenses/LICENSE-2.0
+## Project layout
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+- `webapp`: Spring Boot application, REST API, persistence, and background jobs.
+- `webapp/frontend`: React, TypeScript, and Vite frontend.
+- `common`: shared Java code.
+- `cli`: Mojito command-line client.
+- `dev-docs/design`: current architecture and design notes.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md).
+
+## License and attribution
+
+Mojito is licensed under the Apache License, Version 2.0. See
+[LICENSE](LICENSE).
+
+Originally developed by Box, Inc. See the
+[original Box project](https://github.com/box/mojito) and
+[Mojito website](https://www.mojito.global/).
+
+Original upstream copyright: Copyright 2016 Box, Inc. All rights reserved.

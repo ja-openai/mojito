@@ -47,6 +47,10 @@ public class MBlob extends SettableAuditableEntity {
     return expireAfterSeconds;
   }
 
+  public boolean hasExpiration() {
+    return expireAfterSeconds != null;
+  }
+
   public void setExpireAfterSeconds(long expireAfterSeconds) {
     this.expireAfterSeconds = expireAfterSeconds;
   }

@@ -5,6 +5,7 @@ import com.box.l10n.mojito.entity.PullRun;
 import com.box.l10n.mojito.entity.PushRun;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
+import com.box.l10n.mojito.service.searchindex.SearchIndexVariantRow;
 import com.google.common.annotations.VisibleForTesting;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -32,6 +33,67 @@ public interface TMTextUnitVariantRepository extends JpaRepository<TMTextUnitVar
 
   @EntityGraph(value = "TMTextUnitVariant.withComments", type = EntityGraph.EntityGraphType.FETCH)
   List<TMTextUnitVariant> findAllByIdIn(List<Long> ids);
+
+  @Query(
+      """
+      select new com.box.l10n.mojito.service.searchindex.SearchIndexVariantRow(
+          tuv.id,
+          tu.id,
+          r.id,
+          r.name,
+          sourceLocale.bcp47Tag,
+          a.id,
+          a.path,
+          l.id,
+          l.bcp47Tag,
+          tu.name,
+          tu.content,
+          tuv.content,
+          tu.comment,
+          tuv.comment,
+          tuv.status,
+          tuv.includedInLocalizedFile,
+          case when tucv.id is not null then true else false end,
+          a.deleted,
+          tuv.createdDate,
+          cb.id,
+          lev.sourceTmTextUnitId,
+          lev.sourceTmTextUnitVariantId,
+          lev.leveragingType,
+          case when lev.id is not null then lev.uniqueMatch else false end)
+      from TMTextUnitVariant tuv
+      join tuv.tmTextUnit tu
+      join tu.asset a
+      join a.repository r
+      join r.sourceLocale sourceLocale
+      join tuv.locale l
+      left join tuv.createdByUser cb
+      left join TMTextUnitCurrentVariant tucv on tucv.tmTextUnitVariant = tuv
+      left join tuv.leveraging lev
+      where r.deleted = false
+      and (:allRepositories = true or r.id in :repositoryIds)
+      and (:afterId is null or tuv.id > :afterId)
+      order by tuv.id asc
+      """)
+  List<SearchIndexVariantRow> findSearchIndexRows(
+      @Param("repositoryIds") List<Long> repositoryIds,
+      @Param("allRepositories") boolean allRepositories,
+      @Param("afterId") Long afterId,
+      Pageable pageable);
+
+  @Query(
+      """
+      select count(tuv)
+      from TMTextUnitVariant tuv
+      join tuv.tmTextUnit tu
+      join tu.asset a
+      join a.repository r
+      where r.deleted = false
+      and (:allRepositories = true or r.id in :repositoryIds)
+      """)
+  long countSearchIndexRows(
+      @Param("repositoryIds") List<Long> repositoryIds,
+      @Param("allRepositories") boolean allRepositories);
 
   TMTextUnitVariant findTopByTmTextUnitTmIdOrderByCreatedDateDesc(Long tmId);
 

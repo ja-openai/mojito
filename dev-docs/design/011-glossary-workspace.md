@@ -205,17 +205,74 @@ Current matching is lexical:
 - case-insensitive matching
 - matched spans and matched text are carried in the result
 
-The review/workbench match endpoint currently builds the repository+locale
-matcher on demand from each enabled managed glossary's canonical asset, term
-metadata, locale targets, and evidence, then scans the selected source string.
-Legacy repository-name glossary lookup still falls back to the raw backing
-repository. `GlossaryWS.matchDuration` captures request timing by result and
-lookup scope; if this proves noisy in review, the next low-risk optimization is
-caching the compiled glossary trie per repository/glossary+locale with explicit
-eviction on glossary writes where practical.
+The review/workbench match endpoint resolves the enabled glossaries for each
+repository, then reuses a process-local compiled matcher keyed by the ordered
+effective glossary ids, their existing last-modified dates, and the target locale.
+Repositories linked to the same glossaries and explicit lookups of one managed
+glossary therefore share the same trie. Legacy repository-name lookup keeps a
+separate repository+locale cache scope. The Caffeine cache holds at most 128
+entries for 30 seconds and coalesces concurrent loads.
+
+Glossary configuration edits already update the glossary's last-modified date,
+which the existing glossary-resolution query observes on every pod. Creating,
+deleting, or changing glossary scope naturally changes the resolved glossary-id
+list. Term, translation, and evidence changes are reconciled independently for
+each glossary and target locale within the 30-second cache lifetime. There is no
+glossary revision column, additional database write, shared-row lock, global
+eviction, transaction callback, pub/sub dependency, or AspectJ-dependent cache
+invalidation. The existing last-modified date has one-second precision, so the
+bounded TTL remains the correctness backstop for rapid configuration edits.
+
+Managed-glossary cold loads hydrate source and target text-unit DTOs from the
+existing `TEXT_UNIT_DTOS_CACHE` JSON/blob snapshots and refresh them with
+`UpdateType.ALWAYS`, which incrementally applies the existing asset-version and
+locale-specific `(last_modified_date, current_variant_id)` translation-watermark
+checks before rebuilding the in-memory trie. Root-locale matching reuses its
+already loaded source snapshot rather than fetching the same snapshot twice.
+Glossary approval metadata and evidence remain authoritative MySQL reads. Legacy
+repository-name lookups or missing locale metadata keep the existing
+direct-search fallback.
+`GlossaryWS.matchDuration` captures request timing, while
+`GlossaryService.cache.lookup` and `GlossaryService.cache.loadDuration` measure
+bounded-scope cache reuse and cold-load duration. Legacy AI translation batches
+skip glossary loading entirely when the locale has no strings to translate.
+
+Dedicated serialized trie snapshots are intentionally not used: the existing
+JSON/blob DTO cache already supports cross-pod hydration and database delta
+refresh without introducing a second serialization or invalidation contract.
 
 Review project detail and text-unit detail can show matched glossary terms and
 include glossary context in AI review requests.
+
+### Database Load And Latency Impact
+
+Previously, every review/workbench glossary-match request and every AI
+translation repository/locale run searched MySQL for the complete glossary
+source and target text units, loaded approval metadata and evidence, and rebuilt
+the same trie. Reviewing 500 strings against one glossary and locale could
+therefore trigger roughly 500 complete glossary rebuilds. Multiple reviewers
+multiplied the same database work, and interactive AI review waited for glossary
+matching before submitting its model request.
+
+Now those 500 requests normally share one compiled trie per pod, glossary scope,
+and locale within the cache lifetime: roughly 499 of 500 complete rebuilds are
+avoided, or 99.8% fewer full glossary rebuilds in that example. Concurrent
+requests for the same scope share a single load. Translating 65 locales does not
+update a shared glossary row or serialize the locale transactions; each locale
+refreshes independently through its existing DTO-cache watermark. Managed-
+glossary cold loads reuse shared JSON/blob text-unit snapshots instead of
+directly executing the former full source and target text-unit searches.
+
+If stricter cross-pod freshness is later needed, a best-effort pub/sub
+notification can invalidate only the affected glossary+locale after a committed
+write. The existing TTL and DTO-cache watermark must still reconcile missed
+notifications; pub/sub is a latency optimization, not the source of truth.
+
+This does not eliminate all database traffic: each request still resolves enabled
+glossary/repository links, and a cold load still checks snapshot freshness and
+loads authoritative approval metadata and evidence. The savings are the repeated
+wide glossary scans, metadata/evidence hydration, and trie construction that
+previously scaled with reviewed-string count and concurrent reviewers.
 
 Future semantic matching should retrieve candidates and rerank them. It should
 not silently enforce terminology without an approved glossary term.
@@ -252,4 +309,3 @@ metadata.
 - Cluster duplicate candidate proposals.
 - Add semantic retrieval/reranking behind the existing match contract.
 - Decide whether a flattened CSV utility export is worth supporting later.
-- Cache compiled glossary tries for repeated repository/locale match lookups.

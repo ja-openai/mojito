@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.tm.textunitdtocache;
 
 import com.box.l10n.mojito.entity.Asset;
+import com.box.l10n.mojito.entity.AssetExtraction;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.okapi.TextUnitUtils;
 import com.box.l10n.mojito.service.asset.AssetRepository;
@@ -96,15 +97,24 @@ public class TextUnitDTOsCacheService {
   public ImmutableList<TextUnitDTO> getTextUnitDTOsForAssetAndLocale(
       Long assetId, Long localeId, boolean isRootLocale, UpdateType updateType) {
 
-    Optional<ImmutableList<TextUnitDTO>> optionalTextUnitDTOs =
-        textUnitDTOsCacheBlobStorage.getTextUnitDTOs(assetId, localeId);
+    Optional<TextUnitDTOsCacheBlobStorageJson> optionalCacheEntry =
+        textUnitDTOsCacheBlobStorage.getCacheEntry(assetId, localeId);
 
-    ImmutableList<TextUnitDTO> textUnitDTOs = optionalTextUnitDTOs.orElse(ImmutableList.of());
+    ImmutableList<TextUnitDTO> textUnitDTOs =
+        optionalCacheEntry
+            .map(TextUnitDTOsCacheBlobStorageJson::getTextUnitDTOs)
+            .map(ImmutableList::copyOf)
+            .orElse(ImmutableList.of());
 
     if (UpdateType.ALWAYS.equals(updateType)
-        || (UpdateType.IF_MISSING.equals(updateType) && !optionalTextUnitDTOs.isPresent())) {
+        || (UpdateType.IF_MISSING.equals(updateType) && optionalCacheEntry.isEmpty())) {
       textUnitDTOs =
-          updateTextUnitDTOsWithDeltaFromDatabase(textUnitDTOs, assetId, localeId, isRootLocale);
+          updateTextUnitDTOsWithDeltaFromDatabase(
+              textUnitDTOs,
+              assetId,
+              localeId,
+              isRootLocale,
+              optionalCacheEntry.map(TextUnitDTOsCacheBlobStorageJson::getCacheState).orElse(null));
     }
 
     return textUnitDTOs;
@@ -123,8 +133,21 @@ public class TextUnitDTOsCacheService {
   @Timed("TextUnitDTOsCacheService.updateTextUnitDTOsWithDeltaFromDatabase")
   ImmutableList<TextUnitDTO> updateTextUnitDTOsWithDeltaFromDatabase(
       ImmutableList<TextUnitDTO> toUpdate, Long assetId, Long localeId, boolean isRootLocale) {
+    return updateTextUnitDTOsWithDeltaFromDatabase(toUpdate, assetId, localeId, isRootLocale, null);
+  }
 
+  private ImmutableList<TextUnitDTO> updateTextUnitDTOsWithDeltaFromDatabase(
+      ImmutableList<TextUnitDTO> toUpdate,
+      Long assetId,
+      Long localeId,
+      boolean isRootLocale,
+      TextUnitDTOsCacheState previousCacheState) {
     Asset asset = getAssetById(assetId);
+
+    if (previousCacheState != null && hasMatchingAssetState(asset, previousCacheState)) {
+      return updateCachedTranslationsFromWatermark(
+          toUpdate, asset, localeId, isRootLocale, previousCacheState);
+    }
 
     ImmutableList<TMTextUnitCurrentVariantDTO> currentTranslations =
         getCurrentTranslationsOfAllTextUnits(assetId, localeId);
@@ -159,13 +182,105 @@ public class TextUnitDTOsCacheService {
         getTextUnitDTOsForAllTextUnits(
             asset, idsOfAllTextUnits, toUpdateByTmTextUnitIds, fetchedByTmTextUnitId);
 
-    if (!toUpdate.equals(textUnitDTOsForAllTextUnits)) {
-      textUnitDTOsCacheBlobStorage.putTextUnitDTOs(assetId, localeId, textUnitDTOsForAllTextUnits);
+    TextUnitDTOsCacheState cacheState = getCacheState(asset, currentTranslations, null);
+    if (!toUpdate.equals(textUnitDTOsForAllTextUnits)
+        || !Objects.equals(previousCacheState, cacheState)) {
+      textUnitDTOsCacheBlobStorage.putTextUnitDTOs(
+          assetId, localeId, textUnitDTOsForAllTextUnits, cacheState);
     } else {
       logger.debug("No change in text units, don't write blob");
     }
 
     return textUnitDTOsForAllTextUnits;
+  }
+
+  private ImmutableList<TextUnitDTO> updateCachedTranslationsFromWatermark(
+      ImmutableList<TextUnitDTO> cachedTextUnits,
+      Asset asset,
+      Long localeId,
+      boolean isRootLocale,
+      TextUnitDTOsCacheState previousCacheState) {
+    ImmutableList<TMTextUnitCurrentVariantDTO> updatedCurrentVariants =
+        previousCacheState.lastModifiedDate() == null
+            ? getCurrentTranslationsOfAllTextUnits(asset.getId(), localeId)
+            : ImmutableList.copyOf(
+                tmTextUnitCurrentVariantRepository.findChangesByTmIdAndLocaleIdAndAssetIdSince(
+                    asset.getRepository().getTm().getId(),
+                    localeId,
+                    asset.getId(),
+                    previousCacheState.lastModifiedDate()));
+
+    ImmutableMap<Long, TextUnitDTO> cachedByTmTextUnitId =
+        cachedTextUnits.stream()
+            .collect(
+                ImmutableMap.toImmutableMap(TextUnitDTO::getTmTextUnitId, Function.identity()));
+    ImmutableSet<Long> updatedTextUnitIds =
+        getTmTextUnitIdsForNewTranslations(updatedCurrentVariants, cachedByTmTextUnitId)
+            .collect(ImmutableSet.toImmutableSet());
+    if (updatedTextUnitIds.isEmpty()) {
+      logger.debug(
+          "No current variant changes for assetId: {}, localeId: {}", asset.getId(), localeId);
+      return cachedTextUnits;
+    }
+
+    ImmutableMap<Long, TextUnitDTO> updatedByTmTextUnitId =
+        fetchTextUnitDTOForTmTextUnitIds(asset.getId(), localeId, isRootLocale, updatedTextUnitIds);
+    ImmutableList<TextUnitDTO> updatedTextUnits =
+        Streams.concat(
+                cachedTextUnits.stream()
+                    .map(
+                        cached ->
+                            updatedByTmTextUnitId.getOrDefault(cached.getTmTextUnitId(), cached)),
+                updatedByTmTextUnitId.entrySet().stream()
+                    .filter(entry -> !cachedByTmTextUnitId.containsKey(entry.getKey()))
+                    .map(java.util.Map.Entry::getValue))
+            .collect(ImmutableList.toImmutableList());
+    TextUnitDTOsCacheState cacheState =
+        getCacheState(asset, updatedCurrentVariants, previousCacheState);
+    textUnitDTOsCacheBlobStorage.putTextUnitDTOs(
+        asset.getId(), localeId, updatedTextUnits, cacheState);
+    return updatedTextUnits;
+  }
+
+  private boolean hasMatchingAssetState(Asset asset, TextUnitDTOsCacheState cacheState) {
+    AssetExtraction assetExtraction = asset.getLastSuccessfulAssetExtraction();
+    return Objects.equals(
+            cacheState.assetExtractionId(),
+            assetExtraction == null ? null : assetExtraction.getId())
+        && Objects.equals(
+            cacheState.assetExtractionVersion(),
+            assetExtraction == null ? null : assetExtraction.getVersion())
+        && cacheState.assetDeleted() == Boolean.TRUE.equals(asset.getDeleted());
+  }
+
+  private TextUnitDTOsCacheState getCacheState(
+      Asset asset,
+      List<TMTextUnitCurrentVariantDTO> currentVariants,
+      TextUnitDTOsCacheState previousCacheState) {
+    AssetExtraction assetExtraction = asset.getLastSuccessfulAssetExtraction();
+    java.time.ZonedDateTime lastModifiedDate =
+        previousCacheState == null ? null : previousCacheState.lastModifiedDate();
+    Long currentVariantId =
+        previousCacheState == null ? null : previousCacheState.currentVariantId();
+    for (TMTextUnitCurrentVariantDTO currentVariant : currentVariants) {
+      if (currentVariant.getLastModifiedDate() == null) {
+        continue;
+      }
+      if (lastModifiedDate == null
+          || currentVariant.getLastModifiedDate().isAfter(lastModifiedDate)
+          || (currentVariant.getLastModifiedDate().isEqual(lastModifiedDate)
+              && (currentVariantId == null
+                  || currentVariant.getCurrentVariantId() > currentVariantId))) {
+        lastModifiedDate = currentVariant.getLastModifiedDate();
+        currentVariantId = currentVariant.getCurrentVariantId();
+      }
+    }
+    return new TextUnitDTOsCacheState(
+        assetExtraction == null ? null : assetExtraction.getId(),
+        assetExtraction == null ? null : assetExtraction.getVersion(),
+        Boolean.TRUE.equals(asset.getDeleted()),
+        lastModifiedDate,
+        currentVariantId);
   }
 
   /**

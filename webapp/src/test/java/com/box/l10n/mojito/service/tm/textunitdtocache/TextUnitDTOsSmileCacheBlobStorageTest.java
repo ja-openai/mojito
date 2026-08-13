@@ -8,6 +8,7 @@ import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.google.common.collect.ImmutableList;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.util.Optional;
 import org.junit.Before;
@@ -21,9 +22,13 @@ public class TextUnitDTOsSmileCacheBlobStorageTest {
 
   ObjectMapper objectMapper = ObjectMapper.withSmileEnabled();
 
+  SimpleMeterRegistry meterRegistry;
+
   @Before
   public void setUp() {
     textUnitDTOsCacheBlobStorage.objectMapper = objectMapper;
+    meterRegistry = new SimpleMeterRegistry();
+    textUnitDTOsCacheBlobStorage.meterRegistry = meterRegistry;
   }
 
   @Test
@@ -63,7 +68,7 @@ public class TextUnitDTOsSmileCacheBlobStorageTest {
         .thenReturn(Optional.of(expectedBytes));
     textUnitDTOsCacheBlobStorage.structuredBlobStorage = structuredBlobStorageMock;
     Optional<ImmutableList<TextUnitDTO>> textUnitDTOS =
-        textUnitDTOsCacheBlobStorage.getTextUnitsFromCache(1234L, 56L);
+        textUnitDTOsCacheBlobStorage.getTextUnitDTOs(1234L, 56L);
     Mockito.verify(structuredBlobStorageMock)
         .getBytes(TEXT_UNIT_DTOS_CACHE, "asset/1234/locale/56.smile");
     assertEquals(1, textUnitDTOS.get().size());
@@ -71,5 +76,30 @@ public class TextUnitDTOsSmileCacheBlobStorageTest {
     assertEquals(1L, textUnitDTOS.get().get(0).getTmTextUnitId().longValue());
     assertEquals("testName", textUnitDTOS.get().get(0).getName());
     assertEquals("testSource", textUnitDTOS.get().get(0).getSource());
+    assertEquals(1, cacheLookupCount("hit"), 0);
+  }
+
+  @Test
+  public void testMissingTextUnitDTOSRecordsMiss() {
+    StructuredBlobStorage structuredBlobStorageMock = Mockito.mock(StructuredBlobStorage.class);
+    Mockito.when(
+            structuredBlobStorageMock.getBytes(TEXT_UNIT_DTOS_CACHE, "asset/1234/locale/56.smile"))
+        .thenReturn(Optional.empty());
+    textUnitDTOsCacheBlobStorage.structuredBlobStorage = structuredBlobStorageMock;
+
+    Optional<ImmutableList<TextUnitDTO>> textUnitDTOS =
+        textUnitDTOsCacheBlobStorage.getTextUnitDTOs(1234L, 56L);
+
+    assertEquals(Optional.empty(), textUnitDTOS);
+    assertEquals(1, cacheLookupCount("miss"), 0);
+  }
+
+  private double cacheLookupCount(String result) {
+    return meterRegistry
+        .get(TextUnitDTOsCacheBlobStorage.CACHE_LOOKUP_METRIC)
+        .tag("format", "smile")
+        .tag("result", result)
+        .counter()
+        .count();
   }
 }
