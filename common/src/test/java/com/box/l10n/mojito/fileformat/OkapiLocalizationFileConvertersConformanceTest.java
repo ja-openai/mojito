@@ -74,6 +74,40 @@ public class OkapiLocalizationFileConvertersConformanceTest {
   @Autowired private IFilterConfigurationMapper filterConfigurationMapper;
 
   @Test
+  public void customizedJavaScriptAndTypeScriptPreserveSourceCommentsAndStableIdentity()
+      throws Exception {
+    Path root = findFixtureRoot();
+    for (String extension : List.of("js", "ts")) {
+      String assetPath = "harbor." + extension;
+      String source = Files.readString(root.resolve("fixtures/javascript/" + assetPath));
+      LocalizationFileFormat format =
+          "js".equals(extension)
+              ? LocalizationFileFormat.JAVASCRIPT
+              : LocalizationFileFormat.TYPESCRIPT;
+      LocalizationCatalog portable =
+          LocalizationFileConverters.parseForMojito(
+              format, source.getBytes(StandardCharsets.UTF_8), List.of());
+      List<AssetExtractorTextUnit> legacy =
+          extractor.getAssetExtractorTextUnitsForAsset(assetPath, source, null, null);
+
+      assertEquals(
+          assetPath + ": customized filter unit count", portable.messages().size(), legacy.size());
+      for (AssetExtractorTextUnit unit : legacy) {
+        LocalizationMessage message = portable.messages().get(unit.getName());
+        assertEquals(
+            assetPath + ": customized source text", message.defaultMessage(), unit.getSource());
+        assertEquals(
+            assetPath + ": translator comments", message.description(), unit.getComments());
+        assertEquals(
+            assetPath + ": stable Mojito translation-memory identity",
+            textUnitUtils.computeTextUnitMD5(
+                unit.getName(), message.defaultMessage(), message.description()),
+            textUnitUtils.computeTextUnitMD5(unit.getName(), unit.getSource(), unit.getComments()));
+      }
+    }
+  }
+
+  @Test
   public void allDeclaredLegacyExtractionComparisons() throws Exception {
     Path root = findFixtureRoot();
     JsonNode manifest = JSON.readTree(root.resolve("manifest.json").toFile());

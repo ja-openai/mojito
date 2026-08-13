@@ -27,6 +27,8 @@ FORMATS = {
     "java_properties",
     "formatjs_json",
     "yaml",
+    "javascript",
+    "typescript",
 }
 ENCODINGS = {
     None,
@@ -1656,6 +1658,13 @@ def main() -> None:
                 f"{case_id}/{message_id}: missing message"
             )
             metadata = descriptor.get("metadata", {})
+            if "javascriptTemplate" in metadata:
+                assert case["format"] in {"javascript", "typescript"}, (
+                    f"{case_id}/{message_id}: backtick ownership requires JavaScript or TypeScript"
+                )
+                assert metadata["javascriptTemplate"] is True, (
+                    f"{case_id}/{message_id}: template ownership must be explicit"
+                )
             if "androidProtectedPlaceholderOccurrences" in metadata:
                 assert case["format"] == "android" and "variants" not in descriptor, (
                     f"{case_id}/{message_id}: singular protected placeholder ownership requires a nonplural Android message"
@@ -2940,6 +2949,8 @@ def main() -> None:
             "gettext_po",
             "java_properties",
             "yaml",
+            "javascript",
+            "typescript",
         }, f"{case_id}: unsupported source-skeleton format"
         assert case.get("encoding") in {
             None,

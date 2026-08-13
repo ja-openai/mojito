@@ -1,0 +1,19 @@
+{
+  "filterConfigId": "okf_regex@mojito-js",
+  "units": [
+    {
+      "name": "harbor.arrival",
+      "source": "The \"Aurora\" arrives\nsoon",
+      "comments": "Harbor arrival announcement"
+    },
+    {
+      "name": "harbor.route",
+      "source": "Follow `Beacon`\nthrough the northern channel",
+      "comments": "Final route note"
+    },
+    {
+      "name": "harbor.literal",
+      "source": "Keep `helm` and \\u263A"
+    }
+  ]
+}

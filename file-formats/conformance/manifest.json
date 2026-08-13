@@ -2,6 +2,33 @@
   "schemaVersion": 1,
   "workflowCases": [
     {
+      "id": "javascript-mojito-preserves-notes-protected-values-and-source-layout",
+      "format": "javascript",
+      "input": "fixtures/javascript/harbor.js",
+      "expected": "fixtures/javascript/harbor.js.workflow.expected.json",
+      "filterOptions": [],
+      "translations": {
+        "harbor.arrival": "Le \"Boréal\" arrive\nbientôt",
+        "harbor.route": "Suivez `Balise`\npar le chenal nord",
+        "harbor.literal": "Gardez `barre` et \\u263A"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/javascript/harbor.js.localized.js"
+    },
+    {
+      "id": "typescript-mojito-preserves-notes-protected-values-and-source-layout",
+      "format": "typescript",
+      "input": "fixtures/javascript/harbor.ts",
+      "expected": "fixtures/javascript/harbor.ts.workflow.expected.json",
+      "filterOptions": [],
+      "translations": {
+        "harbor.status🧭": "Prêt pour \"Boréal\"\nau quai `nord`",
+        "harbor.welcome": "Bienvenue ${captain}"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/javascript/harbor.ts.localized.ts"
+    },
+    {
       "id": "apple-mojito-output-preserves-intentional-french-legacy-plural-policy",
       "format": "apple_stringsdict",
       "input": "fixtures/workflow/apple-french-legacy-plurals.stringsdict",
@@ -959,6 +986,35 @@
     }
   ],
   "cases": [
+    {
+      "id": "javascript-customized-mojito-quoted-keys-and-template-values",
+      "format": "javascript",
+      "input": "fixtures/javascript/harbor.js",
+      "expected": "fixtures/javascript/harbor.js.expected.json",
+      "okapi": {
+        "policy": "different",
+        "assetPath": "harbor.js",
+        "expected": "fixtures/javascript/harbor.js.okapi.json",
+        "reason": "Mojito's business-policy step suppresses DO NOT TRANSLATE resources after raw JavaScript extraction."
+      }
+    },
+    {
+      "id": "typescript-customized-mojito-quoted-keys-and-template-values",
+      "format": "typescript",
+      "input": "fixtures/javascript/harbor.ts",
+      "expected": "fixtures/javascript/harbor.ts.expected.json",
+      "okapi": {
+        "policy": "match",
+        "assetPath": "harbor.ts",
+        "expected": "fixtures/javascript/harbor.ts.okapi.json"
+      }
+    },
+    {
+      "id": "javascript-rejects-unterminated-quoted-source-values",
+      "format": "javascript",
+      "input": "fixtures/javascript/unterminated.js",
+      "error": "INVALID_JAVASCRIPT"
+    },
     {
       "id": "android-basic",
       "format": "android",
@@ -29027,6 +29083,22 @@
     }
   ],
   "sourceSkeletons": [
+    {
+      "id": "javascript-source-skeleton-preserves-comments-and-template-escaping",
+      "format": "javascript",
+      "input": "fixtures/javascript/harbor.js",
+      "expected": "fixtures/javascript/harbor.js.expected.skeleton.json",
+      "translations": "fixtures/javascript/harbor.js.translations.json",
+      "localized": "fixtures/javascript/harbor.js.localized.js"
+    },
+    {
+      "id": "typescript-source-skeleton-preserves-comments-and-template-escaping",
+      "format": "typescript",
+      "input": "fixtures/javascript/harbor.ts",
+      "expected": "fixtures/javascript/harbor.ts.expected.skeleton.json",
+      "translations": "fixtures/javascript/harbor.ts.translations.json",
+      "localized": "fixtures/javascript/harbor.ts.localized.ts"
+    },
     {
       "id": "android-source-skeleton-preserves-entity-escaped-unicode-resource-identities",
       "format": "android",

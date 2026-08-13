@@ -101,6 +101,12 @@ public class LocalizationConverterSelectionTest {
         LocalizationFileFormat.JAVA_PROPERTIES,
         LocalizationConverterSelection.format(
             "messages.properties", FilterConfigIdOverride.PROPERTIES_JAVA));
+    assertEquals(
+        LocalizationFileFormat.JAVASCRIPT,
+        LocalizationConverterSelection.format("Messages.JS", null));
+    assertEquals(
+        LocalizationFileFormat.TYPESCRIPT,
+        LocalizationConverterSelection.format("Messages.TS", null));
   }
 
   @Test

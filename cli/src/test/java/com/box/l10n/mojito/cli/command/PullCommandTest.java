@@ -417,6 +417,18 @@ public class PullCommandTest extends CLITestBase {
   }
 
   @Test
+  public void portableConverterReusesExistingJavaScriptDataset() throws Exception {
+    String[] localeMapping = {"-lm", "fr:fr-FR,ja:ja-JP", "-lmt", "MAP_ONLY"};
+    assertPortableMatchesExistingDataset("pullJS", "en.js", new String[0], localeMapping);
+  }
+
+  @Test
+  public void portableConverterReusesExistingTypeScriptDataset() throws Exception {
+    String[] localeMapping = {"-lm", "fr:fr-FR,ja:ja-JP", "-lmt", "MAP_ONLY"};
+    assertPortableMatchesExistingDataset("pullTS", "en.ts", new String[0], localeMapping);
+  }
+
+  @Test
   public void portableConverterReusesExistingAppleStringsdictDataset() throws Exception {
     assertPortableMatchesExistingDataset(
         "pullMacStringsdict", "en.lproj/Localizable.stringsdict", new String[0], new String[0]);

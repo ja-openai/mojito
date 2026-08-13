@@ -23,6 +23,8 @@ FORMAT_NAMES = {
     "java_properties": "Java properties",
     "formatjs_json": "FormatJS JSON",
     "yaml": "YAML",
+    "javascript": "JavaScript source",
+    "typescript": "TypeScript source",
 }
 CATEGORY_NAMES = {
     "missing_legacy": "real platform-localizable units that Okapi omitted",

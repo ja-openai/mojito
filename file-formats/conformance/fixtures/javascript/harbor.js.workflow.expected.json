@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "javascript",
+  "messages": {
+    "harbor.arrival": {
+      "defaultMessage": "The \"Aurora\" arrives\nsoon",
+      "description": "Harbor arrival announcement"
+    },
+    "harbor.route": {
+      "defaultMessage": "Follow `Beacon`\nthrough the northern channel",
+      "description": "Final route note",
+      "metadata": {
+        "javascriptTemplate": true
+      }
+    },
+    "harbor.literal": {
+      "defaultMessage": "Keep `helm` and \\u263A"
+    }
+  }
+}

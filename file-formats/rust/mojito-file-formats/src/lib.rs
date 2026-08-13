@@ -16,6 +16,7 @@ mod apple_xcstrings_writer;
 mod gettext;
 mod gettext_plural;
 mod gettext_writer;
+mod javascript;
 mod model;
 mod placeholders;
 mod properties;
@@ -423,6 +424,7 @@ pub fn parse_with_feature_flags(
         FileFormat::JavaProperties => properties::parse(&source),
         FileFormat::FormatJsJson => parse_formatjs(&source),
         FileFormat::Yaml => yaml::parse(&source),
+        FileFormat::JavaScript | FileFormat::TypeScript => javascript::parse(format, &source),
     }
 }
 
