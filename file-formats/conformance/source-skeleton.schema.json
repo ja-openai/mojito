@@ -41,7 +41,8 @@
         "java_properties",
         "yaml",
         "javascript",
-        "typescript"
+        "typescript",
+        "resx"
       ]
     },
     "encoding": {

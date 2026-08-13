@@ -983,6 +983,20 @@
         "extractAllPairs=maybe"
       ],
       "error": "INVALID_FILTER_OPTION"
+    },
+    {
+      "id": "resx-mojito-output-preserves-protected-data-source-comments-and-formatting",
+      "format": "resx",
+      "input": "fixtures/xml-resources/microsoft.resx",
+      "expected": "fixtures/xml-resources/microsoft.expected.json",
+      "filterOptions": [],
+      "translations": {
+        "harbor": "Paisible & stable 🧭",
+        "count": "  {0} signaux  ",
+        "$this.Text": "Titre de fenêtre"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/xml-resources/microsoft.localized.resx"
     }
   ],
   "cases": [
@@ -25587,6 +25601,13 @@
       "format": "yaml",
       "input": "fixtures/yaml/native-styles.yaml",
       "expected": "fixtures/yaml/native-styles.expected.json"
+    },
+    {
+      "id": "resx-customized-mojito-rules-preserve-notes-space-and-protected-content",
+      "format": "resx",
+      "input": "fixtures/xml-resources/microsoft.resx",
+      "expected": "fixtures/xml-resources/microsoft.expected.json",
+      "resxNormalized": "fixtures/xml-resources/microsoft.normalized.resx"
     }
   ],
   "androidOverlays": [
@@ -52503,6 +52524,14 @@
       "expected": "fixtures/yaml/native-styles.expected.skeleton.json",
       "translations": "fixtures/yaml/native-styles.translations.json",
       "localized": "fixtures/yaml/native-styles.localized.yaml"
+    },
+    {
+      "id": "resx-source-skeleton-preserves-comments-metadata-and-exact-xml-bytes",
+      "format": "resx",
+      "input": "fixtures/xml-resources/microsoft.resx",
+      "expected": "fixtures/xml-resources/microsoft.expected.skeleton.json",
+      "translations": "fixtures/xml-resources/microsoft.translations.json",
+      "localized": "fixtures/xml-resources/microsoft.localized.resx"
     }
   ],
   "appleBinarySourceSkeletons": [

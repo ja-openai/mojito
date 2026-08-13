@@ -25,6 +25,7 @@ FORMAT_NAMES = {
     "yaml": "YAML",
     "javascript": "JavaScript source",
     "typescript": "TypeScript source",
+    "resx": "Microsoft RESX/RESW",
 }
 CATEGORY_NAMES = {
     "missing_legacy": "real platform-localizable units that Okapi omitted",

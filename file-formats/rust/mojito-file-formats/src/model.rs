@@ -15,6 +15,7 @@ pub enum FileFormat {
     Yaml,
     JavaScript,
     TypeScript,
+    Resx,
 }
 
 impl FileFormat {
@@ -30,6 +31,7 @@ impl FileFormat {
             "yaml" => Self::Yaml,
             "javascript" => Self::JavaScript,
             "typescript" => Self::TypeScript,
+            "resx" => Self::Resx,
             _ => return None,
         })
     }
@@ -46,6 +48,7 @@ impl FileFormat {
             Self::Yaml => "yaml",
             Self::JavaScript => "javascript",
             Self::TypeScript => "typescript",
+            Self::Resx => "resx",
         }
     }
 }

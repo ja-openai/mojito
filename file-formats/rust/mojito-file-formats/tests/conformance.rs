@@ -322,6 +322,7 @@ fn all_shared_localization_format_fixtures() {
                 .or_else(|| case.get("xcstringsNormalized"))
                 .or_else(|| case.get("propertiesNormalized"))
                 .or_else(|| case.get("gettextNormalized"))
+                .or_else(|| case.get("resxNormalized"))
                 .and_then(Value::as_str)
             {
                 let normalized = write(format, &catalog)
@@ -4083,6 +4084,13 @@ fn all_shared_source_preserving_skeletons() {
                 assert_eq!(
                     parsed.messages[key].default_message, *translation,
                     "{id}: translated JavaScript source identity {key}"
+                );
+            }
+        } else if format == FileFormat::Resx {
+            for (key, translation) in &translations {
+                assert_eq!(
+                    parsed.messages[key].default_message, *translation,
+                    "{id}: translated Microsoft resource {key}"
                 );
             }
         } else if encoding == Some("ISO-8859-1") {

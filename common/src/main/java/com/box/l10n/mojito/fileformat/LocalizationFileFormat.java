@@ -11,7 +11,8 @@ public enum LocalizationFileFormat {
   FORMATJS_JSON("formatjs_json"),
   YAML("yaml"),
   JAVASCRIPT("javascript"),
-  TYPESCRIPT("typescript");
+  TYPESCRIPT("typescript"),
+  RESX("resx");
 
   private final String id;
 

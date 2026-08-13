@@ -80,6 +80,9 @@ public final class LocalizationConverterSelection {
     if (path.endsWith(".properties")) {
       return LocalizationFileFormat.JAVA_PROPERTIES;
     }
+    if (path.endsWith(".resx") || path.endsWith(".resw")) {
+      return LocalizationFileFormat.RESX;
+    }
     if (path.endsWith(".json")) {
       return LocalizationFileFormat.FORMATJS_JSON;
     }

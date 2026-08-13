@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <data name="$this.Text" xml:space="preserve">
+    <value>Window title</value>
+  </data>
+  <data name="count" xml:space="preserve">
+    <value>  {0} signals  </value>
+  </data>
+  <data name="harbor" xml:space="preserve">
+    <value>Calm &amp; steady 🧭</value>
+    <comment>Message shown at the north pier</comment>
+  </data>
+</root>

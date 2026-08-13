@@ -72,6 +72,7 @@ pub(crate) fn extract(
         FileFormat::JavaScript | FileFormat::TypeScript => {
             crate::javascript::extract(format, bytes)
         }
+        FileFormat::Resx => crate::xml_resources::extract_skeleton(format, bytes),
         _ => Err(error(
             "UNSUPPORTED_SKELETON_FORMAT",
             "Source skeletons are not available for this resource format",
@@ -297,6 +298,7 @@ pub(crate) fn render(
         "java_properties" => render_properties(skeleton, translations),
         "yaml" => crate::yaml::render(skeleton, translations),
         "javascript" | "typescript" => crate::javascript::render(skeleton, translations),
+        "resx" => crate::xml_resources::render_skeleton(skeleton, translations),
         _ => Err(error(
             "UNSUPPORTED_SKELETON_FORMAT",
             "Unsupported source-preserving skeleton format",

@@ -30,6 +30,7 @@ FORMATS = {
     "yaml",
     "javascript",
     "typescript",
+    "resx",
 }
 ENCODINGS = {
     None,
@@ -1236,6 +1237,13 @@ def main() -> None:
             ), f"{case_id}: normalized GNU gettext requires canonical and MO snapshots"
             assert (ROOT / case["gettextNormalized"]).is_file(), (
                 f"{case_id}: missing normalized GNU gettext snapshot"
+            )
+        if "resxNormalized" in case:
+            assert case["format"] == "resx" and "expected" in case, (
+                f"{case_id}: normalized Microsoft resources require a canonical RESX catalog"
+            )
+            assert (ROOT / case["resxNormalized"]).is_file(), (
+                f"{case_id}: missing normalized Microsoft resource snapshot"
             )
         if "writerReject" in case:
             rejected = case["writerReject"]
@@ -2974,6 +2982,7 @@ def main() -> None:
             "yaml",
             "javascript",
             "typescript",
+            "resx",
         }, f"{case_id}: unsupported source-skeleton format"
         assert case.get("encoding") in {
             None,
