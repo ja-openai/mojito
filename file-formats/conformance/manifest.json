@@ -66,6 +66,16 @@
       "localized": "fixtures/workflow/properties-identical-duplicates.localized.properties"
     },
     {
+      "id": "properties-mojito-removes-untranslated-continuations-and-duplicates",
+      "format": "java_properties",
+      "input": "fixtures/workflow/properties-remove-untranslated.properties",
+      "expected": "fixtures/workflow/properties-remove-untranslated.expected.json",
+      "filterOptions": [],
+      "translations": { "keep": "Quai nord", "literal": "@#$untranslated$#@" },
+      "removeUntranslated": true,
+      "localized": "fixtures/workflow/properties-remove-untranslated.localized.properties"
+    },
+    {
       "id": "android-mojito-import-copies-arabic-plural-categories-and-target-comments",
       "format": "android",
       "input": "fixtures/workflow/import-android-plurals.xml",

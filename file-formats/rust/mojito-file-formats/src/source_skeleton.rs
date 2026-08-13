@@ -1,7 +1,7 @@
 use crate::model::{Catalog, FileFormat, Message, ParseError};
 use regex::Regex;
 use serde::Serialize;
-use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::fmt::Write;
 use std::sync::OnceLock;
 
@@ -5140,6 +5140,48 @@ fn property_lines(source: &str) -> Vec<PropertyLine> {
         });
     }
     result
+}
+
+pub(crate) fn remove_property_entries(
+    source: &str,
+    removed: &BTreeSet<String>,
+) -> Result<String, ParseError> {
+    if removed.is_empty() {
+        return Ok(source.to_owned());
+    }
+    let mut result = String::with_capacity(source.len());
+    let mut previous = 0;
+    for line in property_lines(source) {
+        let logical = line.text.trim_start_matches(property_whitespace);
+        if logical.is_empty() {
+            continue;
+        }
+        let mut end = 0;
+        let mut escaped = false;
+        for (position, character) in logical.char_indices() {
+            if !escaped && (matches!(character, '=' | ':') || property_whitespace(character)) {
+                break;
+            }
+            escaped = character == '\\' && !escaped;
+            end = position + character.len_utf8();
+        }
+        if !removed.contains(&crate::properties::unescape(&logical[..end])?) {
+            continue;
+        }
+        result.push_str(&source[previous..line.positions[0]]);
+        previous = line.end;
+        if previous < source.len() {
+            if source.as_bytes()[previous] == b'\r'
+                && source.as_bytes().get(previous + 1) == Some(&b'\n')
+            {
+                previous += 2;
+            } else {
+                previous += 1;
+            }
+        }
+    }
+    result.push_str(&source[previous..]);
+    Ok(result)
 }
 
 fn preserve_property_continuations(source: &str, translated: &str) -> String {

@@ -704,6 +704,8 @@ pub(crate) fn localize(
             remove_untranslated,
             &untranslated_keys,
         )?;
+    } else if format == FileFormat::JavaProperties && remove_untranslated {
+        text = crate::source_skeleton::remove_property_entries(&text, &untranslated_keys)?;
     } else if format == FileFormat::GettextPo && remove_untranslated {
         text = gettext_output(&text, &untranslated_marker)?;
     }

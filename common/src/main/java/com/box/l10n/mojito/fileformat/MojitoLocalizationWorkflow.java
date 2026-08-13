@@ -460,6 +460,8 @@ final class MojitoLocalizationWorkflow {
       content =
           processAppleStrings(
               content, options.enabled("removeComment"), removeUntranslated, untranslatedKeys);
+    } else if (format == LocalizationFileFormat.JAVA_PROPERTIES && removeUntranslated) {
+      content = JavaPropertiesSourceSkeleton.removeEntries(content, untranslatedKeys);
     } else if (format == LocalizationFileFormat.GETTEXT_PO && removeUntranslated) {
       content = removeGettextEntries(content, untranslatedMarker);
     }

@@ -131,6 +131,47 @@ final class JavaPropertiesSourceSkeleton {
     return result.toByteArray();
   }
 
+  static String removeEntries(String source, Set<String> removed) {
+    if (removed.isEmpty()) {
+      return source;
+    }
+    StringBuilder result = new StringBuilder(source.length());
+    int previous = 0;
+    for (LogicalLine line : logicalLines(source)) {
+      String logical = line.text();
+      int leading = 0;
+      while (leading < logical.length() && whitespace(logical.charAt(leading))) {
+        leading++;
+      }
+      if (leading == logical.length()) {
+        continue;
+      }
+      int end = leading;
+      boolean escaped = false;
+      while (end < logical.length()) {
+        char character = logical.charAt(end);
+        if (!escaped && (character == '=' || character == ':' || whitespace(character))) {
+          break;
+        }
+        escaped = character == '\\' && !escaped;
+        end++;
+      }
+      if (!removed.contains(JavaPropertiesParser.unescape(logical.substring(leading, end)))) {
+        continue;
+      }
+      result.append(source, previous, line.positions().get(0));
+      previous = line.end();
+      if (previous < source.length()) {
+        if (source.charAt(previous++) == '\r'
+            && previous < source.length()
+            && source.charAt(previous) == '\n') {
+          previous++;
+        }
+      }
+    }
+    return result.append(source, previous, source.length()).toString();
+  }
+
   private static Set<String> separatorlessDeclarations(String source) {
     Set<String> result = new HashSet<>();
     for (LogicalLine line : logicalLines(source)) {
