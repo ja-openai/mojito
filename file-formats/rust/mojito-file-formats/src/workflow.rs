@@ -669,7 +669,7 @@ pub(crate) fn localize(
         source,
         &options,
     )?;
-    let skeleton = crate::extract_skeleton(format, source)?;
+    let mut skeleton = crate::extract_skeleton(format, source)?;
     let mut selected = BTreeMap::new();
     let mut untranslated_keys = BTreeSet::new();
     let mut untranslated_marker = UNTRANSLATED.to_owned();
@@ -705,6 +705,11 @@ pub(crate) fn localize(
                 format!("Translation has no translatable source slot: {key}"),
             ));
         }
+    }
+    if remove_untranslated && matches!(format, FileFormat::Resx | FileFormat::Xtb) {
+        let retained = crate::xml_resources::remove_entries(&skeleton, &untranslated_keys)?;
+        skeleton = crate::extract_skeleton(format, &retained)?;
+        selected.retain(|key, _| !untranslated_keys.contains(key));
     }
     let mut localized = crate::render_skeleton(&skeleton, &selected)?;
     if format == FileFormat::AppleStringsdict {

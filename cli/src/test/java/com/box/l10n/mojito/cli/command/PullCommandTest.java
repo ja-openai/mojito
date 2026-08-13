@@ -17,6 +17,7 @@ import com.box.l10n.mojito.fileformat.LocalizationCatalog;
 import com.box.l10n.mojito.fileformat.LocalizationFileConverters;
 import com.box.l10n.mojito.fileformat.LocalizationFileFormat;
 import com.box.l10n.mojito.fileformat.LocalizationMessage;
+import com.box.l10n.mojito.fileformat.LocalizationParseException;
 import com.box.l10n.mojito.rest.client.AssetClient;
 import com.box.l10n.mojito.rest.client.RepositoryClient;
 import com.box.l10n.mojito.rest.entity.Asset;
@@ -445,6 +446,82 @@ public class PullCommandTest extends CLITestBase {
   }
 
   @Test
+  public void portableConverterRemovesUntranslatedResxLikeOkapi() throws Exception {
+    assertPortableXmlRemovalMatchesOkapi("pullResx", "Test.resx", new String[0]);
+  }
+
+  @Test
+  public void portableConverterRemovesUntranslatedXtbLikeOkapi() throws Exception {
+    assertPortableXmlRemovalMatchesOkapi(
+        "pullXtb", "Resources-en-US.xtb", new String[] {"-sl", "en-US"});
+  }
+
+  private void assertPortableXmlRemovalMatchesOkapi(
+      String datasetName, String assetPath, String[] sourceOptions) throws Exception {
+    Repository repository = createTestRepoUsingRepoService();
+    Path dataset =
+        Path.of(
+            "src/test/resources/com/box/l10n/mojito/cli/command/PullCommandTest_IO", datasetName);
+    String original = dataset.resolve("input/source").toAbsolutePath().toString();
+    String modified = dataset.resolve("input/source_modified").toAbsolutePath().toString();
+    List<String> push =
+        new ArrayList<>(List.of("push", "-r", repository.getName(), "-s", original));
+    push.addAll(List.of(sourceOptions));
+    push.addAll(List.of("--converter", "portable"));
+    getL10nJCommander().run(push.toArray(String[]::new));
+    Asset asset = assetClient.getAssetByPathAndRepositoryId(assetPath, repository.getId());
+    importTranslationsFromDataset(dataset, asset.getId(), "fr-FR");
+    importTranslationsFromDataset(dataset, asset.getId(), "ja-JP");
+
+    File legacy = getTargetTestDir("legacy");
+    File portable = getTargetTestDir("portable");
+    for (String backend : List.of("okapi", "portable")) {
+      File target = "okapi".equals(backend) ? legacy : portable;
+      List<String> pull =
+          new ArrayList<>(
+              List.of(
+                  "pull",
+                  "-r",
+                  repository.getName(),
+                  "-s",
+                  modified,
+                  "-t",
+                  target.getAbsolutePath(),
+                  "--inheritance-mode",
+                  "REMOVE_UNTRANSLATED",
+                  "--converter",
+                  backend));
+      pull.addAll(List.of(sourceOptions));
+      getL10nJCommander().run(pull.toArray(String[]::new));
+    }
+    LocalizationFileFormat format =
+        assetPath.endsWith(".xtb") ? LocalizationFileFormat.XTB : LocalizationFileFormat.RESX;
+    try (var outputs = Files.walk(portable.toPath())) {
+      for (Path actual : outputs.filter(Files::isRegularFile).toList()) {
+        LocalizationCatalog actualCatalog =
+            LocalizationFileConverters.parse(format, Files.readAllBytes(actual));
+        Path expected = legacy.toPath().resolve(portable.toPath().relativize(actual));
+        LocalizationCatalog expectedCatalog;
+        try {
+          expectedCatalog = LocalizationFileConverters.parse(format, Files.readAllBytes(expected));
+        } catch (LocalizationParseException failure) {
+          assertTrue(
+              "Portable XML retains a valid empty root when Okapi corrupts the document",
+              actualCatalog.messages().isEmpty());
+          continue;
+        }
+        assertEquals(expectedCatalog.messages().keySet(), actualCatalog.messages().keySet());
+        for (String id : expectedCatalog.messages().keySet()) {
+          assertEquals(
+              actual + " " + id,
+              expectedCatalog.messages().get(id).defaultMessage(),
+              actualCatalog.messages().get(id).defaultMessage());
+        }
+      }
+    }
+  }
+
+  @Test
   public void portableConverterReusesExistingAndroidDataset() throws Exception {
     Repository repository = createTestRepoUsingRepoService();
     Path source = getTargetTestDir("source").toPath();
@@ -737,16 +814,21 @@ public class PullCommandTest extends CLITestBase {
   }
 
   private void assertEquivalentXmlResources(Path expected, Path actual) throws IOException {
+    assertEquivalentXmlCatalogs(expected, actual, ".xtb");
+  }
+
+  private void assertEquivalentXmlCatalogs(Path expected, Path actual, String assetPath)
+      throws IOException {
+    LocalizationFileFormat format =
+        assetPath.endsWith(".xtb") ? LocalizationFileFormat.XTB : LocalizationFileFormat.RESX;
     try (var expectedFiles = Files.walk(expected)) {
       for (Path expectedFile : expectedFiles.filter(Files::isRegularFile).toList()) {
         Path actualFile = actual.resolve(expected.relativize(expectedFile));
         assertTrue("Missing localized file: " + actualFile, Files.exists(actualFile));
         LocalizationCatalog expectedCatalog =
-            LocalizationFileConverters.parse(
-                LocalizationFileFormat.XTB, Files.readAllBytes(expectedFile));
+            LocalizationFileConverters.parse(format, Files.readAllBytes(expectedFile));
         LocalizationCatalog actualCatalog =
-            LocalizationFileConverters.parse(
-                LocalizationFileFormat.XTB, Files.readAllBytes(actualFile));
+            LocalizationFileConverters.parse(format, Files.readAllBytes(actualFile));
         assertEquals(expectedFile.toString(), expectedCatalog.locale(), actualCatalog.locale());
         assertEquals(expectedFile.toString(), expectedCatalog.messages(), actualCatalog.messages());
       }

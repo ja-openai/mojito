@@ -116,7 +116,8 @@ production throughput claims.
   translator description are identical. Portable extraction exposes one stable
   translation-memory identity, updates every original declaration on output,
   and still rejects conflicting duplicate values or descriptions.
-- Android, JSON, Apple `.strings`, Java properties, and GNU PO remove
+- Android, JSON, Apple `.strings`, Java properties, Microsoft RESX/RESW,
+  Google XTB, and GNU PO remove
   untranslated entries when inheritance mode is `REMOVE_UNTRANSLATED`; Android
   also removes plural groups lacking a translated `other` branch. Java
   properties remove the entire original logical declaration, including physical
@@ -127,6 +128,18 @@ production throughput claims.
   behavior. Workflow-aware Java/Rust localization implements these policies;
   ordinary source-template rendering remains lossless and leaves missing
   translations untouched.
+- Microsoft RESX/RESW and Google XTB remove missing source-owned `<data>` or
+  `<translation>` elements before rendering translations. This prevents
+  untranslated XTB placeholder resources from failing placeholder restoration,
+  preserves the exact XML declaration, harmless XTB doctype, comments, protected
+  binary/property nodes, encoding, and untouched values, and retains intentional
+  translations equal to Mojito's private cleanup marker. Direct CLI comparisons
+  against each existing configured Okapi dataset verify the remaining resource
+  identities and translated values. The customized Okapi RESX writer also drops
+  the final translated entry's comment after removal; portable output preserves
+  that source-owned context. When every RESX or XTB translation is missing,
+  Okapi emits malformed orphan closing tags; portable output retains a valid
+  empty root, including XTB's original harmless declaration.
 - AAPT2 itself accepts and retains Android plural bags with no `other`, but a
   canonical ICU/FormatJS plural cannot safely represent them. Independent Java
   and Rust readers/writers reject these bags instead of inventing a fallback;

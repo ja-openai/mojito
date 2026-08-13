@@ -4,7 +4,7 @@ use crate::xml::{self, XmlElement, XmlNode};
 use quick_xml::escape::unescape;
 use regex::Regex;
 use serde_json::Map;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::sync::OnceLock;
 
 pub(crate) fn parse(format: FileFormat, source: &str) -> Result<Catalog, ParseError> {
@@ -372,6 +372,98 @@ pub(crate) fn render_skeleton(
     }
     output.extend_from_slice(&original[previous..]);
     Ok(output)
+}
+
+pub(crate) fn remove_entries(
+    skeleton: &SourceSkeleton,
+    removed: &BTreeSet<String>,
+) -> Result<Vec<u8>, ParseError> {
+    if removed.is_empty() {
+        return encode_source(&skeleton.source, &skeleton.encoding);
+    }
+    let format = FileFormat::from_id(skeleton.source_format)
+        .ok_or_else(|| error("INVALID_SKELETON", "Unsupported XML resource format"))?;
+    let source = &skeleton.source;
+    let mut result = String::with_capacity(source.len());
+    let mut elements: Vec<OpenElement> = Vec::new();
+    let mut previous = 0;
+    let mut position = 0;
+    while position < source.len() {
+        if source.as_bytes()[position] != b'<' {
+            position += source[position..].chars().next().unwrap().len_utf8();
+            continue;
+        }
+        if source[position..].starts_with("<!--") {
+            position = skip(source, position, "-->")?;
+            continue;
+        }
+        if source[position..].starts_with("<![CDATA[") {
+            position = skip(source, position, "]]>")?;
+            continue;
+        }
+        if source[position..].starts_with("<?") {
+            position = skip(source, position, "?>")?;
+            continue;
+        }
+        let end = tag_end(source, position)?;
+        let token = source[position + 1..end].trim();
+        if token.starts_with('!') {
+            position = end + 1;
+            continue;
+        }
+        if token.starts_with('/') {
+            let current = elements
+                .pop()
+                .ok_or_else(|| error("INVALID_SKELETON", "Unbalanced XML resource elements"))?;
+            let owner = format == FileFormat::Resx && current.name == "data"
+                || format == FileFormat::Xtb && current.name == "translation";
+            if owner
+                && current
+                    .identity
+                    .as_ref()
+                    .is_some_and(|id| removed.contains(id))
+            {
+                let opening = source[..current.body_start]
+                    .rfind('<')
+                    .ok_or_else(|| error("INVALID_SKELETON", "Missing XML entry opening tag"))?;
+                let mut start = opening;
+                while start > previous && matches!(source.as_bytes()[start - 1], b' ' | b'\t') {
+                    start -= 1;
+                }
+                if start > previous && !matches!(source.as_bytes()[start - 1], b'\n' | b'\r') {
+                    start = opening;
+                }
+                result.push_str(&source[previous..start]);
+                previous = end + 1;
+                while matches!(source.as_bytes().get(previous), Some(b' ' | b'\t')) {
+                    previous += 1;
+                }
+                if source.as_bytes().get(previous) == Some(&b'\r') {
+                    previous += 1;
+                }
+                if source.as_bytes().get(previous) == Some(&b'\n') {
+                    previous += 1;
+                }
+            }
+        } else if !token.ends_with('/') {
+            let name = token.split_whitespace().next().unwrap();
+            let identity = if format == FileFormat::Resx && name == "data" {
+                attribute(&token[name.len()..], "name")?
+            } else if format == FileFormat::Xtb && name == "translation" {
+                attribute(&token[name.len()..], "key")?
+            } else {
+                None
+            };
+            elements.push(OpenElement {
+                name: name.to_owned(),
+                identity,
+                body_start: end + 1,
+            });
+        }
+        position = end + 1;
+    }
+    result.push_str(&source[previous..]);
+    encode_source(&result, &skeleton.encoding)
 }
 
 fn encoding_name(bytes: &[u8], declared: Option<&str>) -> &'static str {
