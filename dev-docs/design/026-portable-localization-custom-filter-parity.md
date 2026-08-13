@@ -340,7 +340,7 @@ production throughput claims.
 
 ## Compatibility boundary
 
-Existing `push` and `pull` support an explicit, default-Okapi
+Existing `push`, `pull`, and localized-asset `import` support an explicit, default-Okapi
 `--converter portable` integration through the current extraction and
 translated-output services. The CLI parses `--converter okapi|portable`
 through the same case-insensitive enum path as existing command modes, and the
@@ -389,11 +389,9 @@ mvn -Pno-local-config -pl cli -am \
   -Dsurefire.failIfNoSpecifiedTests=false test
 ```
 
-Rollout controls, durable skeleton transport,
-production-side import persistence, and enrollment of additional source file
-types remain separate future work. Standalone Java and Rust must continue to
-provide executable, shared contracts for every supported extraction and output
-policy.
-YAML, HTML, and bilingual XLIFF require separate format contracts; do not claim
-they are portable-supported merely because their existing filter options were
-inventoried here.
+Rollout controls, durable skeleton transport, complete valid plural-import
+coverage, and enrollment of source file types not yet discovered by the CLI
+remain separate future work. Standalone Java and Rust must continue to provide
+executable, shared contracts for every supported extraction and output policy.
+YAML has its own verified format contract; HTML remains pending its independent
+format contract, and bilingual XLIFF remains intentionally deferred.

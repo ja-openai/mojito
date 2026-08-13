@@ -34,6 +34,26 @@ final class CsvLocalizationFormat {
     return catalog;
   }
 
+  static LocalizationCatalog parseImport(LocalizationFileFormat format, String source) {
+    LocalizationCatalog catalog = new LocalizationCatalog(format);
+    for (Row row : rows(source)) {
+      if (row.fields().size() <= targetColumn(format)) {
+        continue;
+      }
+      String id = raw(source, row.fields().get(0));
+      String translation = row.fields().get(targetColumn(format)).value();
+      if (id.isEmpty() || translation.isEmpty()) {
+        continue;
+      }
+      String description =
+          format == LocalizationFileFormat.CSV && row.fields().size() > 3
+              ? raw(source, row.fields().get(3))
+              : null;
+      catalog.add(id, LocalizationMessage.of(translation, description, null, null, null));
+    }
+    return catalog;
+  }
+
   static String write(LocalizationFileFormat format, LocalizationCatalog catalog) {
     if (!format.id().equals(catalog.sourceFormat())) {
       throw invalid("INVALID_SOURCE_FORMAT", "CSV catalog does not match its requested format");

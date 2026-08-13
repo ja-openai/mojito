@@ -97,4 +97,31 @@ public class CsvLocalizationFormatTest {
       assertEquals(original.messages(), reparsed.messages());
     }
   }
+
+  @Test
+  public void importsLocalizedTargetColumnsWithoutChangingStableIdsOrComments() {
+    LocalizationCatalog csv =
+        LocalizationFileConverters.parseForMojitoImport(
+            LocalizationFileFormat.CSV,
+            ("id,Original,\"Bonjour, ami\",Translator note\n"
+                    + "missing,Untranslated\n"
+                    + "empty,Original,,Ignored\n")
+                .getBytes(StandardCharsets.UTF_8),
+            List.of("targetComment=Vendor reviewed"),
+            "fr-FR",
+            false);
+    assertEquals(1, csv.messages().size());
+    assertEquals("Bonjour, ami", csv.messages().get("id").defaultMessage());
+    assertEquals("Translator note", csv.messages().get("id").description());
+    assertEquals("Vendor reviewed", csv.messages().get("id").metadata().get("mojitoTargetComment"));
+
+    LocalizationCatalog magento =
+        LocalizationFileConverters.parseForMojitoImport(
+            LocalizationFileFormat.CSV_ADOBE_MAGENTO,
+            "\"Hello, friend\",\"Bonjour, ami\"\n".getBytes(StandardCharsets.UTF_8),
+            List.of(),
+            "fr-FR",
+            false);
+    assertEquals("Bonjour, ami", magento.messages().get("\"Hello, friend\"").defaultMessage());
+  }
 }

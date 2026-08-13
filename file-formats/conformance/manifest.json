@@ -1083,6 +1083,30 @@
       },
       "removeUntranslated": false,
       "localized": "fixtures/csv/multiline.localized.csv"
+    },
+    {
+      "id": "csv-mojito-import-reads-target-column-and-keeps-source-identities",
+      "format": "csv",
+      "input": "fixtures/csv/standard.localized.csv",
+      "expected": "fixtures/csv/standard.import.expected.json",
+      "filterOptions": [
+        "targetComment=Approved by vendor"
+      ],
+      "importPolicy": {
+        "targetLocale": "fr-FR",
+        "copyFormsOnImport": false
+      }
+    },
+    {
+      "id": "csv-adobe-magento-import-keeps-quoted-source-as-stable-identity",
+      "format": "csv_adobe_magento",
+      "input": "fixtures/csv/magento.localized.csv",
+      "expected": "fixtures/csv/magento.import.expected.json",
+      "filterOptions": [],
+      "importPolicy": {
+        "targetLocale": "fr-FR",
+        "copyFormsOnImport": false
+      }
     }
   ],
   "cases": [

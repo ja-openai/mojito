@@ -95,7 +95,16 @@ final class MojitoLocalizationWorkflow {
         }
       }
     }
-    LocalizationCatalog original = parse(format, source, extractionOptions);
+    LocalizationCatalog original;
+    if (format == LocalizationFileFormat.CSV
+        || format == LocalizationFileFormat.CSV_ADOBE_MAGENTO) {
+      LocalizationFilterOptions.parse(format, extractionOptions);
+      original =
+          CsvLocalizationFormat.parseImport(
+              format, LocalizationFileConverters.decode(source, null));
+    } else {
+      original = parse(format, source, extractionOptions);
+    }
     if (!copyFormsOnImport && targetComment == null) {
       return original;
     }

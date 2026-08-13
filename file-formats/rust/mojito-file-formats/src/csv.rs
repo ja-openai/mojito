@@ -26,6 +26,29 @@ pub(crate) fn parse(format: FileFormat, source: &str) -> Result<Catalog, ParseEr
     Ok(catalog)
 }
 
+pub(crate) fn parse_import(format: FileFormat, source: &str) -> Result<Catalog, ParseError> {
+    let mut catalog = Catalog::new(format);
+    for row in rows(source)? {
+        let Some(target) = row.fields.get(target_column(format)) else {
+            continue;
+        };
+        let id = raw(source, &row.fields[0]);
+        if id.is_empty() || target.value.is_empty() {
+            continue;
+        }
+        let description = if format == FileFormat::Csv {
+            row.fields.get(3).map(|field| raw(source, field).to_owned())
+        } else {
+            None
+        };
+        catalog.insert(
+            id.to_owned(),
+            Message::new(target.value.clone(), description, None, vec![], Map::new()),
+        )?;
+    }
+    Ok(catalog)
+}
+
 pub(crate) fn write(format: FileFormat, catalog: &Catalog) -> Result<String, ParseError> {
     if catalog.source_format != format.id() {
         return Err(error("INVALID_SOURCE_FORMAT", "Mismatched CSV catalog"));
@@ -375,5 +398,30 @@ mod tests {
             let normalized = write(format, &catalog).unwrap();
             assert_eq!(parse(format, &normalized).unwrap(), catalog);
         }
+    }
+
+    #[test]
+    fn imports_target_columns_using_source_owned_identity() {
+        let standard = parse_import(
+            FileFormat::Csv,
+            "id,Original,\"Bonjour, ami\",Translator note\nmissing,Untranslated\nempty,Original,,Ignored\n",
+        )
+        .unwrap();
+        assert_eq!(standard.messages.len(), 1);
+        assert_eq!(standard.messages["id"].default_message, "Bonjour, ami");
+        assert_eq!(
+            standard.messages["id"].description.as_deref(),
+            Some("Translator note")
+        );
+
+        let magento = parse_import(
+            FileFormat::CsvAdobeMagento,
+            "\"Hello, friend\",\"Bonjour, ami\"\n",
+        )
+        .unwrap();
+        assert_eq!(
+            magento.messages["\"Hello, friend\""].default_message,
+            "Bonjour, ami"
+        );
     }
 }

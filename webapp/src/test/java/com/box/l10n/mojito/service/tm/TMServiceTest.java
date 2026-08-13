@@ -18,6 +18,7 @@ import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariantComment;
 import com.box.l10n.mojito.entity.TMXliff;
+import com.box.l10n.mojito.fileformat.LocalizationConverterSelection;
 import com.box.l10n.mojito.okapi.FilterConfigIdOverride;
 import com.box.l10n.mojito.okapi.ImportTranslationsFromLocalizedAssetStep.StatusForEqualTarget;
 import com.box.l10n.mojito.okapi.InheritanceMode;
@@ -4233,6 +4234,53 @@ public class TMServiceTest extends ServiceTestBase {
   }
 
   @Test
+  public void testPortableImportLocalizedAssetApprovedAndTargetComment() throws Exception {
+    baseTestImportLocalizedAsset(
+        StatusForEqualTarget.APPROVED,
+        LocalizationConverterSelection.usePortable(
+            List.of("targetComment=Reviewed vendor import")));
+
+    TextUnitSearcherParameters parameters = new TextUnitSearcherParameters();
+    parameters.setRepositoryIds(repository.getId());
+    parameters.setStatusFilter(StatusFilter.TRANSLATED);
+    List<TextUnitDTO> translations = textUnitSearcher.search(parameters);
+    assertEquals(3, translations.size());
+    assertEquals("Bonjour", translations.get(0).getTarget());
+    assertEquals("Au revoir", translations.get(1).getTarget());
+    assertEquals("target", translations.get(2).getTarget());
+    for (TextUnitDTO translation : translations) {
+      TMTextUnitVariant variant =
+          tmTextUnitVariantRepository.findById(translation.getTmTextUnitVariantId()).orElseThrow();
+      assertEquals("Reviewed vendor import", variant.getComment());
+      assertEquals(TMTextUnitVariant.Status.APPROVED, variant.getStatus());
+    }
+  }
+
+  @Test
+  public void testPortableImportLocalizedAssetRespectsEqualTargetStatus() throws Exception {
+    baseTestImportLocalizedAsset(
+        StatusForEqualTarget.REVIEW_NEEDED, LocalizationConverterSelection.usePortable(null));
+
+    TextUnitSearcherParameters parameters = new TextUnitSearcherParameters();
+    parameters.setRepositoryIds(repository.getId());
+    parameters.setStatusFilter(StatusFilter.TRANSLATED);
+    List<TextUnitDTO> translations = textUnitSearcher.search(parameters);
+    assertEquals(3, translations.size());
+    assertEquals(TMTextUnitVariant.Status.REVIEW_NEEDED, translations.get(2).getStatus());
+  }
+
+  @Test
+  public void testPortableImportLocalizedAssetSkipsEqualTarget() throws Exception {
+    baseTestImportLocalizedAsset(
+        StatusForEqualTarget.SKIPPED, LocalizationConverterSelection.usePortable(null));
+
+    TextUnitSearcherParameters parameters = new TextUnitSearcherParameters();
+    parameters.setRepositoryIds(repository.getId());
+    parameters.setStatusFilter(StatusFilter.TRANSLATED);
+    assertEquals(2, textUnitSearcher.search(parameters).size());
+  }
+
+  @Test
   public void testImportLocalizedAssetReviewNeeded()
       throws RepositoryNameAlreadyUsedException,
           ExecutionException,
@@ -4415,6 +4463,15 @@ public class TMServiceTest extends ServiceTestBase {
           RepositoryNameAlreadyUsedException,
           AssetUpdateException,
           AssetUpdateException {
+    baseTestImportLocalizedAsset(statusForEqualTarget, null);
+  }
+
+  private void baseTestImportLocalizedAsset(
+      StatusForEqualTarget statusForEqualTarget, List<String> filterOptions)
+      throws InterruptedException,
+          ExecutionException,
+          RepositoryNameAlreadyUsedException,
+          AssetUpdateException {
     repository = repositoryService.createRepository(testIdWatcher.getEntityName("repository"));
     RepositoryLocale repoLocale;
     try {
@@ -4457,7 +4514,7 @@ public class TMServiceTest extends ServiceTestBase {
             repoLocale.getLocale().getId(),
             statusForEqualTarget,
             null,
-            null)
+            filterOptions)
         .get();
   }
 
