@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/box/mojito/file-formats/conformance/source-skeleton.schema.json",
+  "title": "Mojito portable source-preserving localization skeleton",
+  "type": "object",
+  "required": ["schemaVersion", "sourceFormat", "encoding", "source", "slots"],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": { "encoding": { "const": "BINARY_PLIST" } }
+      },
+      "then": {
+        "properties": {
+          "sourceFormat": { "enum": ["apple_strings", "apple_stringsdict"] },
+          "source": { "pattern": "^(?:[0-9a-f]{2})+$" }
+        }
+      },
+      "else": {
+        "properties": {
+          "slots": {
+            "items": { "not": { "required": ["appleObjectIndex"] } }
+          }
+        }
+      }
+    },
+    {
+      "if": { "required": ["appleTargetLocale"] },
+      "then": { "properties": { "sourceFormat": { "const": "apple_xcstrings" } } }
+    }
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "sourceFormat": {
+      "enum": [
+        "android",
+        "apple_strings",
+        "apple_stringsdict",
+        "apple_xcstrings",
+        "gettext_po",
+        "java_properties"
+      ]
+    },
+    "encoding": {
+      "enum": ["UTF-8", "UTF-8-BOM", "UTF-16LE-BOM", "UTF-16BE-BOM", "UTF-16LE", "UTF-16BE", "ISO-8859-1", "CP1252", "US-ASCII", "BINARY_PLIST"]
+    },
+    "source": { "type": "string" },
+    "appleTargetLocale": {
+      "type": "string",
+      "pattern": "^[A-Za-z]{2,8}(?:[-_][A-Za-z0-9]{1,8})*$",
+      "description": "Original Xcode target-locale spelling preserved across source-template insertion."
+    },
+    "androidResourcePath": { "type": "string", "minLength": 1 },
+    "androidFeatureFlags": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "readOnly", "value"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "readOnly": { "type": "boolean" },
+          "value": { "type": ["boolean", "null"] }
+        }
+      }
+    },
+    "slots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "start", "end"],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "required": ["selector"],
+              "properties": { "selector": { "enum": ["@device", "@width"] } }
+            },
+            "then": { "required": ["variant"] },
+            "else": {
+              "if": {
+                "required": ["selector"],
+                "properties": { "selector": { "pattern": "^@device=" } }
+              },
+              "then": {
+                "properties": {
+                  "variant": {
+                    "pattern": "^(zero|one|two|few|many|other|[0-9]+)$"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "variant": { "enum": ["zero", "one", "two", "few", "many", "other"] }
+                }
+              }
+            }
+          }
+        ],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "selector": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Native Foundation stringsdict variable or Xcode String Catalog substitution owning this plural variant, @device/@width owning a variation branch, or @device=<name> owning a device-specific Apple/Xcode plural category or Foundation presentation-width threshold."
+          },
+          "variant": { "type": "string", "minLength": 1 },
+          "start": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Inclusive original-byte start of a value body, an explicit-null Xcode source/target locale, or a zero-width missing-locale insertion boundary."
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Exclusive original-byte end of a value body, an explicit-null Xcode source/target locale, or its identical zero-width missing-locale insertion boundary."
+          },
+          "appleObjectIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Original shared binary Foundation string object cloned through the value-reference bytes owned by start/end."
+          }
+        }
+      }
+    }
+  }
+}
