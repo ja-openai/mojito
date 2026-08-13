@@ -29,7 +29,9 @@ embedded formatter path available even if parser, compiler, LSP, and Wasm
 tooling grow much larger around it.
 
 The crate root exposes short app-facing aliases that mirror the other language
-packages: `parse_to_model`, `format_message`, and `format_message_to_parts`.
+packages: `parse_to_model`, `format_message`, `format_message_to_parts`, and
+`cardinal_plural_categories`. The plural-category lookup reuses the existing
+generated rules and returns `None` for unsupported locales.
 Use `FormatOptions` with `format_message_with_options` or
 `format_message_to_parts_with_options` for locale, function-registry,
 bidi-isolation, and recovery-callback control. Public diagnostics are exposed as

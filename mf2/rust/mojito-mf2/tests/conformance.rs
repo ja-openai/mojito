@@ -3,9 +3,10 @@ use std::fs;
 use std::path::Path;
 
 use mojito_mf2::{
-    format_message, format_message_to_parts, format_message_to_parts_with_options,
-    format_message_with_options, parse_to_model, ArgumentValue, Arguments, BidiIsolation,
-    Diagnostic, FormatOptions, FormattedPart, FunctionRegistry, MessageModel, PartsResult,
+    cardinal_plural_categories, format_message, format_message_to_parts,
+    format_message_to_parts_with_options, format_message_with_options, parse_to_model,
+    ArgumentValue, Arguments, BidiIsolation, Diagnostic, FormatOptions, FormattedPart,
+    FunctionRegistry, MessageModel, PartsResult,
 };
 use serde::Deserialize;
 
@@ -90,6 +91,41 @@ fn public_runtime_api_exposes_result_and_parts() {
 
     assert!(parts.is_ok());
     assert!(!parts.has_errors());
+}
+
+#[test]
+fn cardinal_plural_categories_match_every_existing_generated_rule() {
+    let path =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../cldr/generated/all/plural_rules.json");
+    let data: serde_json::Value = serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap();
+    let cardinal = &data["cardinal"];
+    let rules: BTreeMap<_, _> = cardinal["rules"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|rule| {
+            let categories: Vec<_> = rule["categories"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|category| category["category"].as_str().unwrap())
+                .collect();
+            (rule["id"].as_str().unwrap(), categories)
+        })
+        .collect();
+
+    for (locale, rule) in cardinal["locales"].as_object().unwrap() {
+        assert_eq!(
+            cardinal_plural_categories(locale),
+            Some(rules[rule.as_str().unwrap()].as_slice()),
+            "wrong cardinal categories for {locale}",
+        );
+    }
+    assert_eq!(
+        cardinal_plural_categories("sr-Latn"),
+        Some(["one", "few", "other"].as_slice())
+    );
+    assert_eq!(cardinal_plural_categories("zz"), None);
 }
 
 #[test]

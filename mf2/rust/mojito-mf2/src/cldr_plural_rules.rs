@@ -93,6 +93,52 @@ pub fn select_cardinal(locale: &str, operands: NumberOperands) -> &'static str {
     }
 }
 
+pub fn cardinal_categories(locale: &str) -> Option<&'static [&'static str]> {
+    match lookup_rule_id(CARDINAL_LOCALES, CARDINAL_PARENTS, locale) {
+        Some("r0") => Some(&["one", "other"]),
+        Some("r1") => Some(&["one", "other"]),
+        Some("r2") => Some(&["one", "other"]),
+        Some("r3") => Some(&["zero", "one", "two", "few", "many", "other"]),
+        Some("r4") => Some(&["one", "other"]),
+        Some("r5") => Some(&["one", "few", "many", "other"]),
+        Some("r6") => Some(&["zero", "one", "other"]),
+        Some("r7") => Some(&["other"]),
+        Some("r8") => Some(&["one", "two", "few", "many", "other"]),
+        Some("r9") => Some(&["one", "few", "other"]),
+        Some("r10") => Some(&["one", "many", "other"]),
+        Some("r11") => Some(&["one", "other"]),
+        Some("r12") => Some(&["one", "few", "many", "other"]),
+        Some("r13") => Some(&["zero", "one", "two", "few", "many", "other"]),
+        Some("r14") => Some(&["one", "other"]),
+        Some("r15") => Some(&["one", "two", "few", "other"]),
+        Some("r16") => Some(&["one", "many", "other"]),
+        Some("r17") => Some(&["one", "other"]),
+        Some("r18") => Some(&["one", "many", "other"]),
+        Some("r19") => Some(&["one", "two", "few", "many", "other"]),
+        Some("r20") => Some(&["one", "two", "few", "other"]),
+        Some("r21") => Some(&["one", "two", "few", "many", "other"]),
+        Some("r22") => Some(&["one", "two", "other"]),
+        Some("r23") => Some(&["one", "other"]),
+        Some("r24") => Some(&["one", "two", "other"]),
+        Some("r25") => Some(&["zero", "one", "two", "few", "many", "other"]),
+        Some("r26") => Some(&["zero", "one", "other"]),
+        Some("r27") => Some(&["one", "few", "many", "other"]),
+        Some("r28") => Some(&["zero", "one", "other"]),
+        Some("r29") => Some(&["one", "other"]),
+        Some("r30") => Some(&["one", "few", "other"]),
+        Some("r31") => Some(&["one", "two", "few", "many", "other"]),
+        Some("r32") => Some(&["one", "few", "many", "other"]),
+        Some("r33") => Some(&["one", "many", "other"]),
+        Some("r34") => Some(&["one", "few", "many", "other"]),
+        Some("r35") => Some(&["one", "two", "few", "many", "other"]),
+        Some("r36") => Some(&["one", "few", "other"]),
+        Some("r37") => Some(&["one", "other"]),
+        Some("r38") => Some(&["one", "two", "few", "other"]),
+        Some("r39") => Some(&["one", "other"]),
+        _ => None,
+    }
+}
+
 pub fn select_ordinal(locale: &str, operands: NumberOperands) -> &'static str {
     match lookup_rule_id(ORDINAL_LOCALES, ORDINAL_PARENTS, locale) {
         Some("r0") => select_ordinal_r0(operands),
@@ -475,7 +521,7 @@ fn lookup_rule_id(
 ) -> Option<&'static str> {
     plural_lookup_chain(locale, parents)
         .into_iter()
-        .find_map(|lookup| locales.iter().find(|(candidate, _)| *candidate == lookup).map(|(_, rule)| *rule))
+        .find_map(|lookup| locales.binary_search_by(|(candidate, _)| candidate.cmp(&lookup.as_str())).ok().map(|index| locales[index].1))
 }
 
 fn select_cardinal_r0(operands: NumberOperands) -> &'static str {

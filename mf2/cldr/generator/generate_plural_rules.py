@@ -6,7 +6,6 @@ import json
 import pprint
 import re
 import shutil
-import sys
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -610,6 +609,16 @@ def write_rust(path: Path, data: dict[str, Any]) -> None:
     source.extend(["        _ => \"other\",", "    }", "}", ""])
     source.extend(
         [
+            "pub fn cardinal_categories(locale: &str) -> Option<&'static [&'static str]> {",
+            "    match lookup_rule_id(CARDINAL_LOCALES, CARDINAL_PARENTS, locale) {",
+        ]
+    )
+    for rule in data.get("cardinal", {}).get("rules", []):
+        categories = ", ".join(f'\"{item["category"]}\"' for item in rule["categories"])
+        source.append(f'        Some("{rule["id"]}") => Some(&[{categories}]),')
+    source.extend(["        _ => None,", "    }", "}", ""])
+    source.extend(
+        [
             "pub fn select_ordinal(locale: &str, operands: NumberOperands) -> &'static str {",
             "    match lookup_rule_id(ORDINAL_LOCALES, ORDINAL_PARENTS, locale) {",
         ]
@@ -630,7 +639,7 @@ def write_rust(path: Path, data: dict[str, Any]) -> None:
             ") -> Option<&'static str> {",
             "    plural_lookup_chain(locale, parents)",
             "        .into_iter()",
-            "        .find_map(|lookup| locales.iter().find(|(candidate, _)| *candidate == lookup).map(|(_, rule)| *rule))",
+            "        .find_map(|lookup| locales.binary_search_by(|(candidate, _)| candidate.cmp(&lookup.as_str())).ok().map(|index| locales[index].1))",
             "}",
             "",
         ]
