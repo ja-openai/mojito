@@ -1,0 +1,541 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/box/mojito/file-formats/conformance/catalog.schema.json",
+  "title": "Mojito portable localization catalog",
+  "type": "object",
+  "required": ["schemaVersion", "sourceFormat", "messages"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "sourceFormat": {
+      "enum": [
+        "android",
+        "apple_strings",
+        "apple_stringsdict",
+        "apple_xcstrings",
+        "gettext_po",
+        "java_properties",
+        "formatjs_json"
+      ]
+    },
+    "locale": { "type": "string", "minLength": 1 },
+    "messages": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/message" }
+    }
+  },
+  "$defs": {
+    "message": {
+      "type": "object",
+      "required": ["defaultMessage"],
+      "additionalProperties": false,
+      "properties": {
+        "defaultMessage": { "type": "string" },
+        "description": { "type": "string" },
+        "variants": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^(zero|one|two|few|many|other|=[0-9]+)$"
+          },
+          "additionalProperties": { "type": "string" }
+        },
+        "placeholders": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/placeholder" }
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "appleMarkupEscaping": { "const": "icu-quoted-angle" },
+            "appleDisabledPrintfConversions": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["position", "source"],
+                "additionalProperties": false,
+                "properties": {
+                  "position": { "type": "integer", "minimum": 0 },
+                  "source": { "type": "string", "pattern": "^%(?:[1-9][0-9]*\\$)?n$" },
+                  "argumentPosition": { "type": "integer", "minimum": 1 }
+                }
+              }
+            },
+            "applePluralDisabledPrintfConversions": {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
+                "type": "object",
+                "minProperties": 1,
+                "propertyNames": { "pattern": "^(zero|one|two|few|many|other)$" },
+                "additionalProperties": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "required": ["position", "source"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "position": { "type": "integer", "minimum": 0 },
+                      "source": { "type": "string", "pattern": "^%(?:[1-9][0-9]*\\$)?n$" },
+                      "argumentPosition": { "type": "integer", "minimum": 1 }
+                    }
+                  }
+                }
+              }
+            },
+            "applePlistExtras": { "$ref": "#/$defs/applePlistFields" },
+            "androidPrintfLineSeparator": { "const": true },
+            "androidRuntimeAnnotations": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/androidRuntimeAnnotationSpan" }
+            },
+            "androidPluralRuntimeAnnotations": {
+              "type": "object",
+              "minProperties": 1,
+              "propertyNames": { "pattern": "^(zero|one|two|few|many|other)$" },
+              "additionalProperties": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "$ref": "#/$defs/androidRuntimeAnnotationSpan" }
+              }
+            },
+            "androidRuntimeStyles": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/androidRuntimeStyleSpan" }
+            },
+            "androidPluralRuntimeStyles": {
+              "type": "object",
+              "minProperties": 1,
+              "propertyNames": { "pattern": "^(zero|one|two|few|many|other)$" },
+              "additionalProperties": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "$ref": "#/$defs/androidRuntimeStyleSpan" }
+              }
+            },
+            "androidRuntimeParagraphSpans": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/androidRuntimeParagraphSpan" }
+            },
+            "androidPluralRuntimeParagraphSpans": {
+              "type": "object",
+              "minProperties": 1,
+              "propertyNames": { "pattern": "^(zero|one|two|few|many|other)$" },
+              "additionalProperties": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "$ref": "#/$defs/androidRuntimeParagraphSpan" }
+              }
+            },
+            "androidPluralPlaceholderExamples": {
+              "type": "object",
+              "minProperties": 1,
+              "propertyNames": { "pattern": "^(zero|one|two|few|many|other)$" },
+              "additionalProperties": {
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": { "type": ["string", "null"] }
+                }
+              }
+            },
+            "androidProtectedPlaceholderOccurrences": {
+              "$ref": "#/$defs/androidProtectedPlaceholderOccurrences"
+            },
+            "androidPluralProtectedPlaceholderOccurrences": {
+              "type": "object",
+              "minProperties": 1,
+              "propertyNames": { "pattern": "^(zero|one|two|few|many|other)$" },
+              "additionalProperties": {
+                "$ref": "#/$defs/androidProtectedPlaceholderOccurrences"
+              }
+            },
+            "androidPrintfLineSeparators": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "integer", "minimum": 0 }
+            },
+            "androidPluralPrintfLineSeparators": {
+              "type": "object",
+              "minProperties": 1,
+              "propertyNames": { "pattern": "^(zero|one|two|few|many|other)$" },
+              "additionalProperties": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "androidRawPercentOccurrences": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "integer", "minimum": 0 }
+            },
+            "androidPluralRawPercentOccurrences": {
+              "type": "object",
+              "minProperties": 1,
+              "propertyNames": { "pattern": "^(zero|one|two|few|many|other)$" },
+              "additionalProperties": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "gettextDomain": { "type": "string" },
+            "references": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "mojitoInlineCodes": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["id", "source"],
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "type": "string", "pattern": "^p[1-9][0-9]*$" },
+                  "source": { "type": "string", "minLength": 1 }
+                }
+              }
+            },
+            "mojitoTargetComment": { "type": "string" },
+            "gettextOriginalId": { "type": "string", "minLength": 1 },
+            "gettextDomainHeader": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "locale": { "type": "string", "minLength": 1 },
+                "pluralForms": {
+                  "type": "object",
+                  "required": ["nplurals", "expression"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "nplurals": { "type": "integer", "minimum": 1, "maximum": 100 },
+                    "expression": { "type": "string", "minLength": 1 }
+                  }
+                },
+                "fields": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "required": ["name", "value"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "name": { "type": "string", "not": { "pattern": "[:\\r\\n\\u0000]" } },
+                      "value": { "type": "string", "not": { "pattern": "[\\r\\u0000]" } }
+                    }
+                  }
+                }
+              }
+            },
+            "gettextPrevious": {
+              "type": "object",
+              "required": ["id"],
+              "additionalProperties": false,
+              "properties": {
+                "context": { "type": "string" },
+                "id": { "type": "string" },
+                "plural": { "type": "string" }
+              }
+            },
+            "applePluralRules": {
+              "type": "object",
+              "additionalProperties": { "$ref": "#/$defs/applePluralRule" }
+            },
+            "androidAttributeDependencies": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/androidAttributeDependency" }
+            },
+            "androidStyleableDependencies": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/androidStyleableDependency" }
+            }
+          }
+        }
+      }
+    },
+    "androidRuntimeAnnotationSpan": {
+      "type": "object",
+      "required": ["span", "annotations"],
+      "additionalProperties": false,
+      "properties": {
+        "span": { "type": "integer", "minimum": 0 },
+        "annotations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["key", "value"],
+            "additionalProperties": false,
+            "properties": {
+              "key": { "type": "string" },
+              "value": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "androidRuntimeStyleSpan": {
+      "type": "object",
+      "required": ["span", "effects"],
+      "additionalProperties": false,
+      "properties": {
+        "span": { "type": "integer", "minimum": 0 },
+        "effects": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["kind", "attribute", "value"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": ["height", "size", "foreground", "background", "face", "link"]
+              },
+              "attribute": {
+                "enum": ["height", "size", "fgcolor", "color", "bgcolor", "face", "href"]
+              },
+              "value": { "type": "string" },
+              "color": { "$ref": "#/$defs/androidRuntimeColor" }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": { "enum": ["foreground", "background"] }
+                  }
+                },
+                "then": { "required": ["color"] },
+                "else": { "not": { "required": ["color"] } }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "androidRuntimeColor": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["mode", "argb"],
+          "additionalProperties": false,
+          "properties": {
+            "mode": { "enum": ["literal", "fallback"] },
+            "argb": { "type": "string", "pattern": "^#[0-9a-f]{8}$" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["mode", "reference", "fallbackArgb", "stateful"],
+          "additionalProperties": false,
+          "properties": {
+            "mode": { "const": "system" },
+            "reference": { "type": "string", "pattern": "^@" },
+            "fallbackArgb": { "const": "#ff000000" },
+            "stateful": { "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "androidRuntimeParagraphSpan": {
+      "type": "object",
+      "required": ["span", "kind", "sourceStart", "sourceEnd", "start", "end"],
+      "additionalProperties": false,
+      "properties": {
+        "span": { "type": "integer", "minimum": 0 },
+        "kind": { "enum": ["bullet", "height"] },
+        "sourceStart": { "type": "integer", "minimum": 0 },
+        "sourceEnd": { "type": "integer", "minimum": 0 },
+        "start": { "type": "integer", "minimum": 0 },
+        "end": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "applePlistFields": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/applePlistValue" }
+    },
+    "applePlistDictionary": {
+      "allOf": [
+        { "$ref": "#/$defs/applePlistFields" },
+        { "propertyNames": { "not": { "const": "$applePlistType" } } }
+      ]
+    },
+    "applePlistValue": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "boolean" },
+        {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 18446744073709551615
+        },
+        { "type": "array", "items": { "$ref": "#/$defs/applePlistValue" } },
+        { "$ref": "#/$defs/applePlistDictionary" },
+        { "$ref": "#/$defs/applePlistTaggedValue" }
+      ]
+    },
+    "applePlistTaggedValue": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["$applePlistType", "base64"],
+          "additionalProperties": false,
+          "properties": {
+            "$applePlistType": { "const": "data" },
+            "base64": {
+              "type": "string",
+              "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["$applePlistType", "value"],
+          "additionalProperties": false,
+          "properties": {
+            "$applePlistType": { "const": "date" },
+            "value": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["$applePlistType", "bits"],
+          "additionalProperties": false,
+          "properties": {
+            "$applePlistType": { "const": "real" },
+            "bits": { "type": "string", "pattern": "^[0-9a-f]{16}$" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["$applePlistType", "entries"],
+          "additionalProperties": false,
+          "properties": {
+            "$applePlistType": { "const": "dictionary" },
+            "entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["key", "value"],
+                "additionalProperties": false,
+                "properties": {
+                  "key": { "type": "string" },
+                  "value": { "$ref": "#/$defs/applePlistValue" }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "applePluralRule": {
+      "type": "object",
+      "required": ["variants"],
+      "additionalProperties": false,
+      "properties": {
+        "valueType": { "type": "string" },
+        "variants": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "applePlistExtras": { "$ref": "#/$defs/applePlistFields" }
+      }
+    },
+    "androidAttributeDependency": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "format": {
+          "type": "string",
+          "pattern": "^(reference|string|integer|boolean|color|float|dimension|fraction|enum|flags)(\\|(reference|string|integer|boolean|color|float|dimension|fraction|enum|flags))*$"
+        },
+        "generic": { "const": true },
+        "weak": { "const": true },
+        "min": { "type": "integer", "minimum": -2147483648, "maximum": 2147483647 },
+        "max": { "type": "integer", "minimum": -2147483648, "maximum": 2147483647 },
+        "symbols": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["kind", "name", "value"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": { "enum": ["enum", "flag"] },
+              "name": { "type": "string", "minLength": 1 },
+              "value": {
+                "type": "integer",
+                "minimum": -2147483648,
+                "maximum": 2147483647
+              }
+            }
+          }
+        }
+      }
+    },
+    "androidStyleableDependency": {
+      "type": "object",
+      "required": ["name", "attributes"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "generic": { "const": true },
+        "attributes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/androidAttributeDependency" }
+        }
+      }
+    },
+    "androidProtectedPlaceholderOccurrences": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": { "example": { "type": "string" } }
+            }
+          ]
+        }
+      }
+    },
+    "placeholder": {
+      "type": "object",
+      "required": ["name", "source", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "source": { "type": "string" },
+        "kind": { "enum": ["string", "integer", "number", "character", "value"] },
+        "position": { "type": "integer", "minimum": 1 },
+        "example": { "type": "string" }
+      }
+    }
+  }
+}
