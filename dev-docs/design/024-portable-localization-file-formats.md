@@ -3177,17 +3177,17 @@ same old Okapi identity. Genuine duplicated legacy text units remain separately
 classified, and distinct portable resources are never described as canonical
 duplicates. Three real extraction snapshots currently preserve 35 qualified
 native identities across 16 projection-collision groups. Fixture reports retain
-message IDs for local diagnosis; they do not constitute production telemetry or
-install an extraction hook. Any future observer must remain opt-in, preserve
-legacy results, bound sampling and payload size, isolate failures, and avoid
-message IDs, asset paths, source text, translations, or dynamic errors in metric
-dimensions.
+message IDs for local diagnosis; they do not constitute production telemetry.
+The extraction observer hook is installed but disabled by default behind
+`l10n.file-formats.portable.shadow.enabled=true`; it preserves legacy results,
+bounds sampling and payload size, isolates failures, and avoids message IDs,
+asset paths, source text, translations, or dynamic errors in metric dimensions.
 
 Existing default Okapi routing still rejects ordinary `.po` and `.xcstrings`,
 and existing parser failures occur before any post-extraction observation could
-run. Production shadow instrumentation, durable source-template transport,
-route enrollment beyond already discovered CLI file types, operational metrics,
-and staged cutover remain separate future controls.
+run. Durable source-template transport, route enrollment beyond already
+discovered CLI file types, operational alerting, and staged cutover remain
+separate future controls.
 
 ## Conformance and rollout
 

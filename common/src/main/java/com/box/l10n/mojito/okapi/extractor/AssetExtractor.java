@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.okapi.extractor;
 
+import com.box.l10n.mojito.fileformat.PortableLocalizationShadow;
 import com.box.l10n.mojito.okapi.FilterConfigIdOverride;
 import com.box.l10n.mojito.okapi.RawDocument;
 import com.box.l10n.mojito.okapi.asset.AssetPathToFilterConfigMapper;
@@ -25,6 +26,9 @@ public class AssetExtractor {
   @Autowired AssetPathToFilterConfigMapper assetPathToFilterConfigMapper;
 
   @Autowired IFilterConfigurationMapper filterConfigurationMapper;
+
+  @Autowired(required = false)
+  PortableLocalizationShadow portableLocalizationShadow;
 
   public List<AssetExtractorTextUnit> getAssetExtractorTextUnitsForAsset(
       String assetPath,
@@ -65,6 +69,16 @@ public class AssetExtractor {
     logger.debug("Start processing batch");
     driver.processBatch();
 
-    return assetExtractionStep.getAssetExtractorTextUnits();
+    List<AssetExtractorTextUnit> extracted = assetExtractionStep.getAssetExtractorTextUnits();
+    if (portableLocalizationShadow != null) {
+      try {
+        portableLocalizationShadow.observe(
+            assetPath, assetContent, filterConfigIdOverride, filterOptions, extracted);
+      } catch (RuntimeException failure) {
+        logger.warn(
+            "Portable localization shadow instrumentation failed; legacy extraction kept", failure);
+      }
+    }
+    return extracted;
   }
 }
