@@ -22,6 +22,7 @@ FORMAT_NAMES = {
     "gettext_po": "GNU gettext PO",
     "java_properties": "Java properties",
     "formatjs_json": "FormatJS JSON",
+    "yaml": "YAML",
 }
 CATEGORY_NAMES = {
     "missing_legacy": "real platform-localizable units that Okapi omitted",

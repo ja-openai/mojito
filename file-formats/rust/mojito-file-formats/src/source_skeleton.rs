@@ -68,6 +68,7 @@ pub(crate) fn extract(
         FileFormat::AppleXcstrings => extract_xcstrings(bytes),
         FileFormat::GettextPo => extract_gettext(bytes),
         FileFormat::JavaProperties => extract_properties(bytes, properties_encoding),
+        FileFormat::Yaml => crate::yaml::extract(bytes),
         _ => Err(error(
             "UNSUPPORTED_SKELETON_FORMAT",
             "Source skeletons are not available for this resource format",
@@ -291,6 +292,7 @@ pub(crate) fn render(
         "apple_xcstrings" => render_xcstrings(skeleton, translations),
         "gettext_po" => render_gettext(skeleton, translations),
         "java_properties" => render_properties(skeleton, translations),
+        "yaml" => crate::yaml::render(skeleton, translations),
         _ => Err(error(
             "UNSUPPORTED_SKELETON_FORMAT",
             "Unsupported source-preserving skeleton format",

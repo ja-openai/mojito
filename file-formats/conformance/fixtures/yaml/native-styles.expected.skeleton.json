@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "yaml",
+  "encoding": "UTF-8",
+  "source": "# Translator comments stay in the source template.\nwelcome: 'Welcome: friend'\nduration: \"1 day\"\ngroup:\n  prompt: plain invitation\n  block: |-\n    First line\n    Second line\n  folded: >-\n    Folded\n    message\n  count: 42\n",
+  "slots": [
+    {
+      "id": "welcome",
+      "start": 60,
+      "end": 77
+    },
+    {
+      "id": "duration",
+      "start": 88,
+      "end": 95
+    },
+    {
+      "id": "group/prompt",
+      "start": 113,
+      "end": 129
+    },
+    {
+      "id": "group/block",
+      "start": 139,
+      "end": 172
+    },
+    {
+      "id": "group/folded",
+      "start": 183,
+      "end": 208
+    },
+    {
+      "id": "group/count",
+      "start": 218,
+      "end": 220
+    }
+  ]
+}

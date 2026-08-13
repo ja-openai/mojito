@@ -27,6 +27,7 @@ FORMATS = {
     "gettext_po",
     "java_properties",
     "formatjs_json",
+    "yaml",
 }
 ENCODINGS = {
     None,
@@ -2961,6 +2962,7 @@ def main() -> None:
             "apple_xcstrings",
             "gettext_po",
             "java_properties",
+            "yaml",
         }, f"{case_id}: unsupported source-skeleton format"
         assert case.get("encoding") in {
             None,

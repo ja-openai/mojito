@@ -83,6 +83,9 @@ public final class LocalizationConverterSelection {
     if (path.endsWith(".json")) {
       return LocalizationFileFormat.FORMATJS_JSON;
     }
+    if (path.endsWith(".yaml") || path.endsWith(".yml")) {
+      return LocalizationFileFormat.YAML;
+    }
     return null;
   }
 }

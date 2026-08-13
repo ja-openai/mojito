@@ -12,6 +12,7 @@ pub enum FileFormat {
     GettextPo,
     JavaProperties,
     FormatJsJson,
+    Yaml,
 }
 
 impl FileFormat {
@@ -24,6 +25,7 @@ impl FileFormat {
             "gettext_po" => Self::GettextPo,
             "java_properties" => Self::JavaProperties,
             "formatjs_json" => Self::FormatJsJson,
+            "yaml" => Self::Yaml,
             _ => return None,
         })
     }
@@ -37,6 +39,7 @@ impl FileFormat {
             Self::GettextPo => "gettext_po",
             Self::JavaProperties => "java_properties",
             Self::FormatJsJson => "formatjs_json",
+            Self::Yaml => "yaml",
         }
     }
 }

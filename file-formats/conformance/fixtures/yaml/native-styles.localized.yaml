@@ -1,0 +1,12 @@
+# Translator comments stay in the source template.
+welcome: 'Bienvenue : amie'
+duration: "1 jour"
+group:
+  prompt: invitation claire
+  block: |-
+    Première ligne
+    Deuxième ligne
+  folded: >-
+    Message
+    plié
+  count: 43

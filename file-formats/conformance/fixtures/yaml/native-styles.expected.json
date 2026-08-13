@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "yaml",
+  "messages": {
+    "duration": {
+      "defaultMessage": "1 day"
+    },
+    "group/block": {
+      "defaultMessage": "First line\nSecond line"
+    },
+    "group/count": {
+      "defaultMessage": "42"
+    },
+    "group/folded": {
+      "defaultMessage": "Folded message"
+    },
+    "group/prompt": {
+      "defaultMessage": "plain invitation"
+    },
+    "welcome": {
+      "defaultMessage": "Welcome: friend"
+    }
+  }
+}

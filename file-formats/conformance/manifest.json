@@ -914,6 +914,48 @@
       "translations": {"visible": "Bonjour"},
       "removeUntranslated": true,
       "localized": "fixtures/workflow/apple-output.localized.strings"
+    },
+    {
+      "id": "yaml-mojito-localizes-original-scalar-styles",
+      "format": "yaml",
+      "input": "fixtures/yaml/native-styles.yaml",
+      "expected": "fixtures/yaml/native-styles.expected.json",
+      "filterOptions": [],
+      "translations": {
+        "welcome": "Bienvenue : amie",
+        "duration": "1 jour",
+        "group/prompt": "invitation claire",
+        "group/block": "Première ligne\nDeuxième ligne",
+        "group/folded": "Message\nplié",
+        "group/count": "43"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/yaml/native-styles.localized.yaml"
+    },
+    {
+      "id": "yaml-mojito-honors-configured-scalar-selection",
+      "format": "yaml",
+      "input": "fixtures/yaml/native-styles.yaml",
+      "expected": "fixtures/yaml/native-styles-selected.expected.json",
+      "filterOptions": [
+        "extractAllPairs=false",
+        "exceptions=duration|group/block"
+      ],
+      "translations": {
+        "duration": "1 jour",
+        "group/block": "Une ligne"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/yaml/native-styles-selected.localized.yaml"
+    },
+    {
+      "id": "yaml-mojito-rejects-unknown-options",
+      "format": "yaml",
+      "input": "fixtures/yaml/native-styles.yaml",
+      "filterOptions": [
+        "extractAllPairs=maybe"
+      ],
+      "error": "INVALID_FILTER_OPTION"
     }
   ],
   "cases": [
@@ -25483,6 +25525,12 @@
       "error": "INVALID_XCSTRINGS",
       "xcstringsOracle": "reject",
       "xcstringsDiagnostic": "Fallback value cannot be further varied"
+    },
+    {
+      "id": "yaml-mojito-preserves-nested-scalar-styles-and-key-paths",
+      "format": "yaml",
+      "input": "fixtures/yaml/native-styles.yaml",
+      "expected": "fixtures/yaml/native-styles.expected.json"
     }
   ],
   "androidOverlays": [
@@ -52375,6 +52423,14 @@
           "expected": "Rowan  25 настольный маяков у причала"
         }
       ]
+    },
+    {
+      "id": "yaml-source-skeleton-preserves-quoted-and-block-scalar-layout",
+      "format": "yaml",
+      "input": "fixtures/yaml/native-styles.yaml",
+      "expected": "fixtures/yaml/native-styles.expected.skeleton.json",
+      "translations": "fixtures/yaml/native-styles.translations.json",
+      "localized": "fixtures/yaml/native-styles.localized.yaml"
     }
   ],
   "appleBinarySourceSkeletons": [

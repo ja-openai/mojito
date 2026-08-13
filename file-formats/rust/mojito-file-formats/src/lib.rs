@@ -25,6 +25,7 @@ mod source_skeleton;
 mod workflow;
 mod xml;
 mod xml_name;
+mod yaml;
 
 pub use android_overlay_skeleton::{
     AndroidOverlayLocalizedResource, AndroidOverlayMacroOwner, AndroidOverlaySourceFile,
@@ -421,6 +422,7 @@ pub fn parse_with_feature_flags(
         FileFormat::GettextPo => gettext::parse(&source, gettext_encoding.unwrap_or("UTF-8")),
         FileFormat::JavaProperties => properties::parse(&source),
         FileFormat::FormatJsJson => parse_formatjs(&source),
+        FileFormat::Yaml => yaml::parse(&source),
     }
 }
 
