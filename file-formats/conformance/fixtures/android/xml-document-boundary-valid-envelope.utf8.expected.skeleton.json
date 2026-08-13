@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" standalone=\"yes\"?>\n<!-- Original envelope stays unchanged. -->\n<?navigation mode=\"before\"?>\n<resources xmlns:xml=\"http://www.w3.org/XML/1998/namespace\" xmlns:span=\"urn:neutral:document-boundary\">\n  <string name=\"route\" xml:lang=\"en\">North pier</string>\n  <string name=\"bay\">South harbor</string>\n</resources>\n<?navigation mode=\"after\"?>\n<!-- Original trailing envelope stays unchanged. -->\n",
+  "slots": [
+    {
+      "id": "route",
+      "start": 253,
+      "end": 263
+    },
+    {
+      "id": "bay",
+      "start": 294,
+      "end": 306
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "plurals": {
+    "signals": {
+      "one": "One light",
+      "other": "Many lights"
+    }
+  }
+}

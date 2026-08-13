@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<?éclair channel?>\n<resources><string name=\"signal\">Café tide</string></resources>\n",
+  "slots": [
+    {
+      "id": "signal",
+      "start": 92,
+      "end": 102
+    }
+  ]
+}

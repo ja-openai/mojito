@@ -1,0 +1,11 @@
+{
+  "files.remaining": {
+    "files": {
+      "one": "%d café",
+      "other": "%d cafés",
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d"
+    },
+    "NSStringLocalizedFormatKey": "%#@files@ remaining"
+  }
+}

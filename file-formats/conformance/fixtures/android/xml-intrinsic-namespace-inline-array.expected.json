@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "routes[0]": {
+      "defaultMessage": "Calm quiet",
+      "metadata": {
+        "arrayIndex": 0,
+        "arrayName": "routes",
+        "androidGenericArray": true
+      }
+    }
+  }
+}

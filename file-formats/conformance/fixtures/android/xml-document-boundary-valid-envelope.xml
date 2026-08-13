@@ -1,0 +1,9 @@
+<?xml version="1.0" standalone="yes"?>
+<!-- Original envelope stays unchanged. -->
+<?navigation mode="before"?>
+<resources xmlns:xml="http://www.w3.org/XML/1998/namespace" xmlns:span="urn:neutral:document-boundary">
+  <string name="route" xml:lang="en">North pier</string>
+  <string name="bay">South harbor</string>
+</resources>
+<?navigation mode="after"?>
+<!-- Original trailing envelope stays unchanged. -->

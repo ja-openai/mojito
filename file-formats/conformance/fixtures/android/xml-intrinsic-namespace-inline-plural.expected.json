@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "signals": {
+      "defaultMessage": "{count, plural, one {One light} other {Many lights}}",
+      "variants": {
+        "one": "One light",
+        "other": "Many lights"
+      }
+    }
+  }
+}
