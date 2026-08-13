@@ -1,0 +1,14 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 8,
+  "legacyUnits": 13,
+  "outcome": "mismatch",
+  "differences": [
+    { "category": "source_mismatch", "id": "harbor_signals_one" },
+    { "category": "unexpected_legacy", "id": "harbor_routes_0", "count": 1 },
+    { "category": "unexpected_legacy", "id": "harbor_routes_1", "count": 1 },
+    { "category": "unexpected_legacy", "id": "harbor_routes_2", "count": 1 },
+    { "category": "unexpected_legacy", "id": "harbor_routes_3", "count": 1 },
+    { "category": "unexpected_legacy", "id": "harbor_routes_4", "count": 1 }
+  ]
+}

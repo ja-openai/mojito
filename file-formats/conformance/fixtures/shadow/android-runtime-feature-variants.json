@@ -1,0 +1,136 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 20,
+  "legacyUnits": 18,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "duplicate_legacy",
+      "id": "harbor_lanes_0",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "harbor_route",
+      "count": 4
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "harbor_signals_few",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "harbor_signals_many",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "harbor_signals_one",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "harbor_signals_other",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "harbor_signals_two",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "harbor_signals_zero",
+      "count": 2
+    },
+    {
+      "category": "legacy_projection_collision",
+      "id": "harbor_beacon",
+      "count": 2,
+      "canonicalIds": [
+        "harbor_beacon",
+        "harbor_beacon@flag=neutral.flags.first"
+      ]
+    },
+    {
+      "category": "legacy_projection_collision",
+      "id": "harbor_lanes_0",
+      "count": 2,
+      "canonicalIds": [
+        "harbor_lanes@flag=neutral.flags.second[0]",
+        "harbor_lanes[0]"
+      ]
+    },
+    {
+      "category": "legacy_projection_collision",
+      "id": "harbor_route",
+      "count": 4,
+      "canonicalIds": [
+        "harbor_route",
+        "harbor_route@flag=!neutral.flags.first",
+        "harbor_route@flag=neutral.flags.first",
+        "harbor_route@flag=neutral.flags.second"
+      ]
+    },
+    {
+      "category": "legacy_projection_collision",
+      "id": "harbor_signals_few",
+      "count": 2,
+      "canonicalIds": [
+        "harbor_signals#few",
+        "harbor_signals@flag=neutral.flags.first#few"
+      ]
+    },
+    {
+      "category": "legacy_projection_collision",
+      "id": "harbor_signals_many",
+      "count": 2,
+      "canonicalIds": [
+        "harbor_signals#many",
+        "harbor_signals@flag=neutral.flags.first#many"
+      ]
+    },
+    {
+      "category": "legacy_projection_collision",
+      "id": "harbor_signals_one",
+      "count": 2,
+      "canonicalIds": [
+        "harbor_signals#one",
+        "harbor_signals@flag=neutral.flags.first#one"
+      ]
+    },
+    {
+      "category": "legacy_projection_collision",
+      "id": "harbor_signals_other",
+      "count": 2,
+      "canonicalIds": [
+        "harbor_signals#other",
+        "harbor_signals@flag=neutral.flags.first#other"
+      ]
+    },
+    {
+      "category": "legacy_projection_collision",
+      "id": "harbor_signals_two",
+      "count": 2,
+      "canonicalIds": [
+        "harbor_signals#two",
+        "harbor_signals@flag=neutral.flags.first#two"
+      ]
+    },
+    {
+      "category": "legacy_projection_collision",
+      "id": "harbor_signals_zero",
+      "count": 2,
+      "canonicalIds": [
+        "harbor_signals#zero",
+        "harbor_signals@flag=neutral.flags.first#zero"
+      ]
+    },
+    {
+      "category": "missing_legacy",
+      "id": "harbor_beacon",
+      "count": 2
+    }
+  ]
+}

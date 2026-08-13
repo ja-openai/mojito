@@ -1,0 +1,113 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "local_route",
+      "source": "@macro/harbor_phrase"
+    },
+    {
+      "name": "private_route",
+      "source": "@*macro/harbor_phrase"
+    },
+    {
+      "name": "package_route",
+      "source": "@neutral.harbor.app:macro/harbor_phrase"
+    },
+    {
+      "name": "private_package_route",
+      "source": "@*neutral.harbor.app:macro/harbor_phrase"
+    },
+    {
+      "name": "auto_route",
+      "source": "@auto:macro/harbor_phrase"
+    },
+    {
+      "name": "package_alias_route",
+      "source": "@harbor:macro/harbor_phrase"
+    },
+    {
+      "name": "private_alias_route",
+      "source": "@privateharbor:macro/harbor_phrase"
+    },
+    {
+      "name": "auto_chained_route",
+      "source": "@macro/auto_chain"
+    },
+    {
+      "name": "package_chained_route",
+      "source": "@macro/package_chain"
+    },
+    {
+      "name": "private_chained_route",
+      "source": "@macro/private_chain"
+    },
+    {
+      "name": "scoped_chained_route",
+      "source": "@macro/scoped_chain"
+    },
+    {
+      "name": "styled_private_route",
+      "source": "@*macro/styled_phrase"
+    },
+    {
+      "name": "protected_package_route",
+      "source": "@harbor:macro/protected_phrase"
+    },
+    {
+      "name": "escaped_route",
+      "source": "@macro/harbor_phrase"
+    },
+    {
+      "name": "literal_star_colon_route",
+      "source": "@*:macro/harbor_phrase"
+    },
+    {
+      "name": "harbor_routes_0",
+      "source": "@*macro/harbor_phrase"
+    },
+    {
+      "name": "harbor_routes_1",
+      "source": "@harbor:macro/harbor_phrase"
+    },
+    {
+      "name": "harbor_routes_2",
+      "source": "@macro/scoped_chain"
+    },
+    {
+      "name": "harbor_signals_zero",
+      "source": "@auto:macro/harbor_phrase",
+      "pluralForm": "zero",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_one",
+      "source": "@*neutral.harbor.app:macro/harbor_phrase",
+      "pluralForm": "one",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_two",
+      "source": "@auto:macro/harbor_phrase",
+      "pluralForm": "two",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_few",
+      "source": "@auto:macro/harbor_phrase",
+      "pluralForm": "few",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_many",
+      "source": "@auto:macro/harbor_phrase",
+      "pluralForm": "many",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_other",
+      "source": "@auto:macro/harbor_phrase",
+      "pluralForm": "other",
+      "pluralFormOther": "harbor_signals_other"
+    }
+  ]
+}

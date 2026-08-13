@@ -1,0 +1,14 @@
+{
+  "filterConfigId": "okf_regex@mojito-macStrings",
+  "units": [
+    {
+      "name": "'single key'",
+      "source": "north",
+      "comments": " Single-quoted keys and values are accepted by Foundation. "
+    },
+    {
+      "name": "// Unicode line context \"line_separator_key",
+      "source": "Line boundary"
+    }
+  ]
+}

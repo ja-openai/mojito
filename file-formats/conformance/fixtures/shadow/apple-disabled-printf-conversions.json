@@ -1,0 +1,32 @@
+{
+  "sourceFormat": "apple_strings",
+  "canonicalUnits": 6,
+  "legacyUnits": 6,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "comment_mismatch",
+      "id": "plain"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "escaped"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "mixed.🧭"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "plain"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "positional"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "repeated"
+    }
+  ]
+}

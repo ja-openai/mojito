@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "visible": {
+      "defaultMessage": "Hello",
+      "description": " Visible control ",
+      "metadata": { "mojitoTargetComment": "Approved by vendor" }
+    },
+    "missing": {
+      "defaultMessage": "Goodbye",
+      "description": " Remove untranslated ",
+      "metadata": { "mojitoTargetComment": "Approved by vendor" }
+    }
+  }
+}

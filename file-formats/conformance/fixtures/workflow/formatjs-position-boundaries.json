@@ -1,0 +1,58 @@
+{
+  "minimum": {
+    "file": "src/Min.tsx",
+    "line": -2147483648,
+    "col": "2147483647",
+    "defaultMessage": "Minimum line",
+    "description": "Signed minimum"
+  },
+  "maximum": {
+    "file": "src/Max.tsx",
+    "line": 2147483647,
+    "col": -2147483648,
+    "defaultMessage": "Maximum line",
+    "description": "Signed maximum"
+  },
+  "overflow": {
+    "file": "src/Overflow.tsx",
+    "line": 2147483648,
+    "col": 9,
+    "defaultMessage": "Overflow line",
+    "description": "Ignore overflowing line"
+  },
+  "underflow": {
+    "file": "src/Underflow.tsx",
+    "line": "-2147483649",
+    "col": 7,
+    "defaultMessage": "Underflow line",
+    "description": "Ignore underflowing line"
+  },
+  "column": {
+    "file": "src/Column.tsx",
+    "line": "42",
+    "col": 2147483648,
+    "defaultMessage": "Overflow column",
+    "description": "Ignore overflowing column"
+  },
+  "plus": {
+    "file": "src/Plus.tsx",
+    "line": "+42",
+    "col": "+7",
+    "defaultMessage": "Leading plus",
+    "description": "Ignore explicit positive signs"
+  },
+  "negative_zero": {
+    "file": "src/NegativeZero.tsx",
+    "line": "-0",
+    "col": "-00",
+    "defaultMessage": "Negative zero",
+    "description": "Normalize negative zero"
+  },
+  "whitespace": {
+    "file": "src/Whitespace.tsx",
+    "line": " 42",
+    "col": "7 ",
+    "defaultMessage": "Padded position",
+    "description": "Ignore padded numeric text"
+  }
+}

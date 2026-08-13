@@ -1,0 +1,104 @@
+{
+  "sourceFormat": "apple_stringsdict",
+  "canonicalUnits": 24,
+  "legacyUnits": 24,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "source_mismatch",
+      "id": "harbor.after_count_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.after_count_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.after_count_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.after_count_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.after_count_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.after_count_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.literal_count_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.literal_count_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.literal_count_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.literal_count_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.literal_count_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.literal_count_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.mixed.🧭_count_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.mixed.🧭_count_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.mixed.🧭_count_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.mixed.🧭_count_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.mixed.🧭_count_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.mixed.🧭_count_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.repeated_count_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.repeated_count_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.repeated_count_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.repeated_count_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.repeated_count_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "harbor.repeated_count_zero"
+    }
+  ]
+}

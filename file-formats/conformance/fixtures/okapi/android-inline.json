@@ -1,0 +1,17 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "styled",
+      "source": "A <a href=\"https://example.com\" title=\"help &amp; tips\"><b>bold</b> link</a><br/>"
+    },
+    {
+      "name": "protected",
+      "source": "Use <xliff:g id=\"product\">Mojito</xliff:g> today"
+    },
+    {
+      "name": "numeric",
+      "source": "😀 costs %1$0.2f credits"
+    }
+  ]
+}

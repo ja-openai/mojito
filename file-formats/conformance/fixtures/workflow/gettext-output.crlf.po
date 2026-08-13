@@ -1,0 +1,12 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+
+#. Visible control
+msgid "Hello"
+msgstr "Hello"
+
+#. Remove untranslated
+msgid "Goodbye"
+msgstr "Goodbye"

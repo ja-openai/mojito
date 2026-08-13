@@ -1,0 +1,29 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "quoted",
+      "source": "  keep   these spaces  "
+    },
+    {
+      "name": "collapsed",
+      "source": "one two three"
+    },
+    {
+      "name": "escapes",
+      "source": "Line\nTabtQuote'\" At@ Question? Slash\\"
+    },
+    {
+      "name": "unicode",
+      "source": "A B"
+    },
+    {
+      "name": "percent",
+      "source": "Save 50%% for %2$d items"
+    },
+    {
+      "name": "entity",
+      "source": "Fish & chips < 5"
+    }
+  ]
+}

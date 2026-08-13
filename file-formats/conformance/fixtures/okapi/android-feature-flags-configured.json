@@ -1,0 +1,133 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "anchor",
+      "source": "Quiet harbor anchor"
+    },
+    {
+      "name": "enabled",
+      "source": "Enabled harbor route"
+    },
+    {
+      "name": "disabled",
+      "source": "Disabled harbor route"
+    },
+    {
+      "name": "negative",
+      "source": "Negated harbor route"
+    },
+    {
+      "name": "exclusive",
+      "source": "Enabled exclusive lane"
+    },
+    {
+      "name": "exclusive",
+      "source": "Disabled exclusive lane"
+    },
+    {
+      "name": "signals_enabled_zero",
+      "source": "Several enabled beacons",
+      "pluralForm": "zero",
+      "pluralFormOther": "signals_enabled_other"
+    },
+    {
+      "name": "signals_enabled_one",
+      "source": "One enabled beacon",
+      "pluralForm": "one",
+      "pluralFormOther": "signals_enabled_other"
+    },
+    {
+      "name": "signals_enabled_two",
+      "source": "Several enabled beacons",
+      "pluralForm": "two",
+      "pluralFormOther": "signals_enabled_other"
+    },
+    {
+      "name": "signals_enabled_few",
+      "source": "Several enabled beacons",
+      "pluralForm": "few",
+      "pluralFormOther": "signals_enabled_other"
+    },
+    {
+      "name": "signals_enabled_many",
+      "source": "Several enabled beacons",
+      "pluralForm": "many",
+      "pluralFormOther": "signals_enabled_other"
+    },
+    {
+      "name": "signals_enabled_other",
+      "source": "Several enabled beacons",
+      "pluralForm": "other",
+      "pluralFormOther": "signals_enabled_other"
+    },
+    {
+      "name": "signals_disabled_zero",
+      "source": "Several disabled beacons",
+      "pluralForm": "zero",
+      "pluralFormOther": "signals_disabled_other"
+    },
+    {
+      "name": "signals_disabled_one",
+      "source": "One disabled beacon",
+      "pluralForm": "one",
+      "pluralFormOther": "signals_disabled_other"
+    },
+    {
+      "name": "signals_disabled_two",
+      "source": "Several disabled beacons",
+      "pluralForm": "two",
+      "pluralFormOther": "signals_disabled_other"
+    },
+    {
+      "name": "signals_disabled_few",
+      "source": "Several disabled beacons",
+      "pluralForm": "few",
+      "pluralFormOther": "signals_disabled_other"
+    },
+    {
+      "name": "signals_disabled_many",
+      "source": "Several disabled beacons",
+      "pluralForm": "many",
+      "pluralFormOther": "signals_disabled_other"
+    },
+    {
+      "name": "signals_disabled_other",
+      "source": "Several disabled beacons",
+      "pluralForm": "other",
+      "pluralFormOther": "signals_disabled_other"
+    },
+    {
+      "name": "routes_0",
+      "source": "Always first passage"
+    },
+    {
+      "name": "routes_1",
+      "source": "Enabled passage"
+    },
+    {
+      "name": "routes_2",
+      "source": "Disabled passage"
+    },
+    {
+      "name": "routes_3",
+      "source": "Negated passage"
+    },
+    {
+      "name": "routes_4",
+      "source": "@string/anchor"
+    },
+    {
+      "name": "routes_5",
+      "source": "@string/anchor"
+    },
+    {
+      "name": "routes_6",
+      "source": "@string/anchor"
+    },
+    {
+      "name": "routes_7",
+      "source": "Final open passage"
+    }
+  ]
+}

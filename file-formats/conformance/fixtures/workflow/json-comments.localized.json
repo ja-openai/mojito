@@ -1,0 +1,6 @@
+{
+  // Preserve this existing translator comment.
+  "dock": "Bonjour quai",
+  /* Preserve this original block comment too. */
+  "link": "https://example.test/fr"
+}

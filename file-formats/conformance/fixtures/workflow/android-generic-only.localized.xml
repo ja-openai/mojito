@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <item name="generic" type="string">"Signal du port"</item>
+  <array name="routes">
+    <item>"Route nord"</item>
+  </array>
+</resources>

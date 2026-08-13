@@ -1,0 +1,48 @@
+{
+  "sourceFormat": "apple_strings",
+  "canonicalUnits": 8,
+  "legacyUnits": 0,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "id": "route&east<north>🧭",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "route.attribute",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "route.empty",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "route.format",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "route.literal.apostrophe",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "route.percent.newline",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "route.positioned",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "route<&>",
+      "count": 1
+    }
+  ]
+}

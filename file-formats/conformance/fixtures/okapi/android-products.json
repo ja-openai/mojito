@@ -1,0 +1,65 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "button",
+      "source": "Open"
+    },
+    {
+      "name": "button",
+      "source": "Launch"
+    },
+    {
+      "name": "button",
+      "source": "Begin"
+    },
+    {
+      "name": "solo",
+      "source": "Tablet signal"
+    },
+    {
+      "name": "alerts_zero",
+      "source": "%1$d tablet alerts",
+      "pluralForm": "zero",
+      "pluralFormOther": "alerts_other"
+    },
+    {
+      "name": "alerts_one",
+      "source": "%1$d tablet alert",
+      "pluralForm": "one",
+      "pluralFormOther": "alerts_other"
+    },
+    {
+      "name": "alerts_two",
+      "source": "%1$d tablet alerts",
+      "pluralForm": "two",
+      "pluralFormOther": "alerts_other"
+    },
+    {
+      "name": "alerts_few",
+      "source": "%1$d tablet alerts",
+      "pluralForm": "few",
+      "pluralFormOther": "alerts_other"
+    },
+    {
+      "name": "alerts_many",
+      "source": "%1$d tablet alerts",
+      "pluralForm": "many",
+      "pluralFormOther": "alerts_other"
+    },
+    {
+      "name": "alerts_other",
+      "source": "%1$d tablet alerts",
+      "pluralForm": "other",
+      "pluralFormOther": "alerts_other"
+    },
+    {
+      "name": "labels_0",
+      "source": "Compact"
+    },
+    {
+      "name": "labels_1",
+      "source": "Quick"
+    }
+  ]
+}

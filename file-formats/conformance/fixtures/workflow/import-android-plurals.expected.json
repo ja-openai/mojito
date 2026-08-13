@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "inventory": {
+      "defaultMessage": "{arg0, plural, zero {{arg0} lanterns} one {{arg0} lantern} two {{arg0} lanterns} few {{arg0} lanterns} many {{arg0} lanterns} other {{arg0} lanterns}}",
+      "description": "Imported inventory count",
+      "variants": {
+        "zero": "{arg0} lanterns",
+        "one": "{arg0} lantern",
+        "two": "{arg0} lanterns",
+        "few": "{arg0} lanterns",
+        "many": "{arg0} lanterns",
+        "other": "{arg0} lanterns"
+      },
+      "placeholders": [
+        { "name": "arg0", "source": "%1$d", "kind": "integer", "position": 1 }
+      ],
+      "metadata": { "mojitoTargetComment": "Imported by agency" }
+    },
+    "note": {
+      "defaultMessage": "Inventory",
+      "metadata": { "mojitoTargetComment": "Imported by agency" }
+    }
+  }
+}

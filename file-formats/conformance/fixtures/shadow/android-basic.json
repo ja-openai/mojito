@@ -1,0 +1,16 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 5,
+  "legacyUnits": 5,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "comment_mismatch",
+      "id": "days_1"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "named"
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 11,
+  "legacyUnits": 27,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "id": "mixed_2",
+      "count": 1
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_zero"
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "carriage",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "carriage_line",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "double_line",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "em_space",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "line",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "nonbreaking",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_0",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_1",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_2",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_3",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_4",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_5",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_6",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "space",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "tab",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "theme_space",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "theme_tab",
+      "count": 1
+    }
+  ]
+}

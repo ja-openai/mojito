@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "neutral.harbor🧭": {
+      "defaultMessage": "{lights, plural, one {{lights} mobile lantern} few {{lights} mobile lanterns} many {{lights} mobile lanterns} other {{lights} mobile lanterns}}",
+      "variants": {
+        "one": "{lights} mobile lantern",
+        "few": "{lights} mobile lanterns",
+        "many": "{lights} mobile lanterns",
+        "other": "{lights} mobile lanterns"
+      },
+      "placeholders": [
+        { "name": "lights", "source": "%lld", "kind": "integer", "position": 1 }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@lights@",
+        "applePluralRules": {
+          "lights": {
+            "valueType": "lld",
+            "variants": {
+              "one": "%lld mobile lantern",
+              "few": "%lld mobile lanterns",
+              "many": "%lld mobile lanterns",
+              "other": "%lld mobile lanterns"
+            }
+          }
+        },
+        "pluralVariable": "lights",
+        "valueType": "lld",
+        "defaultDevice": "iphone",
+        "devicePluralVariants": {
+          "iphone": {
+            "NSStringLocalizedFormatKey": "%#@lights@",
+            "lights": {
+              "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+              "NSStringFormatValueTypeKey": "lld",
+              "one": "%lld mobile lantern",
+              "few": "%lld mobile lanterns",
+              "many": "%lld mobile lanterns",
+              "other": "%lld mobile lanterns"
+            }
+          },
+          "mac": {
+            "NSStringLocalizedFormatKey": "%#@lights@",
+            "lights": {
+              "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+              "NSStringFormatValueTypeKey": "lld",
+              "one": "%lld desktop beacon",
+              "few": "%lld desktop beacons",
+              "many": "%lld desktop beacons",
+              "other": "%lld desktop beacons"
+            }
+          }
+        }
+      }
+    }
+  }
+}

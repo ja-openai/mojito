@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "formatjs_json",
+  "messages": {
+    "_translations/course/_fields/title/value": {
+      "defaultMessage": "Course title",
+      "description": "https://example.invalid/course",
+      "metadata": {
+        "references": ["https://example.invalid/course"]
+      }
+    },
+    "_translations/page/_fields/body/value": {
+      "defaultMessage": "Page body",
+      "description": "https://example.invalid/page",
+      "metadata": {
+        "references": ["https://example.invalid/page"]
+      }
+    },
+    "_translations/page/_fields/title/value": {
+      "defaultMessage": "Page title",
+      "description": "https://example.invalid/page",
+      "metadata": {
+        "references": ["https://example.invalid/page"]
+      }
+    }
+  }
+}

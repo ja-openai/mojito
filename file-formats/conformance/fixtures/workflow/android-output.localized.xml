@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="retained">"Bonjour"</string>
+    <string name="exact">"@#$untranslated$#@"</string>
+    <string name="quoted_exact">"\"@#$untranslated$#@\""</string>
+    <plurals name="count">
+        <item quantity="one">"@#$untranslated$#@"</item>
+        <item quantity="other">"Articles"</item>
+    </plurals>
+</resources>

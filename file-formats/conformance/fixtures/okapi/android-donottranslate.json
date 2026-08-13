@@ -1,0 +1,101 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "private.plain",
+      "source": "Keep the harbor marker untranslated"
+    },
+    {
+      "name": "private.relaxed",
+      "source": "%s passes %d hidden markers"
+    },
+    {
+      "name": "private.explicit",
+      "source": "Even an explicit override remains file-private"
+    },
+    {
+      "name": "private.routes_0",
+      "source": "Private northern passage"
+    },
+    {
+      "name": "private.routes_1",
+      "source": "Private southern passage"
+    },
+    {
+      "name": "private.explicit.routes_0",
+      "source": "Explicitly enabled but still file-private"
+    },
+    {
+      "name": "private.signals_zero",
+      "source": "Several private signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "private.signals_other"
+    },
+    {
+      "name": "private.signals_one",
+      "source": "One private signal",
+      "pluralForm": "one",
+      "pluralFormOther": "private.signals_other"
+    },
+    {
+      "name": "private.signals_two",
+      "source": "Several private signals",
+      "pluralForm": "two",
+      "pluralFormOther": "private.signals_other"
+    },
+    {
+      "name": "private.signals_few",
+      "source": "Several private signals",
+      "pluralForm": "few",
+      "pluralFormOther": "private.signals_other"
+    },
+    {
+      "name": "private.signals_many",
+      "source": "Several private signals",
+      "pluralForm": "many",
+      "pluralFormOther": "private.signals_other"
+    },
+    {
+      "name": "private.signals_other",
+      "source": "Several private signals",
+      "pluralForm": "other",
+      "pluralFormOther": "private.signals_other"
+    },
+    {
+      "name": "private.explicit.signals_zero",
+      "source": "Several explicit private signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "private.explicit.signals_other"
+    },
+    {
+      "name": "private.explicit.signals_one",
+      "source": "One explicit private signal",
+      "pluralForm": "one",
+      "pluralFormOther": "private.explicit.signals_other"
+    },
+    {
+      "name": "private.explicit.signals_two",
+      "source": "Several explicit private signals",
+      "pluralForm": "two",
+      "pluralFormOther": "private.explicit.signals_other"
+    },
+    {
+      "name": "private.explicit.signals_few",
+      "source": "Several explicit private signals",
+      "pluralForm": "few",
+      "pluralFormOther": "private.explicit.signals_other"
+    },
+    {
+      "name": "private.explicit.signals_many",
+      "source": "Several explicit private signals",
+      "pluralForm": "many",
+      "pluralFormOther": "private.explicit.signals_other"
+    },
+    {
+      "name": "private.explicit.signals_other",
+      "source": "Several explicit private signals",
+      "pluralForm": "other",
+      "pluralFormOther": "private.explicit.signals_other"
+    }
+  ]
+}

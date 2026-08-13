@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="plain" description="Plain top-level note">Visible plain</string>
+  <item type="string" name="generic" description="Generic resource note">Visible generic</item>
+  <string-array name="routes" description="Array group note">
+    <item description="Array item note">Visible route</item>
+  </string-array>
+  <plurals name="signals" description="Plural group note">
+    <item quantity="one" description="Plural item note">Single signal</item>
+    <item quantity="other" description="Plural other note">Several signals</item>
+  </plurals>
+</resources>

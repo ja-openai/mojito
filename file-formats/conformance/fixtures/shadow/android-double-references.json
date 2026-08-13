@@ -1,0 +1,82 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 22,
+  "legacyUnits": 30,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "id": "mixed_1",
+      "count": 1
+    },
+    {
+      "category": "source_mismatch",
+      "id": "double_chain"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "double_macro"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "routes_5"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "single_macro"
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "double",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "double_cdata",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "double_color",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "double_comment",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "double_entity",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "double_mixed_entity",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_0",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "routes_1",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "single",
+      "count": 1
+    }
+  ]
+}

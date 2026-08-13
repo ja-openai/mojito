@@ -1,0 +1,45 @@
+{
+  "filterConfigId": "okf_macStringdict@mojito",
+  "units": [
+    {
+      "name": "width.after🧭_NSStringVariableWidthRuleType_5",
+      "source": "%n %@ near marker"
+    },
+    {
+      "name": "width.after🧭_NSStringVariableWidthRuleType_040",
+      "source": "%n %@ open marker"
+    },
+    {
+      "name": "width.middle_NSStringVariableWidthRuleType_5",
+      "source": "%@ %n %@ near marker"
+    },
+    {
+      "name": "width.middle_NSStringVariableWidthRuleType_040",
+      "source": "%@ %n %@ open marker"
+    },
+    {
+      "name": "width.repeated_NSStringVariableWidthRuleType_5",
+      "source": "%n%n %@ near marker"
+    },
+    {
+      "name": "width.repeated_NSStringVariableWidthRuleType_040",
+      "source": "%n%n %@ open marker"
+    },
+    {
+      "name": "width.explicit_NSStringVariableWidthRuleType_5",
+      "source": "%2$n %1$@ near marker"
+    },
+    {
+      "name": "width.explicit_NSStringVariableWidthRuleType_040",
+      "source": "%2$n %1$@ open marker"
+    },
+    {
+      "name": "width.escaped_NSStringVariableWidthRuleType_5",
+      "source": "%%n %@ near marker"
+    },
+    {
+      "name": "width.escaped_NSStringVariableWidthRuleType_040",
+      "source": "%%n %@ open marker"
+    }
+  ]
+}

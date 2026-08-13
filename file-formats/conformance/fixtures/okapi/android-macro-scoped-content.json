@@ -1,0 +1,81 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "anchor",
+      "source": "A steady harbor marker"
+    },
+    {
+      "name": "direct_alias",
+      "source": "@macro/auto_reference"
+    },
+    {
+      "name": "scoped_signal",
+      "source": "@macro/protected_content"
+    },
+    {
+      "name": "ignored_foreign_style",
+      "source": "@macro/foreign_wrapper"
+    },
+    {
+      "name": "harbor_routes_0",
+      "source": "@macro/auto_reference"
+    },
+    {
+      "name": "harbor_routes_1",
+      "source": "@macro/public_reference"
+    },
+    {
+      "name": "harbor_routes_2",
+      "source": "@macro/private_reference"
+    },
+    {
+      "name": "harbor_routes_3",
+      "source": "@macro/star_reference"
+    },
+    {
+      "name": "harbor_routes_4",
+      "source": "@macro/chained_reference"
+    },
+    {
+      "name": "harbor_routes_5",
+      "source": "A visible harbor lane"
+    },
+    {
+      "name": "harbor_signals_zero",
+      "source": "A visible harbor signal",
+      "pluralForm": "zero",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_one",
+      "source": "@macro/public_reference",
+      "pluralForm": "one",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_two",
+      "source": "A visible harbor signal",
+      "pluralForm": "two",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_few",
+      "source": "A visible harbor signal",
+      "pluralForm": "few",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_many",
+      "source": "A visible harbor signal",
+      "pluralForm": "many",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_other",
+      "source": "A visible harbor signal",
+      "pluralForm": "other",
+      "pluralFormOther": "harbor_signals_other"
+    }
+  ]
+}

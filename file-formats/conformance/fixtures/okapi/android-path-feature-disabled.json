@@ -1,0 +1,57 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "anchor",
+      "source": "Path-protected harbor anchor"
+    },
+    {
+      "name": "route",
+      "source": "Path-protected harbor route"
+    },
+    {
+      "name": "display",
+      "source": "Default path display"
+    },
+    {
+      "name": "display",
+      "source": "Tablet path display"
+    },
+    {
+      "name": "signals_zero",
+      "source": "Several visible path signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_one",
+      "source": "One visible path signal",
+      "pluralForm": "one",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_two",
+      "source": "Several visible path signals",
+      "pluralForm": "two",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_few",
+      "source": "Several visible path signals",
+      "pluralForm": "few",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_many",
+      "source": "Several visible path signals",
+      "pluralForm": "many",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_other",
+      "source": "Several visible path signals",
+      "pluralForm": "other",
+      "pluralFormOther": "signals_other"
+    }
+  ]
+}

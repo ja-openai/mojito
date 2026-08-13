@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict>
+  <key>markers.repeated</key><dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@markers@ before %1$#@markers@</string>
+    <key>markers</key><dict>
+      <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key><string>d</string>
+      <key>one</key><string>%d blue marker</string>
+      <key>other</key><string>%d blue markers</string>
+    </dict>
+  </dict>
+</dict></plist>

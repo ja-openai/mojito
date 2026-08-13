@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "formatjs_json",
+  "messages": {
+    "minimum": {
+      "defaultMessage": "Minimum line",
+      "description": "Signed minimum",
+      "metadata": {
+        "references": ["src/Min.tsx:-2147483648:2147483647"]
+      }
+    },
+    "maximum": {
+      "defaultMessage": "Maximum line",
+      "description": "Signed maximum",
+      "metadata": {
+        "references": ["src/Max.tsx:2147483647:-2147483648"]
+      }
+    },
+    "overflow": {
+      "defaultMessage": "Overflow line",
+      "description": "Ignore overflowing line",
+      "metadata": {
+        "references": ["src/Overflow.tsx"]
+      }
+    },
+    "underflow": {
+      "defaultMessage": "Underflow line",
+      "description": "Ignore underflowing line",
+      "metadata": {
+        "references": ["src/Underflow.tsx"]
+      }
+    },
+    "column": {
+      "defaultMessage": "Overflow column",
+      "description": "Ignore overflowing column",
+      "metadata": {
+        "references": ["src/Column.tsx:42"]
+      }
+    },
+    "plus": {
+      "defaultMessage": "Leading plus",
+      "description": "Ignore explicit positive signs",
+      "metadata": {
+        "references": ["src/Plus.tsx"]
+      }
+    },
+    "negative_zero": {
+      "defaultMessage": "Negative zero",
+      "description": "Normalize negative zero",
+      "metadata": {
+        "references": ["src/NegativeZero.tsx:0:0"]
+      }
+    },
+    "whitespace": {
+      "defaultMessage": "Padded position",
+      "description": "Ignore padded numeric text",
+      "metadata": {
+        "references": ["src/Whitespace.tsx"]
+      }
+    }
+  }
+}

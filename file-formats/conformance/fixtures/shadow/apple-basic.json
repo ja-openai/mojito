@@ -1,0 +1,26 @@
+{
+  "sourceFormat": "apple_strings",
+  "canonicalUnits": 4,
+  "legacyUnits": 4,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "comment_mismatch",
+      "id": "count"
+    },
+    {
+      "category": "comment_mismatch",
+      "id": "welcome"
+    },
+    {
+      "category": "missing_legacy",
+      "id": "key=with;punctuation",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "key",
+      "count": 1
+    }
+  ]
+}

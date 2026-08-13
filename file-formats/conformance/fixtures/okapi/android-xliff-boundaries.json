@@ -1,0 +1,101 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "anonymous_literal",
+      "source": "Orbit <x:g>ZX-4</x:g> ready"
+    },
+    {
+      "name": "anonymous_formatter",
+      "source": "Harbor <x:g>%1$s</x:g> clear"
+    },
+    {
+      "name": "empty_identifier",
+      "source": "Quiet <x:g example=\"Q&amp;7\" id=\"\">Q-7</x:g> route"
+    },
+    {
+      "name": "empty_formatter",
+      "source": "Seen <x:g id=\"\">%1$d</x:g> times"
+    },
+    {
+      "name": "numeric_identifier",
+      "source": "Dock <x:g id=\"42\">ZX</x:g> open"
+    },
+    {
+      "name": "accented_identifier",
+      "source": "Port <x:g id=\"orbité\">ZX</x:g> calme"
+    },
+    {
+      "name": "cjk_identifier",
+      "source": "Status <x:g id=\"信号\">ZX</x:g> ready"
+    },
+    {
+      "name": "emoji_identifier",
+      "source": "Link <x:g id=\"🛰\">ZX</x:g> active"
+    },
+    {
+      "name": "combining_identifier",
+      "source": "Mark <x:g id=\"ñ\">ZX</x:g> set"
+    },
+    {
+      "name": "unknown_xliff_wrapper",
+      "source": "Nested <x:note><x:g>ZX</x:g></x:note> trace"
+    },
+    {
+      "name": "adjacent_anonymous",
+      "source": "<x:g>ONE</x:g> then <x:g>TWO</x:g>"
+    },
+    {
+      "name": "repeated_same_source",
+      "source": "<x:g example=\"stable\" id=\"repeat\">ZX</x:g> then <x:g id=\"interlude\">YY</x:g> then <x:g example=\"stable\" id=\"repeat\">ZX</x:g>"
+    },
+    {
+      "name": "conventional_with_example",
+      "source": "<x:g example=\"neutral\" id=\"arg0\">%1$s</x:g> follows"
+    },
+    {
+      "name": "protected_routes_0",
+      "source": "Gate <x:g>NW</x:g> ready"
+    },
+    {
+      "name": "protected_routes_1",
+      "source": "Gate <x:g id=\"入口\">%1$s</x:g> ready"
+    },
+    {
+      "name": "protected_count_zero",
+      "source": "<x:g id=\"数量\">%1$d</x:g> orbital signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "protected_count_other"
+    },
+    {
+      "name": "protected_count_one",
+      "source": "<x:g id=\"数量\">%1$d</x:g> orbital signal",
+      "pluralForm": "one",
+      "pluralFormOther": "protected_count_other"
+    },
+    {
+      "name": "protected_count_two",
+      "source": "<x:g id=\"数量\">%1$d</x:g> orbital signals",
+      "pluralForm": "two",
+      "pluralFormOther": "protected_count_other"
+    },
+    {
+      "name": "protected_count_few",
+      "source": "<x:g id=\"数量\">%1$d</x:g> orbital signals",
+      "pluralForm": "few",
+      "pluralFormOther": "protected_count_other"
+    },
+    {
+      "name": "protected_count_many",
+      "source": "<x:g id=\"数量\">%1$d</x:g> orbital signals",
+      "pluralForm": "many",
+      "pluralFormOther": "protected_count_other"
+    },
+    {
+      "name": "protected_count_other",
+      "source": "<x:g id=\"数量\">%1$d</x:g> orbital signals",
+      "pluralForm": "other",
+      "pluralFormOther": "protected_count_other"
+    }
+  ]
+}

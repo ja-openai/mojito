@@ -1,0 +1,98 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 0,
+  "legacyUnits": 18,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "unexpected_legacy",
+      "id": "private.explicit",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private.explicit.routes_0",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private.explicit.signals_few",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private.explicit.signals_many",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private.explicit.signals_one",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private.explicit.signals_other",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private.explicit.signals_two",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private.explicit.signals_zero",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private.plain",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private.relaxed",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private.routes_0",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private.routes_1",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private.signals_few",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private.signals_many",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private.signals_one",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private.signals_other",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private.signals_two",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "private.signals_zero",
+      "count": 1
+    }
+  ]
+}

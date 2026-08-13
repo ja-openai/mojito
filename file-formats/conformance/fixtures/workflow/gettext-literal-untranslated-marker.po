@@ -1,0 +1,20 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+
+#. Preserve @#$untranslated$#@ in translator context
+msgid "literal"
+msgstr "Source marker"
+
+#. Preserve exact marker translation
+msgid "exact"
+msgstr "Source exact marker"
+
+#. Remove untranslated note
+msgid "missing"
+msgstr "Source missing"
+
+#. Keep a source identifier containing the marker
+msgid "Source @#$untranslated$#@ identifier"
+msgstr "Source identity"

@@ -1,0 +1,83 @@
+{
+  "sourceFormat": "apple_strings",
+  "canonicalUnits": 12,
+  "legacyUnits": 9,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "comment_mismatch",
+      "id": "ascii.control.whitespace"
+    },
+    {
+      "category": "comment_mismatch",
+      "id": "quoted.unicode.spaces"
+    },
+    {
+      "category": "comment_mismatch",
+      "id": "unicode.block.context"
+    },
+    {
+      "category": "comment_mismatch",
+      "id": "unicode.line.context"
+    },
+    {
+      "category": "missing_legacy",
+      "id": "commented.shortcut",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "fullwidth.hex",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "https://neutral.route",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "line.route",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "quoted.route",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "route_7.$/north:west-2",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "unicode.separators",
+      "count": 1
+    },
+    {
+      "category": "source_mismatch",
+      "id": "arabic.hex"
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "commented.shortcut\" /* Hidden shortcut note. */;\n\n/* Foundation recognizes only ASCII hexadecimal escape digits. */\n\"fullwidth.hex",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "line.route\" // Hidden after-key note.",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "quoted.route\" /* Hidden key separator note. */",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "unicode.separators\" ",
+      "count": 1
+    }
+  ]
+}

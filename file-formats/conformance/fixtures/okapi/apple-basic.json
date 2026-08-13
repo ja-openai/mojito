@@ -1,0 +1,24 @@
+{
+  "filterConfigId": "okf_regex@mojito-macStrings",
+  "units": [
+    {
+      "name": "welcome",
+      "source": "Hello, %@!",
+      "comments": " Greeting on the welcome screen "
+    },
+    {
+      "name": "count",
+      "source": "%1$ld files",
+      "comments": " Counter label"
+    },
+    {
+      "name": "key",
+      "source": " = ",
+      "comments": " Punctuation in keys must not confuse the lexer. "
+    },
+    {
+      "name": "bare_key",
+      "source": "Bare keys also exist"
+    }
+  ]
+}

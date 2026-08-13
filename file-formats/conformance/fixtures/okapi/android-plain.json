@@ -1,0 +1,9 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "route",
+      "source": "Waypoint"
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 9,
+  "legacyUnits": 1,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "id": "default_escaped_color",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "default_ignored_flags",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "default_quoted_integer",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "default_text",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "empty_format",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "strict_literal",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "strict_padded",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "strict_text",
+      "count": 1
+    }
+  ]
+}

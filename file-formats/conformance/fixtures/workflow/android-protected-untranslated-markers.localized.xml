@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="visible">"Port ouvert"</string>
+  <string description="DO NOT TRANSLATE" name="suppressed_exact">"@#$untranslated$#@"</string>
+  <string description="DO NOT TRANSLATE" name="suppressed_collision">"@#$untranslated$#@#"</string>
+  <string name="protected_exact" translatable="false">"@#$untranslated$#@"</string>
+  <string name="protected_collision" translatable="false">"@#$untranslated$#@#"</string>
+</resources>

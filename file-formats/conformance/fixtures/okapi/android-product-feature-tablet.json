@@ -1,0 +1,133 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "anchor",
+      "source": "Neutral harbor anchor"
+    },
+    {
+      "name": "route",
+      "source": "Default harbor route"
+    },
+    {
+      "name": "route",
+      "source": "Hidden tablet harbor route"
+    },
+    {
+      "name": "active",
+      "source": "Default beacon passage"
+    },
+    {
+      "name": "active",
+      "source": "Tablet beacon passage"
+    },
+    {
+      "name": "fallback",
+      "source": "Default sheltered passage"
+    },
+    {
+      "name": "fallback",
+      "source": "Watch sheltered passage"
+    },
+    {
+      "name": "mode",
+      "source": "Default navigation mode"
+    },
+    {
+      "name": "mode",
+      "source": "Tablet navigation mode"
+    },
+    {
+      "name": "mode",
+      "source": "Watch navigation mode"
+    },
+    {
+      "name": "inverse",
+      "source": "Default inverse passage"
+    },
+    {
+      "name": "inverse",
+      "source": "Tablet inverse passage"
+    },
+    {
+      "name": "conditional",
+      "source": "Hidden default signal"
+    },
+    {
+      "name": "conditional",
+      "source": "Tablet conditional signal"
+    },
+    {
+      "name": "signals_zero",
+      "source": "Several default signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_one",
+      "source": "One default signal",
+      "pluralForm": "one",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_two",
+      "source": "Several default signals",
+      "pluralForm": "two",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_few",
+      "source": "Several default signals",
+      "pluralForm": "few",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_many",
+      "source": "Several default signals",
+      "pluralForm": "many",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_other",
+      "source": "Several default signals",
+      "pluralForm": "other",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_zero",
+      "source": "Several tablet signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_one",
+      "source": "One tablet signal",
+      "pluralForm": "one",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_two",
+      "source": "Several tablet signals",
+      "pluralForm": "two",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_few",
+      "source": "Several tablet signals",
+      "pluralForm": "few",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_many",
+      "source": "Several tablet signals",
+      "pluralForm": "many",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_other",
+      "source": "Several tablet signals",
+      "pluralForm": "other",
+      "pluralFormOther": "signals_other"
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "buried_control",
+      "source": "Never expose this signal",
+      "comments": "Discarded before the Android control element."
+    },
+    {
+      "name": "  harbor.pad  ",
+      "source": "Padded harbor marker"
+    },
+    {
+      "name": "North.Path-7",
+      "source": "Visible ridge marker",
+      "comments": "Earlier context must not leak into the next resource. The latest Android resource comment wins."
+    },
+    {
+      "name": "foreign_nested",
+      "source": "Never expose this wrapper",
+      "comments": "Context survives an ignored foreign wrapper."
+    },
+    {
+      "name": "éclat",
+      "source": "Coastal shimmer"
+    },
+    {
+      "name": "_underway",
+      "source": "Tablet tide signal",
+      "comments": "This comment is deliberately eaten."
+    },
+    {
+      "name": "_0",
+      "source": "Never expose this skipped lane",
+      "comments": "Route collection context."
+    },
+    {
+      "name": "  route.list  _1",
+      "source": "North channel"
+    },
+    {
+      "name": "  route.list  _3",
+      "source": "South channel"
+    },
+    {
+      "name": "  tide.signals  _zero",
+      "source": "Many coastal signals",
+      "comments": "Mixed collection context. Plural collection context.",
+      "pluralForm": "zero",
+      "pluralFormOther": "  tide.signals  _other"
+    },
+    {
+      "name": "  tide.signals  _one",
+      "source": "One coastal signal",
+      "comments": "Mixed collection context. Plural collection context.",
+      "pluralForm": "one",
+      "pluralFormOther": "  tide.signals  _other"
+    },
+    {
+      "name": "  tide.signals  _two",
+      "source": "Many coastal signals",
+      "comments": "Mixed collection context. Plural collection context.",
+      "pluralForm": "two",
+      "pluralFormOther": "  tide.signals  _other"
+    },
+    {
+      "name": "  tide.signals  _few",
+      "source": "Many coastal signals",
+      "comments": "Mixed collection context. Plural collection context.",
+      "pluralForm": "few",
+      "pluralFormOther": "  tide.signals  _other"
+    },
+    {
+      "name": "  tide.signals  _many",
+      "source": "Many coastal signals",
+      "comments": "Mixed collection context. Plural collection context.",
+      "pluralForm": "many",
+      "pluralFormOther": "  tide.signals  _other"
+    },
+    {
+      "name": "  tide.signals  _other",
+      "source": "Many coastal signals",
+      "comments": "Mixed collection context. Plural collection context.",
+      "pluralForm": "other",
+      "pluralFormOther": "  tide.signals  _other"
+    }
+  ]
+}

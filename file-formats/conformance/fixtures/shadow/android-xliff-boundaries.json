@@ -1,0 +1,92 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 21,
+  "legacyUnits": 21,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "source_mismatch",
+      "id": "accented_identifier"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "adjacent_anonymous"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "anonymous_formatter"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "anonymous_literal"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "cjk_identifier"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "combining_identifier"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "conventional_with_example"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "emoji_identifier"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "empty_formatter"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "empty_identifier"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "numeric_identifier"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected_count_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected_count_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected_count_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected_count_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected_count_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected_count_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected_routes_0"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected_routes_1"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "repeated_same_source"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "unknown_xliff_wrapper"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 12,
+  "legacyUnits": 16,
+  "outcome": "mismatch",
+  "differences": [
+    { "category": "source_mismatch", "id": "signals_many" },
+    { "category": "source_mismatch", "id": "signals_one" },
+    { "category": "unexpected_legacy", "id": "routes_0", "count": 1 },
+    { "category": "unexpected_legacy", "id": "routes_2", "count": 1 },
+    { "category": "unexpected_legacy", "id": "routes_4", "count": 1 },
+    { "category": "unexpected_legacy", "id": "routes_5", "count": 1 }
+  ]
+}

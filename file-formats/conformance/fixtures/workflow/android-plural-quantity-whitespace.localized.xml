@@ -1,0 +1,5 @@
+<resources>
+  <plurals name="signals">
+    <item quantity="&#9;other&#10;">"Des signaux visibles"</item>
+  </plurals>
+</resources>

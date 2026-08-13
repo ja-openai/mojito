@@ -1,0 +1,17 @@
+{
+  "_translations": {
+    "page": {
+      "_previewUrl": "https://example.invalid/page",
+      "_fields": {
+        "title": { "value": "Page title", "type": "String" },
+        "body": { "value": "Page body", "type": "String" }
+      }
+    },
+    "course": {
+      "_previewUrl": "https://example.invalid/course",
+      "_fields": {
+        "title": { "value": "Course title", "type": "String" }
+      }
+    }
+  }
+}

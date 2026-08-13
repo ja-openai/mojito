@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="visible">Open harbor</string>
+  <string name="missing">Remove untranslated harbor</string>
+  <string name="suppressed_exact" description="DO NOT TRANSLATE">"@#$untranslated$#@"</string>
+  <string name="suppressed_collision" description="DO NOT TRANSLATE">"@#$untranslated$#@#"</string>
+  <string name="protected_exact" translatable="false">"@#$untranslated$#@"</string>
+  <string name="protected_collision" translatable="false">"@#$untranslated$#@#"</string>
+</resources>

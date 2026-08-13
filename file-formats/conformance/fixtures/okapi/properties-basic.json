@@ -1,0 +1,23 @@
+{
+  "filterConfigId": "okf_properties-outputNotEscaped",
+  "units": [
+    {
+      "name": "welcome",
+      "source": "Hello, %s!",
+      "comments": " Greeting shown on the dashboard"
+    },
+    {
+      "name": "farewell",
+      "source": "Goodbye",
+      "comments": " Another recognized comment marker"
+    },
+    {
+      "name": "whitespace_key",
+      "source": "value after whitespace delimiter"
+    },
+    {
+      "name": "empty",
+      "source": ""
+    }
+  ]
+}

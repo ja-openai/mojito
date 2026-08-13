@@ -2,6 +2,43 @@
   "schemaVersion": 1,
   "workflowCases": [
     {
+      "id": "apple-mojito-output-preserves-intentional-french-legacy-plural-policy",
+      "format": "apple_stringsdict",
+      "input": "fixtures/workflow/apple-french-legacy-plurals.stringsdict",
+      "filterOptions": [],
+      "targetLocale": "fr-FR",
+      "translations": {
+        "beacons#one": "{beacons} balise",
+        "beacons#other": "{beacons} balises"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/workflow/apple-french-legacy-plurals.localized.stringsdict"
+    },
+    {
+      "id": "apple-mojito-output-retains-only-target-locale-plural-categories",
+      "format": "apple_stringsdict",
+      "input": "fixtures/apple/multiple.stringsdict",
+      "expected": "fixtures/apple/multiple.expected.json",
+      "filterOptions": [],
+      "targetLocale": "ja-JP",
+      "translations": {
+        "summary#files#other": "{files} 個のファイル",
+        "summary#folders#other": "{folders} 個のフォルダー"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/workflow/apple-japanese-plurals.localized.stringsdict"
+    },
+    {
+      "id": "properties-mojito-localizes-every-identical-duplicate-declaration",
+      "format": "java_properties",
+      "input": "fixtures/workflow/properties-identical-duplicates.properties",
+      "expected": "fixtures/workflow/properties-identical-duplicates.expected.json",
+      "filterOptions": [],
+      "translations": { "gate": "Quai sud" },
+      "removeUntranslated": false,
+      "localized": "fixtures/workflow/properties-identical-duplicates.localized.properties"
+    },
+    {
       "id": "android-mojito-import-copies-arabic-plural-categories-and-target-comments",
       "format": "android",
       "input": "fixtures/workflow/import-android-plurals.xml",
@@ -288,6 +325,16 @@
       "localized": "fixtures/workflow/android-protected-boolean-case.localized.xml"
     },
     {
+      "id": "json-mojito-preserves-line-and-block-comments-during-localization",
+      "format": "formatjs_json",
+      "input": "fixtures/workflow/json-comments.json",
+      "expected": "fixtures/workflow/json-comments.expected.json",
+      "filterOptions": [],
+      "translations": {"dock": "Bonjour quai", "link": "https://example.test/fr"},
+      "removeUntranslated": false,
+      "localized": "fixtures/workflow/json-comments.localized.json"
+    },
+    {
       "id": "formatjs-mojito-configured-position-description-and-suppression",
       "format": "formatjs_json",
       "input": "fixtures/workflow/formatjs-configured.json",
@@ -402,6 +449,21 @@
       "removeUntranslated": true,
       "localizedContains": ["Bienvenue", "Extension greeting"],
       "localizedExcludes": ["farewell", "See you later", "Extension farewell"]
+    },
+    {
+      "id": "chrome-mojito-retains-missing-final-newline-during-untranslated-cleanup",
+      "format": "formatjs_json",
+      "input": "fixtures/workflow/chrome-configured-no-newline.json",
+      "filterOptions": [
+        "noteKeyPattern=description",
+        "extractAllPairs=false",
+        "exceptions=message"
+      ],
+      "translations": {"welcome/message": "Bienvenue"},
+      "removeUntranslated": true,
+      "localizedContains": ["Bienvenue", "Extension greeting"],
+      "localizedExcludes": ["farewell", "See you later", "Extension farewell"],
+      "localizedEndsWithNewline": false
     },
     {
       "id": "json-mojito-removes-every-consecutive-untranslated-array-object",

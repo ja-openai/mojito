@@ -1,0 +1,83 @@
+{
+  "canonicalUnits": 20,
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "count": 1,
+      "id": "generic_macro"
+    },
+    {
+      "category": "missing_legacy",
+      "count": 1,
+      "id": "typed_macro_routes_0"
+    },
+    {
+      "category": "missing_legacy",
+      "count": 1,
+      "id": "typed_macro_routes_3"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "chained_macro"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "direct_macro"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "disabled_macro"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "empty_macro"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "macro_routes_0"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "macro_routes_2"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "macro_signals_few"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "macro_signals_many"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "macro_signals_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "macro_signals_other"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "macro_signals_two"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "macro_signals_zero"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "mutable_macro"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected_macro"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "styled_macro"
+    }
+  ],
+  "legacyUnits": 17,
+  "outcome": "mismatch",
+  "sourceFormat": "android"
+}

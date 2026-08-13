@@ -1,0 +1,138 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "anchor",
+      "source": "Quiet harbor",
+      "comments": "Android's framework name splitter consumes one additional leading @."
+    },
+    {
+      "name": "single",
+      "source": "@string/anchor"
+    },
+    {
+      "name": "double",
+      "source": "@@string/anchor"
+    },
+    {
+      "name": "double_entity",
+      "source": "@@string/anchor"
+    },
+    {
+      "name": "double_mixed_entity",
+      "source": "@@string/anchor"
+    },
+    {
+      "name": "double_cdata",
+      "source": "@@string/anchor"
+    },
+    {
+      "name": "double_comment",
+      "source": "@<!-- preserve the split marker -->@string/anchor"
+    },
+    {
+      "name": "double_color",
+      "source": "@@color/shade"
+    },
+    {
+      "name": "triple",
+      "source": "@@@string/anchor"
+    },
+    {
+      "name": "escaped",
+      "source": "@@string/anchor"
+    },
+    {
+      "name": "quoted",
+      "source": "@@string/anchor"
+    },
+    {
+      "name": "unknown",
+      "source": "@@unknown/anchor"
+    },
+    {
+      "name": "null_literal",
+      "source": "@@null"
+    },
+    {
+      "name": "create_literal",
+      "source": "@@+id/marker"
+    },
+    {
+      "name": "single_macro",
+      "source": "@macro/shortcut"
+    },
+    {
+      "name": "double_macro",
+      "source": "@@macro/shortcut"
+    },
+    {
+      "name": "double_chain",
+      "source": "@@macro/indirect"
+    },
+    {
+      "name": "routes_0",
+      "source": "@string/anchor"
+    },
+    {
+      "name": "routes_1",
+      "source": "@@string/anchor"
+    },
+    {
+      "name": "routes_2",
+      "source": "@@@string/anchor"
+    },
+    {
+      "name": "routes_3",
+      "source": "@@string/anchor"
+    },
+    {
+      "name": "routes_4",
+      "source": "@@string/anchor"
+    },
+    {
+      "name": "routes_5",
+      "source": "@@macro/shortcut"
+    },
+    {
+      "name": "routes_6",
+      "source": "Actual route"
+    },
+    {
+      "name": "signals_zero",
+      "source": "%1$d visible signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_one",
+      "source": "@@string/anchor",
+      "pluralForm": "one",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_two",
+      "source": "@@macro/shortcut",
+      "pluralForm": "two",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_few",
+      "source": "%1$d visible signals",
+      "pluralForm": "few",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_many",
+      "source": "%1$d visible signals",
+      "pluralForm": "many",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_other",
+      "source": "%1$d visible signals",
+      "pluralForm": "other",
+      "pluralFormOther": "signals_other"
+    }
+  ]
+}

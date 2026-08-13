@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "visible": {
+      "defaultMessage": "Hello",
+      "description": " Visible control ",
+      "metadata": {
+        "references": ["source/Home.swift:17", "source/Welcome.swift:29"]
+      }
+    }
+  }
+}

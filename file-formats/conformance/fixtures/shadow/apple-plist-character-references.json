@@ -1,0 +1,28 @@
+{
+  "sourceFormat": "apple_strings",
+  "canonicalUnits": 4,
+  "legacyUnits": 0,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "id": "escaped.literal",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "harbor.route&east",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "line.break",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "literal&#000000065;",
+      "count": 1
+    }
+  ]
+}

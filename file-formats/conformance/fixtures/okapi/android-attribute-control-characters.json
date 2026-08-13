@@ -1,0 +1,97 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "tab",
+      "source": "Visible harbor",
+      "comments": "North\tdeck"
+    },
+    {
+      "name": "line",
+      "source": "Visible pier",
+      "comments": "North\ndeck"
+    },
+    {
+      "name": "carriage",
+      "source": "Visible lane",
+      "comments": "North\rdeck"
+    },
+    {
+      "name": "carriage_line",
+      "source": "Visible signal",
+      "comments": "North\r\ndeck"
+    },
+    {
+      "name": "literal_tab",
+      "source": "Literal tab becomes a space",
+      "comments": "North deck"
+    },
+    {
+      "name": "literal_line",
+      "source": "Literal line becomes a space",
+      "comments": "North deck"
+    },
+    {
+      "name": "protected",
+      "source": "Captain <code:g example=\"A B C D\" id=\"captain\">%1$s</code:g>"
+    },
+    {
+      "name": "literal_example",
+      "source": "Pilot <code:g example=\"A B C\" id=\"pilot\">%1$s</code:g>"
+    },
+    {
+      "name": "styled",
+      "source": "<annotation route=\"north middle end finish\">Visible style</annotation>"
+    },
+    {
+      "name": "routes_0",
+      "source": "First route"
+    },
+    {
+      "name": "routes_1",
+      "source": "Guide <code:g example=\"P 7 8\" id=\"navigator\">%1$s</code:g>"
+    },
+    {
+      "name": "signals_zero",
+      "source": "%1$d visible lights",
+      "comments": "Count\tlights\nvisible",
+      "pluralForm": "zero",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_one",
+      "source": "One <code:g example=\"M 1 2 3\" id=\"marker\">%1$s</code:g>",
+      "comments": "Count\tlights\nvisible",
+      "pluralForm": "one",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_two",
+      "source": "%1$d visible lights",
+      "comments": "Count\tlights\nvisible",
+      "pluralForm": "two",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_few",
+      "source": "%1$d visible lights",
+      "comments": "Count\tlights\nvisible",
+      "pluralForm": "few",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_many",
+      "source": "%1$d visible lights",
+      "comments": "Count\tlights\nvisible",
+      "pluralForm": "many",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_other",
+      "source": "%1$d visible lights",
+      "comments": "Count\tlights\nvisible",
+      "pluralForm": "other",
+      "pluralFormOther": "signals_other"
+    }
+  ]
+}

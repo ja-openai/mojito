@@ -1,0 +1,15 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    { "name": "numeric_routes_0", "source": "?attr/decimal_window" },
+    { "name": "numeric_routes_1", "source": "?attr/hex_window" },
+    { "name": "numeric_routes_2", "source": "?attr/decimal_modes" },
+    { "name": "numeric_routes_3", "source": "?attr/route_flags" },
+    { "name": "numeric_routes_4", "source": "?attr/empty_enum" },
+    { "name": "numeric_routes_5", "source": "?attr/empty_flags" },
+    { "name": "numeric_routes_6", "source": "?attr/empty_choice" },
+    { "name": "numeric_routes_7", "source": "?attr/weak_window" },
+    { "name": "numeric_routes_8", "source": "?attr/weak_mode" },
+    { "name": "numeric_routes_9", "source": "A decimal route with leading zeroes" }
+  ]
+}

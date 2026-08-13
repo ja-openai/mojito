@@ -1,0 +1,58 @@
+{
+  "sourceFormat": "apple_strings",
+  "canonicalUnits": 8,
+  "legacyUnits": 2,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "id": "bare_shortcut",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "block_separator",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "line_separator_key",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "paragraph_separator_key",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "pilot's code",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "quoted shortcut",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "single key",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "single shortcut",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "'single key'",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "// Unicode line context \"line_separator_key",
+      "count": 1
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    { "name": "harbor_routes_0", "source": "@macro/scoped_signal" },
+    { "name": "harbor_routes_1", "source": "?attr/passage" },
+    { "name": "harbor_routes_2", "source": "?attr/direction" },
+    { "name": "harbor_routes_3", "source": "?attr/distance" },
+    { "name": "harbor_routes_4", "source": "?open_water" },
+    { "name": "harbor_routes_5", "source": "A charted passage" },
+    { "name": "harbor_routes_6", "source": "Another charted passage" },
+    {
+      "name": "harbor_signals_zero",
+      "source": "%d visible signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_one",
+      "source": "?attr/distance",
+      "pluralForm": "one",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_two",
+      "source": "%d visible signals",
+      "pluralForm": "two",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_few",
+      "source": "%d visible signals",
+      "pluralForm": "few",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_many",
+      "source": "%d visible signals",
+      "pluralForm": "many",
+      "pluralFormOther": "harbor_signals_other"
+    },
+    {
+      "name": "harbor_signals_other",
+      "source": "%d visible signals",
+      "pluralForm": "other",
+      "pluralFormOther": "harbor_signals_other"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "formatjs_json",
+  "messages": {
+    "alpha": {
+      "defaultMessage": "Hello {name}",
+      "description": "Home screen greeting",
+      "metadata": {
+        "references": ["src/Home.tsx:42:7"]
+      }
+    }
+  }
+}

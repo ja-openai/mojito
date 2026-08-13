@@ -1,0 +1,18 @@
+{
+  "sourceFormat": "java_properties",
+  "canonicalUnits": 2,
+  "legacyUnits": 2,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "id": "harbor.route",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "harbor.route\\",
+      "count": 1
+    }
+  ]
+}

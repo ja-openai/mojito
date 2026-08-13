@@ -1,0 +1,293 @@
+{
+  "filterConfigId": "okf_macStringdict@mojito",
+  "units": [
+    {
+      "name": "positioned.board_routes_zero",
+      "source": "%d quiet corridors",
+      "pluralForm": "zero",
+      "pluralFormOther": "positioned.board_routes_other"
+    },
+    {
+      "name": "positioned.board_routes_one",
+      "source": "%d quiet corridor",
+      "pluralForm": "one",
+      "pluralFormOther": "positioned.board_routes_other"
+    },
+    {
+      "name": "positioned.board_routes_two",
+      "source": "%d quiet corridors",
+      "pluralForm": "two",
+      "pluralFormOther": "positioned.board_routes_other"
+    },
+    {
+      "name": "positioned.board_routes_few",
+      "source": "%d quiet corridors",
+      "pluralForm": "few",
+      "pluralFormOther": "positioned.board_routes_other"
+    },
+    {
+      "name": "positioned.board_routes_many",
+      "source": "%d quiet corridors",
+      "pluralForm": "many",
+      "pluralFormOther": "positioned.board_routes_other"
+    },
+    {
+      "name": "positioned.board_routes_other",
+      "source": "%d quiet corridors",
+      "pluralForm": "other",
+      "pluralFormOther": "positioned.board_routes_other"
+    },
+    {
+      "name": "reordered.board_signals_zero",
+      "source": "%lld clear signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "reordered.board_signals_other"
+    },
+    {
+      "name": "reordered.board_signals_one",
+      "source": "%lld clear signal",
+      "pluralForm": "one",
+      "pluralFormOther": "reordered.board_signals_other"
+    },
+    {
+      "name": "reordered.board_signals_two",
+      "source": "%lld clear signals",
+      "pluralForm": "two",
+      "pluralFormOther": "reordered.board_signals_other"
+    },
+    {
+      "name": "reordered.board_signals_few",
+      "source": "%lld clear signals",
+      "pluralForm": "few",
+      "pluralFormOther": "reordered.board_signals_other"
+    },
+    {
+      "name": "reordered.board_signals_many",
+      "source": "%lld clear signals",
+      "pluralForm": "many",
+      "pluralFormOther": "reordered.board_signals_other"
+    },
+    {
+      "name": "reordered.board_signals_other",
+      "source": "%lld clear signals",
+      "pluralForm": "other",
+      "pluralFormOther": "reordered.board_signals_other"
+    },
+    {
+      "name": "repeated.board_markers_zero",
+      "source": "%d blue markers",
+      "pluralForm": "zero",
+      "pluralFormOther": "repeated.board_markers_other"
+    },
+    {
+      "name": "repeated.board_markers_one",
+      "source": "%d blue marker",
+      "pluralForm": "one",
+      "pluralFormOther": "repeated.board_markers_other"
+    },
+    {
+      "name": "repeated.board_markers_two",
+      "source": "%d blue markers",
+      "pluralForm": "two",
+      "pluralFormOther": "repeated.board_markers_other"
+    },
+    {
+      "name": "repeated.board_markers_few",
+      "source": "%d blue markers",
+      "pluralForm": "few",
+      "pluralFormOther": "repeated.board_markers_other"
+    },
+    {
+      "name": "repeated.board_markers_many",
+      "source": "%d blue markers",
+      "pluralForm": "many",
+      "pluralFormOther": "repeated.board_markers_other"
+    },
+    {
+      "name": "repeated.board_markers_other",
+      "source": "%d blue markers",
+      "pluralForm": "other",
+      "pluralFormOther": "repeated.board_markers_other"
+    },
+    {
+      "name": "implicit.board_beacons_zero",
+      "source": "%lld active beacons",
+      "pluralForm": "zero",
+      "pluralFormOther": "implicit.board_beacons_other"
+    },
+    {
+      "name": "implicit.board_beacons_one",
+      "source": "%lld active beacon",
+      "pluralForm": "one",
+      "pluralFormOther": "implicit.board_beacons_other"
+    },
+    {
+      "name": "implicit.board_beacons_two",
+      "source": "%lld active beacons",
+      "pluralForm": "two",
+      "pluralFormOther": "implicit.board_beacons_other"
+    },
+    {
+      "name": "implicit.board_beacons_few",
+      "source": "%lld active beacons",
+      "pluralForm": "few",
+      "pluralFormOther": "implicit.board_beacons_other"
+    },
+    {
+      "name": "implicit.board_beacons_many",
+      "source": "%lld active beacons",
+      "pluralForm": "many",
+      "pluralFormOther": "implicit.board_beacons_other"
+    },
+    {
+      "name": "implicit.board_beacons_other",
+      "source": "%lld active beacons",
+      "pluralForm": "other",
+      "pluralFormOther": "implicit.board_beacons_other"
+    },
+    {
+      "name": "mixed.branch_signals_zero",
+      "source": "%1$d signals for %2$@",
+      "pluralForm": "zero",
+      "pluralFormOther": "mixed.branch_signals_other"
+    },
+    {
+      "name": "mixed.branch_signals_one",
+      "source": "%1$d signal for %2$@",
+      "pluralForm": "one",
+      "pluralFormOther": "mixed.branch_signals_other"
+    },
+    {
+      "name": "mixed.branch_signals_two",
+      "source": "%1$d signals for %2$@",
+      "pluralForm": "two",
+      "pluralFormOther": "mixed.branch_signals_other"
+    },
+    {
+      "name": "mixed.branch_signals_few",
+      "source": "%1$d signals for %2$@",
+      "pluralForm": "few",
+      "pluralFormOther": "mixed.branch_signals_other"
+    },
+    {
+      "name": "mixed.branch_signals_many",
+      "source": "%1$d signals for %2$@",
+      "pluralForm": "many",
+      "pluralFormOther": "mixed.branch_signals_other"
+    },
+    {
+      "name": "mixed.branch_signals_other",
+      "source": "%1$d signals for %2$@",
+      "pluralForm": "other",
+      "pluralFormOther": "mixed.branch_signals_other"
+    },
+    {
+      "name": "spelled.board_signals_zero",
+      "source": "several signals",
+      "pluralForm": "zero",
+      "pluralFormOther": "spelled.board_signals_other"
+    },
+    {
+      "name": "spelled.board_signals_one",
+      "source": "a lone signal",
+      "pluralForm": "one",
+      "pluralFormOther": "spelled.board_signals_other"
+    },
+    {
+      "name": "spelled.board_signals_two",
+      "source": "several signals",
+      "pluralForm": "two",
+      "pluralFormOther": "spelled.board_signals_other"
+    },
+    {
+      "name": "spelled.board_signals_few",
+      "source": "several signals",
+      "pluralForm": "few",
+      "pluralFormOther": "spelled.board_signals_other"
+    },
+    {
+      "name": "spelled.board_signals_many",
+      "source": "several signals",
+      "pluralForm": "many",
+      "pluralFormOther": "spelled.board_signals_other"
+    },
+    {
+      "name": "spelled.board_signals_other",
+      "source": "several signals",
+      "pluralForm": "other",
+      "pluralFormOther": "spelled.board_signals_other"
+    },
+    {
+      "name": "digit.board_2signals_zero",
+      "source": "%d numbered pulses",
+      "pluralForm": "zero",
+      "pluralFormOther": "digit.board_2signals_other"
+    },
+    {
+      "name": "digit.board_2signals_one",
+      "source": "%d numbered pulse",
+      "pluralForm": "one",
+      "pluralFormOther": "digit.board_2signals_other"
+    },
+    {
+      "name": "digit.board_2signals_two",
+      "source": "%d numbered pulses",
+      "pluralForm": "two",
+      "pluralFormOther": "digit.board_2signals_other"
+    },
+    {
+      "name": "digit.board_2signals_few",
+      "source": "%d numbered pulses",
+      "pluralForm": "few",
+      "pluralFormOther": "digit.board_2signals_other"
+    },
+    {
+      "name": "digit.board_2signals_many",
+      "source": "%d numbered pulses",
+      "pluralForm": "many",
+      "pluralFormOther": "digit.board_2signals_other"
+    },
+    {
+      "name": "digit.board_2signals_other",
+      "source": "%d numbered pulses",
+      "pluralForm": "other",
+      "pluralFormOther": "digit.board_2signals_other"
+    },
+    {
+      "name": "underscore.board__signals_2_zero",
+      "source": "%d hidden routes",
+      "pluralForm": "zero",
+      "pluralFormOther": "underscore.board__signals_2_other"
+    },
+    {
+      "name": "underscore.board__signals_2_one",
+      "source": "%d hidden route",
+      "pluralForm": "one",
+      "pluralFormOther": "underscore.board__signals_2_other"
+    },
+    {
+      "name": "underscore.board__signals_2_two",
+      "source": "%d hidden routes",
+      "pluralForm": "two",
+      "pluralFormOther": "underscore.board__signals_2_other"
+    },
+    {
+      "name": "underscore.board__signals_2_few",
+      "source": "%d hidden routes",
+      "pluralForm": "few",
+      "pluralFormOther": "underscore.board__signals_2_other"
+    },
+    {
+      "name": "underscore.board__signals_2_many",
+      "source": "%d hidden routes",
+      "pluralForm": "many",
+      "pluralFormOther": "underscore.board__signals_2_other"
+    },
+    {
+      "name": "underscore.board__signals_2_other",
+      "source": "%d hidden routes",
+      "pluralForm": "other",
+      "pluralFormOther": "underscore.board__signals_2_other"
+    }
+  ]
+}

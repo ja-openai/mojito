@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "markers.repeated": {
+      "defaultMessage": "{markers, plural, one {{markers} blue marker} few {{markers} blue markers} many {{markers} blue markers} other {{markers} blue markers}} before {markers, plural, one {{markers} blue marker} few {{markers} blue markers} many {{markers} blue markers} other {{markers} blue markers}}",
+      "variants": {
+        "one": "{markers} blue marker",
+        "few": "{markers} blue markers",
+        "many": "{markers} blue markers",
+        "other": "{markers} blue markers"
+      },
+      "placeholders": [
+        { "name": "markers", "source": "%d", "kind": "integer", "position": 1 }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%1$#@markers@ before %1$#@markers@",
+        "applePluralRules": {
+          "markers": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d blue marker",
+              "few": "%d blue markers",
+              "many": "%d blue markers",
+              "other": "%d blue markers"
+            }
+          }
+        },
+        "pluralVariable": "markers",
+        "valueType": "d"
+      }
+    }
+  }
+}

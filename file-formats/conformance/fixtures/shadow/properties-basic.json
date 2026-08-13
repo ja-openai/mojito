@@ -1,0 +1,16 @@
+{
+  "sourceFormat": "java_properties",
+  "canonicalUnits": 4,
+  "legacyUnits": 4,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "comment_mismatch",
+      "id": "farewell"
+    },
+    {
+      "category": "comment_mismatch",
+      "id": "welcome"
+    }
+  ]
+}

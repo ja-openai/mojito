@@ -1,0 +1,46 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 19,
+  "legacyUnits": 17,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "comment_mismatch",
+      "id": "routes_0"
+    },
+    {
+      "category": "comment_mismatch",
+      "id": "routes_1"
+    },
+    {
+      "category": "missing_legacy",
+      "id": "generic",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "mixed_0",
+      "count": 1
+    },
+    {
+      "category": "source_mismatch",
+      "id": "literal_example"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "protected"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "routes_1"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "signals_one"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "styled"
+    }
+  ]
+}

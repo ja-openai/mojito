@@ -1,0 +1,53 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "open_route",
+      "source": "An open harbor route"
+    },
+    {
+      "name": "mutable_route",
+      "source": "A mutable harbor route"
+    },
+    {
+      "name": "inverse_route",
+      "source": "An inverse harbor route"
+    },
+    {
+      "name": "mutable_signals_zero",
+      "pluralForm": "zero",
+      "pluralFormOther": "mutable_signals_other",
+      "source": "Several harbor signals"
+    },
+    {
+      "name": "mutable_signals_one",
+      "pluralForm": "one",
+      "pluralFormOther": "mutable_signals_other",
+      "source": "One harbor signal"
+    },
+    {
+      "name": "mutable_signals_two",
+      "pluralForm": "two",
+      "pluralFormOther": "mutable_signals_other",
+      "source": "Several harbor signals"
+    },
+    {
+      "name": "mutable_signals_few",
+      "pluralForm": "few",
+      "pluralFormOther": "mutable_signals_other",
+      "source": "Several harbor signals"
+    },
+    {
+      "name": "mutable_signals_many",
+      "pluralForm": "many",
+      "pluralFormOther": "mutable_signals_other",
+      "source": "Several harbor signals"
+    },
+    {
+      "name": "mutable_signals_other",
+      "pluralForm": "other",
+      "pluralFormOther": "mutable_signals_other",
+      "source": "Several harbor signals"
+    }
+  ]
+}

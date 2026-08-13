@@ -1,0 +1,47 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    { "name": "styled", "source": "<b>%s</b> then %d" },
+    { "name": "styled_relative", "source": "<i>%s</i> then %<s" },
+    { "name": "literal_pair", "source": "%s then %d" },
+    { "name": "hidden", "source": "%s then %d" },
+    { "name": "routes_0", "source": "%s then %d" },
+    { "name": "routes_1", "source": "Next %s then %d" },
+    {
+      "name": "signals_zero",
+      "source": "%s then %d",
+      "pluralForm": "zero",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_one",
+      "source": "%s then %d",
+      "pluralForm": "one",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_two",
+      "source": "%s then %d",
+      "pluralForm": "two",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_few",
+      "source": "%s then %d",
+      "pluralForm": "few",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_many",
+      "source": "%s then %d",
+      "pluralForm": "many",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_other",
+      "source": "%s then %d",
+      "pluralForm": "other",
+      "pluralFormOther": "signals_other"
+    }
+  ]
+}

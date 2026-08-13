@@ -1,0 +1,17 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 1,
+  "legacyUnits": 10,
+  "outcome": "mismatch",
+  "differences": [
+    { "category": "unexpected_legacy", "id": "numeric_routes_0", "count": 1 },
+    { "category": "unexpected_legacy", "id": "numeric_routes_1", "count": 1 },
+    { "category": "unexpected_legacy", "id": "numeric_routes_2", "count": 1 },
+    { "category": "unexpected_legacy", "id": "numeric_routes_3", "count": 1 },
+    { "category": "unexpected_legacy", "id": "numeric_routes_4", "count": 1 },
+    { "category": "unexpected_legacy", "id": "numeric_routes_5", "count": 1 },
+    { "category": "unexpected_legacy", "id": "numeric_routes_6", "count": 1 },
+    { "category": "unexpected_legacy", "id": "numeric_routes_7", "count": 1 },
+    { "category": "unexpected_legacy", "id": "numeric_routes_8", "count": 1 }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 13,
+  "legacyUnits": 26,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "duplicate_legacy",
+      "id": "active",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "conditional",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "fallback",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "inverse",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "mode",
+      "count": 3
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "route",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "signals_few",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "signals_many",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "signals_one",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "signals_other",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "signals_two",
+      "count": 2
+    },
+    {
+      "category": "duplicate_legacy",
+      "id": "signals_zero",
+      "count": 2
+    },
+    {
+      "category": "missing_legacy",
+      "id": "lanes_2",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "route",
+      "count": 2
+    }
+  ]
+}

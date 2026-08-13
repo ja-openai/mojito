@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "formatjs_json",
+  "messages": {
+    "dock": {
+      "defaultMessage": "Harbor greeting",
+      "description": "Preserve this existing translator comment."
+    },
+    "link": {
+      "defaultMessage": "https://example.test/en",
+      "description": "Preserve this original block comment too."
+    }
+  }
+}

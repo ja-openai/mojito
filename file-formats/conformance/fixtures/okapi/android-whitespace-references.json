@@ -1,0 +1,126 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "space",
+      "source": "@string/north pier",
+      "comments": "Resource-name parsing intentionally does not validate entry whitespace."
+    },
+    {
+      "name": "tab",
+      "source": "@string/north pier"
+    },
+    {
+      "name": "line",
+      "source": "@string/north pier"
+    },
+    {
+      "name": "carriage",
+      "source": "@string/north pier"
+    },
+    {
+      "name": "carriage_line",
+      "source": "@string/north pier"
+    },
+    {
+      "name": "nonbreaking",
+      "source": "@string/north pier"
+    },
+    {
+      "name": "em_space",
+      "source": "@string/north pier"
+    },
+    {
+      "name": "double_line",
+      "source": "@@string/north pier"
+    },
+    {
+      "name": "theme_space",
+      "source": "?attr/north pier"
+    },
+    {
+      "name": "theme_tab",
+      "source": "?attr/north pier"
+    },
+    {
+      "name": "quoted",
+      "source": "@string/north pier"
+    },
+    {
+      "name": "escaped",
+      "source": "@string/north pier"
+    },
+    {
+      "name": "visible",
+      "source": "A visible harbor"
+    },
+    {
+      "name": "routes_0",
+      "source": "@string/north pier"
+    },
+    {
+      "name": "routes_1",
+      "source": "@string/north pier"
+    },
+    {
+      "name": "routes_2",
+      "source": "@string/north pier"
+    },
+    {
+      "name": "routes_3",
+      "source": "@string/north pier"
+    },
+    {
+      "name": "routes_4",
+      "source": "@string/north pier"
+    },
+    {
+      "name": "routes_5",
+      "source": "@string/north pier"
+    },
+    {
+      "name": "routes_6",
+      "source": "@@string/north pier"
+    },
+    {
+      "name": "routes_7",
+      "source": "Visible route"
+    },
+    {
+      "name": "signals_zero",
+      "source": "@string/north pier",
+      "pluralForm": "zero",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_one",
+      "source": "@string/north pier",
+      "pluralForm": "one",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_two",
+      "source": "@string/north pier",
+      "pluralForm": "two",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_few",
+      "source": "@string/north pier",
+      "pluralForm": "few",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_many",
+      "source": "@string/north pier",
+      "pluralForm": "many",
+      "pluralFormOther": "signals_other"
+    },
+    {
+      "name": "signals_other",
+      "source": "%1$d visible lights",
+      "pluralForm": "other",
+      "pluralFormOther": "signals_other"
+    }
+  ]
+}

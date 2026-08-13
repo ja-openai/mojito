@@ -1,0 +1,13 @@
+{
+  "canonicalUnits": 10,
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "count": 1,
+      "id": "mutable_beacon"
+    }
+  ],
+  "legacyUnits": 9,
+  "outcome": "mismatch",
+  "sourceFormat": "android"
+}

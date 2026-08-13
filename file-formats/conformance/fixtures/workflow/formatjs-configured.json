@@ -1,0 +1,15 @@
+{
+  "alpha": {
+    "file": "src/Home.tsx",
+    "line": 42,
+    "col": 7,
+    "defaultMessage": "Hello {name}",
+    "description": "Home screen greeting"
+  },
+  "beta": {
+    "file": "src/Legal.tsx",
+    "line": 9,
+    "defaultMessage": "Legal text",
+    "description": "DO NOT TRANSLATE: legal copy"
+  }
+}

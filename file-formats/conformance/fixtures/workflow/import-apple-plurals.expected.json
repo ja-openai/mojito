@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "lanterns.remaining": {
+      "defaultMessage": "{lanterns, plural, one {{lanterns} lantern} few {{lanterns} lanterns} many {{lanterns} lanterns} other {{lanterns} lanterns}} remaining",
+      "variants": {
+        "one": "{lanterns} lantern",
+        "few": "{lanterns} lanterns",
+        "many": "{lanterns} lanterns",
+        "other": "{lanterns} lanterns"
+      },
+      "placeholders": [
+        { "name": "lanterns", "source": "%d", "kind": "integer", "position": 1 }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@lanterns@ remaining",
+        "applePluralRules": {
+          "lanterns": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d lantern",
+              "few": "%d lanterns",
+              "many": "%d lanterns",
+              "other": "%d lanterns"
+            }
+          }
+        },
+        "pluralVariable": "lanterns",
+        "valueType": "d"
+      }
+    }
+  }
+}

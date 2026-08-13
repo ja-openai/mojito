@@ -1,0 +1,68 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 1,
+  "legacyUnits": 13,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "unexpected_legacy",
+      "id": "protected_counts_few",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "protected_counts_many",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "protected_counts_one",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "protected_counts_other",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "protected_counts_two",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "protected_counts_zero",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "protected_routes_0",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "protected_routes_1",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "protected_routes_2",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "protected_routes_3",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "protected_routes_4",
+      "count": 1
+    },
+    {
+      "category": "unexpected_legacy",
+      "id": "protected_routes_5",
+      "count": 1
+    }
+  ]
+}

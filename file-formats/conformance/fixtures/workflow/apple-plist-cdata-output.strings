@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <!-- Remove visible translator note -->
+    <key><![CDATA[visible<&>]]></key>
+    <string><![CDATA[Source visible]]></string>
+
+    <!-- Remove visible shadow translator note -->
+    <key>shadow</key>
+    <string><![CDATA[Source shadow]]></string>
+
+    <!-- Remove literal translator note -->
+    <key>literal</key>
+    <string><![CDATA[Source literal]]></string>
+
+    <!-- Remove missing translator note -->
+    <key><![CDATA[missing<&>]]></key>
+    <?route keep?>
+    <!-- Remove nested missing note -->
+    <string><![CDATA[Source missing]]></string>
+  </dict>
+</plist>

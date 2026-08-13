@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    
+    <key><![CDATA[visible<&>]]></key>
+    <string><![CDATA[Port <!--literal--> visible]]></string>
+
+    
+    <key>shadow</key>
+    <string><![CDATA[Fake </key><key>shadow</key><string>@#$untranslated$#@</string> literal]]></string>
+
+    
+    <key>literal</key>
+    <string><![CDATA[@#$untranslated$#@]]></string>
+
+    
+    
+  </dict>
+</plist>

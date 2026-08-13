@@ -1,0 +1,83 @@
+{
+  "filterConfigId": "okf_xml@mojito-AndroidStrings",
+  "units": [
+    {
+      "name": "files_zero",
+      "source": "%1$d files",
+      "comments": "Number of files selected",
+      "pluralForm": "zero",
+      "pluralFormOther": "files_other"
+    },
+    {
+      "name": "files_one",
+      "source": "%1$d file",
+      "comments": "Number of files selected",
+      "pluralForm": "one",
+      "pluralFormOther": "files_other"
+    },
+    {
+      "name": "files_two",
+      "source": "%1$d files",
+      "comments": "Number of files selected",
+      "pluralForm": "two",
+      "pluralFormOther": "files_other"
+    },
+    {
+      "name": "files_few",
+      "source": "%1$d files",
+      "comments": "Number of files selected",
+      "pluralForm": "few",
+      "pluralFormOther": "files_other"
+    },
+    {
+      "name": "files_many",
+      "source": "%1$d files",
+      "comments": "Number of files selected",
+      "pluralForm": "many",
+      "pluralFormOther": "files_other"
+    },
+    {
+      "name": "files_other",
+      "source": "%1$d files",
+      "comments": "Number of files selected",
+      "pluralForm": "other",
+      "pluralFormOther": "files_other"
+    },
+    {
+      "name": "plain_zero",
+      "source": "Nothing",
+      "pluralForm": "zero",
+      "pluralFormOther": "plain_other"
+    },
+    {
+      "name": "plain_one",
+      "source": "One thing",
+      "pluralForm": "one",
+      "pluralFormOther": "plain_other"
+    },
+    {
+      "name": "plain_two",
+      "source": "Many things",
+      "pluralForm": "two",
+      "pluralFormOther": "plain_other"
+    },
+    {
+      "name": "plain_few",
+      "source": "Many things",
+      "pluralForm": "few",
+      "pluralFormOther": "plain_other"
+    },
+    {
+      "name": "plain_many",
+      "source": "Many things",
+      "pluralForm": "many",
+      "pluralFormOther": "plain_other"
+    },
+    {
+      "name": "plain_other",
+      "source": "Many things",
+      "pluralForm": "other",
+      "pluralFormOther": "plain_other"
+    }
+  ]
+}

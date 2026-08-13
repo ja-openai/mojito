@@ -1,0 +1,12 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 6,
+  "legacyUnits": 6,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "source_mismatch",
+      "id": "escapes"
+    }
+  ]
+}

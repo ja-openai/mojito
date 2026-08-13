@@ -1,0 +1,16 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 3,
+  "legacyUnits": 3,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "source_mismatch",
+      "id": "protected"
+    },
+    {
+      "category": "source_mismatch",
+      "id": "styled"
+    }
+  ]
+}

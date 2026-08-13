@@ -1,0 +1,10 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 12,
+  "legacyUnits": 12,
+  "outcome": "mismatch",
+  "differences": [
+    { "category": "missing_legacy", "id": "generic", "count": 1 },
+    { "category": "unexpected_legacy", "id": "hidden", "count": 1 }
+  ]
+}

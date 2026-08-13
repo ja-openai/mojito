@@ -1,0 +1,49 @@
+{
+  "filterConfigId": "okf_regex@mojito-macStrings",
+  "units": [
+    {
+      "name": "quoted.route\" /* Hidden key separator note. */",
+      "source": "Visible amber route",
+      "comments": " Only leading translator notes survive structural comments. "
+    },
+    {
+      "name": "line.route\" // Hidden after-key note.",
+      "source": "Steady orbital route",
+      "comments": " Structural line comments can precede every grammar separator. "
+    },
+    {
+      "name": "commented.shortcut\" /* Hidden shortcut note. */;\n\n/* Foundation recognizes only ASCII hexadecimal escape digits. */\n\"fullwidth.hex",
+      "source": "\\U００４１!",
+      "comments": " Shortcut resources can carry structural comments. "
+    },
+    {
+      "name": "arabic.hex",
+      "source": "\\U٠٠٤١!"
+    },
+    {
+      "name": "quoted.unicode.spaces",
+      "source": "alpha betagamma delta​omega",
+      "comments": " Nonseparator Unicode remains valid inside a quoted value. "
+    },
+    {
+      "name": "unicode.separators\" ",
+      "source": "Expected landing",
+      "comments": " Foundation accepts its two explicit Unicode line separators. "
+    },
+    {
+      "name": "unicode.block.context",
+      "source": "Normalized block context",
+      "comments": " Padded translator context "
+    },
+    {
+      "name": "unicode.line.context",
+      "source": "Normalized line context",
+      "comments": "  Padded line context "
+    },
+    {
+      "name": "ascii.control.whitespace",
+      "source": "Expected ASCII boundary",
+      "comments": " Vertical tab and form feed are native grammar whitespace. "
+    }
+  ]
+}

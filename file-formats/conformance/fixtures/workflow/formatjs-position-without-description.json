@@ -1,0 +1,15 @@
+{
+  "without_description": {
+    "file": "src/WithoutDescription.tsx",
+    "line": 17,
+    "col": 3,
+    "defaultMessage": "Location without a note"
+  },
+  "with_description": {
+    "file": "src/WithDescription.tsx",
+    "line": 21,
+    "col": 5,
+    "defaultMessage": "Location with a note",
+    "description": "Reference control"
+  }
+}

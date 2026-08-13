@@ -537,6 +537,16 @@ def main() -> None:
         assert isinstance(options, list) and all(isinstance(option, str) for option in options), (
             f"{workflow_id}: filter options require strings"
         )
+        if "targetLocale" in workflow:
+            assert workflow["format"] == "apple_stringsdict", (
+                f"{workflow_id}: locale-owned output currently applies to Foundation plural dictionaries"
+            )
+            assert isinstance(workflow["targetLocale"], str) and workflow["targetLocale"], (
+                f"{workflow_id}: locale-owned output requires an explicit target locale"
+            )
+            assert "translations" in workflow, (
+                f"{workflow_id}: locale-owned output requires translated source slots"
+            )
         if "importPolicy" in workflow:
             policy = workflow["importPolicy"]
             assert isinstance(policy, dict), f"{workflow_id}: import policy requires an object"
@@ -623,6 +633,16 @@ def main() -> None:
         if "localized" in workflow and workflow["localized"]:
             assert (ROOT / workflow["localized"]).is_file(), (
                 f"{workflow_id}: missing localized workflow snapshot"
+            )
+        if "localizedEndsWithNewline" in workflow:
+            assert workflow["format"] == "formatjs_json", (
+                f"{workflow_id}: source-owned final newline currently applies to JSON output"
+            )
+            assert isinstance(workflow["localizedEndsWithNewline"], bool), (
+                f"{workflow_id}: final-newline ownership requires an explicit boolean"
+            )
+            assert "translations" in workflow and workflow.get("removeUntranslated") is True, (
+                f"{workflow_id}: final-newline ownership requires translated JSON cleanup"
             )
         if "legacyLocalizedOutput" in workflow:
             assert workflow["format"] == "android", (

@@ -1,0 +1,8 @@
+/* Preserve translator description */
+"literal" = "Source marker";
+/* Preserve block-shadow translator description */
+"block_shadow" = "Source block-shadow marker";
+/* Preserve exact marker translator description */
+"exact" = "Source exact marker";
+/* Remove untranslated description */
+"missing" = "Source removed";

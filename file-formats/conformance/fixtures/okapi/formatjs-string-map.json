@@ -1,0 +1,13 @@
+{
+  "filterConfigId": "okf_json@mojito",
+  "units": [
+    {
+      "name": "welcome",
+      "source": "Hello"
+    },
+    {
+      "name": "markup",
+      "source": "Click <link>here</link>"
+    }
+  ]
+}

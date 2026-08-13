@@ -1,0 +1,78 @@
+{
+  "sourceFormat": "android",
+  "canonicalUnits": 15,
+  "legacyUnits": 1,
+  "outcome": "mismatch",
+  "differences": [
+    {
+      "category": "missing_legacy",
+      "id": "forced.bag_0",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "forced.bag_1",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "mixed.bag_0",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "mixed.bag_4",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "mixed.bag_5",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "signals.bag_few",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "signals.bag_many",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "signals.bag_one",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "signals.bag_other",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "signals.bag_two",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "signals.bag_zero",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "words.bag_0",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "words.bag_1",
+      "count": 1
+    },
+    {
+      "category": "missing_legacy",
+      "id": "words.bag_3",
+      "count": 1
+    }
+  ]
+}
