@@ -18,6 +18,9 @@ public final class LocalizationShadowComparator {
   private static final List<String> CATEGORIES =
       List.of("zero", "one", "two", "few", "many", "other");
   private static final Pattern ARGUMENT = Pattern.compile("\\{([\\p{L}\\p{N}\\p{M}\\p{So}_]+)\\}");
+  private static final Pattern ANDROID_PRODUCT = Pattern.compile("@product=[^@\\[]+");
+  private static final Pattern ANDROID_FEATURE_FLAG = Pattern.compile("@flag=[^\\[]+");
+  private static final Pattern ANDROID_ARRAY_INDEX = Pattern.compile("\\[(\\d+)]$");
 
   private LocalizationShadowComparator() {}
 
@@ -135,9 +138,9 @@ public final class LocalizationShadowComparator {
       List<String> usages = usages(metadata);
       if (message.variants() == null) {
         if (LocalizationFileFormat.ANDROID.id().equals(format)) {
-          id = id.replaceFirst("@product=[^@\\[]+", "");
-          id = id.replaceFirst("@flag=[^\\[]+", "");
-          id = id.replaceAll("\\[(\\d+)]$", "_$1");
+          id = ANDROID_PRODUCT.matcher(id).replaceFirst("");
+          id = ANDROID_FEATURE_FLAG.matcher(id).replaceFirst("");
+          id = ANDROID_ARRAY_INDEX.matcher(id).replaceFirst("_$1");
         }
         String source =
             LocalizationFileFormat.GETTEXT_PO.id().equals(format)
