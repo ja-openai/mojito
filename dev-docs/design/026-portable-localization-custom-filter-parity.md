@@ -403,6 +403,15 @@ non-buildable dataset rather than silently weakening Android resource-name
 validation or falling back to Okapi; the remaining existing cases provide the
 meaningful portable regression gate.
 
+Twelve existing, unmodified CLI dataset tests also pass with only the backend
+property enabled: six localized imports and six pulls covering Java properties,
+ordinary CSV, Adobe Magento CSV, Apple `.strings`, configured JSON, and gettext
+plurals. The gettext import fixture includes French, French Canadian, Japanese,
+Russian, and Croatian. Initial portable imports evaluate existing locale-owned
+translation presence once per asset and perform zero current-variant lookups
+for 100 newly imported strings; reimports still retrieve the existing current
+variant, matching the customized Okapi import step.
+
 To run every existing buildable CLI scenario as a green portable-backend gate,
 exclude only the compiler-invalid historical case:
 
