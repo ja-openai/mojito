@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { type ComponentProps } from 'react';
 import type * as ReactRouterDom from 'react-router-dom';
@@ -6,15 +6,21 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as GlossariesApi from '../../api/glossaries';
+import type * as ReviewProjectsApi from '../../api/review-projects';
 import type { ApiReviewProjectDetail, ApiReviewProjectTextUnit } from '../../api/review-projects';
 import type { ApiUserProfile } from '../../api/users';
+import { REVIEW_PROJECT_DETAIL_QUERY_KEY } from '../../hooks/useReviewProjectDetail';
 import { UserContext } from '../../hooks/useUser';
-import type { ReviewProjectMutationControls } from './review-project-mutations';
+import {
+  type ReviewProjectMutationControls,
+  useReviewProjectMutations,
+} from './review-project-mutations';
 import { ReviewProjectPageView } from './ReviewProjectPageView';
 
 const matchGlossaryTermsMock = vi.hoisted(() => vi.fn());
 const fetchPrecomputedAiReviewMock = vi.hoisted(() => vi.fn());
 const requestAiReviewMock = vi.hoisted(() => vi.fn());
+const saveReviewProjectTextUnitDecisionMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../api/ai-review', () => ({
   fetchPrecomputedAiReview: fetchPrecomputedAiReviewMock,
@@ -30,6 +36,14 @@ vi.mock('../../api/glossaries', async (importActual) => {
   return {
     ...actual,
     matchGlossaryTerms: matchGlossaryTermsMock,
+  };
+});
+
+vi.mock('../../api/review-projects', async (importActual) => {
+  const actual = await importActual<typeof ReviewProjectsApi>();
+  return {
+    ...actual,
+    saveReviewProjectTextUnitDecision: saveReviewProjectTextUnitDecisionMock,
   };
 });
 
@@ -80,6 +94,7 @@ beforeEach(() => {
   navigateMock.mockReset();
   matchGlossaryTermsMock.mockReset();
   matchGlossaryTermsMock.mockResolvedValue({ matchedTerms: [] });
+  saveReviewProjectTextUnitDecisionMock.mockReset();
 });
 
 const user: ApiUserProfile = {
@@ -131,6 +146,27 @@ const project: ApiReviewProjectDetail = {
   assignment: null,
   reviewProjectTextUnits: [textUnit],
 };
+
+function buildNextTextUnit(): ApiReviewProjectTextUnit {
+  return {
+    ...textUnit,
+    id: 102,
+    tmTextUnit: {
+      ...textUnit.tmTextUnit!,
+      id: 4,
+      name: 'checkout.cancel',
+      content: 'Cancel payment',
+      comment: 'Checkout cancel copy',
+    },
+    baselineTmTextUnitVariant: {
+      id: 31,
+      content: 'Cancel payment',
+      status: 'REVIEW_NEEDED',
+      includedInLocalizedFile: true,
+      comment: null,
+    },
+  };
+}
 
 function buildMutations(
   overrides: Partial<ReviewProjectMutationControls> = {},
@@ -240,6 +276,203 @@ describe('ReviewProjectPageView', () => {
     fireEvent.keyDown(window, { key: 'f', ctrlKey: true });
 
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('ignores repeated accept-and-advance shortcut events', async () => {
+    const onRequestSaveDecision = vi.fn();
+    renderReviewProjectPageView({
+      mutations: buildMutations({ onRequestSaveDecision }),
+    });
+
+    await screen.findByRole('textbox', { name: 'Translation' });
+    fireEvent.keyDown(window, {
+      key: 'Enter',
+      ctrlKey: true,
+      shiftKey: true,
+      repeat: true,
+    });
+
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
+  });
+
+  it('still accepts a deliberate accept-and-advance shortcut', async () => {
+    const onRequestSaveDecision = vi.fn();
+    renderReviewProjectPageView({
+      mutations: buildMutations({ onRequestSaveDecision }),
+    });
+
+    await screen.findByRole('textbox', { name: 'Translation' });
+    fireEvent.keyDown(window, {
+      key: 'Enter',
+      ctrlKey: true,
+      shiftKey: true,
+      repeat: false,
+    });
+
+    expect(onRequestSaveDecision).toHaveBeenCalledWith(
+      expect.objectContaining({
+        textUnitId: textUnit.id,
+        target: textUnit.baselineTmTextUnitVariant?.content,
+        decisionState: 'DECIDED',
+      }),
+    );
+  });
+
+  it('mounts a fresh translation editor when the selected text unit changes', async () => {
+    const nextTextUnit = buildNextTextUnit();
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+    const baseProps: ReviewProjectPageViewProps = {
+      projectId: project.id,
+      project: {
+        ...project,
+        reviewProjectTextUnits: [textUnit, nextTextUnit],
+      },
+      mutations: buildMutations(),
+      selectedTextUnitQueryId: textUnit.tmTextUnit!.id,
+      onSelectedTextUnitIdChange: noop,
+      openRequestDetailsQuery: false,
+      requestDetailsSource: null,
+      onRequestDetailsQueryHandled: noop,
+      onRequestDetailsFlowFinished: noop,
+    };
+
+    const { rerender } = render(renderReviewProjectPageViewNode(baseProps, queryClient));
+    const originalEditor = await screen.findByRole('textbox', { name: 'Translation' });
+
+    rerender(
+      renderReviewProjectPageViewNode(
+        {
+          ...baseProps,
+          selectedTextUnitQueryId: nextTextUnit.tmTextUnit!.id,
+        },
+        queryClient,
+      ),
+    );
+
+    const nextEditor = await screen.findByRole('textbox', { name: 'Translation' });
+    expect(nextEditor).not.toBe(originalEditor);
+    expect(nextEditor).toHaveTextContent('Cancel payment');
+  });
+
+  it('keeps arrow-key row navigation available after accepting and advancing', async () => {
+    const nextTextUnit = buildNextTextUnit();
+
+    renderReviewProjectPageView({
+      project: {
+        ...project,
+        reviewProjectTextUnits: [textUnit, nextTextUnit],
+      },
+      mutations: buildMutations({ onRequestSaveDecision: vi.fn() }),
+    });
+
+    fireEvent.keyDown(window, {
+      key: 'Enter',
+      ctrlKey: true,
+      shiftKey: true,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveTextContent(
+        'Cancel payment',
+      );
+    });
+
+    const advancedEditor = screen.getByRole('textbox', { name: 'Translation' });
+    expect(advancedEditor).toHaveFocus();
+    fireEvent.keyDown(advancedEditor, { key: 'Escape' });
+    expect(advancedEditor).not.toHaveFocus();
+
+    fireEvent.keyDown(window, { key: 'ArrowUp' });
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveTextContent(
+        'Pay price now',
+      );
+    });
+    expect(screen.getByRole('textbox', { name: 'Translation' })).not.toHaveFocus();
+
+    fireEvent.keyDown(document.activeElement ?? window, { key: 'ArrowDown' });
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveTextContent(
+        'Cancel payment',
+      );
+    });
+  });
+
+  it('shows the accepted indicator immediately after an accept-and-advance save', async () => {
+    const nextTextUnit = buildNextTextUnit();
+    const liveProject = {
+      ...project,
+      reviewProjectTextUnits: [textUnit, nextTextUnit],
+    };
+    const decidedTextUnit: ApiReviewProjectTextUnit = {
+      ...textUnit,
+      reviewProjectTextUnitDecision: {
+        decisionState: 'DECIDED',
+        notes: null,
+        decisionTmTextUnitVariant: textUnit.baselineTmTextUnitVariant,
+      },
+    };
+    saveReviewProjectTextUnitDecisionMock.mockResolvedValue(decidedTextUnit);
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+    queryClient.setQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id], liveProject);
+
+    function LiveReviewProjectPageView() {
+      const { data: currentProject } = useQuery({
+        queryKey: [...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id],
+        queryFn: () => Promise.resolve(liveProject),
+        staleTime: Infinity,
+      });
+      const mutations = useReviewProjectMutations(project.id);
+
+      return (
+        <ReviewProjectPageView
+          projectId={project.id}
+          project={currentProject ?? null}
+          mutations={mutations}
+          selectedTextUnitQueryId={null}
+          onSelectedTextUnitIdChange={noop}
+          openRequestDetailsQuery={false}
+          requestDetailsSource={null}
+          onRequestDetailsQueryHandled={noop}
+          onRequestDetailsFlowFinished={noop}
+        />
+      );
+    }
+
+    const { container } = render(
+      <QueryClientProvider client={queryClient}>
+        <UserContext.Provider value={user}>
+          <MemoryRouter>
+            <LiveReviewProjectPageView />
+          </MemoryRouter>
+        </UserContext.Provider>
+      </QueryClientProvider>,
+    );
+
+    expect(container.querySelector('.review-project-row__decided-dot')).toBeNull();
+
+    fireEvent.keyDown(window, {
+      key: 'Enter',
+      ctrlKey: true,
+      shiftKey: true,
+    });
+
+    await waitFor(() => {
+      expect(container.querySelector('.review-project-row__decided-dot')).not.toBeNull();
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveTextContent(
+        'Cancel payment',
+      );
+    });
   });
 
   it('delays the visible saving indicator for text-unit saves', async () => {

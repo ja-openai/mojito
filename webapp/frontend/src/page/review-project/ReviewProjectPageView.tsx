@@ -3005,7 +3005,7 @@ function DetailPane({
         return;
       }
 
-      if (event.key !== 'Enter' || (!event.metaKey && !event.ctrlKey)) {
+      if (event.key !== 'Enter' || (!event.metaKey && !event.ctrlKey) || event.repeat) {
         return;
       }
       const focusedEditor = getFocusedDetailEditor();
@@ -3661,6 +3661,7 @@ function DetailPane({
                   ) : null}
                 </div>
                 <TranslationTextEditor
+                  key={textUnit.id}
                   assisted={isVisibleTextEditorEnabled}
                   className={`review-project-detail__input review-project-detail__input--autosize review-project-detail__input--translation${
                     isRejected ? ' review-project-detail__input--rejected' : ''
