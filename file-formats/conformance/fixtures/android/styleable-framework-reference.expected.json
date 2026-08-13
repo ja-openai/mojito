@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "framework_routes[1]": {
+      "defaultMessage": "A framework-aware crossing",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "?attr/local_signal"
+        },
+        "androidAttributeDependencies": [
+          {
+            "format": "string",
+            "name": "local_signal",
+            "weak": true
+          }
+        ],
+        "androidStyleableDependencies": [
+          {
+            "attributes": [
+              {
+                "name": "android:label"
+              },
+              {
+                "format": "string",
+                "name": "local_signal"
+              }
+            ],
+            "name": "FrameworkCompass"
+          }
+        ],
+        "arrayIndex": 1,
+        "arrayName": "framework_routes"
+      }
+    }
+  }
+}

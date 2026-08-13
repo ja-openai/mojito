@@ -1,0 +1,95 @@
+{
+  "arrays": {
+    "conventional_routes": [
+      "%1$s #nord",
+      "%1$s / %1$s ##sud"
+    ],
+    "hash_routes": [
+      "#voie nord",
+      "Quai #voie sud",
+      "Quai #voie est"
+    ],
+    "mixed_hashes": [
+      "#ffaabbcc",
+      "#def",
+      "#def",
+      "Quai ##4",
+      "Quai #5"
+    ]
+  },
+  "arrayPrimitiveValues": {
+    "mixed_hashes": {
+      "0": "#ffaabbcc"
+    }
+  },
+  "plurals": {
+    "conventional_examples": {
+      "one": "%1$d/%1$d #est",
+      "other": "%1$d/%1$d ##est"
+    },
+    "conventional_signals": {
+      "one": "%1$d #pont",
+      "other": "%1$d / %1$d ##ponts"
+    },
+    "empty_examples": {
+      "one": "%1$d exemple vide #ouest",
+      "other": "%1$d exemple omis ##ouest"
+    },
+    "escaped_signals": {
+      "one": "%1$d voie #ouest",
+      "other": "%1$d voies #ouest"
+    },
+    "optional_examples": {
+      "one": "%1$d exemple absent #nord",
+      "other": "%1$d exemple fourni ##nord"
+    },
+    "product_signals": {
+      "one": "%1$d tablette #signal",
+      "other": "%1$d tablette ##signaux"
+    },
+    "protected_signals": {
+      "one": "%1$d voie protégée #nord",
+      "other": "%1$d voies protégées ##nord"
+    },
+    "raw_signals": {
+      "one": "%1$d voie #nord",
+      "other": "%1$d voies ##nord"
+    },
+    "repeated_examples": {
+      "one": "%1$d/%1$d exemples répétés #est",
+      "other": "%1$d/%1$d exemples répétés ##est"
+    },
+    "styled_signals": {
+      "one": "%1$d #bleu voie",
+      "other": "%1$d ##bleu voies"
+    }
+  },
+  "strings": {
+    "entity_hash": "Quai #9",
+    "escaped_color": "#def",
+    "escaped_hash": "Quai #8",
+    "mixed_conventional": "%1$s / %1$s / %1$s #signal traduit",
+    "protected_conventional": "%1$s #port",
+    "protected_private": "Keep #protected",
+    "quoted_color": "#def",
+    "scalar_hash": "Quai #7",
+    "strict_color": "#def",
+    "styled_conventional": "%1$s / %1$s",
+    "unicode_color": "#def",
+    "unicode_hash": "Quai #10"
+  },
+  "styledSpans": {
+    "strings": {
+      "styled_conventional": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "lane": "#signal"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,6 @@
+<resources>
+  <string-array name="routes">
+    <item>North channel</item>
+    <lane>Never expose this invalid lane</lane>
+  </string-array>
+</resources>

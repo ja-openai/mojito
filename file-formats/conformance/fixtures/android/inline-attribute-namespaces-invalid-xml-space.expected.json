@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "native_signal": {
+      "defaultMessage": "north east"
+    }
+  }
+}

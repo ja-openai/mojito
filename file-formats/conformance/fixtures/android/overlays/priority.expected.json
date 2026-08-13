@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "signal": {
+      "defaultMessage": "Variant signal",
+      "metadata": {
+        "androidResourcePath": "src/demoDebug/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "build_variant"
+      }
+    },
+    "library_only": {
+      "defaultMessage": "Library lantern",
+      "metadata": {
+        "androidResourcePath": "libraries/lantern/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "library"
+      }
+    },
+    "directions[0]": {
+      "defaultMessage": "Main east",
+      "metadata": {
+        "arrayIndex": 0,
+        "arrayName": "directions",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "main"
+      }
+    },
+    "alerts": {
+      "defaultMessage": "{count, plural, other {Main bells}}",
+      "variants": {
+        "other": "Main bells"
+      },
+      "metadata": {
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "main"
+      }
+    },
+    "main_only": {
+      "defaultMessage": "Main lantern",
+      "metadata": {
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "main"
+      }
+    },
+    "flavor_only": {
+      "defaultMessage": "Flavor lantern",
+      "metadata": {
+        "androidResourcePath": "src/demo/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "product_flavor"
+      }
+    },
+    "build_only": {
+      "defaultMessage": "Build lantern",
+      "metadata": {
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "build_type"
+      }
+    },
+    "variant_only": {
+      "defaultMessage": "Variant lantern",
+      "metadata": {
+        "androidResourcePath": "src/demoDebug/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "build_variant"
+      }
+    }
+  }
+}

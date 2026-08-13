@@ -1,0 +1,23 @@
+{
+  "messages": {
+    "harbor_route": {
+      "defaultMessage": "A tablet harbor route"
+    },
+    "harbor_route@flag=neutral.flags.first": {
+      "defaultMessage": "A conditional default harbor route",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.first",
+        "androidFeatureFlagMode": "read_write"
+      }
+    },
+    "harbor_route@flag=neutral.flags.second": {
+      "defaultMessage": "A conditional tablet harbor route",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.second",
+        "androidFeatureFlagMode": "read_write"
+      }
+    }
+  },
+  "schemaVersion": 1,
+  "sourceFormat": "android"
+}

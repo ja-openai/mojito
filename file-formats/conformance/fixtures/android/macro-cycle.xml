@@ -1,0 +1,5 @@
+<resources>
+    <macro name="first_phrase">@macro/second_phrase</macro>
+    <macro name="second_phrase">@macro/first_phrase</macro>
+    <string name="unsafe_route">@macro/first_phrase</string>
+</resources>

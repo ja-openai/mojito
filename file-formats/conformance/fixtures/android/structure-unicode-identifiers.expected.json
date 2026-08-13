@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "_route": { "defaultMessage": "Underscored channel" },
+    "Éclat": { "defaultMessage": "Accented coastal light" },
+    "écho": { "defaultMessage": "Combining coastal echo" },
+    "route·north": { "defaultMessage": "Middle-dot coastal route" },
+    "generic·route": {
+      "defaultMessage": "Generic encoded route",
+      "metadata": { "androidGenericString": true }
+    },
+    "渡り.route-2": { "defaultMessage": "Crossing channel" }
+  }
+}

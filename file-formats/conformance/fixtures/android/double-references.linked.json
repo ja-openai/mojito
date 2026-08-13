@@ -1,0 +1,49 @@
+{
+  "arrays": {
+    "mixed": [
+      "@string/anchor",
+      "Visible mixed route"
+    ],
+    "routes": [
+      "@string/anchor",
+      "@string/anchor",
+      "@@@string/anchor",
+      "@@string/anchor",
+      "@@string/anchor",
+      "A neutral harbor",
+      "Actual route"
+    ]
+  },
+  "arrayReferences": {
+    "mixed": {
+      "0": "@string/anchor"
+    },
+    "routes": {
+      "0": "@string/anchor",
+      "1": "@string/anchor"
+    }
+  },
+  "plurals": {
+    "signals": {
+      "two": "A neutral harbor",
+      "other": "%1$d visible signals"
+    }
+  },
+  "pluralReferences": {
+    "signals": {
+      "one": "@string/anchor"
+    }
+  },
+  "strings": {
+    "anchor": "Quiet harbor",
+    "create_literal": "@@+id/marker",
+    "double_chain": "A neutral harbor",
+    "double_macro": "A neutral harbor",
+    "escaped": "@@string/anchor",
+    "null_literal": "@@null",
+    "quoted": "@@string/anchor",
+    "single_macro": "A neutral harbor",
+    "triple": "@@@string/anchor",
+    "unknown": "@@unknown/anchor"
+  }
+}

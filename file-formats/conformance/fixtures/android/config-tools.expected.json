@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "locale": "it-IT",
+  "messages": {
+    "route": {
+      "defaultMessage": "Waypoint",
+      "metadata": {
+        "androidResourcePath": "res/values-land-night-v21/strings.xml",
+        "androidResourceQualifiers": ["land", "night", "v21"]
+      }
+    }
+  }
+}

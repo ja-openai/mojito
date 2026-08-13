@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "package_route": {
+      "defaultMessage": "A brighter harbor crossing",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "private_route": {
+      "defaultMessage": "A brighter harbor crossing",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "shared_routes[0]": {
+      "defaultMessage": "A brighter harbor crossing",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 0,
+        "arrayName": "shared_routes"
+      }
+    },
+    "shared_routes[1]": {
+      "defaultMessage": "A brighter harbor crossing",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 1,
+        "arrayName": "shared_routes"
+      }
+    },
+    "upper_route": {
+      "defaultMessage": "A brighter harbor crossing",
+      "metadata": {
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "arrays": {
+    "lanes": [
+      "Visible upper harbor lane"
+    ]
+  },
+  "plurals": {
+    "signals": {
+      "one": "One upper harbor signal",
+      "other": "Several upper harbor signals"
+    }
+  },
+  "strings": {
+    "retained": "Main retained harbor route",
+    "route": "Upper path-protected harbor route"
+  }
+}

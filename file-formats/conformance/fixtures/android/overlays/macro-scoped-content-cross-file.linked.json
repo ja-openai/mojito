@@ -1,0 +1,17 @@
+{
+  "arrays": {
+    "shared_routes": [
+      "@string/anchor",
+      "A visible overlay lane"
+    ]
+  },
+  "arrayReferences": {
+    "shared_routes": {
+      "0": "@string/anchor"
+    }
+  },
+  "strings": {
+    "anchor": "An overlay harbor marker",
+    "shared_signal": "Overlay %1$s"
+  }
+}

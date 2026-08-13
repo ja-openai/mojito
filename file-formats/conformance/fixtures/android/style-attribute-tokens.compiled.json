@@ -1,0 +1,260 @@
+{
+  "arrays": {
+    "attribute_routes": [
+      "North",
+      "South%nopen"
+    ]
+  },
+  "styledSpans": {
+    "arrays": {
+      "attribute_routes": {
+        "0": [
+          {
+            "name": "annotation",
+            "start": 0,
+            "end": 4,
+            "attributes": {
+              "route": "%n"
+            }
+          }
+        ],
+        "1": [
+          {
+            "name": "annotation",
+            "start": 0,
+            "end": 10,
+            "attributes": {
+              "route": "%%n"
+            }
+          }
+        ]
+      }
+    },
+    "plurals": {
+      "attribute_signals": {
+        "one": [
+          {
+            "name": "annotation",
+            "start": 0,
+            "end": 15,
+            "attributes": {
+              "route": "%n"
+            }
+          }
+        ],
+        "other": [
+          {
+            "name": "annotation",
+            "start": 0,
+            "end": 17,
+            "attributes": {
+              "route": "%%n"
+            }
+          }
+        ]
+      }
+    },
+    "strings": {
+      "attribute_and_visible_newlines": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 15,
+          "attributes": {
+            "route": "north%nwest"
+          }
+        }
+      ],
+      "attribute_escaped_percent_n": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north%%nwest"
+          }
+        }
+      ],
+      "attribute_literal_backslash": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north\\nwest"
+          }
+        }
+      ],
+      "attribute_malformed_percent": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "%_"
+          }
+        }
+      ],
+      "attribute_only_positional_token": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "%1$s"
+          }
+        }
+      ],
+      "attribute_percent_alignment": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 16,
+          "attributes": {
+            "route": "%n%%"
+          }
+        }
+      ],
+      "attribute_positional_token": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 8,
+          "attributes": {
+            "route": "%1$s"
+          }
+        }
+      ],
+      "attribute_printf_newline": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north%nwest"
+          }
+        }
+      ],
+      "attribute_solitary_percent": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north%west"
+          }
+        }
+      ],
+      "attribute_supplementary": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 2,
+          "attributes": {
+            "route": "🧭%n東"
+          }
+        }
+      ],
+      "attribute_xml_carriage": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north\rwest"
+          }
+        }
+      ],
+      "attribute_xml_newline": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north\nwest"
+          }
+        }
+      ],
+      "attribute_xml_tab": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "north\twest"
+          }
+        }
+      ],
+      "font_attribute_newline": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "%n"
+          }
+        }
+      ],
+      "nested_attribute_newline": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 4,
+          "attributes": {
+            "route": "%n"
+          }
+        },
+        {
+          "name": "b",
+          "start": 0,
+          "end": 4
+        }
+      ],
+      "strict_attribute": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 9,
+          "attributes": {
+            "route": "%n"
+          }
+        }
+      ],
+      "unformatted_attribute": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 9,
+          "attributes": {
+            "route": "%n"
+          }
+        }
+      ]
+    }
+  },
+  "plurals": {
+    "attribute_signals": {
+      "one": "%1$d signal\nnear",
+      "other": "%1$d signals%nnear"
+    }
+  },
+  "strings": {
+    "attribute_and_visible_newlines": "Pier\ninner%nopen",
+    "attribute_escaped_percent_n": "Pier",
+    "attribute_literal_backslash": "Pier",
+    "attribute_malformed_percent": "Pier",
+    "attribute_only_positional_token": "Pier",
+    "attribute_percent_alignment": "Berth %_ and 80%%",
+    "attribute_positional_token": "Pier %1$s",
+    "attribute_printf_newline": "Pier",
+    "attribute_solitary_percent": "Pier",
+    "attribute_supplementary": "北🙂",
+    "attribute_xml_carriage": "Pier",
+    "attribute_xml_newline": "Pier",
+    "attribute_xml_tab": "Pier",
+    "font_attribute_newline": "Pier",
+    "nested_attribute_newline": "North",
+    "strict_attribute": "%1$s ready",
+    "unformatted_attribute": "Pier%nopen"
+  }
+}

@@ -1,0 +1,5 @@
+<resources>
+  <string name="anchor">Quiet harbor</string>
+  <string name="em_padding">&#x2003;@string/anchor&#x2003;</string>
+  <string name="nbsp_padding">&#x00A0;@string/anchor&#x00A0;</string>
+</resources>

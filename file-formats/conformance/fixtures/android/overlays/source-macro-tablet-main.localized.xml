@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
+    xmlns:lane="http://schemas.android.com/apk/res-auto">
+  <!-- Uses resolve definitions owned by other original resource files. -->
+  <string name="macro_signal">"Un port lumineux"</string>
+  <string name="macro_styled">"Port "<b tone="bright">"lumineux"</b></string>
+  <string name="macro_protected">"Pilote "<xliff:g id="pilot" example="D&amp;7">%1$s</xliff:g></string>
+  <string name="macro_qualified">"Port qualifié"</string>
+  <string name="macro_private">"Voie privée"</string>
+  <string name="macro_scoped">"Voie d'alias"</string>
+  <string name="macro_chain">"Port transitif"</string>
+  <string-array name="macro_routes">
+    <item>"Voie éloignée"</item>
+    <item>"Voie supérieure"</item>
+  </string-array>
+  <plurals name="macro_lights">
+    <item quantity="one">"%1$d lanterne proche"</item>
+    <item quantity="other">"%1$d lanternes proches"</item>
+  </plurals>
+  <string name="macro_product" product="default">@macro/harbor_phrase</string>
+  <string name="macro_product" product="tablet">"Traversée tablette choisie"</string>
+</resources>

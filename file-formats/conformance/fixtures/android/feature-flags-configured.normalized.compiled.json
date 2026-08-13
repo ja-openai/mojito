@@ -1,0 +1,51 @@
+{
+  "arrays": {
+    "bag_routes": [
+      "Visible bag passage",
+      "Final bag passage"
+    ],
+    "mixed_routes": [
+      "17",
+      "Visible typed passage",
+      "@string/anchor",
+      "31",
+      "Final typed passage"
+    ],
+    "routes": [
+      "Always first passage",
+      "Enabled passage",
+      "Negated passage",
+      "@string/anchor",
+      "@string/anchor",
+      "Final open passage"
+    ]
+  },
+  "arrayPrimitiveValues": {
+    "mixed_routes": {
+      "0": "17",
+      "3": "31"
+    }
+  },
+  "arrayReferences": {
+    "mixed_routes": {
+      "2": "@string/anchor"
+    },
+    "routes": {
+      "3": "@string/anchor",
+      "4": "@string/anchor"
+    }
+  },
+  "plurals": {
+    "signals_enabled": {
+      "one": "One enabled beacon",
+      "other": "Several enabled beacons"
+    }
+  },
+  "strings": {
+    "anchor": "Quiet harbor anchor",
+    "enabled": "Enabled harbor route",
+    "exclusive": "Enabled exclusive lane",
+    "generic_enabled": "Enabled generic signal",
+    "negative": "Negated harbor route"
+  }
+}

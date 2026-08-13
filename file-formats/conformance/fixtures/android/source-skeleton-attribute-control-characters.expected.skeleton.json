@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:code=\"urn:oasis:names:tc:xliff:document:1.2\">\n  <!-- Preserve exact attribute entity spelling and protected examples. -->\n  <string name='scalar' description=\"North&#9;deck&#10;line&#13;end\">Visible harbor</string>\n  <item description='Generic&#13;&#10;deck' type=\"string\" name='generic'>Visible generic</item>\n  <string name=\"protected\">Captain <code:g example='A&#9;B&#10;C&#13;D' id=\"captain\">%1$s</code:g></string>\n  <string name=\"styled\"><annotation route=\"north&#9;middle&#10;end&#13;finish\">Visible style</annotation></string>\n  <string-array name=\"routes\">\n    <item description='Route&#9;deck'>Visible route</item>\n    <item>Guide <code:g id='navigator' example=\"P&#13;&#10;7\">%1$s</code:g></item>\n  </string-array>\n  <plurals description=\"Count&#9;lights&#10;visible\" name=\"signals\">\n    <item quantity=\"one\">One <code:g example='M&#9;1&#10;2&#13;3' id=\"marker\">%1$s</code:g></item>\n    <item quantity=\"other\">%1$d visible lights</item>\n  </plurals>\n  <string description=\"Internal&#9;note\" name=\"untouched\" translatable=\"false\">Protected original</string>\n</resources>\n",
+  "slots": [
+    {
+      "id": "scalar",
+      "start": 247,
+      "end": 261
+    },
+    {
+      "id": "generic",
+      "start": 344,
+      "end": 359
+    },
+    {
+      "id": "protected",
+      "start": 394,
+      "end": 465
+    },
+    {
+      "id": "styled",
+      "start": 499,
+      "end": 580
+    },
+    {
+      "id": "routes[0]",
+      "start": 659,
+      "end": 672
+    },
+    {
+      "id": "routes[1]",
+      "start": 690,
+      "end": 755
+    },
+    {
+      "id": "signals",
+      "variant": "one",
+      "start": 875,
+      "end": 941
+    },
+    {
+      "id": "signals",
+      "variant": "other",
+      "start": 976,
+      "end": 995
+    }
+  ]
+}

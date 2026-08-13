@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<resources>
+  <string name="signal">Library default</string>
+  <string name="signal" product=" ">Library selected</string>
+  <string name="anchor">Library anchor</string>
+</resources>

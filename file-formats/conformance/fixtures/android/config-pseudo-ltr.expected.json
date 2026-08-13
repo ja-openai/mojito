@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "locale": "en-XA",
+  "messages": {
+    "route": {
+      "defaultMessage": "Waypoint",
+      "metadata": {
+        "androidResourcePath": "res/values-en-rXA/strings.xml",
+        "androidResourceQualifiers": ["en", "rXA"]
+      }
+    }
+  }
+}

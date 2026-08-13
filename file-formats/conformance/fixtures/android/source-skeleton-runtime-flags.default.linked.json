@@ -1,0 +1,63 @@
+{
+  "arrayReferences": {
+    "gate.lanes": {
+      "1": "@string/anchor"
+    }
+  },
+  "arrays": {
+    "gate.lanes": [
+      "Open north lane",
+      "@string/anchor"
+    ]
+  },
+  "conditionalArrays": {
+    "gate.lanes": {
+      "condition": "neutral.flags.second",
+      "values": [
+        "Mutable <north> & safe",
+        "@0x7f030000"
+      ]
+    }
+  },
+  "conditionalPlurals": {
+    "gate.count": {
+      "condition": "neutral.flags.first",
+      "variants": {
+        "one": "",
+        "other": "%1$d mutable beacons"
+      }
+    }
+  },
+  "conditionalStrings": {
+    "gate.route": [
+      {
+        "condition": "neutral.flags.first",
+        "value": "First mutable passage"
+      },
+      {
+        "condition": "!neutral.flags.first",
+        "value": "Inverse <quiet> & safe"
+      },
+      {
+        "condition": "neutral.flags.second",
+        "value": "Tablet mutable passage"
+      }
+    ],
+    "gate.signal": {
+      "condition": "neutral.flags.first",
+      "value": ""
+    }
+  },
+  "plurals": {
+    "gate.count": {
+      "one": "%1$d open beacon",
+      "other": "%1$d open beacons"
+    }
+  },
+  "strings": {
+    "anchor": "Open harbor anchor",
+    "gate.private": "Protected private signal",
+    "gate.route": "Open harbor passage",
+    "gate.signal": "Open harbor signal"
+  }
+}

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <attr name="shared_signal" format="string" />
+  <bag type="declare-styleable" name="HarborBeacon">
+    <attr name="route_signal" format="reference|string" />
+    <attr name="beam_direction" format="flags">
+      <flag name="east" value="1" />
+      <flag name="west" value="2" />
+    </attr>
+  </bag>
+  <declare-styleable name="HarborCompass">
+    <attr name="route_signal" format="reference|string" />
+    <attr name="depth_scale" format="integer" min="-3" max="32" />
+    <attr name="passage_mode" format="enum">
+      <enum name="bright" value="2" />
+      <enum name="quiet" value="0" />
+    </attr>
+    <attr name="shared_signal" />
+    <attr name="route_signal" format="reference|string" />
+  </declare-styleable>
+  <string-array name="harbor_routes">
+    <item>?attr/route_signal</item>
+    <item>?attr/depth_scale</item>
+    <item>?attr/passage_mode</item>
+    <item>?attr/beam_direction</item>
+    <item>?attr/shared_signal</item>
+    <item>"A charted styleable passage"</item>
+  </string-array>
+  <plurals name="harbor_signals">
+    <item quantity="one">?attr/passage_mode</item>
+    <item quantity="other">"%d visible styleable signals"</item>
+  </plurals>
+</resources>

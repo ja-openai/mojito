@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<resources xmlns:f="urn:neutral:foreign-protected"
+    xmlns:x="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="visible">Visible northern pier</string>
+  <string name="protected_scalar" translatable="false">"North <f:veil>it's</f:veil> coast"</string>
+  <item name="protected_generic" type="string" format="string" translatable="false">"East <x:note>it's</x:note> inlet"</item>
+  <string-array name="protected_routes" translatable="false">
+    <item>"West <f:g>it's</f:g> passage"</item>
+    <item>"South <x:note>it's</x:note> bay"</item>
+    <item>"Near <f:veil><x:g id="unsafe id">it's</x:g></f:veil> shore"</item>
+    <item>"Far <x:g id="unsafe id"><f:veil>it's</f:veil></x:g> lane"</item>
+    <item>"Old <f:first>it's</f:first><f:second> bay's</f:second> harbor"</item>
+    <item>"Clear <f:veil><b>quiet</b></f:veil> passage"</item>
+  </string-array>
+  <bag type="string-array" name="protected_bag_routes" translatable="false">
+    <item>"Inner <x:note>it's</x:note> route"</item>
+    <item>"Outer <f:veil>it's</f:veil> route"</item>
+  </bag>
+  <plurals name="protected_counts" translatable="false">
+    <item quantity="one">"One <f:veil>beacon's</f:veil> signal"</item>
+    <item quantity="other">"Many <x:note>beacon's</x:note> signals"</item>
+  </plurals>
+  <bag type="plurals" name="protected_bag_counts" translatable="false">
+    <item quantity="other">"Two <f:veil>beacon's</f:veil> routes"</item>
+  </bag>
+</resources>

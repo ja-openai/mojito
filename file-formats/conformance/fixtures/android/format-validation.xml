@@ -1,0 +1,15 @@
+<resources>
+  <string name="styled"><b>%s</b> then %d</string>
+  <string name="styled_relative"><i>%s</i> then %&lt;s</string>
+  <string name="literal_pair" formatted=" FALSE ">%s then %d</string>
+  <string name="hidden" translatable=" FALSE " formatted=" FALSE ">%s then %d</string>
+  <item type="string" name="generic" formatted="not-a-boolean" translatable="not-a-boolean">%s then %d</item>
+  <string-array name="routes" translatable=" TRUE ">
+    <item formatted="false">%s then %d</item>
+    <item formatted="not-a-boolean">Next %s then %d</item>
+  </string-array>
+  <plurals name="signals" formatted="not-a-boolean" translatable="not-a-boolean">
+    <item quantity="one">%s then %d</item>
+    <item quantity="other">%s then %d</item>
+  </plurals>
+</resources>

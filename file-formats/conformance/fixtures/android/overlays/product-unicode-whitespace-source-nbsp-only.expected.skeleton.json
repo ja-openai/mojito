@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "sources": [
+    {
+      "sourceSet": "library",
+      "resourcePath": "src/library/res/values/strings.xml",
+      "skeleton": {
+        "schemaVersion": 1,
+        "sourceFormat": "android",
+        "encoding": "ISO-8859-1",
+        "source": "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n<resources>\n  <string name=\"signal\">Library default</string>\n  <string name=\"signal\" product=\" \">Library selected</string>\n  <string name=\"anchor\">Library anchor</string>\n</resources>\n",
+        "androidResourcePath": "src/library/res/values/strings.xml",
+        "slots": []
+      }
+    },
+    {
+      "sourceSet": "main",
+      "resourcePath": "src/main/res/values/strings.xml",
+      "skeleton": {
+        "schemaVersion": 1,
+        "sourceFormat": "android",
+        "encoding": "UTF-16LE",
+        "source": "<?xml version=\"1.0\" encoding=\"UTF-16LE\"?>\n<resources>\n  <string name=\"signal\" product=\" \">Main selected</string>\n  <string name=\"anchor\">Main anchor</string>\n</resources>\n",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "slots": [
+          {
+            "id": "signal@product= ",
+            "start": 180,
+            "end": 206
+          },
+          {
+            "id": "anchor",
+            "start": 274,
+            "end": 296
+          }
+        ]
+      }
+    }
+  ],
+  "androidSelectedProducts": [
+    " "
+  ],
+  "androidRuntimeSlotOwners": {
+    "anchor": "anchor",
+    "signal": "signal@product= "
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "arrays": {
+    "harbor_lanes": [
+      "A fallback harbor lane"
+    ]
+  },
+  "conditionalArrays": {
+    "harbor_lanes": [
+      {
+        "condition": "neutral.flags.first",
+        "values": [
+          "A first conditional harbor lane"
+        ]
+      },
+      {
+        "condition": "neutral.flags.second",
+        "values": [
+          "A second conditional harbor lane"
+        ]
+      }
+    ]
+  },
+  "conditionalPlurals": {
+    "harbor_signals": [
+      {
+        "condition": "neutral.flags.first",
+        "variants": {
+          "one": "One first conditional signal",
+          "other": "Several first conditional signals"
+        }
+      },
+      {
+        "condition": "neutral.flags.second",
+        "variants": {
+          "one": "One second conditional signal",
+          "other": "Several second conditional signals"
+        }
+      }
+    ]
+  },
+  "conditionalStrings": {
+    "harbor_route": [
+      {
+        "condition": "neutral.flags.first",
+        "value": "A first conditional harbor route"
+      },
+      {
+        "condition": "neutral.flags.second",
+        "value": "A second conditional harbor route"
+      }
+    ]
+  },
+  "plurals": {
+    "harbor_signals": {
+      "one": "One fallback signal",
+      "other": "Several fallback signals"
+    }
+  },
+  "strings": {
+    "harbor_route": "A fallback harbor route"
+  }
+}

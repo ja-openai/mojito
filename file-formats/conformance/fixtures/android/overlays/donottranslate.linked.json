@@ -1,0 +1,23 @@
+{
+  "arrays": {
+    "private.routes": [
+      "Private overriding route",
+      "17"
+    ]
+  },
+  "arrayPrimitiveValues": {
+    "private.routes": {
+      "1": "17"
+    }
+  },
+  "plurals": {
+    "private.signals": {
+      "one": "One private overriding signal",
+      "other": "Several private overriding signals"
+    }
+  },
+  "strings": {
+    "private.anchor": "Private overriding anchor",
+    "retained.anchor": "Visible unaffected anchor"
+  }
+}

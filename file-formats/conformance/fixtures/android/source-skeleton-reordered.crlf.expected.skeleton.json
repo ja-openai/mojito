@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\"?>\r\n<resources xmlns:code=\"urn:oasis:names:tc:xliff:document:1.2\"\r\n           xmlns:hint=\"http://schemas.android.com/tools\"\r\n           hint:locale=\"fr_CA\">\r\n  <!-- Lexical attributes, aliases, quote styles, and nontranslatable values never move. -->\r\n  <string name=\"private_route\" translatable=\"false\">Protected original channel</string>\r\n\r\n  <string name=\"styled_route\">Before <b tone='north' marker=\"N\">north</b> beside <i shade=\"east\">east</i>.</string>\r\n  <string name=\"nested_route\"><b class='outer'><u lane=\"inner\">center</u></b> versus <i mood='calm'>outer</i></string>\r\n  <string name=\"protected_route\">Pilot <code:g example='P-7' id=\"pilot\">%1$s</code:g> meets radar <code:g id='radar' example=\"R-2\">%2$s</code:g></string>\r\n  <string name=\"mixed_route\"><b class='pilot'>Lead <code:g example=\"P-7\" id='pilot'>%1$s</code:g></b> near <i class=\"radar\">Scan <code:g id=\"radar\" example='R-2'>%2$s</code:g></i></string>\r\n  <string name=\"repeated_style\"><b lane='north'>north</b> / <b lane=\"south\">south</b></string>\r\n\r\n  <string-array name=\"routes\">\r\n    <item>First <b path='one'>north</b> after <i path=\"two\">south</i></item>\r\n    <item>Captain <code:g id='captain' example=\"C-3\">%1$s</code:g> beside <code:g example='D-4' id=\"deck\">%2$s</code:g></item>\r\n  </string-array>\r\n\r\n  <plurals name=\"signals\">\r\n    <item quantity=\"one\"><b tone='first'>%1$d north</b> then <i tone=\"second\">south</i></item>\r\n    <item quantity=\"other\"><b tone=\"many\">%1$d north</b> then <i tone='far'>south</i></item>\r\n  </plurals>\r\n</resources>\r\n",
+  "slots": [
+    {
+      "id": "styled_route",
+      "start": 392,
+      "end": 468
+    },
+    {
+      "id": "nested_route",
+      "start": 509,
+      "end": 588
+    },
+    {
+      "id": "protected_route",
+      "start": 632,
+      "end": 743
+    },
+    {
+      "id": "mixed_route",
+      "start": 783,
+      "end": 933
+    },
+    {
+      "id": "repeated_style",
+      "start": 976,
+      "end": 1029
+    },
+    {
+      "id": "routes[0]",
+      "start": 1084,
+      "end": 1143
+    },
+    {
+      "id": "routes[1]",
+      "start": 1162,
+      "end": 1271
+    },
+    {
+      "id": "signals",
+      "variant": "one",
+      "start": 1354,
+      "end": 1416
+    },
+    {
+      "id": "signals",
+      "variant": "other",
+      "start": 1452,
+      "end": 1510
+    }
+  ]
+}

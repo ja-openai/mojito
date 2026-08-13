@@ -1,0 +1,8 @@
+{
+  "strings": {
+    "outer": "Outer A1",
+    "shadowed_foreign": "Hidden B2",
+    "restored": "Again C3",
+    "local_alias": "Local D4"
+  }
+}

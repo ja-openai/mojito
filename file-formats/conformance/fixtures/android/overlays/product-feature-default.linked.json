@@ -1,0 +1,19 @@
+{
+  "arrays": {
+    "lanes": [
+      "Main default channel"
+    ]
+  },
+  "plurals": {
+    "signals": {
+      "one": "One main default signal",
+      "other": "Several main default signals"
+    }
+  },
+  "strings": {
+    "active": "Main default beacon",
+    "anchor": "Shared overlay anchor",
+    "fallback": "Upper universal fallback",
+    "route": "Main default harbor route"
+  }
+}

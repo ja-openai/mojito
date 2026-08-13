@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": { "defaultMessage": "Quiet harbor" },
+    "escaped_alias": { "defaultMessage": "@string/anchor" },
+    "quoted_alias": { "defaultMessage": "@string/anchor" },
+    "routes[1]": {
+      "defaultMessage": "Silent beacon",
+      "metadata": {
+        "arrayIndex": 1,
+        "arrayName": "routes",
+        "androidArrayReferences": {
+          "0": "@string/anchor",
+          "2": "@null",
+          "4": "@empty",
+          "5": "?attr/title"
+        }
+      }
+    },
+    "routes[3]": {
+      "defaultMessage": "Across {arg0}",
+      "placeholders": [
+        { "name": "arg0", "source": "%1$s", "kind": "string", "position": 1 }
+      ],
+      "metadata": {
+        "arrayIndex": 3,
+        "arrayName": "routes",
+        "androidArrayReferences": {
+          "0": "@string/anchor",
+          "2": "@null",
+          "4": "@empty",
+          "5": "?attr/title"
+        }
+      }
+    },
+    "routes[6]": {
+      "defaultMessage": "@string/anchor",
+      "metadata": {
+        "arrayIndex": 6,
+        "arrayName": "routes",
+        "androidArrayReferences": {
+          "0": "@string/anchor",
+          "2": "@null",
+          "4": "@empty",
+          "5": "?attr/title"
+        }
+      }
+    },
+    "signals": {
+      "defaultMessage": "{arg0, plural, other {{arg0} signals}}",
+      "variants": { "other": "{arg0} signals" },
+      "placeholders": [
+        { "name": "arg0", "source": "%1$d", "kind": "integer", "position": 1 }
+      ],
+      "metadata": {
+        "androidPluralReferences": {
+          "one": "@string/anchor",
+          "many": "@null"
+        }
+      }
+    }
+  }
+}

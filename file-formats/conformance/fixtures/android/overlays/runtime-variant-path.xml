@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="harbor_route">A path-protected harbor route</string>
+    <plurals name="harbor_signals">
+        <item quantity="one">One path-protected signal</item>
+        <item quantity="other">Several path-protected signals</item>
+    </plurals>
+    <string-array name="harbor_lanes">
+        <item>A path-protected harbor lane</item>
+    </string-array>
+</resources>

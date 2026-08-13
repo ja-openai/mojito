@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Resource-name parsing intentionally does not validate entry whitespace. -->
+  <string name="space">@string/north pier</string>
+  <string name="tab">@string/north&#9;pier</string>
+  <string name="line">@string/north&#10;pier</string>
+  <string name="carriage">@string/north&#13;pier</string>
+  <string name="carriage_line">@string/north&#13;&#10;pier</string>
+  <string name="nonbreaking">@string/north&#160;pier</string>
+  <string name="em_space">@string/north&#8195;pier</string>
+  <string name="double_line">@@string/north&#10;pier</string>
+  <string name="theme_space">?attr/north pier</string>
+  <string name="theme_tab">?attr/north&#9;pier</string>
+  <item type="string" name="generic_space">@string/north pier</item>
+  <item type="string" format="string" name="strict_line">@string/north&#10;pier</item>
+  <string name="quoted">"@string/north pier"</string>
+  <string name="escaped">\@string/north pier</string>
+  <string name="visible">A visible harbor</string>
+
+  <string-array name="routes">
+    <item>@string/north pier</item>
+    <item>@string/north&#9;pier</item>
+    <item>@string/north&#10;pier</item>
+    <item>@string/north&#13;pier</item>
+    <item>@string/north&#13;&#10;pier</item>
+    <item>@string/north&#160;pier</item>
+    <item>@@string/north&#8195;pier</item>
+    <item>Visible route</item>
+  </string-array>
+  <array name="mixed">
+    <item>?attr/north&#9;pier</item>
+    <item>@string/north&#13;pier</item>
+    <item>Visible mixed route</item>
+  </array>
+  <plurals name="signals">
+    <item quantity="zero">@string/north&#13;pier</item>
+    <item quantity="one">@string/north pier</item>
+    <item quantity="two">@string/north&#9;pier</item>
+    <item quantity="few">@string/north&#10;pier</item>
+    <item quantity="many">@string/north&#160;pier</item>
+    <item quantity="other">%1$d visible lights</item>
+  </plurals>
+</resources>

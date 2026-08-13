@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<resources xmlns:code="urn:oasis:names:tc:xliff:document:1.2">
+  <!-- Preserve original XML entities, Android escaping, tags, and comments exactly. -->
+  <string name='scalar'>North\&#34;pier and \"quiet\" water</string>
+  <string name="styled">North <b lane='harbor&quot;side'>\"quiet\"</b> pier</string>
+  <string name="protected">Guide <code:g example='A&quot;7' id="pilot">%1$s</code:g> to \"north\"</string>
+  <string name="commented">North\"<!-- keep this original quote boundary -->pier</string>
+  <string translatable="false" name="untouched">Keep \"protected\" text</string>
+
+  <string-array name="routes">
+    <item>West \"pier, quiet\" water</item>
+    <item>East <i lane='water&quot;side'>\"steady\"</i> water</item>
+  </string-array>
+
+  <plurals name="signals">
+    <item quantity='one'>One \"quiet\" beacon</item>
+    <item quantity="other">%1$d <b>\"quiet\"</b> beacons</item>
+  </plurals>
+</resources>

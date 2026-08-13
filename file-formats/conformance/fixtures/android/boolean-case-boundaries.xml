@@ -1,0 +1,29 @@
+<resources>
+  <string name="upper_enabled" translatable="TRUE" formatted="TRUE">%1$s orbital route</string>
+  <string name="title_enabled" translatable="True" formatted="True">%1$d quiet beacons</string>
+  <string name="padded_enabled" translatable=" true " formatted=" True ">%1$s harbor route</string>
+  <string name="uppercase_unformatted" formatted="FALSE">%s %d preserved</string>
+  <string name="title_unformatted" formatted="False">%s %d retained</string>
+  <string name="hidden_upper_string" translatable="FALSE">Hidden uppercase signal</string>
+  <string name="hidden_title_string" translatable="False">Hidden title-case signal</string>
+  <string-array name="upper_array" translatable="TRUE">
+    <item>Uppercase array signal</item>
+  </string-array>
+  <string-array name="title_array" translatable="True">
+    <item>Title-case array signal</item>
+  </string-array>
+  <string-array name="hidden_title_array" translatable="False">
+    <item>Hidden title-case array signal</item>
+  </string-array>
+  <plurals name="ignored_mixed_plural" translatable="fAlSe">
+    <item quantity="one">%1$d visible mixed signal</item>
+    <item quantity="other">%1$d visible mixed signals</item>
+  </plurals>
+  <plurals name="ignored_invalid_plural" translatable="0">
+    <item quantity="other">%1$d visible ignored signals</item>
+  </plurals>
+  <plurals name="hidden_title_plural" translatable="False">
+    <item quantity="other">%1$d hidden title-case signals</item>
+  </plurals>
+  <item type="string" name="generic_ignored_flags" formatted="fAlSe" translatable="fAlSe">Generic flags are ignored</item>
+</resources>

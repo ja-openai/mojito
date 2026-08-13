@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\"?>\r\n<resources xmlns:code=\"urn:oasis:names:tc:xliff:document:1.2\"\r\n    xmlns:hint=\"http://schemas.android.com/tools\"\r\n    hint:locale=\"fr_CA\">\r\n  <!-- Preserve this exact spacing, order, and original namespace aliases. -->\r\n  <macro name=\"private_route\">A 🧭 route that stays exactly where it was</macro>\r\n  <string translatable=\"false\" name=\"internal\">Do not replace this value</string>\r\n\r\n  <!-- Keep attribute order, quote style, and entity spelling. -->\r\n  <string description='A neutral \"harbor\" label' name=\"harbor\">North &amp; pier</string>\r\n  <string name=\"rich\">Walk <b class=\"quiet\" route='east'>north</b> now</string>\r\n  <string name=\"protected\">Hello <code:g example=\"R-9\" id=\"pilot\">%1$s</code:g>!</string>\r\n  <item format=\"string\" name=\"generic\" type=\"string\">Ordinary lane</item>\r\n\r\n  <string-array name=\"routes\">\r\n    <item>East pier</item>\r\n    <item>@string/harbor</item>\r\n    <item>West pier</item>\r\n  </string-array>\r\n\r\n  <plurals name=\"visits\">\r\n    <item quantity=\"one\">%1$d visit</item>\r\n    <item quantity=\"other\">%1$d visits</item>\r\n  </plurals>\r\n</resources>\r\n",
+  "slots": [
+    {
+      "id": "harbor",
+      "start": 543,
+      "end": 559
+    },
+    {
+      "id": "rich",
+      "start": 592,
+      "end": 640
+    },
+    {
+      "id": "protected",
+      "start": 678,
+      "end": 731
+    },
+    {
+      "id": "generic",
+      "start": 795,
+      "end": 808
+    },
+    {
+      "id": "routes[0]",
+      "start": 861,
+      "end": 870
+    },
+    {
+      "id": "routes[2]",
+      "start": 922,
+      "end": 931
+    },
+    {
+      "id": "visits",
+      "variant": "one",
+      "start": 1013,
+      "end": 1023
+    },
+    {
+      "id": "visits",
+      "variant": "other",
+      "start": 1059,
+      "end": 1070
+    }
+  ]
+}

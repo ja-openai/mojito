@@ -1,0 +1,10 @@
+{
+  "anchor.route@flag=neutral.flags.path": "Ancre française",
+  "route@flag=neutral.flags.path": "Passage français",
+  "route@product=tablet@flag=neutral.flags.path": "Passage tablette français",
+  "beacon@flag=neutral.flags.path": "Balise française",
+  "lanes@flag=neutral.flags.path[0]": "Nord <clair> & sûr",
+  "lanes@flag=neutral.flags.path[2]": "Sud français",
+  "signals@flag=neutral.flags.path#one": "{arg0} signal français",
+  "signals@flag=neutral.flags.path#other": "{arg0} signaux français"
+}

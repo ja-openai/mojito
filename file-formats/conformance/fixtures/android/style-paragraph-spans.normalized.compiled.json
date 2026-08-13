@@ -1,0 +1,430 @@
+{
+  "arrays": {
+    "paragraph_routes": [
+      "north pier west",
+      "first\nleft 🧭 pier right"
+    ]
+  },
+  "styledSpans": {
+    "arrays": {
+      "paragraph_routes": {
+        "0": [
+          {
+            "name": "li",
+            "start": 6,
+            "end": 9,
+            "encodedTag": "li",
+            "runtimeParagraph": {
+              "kind": "bullet",
+              "sourceStart": 6,
+              "sourceEnd": 10,
+              "start": 0,
+              "end": 15
+            }
+          }
+        ],
+        "1": [
+          {
+            "name": "font",
+            "start": 11,
+            "end": 17,
+            "attributes": {
+              "height": "18"
+            },
+            "encodedTag": "font;height=18",
+            "runtimeStyles": [
+              {
+                "kind": "height",
+                "attribute": "height",
+                "value": "18"
+              }
+            ],
+            "runtimeParagraph": {
+              "kind": "height",
+              "sourceStart": 11,
+              "sourceEnd": 18,
+              "start": 6,
+              "end": 24
+            }
+          }
+        ]
+      }
+    },
+    "plurals": {
+      "paragraph_signals": {
+        "one": [
+          {
+            "name": "li",
+            "start": 11,
+            "end": 16,
+            "encodedTag": "li",
+            "runtimeParagraph": {
+              "kind": "bullet",
+              "sourceStart": 11,
+              "sourceEnd": 17,
+              "start": 6,
+              "end": 23
+            }
+          }
+        ],
+        "other": [
+          {
+            "name": "font",
+            "start": 11,
+            "end": 17,
+            "attributes": {
+              "height": "18"
+            },
+            "encodedTag": "font;height=18",
+            "runtimeStyles": [
+              {
+                "kind": "height",
+                "attribute": "height",
+                "value": "18"
+              }
+            ],
+            "runtimeParagraph": {
+              "kind": "height",
+              "sourceStart": 11,
+              "sourceEnd": 18,
+              "start": 6,
+              "end": 24
+            }
+          }
+        ]
+      }
+    },
+    "strings": {
+      "attributed_bullet": [
+        {
+          "name": "li",
+          "start": 6,
+          "end": 9,
+          "attributes": {
+            "route": "west"
+          },
+          "encodedTag": "li;route=west"
+        }
+      ],
+      "empty_bullet": [
+        {
+          "name": "li",
+          "start": 5,
+          "end": 4,
+          "encodedTag": "li",
+          "runtimeParagraph": {
+            "kind": "bullet",
+            "sourceStart": 5,
+            "sourceEnd": 5,
+            "start": 0,
+            "end": 9
+          }
+        }
+      ],
+      "empty_line_bullet": [
+        {
+          "name": "li",
+          "start": 6,
+          "end": 5,
+          "encodedTag": "li",
+          "runtimeParagraph": {
+            "kind": "bullet",
+            "sourceStart": 6,
+            "sourceEnd": 6,
+            "start": 6,
+            "end": 6
+          }
+        }
+      ],
+      "injected_height": [
+        {
+          "name": "font",
+          "start": 6,
+          "end": 9,
+          "attributes": {
+            "route": "west",
+            "height": "18"
+          },
+          "encodedTag": "font;route=west;height=18",
+          "runtimeStyles": [
+            {
+              "kind": "height",
+              "attribute": "height",
+              "value": "18"
+            }
+          ],
+          "runtimeParagraph": {
+            "kind": "height",
+            "sourceStart": 6,
+            "sourceEnd": 10,
+            "start": 0,
+            "end": 15
+          }
+        }
+      ],
+      "line_end_bullet": [
+        {
+          "name": "li",
+          "start": 11,
+          "end": 14,
+          "encodedTag": "li",
+          "runtimeParagraph": {
+            "kind": "bullet",
+            "sourceStart": 11,
+            "sourceEnd": 15,
+            "start": 6,
+            "end": 16
+          }
+        }
+      ],
+      "line_height": [
+        {
+          "name": "font",
+          "start": 11,
+          "end": 17,
+          "attributes": {
+            "height": "18"
+          },
+          "encodedTag": "font;height=18",
+          "runtimeStyles": [
+            {
+              "kind": "height",
+              "attribute": "height",
+              "value": "18"
+            }
+          ],
+          "runtimeParagraph": {
+            "kind": "height",
+            "sourceStart": 11,
+            "sourceEnd": 18,
+            "start": 6,
+            "end": 25
+          }
+        }
+      ],
+      "line_start_bullet": [
+        {
+          "name": "li",
+          "start": 6,
+          "end": 9,
+          "encodedTag": "li",
+          "runtimeParagraph": {
+            "kind": "bullet",
+            "sourceStart": 6,
+            "sourceEnd": 10,
+            "start": 6,
+            "end": 17
+          }
+        }
+      ],
+      "middle_bullet": [
+        {
+          "name": "li",
+          "start": 6,
+          "end": 9,
+          "encodedTag": "li",
+          "runtimeParagraph": {
+            "kind": "bullet",
+            "sourceStart": 6,
+            "sourceEnd": 10,
+            "start": 0,
+            "end": 15
+          }
+        }
+      ],
+      "middle_height": [
+        {
+          "name": "font",
+          "start": 6,
+          "end": 9,
+          "attributes": {
+            "height": "18"
+          },
+          "encodedTag": "font;height=18",
+          "runtimeStyles": [
+            {
+              "kind": "height",
+              "attribute": "height",
+              "value": "18"
+            }
+          ],
+          "runtimeParagraph": {
+            "kind": "height",
+            "sourceStart": 6,
+            "sourceEnd": 10,
+            "start": 0,
+            "end": 15
+          }
+        }
+      ],
+      "middle_line_bullet": [
+        {
+          "name": "li",
+          "start": 11,
+          "end": 17,
+          "encodedTag": "li",
+          "runtimeParagraph": {
+            "kind": "bullet",
+            "sourceStart": 11,
+            "sourceEnd": 18,
+            "start": 6,
+            "end": 25
+          }
+        }
+      ],
+      "multiline_bullet": [
+        {
+          "name": "li",
+          "start": 11,
+          "end": 20,
+          "encodedTag": "li",
+          "runtimeParagraph": {
+            "kind": "bullet",
+            "sourceStart": 11,
+            "sourceEnd": 21,
+            "start": 6,
+            "end": 28
+          }
+        }
+      ],
+      "nested_bullet_height": [
+        {
+          "name": "li",
+          "start": 6,
+          "end": 9,
+          "encodedTag": "li",
+          "runtimeParagraph": {
+            "kind": "bullet",
+            "sourceStart": 6,
+            "sourceEnd": 10,
+            "start": 0,
+            "end": 15
+          }
+        },
+        {
+          "name": "font",
+          "start": 6,
+          "end": 9,
+          "attributes": {
+            "height": "18"
+          },
+          "encodedTag": "font;height=18",
+          "runtimeStyles": [
+            {
+              "kind": "height",
+              "attribute": "height",
+              "value": "18"
+            }
+          ],
+          "runtimeParagraph": {
+            "kind": "height",
+            "sourceStart": 6,
+            "sourceEnd": 10,
+            "start": 0,
+            "end": 15
+          }
+        }
+      ],
+      "nested_height": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 14,
+          "encodedTag": "b"
+        },
+        {
+          "name": "font",
+          "start": 6,
+          "end": 9,
+          "attributes": {
+            "height": "18"
+          },
+          "encodedTag": "font;height=18",
+          "runtimeStyles": [
+            {
+              "kind": "height",
+              "attribute": "height",
+              "value": "18"
+            }
+          ],
+          "runtimeParagraph": {
+            "kind": "height",
+            "sourceStart": 6,
+            "sourceEnd": 10,
+            "start": 0,
+            "end": 15
+          }
+        }
+      ],
+      "supplementary_prefix": [
+        {
+          "name": "li",
+          "start": 9,
+          "end": 11,
+          "encodedTag": "li",
+          "runtimeParagraph": {
+            "kind": "bullet",
+            "sourceStart": 9,
+            "sourceEnd": 12,
+            "start": 0,
+            "end": 17
+          }
+        }
+      ],
+      "unicode_separator": [
+        {
+          "name": "li",
+          "start": 11,
+          "end": 14,
+          "encodedTag": "li",
+          "runtimeParagraph": {
+            "kind": "bullet",
+            "sourceStart": 11,
+            "sourceEnd": 15,
+            "start": 0,
+            "end": 21
+          }
+        }
+      ],
+      "whole_line_bullet": [
+        {
+          "name": "li",
+          "start": 6,
+          "end": 9,
+          "encodedTag": "li",
+          "runtimeParagraph": {
+            "kind": "bullet",
+            "sourceStart": 6,
+            "sourceEnd": 10,
+            "start": 6,
+            "end": 11
+          }
+        }
+      ]
+    }
+  },
+  "plurals": {
+    "paragraph_signals": {
+      "one": "first\nleft beacon right",
+      "other": "first\nleft beacons right"
+    }
+  },
+  "strings": {
+    "attributed_bullet": "north pier east",
+    "empty_bullet": "firstlast",
+    "empty_line_bullet": "first\n\nlast",
+    "injected_height": "north pier west",
+    "line_end_bullet": "first\nleft pier\nlast",
+    "line_height": "first\nleft 🧭 pier right\nlast",
+    "line_start_bullet": "first\npier right\nlast",
+    "middle_bullet": "north pier west",
+    "middle_height": "north pier west",
+    "middle_line_bullet": "first\nleft 🧭 pier right\nlast",
+    "multiline_bullet": "first\nleft pier\ninner right\nlast",
+    "nested_bullet_height": "north pier west",
+    "nested_height": "north pier west",
+    "supplementary_prefix": "🧭 north 東🙂 west",
+    "unicode_separator": "first left pier right",
+    "whole_line_bullet": "first\npier\nlast"
+  }
+}

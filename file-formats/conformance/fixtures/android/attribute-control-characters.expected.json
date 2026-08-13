@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "carriage": {
+      "defaultMessage": "Visible lane",
+      "description": "North\rdeck"
+    },
+    "carriage_line": {
+      "defaultMessage": "Visible signal",
+      "description": "North\r\ndeck"
+    },
+    "generic": {
+      "defaultMessage": "Generic route",
+      "description": "Generic\tnorth\ndeck",
+      "metadata": {
+        "androidGenericString": true
+      }
+    },
+    "line": {
+      "defaultMessage": "Visible pier",
+      "description": "North\ndeck"
+    },
+    "literal_example": {
+      "defaultMessage": "Pilot {pilot}",
+      "placeholders": [
+        {
+          "name": "pilot",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1,
+          "example": "A B C"
+        }
+      ]
+    },
+    "literal_line": {
+      "defaultMessage": "Literal line becomes a space",
+      "description": "North deck"
+    },
+    "literal_tab": {
+      "defaultMessage": "Literal tab becomes a space",
+      "description": "North deck"
+    },
+    "mixed[0]": {
+      "defaultMessage": "Mixed route",
+      "description": "Mixed\r\ndeck",
+      "metadata": {
+        "androidGenericArray": true,
+        "arrayIndex": 0,
+        "arrayName": "mixed"
+      }
+    },
+    "protected": {
+      "defaultMessage": "Captain {captain}",
+      "placeholders": [
+        {
+          "name": "captain",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1,
+          "example": "A\tB\nC\rD"
+        }
+      ]
+    },
+    "routes[0]": {
+      "defaultMessage": "First route",
+      "description": "Route\tdeck",
+      "metadata": {
+        "arrayIndex": 0,
+        "arrayName": "routes"
+      }
+    },
+    "routes[1]": {
+      "defaultMessage": "Guide {navigator}",
+      "description": "Second\ndeck",
+      "placeholders": [
+        {
+          "name": "navigator",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1,
+          "example": "P\t7\n8"
+        }
+      ],
+      "metadata": {
+        "arrayIndex": 1,
+        "arrayName": "routes"
+      }
+    },
+    "signals": {
+      "defaultMessage": "{arg0, plural, one {One {marker}} other {{arg0} visible lights}}",
+      "description": "Count\tlights\nvisible",
+      "variants": {
+        "one": "One {marker}",
+        "other": "{arg0} visible lights"
+      },
+      "placeholders": [
+        {
+          "name": "marker",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1,
+          "example": "M\t1\n2\r3"
+        },
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ]
+    },
+    "styled": {
+      "defaultMessage": "'<'annotation route=\"north\tmiddle\nend\rfinish\">Visible style'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "tab": {
+      "defaultMessage": "Visible harbor",
+      "description": "North\tdeck"
+    }
+  }
+}

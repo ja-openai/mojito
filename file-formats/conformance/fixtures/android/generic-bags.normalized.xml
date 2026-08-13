@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="anchor">"Bag harbor marker"</string>
+  <bag type="array" name="forced.bag" format="string">
+    <item description="Explicitly string-formatted generic array bag.">"17"</item>
+    <item description="Explicitly string-formatted generic array bag.">"true"</item>
+  </bag>
+  <bag type="array" name="mixed.bag">
+    <item description="Mixed generic bag navigation choices.">"Sail toward %1$s"</item>
+    <item>17</item>
+    <item>true</item>
+    <item>@string/anchor</item>
+    <item description="Mixed generic bag navigation choices.">"17"</item>
+    <item description="Mixed generic bag navigation choices.">"#112233"</item>
+  </bag>
+  <bag type="plurals" name="signals.bag" product="tablet" description="Product-specific generic bag signal quantities.">
+    <item quantity="one">"%1$d coastal flare"</item>
+    <item quantity="other">"%1$d coastal flares"</item>
+  </bag>
+  <bag type="string-array" name="words.bag">
+    <item description="String-only generic bag navigation choices.">"North inlet"</item>
+    <item description="String-only generic bag navigation choices.">"17"</item>
+    <item>@string/anchor</item>
+    <item description="String-only generic bag navigation choices.">"South inlet"</item>
+  </bag>
+</resources>

@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "overlay_styleable_routes[3]": {
+      "defaultMessage": "A higher-priority styleable passage",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "?attr/overlay_signal",
+          "1": "?attr/overlay_route",
+          "2": "?attr/overlay_direction"
+        },
+        "androidAttributeDependencies": [
+          {
+            "format": "flags",
+            "name": "overlay_direction",
+            "symbols": [
+              {
+                "kind": "flag",
+                "name": "east",
+                "value": 1
+              },
+              {
+                "kind": "flag",
+                "name": "west",
+                "value": 2
+              }
+            ],
+            "weak": true
+          },
+          {
+            "format": "enum",
+            "name": "overlay_route",
+            "symbols": [
+              {
+                "kind": "enum",
+                "name": "bright",
+                "value": 2
+              },
+              {
+                "kind": "enum",
+                "name": "quiet",
+                "value": 0
+              }
+            ],
+            "weak": true
+          },
+          {
+            "format": "reference|string",
+            "name": "overlay_signal",
+            "weak": true
+          }
+        ],
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidStyleableDependencies": [
+          {
+            "attributes": [
+              {
+                "format": "reference|string",
+                "name": "overlay_signal"
+              },
+              {
+                "format": "enum",
+                "name": "overlay_route",
+                "symbols": [
+                  {
+                    "kind": "enum",
+                    "name": "bright",
+                    "value": 2
+                  },
+                  {
+                    "kind": "enum",
+                    "name": "quiet",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "format": "flags",
+                "name": "overlay_direction",
+                "symbols": [
+                  {
+                    "kind": "flag",
+                    "name": "east",
+                    "value": 1
+                  },
+                  {
+                    "kind": "flag",
+                    "name": "west",
+                    "value": 2
+                  }
+                ]
+              }
+            ],
+            "name": "OverlayCompass"
+          }
+        ],
+        "arrayIndex": 3,
+        "arrayName": "overlay_styleable_routes"
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+<resources>
+  <string name="alias">@string/original</string>
+  <string name="platform">@android:string/ok</string>
+  <string name="theme">?attr/title</string>
+  <plurals name="ignored" translatable="false"><item quantity="one">One</item><item quantity="other">Other</item></plurals>
+  <string-array name="ignored_array" translatable="false"><item>No</item></string-array>
+  <string-array name="visible"><item translatable="false">No</item><item>Yes</item></string-array>
+  <string name="escaped">\@string/original</string>
+  <string name="empty"></string>
+</resources>

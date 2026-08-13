@@ -1,0 +1,16 @@
+{
+  "anchor": "Ancre ouverte",
+  "gate.route": "Passage ouvert",
+  "gate.route@flag=neutral.flags.first": "Premier passage mutable",
+  "gate.route@flag=!neutral.flags.first": "Inverse <calme> & sûr",
+  "gate.route@flag=neutral.flags.second": "Second passage mutable",
+  "gate.route@product=tablet@flag=neutral.flags.second": "Passage tablette mutable",
+  "gate.signal": "Signal ouvert",
+  "gate.signal@flag=neutral.flags.first": "Signal premier mutable",
+  "gate.count#one": "{arg0} balise ouverte",
+  "gate.count#other": "{arg0} balises ouvertes",
+  "gate.count@flag=neutral.flags.first#one": "{arg0} balise mutable",
+  "gate.count@flag=neutral.flags.first#other": "{arg0} balises mutables",
+  "gate.lanes[0]": "Voie nord ouverte",
+  "gate.lanes@flag=neutral.flags.second[0]": "Voie <nord> mutable"
+}

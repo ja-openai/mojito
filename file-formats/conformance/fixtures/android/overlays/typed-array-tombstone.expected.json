@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": {
+      "defaultMessage": "Overlay harbor",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": {
+      "defaultMessage": "Original overlay anchor",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "routes.bag[1]": {
+      "defaultMessage": "Updated coastal route",
+      "metadata": {
+        "androidArrayPrimitives": { "0": "17" },
+        "androidArrayReferences": { "2": "@string/anchor" },
+        "androidBagType": "array",
+        "androidGenericArray": true,
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 1,
+        "arrayName": "routes.bag"
+      }
+    },
+    "signals.bag": {
+      "defaultMessage": "{count, plural, one {One updated signal} other {Many updated signals}}",
+      "variants": { "one": "One updated signal", "other": "Many updated signals" },
+      "metadata": {
+        "androidBagType": "plurals",
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    }
+  }
+}

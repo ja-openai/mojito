@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<resources xmlns:platform="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+  <!-- Ordered mutable flags retain fallback plus positive and inverse alternatives. -->
+  <string name="anchor">Open harbor anchor</string>
+  <string name="gate.route" product=" default ">Open harbor passage</string>
+  <string name="gate.route" product="default" platform:featureFlag="neutral.flags.first">First mutable passage</string>
+  <string name="gate.route" product="default" platform:featureFlag="!neutral.flags.first"><![CDATA[Inverse <quiet> & safe]]></string>
+  <string name="gate.route" product="default" platform:featureFlag="neutral.flags.second">Second mutable passage</string>
+  <string name="gate.route" product=" tablet " platform:featureFlag="neutral.flags.second">Tablet mutable passage</string>
+
+  <item type="string" name="gate.signal" product="default">Open harbor signal</item>
+  <item type="string" name="gate.signal" product="default" platform:featureFlag="neutral.flags.first" tools:ignore="Protected" />
+  <string name="gate.disabled" platform:featureFlag="neutral.flags.disabled">Protected disabled passage</string>
+
+  <plurals name="gate.count" product="default">
+    <item quantity="one">%1$d open beacon</item>
+    <item quantity="other">%1$d open beacons</item>
+  </plurals>
+  <plurals name="gate.count" product="default" platform:featureFlag="neutral.flags.first">
+    <item quantity="one" />
+    <item quantity="other">%1$d mutable beacons</item>
+  </plurals>
+
+  <string-array name="gate.lanes" product="default">
+    <item>Open north lane</item>
+    <item>@string/anchor</item>
+  </string-array>
+  <string-array name="gate.lanes" product="default" platform:featureFlag="neutral.flags.second">
+    <item><![CDATA[Mutable <north> & safe]]></item>
+    <item>@string/anchor</item>
+  </string-array>
+  <string translatable="false" name="gate.private">Protected private signal</string>
+</resources>

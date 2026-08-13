@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="collapsed">"one two three"</string>
+  <string name="entity">"Fish &amp; chips &lt; 5"</string>
+  <string name="escapes">"Line\nTab\tQuote'\" At@ Question? Slash\\"</string>
+  <string name="percent">"Save 50%% for %2$d items"</string>
+  <string name="quoted">"  keep   these spaces  "</string>
+  <string name="unicode">"A B"</string>
+</resources>

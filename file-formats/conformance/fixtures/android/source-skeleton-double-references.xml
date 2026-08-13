@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<resources>
+  <!-- Macro declarations and every single/doubled alias stay source-owned. -->
+  <macro name='shortcut'>Original harbor instruction</macro>
+  <macro name="indirect">@@macro/shortcut</macro>
+  <string name="anchor">Quiet harbor</string>
+  <string name='single_alias'>@string/anchor</string>
+  <string name="double_alias">@@string/anchor</string>
+  <item type="string" name='generic_alias'>&#64;&#64;string/anchor</item>
+  <string name="double_comment">@<!-- original alias boundary -->@string/anchor</string>
+  <string name="escaped">\@@string/anchor</string>
+  <string name="quoted">"@@string/anchor"</string>
+  <string name="triple">@@@string/anchor</string>
+  <string name="single_macro">@macro/shortcut</string>
+  <string name="double_macro">@@macro/indirect</string>
+  <string translatable="false" name="untouched">@@string/anchor</string>
+
+  <string-array name="routes">
+    <item>@string/anchor</item>
+    <item>@@string/anchor</item>
+    <item>@@macro/shortcut</item>
+    <item>Visible route</item>
+  </string-array>
+
+  <plurals name="signals">
+    <item quantity='one'>@@string/anchor</item>
+    <item quantity="two">@@macro/shortcut</item>
+    <item quantity="other">%1$d visible signals</item>
+  </plurals>
+</resources>

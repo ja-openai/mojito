@@ -1,0 +1,3 @@
+<resources>
+  <string name="invalid.explicit" translatable="true">%s passes %d markers</string>
+</resources>

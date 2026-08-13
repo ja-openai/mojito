@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <macro name="harbor_phrase" translatable="false">A quiet harbor route</macro>
+    <item type="macro" name="styled_phrase" formatted="not-a-boolean">A <b>steady</b> harbor beacon</item>
+    <macro name="protected_phrase">Reading <xliff:g id="signal" example="AB-9">%1$s</xliff:g></macro>
+    <macro name="one_signal">%1$d harbor signal</macro>
+    <macro name="other_signals">%1$d harbor signals</macro>
+    <macro name="indirect_phrase">@macro/harbor_phrase</macro>
+    <macro name="empty_phrase"></macro>
+    <macro name="numeric_phrase">17</macro>
+    <macro name="reference_phrase">@string/anchor</macro>
+    <macro name="disabled_phrase" android:featureFlag="neutral.flags.disabled">A fixed-flag macro still expands</macro>
+    <macro name="mutable_phrase" android:featureFlag="neutral.flags.mutable">A runtime-flag macro still expands</macro>
+    <string name="anchor">North harbor marker</string>
+    <string name="direct_macro">@macro/harbor_phrase</string>
+    <item type="string" name="generic_macro">@macro/harbor_phrase</item>
+    <string name="styled_macro">@macro/styled_phrase</string>
+    <string name="protected_macro">@macro/protected_phrase</string>
+    <string name="chained_macro">@macro/indirect_phrase</string>
+    <string name="empty_macro">@macro/empty_phrase</string>
+    <string name="disabled_macro">@macro/disabled_phrase</string>
+    <string name="mutable_macro">@macro/mutable_phrase</string>
+    <string-array name="macro_routes">
+        <item>@macro/harbor_phrase</item>
+        <item>A direct harbor lane</item>
+        <item>@macro/indirect_phrase</item>
+    </string-array>
+    <plurals name="macro_signals">
+        <item quantity="one">@macro/one_signal</item>
+        <item quantity="other">@macro/other_signals</item>
+    </plurals>
+    <array name="typed_macro_routes">
+        <item>@macro/harbor_phrase</item>
+        <item>@macro/numeric_phrase</item>
+        <item>@macro/reference_phrase</item>
+        <item>A final harbor lane</item>
+    </array>
+</resources>

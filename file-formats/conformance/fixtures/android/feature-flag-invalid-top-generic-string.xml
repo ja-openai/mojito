@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:p="http://schemas.android.com/apk/res/android">
+  <item type="string" name="harbor" p:featureFlag="neutral.harbor.active">Generic harbor</item>
+</resources>

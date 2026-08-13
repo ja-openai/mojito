@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-16LE"?>
+<resources>
+  <!-- Original neutral navigation note. -->
+  <string name="signal">"Côte sûre"</string>
+  <string name="route">"Rive 🚢 calme"</string>
+</resources>

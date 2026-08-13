@@ -1,0 +1,46 @@
+{
+  "arrays": {
+    "routes": [
+      "@string/anchor",
+      "@string/anchor",
+      "Route macro traduite",
+      "Route visible traduite"
+    ]
+  },
+  "arrayReferences": {
+    "routes": {
+      "0": "@string/anchor",
+      "1": "@string/anchor"
+    }
+  },
+  "macros": [
+    "indirect",
+    "shortcut"
+  ],
+  "plurals": {
+    "signals": {
+      "two": "Deux instructions traduites",
+      "other": "%1$d signaux traduits"
+    }
+  },
+  "pluralReferences": {
+    "signals": {
+      "one": "@string/anchor"
+    }
+  },
+  "strings": {
+    "anchor": "Abri calme",
+    "double_macro": "Instruction indirecte traduite",
+    "escaped": "Texte @@ protégé",
+    "quoted": "Texte @@ cité",
+    "single_macro": "Instruction directe traduite",
+    "triple": "Texte @@@ distinct"
+  },
+  "references": {
+    "double_alias": "@string/anchor",
+    "double_comment": "@string/anchor",
+    "generic_alias": "@string/anchor",
+    "single_alias": "@string/anchor",
+    "untouched": "@string/anchor"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "arrayReferences": {
+    "macro_routes": {
+      "0": "@macro/harbor_phrase",
+      "2": "@macro/indirect_phrase"
+    },
+    "typed_macro_routes": {
+      "0": "@macro/harbor_phrase",
+      "1": "@macro/numeric_phrase",
+      "2": "@macro/reference_phrase"
+    }
+  },
+  "arrays": {
+    "macro_routes": [
+      "@macro/harbor_phrase",
+      "A direct harbor lane",
+      "@macro/indirect_phrase"
+    ],
+    "typed_macro_routes": [
+      "@macro/harbor_phrase",
+      "@macro/numeric_phrase",
+      "@macro/reference_phrase",
+      "A final harbor lane"
+    ]
+  },
+  "macros": [
+    "disabled_phrase",
+    "empty_phrase",
+    "harbor_phrase",
+    "indirect_phrase",
+    "mutable_phrase",
+    "numeric_phrase",
+    "one_signal",
+    "other_signals",
+    "protected_phrase",
+    "reference_phrase",
+    "styled_phrase"
+  ],
+  "pluralReferences": {
+    "macro_signals": {
+      "one": "@macro/one_signal",
+      "other": "@macro/other_signals"
+    }
+  },
+  "plurals": {
+    "macro_signals": {}
+  },
+  "references": {
+    "chained_macro": "@macro/indirect_phrase",
+    "direct_macro": "@macro/harbor_phrase",
+    "disabled_macro": "@macro/disabled_phrase",
+    "empty_macro": "@macro/empty_phrase",
+    "generic_macro": "@macro/harbor_phrase",
+    "mutable_macro": "@macro/mutable_phrase",
+    "protected_macro": "@macro/protected_phrase",
+    "styled_macro": "@macro/styled_phrase"
+  },
+  "strings": {
+    "anchor": "North harbor marker"
+  }
+}

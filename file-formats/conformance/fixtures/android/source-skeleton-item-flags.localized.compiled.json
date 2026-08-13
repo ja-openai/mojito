@@ -1,0 +1,50 @@
+{
+  "arrayReferences": {
+    "cargo": {
+      "4": "@string/anchor"
+    },
+    "lanes": {
+      "4": "@string/anchor",
+      "5": "@string/anchor"
+    }
+  },
+  "arrays": {
+    "bag.lanes": [
+      "Protected hidden bag",
+      "Sac mutable",
+      "Sac ouvert"
+    ],
+    "cargo": [
+      "7",
+      "17",
+      "Cargaison mutable",
+      "Protected hidden cargo",
+      "@string/anchor",
+      "Cargaison inverse",
+      "31",
+      "Dernière cargaison"
+    ],
+    "lanes": [
+      "Protected hidden north",
+      "Route nord visible",
+      "Route est mutable",
+      "Inverse <ouest> & sûr",
+      "@string/anchor",
+      "@string/anchor",
+      "Route sud ouverte",
+      "",
+      "Route vide ajoutée"
+    ]
+  },
+  "configuration": "v10000",
+  "plurals": {
+    "signals": {
+      "one": "%1$d signal calme",
+      "other": "%1$d signaux calmes"
+    }
+  },
+  "strings": {
+    "anchor": "Ancre sûre",
+    "private": "Protected private route"
+  }
+}

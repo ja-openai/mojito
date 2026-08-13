@@ -1,0 +1,17 @@
+{
+  "anchor": "Ancre sûre",
+  "lanes[0]": "Route nord visible",
+  "lanes[1]": "Route est mutable",
+  "lanes[2]": "Inverse <ouest> & sûr",
+  "lanes[4]": "Route sud ouverte",
+  "lanes[5]": "Route vide ajoutée",
+  "lanes@product=tablet[0]": "Route tablette visible",
+  "lanes@product=tablet[1]": "Route tablette inverse",
+  "cargo[1]": "Cargaison mutable",
+  "cargo[3]": "Cargaison inverse",
+  "cargo[5]": "Dernière cargaison",
+  "bag.lanes[0]": "Sac mutable",
+  "bag.lanes[1]": "Sac ouvert",
+  "signals#one": "{arg0} signal calme",
+  "signals#other": "{arg0} signaux calmes"
+}

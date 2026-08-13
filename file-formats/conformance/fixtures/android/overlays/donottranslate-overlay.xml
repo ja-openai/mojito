@@ -1,0 +1,11 @@
+<resources>
+  <string name="private.anchor" translatable="true">Private overriding anchor</string>
+  <bag type="array" name="private.routes" translatable="true">
+    <item>Private overriding route</item>
+    <item>17</item>
+  </bag>
+  <bag type="plurals" name="private.signals" translatable="true">
+    <item quantity="one">One private overriding signal</item>
+    <item quantity="other">Several private overriding signals</item>
+  </bag>
+</resources>

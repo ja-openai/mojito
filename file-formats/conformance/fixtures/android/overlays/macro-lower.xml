@@ -1,0 +1,4 @@
+<resources>
+    <macro name="shared_harbor">A lower harbor route</macro>
+    <string name="lower_route">@macro/shared_harbor</string>
+</resources>

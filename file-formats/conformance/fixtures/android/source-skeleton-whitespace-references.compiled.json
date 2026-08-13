@@ -1,0 +1,49 @@
+{
+  "arrays": {
+    "routes": [
+      "@string/north pier",
+      "@string/north\tpier",
+      "@string/north\npier",
+      "@string/north\rpier",
+      "@string/north\r\npier",
+      "@string/north pier",
+      "Visible route"
+    ]
+  },
+  "arrayReferences": {
+    "routes": {
+      "0": "@string/north pier",
+      "1": "@string/north\tpier",
+      "2": "@string/north\npier",
+      "3": "@string/north\rpier",
+      "4": "@string/north\r\npier",
+      "5": "@string/north pier"
+    }
+  },
+  "plurals": {
+    "signals": {
+      "other": "%1$d visible lights"
+    }
+  },
+  "pluralReferences": {
+    "signals": {
+      "zero": "@string/north\rpier",
+      "one": "@string/north pier",
+      "two": "@string/north\tpier",
+      "few": "@string/north\npier",
+      "many": "@string/north pier"
+    }
+  },
+  "references": {
+    "carriage": "@string/north\rpier",
+    "double_tab": "@string/north\tpier",
+    "line": "@string/north\npier",
+    "space": "@string/north pier",
+    "untouched": "@string/north pier"
+  },
+  "strings": {
+    "escaped": "@string/north pier",
+    "quoted": "@string/north pier",
+    "visible": "A calm harbor"
+  }
+}

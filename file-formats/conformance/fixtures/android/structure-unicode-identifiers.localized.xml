@@ -1,0 +1,8 @@
+<resources>
+  <string name="_route">"Canal discret"</string>
+  <string name="Éclat">"Lumière côtière"</string>
+  <string name="e&#x0301;cho">"Écho du port"</string>
+  <string name="route&#x00b7;north">"Route du nord"</string>
+  <item type="str&#x69;ng" name="generic&#x00b7;route">"Voie générique"</item>
+  <string name="渡り.route-2">"Passage côtier"</string>
+</resources>

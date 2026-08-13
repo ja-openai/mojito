@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "numeric_routes[9]": {
+      "defaultMessage": "A decimal route with leading zeroes",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "?attr/decimal_window",
+          "1": "?attr/hex_window",
+          "2": "?attr/decimal_modes",
+          "3": "?attr/route_flags",
+          "4": "?attr/empty_enum",
+          "5": "?attr/empty_flags",
+          "6": "?attr/empty_choice",
+          "7": "?attr/weak_window",
+          "8": "?attr/weak_mode"
+        },
+        "androidAttributeDependencies": [
+          {
+            "format": "integer|enum",
+            "name": "decimal_modes",
+            "symbols": [
+              {
+                "kind": "enum",
+                "name": "bits_signed",
+                "value": -2147483648
+              },
+              {
+                "kind": "enum",
+                "name": "bits_unsigned",
+                "value": -1
+              },
+              {
+                "kind": "enum",
+                "name": "count_eight",
+                "value": 8
+              },
+              {
+                "kind": "enum",
+                "name": "count_maximum",
+                "value": 2147483647
+              },
+              {
+                "kind": "enum",
+                "name": "count_minimum",
+                "value": -2147483648
+              },
+              {
+                "kind": "enum",
+                "name": "count_negative",
+                "value": -8
+              },
+              {
+                "kind": "enum",
+                "name": "count_ten",
+                "value": 10
+              },
+              {
+                "kind": "enum",
+                "name": "shared_first",
+                "value": 9
+              },
+              {
+                "kind": "enum",
+                "name": "shared_second",
+                "value": 9
+              }
+            ]
+          },
+          {
+            "format": "integer",
+            "max": 9,
+            "min": -8,
+            "name": "decimal_window"
+          },
+          {
+            "format": "enum|flags",
+            "name": "empty_choice"
+          },
+          {
+            "format": "enum",
+            "name": "empty_enum"
+          },
+          {
+            "format": "flags",
+            "name": "empty_flags"
+          },
+          {
+            "format": "integer",
+            "max": -2147483648,
+            "min": -1,
+            "name": "hex_window"
+          },
+          {
+            "format": "integer|flags",
+            "name": "route_flags",
+            "symbols": [
+              {
+                "kind": "flag",
+                "name": "route_all",
+                "value": -1
+              },
+              {
+                "kind": "flag",
+                "name": "route_high",
+                "value": -2147483648
+              },
+              {
+                "kind": "flag",
+                "name": "route_low",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "format": "integer|enum",
+            "name": "weak_mode",
+            "symbols": [
+              {
+                "kind": "enum",
+                "name": "weak_eight",
+                "value": 8
+              },
+              {
+                "kind": "enum",
+                "name": "weak_ten",
+                "value": 10
+              }
+            ],
+            "weak": true
+          },
+          {
+            "format": "integer",
+            "max": 10,
+            "min": 9,
+            "name": "weak_window",
+            "weak": true
+          }
+        ],
+        "androidStyleableDependencies": [
+          {
+            "attributes": [
+              {
+                "format": "integer",
+                "max": 10,
+                "min": 9,
+                "name": "weak_window"
+              },
+              {
+                "format": "integer|enum",
+                "name": "weak_mode",
+                "symbols": [
+                  {
+                    "kind": "enum",
+                    "name": "weak_eight",
+                    "value": 8
+                  },
+                  {
+                    "kind": "enum",
+                    "name": "weak_ten",
+                    "value": 10
+                  }
+                ]
+              },
+              {
+                "name": "empty_enum"
+              }
+            ],
+            "name": "NumericCompass"
+          }
+        ],
+        "arrayIndex": 9,
+        "arrayName": "numeric_routes"
+      }
+    }
+  }
+}

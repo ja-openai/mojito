@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "lanes[0]": {
+      "defaultMessage": "Visible upper harbor lane",
+      "metadata": {
+        "androidOverlaySourceSet": "build_type",
+        "androidPathFeatureFlag": "neutral.path.enabled",
+        "androidResourcePath": "src/debug/res/flag(neutral.path.enabled)/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 0,
+        "arrayName": "lanes"
+      }
+    },
+    "retained": {
+      "defaultMessage": "Main retained harbor route",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "route": {
+      "defaultMessage": "Upper path-protected harbor route",
+      "metadata": {
+        "androidOverlaySourceSet": "build_type",
+        "androidPathFeatureFlag": "neutral.path.enabled",
+        "androidResourcePath": "src/debug/res/flag(neutral.path.enabled)/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "signals": {
+      "defaultMessage": "{count, plural, one {One upper harbor signal} other {Several upper harbor signals}}",
+      "variants": {
+        "one": "One upper harbor signal",
+        "other": "Several upper harbor signals"
+      },
+      "metadata": {
+        "androidOverlaySourceSet": "build_type",
+        "androidPathFeatureFlag": "neutral.path.enabled",
+        "androidResourcePath": "src/debug/res/flag(neutral.path.enabled)/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    }
+  }
+}

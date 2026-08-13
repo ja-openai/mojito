@@ -1,0 +1,22 @@
+{
+  "arrays": {
+    "open_routes": [
+      "First open harbor passage",
+      "Second open harbor passage",
+      "Foreign item gate remains visible",
+      "Unqualified item gate remains visible"
+    ]
+  },
+  "plurals": {
+    "plural_gate": {
+      "one": "One visible beacon",
+      "other": "Several visible beacons"
+    }
+  },
+  "strings": {
+    "empty_gate": "Empty gate remains visible",
+    "foreign_gate": "Foreign namespace remains visible",
+    "unqualified_gate": "Unqualified gate remains visible",
+    "whitespace_gate": "Whitespace gate remains visible"
+  }
+}

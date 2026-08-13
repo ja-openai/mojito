@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "accented_identifier": {
+      "defaultMessage": "Port {orbité} calme",
+      "placeholders": [
+        {
+          "name": "orbité",
+          "source": "ZX",
+          "kind": "string"
+        }
+      ]
+    },
+    "adjacent_anonymous": {
+      "defaultMessage": "{_xliff0} then {_xliff1}",
+      "placeholders": [
+        {
+          "name": "_xliff0",
+          "source": "ONE",
+          "kind": "string"
+        },
+        {
+          "name": "_xliff1",
+          "source": "TWO",
+          "kind": "string"
+        }
+      ]
+    },
+    "anonymous_formatter": {
+      "defaultMessage": "Harbor {_xliff0} clear",
+      "placeholders": [
+        {
+          "name": "_xliff0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ]
+    },
+    "anonymous_literal": {
+      "defaultMessage": "Orbit {_xliff0} ready",
+      "placeholders": [
+        {
+          "name": "_xliff0",
+          "source": "ZX-4",
+          "kind": "string"
+        }
+      ]
+    },
+    "cjk_identifier": {
+      "defaultMessage": "Status {信号} ready",
+      "placeholders": [
+        {
+          "name": "信号",
+          "source": "ZX",
+          "kind": "string"
+        }
+      ]
+    },
+    "combining_identifier": {
+      "defaultMessage": "Mark {ñ} set",
+      "placeholders": [
+        {
+          "name": "ñ",
+          "source": "ZX",
+          "kind": "string"
+        }
+      ]
+    },
+    "conventional_with_example": {
+      "defaultMessage": "{arg0} follows",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1,
+          "example": "neutral"
+        }
+      ]
+    },
+    "emoji_identifier": {
+      "defaultMessage": "Link {🛰} active",
+      "placeholders": [
+        {
+          "name": "🛰",
+          "source": "ZX",
+          "kind": "string"
+        }
+      ]
+    },
+    "empty_formatter": {
+      "defaultMessage": "Seen {_xliff0} times",
+      "placeholders": [
+        {
+          "name": "_xliff0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ]
+    },
+    "empty_identifier": {
+      "defaultMessage": "Quiet {_xliff0} route",
+      "placeholders": [
+        {
+          "name": "_xliff0",
+          "source": "Q-7",
+          "kind": "string",
+          "example": "Q&7"
+        }
+      ]
+    },
+    "numeric_identifier": {
+      "defaultMessage": "Dock {42} open",
+      "placeholders": [
+        {
+          "name": "42",
+          "source": "ZX",
+          "kind": "string"
+        }
+      ]
+    },
+    "protected_count": {
+      "defaultMessage": "{数量, plural, one {{数量} orbital signal} other {{数量} orbital signals}}",
+      "variants": {
+        "one": "{数量} orbital signal",
+        "other": "{数量} orbital signals"
+      },
+      "placeholders": [
+        {
+          "name": "数量",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ]
+    },
+    "protected_routes[0]": {
+      "defaultMessage": "Gate {_xliff0} ready",
+      "placeholders": [
+        {
+          "name": "_xliff0",
+          "source": "NW",
+          "kind": "string"
+        }
+      ],
+      "metadata": {
+        "arrayIndex": 0,
+        "arrayName": "protected_routes"
+      }
+    },
+    "protected_routes[1]": {
+      "defaultMessage": "Gate {入口} ready",
+      "placeholders": [
+        {
+          "name": "入口",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "arrayIndex": 1,
+        "arrayName": "protected_routes"
+      }
+    },
+    "repeated_same_source": {
+      "defaultMessage": "{repeat} then {interlude} then {repeat}",
+      "placeholders": [
+        {
+          "name": "repeat",
+          "source": "ZX",
+          "kind": "string",
+          "example": "stable"
+        },
+        {
+          "name": "interlude",
+          "source": "YY",
+          "kind": "string"
+        }
+      ]
+    },
+    "unknown_xliff_wrapper": {
+      "defaultMessage": "Nested {_xliff0} trace",
+      "placeholders": [
+        {
+          "name": "_xliff0",
+          "source": "ZX",
+          "kind": "string"
+        }
+      ]
+    }
+  }
+}

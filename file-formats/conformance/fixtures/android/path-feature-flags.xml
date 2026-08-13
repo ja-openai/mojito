@@ -1,0 +1,20 @@
+<resources xmlns:platform="http://schemas.android.com/apk/res/android">
+  <string name="anchor">Path-protected harbor anchor</string>
+  <string name="route">Path-protected harbor route</string>
+  <string name="display">Default path display</string>
+  <string name="display" product="tablet">Tablet path display</string>
+  <plurals name="signals">
+    <item quantity="one" platform:featureFlag="neutral.path.disabled">One visible path signal</item>
+    <item quantity="other">Several visible path signals</item>
+  </plurals>
+  <array name="lanes">
+    <item platform:featureFlag="neutral.path.disabled">Hidden path lane</item>
+    <item platform:featureFlag="neutral.path.enabled">@string/anchor</item>
+    <item>37</item>
+    <item>Visible path lane</item>
+  </array>
+  <bag type="string-array" name="bag_lanes">
+    <item platform:featureFlag="neutral.path.disabled">Hidden bag lane</item>
+    <item>Visible bag lane</item>
+  </bag>
+</resources>

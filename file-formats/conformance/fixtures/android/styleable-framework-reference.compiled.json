@@ -1,0 +1,24 @@
+{
+  "arrays": {
+    "framework_routes": [
+      "?attr/local_signal",
+      "A framework-aware crossing"
+    ]
+  },
+  "arrayReferences": {
+    "framework_routes": {
+      "0": "?attr/local_signal"
+    }
+  },
+  "attributes": {
+    "local_signal": {
+      "format": "string"
+    }
+  },
+  "styleables": {
+    "FrameworkCompass": [
+      "android:label",
+      "local_signal"
+    ]
+  }
+}

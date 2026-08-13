@@ -1,0 +1,13 @@
+{
+  "shared_signal": "Pilote {pilot}",
+  "main_anchor": "Ancre & côte",
+  "product_signal": "Balise tablette mixte",
+  "product_routes[0]": "Route tablette mixte",
+  "product_lights#one": "{arg0} feu tablette mixte",
+  "product_lights#other": "{arg0} feux tablette mixtes",
+  "routes[0]": "Débogage <b lane=\"north\">nord</b>",
+  "routes[1]": "Débogage sud",
+  "lights#one": "{arg0} feu supérieur",
+  "lights#other": "{arg0} feux supérieurs",
+  "debug_anchor": "Débogage seul"
+}

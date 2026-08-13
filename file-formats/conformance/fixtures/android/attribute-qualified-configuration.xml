@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="localized_route" format="integer" min="08" max="09" />
+    <declare-styleable name="LocalizedCompass">
+        <attr name="localized_signal" format="enum">
+            <enum name="local_eight" value="08" />
+            <enum name="local_ten" value="010" />
+        </attr>
+    </declare-styleable>
+    <string-array name="localized_routes">
+        <item>?attr/localized_route</item>
+        <item>?attr/localized_signal</item>
+        <item>Un passage localisé</item>
+    </string-array>
+</resources>

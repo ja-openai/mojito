@@ -1,0 +1,280 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "ampersand_value": {
+      "defaultMessage": "'<'annotation route=\"north&amp;west\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "angle_value": {
+      "defaultMessage": "'<'annotation route=\"north&lt;west\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "colon_comma": {
+      "defaultMessage": "'<'annotation route=\"north:1,2west\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "comma_value": {
+      "defaultMessage": "'<'annotation route=\"north,west\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "delimiter_routes[0]": {
+      "defaultMessage": "'<'annotation lane=\"north;alert=ready\" zone=\"west\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeAnnotations": [
+          {
+            "annotations": [
+              {
+                "key": "lane",
+                "value": "north"
+              },
+              {
+                "key": "alert",
+                "value": "ready"
+              },
+              {
+                "key": "zone",
+                "value": "west"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 0,
+        "arrayName": "delimiter_routes"
+      }
+    },
+    "delimiter_routes[1]": {
+      "defaultMessage": "'<'annotation route=\"north;lost\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeAnnotations": [
+          {
+            "annotations": [
+              {
+                "key": "route",
+                "value": "north"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 1,
+        "arrayName": "delimiter_routes"
+      }
+    },
+    "delimiter_signals": {
+      "defaultMessage": "{arg0, plural, one {'<'annotation lane=\"north;alert=ready\" zone=\"west\">{arg0} beacon'<'/annotation>} other {'<'annotation lane=\"south;alert=clear\" zone=\"east\">{arg0} beacons'<'/annotation>}}",
+      "variants": {
+        "one": "'<'annotation lane=\"north;alert=ready\" zone=\"west\">{arg0} beacon'<'/annotation>",
+        "other": "'<'annotation lane=\"south;alert=clear\" zone=\"east\">{arg0} beacons'<'/annotation>"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidPluralRuntimeAnnotations": {
+          "one": [
+            {
+              "annotations": [
+                {
+                  "key": "lane",
+                  "value": "north"
+                },
+                {
+                  "key": "alert",
+                  "value": "ready"
+                },
+                {
+                  "key": "zone",
+                  "value": "west"
+                }
+              ],
+              "span": 0
+            }
+          ],
+          "other": [
+            {
+              "annotations": [
+                {
+                  "key": "lane",
+                  "value": "south"
+                },
+                {
+                  "key": "alert",
+                  "value": "clear"
+                },
+                {
+                  "key": "zone",
+                  "value": "east"
+                }
+              ],
+              "span": 0
+            }
+          ]
+        }
+      }
+    },
+    "empty_value": {
+      "defaultMessage": "'<'annotation route=\"north\" zone=\"\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "equals_value": {
+      "defaultMessage": "'<'annotation route=\"north=west=harbor\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "injected_duplicate": {
+      "defaultMessage": "'<'annotation route=\"north;zone=shadow\" zone=\"actual\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeAnnotations": [
+          {
+            "annotations": [
+              {
+                "key": "route",
+                "value": "north"
+              },
+              {
+                "key": "zone",
+                "value": "shadow"
+              },
+              {
+                "key": "zone",
+                "value": "actual"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "nested_injection": {
+      "defaultMessage": "'<'annotation route=\"north;alert=west\"><b>🧭 Pier</b>'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeAnnotations": [
+          {
+            "annotations": [
+              {
+                "key": "route",
+                "value": "north"
+              },
+              {
+                "key": "alert",
+                "value": "west"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "ordered_attributes": {
+      "defaultMessage": "'<'annotation alert=\"ready\" lane=\"north\" zone=\"west\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "quoted_value": {
+      "defaultMessage": "'<'annotation route=\"north&quot;west\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "semicolon_assignment": {
+      "defaultMessage": "'<'annotation route=\"north;alert=west\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeAnnotations": [
+          {
+            "annotations": [
+              {
+                "key": "route",
+                "value": "north"
+              },
+              {
+                "key": "alert",
+                "value": "west"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "semicolon_double": {
+      "defaultMessage": "'<'annotation route=\"north;;alert=west\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeAnnotations": [
+          {
+            "annotations": [
+              {
+                "key": "route",
+                "value": "north"
+              },
+              {
+                "key": ";alert",
+                "value": "west"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "semicolon_plain": {
+      "defaultMessage": "'<'annotation route=\"north;west\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeAnnotations": [
+          {
+            "annotations": [
+              {
+                "key": "route",
+                "value": "north"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "semicolon_terminal": {
+      "defaultMessage": "'<'annotation route=\"north;\">Pier'<'/annotation>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeAnnotations": [
+          {
+            "annotations": [
+              {
+                "key": "route",
+                "value": "north"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "styled": {
+      "defaultMessage": "A '<'a href=\"https://example.com\" title=\"help &amp; tips\"><b>bold</b> link'<'/a><br></br>",
+      "metadata": { "androidMarkupEscaping": "icu-quoted-angle" }
+    },
+    "protected": {
+      "defaultMessage": "Use {product} today",
+      "placeholders": [{ "name": "product", "source": "Mojito", "kind": "string" }]
+    },
+    "numeric": {
+      "defaultMessage": "😀 costs {arg0} credits",
+      "placeholders": [{ "name": "arg0", "source": "%1$0.2f", "kind": "number", "position": 1 }]
+    }
+  }
+}

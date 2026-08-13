@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\"?>\n<resources xmlns:f=\"urn:neutral:span-attributes\"\n    xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    xml:space=\"preserve\" xml:lang=\"en\">\n  <string name=\"scalar_space\" xml:space=\"preserve\">  north   west  </string>\n  <string name=\"scalar_default_space\" xml:space=\"default\">  north   east  </string>\n  <string name=\"space_style\"><b xml:space=\"preserve\">  northern   passage  </b></string>\n  <string name=\"language_style\"><b xml:lang=\"fr\">Harbor signal</b></string>\n  <string name=\"foreign_annotation\"><annotation f:route=\"north&#9;dock\">Harbor signal</annotation></string>\n  <string name=\"font_effect\"><font android:size=\"12\" f:color=\"red\">Harbor glow</font></string>\n  <string name=\"ordered_namespaces\"><b alpha=\"A\" android:bravo=\"B\" xml:charlie=\"C\" f:delta=\"D\">Harbor order</b></string>\n  <string name=\"inline_namespace\"><b xmlns:inner=\"urn:neutral:inline\" inner:route=\"quiet\">Harbor route</b></string>\n  <item name=\"generic_style\" type=\"string\" format=\"string\"><font android:size=\"8\">Harbor guide</font></item>\n  <string-array name=\"routes\">\n    <item><annotation f:key=\"private\">Harbor route</annotation></item>\n    <item><font f:color=\"#112233\">Harbor light</font></item>\n  </string-array>\n  <plurals name=\"signals\">\n    <item quantity=\"one\"><font android:size=\"9\">%1$d harbor beacon</font></item>\n    <item quantity=\"other\"><annotation f:key=\"beacon\">%1$d harbor beacons</annotation></item>\n  </plurals>\n  <string name=\"protected\" translatable=\"false\"><b f:route=\"protected\">Private harbor</b></string>\n</resources>\n",
+  "slots": [
+    {
+      "id": "scalar_space",
+      "start": 225,
+      "end": 241
+    },
+    {
+      "id": "scalar_default_space",
+      "start": 309,
+      "end": 325
+    },
+    {
+      "id": "space_style",
+      "start": 364,
+      "end": 414
+    },
+    {
+      "id": "language_style",
+      "start": 456,
+      "end": 490
+    },
+    {
+      "id": "foreign_annotation",
+      "start": 536,
+      "end": 598
+    },
+    {
+      "id": "font_effect",
+      "start": 637,
+      "end": 693
+    },
+    {
+      "id": "ordered_namespaces",
+      "start": 739,
+      "end": 814
+    },
+    {
+      "id": "inline_namespace",
+      "start": 858,
+      "end": 930
+    },
+    {
+      "id": "generic_style",
+      "start": 999,
+      "end": 1041
+    },
+    {
+      "id": "routes[0]",
+      "start": 1090,
+      "end": 1143
+    },
+    {
+      "id": "routes[1]",
+      "start": 1161,
+      "end": 1204
+    },
+    {
+      "id": "signals",
+      "start": 1282,
+      "end": 1330,
+      "variant": "one"
+    },
+    {
+      "id": "signals",
+      "start": 1365,
+      "end": 1424,
+      "variant": "other"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="angle_attribute"><annotation note="A > B">"steady"</annotation></string>
+  <string name="annotated"><annotation role="navigator" tone="pilot's cue">"North"</annotation></string>
+  <string name="apostrophe_text"><annotation tone="clear">"pilot isn't ready"</annotation></string>
+  <string name="attribute_placeholder"><annotation tone="%1$s">"%1$s"</annotation></string>
+  <string name="nested">"Proceed "<a href="https://neutral.invalid/r?step=1&amp;lane=2"><b>"%1$s"</b></a></string>
+  <plurals name="notices">
+    <item quantity="one"><annotation tone="quiet">"%1$d notice"</annotation></item>
+    <item quantity="other"><annotation tone="quiet">"%1$d notices"</annotation></item>
+  </plurals>
+  <string name="unicode_span">"🧭 "<annotation role="route">"東🙂"</annotation>" fin"</string>
+  <string-array name="waypoints">
+    <item><font color="#204080">"East"</font></item>
+  </string-array>
+</resources>

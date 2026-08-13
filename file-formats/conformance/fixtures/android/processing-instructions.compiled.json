@@ -1,0 +1,37 @@
+{
+  "arrays": {
+    "routes": [
+      "East pier",
+      "West pier"
+    ]
+  },
+  "plurals": {
+    "signals": {
+      "one": "%1$d signal",
+      "other": "%1$d signals"
+    }
+  },
+  "strings": {
+    "escaped": "A",
+    "generic": "Open road",
+    "mixed": "East west",
+    "pilot": "Hi %1$s!",
+    "plain": "North port",
+    "quoted": "North  south",
+    "styled": "Move northward now"
+  },
+  "styledSpans": {
+    "strings": {
+      "styled": [
+        {
+          "name": "b",
+          "start": 5,
+          "end": 13,
+          "attributes": {
+            "lane": "east"
+          }
+        }
+      ]
+    }
+  }
+}

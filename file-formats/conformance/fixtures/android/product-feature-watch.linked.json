@@ -1,0 +1,28 @@
+{
+  "arrays": {
+    "lanes": [
+      "13",
+      "Default inlet",
+      "Default outlet"
+    ]
+  },
+  "arrayPrimitiveValues": {
+    "lanes": {
+      "0": "13"
+    }
+  },
+  "plurals": {
+    "signals": {
+      "one": "One default signal",
+      "other": "Several default signals"
+    }
+  },
+  "strings": {
+    "active": "Default beacon passage",
+    "anchor": "Neutral harbor anchor",
+    "fallback": "Watch sheltered passage",
+    "inverse": "Default inverse passage",
+    "mode": "Watch navigation mode",
+    "route": "Default harbor route"
+  }
+}

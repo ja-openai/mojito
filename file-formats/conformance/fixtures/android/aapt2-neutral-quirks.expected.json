@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "quote_segments": { "defaultMessage": "north   quiet   zone   south" },
+    "entity_spaces": { "defaultMessage": "left   right" },
+    "quoted_entity_spaces": { "defaultMessage": "    " },
+    "escaped_entity_spaces": { "defaultMessage": "left  right" },
+    "quoted_apostrophe": { "defaultMessage": "the signal isn't ready" },
+    "escaped_apostrophe": { "defaultMessage": "the signal isn't ready" },
+    "hash_and_controls": { "defaultMessage": "#code\n\t@mark?\\" },
+    "escaped_markup": {
+      "defaultMessage": "<strong>{arg0}</strong> / {arg1}",
+      "placeholders": [
+        { "name": "arg0", "source": "%1$s", "kind": "string", "position": 1 },
+        { "name": "arg1", "source": "%2$d", "kind": "integer", "position": 2 }
+      ],
+      "metadata": { "androidLiteralMarkup": true }
+    },
+    "rich_annotation": {
+      "defaultMessage": "A '<'annotation role=\"signal\" tone=\"soft\"><b>steady</b>'<'/annotation> state",
+      "metadata": { "androidMarkupEscaping": "icu-quoted-angle" }
+    },
+    "named_literal": {
+      "defaultMessage": "Label: {token}",
+      "placeholders": [{ "name": "token", "source": "ZX-4", "kind": "string", "example": "ZX-4" }]
+    },
+    "named_format": {
+      "defaultMessage": "Reading {amount}",
+      "placeholders": [{ "name": "amount", "source": "%1$d", "kind": "integer", "position": 1, "example": "18" }]
+    },
+    "repeated_format": {
+      "defaultMessage": "{arg0} then {arg0}",
+      "placeholders": [{ "name": "arg0", "source": "%1$s", "kind": "string", "position": 1 }]
+    },
+    "line_separator": {
+      "defaultMessage": "north\nready",
+      "metadata": { "androidPrintfLineSeparator": true }
+    },
+    "all_quantities": {
+      "defaultMessage": "{arg0, plural, zero {{arg0} signals: none} one {{arg0} signal} two {{arg0} signals: pair} few {{arg0} signals: few} many {{arg0} signals: many} other {{arg0} signals}}",
+      "variants": {
+        "zero": "{arg0} signals: none",
+        "one": "{arg0} signal",
+        "two": "{arg0} signals: pair",
+        "few": "{arg0} signals: few",
+        "many": "{arg0} signals: many",
+        "other": "{arg0} signals"
+      },
+      "placeholders": [{ "name": "arg0", "source": "%1$d", "kind": "integer", "position": 1 }]
+    }
+  }
+}

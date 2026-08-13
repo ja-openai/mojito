@@ -1,0 +1,26 @@
+{
+  "arrayReferences": {
+    "harbor.lanes": {
+      "1": "@string/anchor"
+    }
+  },
+  "arrays": {
+    "harbor.lanes": [
+      "Tablette <nord> & sûre",
+      "@string/anchor",
+      "Tablette sud douce"
+    ]
+  },
+  "plurals": {
+    "tide.count": {
+      "one": "%1$d balise tablette",
+      "other": "%1$d balises tablette"
+    }
+  },
+  "strings": {
+    "anchor": "Ancre sûre",
+    "harbor.route": "Passage tablette & calme",
+    "harbor.signal": "Signal tablette & prêt",
+    "private.route": "Protected private route"
+  }
+}

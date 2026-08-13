@@ -1,0 +1,21 @@
+{
+  "arrays": {
+    "conditional_routes": [
+      "Enabled upper lane",
+      "Final upper lane"
+    ],
+    "fallback_array": [
+      "Main typed fallback"
+    ]
+  },
+  "plurals": {
+    "fallback_signals": {
+      "one": "One main beacon",
+      "other": "Several main beacons"
+    }
+  },
+  "strings": {
+    "enabled_scalar": "Enabled upper harbor",
+    "fallback_scalar": "Main fallback harbor"
+  }
+}

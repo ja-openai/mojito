@@ -1,0 +1,20 @@
+<resources>
+  <!-- AAPT2 exempts unmistakable legacy Time.format directives from positional checks. -->
+  <string name="time_upper_day">Depart %D and follow %s</string>
+  <string name="time_upper_full_date">Depart %F and follow %s</string>
+  <string name="time_upper_hour">Depart %K and follow %s</string>
+  <string name="time_upper_minute">Depart %M and follow %s</string>
+  <string name="time_upper_week">Depart %W and follow %s</string>
+  <string name="time_upper_zone">Depart %Z and follow %s</string>
+  <string name="time_lower_hour">Depart %k and follow %s</string>
+  <string name="time_lower_month">Depart %m and follow %s</string>
+  <string name="time_lower_weekday">Depart %w and follow %s</string>
+  <string name="time_lower_year">Depart %y and follow %s</string>
+  <string name="time_lower_zone">Depart %z and follow %s</string>
+  <string name="time_shortcut_after_argument">Follow %s until %M</string>
+  <string name="time_positional">Depart %1$tY and dock %1$tm</string>
+  <item type="string" format="string" name="strict_generic_time">Inspect %W then %s</item>
+  <string name="escaped_percent">Dock %% then %1$s</string>
+  <string name="native_newline">Dock %n then %1$s</string>
+  <string name="formatting_disabled" formatted="false">Dock %_ then %1$s</string>
+</resources>

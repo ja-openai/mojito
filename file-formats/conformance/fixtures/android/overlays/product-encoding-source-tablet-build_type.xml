@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-16BE"?>
+<resources xmlns:marker="urn:oasis:names:tc:xliff:document:1.2">
+  <!-- Upper-priority lexical formatting and protected attributes remain owned. -->
+  <string name="shared_signal">Debug <marker:g id="pilot" example="D&amp;2">%1$s</marker:g></string>
+  <string translatable="false" name="masked_signal">Protected upper coast</string>
+  <string name="product_signal" product="tablet">Upper tablet beacon</string>
+  <string-array name="product_routes" product="tablet">
+    <item>Upper tablet route</item>
+  </string-array>
+  <plurals name="product_lights" product="tablet">
+    <item quantity="one">%1$d upper tablet light</item>
+    <item quantity="other">%1$d upper tablet lights</item>
+  </plurals>
+  <string-array name="routes">
+    <item>Debug <b lane="north">north</b></item>
+    <item>Debug south</item>
+  </string-array>
+  <plurals name="lights">
+    <item quantity="one">%1$d upper light</item>
+    <item quantity="other">%1$d upper lights</item>
+  </plurals>
+  <string name="debug_anchor">Upper only</string>
+</resources>

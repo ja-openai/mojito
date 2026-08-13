@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <string-array name="harbor_lanes">
+        <item android:featureFlag="neutral.flags.mutable">A mutable harbor lane</item>
+        <item android:featureFlag="!neutral.flags.mutable">An inverse harbor lane</item>
+        <item>An open harbor lane</item>
+    </string-array>
+</resources>

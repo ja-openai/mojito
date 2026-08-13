@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <bag type="attr" name="overlay_signal" format="integer" min="-4" max="9" />
+</resources>

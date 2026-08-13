@@ -1,0 +1,11 @@
+<resources xmlns:platform="http://schemas.android.com/apk/res/android">
+  <string name="route">Upper path-protected harbor route</string>
+  <plurals name="signals">
+    <item quantity="one">One upper harbor signal</item>
+    <item quantity="other">Several upper harbor signals</item>
+  </plurals>
+  <string-array name="lanes">
+    <item platform:featureFlag="neutral.path.disabled">Hidden upper harbor lane</item>
+    <item>Visible upper harbor lane</item>
+  </string-array>
+</resources>

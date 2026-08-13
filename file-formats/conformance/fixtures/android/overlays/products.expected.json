@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "display": {
+      "defaultMessage": "Regular panel",
+      "metadata": {
+        "androidProduct": "default",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "main"
+      }
+    },
+    "display@product=tablet": {
+      "defaultMessage": "Updated wide panel",
+      "metadata": {
+        "androidProduct": "tablet",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "build_type"
+      }
+    },
+    "retained": {
+      "defaultMessage": "Common switch",
+      "metadata": {
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "main"
+      }
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "arrays": {
+    "routes": [
+      "West \"pier, quiet\" water",
+      "East \"steady\" water"
+    ]
+  },
+  "styledSpans": {
+    "arrays": {
+      "routes": {
+        "1": [
+          {
+            "name": "i",
+            "start": 5,
+            "end": 12,
+            "attributes": {
+              "lane": "water\"side"
+            }
+          }
+        ]
+      }
+    },
+    "plurals": {
+      "signals": {
+        "other": [
+          {
+            "name": "b",
+            "start": 5,
+            "end": 11
+          }
+        ]
+      }
+    },
+    "strings": {
+      "styled": [
+        {
+          "name": "b",
+          "start": 6,
+          "end": 12,
+          "attributes": {
+            "lane": "harbor\"side"
+          }
+        }
+      ]
+    }
+  },
+  "plurals": {
+    "signals": {
+      "one": "One \"quiet\" beacon",
+      "other": "%1$d \"quiet\" beacons"
+    }
+  },
+  "strings": {
+    "commented": "North\"pier",
+    "protected": "Guide %1$s to \"north\"",
+    "scalar": "North\"pier and \"quiet\" water",
+    "styled": "North \"quiet\" pier",
+    "untouched": "Keep \"protected\" text"
+  }
+}

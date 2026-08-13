@@ -1,0 +1,10 @@
+{
+  "harbor": "Quai & abri sûr",
+  "rich": "Marchez <b class=\"quiet\" route=\"east\">au nord</b> maintenant",
+  "protected": "Bonjour {pilot} !",
+  "generic": "Voie 🙂 tranquille",
+  "routes[0]": "Quai est",
+  "routes[2]": "Quai ouest",
+  "visits#one": "{arg0} visite",
+  "visits#other": "{arg0} visites"
+}

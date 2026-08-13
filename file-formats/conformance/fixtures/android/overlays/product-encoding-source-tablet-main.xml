@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<resources xmlns:marker="urn:oasis:names:tc:xliff:document:1.2">
+  <!-- Lower-priority declarations stay byte-for-byte untouched. -->
+  <string name="shared_signal">Main <marker:g id="pilot" example="M-1">%1$s</marker:g></string>
+  <string name="main_anchor">Main &amp; harbor</string>
+  <string name="masked_signal">Lower coast</string>
+  <string name="product_signal" product="default">Main default beacon</string>
+  <string name="product_signal" product="tablet">Main tablet beacon</string>
+  <string-array name="product_routes" product="default">
+    <item>Main default route</item>
+  </string-array>
+  <string-array name="product_routes" product="tablet">
+    <item>Main tablet route</item>
+  </string-array>
+  <plurals name="product_lights" product="default">
+    <item quantity="one">%1$d main default light</item>
+    <item quantity="other">%1$d main default lights</item>
+  </plurals>
+  <plurals name="product_lights" product="tablet">
+    <item quantity="one">%1$d main tablet light</item>
+    <item quantity="other">%1$d main tablet lights</item>
+  </plurals>
+  <string-array name="routes">
+    <item>Main north</item>
+    <item>Main south</item>
+  </string-array>
+  <plurals name="lights">
+    <item quantity="one">%1$d main light</item>
+    <item quantity="other">%1$d main lights</item>
+  </plurals>
+</resources>

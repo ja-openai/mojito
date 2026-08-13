@@ -1,0 +1,27 @@
+{
+  "arrays": {
+    "title_array": [
+      "Title-case array signal"
+    ],
+    "upper_array": [
+      "Uppercase array signal"
+    ]
+  },
+  "plurals": {
+    "ignored_invalid_plural": {
+      "other": "%1$d visible ignored signals"
+    },
+    "ignored_mixed_plural": {
+      "one": "%1$d visible mixed signal",
+      "other": "%1$d visible mixed signals"
+    }
+  },
+  "strings": {
+    "generic_ignored_flags": "Generic flags are ignored",
+    "padded_enabled": "%1$s harbor route",
+    "title_enabled": "%1$d quiet beacons",
+    "title_unformatted": "%s %d retained",
+    "upper_enabled": "%1$s orbital route",
+    "uppercase_unformatted": "%s %d preserved"
+  }
+}

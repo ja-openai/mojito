@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:auto="http://schemas.android.com/apk/res-auto">
+    <macro name="harbor_phrase">A shared harbor crossing</macro>
+    <macro name="scoped_phrase">@auto:macro/harbor_phrase</macro>
+</resources>

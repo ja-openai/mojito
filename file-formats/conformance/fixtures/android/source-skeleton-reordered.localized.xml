@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<resources xmlns:code="urn:oasis:names:tc:xliff:document:1.2"
+           xmlns:hint="http://schemas.android.com/tools"
+           hint:locale="fr_CA">
+  <!-- Lexical attributes, aliases, quote styles, and nontranslatable values never move. -->
+  <string name="private_route" translatable="false">Protected original channel</string>
+
+  <string name="styled_route">"Après "<i shade="east">"est"</i>" puis "<b tone='north' marker="N">"nord"</b>"."</string>
+  <string name="nested_route">"Avant "<i mood='calm'>"extérieur"</i>" puis "<b class='outer'><u lane="inner">"centre"</u></b></string>
+  <string name="protected_route">"Radar "<code:g id='radar' example="R-2">%2$s</code:g>" puis pilote "<code:g example='P-7' id="pilot">%1$s</code:g></string>
+  <string name="mixed_route"><i class="radar">"Radar "<code:g id="radar" example='R-2'>%2$s</code:g></i>" puis "<b class='pilot'>"Pilote "<code:g example="P-7" id='pilot'>%1$s</code:g></b></string>
+  <string name="repeated_style"><b lane="south">"sud"</b>" puis "<b lane='north'>"nord"</b></string>
+
+  <string-array name="routes">
+    <item>"Après "<i path="two">"sud"</i>" puis "<b path='one'>"nord"</b></item>
+    <item>"Pont "<code:g example='D-4' id="deck">%2$s</code:g>" puis capitaine "<code:g id='captain' example="C-3">%1$s</code:g></item>
+  </string-array>
+
+  <plurals name="signals">
+    <item quantity="one"><i tone="second">"sud"</i>" puis "<b tone='first'>"%1$d nord"</b></item>
+    <item quantity="other"><i tone='far'>"sud"</i>" puis "<b tone="many">"%1$d nord"</b></item>
+  </plurals>
+</resources>

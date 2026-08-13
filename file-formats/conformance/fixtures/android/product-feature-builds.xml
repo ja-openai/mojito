@@ -1,0 +1,35 @@
+<resources xmlns:platform="http://schemas.android.com/apk/res/android">
+  <string name="anchor">Neutral harbor anchor</string>
+  <string name="route">Default harbor route</string>
+  <string name="route" product="tablet" platform:featureFlag="neutral.flags.disabled">Hidden tablet harbor route</string>
+  <string name="active">Default beacon passage</string>
+  <string name="active" product="tablet" platform:featureFlag="neutral.flags.enabled">Tablet beacon passage</string>
+  <string name="fallback">Default sheltered passage</string>
+  <string name="fallback" product="watch">Watch sheltered passage</string>
+  <string name="mode">Default navigation mode</string>
+  <string name="mode" product="tablet">Tablet navigation mode</string>
+  <string name="mode" product="watch">Watch navigation mode</string>
+  <string name="inverse">Default inverse passage</string>
+  <string name="inverse" product="tablet" platform:featureFlag="!neutral.flags.disabled">Tablet inverse passage</string>
+  <string name="conditional" platform:featureFlag="neutral.flags.disabled">Hidden default signal</string>
+  <string name="conditional" product="tablet" platform:featureFlag="neutral.flags.enabled">Tablet conditional signal</string>
+  <plurals name="signals">
+    <item quantity="one">One default signal</item>
+    <item quantity="other">Several default signals</item>
+  </plurals>
+  <plurals name="signals" product="tablet" platform:featureFlag="neutral.flags.enabled">
+    <item quantity="one">One tablet signal</item>
+    <item quantity="other">Several tablet signals</item>
+  </plurals>
+  <array name="lanes">
+    <item>13</item>
+    <item>Default inlet</item>
+    <item>Default outlet</item>
+  </array>
+  <array name="lanes" product="tablet">
+    <item platform:featureFlag="neutral.flags.disabled">17</item>
+    <item platform:featureFlag="neutral.flags.enabled">@string/anchor</item>
+    <item>41</item>
+    <item>Tablet open channel</item>
+  </array>
+</resources>

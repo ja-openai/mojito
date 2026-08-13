@@ -1,0 +1,22 @@
+{
+  "strings": {
+    "invalid_font_size": "Pier"
+  },
+  "styledSpans": {
+    "strings": {
+      "invalid_font_size": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "size": "harbor"
+          },
+          "encodedTag": "font;size=harbor",
+          "runtimeStyles": [],
+          "runtimeError": "NumberFormatException"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "arrays": {
+    "forced.bag": [
+      "17",
+      "true"
+    ],
+    "hidden.bag": [
+      "Never translate the hidden bag"
+    ],
+    "integer.bag": [
+      "9",
+      "13"
+    ],
+    "mixed.bag": [
+      "Sail toward %1$s",
+      "17",
+      "true",
+      "@string/anchor",
+      "17",
+      "#112233"
+    ],
+    "words.bag": [
+      "North inlet",
+      "17",
+      "@string/anchor",
+      "South inlet"
+    ]
+  },
+  "arrayPrimitiveValues": {
+    "integer.bag": {
+      "0": "9",
+      "1": "13"
+    },
+    "mixed.bag": {
+      "1": "17",
+      "2": "true"
+    }
+  },
+  "arrayReferences": {
+    "mixed.bag": {
+      "3": "@string/anchor"
+    },
+    "words.bag": {
+      "2": "@string/anchor"
+    }
+  },
+  "plurals": {
+    "signals.bag": {
+      "one": "%1$d coastal flare",
+      "other": "%1$d coastal flares"
+    }
+  },
+  "strings": {
+    "anchor": "Bag harbor marker"
+  }
+}

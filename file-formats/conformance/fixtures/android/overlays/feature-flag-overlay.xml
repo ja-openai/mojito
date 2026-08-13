@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:platform="http://schemas.android.com/apk/res/android">
+    <string name="harbor" platform:featureFlag="neutral.overlay.harbor">Conditional overlay harbor</string>
+</resources>

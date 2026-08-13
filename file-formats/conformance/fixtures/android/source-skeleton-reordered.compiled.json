@@ -1,0 +1,169 @@
+{
+  "arrays": {
+    "routes": [
+      "First north after south",
+      "Captain %1$s beside %2$s"
+    ]
+  },
+  "styledSpans": {
+    "arrays": {
+      "routes": {
+        "0": [
+          {
+            "name": "b",
+            "start": 6,
+            "end": 10,
+            "attributes": {
+              "path": "one"
+            }
+          },
+          {
+            "name": "i",
+            "start": 18,
+            "end": 22,
+            "attributes": {
+              "path": "two"
+            }
+          }
+        ]
+      }
+    },
+    "plurals": {
+      "signals": {
+        "one": [
+          {
+            "name": "b",
+            "start": 0,
+            "end": 9,
+            "attributes": {
+              "tone": "first"
+            }
+          },
+          {
+            "name": "i",
+            "start": 16,
+            "end": 20,
+            "attributes": {
+              "tone": "second"
+            }
+          }
+        ],
+        "other": [
+          {
+            "name": "b",
+            "start": 0,
+            "end": 9,
+            "attributes": {
+              "tone": "many"
+            }
+          },
+          {
+            "name": "i",
+            "start": 16,
+            "end": 20,
+            "attributes": {
+              "tone": "far"
+            }
+          }
+        ]
+      }
+    },
+    "strings": {
+      "mixed_route": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 8,
+          "attributes": {
+            "class": "pilot"
+          }
+        },
+        {
+          "name": "i",
+          "start": 15,
+          "end": 23,
+          "attributes": {
+            "class": "radar"
+          }
+        }
+      ],
+      "nested_route": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 5,
+          "attributes": {
+            "class": "outer"
+          }
+        },
+        {
+          "name": "u",
+          "start": 0,
+          "end": 5,
+          "attributes": {
+            "lane": "inner"
+          }
+        },
+        {
+          "name": "i",
+          "start": 14,
+          "end": 18,
+          "attributes": {
+            "mood": "calm"
+          }
+        }
+      ],
+      "repeated_style": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 4,
+          "attributes": {
+            "lane": "north"
+          }
+        },
+        {
+          "name": "b",
+          "start": 8,
+          "end": 12,
+          "attributes": {
+            "lane": "south"
+          }
+        }
+      ],
+      "styled_route": [
+        {
+          "name": "b",
+          "start": 7,
+          "end": 11,
+          "attributes": {
+            "marker": "N",
+            "tone": "north"
+          }
+        },
+        {
+          "name": "i",
+          "start": 20,
+          "end": 23,
+          "attributes": {
+            "shade": "east"
+          }
+        }
+      ]
+    }
+  },
+  "plurals": {
+    "signals": {
+      "one": "%1$d north then south",
+      "other": "%1$d north then south"
+    }
+  },
+  "strings": {
+    "mixed_route": "Lead %1$s near Scan %2$s",
+    "nested_route": "center versus outer",
+    "private_route": "Protected original channel",
+    "protected_route": "Pilot %1$s meets radar %2$s",
+    "repeated_style": "north / south",
+    "styled_route": "Before north beside east."
+  }
+}

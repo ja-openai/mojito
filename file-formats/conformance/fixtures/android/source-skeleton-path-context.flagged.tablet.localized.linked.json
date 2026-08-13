@@ -1,0 +1,39 @@
+{
+  "conditionalArrays": {
+    "lanes": {
+      "condition": "neutral.flags.path",
+      "values": [
+        "Nord <clair> & sûr",
+        "@0x7f030000",
+        "Sud français"
+      ]
+    }
+  },
+  "conditionalPlurals": {
+    "signals": {
+      "condition": "neutral.flags.path",
+      "variants": {
+        "one": "%1$d signal français",
+        "other": "%1$d signaux français"
+      }
+    }
+  },
+  "conditionalStrings": {
+    "anchor.route": {
+      "condition": "neutral.flags.path",
+      "value": "Ancre française"
+    },
+    "beacon": {
+      "condition": "neutral.flags.path",
+      "value": "Balise française"
+    },
+    "private": {
+      "condition": "neutral.flags.path",
+      "value": "Keep private night note"
+    },
+    "route": {
+      "condition": "neutral.flags.path",
+      "value": "Passage tablette français"
+    }
+  }
+}

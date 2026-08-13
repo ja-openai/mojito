@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:platform="http://schemas.android.com/apk/res/android"
+           xmlns:alias="http://schemas.android.com/apk/res/android"
+           xmlns:foreign="https://neutral.example/harbor/flags"
+           platform:featureFlag="neutral.root.ignored">
+    <skip platform:featureFlag="neutral.control.skip" />
+    <eat-comment platform:featureFlag="neutral.control.comment" />
+    <foreign:string name="hidden_wrapper" platform:featureFlag="neutral.foreign.wrapper">Never extracted</foreign:string>
+    <string name="foreign_gate" foreign:featureFlag="neutral.foreign.attribute">Foreign namespace remains visible</string>
+    <string name="unqualified_gate" featureFlag="neutral.unqualified.attribute">Unqualified gate remains visible</string>
+    <string name="empty_gate" platform:featureFlag="">Empty gate remains visible</string>
+    <string name="whitespace_gate" alias:featureFlag=" &#x9; ">Whitespace gate remains visible</string>
+    <string-array name="open_routes">
+        <item platform:featureFlag="">First open harbor passage</item>
+        <item alias:featureFlag=" &#x9; ">Second open harbor passage</item>
+        <item foreign:featureFlag="neutral.foreign.item">Foreign item gate remains visible</item>
+        <item featureFlag="neutral.unqualified.item">Unqualified item gate remains visible</item>
+    </string-array>
+    <plurals name="plural_gate">
+        <item quantity="one" platform:featureFlag="neutral.plural.one">One visible beacon</item>
+        <item quantity="other" alias:featureFlag="neutral.plural.other">Several visible beacons</item>
+    </plurals>
+</resources>

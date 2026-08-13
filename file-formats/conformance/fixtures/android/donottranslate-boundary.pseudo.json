@@ -1,0 +1,8 @@
+{
+  "resources": {
+    "visible.explicit": ["ar-rXB", "en-rXA"],
+    "visible.generic": ["ar-rXB", "en-rXA"],
+    "visible.plain": ["ar-rXB", "en-rXA"],
+    "visible.signals": ["ar-rXB", "en-rXA"]
+  }
+}

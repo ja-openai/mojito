@@ -1,0 +1,53 @@
+{
+  "strings": {
+    "boundary_byte_order_mark": "quai & ﻿ ouest ﻿",
+    "boundary_em_space": "quai &   ouest  ",
+    "boundary_en_quad": "quai &   ouest  ",
+    "boundary_figure": "quai &   ouest  ",
+    "boundary_hair": "quai &   ouest  ",
+    "boundary_ideographic": "quai & 　 ouest 　",
+    "boundary_line_separator": "quai &   ouest  ",
+    "boundary_medium_math": "quai &   ouest  ",
+    "boundary_mongolian": "quai & ᠎ ouest ᠎",
+    "boundary_narrow_no_break": "quai &   ouest  ",
+    "boundary_next_line": "quai &  ouest ",
+    "boundary_no_break": "quai &   ouest  ",
+    "boundary_ogham": "quai &   ouest  ",
+    "boundary_paragraph_separator": "quai &   ouest  ",
+    "boundary_punctuation": "quai &   ouest  ",
+    "boundary_zero_width": "quai & ​ ouest ​",
+    "entity_byte_order_mark": "sud﻿ ouest",
+    "entity_em_space": "sud  ouest",
+    "entity_en_quad": "sud  ouest",
+    "entity_figure": "sud  ouest",
+    "entity_hair": "sud  ouest",
+    "entity_ideographic": "sud　 ouest",
+    "entity_line_separator": "sud  ouest",
+    "entity_medium_math": "sud  ouest",
+    "entity_mongolian": "sud᠎ ouest",
+    "entity_narrow_no_break": "sud  ouest",
+    "entity_next_line": "sud ouest",
+    "entity_no_break": "sud  ouest",
+    "entity_ogham": "sud  ouest",
+    "entity_paragraph_separator": "sud  ouest",
+    "entity_punctuation": "sud  ouest",
+    "entity_zero_width": "sud​ ouest",
+    "escaped_byte_order_mark": "sud﻿ ouest",
+    "escaped_em_space": "sud  ouest",
+    "escaped_en_quad": "sud  ouest",
+    "escaped_figure": "sud  ouest",
+    "escaped_hair": "sud  ouest",
+    "escaped_ideographic": "sud　 ouest",
+    "escaped_line_separator": "sud  ouest",
+    "escaped_medium_math": "sud  ouest",
+    "escaped_mongolian": "sud᠎ ouest",
+    "escaped_narrow_no_break": "sud  ouest",
+    "escaped_next_line": "sud ouest",
+    "escaped_no_break": "sud  ouest",
+    "escaped_ogham": "sud  ouest",
+    "escaped_paragraph_separator": "sud  ouest",
+    "escaped_punctuation": "sud  ouest",
+    "escaped_zero_width": "sud​ ouest",
+    "quoted_unicode": "      ouest    "
+  }
+}

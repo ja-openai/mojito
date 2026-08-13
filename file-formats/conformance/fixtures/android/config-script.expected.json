@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "locale": "zh-Hant-TW",
+  "messages": {
+    "route": {
+      "defaultMessage": "Waypoint",
+      "metadata": {
+        "androidResourcePath": "res/values-b+zh+Hant+TW-night-v24/strings.xml",
+        "androidResourceQualifiers": ["b+zh+Hant+TW", "night", "v24"]
+      }
+    }
+  }
+}

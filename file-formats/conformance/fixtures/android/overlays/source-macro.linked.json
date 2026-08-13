@@ -1,0 +1,80 @@
+{
+  "products": {
+    "default": {
+      "arrays": {
+        "macro_routes": [
+          "A remote channel",
+          "An upper harbor"
+        ]
+      },
+      "plurals": {
+        "macro_lights": {
+          "one": "%1$d remote lantern",
+          "other": "%1$d remote lanterns"
+        }
+      },
+      "strings": {
+        "macro_chain": "An upper harbor",
+        "macro_private": "A remote channel",
+        "macro_product": "An upper harbor",
+        "macro_protected": "Upper %1$s",
+        "macro_qualified": "An upper harbor",
+        "macro_scoped": "A remote channel",
+        "macro_signal": "An upper harbor",
+        "macro_styled": "Upper harbor"
+      },
+      "styledSpans": {
+        "strings": {
+          "macro_styled": [
+            {
+              "attributes": {
+                "tone": "bright"
+              },
+              "end": 11,
+              "name": "b",
+              "start": 6
+            }
+          ]
+        }
+      }
+    },
+    "tablet": {
+      "arrays": {
+        "macro_routes": [
+          "A remote channel",
+          "An upper harbor"
+        ]
+      },
+      "plurals": {
+        "macro_lights": {
+          "one": "%1$d remote lantern",
+          "other": "%1$d remote lanterns"
+        }
+      },
+      "strings": {
+        "macro_chain": "An upper harbor",
+        "macro_private": "A remote channel",
+        "macro_product": "A remote tablet crossing",
+        "macro_protected": "Upper %1$s",
+        "macro_qualified": "An upper harbor",
+        "macro_scoped": "A remote channel",
+        "macro_signal": "An upper harbor",
+        "macro_styled": "Upper harbor"
+      },
+      "styledSpans": {
+        "strings": {
+          "macro_styled": [
+            {
+              "attributes": {
+                "tone": "bright"
+              },
+              "end": 11,
+              "name": "b",
+              "start": 6
+            }
+          ]
+        }
+      }
+    }
+  }
+}

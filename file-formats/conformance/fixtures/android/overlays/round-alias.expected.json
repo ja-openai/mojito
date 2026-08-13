@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "locale": "en",
+  "messages": {
+    "route": {
+      "defaultMessage": "River trail",
+      "metadata": {
+        "androidResourcePath": "src/debug/res/values-en-round-v23/strings.xml",
+        "androidResourceQualifiers": [
+          "en",
+          "round",
+          "v23"
+        ],
+        "androidOverlaySourceSet": "build_type"
+      }
+    },
+    "retained": {
+      "defaultMessage": "Old pier",
+      "metadata": {
+        "androidResourcePath": "src/main/res/values-en-round/strings.xml",
+        "androidResourceQualifiers": [
+          "en",
+          "round"
+        ],
+        "androidOverlaySourceSet": "main"
+      }
+    }
+  }
+}

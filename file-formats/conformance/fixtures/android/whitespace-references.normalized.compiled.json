@@ -1,0 +1,53 @@
+{
+  "arrays": {
+    "mixed": [
+      "?attr/north\tpier",
+      "@string/north\rpier",
+      "Visible mixed route"
+    ],
+    "routes": [
+      "@string/north pier",
+      "@string/north\tpier",
+      "@string/north\npier",
+      "@string/north\rpier",
+      "@string/north\r\npier",
+      "@string/north pier",
+      "@string/north pier",
+      "Visible route"
+    ]
+  },
+  "arrayReferences": {
+    "mixed": {
+      "0": "?attr/north\tpier",
+      "1": "@string/north\rpier"
+    },
+    "routes": {
+      "0": "@string/north pier",
+      "1": "@string/north\tpier",
+      "2": "@string/north\npier",
+      "3": "@string/north\rpier",
+      "4": "@string/north\r\npier",
+      "5": "@string/north pier",
+      "6": "@string/north pier"
+    }
+  },
+  "plurals": {
+    "signals": {
+      "other": "%1$d visible lights"
+    }
+  },
+  "pluralReferences": {
+    "signals": {
+      "zero": "@string/north\rpier",
+      "one": "@string/north pier",
+      "two": "@string/north\tpier",
+      "few": "@string/north\npier",
+      "many": "@string/north pier"
+    }
+  },
+  "strings": {
+    "escaped": "@string/north pier",
+    "quoted": "@string/north pier",
+    "visible": "A visible harbor"
+  }
+}

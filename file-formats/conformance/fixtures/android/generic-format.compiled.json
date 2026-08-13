@@ -1,0 +1,32 @@
+{
+  "strings": {
+    "anchor": "Harbor marker",
+    "default_escaped_color": "#112233",
+    "default_ignored_flags": "%s near %d",
+    "default_quoted_integer": "17",
+    "default_text": "Sailing %1$s",
+    "empty_format": "Quiet tide",
+    "strict_hidden": "%s near %d",
+    "strict_literal": "%s near %d",
+    "strict_padded": "Beacon %1$s",
+    "strict_text": "Compass %1$s"
+  },
+  "primitiveValues": {
+    "default_boolean": "true",
+    "default_color": "#ff112233",
+    "default_dimension": "4.000000dp",
+    "default_float": "1.5",
+    "default_fraction": "0.250000%",
+    "default_integer": "17",
+    "typed_boolean": "true",
+    "typed_color": "#ffa1b2c3",
+    "typed_dimension": "8.000000sp",
+    "typed_float": "2.25",
+    "typed_fraction": "0.500000%",
+    "typed_integer": "0x0000001f"
+  },
+  "references": {
+    "strict_reference": "?attr/harbor",
+    "typed_reference": "@string/anchor"
+  }
+}

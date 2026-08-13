@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "escaped_before_terminal": {
+      "defaultMessage": "Harbor signal 80% beside 30%",
+      "metadata": {
+        "androidRawPercentOccurrences": [
+          1
+        ]
+      }
+    },
+    "generic_fragment": {
+      "defaultMessage": "Gauge %_ for {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidGenericString": true,
+        "androidRawPercentOccurrences": [
+          0
+        ]
+      }
+    },
+    "only_percent": {
+      "defaultMessage": "%",
+      "metadata": {
+        "androidRawPercentOccurrences": [
+          0
+        ]
+      }
+    },
+    "raw_before_escaped": {
+      "defaultMessage": "Harbor signal %_ beside 80%",
+      "metadata": {
+        "androidRawPercentOccurrences": [
+          0
+        ]
+      }
+    },
+    "raw_routes[0]": {
+      "defaultMessage": "North %_ for {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidRawPercentOccurrences": [
+          0
+        ],
+        "arrayIndex": 0,
+        "arrayName": "raw_routes"
+      }
+    },
+    "raw_routes[1]": {
+      "defaultMessage": "South 80% and 30%",
+      "metadata": {
+        "androidRawPercentOccurrences": [
+          1
+        ],
+        "arrayIndex": 1,
+        "arrayName": "raw_routes"
+      }
+    },
+    "raw_signals": {
+      "defaultMessage": "{arg0, plural, one {%_ at {arg0} signal} other {80% and %_ at {arg0} signals}}",
+      "variants": {
+        "one": "%_ at {arg0} signal",
+        "other": "80% and %_ at {arg0} signals"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidPluralRawPercentOccurrences": {
+          "one": [
+            0
+          ],
+          "other": [
+            1
+          ]
+        }
+      }
+    },
+    "solitary_fragment": {
+      "defaultMessage": "Harbor signal %_",
+      "metadata": {
+        "androidRawPercentOccurrences": [
+          0
+        ]
+      }
+    },
+    "strict_terminal": {
+      "defaultMessage": "Gauge ends at 30%",
+      "metadata": {
+        "androidGenericFormat": "string",
+        "androidGenericString": true,
+        "androidRawPercentOccurrences": [
+          0
+        ]
+      }
+    },
+    "styled_attribute": {
+      "defaultMessage": "'<'annotation role=\"50%%\">Signal %_'<'/annotation> for {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRawPercentOccurrences": [
+          0
+        ]
+      }
+    },
+    "styled_fragment": {
+      "defaultMessage": "<b>Signal %_</b> for {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidRawPercentOccurrences": [
+          0
+        ]
+      }
+    },
+    "supplementary_percent": {
+      "defaultMessage": "🧭 %_ beside 80%",
+      "metadata": {
+        "androidRawPercentOccurrences": [
+          0
+        ]
+      }
+    },
+    "terminal_percent": {
+      "defaultMessage": "Fuel remaining: 80%",
+      "metadata": {
+        "androidRawPercentOccurrences": [
+          0
+        ]
+      }
+    },
+    "unformatted_percent": {
+      "defaultMessage": "Gauge %_ for %1$s and 80%%",
+      "metadata": {
+        "formatted": false
+      }
+    }
+  }
+}

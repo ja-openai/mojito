@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<resources xmlns:f="urn:neutral:foreign-protected" xmlns:x="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="protected" translatable="false">North <x:note>it's</x:note> coast</string>
+</resources>

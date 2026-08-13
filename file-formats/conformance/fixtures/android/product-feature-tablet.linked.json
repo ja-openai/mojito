@@ -1,0 +1,33 @@
+{
+  "arrays": {
+    "lanes": [
+      "@string/anchor",
+      "41",
+      "Tablet open channel"
+    ]
+  },
+  "arrayReferences": {
+    "lanes": {
+      "0": "@string/anchor"
+    }
+  },
+  "arrayPrimitiveValues": {
+    "lanes": {
+      "1": "41"
+    }
+  },
+  "plurals": {
+    "signals": {
+      "one": "One tablet signal",
+      "other": "Several tablet signals"
+    }
+  },
+  "strings": {
+    "active": "Tablet beacon passage",
+    "anchor": "Neutral harbor anchor",
+    "conditional": "Tablet conditional signal",
+    "fallback": "Default sheltered passage",
+    "inverse": "Tablet inverse passage",
+    "mode": "Tablet navigation mode"
+  }
+}

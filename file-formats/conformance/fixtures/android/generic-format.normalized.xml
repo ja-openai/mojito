@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="anchor">"Harbor marker"</string>
+  <item type="string" name="default_escaped_color">"#112233"</item>
+  <item type="string" name="default_ignored_flags">"%s near %d"</item>
+  <item type="string" name="default_quoted_integer">"17"</item>
+  <item type="string" name="default_text">"Sailing %1$s"</item>
+  <item type="string" name="empty_format">"Quiet tide"</item>
+  <item type="string" name="strict_literal" format="string" formatted="false">"%s near %d"</item>
+  <item type="string" name="strict_padded" format="string">"Beacon %1$s"</item>
+  <item type="string" name="strict_text" format="string">"Compass %1$s"</item>
+</resources>

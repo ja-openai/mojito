@@ -1,0 +1,5 @@
+<resources>
+  <string name="cdata"><![CDATA[<i>literal</i> & value]]></string>
+  <string name="literal_percent" formatted="false">50%% and %1$s</string>
+  <string name="annotation"><annotation key="tone">Stay calm</annotation></string>
+</resources>

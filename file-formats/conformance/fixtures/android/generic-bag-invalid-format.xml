@@ -1,0 +1,5 @@
+<resources>
+  <bag type="array" name="routes.bag" format="nebula">
+    <item>Invalid coastal format</item>
+  </bag>
+</resources>

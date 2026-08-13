@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<resources xmlns:x="urn:oasis:names:tc:xliff:document:1.2">
+  <?root original="kept"?>
+  <string name="plain">North<?lane mode="quiet"?> port</string>
+  <string name="mixed">East<!-- original comment --><?mark value="1"?><![CDATA[ west]]></string>
+  <string name="quoted">"North<?quote keep?>  south"</string>
+  <string name="escaped">\u0<?unicode split?>041</string>
+  <string name="styled">Move <b lane="east">north<?style hold?>ward</b> now</string>
+  <string name="pilot">Hi <x:g id="pilot">%1<?protected hold?>$s</x:g>!</string>
+  <item type="string" name="generic" format="string">Open<?generic keep?> road</item>
+  <string-array name="routes">
+    <item>East<?array one?> pier</item>
+    <item>West<?array two?> pier</item>
+  </string-array>
+  <plurals name="signals">
+    <item quantity="one">%1$d<?plural one?> signal</item>
+    <item quantity="other">%1$d<?plural other?> signals</item>
+  </plurals>
+</resources>

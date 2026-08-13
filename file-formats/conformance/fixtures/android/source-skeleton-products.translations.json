@@ -1,0 +1,16 @@
+{
+  "anchor": "Ancre sûre",
+  "harbor.route": "Passage commun sûr",
+  "harbor.route@product=tablet": "Passage tablette & calme",
+  "harbor.route@product=watch": "Montre <calme> & claire",
+  "harbor.signal": "Signal commun prêt",
+  "harbor.signal@product=tablet": "Signal tablette & prêt",
+  "harbor.lanes[0]": "Voie nord commune",
+  "harbor.lanes[2]": "Voie sud commune",
+  "harbor.lanes@product=tablet[0]": "Tablette <nord> & sûre",
+  "harbor.lanes@product=tablet[2]": "Tablette sud douce",
+  "tide.count#one": "{arg0} balise commune",
+  "tide.count#other": "{arg0} balises communes",
+  "tide.count@product=tablet#one": "{arg0} balise tablette",
+  "tide.count@product=tablet#other": "{arg0} balises tablette"
+}

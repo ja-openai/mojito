@@ -1,0 +1,57 @@
+{
+  "arrays": {
+    "routes": [
+      "@com.neutral.port:string/anchor",
+      "@*android:string/anchor",
+      "?android:attr/title",
+      "?attr/title",
+      "@color/harbor",
+      "@id/harbor",
+      "@macro/harbor",
+      "?android:attr/title",
+      "@string/quiet-harbor",
+      "Quiet %1$s",
+      "@com.neutral.port:string/anchor",
+      "?android:attr/title"
+    ]
+  },
+  "arrayReferences": {
+    "routes": {
+      "0": "@com.neutral.port:string/anchor",
+      "1": "@*android:string/anchor",
+      "2": "?android:attr/title",
+      "3": "?attr/title",
+      "4": "@color/harbor",
+      "5": "@id/harbor",
+      "6": "@macro/harbor",
+      "7": "?android:attr/title",
+      "8": "@string/quiet-harbor"
+    }
+  },
+  "plurals": {
+    "signals": {
+      "other": "%1$d quiet signals"
+    }
+  },
+  "pluralReferences": {
+    "signals": {
+      "zero": "@*com.neutral.port:string/anchor",
+      "one": "?android:attr/title",
+      "two": "?attr/title",
+      "few": "@color/harbor",
+      "many": "@id/harbor"
+    }
+  },
+  "strings": {
+    "anchor": "Calm harbor",
+    "at_literal": "@not_a_reference",
+    "escaped_theme": "?android:attr/title",
+    "invalid_create_literal": "@+string/harbor",
+    "invalid_private_create_literal": "@+*android:id/harbor",
+    "invalid_theme_type_literal": "?string/harbor",
+    "numeric_literal": "@0",
+    "quoted_package": "@com.neutral.port:string/anchor",
+    "unicode_padded": " @com.neutral.port:string/anchor ",
+    "unknown_type_literal": "@unknown/harbor"
+  }
+}

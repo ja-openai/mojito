@@ -1,0 +1,65 @@
+{
+  "arrays": {
+    "mixed": [
+      "@string/anchor",
+      "Visible mixed route"
+    ],
+    "routes": [
+      "@string/anchor",
+      "@string/anchor",
+      "@@@string/anchor",
+      "@@string/anchor",
+      "@@string/anchor",
+      "@macro/shortcut",
+      "Actual route"
+    ]
+  },
+  "arrayReferences": {
+    "mixed": {
+      "0": "@string/anchor"
+    },
+    "routes": {
+      "0": "@string/anchor",
+      "1": "@string/anchor",
+      "5": "@macro/shortcut"
+    }
+  },
+  "macros": [
+    "indirect",
+    "shortcut"
+  ],
+  "plurals": {
+    "signals": {
+      "other": "%1$d visible signals"
+    }
+  },
+  "pluralReferences": {
+    "signals": {
+      "one": "@string/anchor",
+      "two": "@macro/shortcut"
+    }
+  },
+  "strings": {
+    "anchor": "Quiet harbor",
+    "create_literal": "@@+id/marker",
+    "escaped": "@@string/anchor",
+    "null_literal": "@@null",
+    "quoted": "@@string/anchor",
+    "triple": "@@@string/anchor",
+    "unknown": "@@unknown/anchor"
+  },
+  "references": {
+    "double": "@string/anchor",
+    "double_cdata": "@string/anchor",
+    "double_chain": "@macro/indirect",
+    "double_color": "@color/shade",
+    "double_comment": "@string/anchor",
+    "double_entity": "@string/anchor",
+    "double_macro": "@macro/shortcut",
+    "double_mixed_entity": "@string/anchor",
+    "generic": "@string/anchor",
+    "generic_strict": "@string/anchor",
+    "single": "@string/anchor",
+    "single_macro": "@macro/shortcut"
+  }
+}

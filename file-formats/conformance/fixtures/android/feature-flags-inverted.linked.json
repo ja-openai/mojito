@@ -1,0 +1,32 @@
+{
+  "arrays": {
+    "mixed_routes": [
+      "7",
+      "17",
+      "Hidden typed passage",
+      "Final typed passage"
+    ]
+  },
+  "arrayPrimitiveValues": {
+    "mixed_routes": {
+      "0": "7",
+      "1": "17"
+    }
+  },
+  "plurals": {
+    "bag_signals": {
+      "one": "One hidden bag beacon",
+      "other": "Several hidden bag beacons"
+    },
+    "signals_disabled": {
+      "one": "One disabled beacon",
+      "other": "Several disabled beacons"
+    }
+  },
+  "strings": {
+    "anchor": "Quiet harbor anchor",
+    "disabled": "Disabled harbor route",
+    "exclusive": "Disabled exclusive lane",
+    "generic_disabled": "Disabled generic signal"
+  }
+}

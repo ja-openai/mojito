@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "locale": "fr",
+  "messages": {
+    "localized_routes[2]": {
+      "defaultMessage": "Un passage localisé",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "?attr/localized_route",
+          "1": "?attr/localized_signal"
+        },
+        "androidAttributeDependencies": [
+          {
+            "format": "integer",
+            "max": 9,
+            "min": 8,
+            "name": "localized_route"
+          },
+          {
+            "format": "enum",
+            "name": "localized_signal",
+            "symbols": [
+              {
+                "kind": "enum",
+                "name": "local_eight",
+                "value": 8
+              },
+              {
+                "kind": "enum",
+                "name": "local_ten",
+                "value": 10
+              }
+            ],
+            "weak": true
+          }
+        ],
+        "androidResourcePath": "res/values-fr-night/strings.xml",
+        "androidResourceQualifiers": [
+          "fr",
+          "night"
+        ],
+        "androidStyleableDependencies": [
+          {
+            "attributes": [
+              {
+                "format": "enum",
+                "name": "localized_signal",
+                "symbols": [
+                  {
+                    "kind": "enum",
+                    "name": "local_eight",
+                    "value": 8
+                  },
+                  {
+                    "kind": "enum",
+                    "name": "local_ten",
+                    "value": 10
+                  }
+                ]
+              }
+            ],
+            "name": "LocalizedCompass"
+          }
+        ],
+        "arrayIndex": 2,
+        "arrayName": "localized_routes"
+      }
+    }
+  }
+}

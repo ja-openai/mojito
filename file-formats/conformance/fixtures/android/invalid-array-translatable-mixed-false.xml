@@ -1,0 +1,5 @@
+<resources>
+  <string-array name="mixed_false" translatable="fAlSe">
+    <item>Neutral orbital signal</item>
+  </string-array>
+</resources>

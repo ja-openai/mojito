@@ -1,0 +1,12 @@
+<resources>
+  <string name="signal">Library signal</string>
+  <string name="library_only">Library lantern</string>
+  <string-array name="directions">
+    <item>Library north</item>
+    <item>Library south</item>
+  </string-array>
+  <plurals name="alerts">
+    <item quantity="one">One library bell</item>
+    <item quantity="other">Library bells</item>
+  </plurals>
+</resources>

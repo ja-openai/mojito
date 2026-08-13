@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "active": {
+      "defaultMessage": "Main default café beacon",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "anchor": {
+      "defaultMessage": "Shared café anchor",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "fallback": {
+      "defaultMessage": "Upper café fallback",
+      "metadata": {
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "lanes[0]": {
+      "defaultMessage": "Main default café channel",
+      "metadata": {
+        "androidGenericArray": true,
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 0,
+        "arrayName": "lanes"
+      }
+    },
+    "route": {
+      "defaultMessage": "Main default café route",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "signals": {
+      "defaultMessage": "{count, plural, one {One main default café signal} other {Several main default café signals}}",
+      "variants": {
+        "one": "One main default café signal",
+        "other": "Several main default café signals"
+      },
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    }
+  }
+}

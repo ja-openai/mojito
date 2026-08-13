@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:p="http://schemas.android.com/apk/res/android">
+  <bag type="array" name="routes"><item p:featureFlag="neutral.harbor.active">Bag harbor</item></bag>
+</resources>

@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\"?>\r\n<resources xmlns:code=\"urn:oasis:names:tc:xliff:document:1.2\"\r\n           xmlns:hint=\"http://schemas.android.com/tools\"\r\n           hint:locale=\"fr_CA\">\r\n  <!-- Every root comment and protected native declaration remains untouched. -->\r\n  <string name=\"private_route\" translatable=\"false\">Original protected channel</string>\r\n\r\n  <string name=\"styled_comments\">North<!-- root-before --> <b shade='north'>clear<!-- bold-inside --><![CDATA[bright & safe]]></b><!-- root-between --> then <i tone=\"east\"><![CDATA[east & soft]]><!-- italic-inside --></i><!-- root-after --></string>\r\n  <string name=\"protected_comments\">First<!-- first-marker --> <code:g example='P-7' id=\"pilot\">%1$s</code:g><!-- between-markers --> then <![CDATA[second & clear]]><code:g id='radar' example=\"R-2\">%2$s</code:g><!-- last-marker --></string>\r\n  <string name=\"nested_comments\"><b class='outer'>Outer<!-- outer-marker --><u lane=\"inner\"><![CDATA[inner & quiet]]><!-- inner-marker --></u></b><!-- sibling-marker --><i mood='calm'>East<!-- calm-marker --></i></string>\r\n  <string name=\"comment_only\"><b lane='north'><!-- empty-bold-marker --></b><!-- between-empty --><i lane=\"south\"><![CDATA[south & mild]]></i></string>\r\n\r\n  <string-array name=\"routes\">\r\n    <item>First<!-- array-before --><b path='one'><![CDATA[north & calm]]></b><!-- array-between --><i path=\"two\">south<!-- array-inside --></i></item>\r\n    <item>Captain<!-- captain-marker --><code:g id='captain' example=\"C-3\">%1$s</code:g><!-- deck-marker --><code:g example='D-4' id=\"deck\">%2$s</code:g></item>\r\n  </string-array>\r\n\r\n  <plurals name=\"signals\">\r\n    <item quantity=\"one\"><b tone='first'>%1$d<!-- count-marker --> north</b><!-- plural-between --><i tone=\"second\"><![CDATA[south & calm]]></i></item>\r\n    <item quantity=\"other\"><b tone=\"many\">%1$d<![CDATA[ north & far]]></b><!-- plural-many --><i tone='far'>south<!-- many-inside --></i></item>\r\n  </plurals>\r\n</resources>\r\n",
+  "slots": [
+    {
+      "id": "styled_comments",
+      "start": 384,
+      "end": 591
+    },
+    {
+      "id": "protected_comments",
+      "start": 638,
+      "end": 833
+    },
+    {
+      "id": "nested_comments",
+      "start": 877,
+      "end": 1056
+    },
+    {
+      "id": "comment_only",
+      "start": 1097,
+      "end": 1209
+    },
+    {
+      "id": "routes[0]",
+      "start": 1264,
+      "end": 1398
+    },
+    {
+      "id": "routes[1]",
+      "start": 1417,
+      "end": 1560
+    },
+    {
+      "id": "signals",
+      "variant": "one",
+      "start": 1643,
+      "end": 1762
+    },
+    {
+      "id": "signals",
+      "variant": "other",
+      "start": 1798,
+      "end": 1908
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "arrays": {
+    "lanes": [
+      "@string/anchor",
+      "Upper visible channel"
+    ]
+  },
+  "arrayReferences": {
+    "lanes": {
+      "0": "@string/anchor"
+    }
+  },
+  "plurals": {
+    "signals": {
+      "one": "One main tablet signal",
+      "other": "Several main tablet signals"
+    }
+  },
+  "strings": {
+    "active": "Upper tablet beacon",
+    "anchor": "Shared overlay anchor",
+    "fallback": "Upper universal fallback",
+    "route": "Main tablet harbor route"
+  }
+}

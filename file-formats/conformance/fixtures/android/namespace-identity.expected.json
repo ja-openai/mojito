@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "bare_style": {
+      "defaultMessage": "Value '<'g id=\"plain\">B2'<'/g>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "foreign_alias": {
+      "defaultMessage": "Value F4"
+    },
+    "inline_foreign": {
+      "defaultMessage": "One two <b>three</b> four"
+    },
+    "real_alias": {
+      "defaultMessage": "Value {actual}",
+      "placeholders": [
+        {
+          "name": "actual",
+          "source": "R7",
+          "kind": "string",
+          "example": "R7"
+        }
+      ]
+    },
+    "real_without_id": {
+      "defaultMessage": "Before {_xliff0} after",
+      "placeholders": [
+        {
+          "name": "_xliff0",
+          "source": "middle",
+          "kind": "string"
+        }
+      ]
+    }
+  }
+}

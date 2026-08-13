@@ -1,0 +1,5 @@
+<resources xmlns:drift="urn:neutral:drifting-bag">
+  <bag type="array" name="routes.bag">
+    <drift:item>Namespaced coastal channel</drift:item>
+  </bag>
+</resources>

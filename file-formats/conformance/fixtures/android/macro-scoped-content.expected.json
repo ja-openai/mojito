@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": {
+      "defaultMessage": "A steady harbor marker"
+    },
+    "harbor_routes[5]": {
+      "defaultMessage": "A visible harbor lane",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "@string/anchor",
+          "1": "@string/anchor",
+          "2": "@string/anchor",
+          "3": "@string/anchor",
+          "4": "@string/anchor"
+        },
+        "arrayIndex": 5,
+        "arrayName": "harbor_routes"
+      }
+    },
+    "harbor_signals": {
+      "defaultMessage": "{count, plural, other {A visible harbor signal}}",
+      "variants": {
+        "other": "A visible harbor signal"
+      },
+      "metadata": {
+        "androidPluralReferences": {
+          "one": "@string/anchor"
+        }
+      }
+    },
+    "ignored_foreign_style": {
+      "defaultMessage": "A wrapped harbor crossing"
+    },
+    "scoped_signal": {
+      "defaultMessage": "Signal {marker}",
+      "placeholders": [
+        {
+          "name": "marker",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1,
+          "example": "M-7"
+        }
+      ]
+    }
+  }
+}

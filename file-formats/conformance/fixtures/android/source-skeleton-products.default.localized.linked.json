@@ -1,0 +1,26 @@
+{
+  "arrayReferences": {
+    "harbor.lanes": {
+      "1": "@string/anchor"
+    }
+  },
+  "arrays": {
+    "harbor.lanes": [
+      "Voie nord commune",
+      "@string/anchor",
+      "Voie sud commune"
+    ]
+  },
+  "plurals": {
+    "tide.count": {
+      "one": "%1$d balise commune",
+      "other": "%1$d balises communes"
+    }
+  },
+  "strings": {
+    "anchor": "Ancre sûre",
+    "harbor.route": "Passage commun sûr",
+    "harbor.signal": "Signal commun prêt",
+    "private.route": "Protected private route"
+  }
+}

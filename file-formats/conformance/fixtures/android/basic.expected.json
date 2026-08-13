@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "welcome": {
+      "defaultMessage": "Hello {arg0}!",
+      "description": "Welcome screen greeting",
+      "placeholders": [{ "name": "arg0", "source": "%1$s", "kind": "string", "position": 1 }]
+    },
+    "rich": {
+      "defaultMessage": "Tap <b>Continue</b> & go",
+      "description": "The markup is real XML, not escaped text."
+    },
+    "named": {
+      "defaultMessage": "Hi {person}!",
+      "placeholders": [{ "name": "person", "source": "%1$s", "kind": "string", "position": 1, "example": "Ada" }]
+    },
+    "days[0]": {
+      "defaultMessage": "Monday",
+      "description": "Day picker labels",
+      "metadata": { "arrayIndex": 0, "arrayName": "days" }
+    },
+    "days[1]": {
+      "defaultMessage": "Tuesday",
+      "description": "Day picker labels",
+      "metadata": { "arrayIndex": 1, "arrayName": "days" }
+    }
+  }
+}

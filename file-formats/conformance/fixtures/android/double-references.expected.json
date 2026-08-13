@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": {
+      "defaultMessage": "Quiet harbor",
+      "description": "Android's framework name splitter consumes one additional leading @."
+    },
+    "create_literal": {
+      "defaultMessage": "@@+id/marker"
+    },
+    "double_chain": {
+      "defaultMessage": "A neutral harbor"
+    },
+    "double_macro": {
+      "defaultMessage": "A neutral harbor"
+    },
+    "escaped": {
+      "defaultMessage": "@@string/anchor"
+    },
+    "mixed[1]": {
+      "defaultMessage": "Visible mixed route",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "@@string/anchor"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 1,
+        "arrayName": "mixed"
+      }
+    },
+    "null_literal": {
+      "defaultMessage": "@@null"
+    },
+    "quoted": {
+      "defaultMessage": "@@string/anchor"
+    },
+    "routes[2]": {
+      "defaultMessage": "@@@string/anchor",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "@string/anchor",
+          "1": "@@string/anchor"
+        },
+        "arrayIndex": 2,
+        "arrayName": "routes"
+      }
+    },
+    "routes[3]": {
+      "defaultMessage": "@@string/anchor",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "@string/anchor",
+          "1": "@@string/anchor"
+        },
+        "arrayIndex": 3,
+        "arrayName": "routes"
+      }
+    },
+    "routes[4]": {
+      "defaultMessage": "@@string/anchor",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "@string/anchor",
+          "1": "@@string/anchor"
+        },
+        "arrayIndex": 4,
+        "arrayName": "routes"
+      }
+    },
+    "routes[5]": {
+      "defaultMessage": "A neutral harbor",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "@string/anchor",
+          "1": "@@string/anchor"
+        },
+        "arrayIndex": 5,
+        "arrayName": "routes"
+      }
+    },
+    "routes[6]": {
+      "defaultMessage": "Actual route",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "@string/anchor",
+          "1": "@@string/anchor"
+        },
+        "arrayIndex": 6,
+        "arrayName": "routes"
+      }
+    },
+    "signals": {
+      "defaultMessage": "{arg0, plural, two {A neutral harbor} other {{arg0} visible signals}}",
+      "variants": {
+        "other": "{arg0} visible signals",
+        "two": "A neutral harbor"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidPluralReferences": {
+          "one": "@@string/anchor"
+        }
+      }
+    },
+    "single_macro": {
+      "defaultMessage": "A neutral harbor"
+    },
+    "triple": {
+      "defaultMessage": "@@@string/anchor"
+    },
+    "unknown": {
+      "defaultMessage": "@@unknown/anchor"
+    }
+  }
+}

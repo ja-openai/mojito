@@ -1,0 +1,3 @@
+<resources xmlns:platform="http://schemas.android.com/apk/res/android">
+  <string name="route" platform:featureFlag="neutral.path.enabled">Conflicting harbor route</string>
+</resources>

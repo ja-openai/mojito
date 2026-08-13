@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<resources xmlns:x="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="visible">"Port visible"</string>
+  <string name="protected_scalar" translatable="false">"Harbor's  quiet" %s %d</string>
+  <item type="string" name="protected_generic" format="string" translatable="false">West\'s \u0041 quay</item>
+  <string-array name="protected_routes" translatable="false">
+    <item>South\'s  pier</item>
+    <item>"East's calm"</item>
+    <item>North <x:g id="bad id">%1$s</x:g> lane</item>
+    <item><x:g id="other"><b>%1$s</b></x:g></item>
+  </string-array>
+  <bag type="string-array" name="protected_bag_routes" translatable="false">
+    <item>Bay\'s quiet</item>
+  </bag>
+  <plurals name="protected_counts" translatable="false">
+    <item quantity="one">One signal\'s shore</item>
+    <item quantity="other">%s then %d</item>
+  </plurals>
+  <bag type="plurals" name="protected_bag_counts" translatable="false">
+    <item quantity="other">Two beacon\'s lane</item>
+  </bag>
+</resources>

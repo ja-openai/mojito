@@ -1,0 +1,10 @@
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="it_IT">
+  <string name="route" product="tablet">Navigate %1$s</string>
+  <plurals name="signals">
+    <item quantity="one">%1$d signal</item>
+    <item quantity="other">%1$d signals</item>
+  </plurals>
+  <string-array name="checkpoints">
+    <item>north</item>
+  </string-array>
+</resources>

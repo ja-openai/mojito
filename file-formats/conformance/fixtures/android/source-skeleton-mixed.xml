@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<resources xmlns:code="urn:oasis:names:tc:xliff:document:1.2">
+  <!-- Neutral original fixtures keep every odd lexical spelling. -->
+  <string description='Empty "harbor"' name="empty_scalar"/>
+  <item type="string" name='empty_generic' />
+  <string name="commented">North<!-- preserve this exact inline comment --> pier</string>
+  <string name="cdata"><![CDATA[<quiet> & calm]]></string>
+  <string name="cdata_split">North <![CDATA[<quiet> & calm]]> pier</string>
+  <string translatable="false" name="ignored_empty"/>
+
+  <string-array name="routes">
+    <item/>
+    <item>West<!-- keep original array marker --> pier</item>
+    <item><![CDATA[<blue> & mild]]></item>
+  </string-array>
+
+  <plurals name="visits">
+    <item quantity='one'/>
+    <item quantity="other">%1$d<!-- keep native plural marker --> visits</item>
+  </plurals>
+</resources>

@@ -1,0 +1,8 @@
+{
+  "conditionalStrings": {
+    "harbor_route": {
+      "condition": "neutral.flags.mutable",
+      "value": "A mutable tablet harbor route"
+    }
+  }
+}

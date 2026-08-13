@@ -1,0 +1,34 @@
+{
+  "arrayReferences": {
+    "gate.lanes": {
+      "1": "@string/anchor"
+    }
+  },
+  "arrays": {
+    "gate.lanes": [
+      "Voie nord ouverte",
+      "@string/anchor"
+    ]
+  },
+  "plurals": {
+    "gate.count": {
+      "one": "%1$d balise ouverte",
+      "other": "%1$d balises ouvertes"
+    }
+  },
+  "productVariants": {
+    "gate.disabled": [
+      "Protected disabled passage",
+      "Protected disabled passage"
+    ],
+    "gate.route": [
+      "Passage ouvert",
+      "Passage tablette mutable"
+    ]
+  },
+  "strings": {
+    "anchor": "Ancre ouverte",
+    "gate.private": "Protected private signal",
+    "gate.signal": "Signal ouvert"
+  }
+}

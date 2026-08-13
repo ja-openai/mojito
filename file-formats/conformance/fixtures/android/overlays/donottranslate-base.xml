@@ -1,0 +1,11 @@
+<resources>
+  <string name="private.anchor">Visible original anchor</string>
+  <string name="retained.anchor">Visible unaffected anchor</string>
+  <string-array name="private.routes">
+    <item>Visible original route</item>
+  </string-array>
+  <plurals name="private.signals">
+    <item quantity="one">One visible original signal</item>
+    <item quantity="other">Several visible original signals</item>
+  </plurals>
+</resources>

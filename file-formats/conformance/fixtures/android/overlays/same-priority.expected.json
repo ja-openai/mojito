@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "left_lantern": {
+      "defaultMessage": "Left lantern",
+      "metadata": {
+        "androidResourcePath": "src/main/res/values/alpha.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "main"
+      }
+    },
+    "right_lantern": {
+      "defaultMessage": "Right lantern",
+      "metadata": {
+        "androidResourcePath": "src/main/res/values/beta.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "main"
+      }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "arrayReferences": {
+    "routes": {
+      "1": "@string/harbor"
+    }
+  },
+  "arrays": {
+    "routes": [
+      "East pier",
+      "@string/harbor",
+      "West pier"
+    ]
+  },
+  "macros": [
+    "private_route"
+  ],
+  "plurals": {
+    "visits": {
+      "one": "%1$d visit",
+      "other": "%1$d visits"
+    }
+  },
+  "strings": {
+    "generic": "Ordinary lane",
+    "harbor": "North & pier",
+    "internal": "Do not replace this value",
+    "protected": "Hello %1$s!",
+    "rich": "Walk north now"
+  },
+  "styledSpans": {
+    "strings": {
+      "rich": [
+        {
+          "attributes": {
+            "class": "quiet",
+            "route": "east"
+          },
+          "end": 9,
+          "name": "b",
+          "start": 5
+        }
+      ]
+    }
+  }
+}

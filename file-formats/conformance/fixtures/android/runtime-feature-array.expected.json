@@ -1,0 +1,63 @@
+{
+  "messages": {
+    "harbor_lanes[0]": {
+      "defaultMessage": "A mutable harbor lane",
+      "metadata": {
+        "androidArrayFeatureFlagModes": {
+          "0": "read_write",
+          "1": "read_write"
+        },
+        "androidArrayFeatureFlags": {
+          "0": "neutral.flags.mutable",
+          "1": "!neutral.flags.mutable"
+        },
+        "androidResourcePath": "res/values-v10000/strings.xml",
+        "androidResourceQualifiers": [
+          "v10000"
+        ],
+        "arrayIndex": 0,
+        "arrayName": "harbor_lanes"
+      }
+    },
+    "harbor_lanes[1]": {
+      "defaultMessage": "An inverse harbor lane",
+      "metadata": {
+        "androidArrayFeatureFlagModes": {
+          "0": "read_write",
+          "1": "read_write"
+        },
+        "androidArrayFeatureFlags": {
+          "0": "neutral.flags.mutable",
+          "1": "!neutral.flags.mutable"
+        },
+        "androidResourcePath": "res/values-v10000/strings.xml",
+        "androidResourceQualifiers": [
+          "v10000"
+        ],
+        "arrayIndex": 1,
+        "arrayName": "harbor_lanes"
+      }
+    },
+    "harbor_lanes[2]": {
+      "defaultMessage": "An open harbor lane",
+      "metadata": {
+        "androidArrayFeatureFlagModes": {
+          "0": "read_write",
+          "1": "read_write"
+        },
+        "androidArrayFeatureFlags": {
+          "0": "neutral.flags.mutable",
+          "1": "!neutral.flags.mutable"
+        },
+        "androidResourcePath": "res/values-v10000/strings.xml",
+        "androidResourceQualifiers": [
+          "v10000"
+        ],
+        "arrayIndex": 2,
+        "arrayName": "harbor_lanes"
+      }
+    }
+  },
+  "schemaVersion": 1,
+  "sourceFormat": "android"
+}

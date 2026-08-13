@@ -1,0 +1,11 @@
+<resources>
+  <string name="quoted">"  keep   these spaces  "</string>
+  <string name="collapsed">
+    one   two
+    three
+  </string>
+  <string name="escapes">Line\nTab\tQuote\'\" At\@ Question\? Slash\\</string>
+  <string name="unicode">A\u00A0B</string>
+  <string name="percent">Save 50%% for %2$d items</string>
+  <string name="entity">Fish &amp; chips &lt; 5</string>
+</resources>

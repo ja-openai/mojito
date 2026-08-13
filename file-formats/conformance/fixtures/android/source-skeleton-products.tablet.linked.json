@@ -1,0 +1,26 @@
+{
+  "arrayReferences": {
+    "harbor.lanes": {
+      "1": "@string/anchor"
+    }
+  },
+  "arrays": {
+    "harbor.lanes": [
+      "Tablet <north> & safe",
+      "@string/anchor",
+      "Tablet south lane"
+    ]
+  },
+  "plurals": {
+    "tide.count": {
+      "one": "",
+      "other": "%1$d tablet beacons"
+    }
+  },
+  "strings": {
+    "anchor": "Safe harbor anchor",
+    "harbor.route": "Tablet harbor passage",
+    "harbor.signal": "",
+    "private.route": "Protected private route"
+  }
+}

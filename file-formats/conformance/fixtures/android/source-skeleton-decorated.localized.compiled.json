@@ -1,0 +1,149 @@
+{
+  "arrays": {
+    "routes": [
+      "sud puis nord & sûr",
+      "Pont %2$s puis capitaine %1$s"
+    ]
+  },
+  "styledSpans": {
+    "arrays": {
+      "routes": {
+        "0": [
+          {
+            "name": "i",
+            "start": 0,
+            "end": 2,
+            "attributes": {
+              "path": "two"
+            }
+          },
+          {
+            "name": "b",
+            "start": 9,
+            "end": 18,
+            "attributes": {
+              "path": "one"
+            }
+          }
+        ]
+      }
+    },
+    "plurals": {
+      "signals": {
+        "one": [
+          {
+            "name": "i",
+            "start": 0,
+            "end": 10,
+            "attributes": {
+              "tone": "second"
+            }
+          },
+          {
+            "name": "b",
+            "start": 17,
+            "end": 25,
+            "attributes": {
+              "tone": "first"
+            }
+          }
+        ],
+        "other": [
+          {
+            "name": "i",
+            "start": 0,
+            "end": 2,
+            "attributes": {
+              "tone": "far"
+            }
+          },
+          {
+            "name": "b",
+            "start": 9,
+            "end": 24,
+            "attributes": {
+              "tone": "many"
+            }
+          }
+        ]
+      }
+    },
+    "strings": {
+      "comment_only": [
+        {
+          "name": "i",
+          "start": 0,
+          "end": 9,
+          "attributes": {
+            "lane": "south"
+          }
+        },
+        {
+          "name": "b",
+          "start": 16,
+          "end": 19,
+          "attributes": {
+            "lane": "north"
+          }
+        }
+      ],
+      "nested_comments": [
+        {
+          "name": "i",
+          "start": 0,
+          "end": 2,
+          "attributes": {
+            "mood": "calm"
+          }
+        },
+        {
+          "name": "b",
+          "start": 9,
+          "end": 25,
+          "attributes": {
+            "class": "outer"
+          }
+        },
+        {
+          "name": "u",
+          "start": 14,
+          "end": 25,
+          "attributes": {
+            "lane": "inner"
+          }
+        }
+      ],
+      "styled_comments": [
+        {
+          "name": "i",
+          "start": 6,
+          "end": 15,
+          "attributes": {
+            "tone": "east"
+          }
+        },
+        {
+          "name": "b",
+          "start": 22,
+          "end": 35,
+          "attributes": {
+            "shade": "north"
+          }
+        }
+      ]
+    }
+  },
+  "plurals": {
+    "signals": {
+      "one": "sud & calme puis %1$d nord",
+      "other": "sud puis %1$d nord & loin"
+    }
+  },
+  "strings": {
+    "comment_only": "sud & doux puis nord",
+    "nested_comments": "est puis nord centre & sûr",
+    "private_route": "Original protected channel",
+    "protected_comments": "Radar %2$s puis pilote %1$s",
+    "styled_comments": "Après est & doux puis nord ]]> & sûr"
+  }
+}

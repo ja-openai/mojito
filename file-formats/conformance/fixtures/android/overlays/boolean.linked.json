@@ -1,0 +1,10 @@
+{
+  "plurals": {
+    "navigation_signals": {
+      "other": "%1$d replacement orbital signals"
+    }
+  },
+  "strings": {
+    "navigation_hint": "Generic orbital route"
+  }
+}

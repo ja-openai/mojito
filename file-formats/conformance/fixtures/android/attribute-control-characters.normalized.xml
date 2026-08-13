@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="carriage" description="North&#13;deck">"Visible lane"</string>
+  <string name="carriage_line" description="North&#13;&#10;deck">"Visible signal"</string>
+  <item type="string" name="generic" description="Generic&#9;north&#10;deck">"Generic route"</item>
+  <string name="line" description="North&#10;deck">"Visible pier"</string>
+  <string name="literal_example">"Pilot "<xliff:g id="pilot" example="A B C">%1$s</xliff:g></string>
+  <string name="literal_line" description="North deck">"Literal line becomes a space"</string>
+  <string name="literal_tab" description="North deck">"Literal tab becomes a space"</string>
+  <array name="mixed">
+    <item description="Mixed&#13;&#10;deck">"Mixed route"</item>
+  </array>
+  <string name="protected">"Captain "<xliff:g id="captain" example="A&#9;B&#10;C&#13;D">%1$s</xliff:g></string>
+  <string-array name="routes">
+    <item description="Route&#9;deck">"First route"</item>
+    <item description="Second&#10;deck">"Guide "<xliff:g id="navigator" example="P&#9;7&#10;8">%1$s</xliff:g></item>
+  </string-array>
+  <plurals name="signals" description="Count&#9;lights&#10;visible">
+    <item quantity="one">"One "<xliff:g id="marker" example="M&#9;1&#10;2&#13;3">%1$s</xliff:g></item>
+    <item quantity="other">"%1$d visible lights"</item>
+  </plurals>
+  <string name="styled"><annotation route="north&#9;middle&#10;end&#13;finish">"Visible style"</annotation></string>
+  <string name="tab" description="North&#9;deck">"Visible harbor"</string>
+</resources>

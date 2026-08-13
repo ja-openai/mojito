@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="alternating_routes">"A%nB\nC%nD\nE"</string>
+  <item type="string" name="default_signal">"North%npier\nclear"</item>
+  <string name="disabled_newlines" formatted="false">"Harbor\nnorth%nopen"</string>
+  <string name="escaped_percent_route">"Charge 80%%\nreserve%nready"</string>
+  <string name="legacy_printf_only">"Lighthouse%nwatch"</string>
+  <plurals name="legacy_signals">
+    <item quantity="one">"%1$d beacon%nnear"</item>
+    <item quantity="other">"%1$d beacons%nnear"</item>
+  </plurals>
+  <string name="literal_percent_n">"Marker %%n"</string>
+  <plurals name="mixed_signals">
+    <item quantity="one">"%1$d beacon\nnorth%nready"</item>
+    <item quantity="other">"%1$d beacons%nnorth\nready"</item>
+  </plurals>
+  <string name="native_only">"Lighthouse\nwatch"</string>
+  <string name="native_then_printf">"Harbor\nnorth%nopen"</string>
+  <string name="printf_then_native">"Harbor%nnorth\nopen"</string>
+  <string name="raw_percent_route">"Berth %\nreserve%nready"</string>
+  <string-array name="route_stages">
+    <item>"Arrival\nnorth%nberth"</item>
+    <item>"Departure%nsouth\nchannel"</item>
+    <item>"Literal %%n buoy"</item>
+  </string-array>
+  <plurals name="split_signals">
+    <item quantity="one">"%1$d buoy\nnear"</item>
+    <item quantity="other">"%1$d buoys%nnear"</item>
+  </plurals>
+  <item type="string" name="strict_signal" format="string">"%1$s\ndeparture%nready"</item>
+  <string name="styled_route"><annotation note="lantern-%%"><b>"North\npier"</b>"%nclear"</annotation></string>
+  <string name="supplementary_route">"🧭\nnorth%nwest"</string>
+</resources>

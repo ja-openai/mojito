@@ -1,0 +1,18 @@
+{
+  "arrays": {
+    "visible.routes": [
+      "Visible northern route"
+    ]
+  },
+  "plurals": {
+    "visible.signals": {
+      "one": "One visible signal",
+      "other": "Several visible signals"
+    }
+  },
+  "strings": {
+    "visible.explicit": "Visible explicit marker",
+    "visible.generic": "Visible generic marker",
+    "visible.plain": "Visible filename-boundary marker"
+  }
+}

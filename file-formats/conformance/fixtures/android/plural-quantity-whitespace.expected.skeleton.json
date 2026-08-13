@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<resources>\n  <plurals name=\"signals\">\n    <item quantity=\" one \">One signal</item>\n    <item quantity=\"&#9;other&#10;\">%1$d signals</item>\n  </plurals>\n</resources>\n",
+  "slots": [
+    {"id": "signals", "variant": "one", "start": 66, "end": 76},
+    {"id": "signals", "variant": "other", "start": 120, "end": 132}
+  ]
+}

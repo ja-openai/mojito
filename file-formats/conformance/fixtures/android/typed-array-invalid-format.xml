@@ -1,0 +1,5 @@
+<resources>
+  <array name="routes" format="string|reference">
+    <item>Harbor light</item>
+  </array>
+</resources>

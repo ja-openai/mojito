@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="overlay_routes">
+        <item>?attr/overlay_signal</item>
+        <item>?attr/overlay_route</item>
+        <item>A cross-file passage</item>
+    </string-array>
+</resources>

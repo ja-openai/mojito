@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "conditional_routes[0]": {
+      "defaultMessage": "Enabled upper lane",
+      "metadata": {
+        "androidArrayFeatureFlags": {
+          "0": "neutral.flags.enabled"
+        },
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 0,
+        "arrayName": "conditional_routes"
+      }
+    },
+    "conditional_routes[1]": {
+      "defaultMessage": "Final upper lane",
+      "metadata": {
+        "androidArrayFeatureFlags": {
+          "0": "neutral.flags.enabled"
+        },
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 1,
+        "arrayName": "conditional_routes"
+      }
+    },
+    "enabled_scalar": {
+      "defaultMessage": "Enabled upper harbor",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.enabled",
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "fallback_array[0]": {
+      "defaultMessage": "Main typed fallback",
+      "metadata": {
+        "androidGenericArray": true,
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 0,
+        "arrayName": "fallback_array"
+      }
+    },
+    "fallback_scalar": {
+      "defaultMessage": "Main fallback harbor",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "fallback_signals": {
+      "defaultMessage": "{count, plural, one {One main beacon} other {Several main beacons}}",
+      "variants": {
+        "one": "One main beacon",
+        "other": "Several main beacons"
+      },
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    }
+  }
+}

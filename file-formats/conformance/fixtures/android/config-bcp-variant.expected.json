@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "locale": "en-Latn-US-posix",
+  "messages": {
+    "route": {
+      "defaultMessage": "Waypoint",
+      "metadata": {
+        "androidResourcePath": "res/values-b+EN+latn+us+POSIX-night/strings.xml",
+        "androidResourceQualifiers": [
+          "b+EN+latn+us+POSIX",
+          "night"
+        ]
+      }
+    }
+  }
+}

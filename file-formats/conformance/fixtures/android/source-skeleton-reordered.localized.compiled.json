@@ -1,0 +1,169 @@
+{
+  "arrays": {
+    "routes": [
+      "Après sud puis nord",
+      "Pont %2$s puis capitaine %1$s"
+    ]
+  },
+  "styledSpans": {
+    "arrays": {
+      "routes": {
+        "0": [
+          {
+            "name": "i",
+            "start": 6,
+            "end": 8,
+            "attributes": {
+              "path": "two"
+            }
+          },
+          {
+            "name": "b",
+            "start": 15,
+            "end": 18,
+            "attributes": {
+              "path": "one"
+            }
+          }
+        ]
+      }
+    },
+    "plurals": {
+      "signals": {
+        "one": [
+          {
+            "name": "i",
+            "start": 0,
+            "end": 2,
+            "attributes": {
+              "tone": "second"
+            }
+          },
+          {
+            "name": "b",
+            "start": 9,
+            "end": 17,
+            "attributes": {
+              "tone": "first"
+            }
+          }
+        ],
+        "other": [
+          {
+            "name": "i",
+            "start": 0,
+            "end": 2,
+            "attributes": {
+              "tone": "far"
+            }
+          },
+          {
+            "name": "b",
+            "start": 9,
+            "end": 17,
+            "attributes": {
+              "tone": "many"
+            }
+          }
+        ]
+      }
+    },
+    "strings": {
+      "mixed_route": [
+        {
+          "name": "i",
+          "start": 0,
+          "end": 9,
+          "attributes": {
+            "class": "radar"
+          }
+        },
+        {
+          "name": "b",
+          "start": 16,
+          "end": 26,
+          "attributes": {
+            "class": "pilot"
+          }
+        }
+      ],
+      "nested_route": [
+        {
+          "name": "i",
+          "start": 6,
+          "end": 14,
+          "attributes": {
+            "mood": "calm"
+          }
+        },
+        {
+          "name": "b",
+          "start": 21,
+          "end": 26,
+          "attributes": {
+            "class": "outer"
+          }
+        },
+        {
+          "name": "u",
+          "start": 21,
+          "end": 26,
+          "attributes": {
+            "lane": "inner"
+          }
+        }
+      ],
+      "repeated_style": [
+        {
+          "name": "b",
+          "start": 0,
+          "end": 2,
+          "attributes": {
+            "lane": "south"
+          }
+        },
+        {
+          "name": "b",
+          "start": 9,
+          "end": 12,
+          "attributes": {
+            "lane": "north"
+          }
+        }
+      ],
+      "styled_route": [
+        {
+          "name": "i",
+          "start": 6,
+          "end": 8,
+          "attributes": {
+            "shade": "east"
+          }
+        },
+        {
+          "name": "b",
+          "start": 15,
+          "end": 18,
+          "attributes": {
+            "marker": "N",
+            "tone": "north"
+          }
+        }
+      ]
+    }
+  },
+  "plurals": {
+    "signals": {
+      "one": "sud puis %1$d nord",
+      "other": "sud puis %1$d nord"
+    }
+  },
+  "strings": {
+    "mixed_route": "Radar %2$s puis Pilote %1$s",
+    "nested_route": "Avant extérieur puis centre",
+    "private_route": "Protected original channel",
+    "protected_route": "Radar %2$s puis pilote %1$s",
+    "repeated_style": "sud puis nord",
+    "styled_route": "Après est puis nord."
+  }
+}

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="escaped_carriage_return">"left\u000Dright"</string>
+  <string name="escaped_control">"left\u0001right"</string>
+  <string name="escaped_newline">"left\nright"</string>
+  <string name="escaped_nul">"left\u0000right"</string>
+  <string name="escaped_tab">"left\tright"</string>
+  <string name="five_hex_digits">"wide Ὠ0"</string>
+  <string name="isolated_high">"leftright"</string>
+  <string name="isolated_low">"leftright"</string>
+  <string name="one_hex_digit">"tail\u0001"</string>
+  <string name="short_before_style">"lead\u0001"<b>"rest"</b></string>
+  <string name="supplementary_before_style">"A"<b>"west"</b></string>
+  <string name="supplementary_pair">"leftright"</string>
+  <string name="three_hex_digits">"tailA"</string>
+  <string name="trailing_backslash">"trail"</string>
+  <string name="trailing_before_style">"trail"<b>"west"</b></string>
+  <string name="two_hex_digits">"tailA"</string>
+  <string name="unknown_escapes">"leftrx41fv101 right"</string>
+  <string name="zero_hex_digits">"tail\u0000"</string>
+</resources>

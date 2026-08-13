@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:signal="urn:oasis:names:tc:xliff:document:1.2">
+  <!-- Definitions are build-only and never editable translation slots. -->
+  <macro name="harbor_phrase">A lower harbor</macro>
+  <macro name="styled_phrase">Lower <b tone="bright">harbor</b></macro>
+  <macro name="protected_phrase">Lower <signal:g id="pilot" example="L-0">%1$s</signal:g></macro>
+  <macro name="route_phrase">A remote channel</macro>
+  <macro name="one_light">%1$d remote lantern</macro>
+  <macro name="other_lights">%1$d remote lanterns</macro>
+  <macro name="tablet_phrase">A remote tablet crossing</macro>
+</resources>

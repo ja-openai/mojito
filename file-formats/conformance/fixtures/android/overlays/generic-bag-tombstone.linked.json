@@ -1,0 +1,23 @@
+{
+  "arrays": {
+    "routes.bag": [
+      "7",
+      "13"
+    ]
+  },
+  "arrayPrimitiveValues": {
+    "routes.bag": {
+      "0": "7",
+      "1": "13"
+    }
+  },
+  "plurals": {
+    "signals.bag": {
+      "one": "One original signal",
+      "other": "Many original signals"
+    }
+  },
+  "strings": {
+    "anchor": "Original overlay anchor"
+  }
+}

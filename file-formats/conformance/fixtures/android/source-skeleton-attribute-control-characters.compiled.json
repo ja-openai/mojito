@@ -1,0 +1,35 @@
+{
+  "arrays": {
+    "routes": [
+      "Visible route",
+      "Guide %1$s"
+    ]
+  },
+  "plurals": {
+    "signals": {
+      "one": "One %1$s",
+      "other": "%1$d visible lights"
+    }
+  },
+  "strings": {
+    "generic": "Visible generic",
+    "protected": "Captain %1$s",
+    "scalar": "Visible harbor",
+    "styled": "Visible style",
+    "untouched": "Protected original"
+  },
+  "styledSpans": {
+    "strings": {
+      "styled": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 12,
+          "attributes": {
+            "route": "north\tmiddle\nend\rfinish"
+          }
+        }
+      ]
+    }
+  }
+}

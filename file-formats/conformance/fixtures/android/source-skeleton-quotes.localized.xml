@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<resources xmlns:code="urn:oasis:names:tc:xliff:document:1.2">
+  <!-- Preserve original XML entities, Android escaping, tags, and comments exactly. -->
+  <string name='scalar'>"Quai \"nord\" et \"calme\""</string>
+  <string name="styled">"Port "<b lane='harbor&quot;side'>"\"doux\""</b>" sûr"</string>
+  <string name="protected">"Pilote "<code:g example='A&quot;7' id="pilot">%1$s</code:g>" vers \"nord\""</string>
+  <string name="commented">"Port \<!-- keep this original quote boundary -->"bleu\" calme"</string>
+  <string translatable="false" name="untouched">Keep \"protected\" text</string>
+
+  <string-array name="routes">
+    <item>"Quai \"ouest, calme\""</item>
+    <item>"Port "<i lane='water&quot;side'>"\"stable\""</i>" sûr"</item>
+  </string-array>
+
+  <plurals name="signals">
+    <item quantity='one'>"Une \"lumière\" sûre"</item>
+    <item quantity="other">"%1$d "<b>"\"lumières\""</b>" sûres"</item>
+  </plurals>
+</resources>

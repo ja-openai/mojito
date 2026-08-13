@@ -1,0 +1,7 @@
+{
+  "strings": {
+    "anchor": "Quiet harbor",
+    "em_padding": " @string/anchor ",
+    "nbsp_padding": " @string/anchor "
+  }
+}

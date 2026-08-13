@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<resources xmlns:platform="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+  <!-- Ordered mutable flags retain fallback plus positive and inverse alternatives. -->
+  <string name="anchor">"Ancre ouverte"</string>
+  <string name="gate.route" product=" default ">"Passage ouvert"</string>
+  <string name="gate.route" product="default" platform:featureFlag="neutral.flags.first">"Premier passage mutable"</string>
+  <string name="gate.route" product="default" platform:featureFlag="!neutral.flags.first"><![CDATA["Inverse <calme> & sûr"]]></string>
+  <string name="gate.route" product="default" platform:featureFlag="neutral.flags.second">"Second passage mutable"</string>
+  <string name="gate.route" product=" tablet " platform:featureFlag="neutral.flags.second">"Passage tablette mutable"</string>
+
+  <item type="string" name="gate.signal" product="default">"Signal ouvert"</item>
+  <item type="string" name="gate.signal" product="default" platform:featureFlag="neutral.flags.first" tools:ignore="Protected" >"Signal premier mutable"</item>
+  <string name="gate.disabled" platform:featureFlag="neutral.flags.disabled">Protected disabled passage</string>
+
+  <plurals name="gate.count" product="default">
+    <item quantity="one">"%1$d balise ouverte"</item>
+    <item quantity="other">"%1$d balises ouvertes"</item>
+  </plurals>
+  <plurals name="gate.count" product="default" platform:featureFlag="neutral.flags.first">
+    <item quantity="one" >"%1$d balise mutable"</item>
+    <item quantity="other">"%1$d balises mutables"</item>
+  </plurals>
+
+  <string-array name="gate.lanes" product="default">
+    <item>"Voie nord ouverte"</item>
+    <item>@string/anchor</item>
+  </string-array>
+  <string-array name="gate.lanes" product="default" platform:featureFlag="neutral.flags.second">
+    <item><![CDATA["Voie <nord> mutable"]]></item>
+    <item>@string/anchor</item>
+  </string-array>
+  <string translatable="false" name="gate.private">Protected private signal</string>
+</resources>

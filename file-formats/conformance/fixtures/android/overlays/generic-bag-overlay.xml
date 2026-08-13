@@ -1,0 +1,11 @@
+<resources>
+  <bag type="array" name="routes.bag">
+    <item>17</item>
+    <item>Updated coastal route</item>
+    <item>@string/anchor</item>
+  </bag>
+  <bag type="plurals" name="signals.bag">
+    <item quantity="one">One updated signal</item>
+    <item quantity="other">Many updated signals</item>
+  </bag>
+</resources>

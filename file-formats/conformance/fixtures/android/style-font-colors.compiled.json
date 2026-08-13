@@ -1,0 +1,1109 @@
+{
+  "arrays": {
+    "named_colors": [
+      "Pier",
+      "Pier",
+      "Pier",
+      "Pier",
+      "Pier",
+      "Pier",
+      "Pier",
+      "Pier",
+      "Pier",
+      "Pier",
+      "Pier",
+      "Pier",
+      "Pier",
+      "Pier",
+      "Pier",
+      "Pier",
+      "Pier",
+      "Pier",
+      "Pier",
+      "Pier"
+    ]
+  },
+  "styledSpans": {
+    "arrays": {
+      "named_colors": {
+        "0": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "black"
+            },
+            "encodedTag": "font;color=black",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "black",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ff000000"
+                }
+              }
+            ]
+          }
+        ],
+        "1": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "darkgray"
+            },
+            "encodedTag": "font;color=darkgray",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "darkgray",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ff444444"
+                }
+              }
+            ]
+          }
+        ],
+        "2": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "gray"
+            },
+            "encodedTag": "font;color=gray",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "gray",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ff888888"
+                }
+              }
+            ]
+          }
+        ],
+        "3": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "lightgray"
+            },
+            "encodedTag": "font;color=lightgray",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "lightgray",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ffcccccc"
+                }
+              }
+            ]
+          }
+        ],
+        "4": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "white"
+            },
+            "encodedTag": "font;color=white",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "white",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ffffffff"
+                }
+              }
+            ]
+          }
+        ],
+        "5": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "blue"
+            },
+            "encodedTag": "font;color=blue",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "blue",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ff0000ff"
+                }
+              }
+            ]
+          }
+        ],
+        "6": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "yellow"
+            },
+            "encodedTag": "font;color=yellow",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "yellow",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ffffff00"
+                }
+              }
+            ]
+          }
+        ],
+        "7": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "cyan"
+            },
+            "encodedTag": "font;color=cyan",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "cyan",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ff00ffff"
+                }
+              }
+            ]
+          }
+        ],
+        "8": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "magenta"
+            },
+            "encodedTag": "font;color=magenta",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "magenta",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ffff00ff"
+                }
+              }
+            ]
+          }
+        ],
+        "9": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "aqua"
+            },
+            "encodedTag": "font;color=aqua",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "aqua",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ff00ffff"
+                }
+              }
+            ]
+          }
+        ],
+        "10": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "fuchsia"
+            },
+            "encodedTag": "font;color=fuchsia",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "fuchsia",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ffff00ff"
+                }
+              }
+            ]
+          }
+        ],
+        "11": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "darkgrey"
+            },
+            "encodedTag": "font;color=darkgrey",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "darkgrey",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ff444444"
+                }
+              }
+            ]
+          }
+        ],
+        "12": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "grey"
+            },
+            "encodedTag": "font;color=grey",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "grey",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ff888888"
+                }
+              }
+            ]
+          }
+        ],
+        "13": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "lime"
+            },
+            "encodedTag": "font;color=lime",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "lime",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ff00ff00"
+                }
+              }
+            ]
+          }
+        ],
+        "14": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "maroon"
+            },
+            "encodedTag": "font;color=maroon",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "maroon",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ff800000"
+                }
+              }
+            ]
+          }
+        ],
+        "15": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "navy"
+            },
+            "encodedTag": "font;color=navy",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "navy",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ff000080"
+                }
+              }
+            ]
+          }
+        ],
+        "16": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "olive"
+            },
+            "encodedTag": "font;color=olive",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "olive",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ff808000"
+                }
+              }
+            ]
+          }
+        ],
+        "17": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "purple"
+            },
+            "encodedTag": "font;color=purple",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "purple",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ff800080"
+                }
+              }
+            ]
+          }
+        ],
+        "18": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "silver"
+            },
+            "encodedTag": "font;color=silver",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "silver",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ffc0c0c0"
+                }
+              }
+            ]
+          }
+        ],
+        "19": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 3,
+            "attributes": {
+              "color": "teal"
+            },
+            "encodedTag": "font;color=teal",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "teal",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ff008080"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "plurals": {
+      "signal_colors": {
+        "one": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 10,
+            "attributes": {
+              "color": "red"
+            },
+            "encodedTag": "font;color=red",
+            "runtimeStyles": [
+              {
+                "kind": "foreground",
+                "attribute": "color",
+                "value": "red",
+                "color": {
+                  "mode": "literal",
+                  "argb": "#ffff0000"
+                }
+              }
+            ]
+          }
+        ],
+        "other": [
+          {
+            "name": "font",
+            "start": 0,
+            "end": 11,
+            "attributes": {
+              "bgcolor": "@android:color/black"
+            },
+            "encodedTag": "font;bgcolor=@android:color/black",
+            "runtimeStyles": [
+              {
+                "kind": "background",
+                "attribute": "bgcolor",
+                "value": "@android:color/black",
+                "color": {
+                  "mode": "system",
+                  "reference": "@android:color/black",
+                  "fallbackArgb": "#ff000000",
+                  "stateful": false
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "strings": {
+      "alpha_hex": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "#8040a0c0"
+          },
+          "encodedTag": "font;color=#8040a0c0",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "#8040a0c0",
+              "color": {
+                "mode": "literal",
+                "argb": "#8040a0c0"
+              }
+            }
+          ]
+        }
+      ],
+      "css_green": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "green"
+          },
+          "encodedTag": "font;color=green",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "green",
+              "color": {
+                "mode": "literal",
+                "argb": "#ff00ff00"
+              }
+            }
+          ]
+        }
+      ],
+      "empty_color": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": ""
+          },
+          "encodedTag": "font;color=",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "",
+              "color": {
+                "mode": "fallback",
+                "argb": "#ff000000"
+              }
+            }
+          ]
+        }
+      ],
+      "fullwidth_decimal_hex": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "#１２３４５６"
+          },
+          "encodedTag": "font;color=#１２３４５６",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "#１２３４５６",
+              "color": {
+                "mode": "literal",
+                "argb": "#ff123456"
+              }
+            }
+          ]
+        }
+      ],
+      "fullwidth_hex": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "#ＡＢＣＤＥＦ"
+          },
+          "encodedTag": "font;color=#ＡＢＣＤＥＦ",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "#ＡＢＣＤＥＦ",
+              "color": {
+                "mode": "literal",
+                "argb": "#ffabcdef"
+              }
+            }
+          ]
+        }
+      ],
+      "grey_alias": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "LiGhTgReY"
+          },
+          "encodedTag": "font;color=LiGhTgReY",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "LiGhTgReY",
+              "color": {
+                "mode": "literal",
+                "argb": "#ffcccccc"
+              }
+            }
+          ]
+        }
+      ],
+      "injected_colors": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "route": "west",
+            "fgcolor": "LiMe",
+            "bgcolor": "#abc"
+          },
+          "encodedTag": "font;route=west;fgcolor=LiMe;bgcolor=#abc",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "fgcolor",
+              "value": "LiMe",
+              "color": {
+                "mode": "literal",
+                "argb": "#ff00ff00"
+              }
+            },
+            {
+              "kind": "background",
+              "attribute": "bgcolor",
+              "value": "#abc",
+              "color": {
+                "mode": "fallback",
+                "argb": "#ff000000"
+              }
+            }
+          ]
+        }
+      ],
+      "invalid_hex": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "#12x456"
+          },
+          "encodedTag": "font;color=#12x456",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "#12x456",
+              "color": {
+                "mode": "fallback",
+                "argb": "#ff000000"
+              }
+            }
+          ]
+        }
+      ],
+      "named_case": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "ReD"
+          },
+          "encodedTag": "font;color=ReD",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "ReD",
+              "color": {
+                "mode": "literal",
+                "argb": "#ffff0000"
+              }
+            }
+          ]
+        }
+      ],
+      "opaque_hex": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "#204080"
+          },
+          "encodedTag": "font;color=#204080",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "#204080",
+              "color": {
+                "mode": "literal",
+                "argb": "#ff204080"
+              }
+            }
+          ]
+        }
+      ],
+      "ordered_foregrounds": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "navy",
+            "fgcolor": "#00ff80"
+          },
+          "encodedTag": "font;color=navy;fgcolor=#00ff80",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "fgcolor",
+              "value": "#00ff80",
+              "color": {
+                "mode": "literal",
+                "argb": "#ff00ff80"
+              }
+            },
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "navy",
+              "color": {
+                "mode": "literal",
+                "argb": "#ff000080"
+              }
+            }
+          ]
+        }
+      ],
+      "seven_digit_hex": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "bgcolor": "#1234567"
+          },
+          "encodedTag": "font;bgcolor=#1234567",
+          "runtimeStyles": [
+            {
+              "kind": "background",
+              "attribute": "bgcolor",
+              "value": "#1234567",
+              "color": {
+                "mode": "fallback",
+                "argb": "#ff000000"
+              }
+            }
+          ]
+        }
+      ],
+      "short_hex": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "#abc"
+          },
+          "encodedTag": "font;color=#abc",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "#abc",
+              "color": {
+                "mode": "fallback",
+                "argb": "#ff000000"
+              }
+            }
+          ]
+        }
+      ],
+      "signed_negative_alpha": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "bgcolor": "#-0000001"
+          },
+          "encodedTag": "font;bgcolor=#-0000001",
+          "runtimeStyles": [
+            {
+              "kind": "background",
+              "attribute": "bgcolor",
+              "value": "#-0000001",
+              "color": {
+                "mode": "literal",
+                "argb": "#ffffffff"
+              }
+            }
+          ]
+        }
+      ],
+      "signed_negative_hex": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "#-00001"
+          },
+          "encodedTag": "font;color=#-00001",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "#-00001",
+              "color": {
+                "mode": "literal",
+                "argb": "#ffffffff"
+              }
+            }
+          ]
+        }
+      ],
+      "signed_positive_hex": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "#+12345"
+          },
+          "encodedTag": "font;color=#+12345",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "#+12345",
+              "color": {
+                "mode": "literal",
+                "argb": "#ff012345"
+              }
+            }
+          ]
+        }
+      ],
+      "supplementary_hex": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "#𝟙2345"
+          },
+          "encodedTag": "font;color=#𝟙2345",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "#𝟙2345",
+              "color": {
+                "mode": "fallback",
+                "argb": "#ff000000"
+              }
+            }
+          ]
+        }
+      ],
+      "system_background": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "bgcolor": "@color/black"
+          },
+          "encodedTag": "font;bgcolor=@color/black",
+          "runtimeStyles": [
+            {
+              "kind": "background",
+              "attribute": "bgcolor",
+              "value": "@color/black",
+              "color": {
+                "mode": "system",
+                "reference": "@color/black",
+                "fallbackArgb": "#ff000000",
+                "stateful": false
+              }
+            }
+          ]
+        }
+      ],
+      "system_foreground": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "@android:color/white"
+          },
+          "encodedTag": "font;color=@android:color/white",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "@android:color/white",
+              "color": {
+                "mode": "system",
+                "reference": "@android:color/white",
+                "fallbackArgb": "#ff000000",
+                "stateful": true
+              }
+            }
+          ]
+        }
+      ],
+      "unresolved_system": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "@neutral.app:color/pier"
+          },
+          "encodedTag": "font;color=@neutral.app:color/pier",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "@neutral.app:color/pier",
+              "color": {
+                "mode": "fallback",
+                "argb": "#ff000000"
+              }
+            }
+          ]
+        }
+      ],
+      "unsupported_css_name": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "orange"
+          },
+          "encodedTag": "font;color=orange",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "orange",
+              "color": {
+                "mode": "fallback",
+                "argb": "#ff000000"
+              }
+            }
+          ]
+        }
+      ],
+      "unsupported_transparent_name": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": "transparent"
+          },
+          "encodedTag": "font;color=transparent",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": "transparent",
+              "color": {
+                "mode": "fallback",
+                "argb": "#ff000000"
+              }
+            }
+          ]
+        }
+      ],
+      "uppercase_hex": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "bgcolor": "#ABCDEF"
+          },
+          "encodedTag": "font;bgcolor=#ABCDEF",
+          "runtimeStyles": [
+            {
+              "kind": "background",
+              "attribute": "bgcolor",
+              "value": "#ABCDEF",
+              "color": {
+                "mode": "literal",
+                "argb": "#ffabcdef"
+              }
+            }
+          ]
+        }
+      ],
+      "whitespace_color": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "color": " red"
+          },
+          "encodedTag": "font;color= red",
+          "runtimeStyles": [
+            {
+              "kind": "foreground",
+              "attribute": "color",
+              "value": " red",
+              "color": {
+                "mode": "fallback",
+                "argb": "#ff000000"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "plurals": {
+    "signal_colors": {
+      "one": "%1$d beacon",
+      "other": "%1$d beacons"
+    }
+  },
+  "strings": {
+    "alpha_hex": "Pier",
+    "css_green": "Pier",
+    "empty_color": "Pier",
+    "fullwidth_decimal_hex": "Pier",
+    "fullwidth_hex": "Pier",
+    "grey_alias": "Pier",
+    "injected_colors": "Pier",
+    "invalid_hex": "Pier",
+    "named_case": "Pier",
+    "opaque_hex": "Pier",
+    "ordered_foregrounds": "Pier",
+    "seven_digit_hex": "Pier",
+    "short_hex": "Pier",
+    "signed_negative_alpha": "Pier",
+    "signed_negative_hex": "Pier",
+    "signed_positive_hex": "Pier",
+    "supplementary_hex": "Pier",
+    "system_background": "Pier",
+    "system_foreground": "Pier",
+    "unresolved_system": "Pier",
+    "unsupported_css_name": "Pier",
+    "unsupported_transparent_name": "Pier",
+    "uppercase_hex": "Pier",
+    "whitespace_color": "Pier"
+  }
+}

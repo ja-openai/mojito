@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "plain": {
+      "defaultMessage": "North port"
+    },
+    "mixed": {
+      "defaultMessage": "East west"
+    },
+    "quoted": {
+      "defaultMessage": "North  south"
+    },
+    "escaped": {
+      "defaultMessage": "A"
+    },
+    "styled": {
+      "defaultMessage": "Move '<'b lane=\"east\">northward'<'/b> now",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "pilot": {
+      "defaultMessage": "Hi {pilot}!",
+      "placeholders": [
+        {
+          "name": "pilot",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1
+        }
+      ]
+    },
+    "generic": {
+      "defaultMessage": "Open road",
+      "metadata": {
+        "androidGenericString": true,
+        "androidGenericFormat": "string"
+      }
+    },
+    "routes[0]": {
+      "defaultMessage": "East pier",
+      "metadata": {
+        "arrayName": "routes",
+        "arrayIndex": 0
+      }
+    },
+    "routes[1]": {
+      "defaultMessage": "West pier",
+      "metadata": {
+        "arrayName": "routes",
+        "arrayIndex": 1
+      }
+    },
+    "signals": {
+      "defaultMessage": "{arg0, plural, one {{arg0} signal} other {{arg0} signals}}",
+      "variants": {
+        "one": "{arg0} signal",
+        "other": "{arg0} signals"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "arrays": {
+    "private_routes": [
+      "Private it's lane"
+    ]
+  },
+  "plurals": {
+    "private_counts": {
+      "other": "Private it's signals"
+    }
+  },
+  "strings": {
+    "private_generic": "Private it's route",
+    "private_scalar": "Private it's coast"
+  }
+}

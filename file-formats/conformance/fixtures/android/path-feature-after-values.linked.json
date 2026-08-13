@@ -1,0 +1,33 @@
+{
+  "arrays": {
+    "bag_lanes": [
+      "Visible bag lane"
+    ],
+    "lanes": [
+      "@string/anchor",
+      "37",
+      "Visible path lane"
+    ]
+  },
+  "arrayReferences": {
+    "lanes": {
+      "0": "@string/anchor"
+    }
+  },
+  "arrayPrimitiveValues": {
+    "lanes": {
+      "1": "37"
+    }
+  },
+  "plurals": {
+    "signals": {
+      "one": "One visible path signal",
+      "other": "Several visible path signals"
+    }
+  },
+  "strings": {
+    "anchor": "Path-protected harbor anchor",
+    "display": "Default path display",
+    "route": "Path-protected harbor route"
+  }
+}

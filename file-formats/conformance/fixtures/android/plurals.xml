@@ -1,0 +1,12 @@
+<resources>
+  <!-- Number of files selected -->
+  <plurals name="files">
+    <item quantity="one">%1$d file</item>
+    <item quantity="other">%1$d files</item>
+  </plurals>
+  <plurals name="plain">
+    <item quantity="zero">Nothing</item>
+    <item quantity="one">One thing</item>
+    <item quantity="other">Many things</item>
+  </plurals>
+</resources>

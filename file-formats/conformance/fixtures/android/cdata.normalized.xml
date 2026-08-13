@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="annotation"><annotation key="tone">"Stay calm"</annotation></string>
+  <string name="cdata">"&lt;i>literal&lt;/i> &amp; value"</string>
+  <string name="literal_percent" formatted="false">"50%% and %1$s"</string>
+</resources>

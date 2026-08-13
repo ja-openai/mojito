@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<resources xmlns:code="urn:oasis:names:tc:xliff:document:1.2"
+           xmlns:hint="http://schemas.android.com/tools"
+           hint:locale="fr_CA">
+  <!-- Every root comment and protected native declaration remains untouched. -->
+  <string name="private_route" translatable="false">Original protected channel</string>
+
+  <string name="styled_comments">"Aprè<!-- root-before -->s "<i tone="east"><![CDATA["est & doux"]]><!-- italic-inside --></i><!-- root-between -->" puis "<b shade='north'>"nord<!-- bold-inside --><![CDATA[ ]]]]><![CDATA[> & sûr"]]></b><!-- root-after --></string>
+  <string name="protected_comments">"Rada<!-- first-marker -->r "<code:g id='radar' example="R-2">%2$s</code:g><!-- between-markers -->" puis<![CDATA[ pilote "]]><code:g example='P-7' id="pilot">%1$s</code:g><!-- last-marker --></string>
+  <string name="nested_comments"><i mood='calm'>"est"<!-- calm-marker --></i><!-- sibling-marker -->" puis "<b class='outer'>"nord "<!-- outer-marker --><u lane="inner"><![CDATA["centre & sûr"]]><!-- inner-marker --></u></b></string>
+  <string name="comment_only"><i lane="south"><![CDATA["sud & doux"]]></i><!-- between-empty -->" puis "<b lane='north'><!-- empty-bold-marker -->"nord"</b></string>
+
+  <string-array name="routes">
+    <item><!-- array-before --><i path="two">"sud"<!-- array-inside --></i><!-- array-between -->" puis "<b path='one'><![CDATA["nord & sûr"]]></b></item>
+    <item>"Pont "<!-- captain-marker --><code:g example='D-4' id="deck">%2$s</code:g><!-- deck-marker -->" puis capitaine "<code:g id='captain' example="C-3">%1$s</code:g></item>
+  </string-array>
+
+  <plurals name="signals">
+    <item quantity="one"><i tone="second"><![CDATA["sud & calme"]]></i><!-- plural-between -->" puis "<b tone='first'>"%1$<!-- count-marker -->d nord"</b></item>
+    <item quantity="other"><i tone='far'>"sud"<!-- many-inside --></i><!-- plural-many -->" puis "<b tone="many">"%1$<![CDATA[d nord & loin"]]></b></item>
+  </plurals>
+</resources>

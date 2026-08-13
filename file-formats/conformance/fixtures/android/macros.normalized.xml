@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="anchor">"North harbor marker"</string>
+  <string name="chained_macro">"A quiet harbor route"</string>
+  <string name="direct_macro">"A quiet harbor route"</string>
+  <string name="disabled_macro">"A fixed-flag macro still expands"</string>
+  <string name="empty_macro">""</string>
+  <item type="string" name="generic_macro">"A quiet harbor route"</item>
+  <string-array name="macro_routes">
+    <item>"A quiet harbor route"</item>
+    <item>"A direct harbor lane"</item>
+    <item>"A quiet harbor route"</item>
+  </string-array>
+  <plurals name="macro_signals">
+    <item quantity="one">"%1$d harbor signal"</item>
+    <item quantity="other">"%1$d harbor signals"</item>
+  </plurals>
+  <string name="mutable_macro">"A runtime-flag macro still expands"</string>
+  <string name="protected_macro">"Reading "<xliff:g id="signal" example="AB-9">%1$s</xliff:g></string>
+  <string name="styled_macro">"A "<b>"steady"</b>" harbor beacon"</string>
+  <array name="typed_macro_routes">
+    <item>"A quiet harbor route"</item>
+    <item>17</item>
+    <item>@string/anchor</item>
+    <item>"A final harbor lane"</item>
+  </array>
+</resources>

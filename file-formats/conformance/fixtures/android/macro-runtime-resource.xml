@@ -1,0 +1,4 @@
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <macro name="harbor_phrase">A runtime-gated harbor</macro>
+    <string name="unsafe_route" android:featureFlag="neutral.flags.mutable">@macro/harbor_phrase</string>
+</resources>

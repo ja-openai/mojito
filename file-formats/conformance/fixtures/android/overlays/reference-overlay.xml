@@ -1,0 +1,12 @@
+<resources>
+  <string name="anchor">Overlay harbor</string>
+  <string-array name="routes">
+    <item>Overlay channel</item>
+    <item>@string/anchor</item>
+    <item>@empty</item>
+  </string-array>
+  <plurals name="signals">
+    <item quantity="one">@string/anchor</item>
+    <item quantity="other">%1$d overlay signals</item>
+  </plurals>
+</resources>

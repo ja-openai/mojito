@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "locale": "en",
+  "messages": {
+    "route": {
+      "defaultMessage": "Waypoint",
+      "metadata": {
+        "androidResourcePath": "res/values-mcc001-en/strings.xml",
+        "androidResourceQualifiers": [
+          "mcc001",
+          "en"
+        ]
+      }
+    }
+  }
+}

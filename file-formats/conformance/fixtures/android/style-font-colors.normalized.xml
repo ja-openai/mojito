@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="alpha_hex"><font color="#8040a0c0">"Pier"</font></string>
+  <string name="css_green"><font color="green">"Pier"</font></string>
+  <string name="empty_color"><font color="">"Pier"</font></string>
+  <string name="fullwidth_decimal_hex"><font color="#１２３４５６">"Pier"</font></string>
+  <string name="fullwidth_hex"><font color="#ＡＢＣＤＥＦ">"Pier"</font></string>
+  <string name="grey_alias"><font color="LiGhTgReY">"Pier"</font></string>
+  <string name="injected_colors"><font route="west;fgcolor=LiMe;bgcolor=#abc">"Pier"</font></string>
+  <string name="invalid_hex"><font color="#12x456">"Pier"</font></string>
+  <string name="named_case"><font color="ReD">"Pier"</font></string>
+  <string-array name="named_colors">
+    <item><font color="black">"Pier"</font></item>
+    <item><font color="darkgray">"Pier"</font></item>
+    <item><font color="gray">"Pier"</font></item>
+    <item><font color="lightgray">"Pier"</font></item>
+    <item><font color="white">"Pier"</font></item>
+    <item><font color="blue">"Pier"</font></item>
+    <item><font color="yellow">"Pier"</font></item>
+    <item><font color="cyan">"Pier"</font></item>
+    <item><font color="magenta">"Pier"</font></item>
+    <item><font color="aqua">"Pier"</font></item>
+    <item><font color="fuchsia">"Pier"</font></item>
+    <item><font color="darkgrey">"Pier"</font></item>
+    <item><font color="grey">"Pier"</font></item>
+    <item><font color="lime">"Pier"</font></item>
+    <item><font color="maroon">"Pier"</font></item>
+    <item><font color="navy">"Pier"</font></item>
+    <item><font color="olive">"Pier"</font></item>
+    <item><font color="purple">"Pier"</font></item>
+    <item><font color="silver">"Pier"</font></item>
+    <item><font color="teal">"Pier"</font></item>
+  </string-array>
+  <string name="opaque_hex"><font color="#204080">"Pier"</font></string>
+  <string name="ordered_foregrounds"><font color="navy" fgcolor="#00ff80">"Pier"</font></string>
+  <string name="seven_digit_hex"><font bgcolor="#1234567">"Pier"</font></string>
+  <string name="short_hex"><font color="#abc">"Pier"</font></string>
+  <plurals name="signal_colors">
+    <item quantity="one"><font color="red">"%1$d beacon"</font></item>
+    <item quantity="other"><font bgcolor="@android:color/black">"%1$d beacons"</font></item>
+  </plurals>
+  <string name="signed_negative_alpha"><font bgcolor="#-0000001">"Pier"</font></string>
+  <string name="signed_negative_hex"><font color="#-00001">"Pier"</font></string>
+  <string name="signed_positive_hex"><font color="#+12345">"Pier"</font></string>
+  <string name="supplementary_hex"><font color="#𝟙2345">"Pier"</font></string>
+  <string name="system_background"><font bgcolor="@color/black">"Pier"</font></string>
+  <string name="system_foreground"><font color="@android:color/white">"Pier"</font></string>
+  <string name="unresolved_system"><font color="@neutral.app:color/pier">"Pier"</font></string>
+  <string name="unsupported_css_name"><font color="orange">"Pier"</font></string>
+  <string name="unsupported_transparent_name"><font color="transparent">"Pier"</font></string>
+  <string name="uppercase_hex"><font bgcolor="#ABCDEF">"Pier"</font></string>
+  <string name="whitespace_color"><font color=" red">"Pier"</font></string>
+</resources>

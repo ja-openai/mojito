@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": { "defaultMessage": "Bag harbor marker" },
+    "mixed.bag[0]": {
+      "defaultMessage": "Sail toward {arg0}",
+      "description": "Mixed generic bag navigation choices.",
+      "placeholders": [
+        { "name": "arg0", "source": "%1$s", "kind": "string", "position": 1 }
+      ],
+      "metadata": {
+        "androidArrayPrimitives": { "1": "17", "2": "true" },
+        "androidArrayReferences": { "3": "@string/anchor" },
+        "androidBagType": "array",
+        "androidGenericArray": true,
+        "arrayIndex": 0,
+        "arrayName": "mixed.bag"
+      }
+    },
+    "mixed.bag[4]": {
+      "defaultMessage": "17",
+      "description": "Mixed generic bag navigation choices.",
+      "metadata": {
+        "androidArrayPrimitives": { "1": "17", "2": "true" },
+        "androidArrayReferences": { "3": "@string/anchor" },
+        "androidBagType": "array",
+        "androidGenericArray": true,
+        "arrayIndex": 4,
+        "arrayName": "mixed.bag"
+      }
+    },
+    "mixed.bag[5]": {
+      "defaultMessage": "#112233",
+      "description": "Mixed generic bag navigation choices.",
+      "metadata": {
+        "androidArrayPrimitives": { "1": "17", "2": "true" },
+        "androidArrayReferences": { "3": "@string/anchor" },
+        "androidBagType": "array",
+        "androidGenericArray": true,
+        "arrayIndex": 5,
+        "arrayName": "mixed.bag"
+      }
+    },
+    "words.bag[0]": {
+      "defaultMessage": "North inlet",
+      "description": "String-only generic bag navigation choices.",
+      "metadata": {
+        "androidArrayReferences": { "2": "@string/anchor" },
+        "androidBagType": "string-array",
+        "arrayIndex": 0,
+        "arrayName": "words.bag"
+      }
+    },
+    "words.bag[1]": {
+      "defaultMessage": "17",
+      "description": "String-only generic bag navigation choices.",
+      "metadata": {
+        "androidArrayReferences": { "2": "@string/anchor" },
+        "androidBagType": "string-array",
+        "arrayIndex": 1,
+        "arrayName": "words.bag"
+      }
+    },
+    "words.bag[3]": {
+      "defaultMessage": "South inlet",
+      "description": "String-only generic bag navigation choices.",
+      "metadata": {
+        "androidArrayReferences": { "2": "@string/anchor" },
+        "androidBagType": "string-array",
+        "arrayIndex": 3,
+        "arrayName": "words.bag"
+      }
+    },
+    "forced.bag[0]": {
+      "defaultMessage": "17",
+      "description": "Explicitly string-formatted generic array bag.",
+      "metadata": {
+        "androidArrayFormat": "string",
+        "androidBagType": "array",
+        "androidGenericArray": true,
+        "arrayIndex": 0,
+        "arrayName": "forced.bag"
+      }
+    },
+    "forced.bag[1]": {
+      "defaultMessage": "true",
+      "description": "Explicitly string-formatted generic array bag.",
+      "metadata": {
+        "androidArrayFormat": "string",
+        "androidBagType": "array",
+        "androidGenericArray": true,
+        "arrayIndex": 1,
+        "arrayName": "forced.bag"
+      }
+    },
+    "signals.bag@product=tablet": {
+      "defaultMessage": "{arg0, plural, one {{arg0} coastal flare} other {{arg0} coastal flares}}",
+      "description": "Product-specific generic bag signal quantities.",
+      "variants": {
+        "one": "{arg0} coastal flare",
+        "other": "{arg0} coastal flares"
+      },
+      "placeholders": [
+        { "name": "arg0", "source": "%1$d", "kind": "integer", "position": 1 }
+      ],
+      "metadata": { "androidBagType": "plurals", "androidProduct": "tablet" }
+    }
+  }
+}

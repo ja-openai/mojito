@@ -1,0 +1,19 @@
+<resources>
+  <string name="anchor">Quiet harbor</string>
+  <string name="escaped_alias">\@string/anchor</string>
+  <string name="quoted_alias">"@string/anchor"</string>
+  <string-array name="routes">
+    <item>@string/anchor</item>
+    <item translatable="false">Silent beacon</item>
+    <item>@null</item>
+    <item>Across %1$s</item>
+    <item>@empty</item>
+    <item>?attr/title</item>
+    <item>"@string/anchor"</item>
+  </string-array>
+  <plurals name="signals">
+    <item quantity="one">@string/anchor</item>
+    <item quantity="other">%1$d signals</item>
+    <item quantity="many">@null</item>
+  </plurals>
+</resources>

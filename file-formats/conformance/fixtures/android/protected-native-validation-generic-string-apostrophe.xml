@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<resources>
+  <item type="string" name="protected" format="string" translatable="false">North's quiet</item>
+</resources>

@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": {
+      "defaultMessage": "Quiet harbor",
+      "description": "Every quote spelling and resource value is original to this neutral fixture."
+    },
+    "entity_quote": {
+      "defaultMessage": "North\"pier near \"quiet\" water"
+    },
+    "escaped_entity_alias": {
+      "defaultMessage": "@string/anchor"
+    },
+    "placeholder": {
+      "defaultMessage": "Guide {pilot} to \"north\"",
+      "placeholders": [
+        {
+          "name": "pilot",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1,
+          "example": "A\"7"
+        }
+      ]
+    },
+    "routes[0]": {
+      "defaultMessage": "North\"pier and \"quiet\" water",
+      "metadata": {
+        "arrayIndex": 0,
+        "arrayName": "routes"
+      }
+    },
+    "routes[1]": {
+      "defaultMessage": "West \"pier, quiet\" water",
+      "metadata": {
+        "arrayIndex": 1,
+        "arrayName": "routes"
+      }
+    },
+    "routes[2]": {
+      "defaultMessage": "East <i>\"steady\"</i> water",
+      "metadata": {
+        "arrayIndex": 2,
+        "arrayName": "routes"
+      }
+    },
+    "scalar": {
+      "defaultMessage": "North\"pier and \"quiet\" water"
+    },
+    "signals": {
+      "defaultMessage": "{arg0, plural, one {One \"quiet\" beacon} other {{arg0} \"quiet\" beacons}}",
+      "variants": {
+        "one": "One \"quiet\" beacon",
+        "other": "{arg0} \"quiet\" beacons"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ]
+    },
+    "styled": {
+      "defaultMessage": "North '<'b lane=\"harbor&quot;side\">\"quiet\"'<'/b> pier",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "styled_signals": {
+      "defaultMessage": "{arg0, plural, one {One <b>\"quiet\"</b> beacon} other {{arg0} <b>\"quiet\"</b> beacons}}",
+      "variants": {
+        "one": "One <b>\"quiet\"</b> beacon",
+        "other": "{arg0} <b>\"quiet\"</b> beacons"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ]
+    }
+  }
+}

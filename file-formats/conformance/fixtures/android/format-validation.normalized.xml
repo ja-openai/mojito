@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <item type="string" name="generic">"%s then %d"</item>
+  <string name="literal_pair" formatted="false">"%s then %d"</string>
+  <string-array name="routes">
+    <item>"%s then %d"</item>
+    <item>"Next %s then %d"</item>
+  </string-array>
+  <plurals name="signals">
+    <item quantity="one">"%s then %d"</item>
+    <item quantity="other">"%s then %d"</item>
+  </plurals>
+  <string name="styled"><b>"%s"</b>" then %d"</string>
+  <string name="styled_relative"><i>"%s"</i>" then %&lt;s"</string>
+</resources>

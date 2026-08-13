@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "retained": {
+      "defaultMessage": "Visible lantern",
+      "metadata": {
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "main"
+      }
+    }
+  }
+}

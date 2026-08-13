@@ -1,0 +1,10 @@
+{
+  "strings": {
+    "collapsed": "one two three",
+    "entity": "Fish & chips < 5",
+    "escapes": "Line\nTab\tQuote'\" At@ Question? Slash\\",
+    "percent": "Save 50%% for %2$d items",
+    "quoted": "  keep   these spaces  ",
+    "unicode": "A B"
+  }
+}

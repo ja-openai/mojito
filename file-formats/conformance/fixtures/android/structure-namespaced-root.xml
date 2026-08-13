@@ -1,0 +1,3 @@
+<drift:resources xmlns:drift="urn:neutral:drifting-resource">
+  <string name="harbor">Harbor marker</string>
+</drift:resources>

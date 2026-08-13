@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\"?>\n<resources>\n  <!-- Macro declarations and every single/doubled alias stay source-owned. -->\n  <macro name='shortcut'>Original harbor instruction</macro>\n  <macro name=\"indirect\">@@macro/shortcut</macro>\n  <string name=\"anchor\">Quiet harbor</string>\n  <string name='single_alias'>@string/anchor</string>\n  <string name=\"double_alias\">@@string/anchor</string>\n  <item type=\"string\" name='generic_alias'>&#64;&#64;string/anchor</item>\n  <string name=\"double_comment\">@<!-- original alias boundary -->@string/anchor</string>\n  <string name=\"escaped\">\\@@string/anchor</string>\n  <string name=\"quoted\">\"@@string/anchor\"</string>\n  <string name=\"triple\">@@@string/anchor</string>\n  <string name=\"single_macro\">@macro/shortcut</string>\n  <string name=\"double_macro\">@@macro/indirect</string>\n  <string translatable=\"false\" name=\"untouched\">@@string/anchor</string>\n\n  <string-array name=\"routes\">\n    <item>@string/anchor</item>\n    <item>@@string/anchor</item>\n    <item>@@macro/shortcut</item>\n    <item>Visible route</item>\n  </string-array>\n\n  <plurals name=\"signals\">\n    <item quantity='one'>@@string/anchor</item>\n    <item quantity=\"two\">@@macro/shortcut</item>\n    <item quantity=\"other\">%1$d visible signals</item>\n  </plurals>\n</resources>\n",
+  "slots": [
+    {
+      "id": "anchor",
+      "start": 249,
+      "end": 261
+    },
+    {
+      "id": "escaped",
+      "start": 568,
+      "end": 584
+    },
+    {
+      "id": "quoted",
+      "start": 618,
+      "end": 635
+    },
+    {
+      "id": "triple",
+      "start": 669,
+      "end": 685
+    },
+    {
+      "id": "single_macro",
+      "start": 725,
+      "end": 740
+    },
+    {
+      "id": "double_macro",
+      "start": 780,
+      "end": 796
+    },
+    {
+      "id": "routes[2]",
+      "start": 986,
+      "end": 1002
+    },
+    {
+      "id": "routes[3]",
+      "start": 1020,
+      "end": 1033
+    },
+    {
+      "id": "signals",
+      "variant": "two",
+      "start": 1160,
+      "end": 1176
+    },
+    {
+      "id": "signals",
+      "variant": "other",
+      "start": 1211,
+      "end": 1231
+    }
+  ]
+}

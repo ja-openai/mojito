@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "locale": "fr",
+  "messages": {
+    "route": {
+      "defaultMessage": "Waypoint",
+      "metadata": {
+        "androidResourcePath": "res/values-fr-feminine-night-v34/strings.xml",
+        "androidResourceQualifiers": ["fr", "feminine", "night", "v34"]
+      }
+    }
+  }
+}

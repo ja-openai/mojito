@@ -1,0 +1,60 @@
+{
+  "products": {
+    "default": {
+      "arrays": {
+        "product_routes": [
+          "Main default route"
+        ],
+        "routes": [
+          "Debug north",
+          "Debug south"
+        ]
+      },
+      "plurals": {
+        "lights": {
+          "one": "%1$d upper light",
+          "other": "%1$d upper lights"
+        },
+        "product_lights": {
+          "one": "%1$d main default light",
+          "other": "%1$d main default lights"
+        }
+      },
+      "strings": {
+        "debug_anchor": "Upper only",
+        "main_anchor": "Main & harbor",
+        "masked_signal": "Protected upper coast",
+        "product_signal": "Main default beacon",
+        "shared_signal": "Debug %1$s"
+      }
+    },
+    "tablet": {
+      "arrays": {
+        "product_routes": [
+          "Upper tablet route"
+        ],
+        "routes": [
+          "Debug north",
+          "Debug south"
+        ]
+      },
+      "plurals": {
+        "lights": {
+          "one": "%1$d upper light",
+          "other": "%1$d upper lights"
+        },
+        "product_lights": {
+          "one": "%1$d upper tablet light",
+          "other": "%1$d upper tablet lights"
+        }
+      },
+      "strings": {
+        "debug_anchor": "Upper only",
+        "main_anchor": "Main & harbor",
+        "masked_signal": "Protected upper coast",
+        "product_signal": "Upper tablet beacon",
+        "shared_signal": "Debug %1$s"
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "plain": "Quiet marina",
+  "mixed": "Clear inlet",
+  "quoted": "South  bay",
+  "escaped": "Beacon",
+  "styled": "Take <b lane=\"east\">harborward</b> slowly",
+  "pilot": "Welcome {pilot}.",
+  "generic": "Sheltered road",
+  "routes[0]": "Inner quay",
+  "routes[1]": "Outer quay",
+  "signals#one": "{arg0} beacon",
+  "signals#other": "{arg0} beacons"
+}

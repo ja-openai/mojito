@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "locale": "en-US",
+  "messages": {
+    "route": {
+      "defaultMessage": "Waypoint",
+      "metadata": {
+        "androidResourcePath": "src/main/res/values-mcc310-mnc004-en-rUS-sw600dp-land-night-v31/strings.xml",
+        "androidResourceQualifiers": ["mcc310", "mnc004", "en", "rUS", "sw600dp", "land", "night", "v31"]
+      }
+    }
+  }
+}

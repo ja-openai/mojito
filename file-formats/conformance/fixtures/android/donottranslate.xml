@@ -1,0 +1,33 @@
+<resources>
+  <string name="private.plain">Keep the harbor marker untranslated</string>
+  <string name="private.relaxed">%s passes %d hidden markers</string>
+  <string name="private.explicit" translatable="true">Even an explicit override remains file-private</string>
+  <item type="string" name="private.generic">Keep the generic channel private</item>
+  <item type="string" format="string" name="private.strict">Keep the strict channel private</item>
+  <string-array name="private.routes">
+    <item>Private northern passage</item>
+    <item>Private southern passage</item>
+  </string-array>
+  <string-array name="private.explicit.routes" translatable="true">
+    <item>Explicitly enabled but still file-private</item>
+  </string-array>
+  <array name="private.typed">
+    <item>Private typed channel</item>
+    <item>17</item>
+  </array>
+  <plurals name="private.signals">
+    <item quantity="one">One private signal</item>
+    <item quantity="other">Several private signals</item>
+  </plurals>
+  <plurals name="private.explicit.signals" translatable="true">
+    <item quantity="one">One explicit private signal</item>
+    <item quantity="other">Several explicit private signals</item>
+  </plurals>
+  <bag type="string-array" name="private.bag">
+    <item>Private generic-bag passage</item>
+  </bag>
+  <bag type="plurals" name="private.bag.signals">
+    <item quantity="one">One private bag signal</item>
+    <item quantity="other">Several private bag signals</item>
+  </bag>
+</resources>

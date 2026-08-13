@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <plurals name="conventional_examples">
+    <item quantity="one"><xliff:g id="arg0">%1$d</xliff:g>"/"<xliff:g id="arg0" example="">%1$d</xliff:g>" #east"</item>
+    <item quantity="other"><xliff:g id="arg0" example="">%1$d</xliff:g>"/"<xliff:g id="arg0">%1$d</xliff:g>" ##east"</item>
+  </plurals>
+  <string-array name="conventional_routes">
+    <item><xliff:g id="arg0">%1$s</xliff:g>" #north"</item>
+    <item>"%1$s / "<xliff:g id="arg0">%1$s</xliff:g>" ##south"</item>
+  </string-array>
+  <plurals name="conventional_signals">
+    <item quantity="one"><xliff:g id="arg0">%1$d</xliff:g>" #bridge"</item>
+    <item quantity="other">"%1$d / "<xliff:g id="arg0">%1$d</xliff:g>" ##bridges"</item>
+  </plurals>
+  <plurals name="empty_examples">
+    <item quantity="one"><xliff:g id="count" example="">%1$d</xliff:g>" empty #west"</item>
+    <item quantity="other"><xliff:g id="count">%1$d</xliff:g>" absent ##west"</item>
+  </plurals>
+  <string name="entity_hash">"Dock #9"</string>
+  <item type="string" name="escaped_color">"#abc"</item>
+  <string name="escaped_hash">"Dock #8"</string>
+  <plurals name="escaped_signals">
+    <item quantity="one">"%1$d route #west"</item>
+    <item quantity="other">"%1$d routes #west"</item>
+  </plurals>
+  <string-array name="hash_routes">
+    <item>"#lane north"</item>
+    <item>"Dock #lane south"</item>
+    <item>"Dock #lane east"</item>
+  </string-array>
+  <string name="mixed_conventional"><xliff:g id="arg0">%1$s</xliff:g>" / %1$s / "<xliff:g id="arg0" example="">%1$s</xliff:g>" #signal"</string>
+  <array name="mixed_hashes">
+    <item>#abc</item>
+    <item description="Untyped array colors remain protected slots; escaped colors stay editable.">"#abc"</item>
+    <item description="Untyped array colors remain protected slots; escaped colors stay editable.">"#abc"</item>
+    <item description="Untyped array colors remain protected slots; escaped colors stay editable.">"Dock ##4"</item>
+    <item description="Untyped array colors remain protected slots; escaped colors stay editable.">"Dock #5"</item>
+  </array>
+  <plurals name="optional_examples">
+    <item quantity="one"><xliff:g id="count">%1$d</xliff:g>" omitted #north"</item>
+    <item quantity="other"><xliff:g id="count" example="#many">%1$d</xliff:g>" supplied ##north"</item>
+  </plurals>
+  <plurals name="product_signals" product="default">
+    <item quantity="one">"%1$d default #signal"</item>
+    <item quantity="other">"%1$d default ##signals"</item>
+  </plurals>
+  <plurals name="product_signals" product="tablet">
+    <item quantity="one">"%1$d tablet #signal"</item>
+    <item quantity="other">"%1$d tablet ##signals"</item>
+  </plurals>
+  <string name="protected_conventional"><xliff:g id="arg0">%1$s</xliff:g>" #harbor"</string>
+  <plurals name="protected_signals">
+    <item quantity="one"><xliff:g id="count" example="#1">%1$d</xliff:g>" protected #lane"</item>
+    <item quantity="other"><xliff:g id="count" example="#2">%1$d</xliff:g>" protected ##lanes"</item>
+  </plurals>
+  <item type="string" name="quoted_color">"#abc"</item>
+  <plurals name="raw_signals">
+    <item quantity="one">"%1$d route #north"</item>
+    <item quantity="other">"%1$d routes ##north"</item>
+  </plurals>
+  <plurals name="repeated_examples">
+    <item quantity="one"><xliff:g id="count" example="#lead">%1$d</xliff:g>"/"<xliff:g id="count" example="#tail">%1$d</xliff:g>" repeated #east"</item>
+    <item quantity="other"><xliff:g id="count" example="#tail">%1$d</xliff:g>"/"<xliff:g id="count" example="#lead">%1$d</xliff:g>" repeated ##east"</item>
+  </plurals>
+  <string name="scalar_hash" description="Hash spellings are original neutral cases, not platform examples.">"Dock #7"</string>
+  <item type="string" name="strict_color" format="string">"#abc"</item>
+  <string name="styled_conventional"><b lane="#signal"><xliff:g id="arg0">%1$s</xliff:g></b>" / %1$s"</string>
+  <plurals name="styled_signals">
+    <item quantity="one">"%1$d "<b lane="#inner">"#blue"</b>" route"</item>
+    <item quantity="other">"%1$d "<i lane="hash#inner">"##blue"</i>" routes"</item>
+  </plurals>
+  <item type="string" name="unicode_color">"#abc"</item>
+  <string name="unicode_hash">"Dock #10"</string>
+</resources>

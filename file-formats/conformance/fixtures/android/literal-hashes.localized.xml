@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:code="urn:oasis:names:tc:xliff:document:1.2">
+  <!-- Hash spellings are original neutral cases, not platform examples. -->
+  <string name="scalar_hash">"Quai #7"</string>
+  <string name="escaped_hash">"Quai #8"</string>
+  <string name="entity_hash">"Quai #9"</string>
+  <string name="unicode_hash">"Quai #10"</string>
+  <string name="protected_conventional"><code:g id="arg0">%1$s</code:g>" #port"</string>
+  <string name="mixed_conventional"><code:g id="arg0">%1$s</code:g>" / %1$s / "<code:g id="arg0" example="">%1$s</code:g>" #signal traduit"</string>
+  <string name="styled_conventional"><b lane="#signal"><code:g id="arg0">%1$s</code:g></b>" / %1$s"</string>
+
+  <!-- Generic TYPE_ANY recognizes an unescaped leading color as a primitive. -->
+  <item type="string" name="primitive_color">#abc</item>
+  <item type="string" name="escaped_color">"#def"</item>
+  <item type="string" name="unicode_color">"#def"</item>
+  <item type="string" name="quoted_color">"#def"</item>
+  <item type="string" name="strict_color" format="string">"#def"</item>
+
+  <!-- Untyped array colors remain protected slots; escaped colors stay editable. -->
+  <array name="mixed_hashes">
+    <item>#abc</item>
+    <item>"#def"</item>
+    <item>"#def"</item>
+    <item>"Quai ##4"</item>
+    <item>"Quai #5"</item>
+  </array>
+
+  <string-array name="hash_routes">
+    <item>"#voie nord"</item>
+    <item>"Quai #voie sud"</item>
+    <item>"Quai #voie est"</item>
+  </string-array>
+
+  <string-array name="conventional_routes">
+    <item><code:g id="arg0">%1$s</code:g>" #nord"</item>
+    <item>"%1$s / "<code:g id="arg0">%1$s</code:g>" ##sud"</item>
+  </string-array>
+
+  <plurals name="raw_signals">
+    <item quantity="one">"%1$d voie #nord"</item>
+    <item quantity="other">"%1$d voies ##nord"</item>
+  </plurals>
+  <plurals name="escaped_signals">
+    <item quantity="one">"%1$d voie #ouest"</item>
+    <item quantity="other">"%1$d voies #ouest"</item>
+  </plurals>
+  <plurals name="styled_signals">
+    <item quantity="one">"%1$d "<b lane="&#35;inner">"#bleu"</b>" voie"</item>
+    <item quantity="other">"%1$d "<i lane="hash#inner">"##bleu"</i>" voies"</item>
+  </plurals>
+  <plurals name="protected_signals">
+    <item quantity="one"><code:g id="count" example="#1">%1$d</code:g>" voie protégée #nord"</item>
+    <item quantity="other"><code:g id="count" example="#2">%1$d</code:g>" voies protégées ##nord"</item>
+  </plurals>
+  <plurals name="optional_examples">
+    <item quantity="one"><code:g id="count">%1$d</code:g>" exemple absent #nord"</item>
+    <item quantity="other"><code:g id="count" example="#many">%1$d</code:g>" exemple fourni ##nord"</item>
+  </plurals>
+  <plurals name="empty_examples">
+    <item quantity="one"><code:g id="count" example="">%1$d</code:g>" exemple vide #ouest"</item>
+    <item quantity="other"><code:g id="count">%1$d</code:g>" exemple omis ##ouest"</item>
+  </plurals>
+  <plurals name="repeated_examples">
+    <item quantity="one"><code:g id="count" example="#lead">%1$d</code:g>"/"<code:g id="count" example="#tail">%1$d</code:g>" exemples répétés #est"</item>
+    <item quantity="other"><code:g id="count" example="#tail">%1$d</code:g>"/"<code:g id="count" example="#lead">%1$d</code:g>" exemples répétés ##est"</item>
+  </plurals>
+  <plurals name="conventional_signals">
+    <item quantity="one"><code:g id="arg0">%1$d</code:g>" #pont"</item>
+    <item quantity="other">"%1$d / "<code:g id="arg0">%1$d</code:g>" ##ponts"</item>
+  </plurals>
+  <plurals name="conventional_examples">
+    <item quantity="one"><code:g id="arg0">%1$d</code:g>"/"<code:g id="arg0" example="">%1$d</code:g>" #est"</item>
+    <item quantity="other"><code:g id="arg0" example="">%1$d</code:g>"/"<code:g id="arg0">%1$d</code:g>" ##est"</item>
+  </plurals>
+
+  <plurals name="product_signals" product="default">
+    <item quantity="one">"%1$d défaut #signal"</item>
+    <item quantity="other">"%1$d défaut ##signaux"</item>
+  </plurals>
+  <plurals name="product_signals" product="tablet">
+    <item quantity="one">"%1$d tablette #signal"</item>
+    <item quantity="other">"%1$d tablette ##signaux"</item>
+  </plurals>
+
+  <string translatable="false" name="protected_private">Keep #protected</string>
+</resources>

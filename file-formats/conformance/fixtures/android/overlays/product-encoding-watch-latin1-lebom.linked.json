@@ -1,0 +1,19 @@
+{
+  "arrays": {
+    "lanes": [
+      "Main default café channel"
+    ]
+  },
+  "plurals": {
+    "signals": {
+      "one": "One main default café signal",
+      "other": "Several main default café signals"
+    }
+  },
+  "strings": {
+    "active": "Main default café beacon",
+    "anchor": "Shared café anchor",
+    "fallback": "Upper café fallback",
+    "route": "Main default café route"
+  }
+}

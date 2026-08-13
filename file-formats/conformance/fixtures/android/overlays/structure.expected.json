@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "foreign_shadow": {
+      "defaultMessage": "Original protected marker",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "route.bundle[1]": {
+      "defaultMessage": "Updated channel",
+      "metadata": {
+        "androidArrayPrimitives": { "0": "17" },
+        "androidGenericArray": true,
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 1,
+        "arrayName": "route.bundle"
+      }
+    },
+    "route.marker": {
+      "defaultMessage": "Updated coastal marker",
+      "metadata": {
+        "androidOverlaySourceSet": "build_type",
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    }
+  }
+}

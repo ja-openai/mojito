@@ -1,0 +1,7 @@
+<resources xmlns:vendor="urn:mojito:neutral:annotation">
+  <string name="before_style">alpha   <b> beta </b>   omega</string>
+  <string name="inside_quote">"  alpha <b> beta </b> omega  "</string>
+  <string name="quote_after_span"><b>"  echo  "</b> tail</string>
+  <string name="empty_span">north   <b/>   south</string>
+  <string name="unknown_boundary">north  <vendor:skip>  soft  </vendor:skip> south</string>
+</resources>

@@ -1,0 +1,5 @@
+<resources>
+  <integer-array name="routes">
+    <item>Harbor light</item>
+  </integer-array>
+</resources>

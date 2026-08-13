@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-16LE"?>
+<resources>
+  <string name="signal" product="tablet">Main selected</string>
+  <string name="anchor">Main anchor</string>
+</resources>

@@ -1,0 +1,7 @@
+{
+  "strings": { "anchor": "Overlay harbor" },
+  "arrays": { "routes": ["Overlay channel", "@string/anchor", "@empty"] },
+  "arrayReferences": { "routes": { "1": "@string/anchor", "2": "@empty" } },
+  "plurals": { "signals": { "other": "%1$d overlay signals" } },
+  "pluralReferences": { "signals": { "one": "@string/anchor" } }
+}

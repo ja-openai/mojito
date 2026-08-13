@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:use="http://schemas.android.com/apk/res/neutral.distant.harbor">
+    <string name="anchor">A steady harbor marker</string>
+    <macro name="auto_reference" xmlns:route="http://schemas.android.com/apk/res-auto">@route:string/anchor</macro>
+    <macro name="public_reference" xmlns:route="http://schemas.android.com/apk/res/neutral.scoped.harbor">@route:string/anchor</macro>
+    <macro name="private_reference" xmlns:route="http://schemas.android.com/apk/prv/res/neutral.scoped.harbor">@route:string/anchor</macro>
+    <macro name="star_reference" xmlns:route="http://schemas.android.com/apk/res/neutral.scoped.harbor">@*route:string/anchor</macro>
+    <macro name="chained_reference">@macro/auto_reference</macro>
+    <macro name="protected_content" xmlns:signal="urn:oasis:names:tc:xliff:document:1.2">Signal <signal:g id="marker" example="M-7">%1$s</signal:g></macro>
+    <macro name="foreign_wrapper" xmlns:style="urn:neutral:style"><style:b>A wrapped harbor</style:b> crossing</macro>
+    <string name="direct_alias">@macro/auto_reference</string>
+    <string name="scoped_signal" xmlns:signal="urn:neutral:foreign">@macro/protected_content</string>
+    <string name="ignored_foreign_style">@macro/foreign_wrapper</string>
+    <string-array name="harbor_routes">
+        <item>@macro/auto_reference</item>
+        <item>@macro/public_reference</item>
+        <item>@macro/private_reference</item>
+        <item>@macro/star_reference</item>
+        <item>@macro/chained_reference</item>
+        <item>A visible harbor lane</item>
+    </string-array>
+    <plurals name="harbor_signals">
+        <item quantity="one">@macro/public_reference</item>
+        <item quantity="other">A visible harbor signal</item>
+    </plurals>
+</resources>

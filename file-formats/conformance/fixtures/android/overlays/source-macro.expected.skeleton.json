@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "sources": [
+    {
+      "sourceSet": "library",
+      "resourcePath": "src/library/res/values/definitions.xml",
+      "skeleton": {
+        "schemaVersion": 1,
+        "sourceFormat": "android",
+        "encoding": "UTF-8",
+        "source": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:signal=\"urn:oasis:names:tc:xliff:document:1.2\">\n  <!-- Definitions are build-only and never editable translation slots. -->\n  <macro name=\"harbor_phrase\">A lower harbor</macro>\n  <macro name=\"styled_phrase\">Lower <b tone=\"bright\">harbor</b></macro>\n  <macro name=\"protected_phrase\">Lower <signal:g id=\"pilot\" example=\"L-0\">%1$s</signal:g></macro>\n  <macro name=\"route_phrase\">A remote channel</macro>\n  <macro name=\"one_light\">%1$d remote lantern</macro>\n  <macro name=\"other_lights\">%1$d remote lanterns</macro>\n  <macro name=\"tablet_phrase\">A remote tablet crossing</macro>\n</resources>\n",
+        "androidResourcePath": "src/library/res/values/definitions.xml",
+        "slots": []
+      }
+    },
+    {
+      "sourceSet": "main",
+      "resourcePath": "src/main/res/values/usage.xml",
+      "skeleton": {
+        "schemaVersion": 1,
+        "sourceFormat": "android",
+        "encoding": "UTF-8",
+        "source": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\"\n    xmlns:lane=\"http://schemas.android.com/apk/res-auto\">\n  <!-- Uses resolve definitions owned by other original resource files. -->\n  <string name=\"macro_signal\">@macro/harbor_phrase</string>\n  <string name=\"macro_styled\">@macro/styled_phrase</string>\n  <string name=\"macro_protected\">@macro/protected_phrase</string>\n  <string name=\"macro_qualified\">@neutral.cross.harbor:macro/harbor_phrase</string>\n  <string name=\"macro_private\">@*macro/route_phrase</string>\n  <string name=\"macro_scoped\">@lane:macro/route_phrase</string>\n  <string name=\"macro_chain\">@macro/scoped_chain</string>\n  <string-array name=\"macro_routes\">\n    <item>@macro/route_phrase</item>\n    <item>@macro/harbor_phrase</item>\n  </string-array>\n  <plurals name=\"macro_lights\">\n    <item quantity=\"one\">@macro/one_light</item>\n    <item quantity=\"other\">@macro/other_lights</item>\n  </plurals>\n  <string name=\"macro_product\" product=\"default\">@macro/harbor_phrase</string>\n  <string name=\"macro_product\" product=\"tablet\">@macro/tablet_phrase</string>\n</resources>\n",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "slots": [
+          {
+            "id": "macro_signal",
+            "start": 266,
+            "end": 286
+          },
+          {
+            "id": "macro_styled",
+            "start": 326,
+            "end": 346
+          },
+          {
+            "id": "macro_protected",
+            "start": 389,
+            "end": 412
+          },
+          {
+            "id": "macro_qualified",
+            "start": 455,
+            "end": 496
+          },
+          {
+            "id": "macro_private",
+            "start": 537,
+            "end": 557
+          },
+          {
+            "id": "macro_scoped",
+            "start": 597,
+            "end": 621
+          },
+          {
+            "id": "macro_chain",
+            "start": 660,
+            "end": 679
+          },
+          {
+            "id": "macro_routes[0]",
+            "start": 736,
+            "end": 755
+          },
+          {
+            "id": "macro_routes[1]",
+            "start": 773,
+            "end": 793
+          },
+          {
+            "id": "macro_lights",
+            "variant": "one",
+            "start": 876,
+            "end": 892
+          },
+          {
+            "id": "macro_lights",
+            "variant": "other",
+            "start": 927,
+            "end": 946
+          },
+          {
+            "id": "macro_product",
+            "start": 1016,
+            "end": 1036
+          },
+          {
+            "id": "macro_product@product=tablet",
+            "start": 1094,
+            "end": 1114
+          }
+        ]
+      }
+    },
+    {
+      "sourceSet": "build_type",
+      "resourcePath": "src/debug/res/values/definitions.xml",
+      "skeleton": {
+        "schemaVersion": 1,
+        "sourceFormat": "android",
+        "encoding": "UTF-8",
+        "source": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:signal=\"urn:oasis:names:tc:xliff:document:1.2\">\n  <!-- Higher-priority definitions replace dependencies without rewriting their sources. -->\n  <macro name=\"harbor_phrase\">An upper harbor</macro>\n  <macro name=\"styled_phrase\">Upper <b tone=\"bright\">harbor</b></macro>\n  <macro name=\"protected_phrase\">Upper <signal:g id=\"pilot\" example=\"D&amp;7\">%1$s</signal:g></macro>\n  <macro name=\"scoped_chain\" xmlns:route=\"http://schemas.android.com/apk/res-auto\">@route:macro/harbor_phrase</macro>\n</resources>\n",
+        "androidResourcePath": "src/debug/res/values/definitions.xml",
+        "slots": []
+      }
+    }
+  ],
+  "androidApplicationPackage": "neutral.cross.harbor",
+  "androidMacroOwners": {
+    "harbor_phrase": {
+      "sourceSet": "build_type",
+      "resourcePath": "src/debug/res/values/definitions.xml"
+    },
+    "one_light": {
+      "sourceSet": "library",
+      "resourcePath": "src/library/res/values/definitions.xml"
+    },
+    "other_lights": {
+      "sourceSet": "library",
+      "resourcePath": "src/library/res/values/definitions.xml"
+    },
+    "protected_phrase": {
+      "sourceSet": "build_type",
+      "resourcePath": "src/debug/res/values/definitions.xml"
+    },
+    "route_phrase": {
+      "sourceSet": "library",
+      "resourcePath": "src/library/res/values/definitions.xml"
+    },
+    "scoped_chain": {
+      "sourceSet": "build_type",
+      "resourcePath": "src/debug/res/values/definitions.xml"
+    },
+    "styled_phrase": {
+      "sourceSet": "build_type",
+      "resourcePath": "src/debug/res/values/definitions.xml"
+    },
+    "tablet_phrase": {
+      "sourceSet": "library",
+      "resourcePath": "src/library/res/values/definitions.xml"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:harbor="http://schemas.android.com/apk/res/neutral.overlay.harbor">
+    <string name="package_route">@neutral.overlay.harbor:macro/harbor_phrase</string>
+    <string name="private_route">@*macro/scoped_phrase</string>
+    <string-array name="shared_routes">
+        <item>@harbor:macro/harbor_phrase</item>
+        <item>@macro/scoped_phrase</item>
+    </string-array>
+</resources>

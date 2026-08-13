@@ -1,0 +1,30 @@
+{
+  "strings": {
+    "duplicate": "Signal"
+  },
+  "styledSpans": {
+    "strings": {
+      "duplicate": [
+        {
+          "name": "annotation",
+          "start": 0,
+          "end": 5,
+          "attributes": {
+            "key": "foreign"
+          },
+          "encodedTag": "annotation;key=system;key=foreign",
+          "runtimeAnnotations": [
+            {
+              "key": "key",
+              "value": "system"
+            },
+            {
+              "key": "key",
+              "value": "foreign"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

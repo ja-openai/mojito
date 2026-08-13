@@ -1,0 +1,44 @@
+{
+  "arrays": {
+    "private.bag": [
+      "Private generic-bag passage"
+    ],
+    "private.explicit.routes": [
+      "Explicitly enabled but still file-private"
+    ],
+    "private.routes": [
+      "Private northern passage",
+      "Private southern passage"
+    ],
+    "private.typed": [
+      "Private typed channel",
+      "17"
+    ]
+  },
+  "arrayPrimitiveValues": {
+    "private.typed": {
+      "1": "17"
+    }
+  },
+  "plurals": {
+    "private.bag.signals": {
+      "one": "One private bag signal",
+      "other": "Several private bag signals"
+    },
+    "private.explicit.signals": {
+      "one": "One explicit private signal",
+      "other": "Several explicit private signals"
+    },
+    "private.signals": {
+      "one": "One private signal",
+      "other": "Several private signals"
+    }
+  },
+  "strings": {
+    "private.explicit": "Even an explicit override remains file-private",
+    "private.generic": "Keep the generic channel private",
+    "private.plain": "Keep the harbor marker untranslated",
+    "private.relaxed": "%s passes %d hidden markers",
+    "private.strict": "Keep the strict channel private"
+  }
+}

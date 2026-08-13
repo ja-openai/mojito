@@ -1,0 +1,20 @@
+{
+  "arrays": {
+    "directions": [
+      "Main east"
+    ]
+  },
+  "plurals": {
+    "alerts": {
+      "other": "Main bells"
+    }
+  },
+  "strings": {
+    "build_only": "Build lantern",
+    "flavor_only": "Flavor lantern",
+    "library_only": "Library lantern",
+    "main_only": "Main lantern",
+    "signal": "Variant signal",
+    "variant_only": "Variant lantern"
+  }
+}

@@ -1,0 +1,6 @@
+<resources>
+  <integer-array name="routes">
+    <item>17</item>
+    <item>31</item>
+  </integer-array>
+</resources>

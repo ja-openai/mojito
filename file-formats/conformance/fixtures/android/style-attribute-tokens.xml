@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="attribute_printf_newline"><annotation route="north%nwest">Pier</annotation></string>
+    <string name="attribute_and_visible_newlines"><annotation route="north%nwest">Pier\ninner%nopen</annotation></string>
+    <string name="attribute_escaped_percent_n"><annotation route="north%%nwest">Pier</annotation></string>
+    <string name="attribute_solitary_percent"><annotation route="north%west">Pier</annotation></string>
+    <string name="attribute_malformed_percent"><annotation route="%_">Pier</annotation></string>
+    <string name="attribute_positional_token"><annotation route="%1$s">Pier %1$s</annotation></string>
+    <string name="attribute_only_positional_token"><annotation route="%1$s">Pier</annotation></string>
+    <string name="attribute_percent_alignment"><annotation route="%n%%">Berth %_ and 80%%</annotation></string>
+    <string name="attribute_literal_backslash"><annotation route="north\nwest">Pier</annotation></string>
+    <string name="attribute_xml_newline"><annotation route="north&#10;west">Pier</annotation></string>
+    <string name="attribute_xml_carriage"><annotation route="north&#13;west">Pier</annotation></string>
+    <string name="attribute_xml_tab"><annotation route="north&#9;west">Pier</annotation></string>
+    <string name="attribute_supplementary"><annotation route="🧭%n東">北🙂</annotation></string>
+    <string name="font_attribute_newline"><font color="%n">Pier</font></string>
+    <string name="nested_attribute_newline"><annotation route="%n"><b>North</b></annotation></string>
+    <string name="unformatted_attribute" formatted="false"><annotation route="%n">Pier%nopen</annotation></string>
+    <item type="string" format="string" name="strict_attribute"><annotation route="%n">%1$s ready</annotation></item>
+    <string-array name="attribute_routes">
+        <item><annotation route="%n">North</annotation></item>
+        <item><annotation route="%%n">South%nopen</annotation></item>
+    </string-array>
+    <plurals name="attribute_signals">
+        <item quantity="one"><annotation route="%n">%1$d signal\nnear</annotation></item>
+        <item quantity="other"><annotation route="%%n">%1$d signals%nnear</annotation></item>
+    </plurals>
+</resources>

@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\"?>\n<resources xmlns:x=\"urn:oasis:names:tc:xliff:document:1.2\">\n  <?root original=\"kept\"?>\n  <string name=\"plain\">North<?lane mode=\"quiet\"?> port</string>\n  <string name=\"mixed\">East<!-- original comment --><?mark value=\"1\"?><![CDATA[ west]]></string>\n  <string name=\"quoted\">\"North<?quote keep?>  south\"</string>\n  <string name=\"escaped\">\\u0<?unicode split?>041</string>\n  <string name=\"styled\">Move <b lane=\"east\">north<?style hold?>ward</b> now</string>\n  <string name=\"pilot\">Hi <x:g id=\"pilot\">%1<?protected hold?>$s</x:g>!</string>\n  <item type=\"string\" name=\"generic\" format=\"string\">Open<?generic keep?> road</item>\n  <string-array name=\"routes\">\n    <item>East<?array one?> pier</item>\n    <item>West<?array two?> pier</item>\n  </string-array>\n  <plurals name=\"signals\">\n    <item quantity=\"one\">%1$d<?plural one?> signal</item>\n    <item quantity=\"other\">%1$d<?plural other?> signals</item>\n  </plurals>\n</resources>\n",
+  "slots": [
+    {
+      "id": "plain",
+      "start": 132,
+      "end": 163
+    },
+    {
+      "id": "mixed",
+      "start": 196,
+      "end": 260
+    },
+    {
+      "id": "quoted",
+      "start": 294,
+      "end": 322
+    },
+    {
+      "id": "escaped",
+      "start": 357,
+      "end": 380
+    },
+    {
+      "id": "styled",
+      "start": 414,
+      "end": 465
+    },
+    {
+      "id": "pilot",
+      "start": 498,
+      "end": 546
+    },
+    {
+      "id": "generic",
+      "start": 609,
+      "end": 634
+    },
+    {
+      "id": "routes[0]",
+      "start": 683,
+      "end": 705
+    },
+    {
+      "id": "routes[1]",
+      "start": 723,
+      "end": 745
+    },
+    {
+      "id": "signals",
+      "start": 823,
+      "end": 848,
+      "variant": "one"
+    },
+    {
+      "id": "signals",
+      "start": 883,
+      "end": 911,
+      "variant": "other"
+    }
+  ]
+}

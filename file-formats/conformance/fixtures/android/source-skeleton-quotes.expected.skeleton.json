@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\"?>\n<resources xmlns:code=\"urn:oasis:names:tc:xliff:document:1.2\">\n  <!-- Preserve original XML entities, Android escaping, tags, and comments exactly. -->\n  <string name='scalar'>North\\&#34;pier and \\\"quiet\\\" water</string>\n  <string name=\"styled\">North <b lane='harbor&quot;side'>\\\"quiet\\\"</b> pier</string>\n  <string name=\"protected\">Guide <code:g example='A&quot;7' id=\"pilot\">%1$s</code:g> to \\\"north\\\"</string>\n  <string name=\"commented\">North\\\"<!-- keep this original quote boundary -->pier</string>\n  <string translatable=\"false\" name=\"untouched\">Keep \\\"protected\\\" text</string>\n\n  <string-array name=\"routes\">\n    <item>West \\\"pier, quiet\\\" water</item>\n    <item>East <i lane='water&quot;side'>\\\"steady\\\"</i> water</item>\n  </string-array>\n\n  <plurals name=\"signals\">\n    <item quantity='one'>One \\\"quiet\\\" beacon</item>\n    <item quantity=\"other\">%1$d <b>\\\"quiet\\\"</b> beacons</item>\n  </plurals>\n</resources>\n",
+  "slots": [
+    {
+      "id": "scalar",
+      "start": 198,
+      "end": 233
+    },
+    {
+      "id": "styled",
+      "start": 267,
+      "end": 318
+    },
+    {
+      "id": "protected",
+      "start": 355,
+      "end": 425
+    },
+    {
+      "id": "commented",
+      "start": 462,
+      "end": 515
+    },
+    {
+      "id": "routes[0]",
+      "start": 648,
+      "end": 674
+    },
+    {
+      "id": "routes[1]",
+      "start": 692,
+      "end": 743
+    },
+    {
+      "id": "signals",
+      "variant": "one",
+      "start": 822,
+      "end": 842
+    },
+    {
+      "id": "signals",
+      "variant": "other",
+      "start": 877,
+      "end": 906
+    }
+  ]
+}

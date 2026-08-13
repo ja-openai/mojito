@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\"?>\n<resources xmlns:tools=\"http://schemas.android.com/tools\" tools:locale=\"de_DE\">\n  <!-- Directory qualifiers, not this design-time annotation, own the locale. -->\n  <string name=\" anchor.route \">North harbor anchor</string>\n  <string name=\"route\" product=\" default \">Default night passage</string>\n  <string name=\"route\" product=\" tablet \">Tablet night passage</string>\n  <item type=\"string\" name=\"beacon\">Night beacon</item>\n  <string-array name=\"lanes\">\n    <item><![CDATA[North <safe> & clear]]></item>\n    <item>@string/anchor.route</item>\n    <item>South night lane</item>\n  </string-array>\n  <plurals name=\"signals\">\n    <item quantity=\"one\">%1$d quiet signal</item>\n    <item quantity=\"other\">%1$d quiet signals</item>\n  </plurals>\n  <string translatable=\"false\" name=\"private\">Keep private night note</string>\n</resources>\n",
+  "androidResourcePath": "src/main/res/flag(neutral.flags.path)/values-fr-night/strings.xml",
+  "slots": [
+    {
+      "id": "anchor.route@flag=neutral.flags.path",
+      "start": 216,
+      "end": 235
+    },
+    {
+      "id": "route@flag=neutral.flags.path",
+      "start": 288,
+      "end": 309
+    },
+    {
+      "id": "route@product=tablet@flag=neutral.flags.path",
+      "start": 361,
+      "end": 381
+    },
+    {
+      "id": "beacon@flag=neutral.flags.path",
+      "start": 427,
+      "end": 439
+    },
+    {
+      "id": "lanes@flag=neutral.flags.path[0]",
+      "start": 487,
+      "end": 519
+    },
+    {
+      "id": "lanes@flag=neutral.flags.path[2]",
+      "start": 575,
+      "end": 591
+    },
+    {
+      "id": "signals@flag=neutral.flags.path",
+      "variant": "one",
+      "start": 669,
+      "end": 686
+    },
+    {
+      "id": "signals@flag=neutral.flags.path",
+      "variant": "other",
+      "start": 721,
+      "end": 739
+    }
+  ],
+  "androidFeatureFlags": [
+    {
+      "name": "neutral.flags.path",
+      "readOnly": false,
+      "value": null
+    }
+  ]
+}

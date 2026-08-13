@@ -1,0 +1,37 @@
+{
+  "arrays": {
+    "routes": [
+      "Inner quay",
+      "Outer quay"
+    ]
+  },
+  "plurals": {
+    "signals": {
+      "one": "%1$d beacon",
+      "other": "%1$d beacons"
+    }
+  },
+  "strings": {
+    "escaped": "Beacon",
+    "generic": "Sheltered road",
+    "mixed": "Clear inlet",
+    "pilot": "Welcome %1$s.",
+    "plain": "Quiet marina",
+    "quoted": "South  bay",
+    "styled": "Take harborward slowly"
+  },
+  "styledSpans": {
+    "strings": {
+      "styled": [
+        {
+          "name": "b",
+          "start": 5,
+          "end": 14,
+          "attributes": {
+            "lane": "east"
+          }
+        }
+      ]
+    }
+  }
+}

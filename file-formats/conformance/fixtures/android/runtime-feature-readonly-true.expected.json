@@ -1,0 +1,32 @@
+{
+  "messages": {
+    "mutable_beacon": {
+      "defaultMessage": "A mutable harbor beacon",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.mutable",
+        "androidGenericString": true
+      }
+    },
+    "mutable_route": {
+      "defaultMessage": "A mutable harbor route",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.mutable"
+      }
+    },
+    "mutable_signals": {
+      "defaultMessage": "{count, plural, one {One harbor signal} other {Several harbor signals}}",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.mutable"
+      },
+      "variants": {
+        "one": "One harbor signal",
+        "other": "Several harbor signals"
+      }
+    },
+    "open_route": {
+      "defaultMessage": "An open harbor route"
+    }
+  },
+  "schemaVersion": 1,
+  "sourceFormat": "android"
+}

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <item type="string" name="generic_ignored_flags">"Generic flags are ignored"</item>
+  <plurals name="ignored_invalid_plural">
+    <item quantity="other">"%1$d visible ignored signals"</item>
+  </plurals>
+  <plurals name="ignored_mixed_plural">
+    <item quantity="one">"%1$d visible mixed signal"</item>
+    <item quantity="other">"%1$d visible mixed signals"</item>
+  </plurals>
+  <string name="padded_enabled">"%1$s harbor route"</string>
+  <string-array name="title_array">
+    <item>"Title-case array signal"</item>
+  </string-array>
+  <string name="title_enabled">"%1$d quiet beacons"</string>
+  <string name="title_unformatted" formatted="false">"%s %d retained"</string>
+  <string-array name="upper_array">
+    <item>"Uppercase array signal"</item>
+  </string-array>
+  <string name="upper_enabled">"%1$s orbital route"</string>
+  <string name="uppercase_unformatted" formatted="false">"%s %d preserved"</string>
+</resources>

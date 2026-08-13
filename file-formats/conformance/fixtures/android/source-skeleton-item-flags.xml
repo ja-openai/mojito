@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<resources xmlns:gate="http://schemas.android.com/apk/res/android"
+           xmlns:tools="http://schemas.android.com/tools"
+           gate:featureFlag="neutral.ignored.root">
+  <!-- Fixed conditions compact native positions; mutable positions remain conditional. -->
+  <string name="anchor">Harbor anchor</string>
+  <string-array name="lanes" product=" default ">
+    <item gate:featureFlag="neutral.flags.hidden">Protected hidden north</item>
+    <item gate:featureFlag="neutral.flags.visible">Visible north route</item>
+    <item gate:featureFlag="neutral.flags.mutable">Mutable east route</item>
+    <item gate:featureFlag="!neutral.flags.mutable"><![CDATA[Inverse <west> & safe]]></item>
+    <item gate:featureFlag="neutral.flags.hidden">@string/anchor</item>
+    <item gate:featureFlag="neutral.flags.visible">@string/anchor</item>
+    <item>Open south route</item>
+    <item gate:featureFlag="neutral.flags.hidden" tools:ignore="Protected" />
+    <item gate:featureFlag="neutral.flags.mutable" />
+  </string-array>
+  <string-array name="lanes" product=" tablet ">
+    <item gate:featureFlag="neutral.flags.hidden">Protected hidden tablet</item>
+    <item gate:featureFlag="neutral.flags.visible">Visible tablet route</item>
+    <item gate:featureFlag="!neutral.flags.mutable">Inverse tablet route</item>
+  </string-array>
+  <array name="cargo">
+    <item gate:featureFlag="neutral.flags.hidden">7</item>
+    <item>17</item>
+    <item gate:featureFlag="neutral.flags.mutable">Mutable cargo route</item>
+    <item gate:featureFlag="neutral.flags.hidden">Protected hidden cargo</item>
+    <item gate:featureFlag="neutral.flags.visible">@string/anchor</item>
+    <item gate:featureFlag="!neutral.flags.mutable">Inverse cargo route</item>
+    <item>31</item>
+    <item>Final cargo route</item>
+  </array>
+  <bag type="string-array" name="bag.lanes">
+    <item gate:featureFlag="neutral.flags.hidden">Protected hidden bag</item>
+    <item gate:featureFlag="neutral.flags.mutable">Mutable bag route</item>
+    <item>Open bag route</item>
+  </bag>
+  <plurals name="signals">
+    <item quantity="one" gate:featureFlag="neutral.ignored.one">%1$d quiet signal</item>
+    <item quantity="other" gate:featureFlag="neutral.ignored.other">%1$d quiet signals</item>
+  </plurals>
+  <string translatable="false" name="private">Protected private route</string>
+</resources>

@@ -1,0 +1,28 @@
+{
+  "conditionalPlurals": {
+    "mutable_signals": {
+      "condition": "neutral.flags.mutable",
+      "variants": {
+        "one": "One harbor signal",
+        "other": "Several harbor signals"
+      }
+    }
+  },
+  "conditionalStrings": {
+    "inverse_route": {
+      "condition": "!neutral.flags.mutable",
+      "value": "An inverse harbor route"
+    },
+    "mutable_beacon": {
+      "condition": "neutral.flags.mutable",
+      "value": "A mutable harbor beacon"
+    },
+    "mutable_route": {
+      "condition": "neutral.flags.mutable",
+      "value": "A mutable harbor route"
+    }
+  },
+  "strings": {
+    "open_route": "An open harbor route"
+  }
+}

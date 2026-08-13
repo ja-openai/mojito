@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": {
+      "defaultMessage": "Overlay harbor",
+      "metadata": {
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "build_type"
+      }
+    },
+    "routes[0]": {
+      "defaultMessage": "Overlay channel",
+      "metadata": {
+        "arrayIndex": 0,
+        "arrayName": "routes",
+        "androidArrayReferences": { "1": "@string/anchor", "2": "@empty" },
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "build_type"
+      }
+    },
+    "signals": {
+      "defaultMessage": "{arg0, plural, other {{arg0} overlay signals}}",
+      "variants": { "other": "{arg0} overlay signals" },
+      "placeholders": [
+        { "name": "arg0", "source": "%1$d", "kind": "integer", "position": 1 }
+      ],
+      "metadata": {
+        "androidPluralReferences": { "one": "@string/anchor" },
+        "androidResourcePath": "src/debug/res/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "androidOverlaySourceSet": "build_type"
+      }
+    }
+  }
+}

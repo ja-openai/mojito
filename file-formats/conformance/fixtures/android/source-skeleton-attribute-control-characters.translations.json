@@ -1,0 +1,10 @@
+{
+  "scalar": "Port calme",
+  "generic": "Voie générale",
+  "protected": "Capitaine {captain}",
+  "styled": "<annotation route=\"north\tmiddle\nend\rfinish\">Style visible</annotation>",
+  "routes[0]": "Route visible",
+  "routes[1]": "Guide {navigator}",
+  "signals#one": "Une balise {marker}",
+  "signals#other": "{arg0} balises visibles"
+}

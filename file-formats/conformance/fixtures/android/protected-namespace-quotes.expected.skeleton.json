@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\"?>\n<resources xmlns:f=\"urn:neutral:foreign-protected\"\n    xmlns:x=\"urn:oasis:names:tc:xliff:document:1.2\">\n  <string name=\"visible\">Visible northern pier</string>\n  <string name=\"protected_scalar\" translatable=\"false\">\"North <f:veil>it's</f:veil> coast\"</string>\n  <item name=\"protected_generic\" type=\"string\" format=\"string\" translatable=\"false\">\"East <x:note>it's</x:note> inlet\"</item>\n  <string-array name=\"protected_routes\" translatable=\"false\">\n    <item>\"West <f:g>it's</f:g> passage\"</item>\n    <item>\"South <x:note>it's</x:note> bay\"</item>\n    <item>\"Near <f:veil><x:g id=\"unsafe id\">it's</x:g></f:veil> shore\"</item>\n    <item>\"Far <x:g id=\"unsafe id\"><f:veil>it's</f:veil></x:g> lane\"</item>\n    <item>\"Old <f:first>it's</f:first><f:second> bay's</f:second> harbor\"</item>\n    <item>\"Clear <f:veil><b>quiet</b></f:veil> passage\"</item>\n  </string-array>\n  <bag type=\"string-array\" name=\"protected_bag_routes\" translatable=\"false\">\n    <item>\"Inner <x:note>it's</x:note> route\"</item>\n    <item>\"Outer <f:veil>it's</f:veil> route\"</item>\n  </bag>\n  <plurals name=\"protected_counts\" translatable=\"false\">\n    <item quantity=\"one\">\"One <f:veil>beacon's</f:veil> signal\"</item>\n    <item quantity=\"other\">\"Many <x:note>beacon's</x:note> signals\"</item>\n  </plurals>\n  <bag type=\"plurals\" name=\"protected_bag_counts\" translatable=\"false\">\n    <item quantity=\"other\">\"Two <f:veil>beacon's</f:veil> routes\"</item>\n  </bag>\n</resources>\n",
+  "slots": [
+    {
+      "id": "visible",
+      "start": 151,
+      "end": 172
+    }
+  ]
+}

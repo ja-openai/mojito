@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "encoding": "UTF-16LE-BOM",
+  "source": "<?xml version=\"1.0\"?>\n<resources xmlns:platform=\"http://schemas.android.com/apk/res/android\" xmlns:tools=\"http://schemas.android.com/tools\">\n  <!-- Ordered mutable flags retain fallback plus positive and inverse alternatives. -->\n  <string name=\"anchor\">Open harbor anchor</string>\n  <string name=\"gate.route\" product=\" default \">Open harbor passage</string>\n  <string name=\"gate.route\" product=\"default\" platform:featureFlag=\"neutral.flags.first\">First mutable passage</string>\n  <string name=\"gate.route\" product=\"default\" platform:featureFlag=\"!neutral.flags.first\"><![CDATA[Inverse <quiet> & safe]]></string>\n  <string name=\"gate.route\" product=\"default\" platform:featureFlag=\"neutral.flags.second\">Second mutable passage</string>\n  <string name=\"gate.route\" product=\" tablet \" platform:featureFlag=\"neutral.flags.second\">Tablet mutable passage</string>\n\n  <item type=\"string\" name=\"gate.signal\" product=\"default\">Open harbor signal</item>\n  <item type=\"string\" name=\"gate.signal\" product=\"default\" platform:featureFlag=\"neutral.flags.first\" tools:ignore=\"Protected\" />\n  <string name=\"gate.disabled\" platform:featureFlag=\"neutral.flags.disabled\">Protected disabled passage</string>\n\n  <plurals name=\"gate.count\" product=\"default\">\n    <item quantity=\"one\">%1$d open beacon</item>\n    <item quantity=\"other\">%1$d open beacons</item>\n  </plurals>\n  <plurals name=\"gate.count\" product=\"default\" platform:featureFlag=\"neutral.flags.first\">\n    <item quantity=\"one\" />\n    <item quantity=\"other\">%1$d mutable beacons</item>\n  </plurals>\n\n  <string-array name=\"gate.lanes\" product=\"default\">\n    <item>Open north lane</item>\n    <item>@string/anchor</item>\n  </string-array>\n  <string-array name=\"gate.lanes\" product=\"default\" platform:featureFlag=\"neutral.flags.second\">\n    <item><![CDATA[Mutable <north> & safe]]></item>\n    <item>@string/anchor</item>\n  </string-array>\n  <string translatable=\"false\" name=\"gate.private\">Protected private signal</string>\n</resources>\n",
+  "androidFeatureFlags": [
+    {
+      "name": "neutral.flags.first",
+      "readOnly": false,
+      "value": false
+    },
+    {
+      "name": "neutral.flags.second",
+      "readOnly": false,
+      "value": true
+    },
+    {
+      "name": "neutral.flags.disabled",
+      "readOnly": true,
+      "value": false
+    }
+  ],
+  "slots": [
+    {
+      "id": "anchor",
+      "start": 510,
+      "end": 546
+    },
+    {
+      "id": "gate.route",
+      "start": 662,
+      "end": 700
+    },
+    {
+      "id": "gate.route@flag=neutral.flags.first",
+      "start": 898,
+      "end": 940
+    },
+    {
+      "id": "gate.route@flag=!neutral.flags.first",
+      "start": 1140,
+      "end": 1208
+    },
+    {
+      "id": "gate.route@flag=neutral.flags.second",
+      "start": 1408,
+      "end": 1452
+    },
+    {
+      "id": "gate.route@product=tablet@flag=neutral.flags.second",
+      "start": 1654,
+      "end": 1698
+    },
+    {
+      "id": "gate.signal",
+      "start": 1838,
+      "end": 1874
+    },
+    {
+      "id": "gate.signal@flag=neutral.flags.first",
+      "start": 2144,
+      "end": 2148
+    },
+    {
+      "id": "gate.count",
+      "variant": "one",
+      "start": 2524,
+      "end": 2556
+    },
+    {
+      "id": "gate.count",
+      "variant": "other",
+      "start": 2626,
+      "end": 2660
+    },
+    {
+      "id": "gate.count@flag=neutral.flags.first",
+      "variant": "one",
+      "start": 2934,
+      "end": 2938
+    },
+    {
+      "id": "gate.count@flag=neutral.flags.first",
+      "variant": "other",
+      "start": 2994,
+      "end": 3034
+    },
+    {
+      "id": "gate.lanes[0]",
+      "start": 3204,
+      "end": 3234
+    },
+    {
+      "id": "gate.lanes@flag=neutral.flags.second[0]",
+      "start": 3564,
+      "end": 3632
+    }
+  ]
+}

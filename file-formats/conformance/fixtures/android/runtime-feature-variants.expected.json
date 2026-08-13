@@ -1,0 +1,78 @@
+{
+  "messages": {
+    "harbor_beacon": {
+      "defaultMessage": "An open harbor beacon",
+      "metadata": {
+        "androidGenericString": true
+      }
+    },
+    "harbor_beacon@flag=neutral.flags.first": {
+      "defaultMessage": "A conditional harbor beacon",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.first",
+        "androidFeatureFlagMode": "read_write",
+        "androidGenericString": true
+      }
+    },
+    "harbor_lanes@flag=neutral.flags.second[0]": {
+      "defaultMessage": "A conditional harbor lane",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.second",
+        "androidFeatureFlagMode": "read_write",
+        "arrayIndex": 0,
+        "arrayName": "harbor_lanes"
+      }
+    },
+    "harbor_lanes[0]": {
+      "defaultMessage": "An open harbor lane",
+      "metadata": {
+        "arrayIndex": 0,
+        "arrayName": "harbor_lanes"
+      }
+    },
+    "harbor_route": {
+      "defaultMessage": "An open harbor route"
+    },
+    "harbor_route@flag=!neutral.flags.first": {
+      "defaultMessage": "An inverse conditional harbor route",
+      "metadata": {
+        "androidFeatureFlag": "!neutral.flags.first",
+        "androidFeatureFlagMode": "read_write"
+      }
+    },
+    "harbor_route@flag=neutral.flags.first": {
+      "defaultMessage": "A first conditional harbor route",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.first",
+        "androidFeatureFlagMode": "read_write"
+      }
+    },
+    "harbor_route@flag=neutral.flags.second": {
+      "defaultMessage": "A second conditional harbor route",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.second",
+        "androidFeatureFlagMode": "read_write"
+      }
+    },
+    "harbor_signals": {
+      "defaultMessage": "{count, plural, one {One open harbor signal} other {Several open harbor signals}}",
+      "variants": {
+        "one": "One open harbor signal",
+        "other": "Several open harbor signals"
+      }
+    },
+    "harbor_signals@flag=neutral.flags.first": {
+      "defaultMessage": "{count, plural, one {One conditional harbor signal} other {Several conditional harbor signals}}",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.first",
+        "androidFeatureFlagMode": "read_write"
+      },
+      "variants": {
+        "one": "One conditional harbor signal",
+        "other": "Several conditional harbor signals"
+      }
+    }
+  },
+  "schemaVersion": 1,
+  "sourceFormat": "android"
+}

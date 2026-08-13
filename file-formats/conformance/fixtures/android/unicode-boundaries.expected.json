@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "supplementary_pair": {
+      "defaultMessage": "leftright"
+    },
+    "isolated_high": {
+      "defaultMessage": "leftright"
+    },
+    "isolated_low": {
+      "defaultMessage": "leftright"
+    },
+    "five_hex_digits": {
+      "defaultMessage": "wide Ὠ0"
+    },
+    "zero_hex_digits": {
+      "defaultMessage": "tail\u0000"
+    },
+    "one_hex_digit": {
+      "defaultMessage": "tail\u0001"
+    },
+    "two_hex_digits": {
+      "defaultMessage": "tailA"
+    },
+    "three_hex_digits": {
+      "defaultMessage": "tailA"
+    },
+    "unknown_escapes": {
+      "defaultMessage": "leftrx41fv101 right"
+    },
+    "trailing_backslash": {
+      "defaultMessage": "trail"
+    },
+    "trailing_before_style": {
+      "defaultMessage": "trail<b>west</b>"
+    },
+    "supplementary_before_style": {
+      "defaultMessage": "A<b>west</b>"
+    },
+    "short_before_style": {
+      "defaultMessage": "lead\u0001<b>rest</b>"
+    },
+    "escaped_nul": {
+      "defaultMessage": "left\u0000right"
+    },
+    "escaped_control": {
+      "defaultMessage": "left\u0001right"
+    },
+    "escaped_tab": {
+      "defaultMessage": "left\tright"
+    },
+    "escaped_newline": {
+      "defaultMessage": "left\nright"
+    },
+    "escaped_carriage_return": {
+      "defaultMessage": "left\rright"
+    }
+  }
+}

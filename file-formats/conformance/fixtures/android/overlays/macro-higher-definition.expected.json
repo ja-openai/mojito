@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "shared_route": {
+      "defaultMessage": "An upper harbor route",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": []
+      }
+    }
+  }
+}

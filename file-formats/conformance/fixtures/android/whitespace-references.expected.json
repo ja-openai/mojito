@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "escaped": {
+      "defaultMessage": "@string/north pier"
+    },
+    "mixed[2]": {
+      "defaultMessage": "Visible mixed route",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "?attr/north\tpier",
+          "1": "@string/north\rpier"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 2,
+        "arrayName": "mixed"
+      }
+    },
+    "quoted": {
+      "defaultMessage": "@string/north pier"
+    },
+    "routes[7]": {
+      "defaultMessage": "Visible route",
+      "metadata": {
+        "androidArrayReferences": {
+          "0": "@string/north pier",
+          "1": "@string/north\tpier",
+          "2": "@string/north\npier",
+          "3": "@string/north\rpier",
+          "4": "@string/north\r\npier",
+          "5": "@string/north pier",
+          "6": "@@string/north pier"
+        },
+        "arrayIndex": 7,
+        "arrayName": "routes"
+      }
+    },
+    "signals": {
+      "defaultMessage": "{arg0, plural, other {{arg0} visible lights}}",
+      "variants": {
+        "other": "{arg0} visible lights"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidPluralReferences": {
+          "few": "@string/north\npier",
+          "many": "@string/north pier",
+          "one": "@string/north pier",
+          "two": "@string/north\tpier",
+          "zero": "@string/north\rpier"
+        }
+      }
+    },
+    "visible": {
+      "defaultMessage": "A visible harbor"
+    }
+  }
+}

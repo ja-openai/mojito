@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<resources xmlns:x="urn:oasis:names:tc:xliff:document:1.2">
+  <?root original="kept"?>
+  <string name="plain">"Quie<?lane mode="quiet"?>t marina"</string>
+  <string name="mixed">"Cle<!-- original comment --><?mark value="1"?><![CDATA[ar inlet"]]></string>
+  <string name="quoted">"South<?quote keep?>  bay"</string>
+  <string name="escaped">"Be<?unicode split?>acon"</string>
+  <string name="styled">"Take "<b lane="east">"harb<?style hold?>orward"</b>" slowly"</string>
+  <string name="pilot">"Welcome "<x:g id="pilot">%1<?protected hold?>$s</x:g>"."</string>
+  <item type="string" name="generic" format="string">"She<?generic keep?>ltered road"</item>
+  <string-array name="routes">
+    <item>"Inn<?array one?>er quay"</item>
+    <item>"Out<?array two?>er quay"</item>
+  </string-array>
+  <plurals name="signals">
+    <item quantity="one">"%1$<?plural one?>d beacon"</item>
+    <item quantity="other">"%1$<?plural other?>d beacons"</item>
+  </plurals>
+</resources>

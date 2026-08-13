@@ -1,0 +1,3 @@
+<resources>
+    <string name="shared_route">@macro/shared_harbor</string>
+</resources>

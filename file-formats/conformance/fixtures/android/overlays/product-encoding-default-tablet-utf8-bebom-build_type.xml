@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-16BE"?>
+<resources xmlns:platform="http://schemas.android.com/apk/res/android">
+  <string name="route" product="tablet" platform:featureFlag="neutral.flags.disabled">Hidden upper tablet route</string>
+  <string name="active" product="tablet" platform:featureFlag="neutral.flags.enabled">Upper café beacon</string>
+  <string name="fallback">Upper café fallback</string>
+  <plurals name="signals" product="tablet" platform:featureFlag="neutral.flags.disabled">
+    <item quantity="one">One hidden upper tablet signal</item>
+    <item quantity="other">Several hidden upper tablet signals</item>
+  </plurals>
+  <array name="lanes" product="tablet" platform:featureFlag="neutral.flags.enabled">
+    <item platform:featureFlag="neutral.flags.disabled">Hidden upper channel</item>
+    <item>@string/anchor</item>
+    <item>Upper visible café channel</item>
+  </array>
+</resources>

@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": { "defaultMessage": "Quiet harbor" },
+    "em_padding": { "defaultMessage": " @string/anchor " },
+    "nbsp_padding": { "defaultMessage": " @string/anchor " }
+  }
+}

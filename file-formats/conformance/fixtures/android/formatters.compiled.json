@@ -1,0 +1,7 @@
+{
+  "strings": {
+    "calendar": "%1$tY-%1$tm-%1$td",
+    "number": "%1$,.2f units",
+    "adjacent": "%% %1$d %%"
+  }
+}

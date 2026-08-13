@@ -1,0 +1,32 @@
+{
+  "strings": {
+    "numeric": "😀 costs %1$0.2f credits",
+    "protected": "Use Mojito today",
+    "styled": "A bold link"
+  },
+  "styledSpans": {
+    "strings": {
+      "styled": [
+        {
+          "name": "a",
+          "start": 2,
+          "end": 10,
+          "attributes": {
+            "href": "https://example.com",
+            "title": "help & tips"
+          }
+        },
+        {
+          "name": "b",
+          "start": 2,
+          "end": 5
+        },
+        {
+          "name": "br",
+          "start": 11,
+          "end": 10
+        }
+      ]
+    }
+  }
+}

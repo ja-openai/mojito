@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="de_DE">
+  <!-- Directory qualifiers, not this design-time annotation, own the locale. -->
+  <string name=" anchor.route ">North harbor anchor</string>
+  <string name="route" product=" default ">Default night passage</string>
+  <string name="route" product=" tablet ">Tablet night passage</string>
+  <item type="string" name="beacon">Night beacon</item>
+  <string-array name="lanes">
+    <item><![CDATA[North <safe> & clear]]></item>
+    <item>@string/anchor.route</item>
+    <item>South night lane</item>
+  </string-array>
+  <plurals name="signals">
+    <item quantity="one">%1$d quiet signal</item>
+    <item quantity="other">%1$d quiet signals</item>
+  </plurals>
+  <string translatable="false" name="private">Keep private night note</string>
+</resources>

@@ -1,0 +1,28 @@
+{
+  "arrays": {
+    "product_routes": [
+      "Route repli montre"
+    ],
+    "routes": [
+      "Débogage nord",
+      "Débogage sud"
+    ]
+  },
+  "plurals": {
+    "lights": {
+      "one": "%1$d feu supérieur",
+      "other": "%1$d feux supérieurs"
+    },
+    "product_lights": {
+      "one": "%1$d feu repli montre",
+      "other": "%1$d feux repli montre"
+    }
+  },
+  "strings": {
+    "debug_anchor": "Débogage seul",
+    "main_anchor": "Ancre & côte",
+    "masked_signal": "Protected upper coast",
+    "product_signal": "Balise repli montre",
+    "shared_signal": "Pilote %1$s"
+  }
+}

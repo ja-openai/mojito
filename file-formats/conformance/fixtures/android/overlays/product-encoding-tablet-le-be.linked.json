@@ -1,0 +1,25 @@
+{
+  "arrays": {
+    "lanes": [
+      "@string/anchor",
+      "Upper visible café channel"
+    ]
+  },
+  "arrayReferences": {
+    "lanes": {
+      "0": "@string/anchor"
+    }
+  },
+  "plurals": {
+    "signals": {
+      "one": "One main tablet café signal",
+      "other": "Several main tablet café signals"
+    }
+  },
+  "strings": {
+    "active": "Upper café beacon",
+    "anchor": "Shared café anchor",
+    "fallback": "Upper café fallback",
+    "route": "Main tablet café route"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "arrayPrimitiveValues": {
+    "cargo": {
+      "0": "17",
+      "4": "31"
+    }
+  },
+  "arrayReferences": {
+    "cargo": {
+      "2": "@string/anchor"
+    },
+    "lanes": {
+      "3": "@string/anchor"
+    }
+  },
+  "arrays": {
+    "bag.lanes": [
+      "Mutable bag route",
+      "Open bag route"
+    ],
+    "cargo": [
+      "17",
+      "Mutable cargo route",
+      "@string/anchor",
+      "Inverse cargo route",
+      "31",
+      "Final cargo route"
+    ],
+    "lanes": [
+      "Visible north route",
+      "Mutable east route",
+      "Inverse <west> & safe",
+      "@string/anchor",
+      "Open south route",
+      ""
+    ]
+  },
+  "configuration": "v10000",
+  "plurals": {
+    "signals": {
+      "one": "%1$d quiet signal",
+      "other": "%1$d quiet signals"
+    }
+  },
+  "strings": {
+    "anchor": "Harbor anchor",
+    "private": "Protected private route"
+  }
+}

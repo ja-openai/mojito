@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:code="urn:oasis:names:tc:xliff:document:1.2">
+  <!-- Preserve exact attribute entity spelling and protected examples. -->
+  <string name='scalar' description="North&#9;deck&#10;line&#13;end">"Port calme"</string>
+  <item description='Generic&#13;&#10;deck' type="string" name='generic'>"Voie générale"</item>
+  <string name="protected">"Capitaine "<code:g example='A&#9;B&#10;C&#13;D' id="captain">%1$s</code:g></string>
+  <string name="styled"><annotation route="north&#9;middle&#10;end&#13;finish">"Style visible"</annotation></string>
+  <string-array name="routes">
+    <item description='Route&#9;deck'>"Route visible"</item>
+    <item>"Guide "<code:g id='navigator' example="P&#13;&#10;7">%1$s</code:g></item>
+  </string-array>
+  <plurals description="Count&#9;lights&#10;visible" name="signals">
+    <item quantity="one">"Une balise "<code:g example='M&#9;1&#10;2&#13;3' id="marker">%1$s</code:g></item>
+    <item quantity="other">"%1$d balises visibles"</item>
+  </plurals>
+  <string description="Internal&#9;note" name="untouched" translatable="false">Protected original</string>
+</resources>

@@ -1,0 +1,22 @@
+{
+  "strings": {
+    "invalid_negative_height": "Pier"
+  },
+  "styledSpans": {
+    "strings": {
+      "invalid_negative_height": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "height": "-2147483649"
+          },
+          "encodedTag": "font;height=-2147483649",
+          "runtimeStyles": [],
+          "runtimeError": "NumberFormatException"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "arrayReferences": {
+    "harbor_routes": {
+      "0": "@macro/theme_reference"
+    }
+  },
+  "arrays": {
+    "harbor_routes": [
+      "@macro/theme_reference",
+      "A visible theme lane"
+    ]
+  },
+  "attributes": {
+    "beacon": {
+      "format": "string"
+    }
+  },
+  "macros": [
+    "theme_reference"
+  ]
+}

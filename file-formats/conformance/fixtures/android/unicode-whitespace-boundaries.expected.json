@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "entity_next_line": {
+      "defaultMessage": "north west"
+    },
+    "escaped_next_line": {
+      "defaultMessage": "north west"
+    },
+    "boundary_next_line": {
+      "defaultMessage": "&#literal  west "
+    },
+    "entity_no_break": {
+      "defaultMessage": "north  west"
+    },
+    "escaped_no_break": {
+      "defaultMessage": "north  west"
+    },
+    "boundary_no_break": {
+      "defaultMessage": "&#literal   west  "
+    },
+    "entity_ogham": {
+      "defaultMessage": "north  west"
+    },
+    "escaped_ogham": {
+      "defaultMessage": "north  west"
+    },
+    "boundary_ogham": {
+      "defaultMessage": "&#literal   west  "
+    },
+    "entity_mongolian": {
+      "defaultMessage": "north᠎ west"
+    },
+    "escaped_mongolian": {
+      "defaultMessage": "north᠎ west"
+    },
+    "boundary_mongolian": {
+      "defaultMessage": "&#literal ᠎ west ᠎"
+    },
+    "entity_en_quad": {
+      "defaultMessage": "north  west"
+    },
+    "escaped_en_quad": {
+      "defaultMessage": "north  west"
+    },
+    "boundary_en_quad": {
+      "defaultMessage": "&#literal   west  "
+    },
+    "entity_em_space": {
+      "defaultMessage": "north  west"
+    },
+    "escaped_em_space": {
+      "defaultMessage": "north  west"
+    },
+    "boundary_em_space": {
+      "defaultMessage": "&#literal   west  "
+    },
+    "entity_figure": {
+      "defaultMessage": "north  west"
+    },
+    "escaped_figure": {
+      "defaultMessage": "north  west"
+    },
+    "boundary_figure": {
+      "defaultMessage": "&#literal   west  "
+    },
+    "entity_punctuation": {
+      "defaultMessage": "north  west"
+    },
+    "escaped_punctuation": {
+      "defaultMessage": "north  west"
+    },
+    "boundary_punctuation": {
+      "defaultMessage": "&#literal   west  "
+    },
+    "entity_hair": {
+      "defaultMessage": "north  west"
+    },
+    "escaped_hair": {
+      "defaultMessage": "north  west"
+    },
+    "boundary_hair": {
+      "defaultMessage": "&#literal   west  "
+    },
+    "entity_zero_width": {
+      "defaultMessage": "north​ west"
+    },
+    "escaped_zero_width": {
+      "defaultMessage": "north​ west"
+    },
+    "boundary_zero_width": {
+      "defaultMessage": "&#literal ​ west ​"
+    },
+    "entity_line_separator": {
+      "defaultMessage": "north  west"
+    },
+    "escaped_line_separator": {
+      "defaultMessage": "north  west"
+    },
+    "boundary_line_separator": {
+      "defaultMessage": "&#literal   west  "
+    },
+    "entity_paragraph_separator": {
+      "defaultMessage": "north  west"
+    },
+    "escaped_paragraph_separator": {
+      "defaultMessage": "north  west"
+    },
+    "boundary_paragraph_separator": {
+      "defaultMessage": "&#literal   west  "
+    },
+    "entity_narrow_no_break": {
+      "defaultMessage": "north  west"
+    },
+    "escaped_narrow_no_break": {
+      "defaultMessage": "north  west"
+    },
+    "boundary_narrow_no_break": {
+      "defaultMessage": "&#literal   west  "
+    },
+    "entity_medium_math": {
+      "defaultMessage": "north  west"
+    },
+    "escaped_medium_math": {
+      "defaultMessage": "north  west"
+    },
+    "boundary_medium_math": {
+      "defaultMessage": "&#literal   west  "
+    },
+    "entity_ideographic": {
+      "defaultMessage": "north　 west"
+    },
+    "escaped_ideographic": {
+      "defaultMessage": "north　 west"
+    },
+    "boundary_ideographic": {
+      "defaultMessage": "&#literal 　 west 　"
+    },
+    "entity_byte_order_mark": {
+      "defaultMessage": "north﻿ west"
+    },
+    "escaped_byte_order_mark": {
+      "defaultMessage": "north﻿ west"
+    },
+    "boundary_byte_order_mark": {
+      "defaultMessage": "&#literal ﻿ west ﻿"
+    },
+    "quoted_unicode": {
+      "defaultMessage": "      west    "
+    }
+  }
+}

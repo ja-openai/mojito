@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:a="http://schemas.android.com/apk/res/android">
+  <string-array name="routes" a:featureFlag="neutral.flags.disabled"><item a:featureFlag="neutral.flags.missing">Hidden invalid lane</item></string-array>
+</resources>

@@ -1,0 +1,3 @@
+<resources>
+  <string name="route">%s reaches %d</string>
+</resources>

@@ -1,0 +1,48 @@
+{
+  "arrays": {
+    "harbor_routes": [
+      "@macro/auto_reference",
+      "@macro/public_reference",
+      "@macro/private_reference",
+      "@macro/star_reference",
+      "@macro/chained_reference",
+      "A visible harbor lane"
+    ]
+  },
+  "arrayReferences": {
+    "harbor_routes": {
+      "0": "@macro/auto_reference",
+      "1": "@macro/public_reference",
+      "2": "@macro/private_reference",
+      "3": "@macro/star_reference",
+      "4": "@macro/chained_reference"
+    }
+  },
+  "macros": [
+    "auto_reference",
+    "chained_reference",
+    "foreign_wrapper",
+    "private_reference",
+    "protected_content",
+    "public_reference",
+    "star_reference"
+  ],
+  "plurals": {
+    "harbor_signals": {
+      "other": "A visible harbor signal"
+    }
+  },
+  "pluralReferences": {
+    "harbor_signals": {
+      "one": "@macro/public_reference"
+    }
+  },
+  "strings": {
+    "anchor": "A steady harbor marker"
+  },
+  "references": {
+    "direct_alias": "@macro/auto_reference",
+    "ignored_foreign_style": "@macro/foreign_wrapper",
+    "scoped_signal": "@macro/protected_content"
+  }
+}

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="signal" format=" string | reference | string " />
+    <attr name="distance" format="integer" min=" -2 " max="0x1f" />
+    <attr name="passage">
+        <enum name="quiet" value="0" />
+        <enum name="bright" value="0x2" />
+    </attr>
+    <bag type="attr" name="direction" format="flags">
+        <flag name="west" value="0x2" />
+        <flag name="east" value="1" />
+    </bag>
+    <attr name="open_water" />
+    <macro name="scoped_signal" xmlns:route="http://schemas.android.com/apk/res/neutral.attr.harbor">?route:attr/signal</macro>
+    <string-array name="harbor_routes">
+        <item>@macro/scoped_signal</item>
+        <item>?attr/passage</item>
+        <item>?attr/direction</item>
+        <item>?attr/distance</item>
+        <item>?open_water</item>
+        <item>A charted passage</item>
+        <item>Another charted passage</item>
+    </string-array>
+    <plurals name="harbor_signals">
+        <item quantity="one">?attr/distance</item>
+        <item quantity="other">%d visible signals</item>
+    </plurals>
+</resources>

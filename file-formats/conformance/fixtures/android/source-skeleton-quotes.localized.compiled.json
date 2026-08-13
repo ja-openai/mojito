@@ -1,0 +1,60 @@
+{
+  "arrays": {
+    "routes": [
+      "Quai \"ouest, calme\"",
+      "Port \"stable\" sûr"
+    ]
+  },
+  "styledSpans": {
+    "arrays": {
+      "routes": {
+        "1": [
+          {
+            "name": "i",
+            "start": 5,
+            "end": 12,
+            "attributes": {
+              "lane": "water\"side"
+            }
+          }
+        ]
+      }
+    },
+    "plurals": {
+      "signals": {
+        "other": [
+          {
+            "name": "b",
+            "start": 5,
+            "end": 14
+          }
+        ]
+      }
+    },
+    "strings": {
+      "styled": [
+        {
+          "name": "b",
+          "start": 5,
+          "end": 10,
+          "attributes": {
+            "lane": "harbor\"side"
+          }
+        }
+      ]
+    }
+  },
+  "plurals": {
+    "signals": {
+      "one": "Une \"lumière\" sûre",
+      "other": "%1$d \"lumières\" sûres"
+    }
+  },
+  "strings": {
+    "commented": "Port \"bleu\" calme",
+    "protected": "Pilote %1$s vers \"nord\"",
+    "scalar": "Quai \"nord\" et \"calme\"",
+    "styled": "Port \"doux\" sûr",
+    "untouched": "Keep \"protected\" text"
+  }
+}

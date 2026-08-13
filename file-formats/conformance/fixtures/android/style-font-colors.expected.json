@@ -1,0 +1,1090 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "alpha_hex": {
+      "defaultMessage": "'<'font color=\"#8040a0c0\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#8040a0c0",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "#8040a0c0"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "css_green": {
+      "defaultMessage": "'<'font color=\"green\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff00ff00",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "green"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "empty_color": {
+      "defaultMessage": "'<'font color=\"\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff000000",
+                  "mode": "fallback"
+                },
+                "kind": "foreground",
+                "value": ""
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "fullwidth_decimal_hex": {
+      "defaultMessage": "'<'font color=\"#１２３４５６\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff123456",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "#１２３４５６"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "fullwidth_hex": {
+      "defaultMessage": "'<'font color=\"#ＡＢＣＤＥＦ\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ffabcdef",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "#ＡＢＣＤＥＦ"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "grey_alias": {
+      "defaultMessage": "'<'font color=\"LiGhTgReY\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ffcccccc",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "LiGhTgReY"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "injected_colors": {
+      "defaultMessage": "'<'font route=\"west;fgcolor=LiMe;bgcolor=#abc\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "fgcolor",
+                "color": {
+                  "argb": "#ff00ff00",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "LiMe"
+              },
+              {
+                "attribute": "bgcolor",
+                "color": {
+                  "argb": "#ff000000",
+                  "mode": "fallback"
+                },
+                "kind": "background",
+                "value": "#abc"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "invalid_hex": {
+      "defaultMessage": "'<'font color=\"#12x456\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff000000",
+                  "mode": "fallback"
+                },
+                "kind": "foreground",
+                "value": "#12x456"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "named_case": {
+      "defaultMessage": "'<'font color=\"ReD\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ffff0000",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "ReD"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "named_colors[0]": {
+      "defaultMessage": "'<'font color=\"black\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff000000",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "black"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 0,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[10]": {
+      "defaultMessage": "'<'font color=\"fuchsia\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ffff00ff",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "fuchsia"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 10,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[11]": {
+      "defaultMessage": "'<'font color=\"darkgrey\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff444444",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "darkgrey"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 11,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[12]": {
+      "defaultMessage": "'<'font color=\"grey\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff888888",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "grey"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 12,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[13]": {
+      "defaultMessage": "'<'font color=\"lime\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff00ff00",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "lime"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 13,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[14]": {
+      "defaultMessage": "'<'font color=\"maroon\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff800000",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "maroon"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 14,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[15]": {
+      "defaultMessage": "'<'font color=\"navy\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff000080",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "navy"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 15,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[16]": {
+      "defaultMessage": "'<'font color=\"olive\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff808000",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "olive"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 16,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[17]": {
+      "defaultMessage": "'<'font color=\"purple\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff800080",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "purple"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 17,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[18]": {
+      "defaultMessage": "'<'font color=\"silver\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ffc0c0c0",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "silver"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 18,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[19]": {
+      "defaultMessage": "'<'font color=\"teal\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff008080",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "teal"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 19,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[1]": {
+      "defaultMessage": "'<'font color=\"darkgray\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff444444",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "darkgray"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 1,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[2]": {
+      "defaultMessage": "'<'font color=\"gray\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff888888",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "gray"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 2,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[3]": {
+      "defaultMessage": "'<'font color=\"lightgray\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ffcccccc",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "lightgray"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 3,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[4]": {
+      "defaultMessage": "'<'font color=\"white\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ffffffff",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "white"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 4,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[5]": {
+      "defaultMessage": "'<'font color=\"blue\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff0000ff",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "blue"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 5,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[6]": {
+      "defaultMessage": "'<'font color=\"yellow\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ffffff00",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "yellow"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 6,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[7]": {
+      "defaultMessage": "'<'font color=\"cyan\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff00ffff",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "cyan"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 7,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[8]": {
+      "defaultMessage": "'<'font color=\"magenta\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ffff00ff",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "magenta"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 8,
+        "arrayName": "named_colors"
+      }
+    },
+    "named_colors[9]": {
+      "defaultMessage": "'<'font color=\"aqua\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff00ffff",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "aqua"
+              }
+            ],
+            "span": 0
+          }
+        ],
+        "arrayIndex": 9,
+        "arrayName": "named_colors"
+      }
+    },
+    "opaque_hex": {
+      "defaultMessage": "'<'font color=\"#204080\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff204080",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "#204080"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "ordered_foregrounds": {
+      "defaultMessage": "'<'font color=\"navy\" fgcolor=\"#00ff80\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "fgcolor",
+                "color": {
+                  "argb": "#ff00ff80",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "#00ff80"
+              },
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff000080",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "navy"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "seven_digit_hex": {
+      "defaultMessage": "'<'font bgcolor=\"#1234567\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "bgcolor",
+                "color": {
+                  "argb": "#ff000000",
+                  "mode": "fallback"
+                },
+                "kind": "background",
+                "value": "#1234567"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "short_hex": {
+      "defaultMessage": "'<'font color=\"#abc\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff000000",
+                  "mode": "fallback"
+                },
+                "kind": "foreground",
+                "value": "#abc"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "signal_colors": {
+      "defaultMessage": "{arg0, plural, one {'<'font color=\"red\">{arg0} beacon'<'/font>} other {'<'font bgcolor=\"@android:color/black\">{arg0} beacons'<'/font>}}",
+      "variants": {
+        "one": "'<'font color=\"red\">{arg0} beacon'<'/font>",
+        "other": "'<'font bgcolor=\"@android:color/black\">{arg0} beacons'<'/font>"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidPluralRuntimeStyles": {
+          "one": [
+            {
+              "effects": [
+                {
+                  "attribute": "color",
+                  "color": {
+                    "argb": "#ffff0000",
+                    "mode": "literal"
+                  },
+                  "kind": "foreground",
+                  "value": "red"
+                }
+              ],
+              "span": 0
+            }
+          ],
+          "other": [
+            {
+              "effects": [
+                {
+                  "attribute": "bgcolor",
+                  "color": {
+                    "fallbackArgb": "#ff000000",
+                    "mode": "system",
+                    "reference": "@android:color/black",
+                    "stateful": false
+                  },
+                  "kind": "background",
+                  "value": "@android:color/black"
+                }
+              ],
+              "span": 0
+            }
+          ]
+        }
+      }
+    },
+    "signed_negative_alpha": {
+      "defaultMessage": "'<'font bgcolor=\"#-0000001\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "bgcolor",
+                "color": {
+                  "argb": "#ffffffff",
+                  "mode": "literal"
+                },
+                "kind": "background",
+                "value": "#-0000001"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "signed_negative_hex": {
+      "defaultMessage": "'<'font color=\"#-00001\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ffffffff",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "#-00001"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "signed_positive_hex": {
+      "defaultMessage": "'<'font color=\"#+12345\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff012345",
+                  "mode": "literal"
+                },
+                "kind": "foreground",
+                "value": "#+12345"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "supplementary_hex": {
+      "defaultMessage": "'<'font color=\"#𝟙2345\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff000000",
+                  "mode": "fallback"
+                },
+                "kind": "foreground",
+                "value": "#𝟙2345"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "system_background": {
+      "defaultMessage": "'<'font bgcolor=\"@color/black\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "bgcolor",
+                "color": {
+                  "fallbackArgb": "#ff000000",
+                  "mode": "system",
+                  "reference": "@color/black",
+                  "stateful": false
+                },
+                "kind": "background",
+                "value": "@color/black"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "system_foreground": {
+      "defaultMessage": "'<'font color=\"@android:color/white\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "fallbackArgb": "#ff000000",
+                  "mode": "system",
+                  "reference": "@android:color/white",
+                  "stateful": true
+                },
+                "kind": "foreground",
+                "value": "@android:color/white"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "unresolved_system": {
+      "defaultMessage": "'<'font color=\"@neutral.app:color/pier\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff000000",
+                  "mode": "fallback"
+                },
+                "kind": "foreground",
+                "value": "@neutral.app:color/pier"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "unsupported_css_name": {
+      "defaultMessage": "'<'font color=\"orange\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff000000",
+                  "mode": "fallback"
+                },
+                "kind": "foreground",
+                "value": "orange"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "unsupported_transparent_name": {
+      "defaultMessage": "'<'font color=\"transparent\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff000000",
+                  "mode": "fallback"
+                },
+                "kind": "foreground",
+                "value": "transparent"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "uppercase_hex": {
+      "defaultMessage": "'<'font bgcolor=\"#ABCDEF\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "bgcolor",
+                "color": {
+                  "argb": "#ffabcdef",
+                  "mode": "literal"
+                },
+                "kind": "background",
+                "value": "#ABCDEF"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    },
+    "whitespace_color": {
+      "defaultMessage": "'<'font color=\" red\">Pier'<'/font>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidRuntimeStyles": [
+          {
+            "effects": [
+              {
+                "attribute": "color",
+                "color": {
+                  "argb": "#ff000000",
+                  "mode": "fallback"
+                },
+                "kind": "foreground",
+                "value": " red"
+              }
+            ],
+            "span": 0
+          }
+        ]
+      }
+    }
+  }
+}

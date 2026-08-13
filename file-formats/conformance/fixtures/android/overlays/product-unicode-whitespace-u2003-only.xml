@@ -1,0 +1,4 @@
+<resources>
+  <string name="signal">Default bay</string>
+  <string name="signal" product=" ">Selected bay</string>
+</resources>

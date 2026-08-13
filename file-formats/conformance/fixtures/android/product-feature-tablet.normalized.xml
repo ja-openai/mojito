@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+  <string name="active" android:featureFlag="neutral.flags.enabled">"Tablet beacon passage"</string>
+  <string name="anchor">"Neutral harbor anchor"</string>
+  <string name="conditional" android:featureFlag="neutral.flags.enabled">"Tablet conditional signal"</string>
+  <string name="fallback">"Default sheltered passage"</string>
+  <string name="inverse" android:featureFlag="!neutral.flags.disabled">"Tablet inverse passage"</string>
+  <array name="lanes">
+    <item android:featureFlag="neutral.flags.enabled">@string/anchor</item>
+    <item>41</item>
+    <item>"Tablet open channel"</item>
+  </array>
+  <string name="mode">"Tablet navigation mode"</string>
+  <plurals name="signals" android:featureFlag="neutral.flags.enabled">
+    <item quantity="one">"One tablet signal"</item>
+    <item quantity="other">"Several tablet signals"</item>
+  </plurals>
+</resources>

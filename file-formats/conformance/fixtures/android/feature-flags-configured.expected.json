@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": {
+      "defaultMessage": "Quiet harbor anchor"
+    },
+    "bag_routes[0]": {
+      "defaultMessage": "Visible bag passage",
+      "metadata": {
+        "androidArrayFeatureFlags": {
+          "0": "neutral.flags.enabled"
+        },
+        "androidBagType": "string-array",
+        "androidFeatureFlag": "!neutral.flags.disabled",
+        "arrayIndex": 0,
+        "arrayName": "bag_routes"
+      }
+    },
+    "bag_routes[1]": {
+      "defaultMessage": "Final bag passage",
+      "metadata": {
+        "androidArrayFeatureFlags": {
+          "0": "neutral.flags.enabled"
+        },
+        "androidBagType": "string-array",
+        "androidFeatureFlag": "!neutral.flags.disabled",
+        "arrayIndex": 1,
+        "arrayName": "bag_routes"
+      }
+    },
+    "enabled": {
+      "defaultMessage": "Enabled harbor route",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.enabled"
+      }
+    },
+    "exclusive": {
+      "defaultMessage": "Enabled exclusive lane",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.enabled"
+      }
+    },
+    "generic_enabled": {
+      "defaultMessage": "Enabled generic signal",
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.enabled",
+        "androidGenericFormat": "string",
+        "androidGenericString": true
+      }
+    },
+    "mixed_routes[1]": {
+      "defaultMessage": "Visible typed passage",
+      "metadata": {
+        "androidArrayFeatureFlags": {
+          "1": "neutral.flags.enabled",
+          "2": "!neutral.flags.disabled",
+          "3": "neutral.flags.enabled"
+        },
+        "androidArrayPrimitives": {
+          "0": "17",
+          "3": "31"
+        },
+        "androidArrayReferences": {
+          "2": "@string/anchor"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 1,
+        "arrayName": "mixed_routes"
+      }
+    },
+    "mixed_routes[4]": {
+      "defaultMessage": "Final typed passage",
+      "metadata": {
+        "androidArrayFeatureFlags": {
+          "1": "neutral.flags.enabled",
+          "2": "!neutral.flags.disabled",
+          "3": "neutral.flags.enabled"
+        },
+        "androidArrayPrimitives": {
+          "0": "17",
+          "3": "31"
+        },
+        "androidArrayReferences": {
+          "2": "@string/anchor"
+        },
+        "androidGenericArray": true,
+        "arrayIndex": 4,
+        "arrayName": "mixed_routes"
+      }
+    },
+    "negative": {
+      "defaultMessage": "Negated harbor route",
+      "metadata": {
+        "androidFeatureFlag": "!neutral.flags.disabled"
+      }
+    },
+    "routes[0]": {
+      "defaultMessage": "Always first passage",
+      "metadata": {
+        "androidArrayFeatureFlags": {
+          "1": "neutral.flags.enabled",
+          "2": "!neutral.flags.disabled",
+          "4": "neutral.flags.enabled"
+        },
+        "androidArrayReferences": {
+          "3": "@string/anchor",
+          "4": "@string/anchor"
+        },
+        "androidFeatureFlag": "!neutral.flags.disabled",
+        "arrayIndex": 0,
+        "arrayName": "routes"
+      }
+    },
+    "routes[1]": {
+      "defaultMessage": "Enabled passage",
+      "metadata": {
+        "androidArrayFeatureFlags": {
+          "1": "neutral.flags.enabled",
+          "2": "!neutral.flags.disabled",
+          "4": "neutral.flags.enabled"
+        },
+        "androidArrayReferences": {
+          "3": "@string/anchor",
+          "4": "@string/anchor"
+        },
+        "androidFeatureFlag": "!neutral.flags.disabled",
+        "arrayIndex": 1,
+        "arrayName": "routes"
+      }
+    },
+    "routes[2]": {
+      "defaultMessage": "Negated passage",
+      "metadata": {
+        "androidArrayFeatureFlags": {
+          "1": "neutral.flags.enabled",
+          "2": "!neutral.flags.disabled",
+          "4": "neutral.flags.enabled"
+        },
+        "androidArrayReferences": {
+          "3": "@string/anchor",
+          "4": "@string/anchor"
+        },
+        "androidFeatureFlag": "!neutral.flags.disabled",
+        "arrayIndex": 2,
+        "arrayName": "routes"
+      }
+    },
+    "routes[5]": {
+      "defaultMessage": "Final open passage",
+      "metadata": {
+        "androidArrayFeatureFlags": {
+          "1": "neutral.flags.enabled",
+          "2": "!neutral.flags.disabled",
+          "4": "neutral.flags.enabled"
+        },
+        "androidArrayReferences": {
+          "3": "@string/anchor",
+          "4": "@string/anchor"
+        },
+        "androidFeatureFlag": "!neutral.flags.disabled",
+        "arrayIndex": 5,
+        "arrayName": "routes"
+      }
+    },
+    "signals_enabled": {
+      "defaultMessage": "{count, plural, one {One enabled beacon} other {Several enabled beacons}}",
+      "variants": {
+        "one": "One enabled beacon",
+        "other": "Several enabled beacons"
+      },
+      "metadata": {
+        "androidFeatureFlag": "neutral.flags.enabled"
+      }
+    }
+  }
+}

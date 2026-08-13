@@ -1,0 +1,3 @@
+<resources>
+  <string name="broken">before <ghost:g id="unused">middle</ghost:g> after</string>
+</resources>

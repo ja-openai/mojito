@@ -1,0 +1,15 @@
+{
+  "scalar_space": "Nord ouest",
+  "scalar_default_space": "Nord est",
+  "space_style": "<b space=\"preserve\">Passage nord</b>",
+  "language_style": "<b lang=\"fr\">Signal du port</b>",
+  "foreign_annotation": "<annotation route=\"north\tdock\">Signal du port</annotation>",
+  "font_effect": "<font size=\"12\" color=\"red\">Éclat du port</font>",
+  "ordered_namespaces": "<b alpha=\"A\" bravo=\"B\" charlie=\"C\" delta=\"D\">Ordre du port</b>",
+  "inline_namespace": "<b route=\"quiet\">Route du port</b>",
+  "generic_style": "<font size=\"8\">Guide du port</font>",
+  "routes[0]": "<annotation key=\"private\">Route du port</annotation>",
+  "routes[1]": "<font color=\"#112233\">Lumière du port</font>",
+  "signals#one": "<font size=\"9\">{arg0} balise du port</font>",
+  "signals#other": "<annotation key=\"beacon\">{arg0} balises du port</annotation>"
+}

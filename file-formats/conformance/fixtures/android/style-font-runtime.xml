@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="face_injects_color"><font face="harbor;color=#123456">Pier</font></string>
+    <string name="unknown_injects_size"><font route="north;size=18">Pier</font></string>
+    <string name="unknown_injects_many"><font route="north;face=serif;size=12">Pier</font></string>
+    <string name="color_injects_background"><font color="#112233;bgcolor=#abcdef">Pier</font></string>
+    <string name="multiple_foregrounds"><font color="#123456" fgcolor="#abcdef">Pier</font></string>
+    <string name="duplicate_size"><font route="north;size=18;size=27">Pier</font></string>
+    <string name="negative_height"><font height="-7">Pier</font></string>
+    <string name="signed_size"><font size="+14">Pier</font></string>
+    <string name="leading_zero_size"><font size="0014">Pier</font></string>
+    <string name="arabic_decimal_size"><font size="١٤">Pier</font></string>
+    <string name="fullwidth_decimal_height"><font height="１２">Pier</font></string>
+    <string name="mixed_decimal_scripts"><font size="١4">Pier</font></string>
+    <string name="maximum_decimal_size"><font size="2147483647">Pier</font></string>
+    <string name="minimum_arabic_decimal_height"><font height="-٢١٤٧٤٨٣٦٤٨">Pier</font></string>
+    <string name="link_injected"><a route="north;href=https://neutral.invalid/p">Pier</a></string>
+    <string name="link_truncated"><a href="https://neutral.invalid/p;lane=west">Pier</a></string>
+    <string name="link_first_wins"><a href="https://neutral.invalid/direct" route="north;href=https://neutral.invalid/shadow">Pier</a></string>
+    <string name="link_missing"><a route="north">Pier</a></string>
+    <string name="nested_styles"><font route="north;size=18"><a route="west;href=https://neutral.invalid/p">🧭 Pier</a></font></string>
+    <string-array name="runtime_style_routes">
+        <item><font route="north;fgcolor=#123456">Pier</font></item>
+        <item><a route="south;href=https://neutral.invalid/r">Pier</a></item>
+    </string-array>
+    <plurals name="runtime_style_signals">
+        <item quantity="one"><font route="north;size=18">%1$d beacon</font></item>
+        <item quantity="other"><a route="south;href=https://neutral.invalid/beacons">%1$d beacons</a></item>
+    </plurals>
+</resources>

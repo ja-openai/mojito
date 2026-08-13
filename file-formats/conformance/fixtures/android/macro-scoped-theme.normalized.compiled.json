@@ -1,0 +1,18 @@
+{
+  "arrayReferences": {
+    "harbor_routes": {
+      "0": "?attr/beacon"
+    }
+  },
+  "arrays": {
+    "harbor_routes": [
+      "?attr/beacon",
+      "A visible theme lane"
+    ]
+  },
+  "attributes": {
+    "beacon": {
+      "format": "string"
+    }
+  }
+}

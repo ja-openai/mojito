@@ -1,0 +1,25 @@
+{
+  "arrays": {
+    "days": [
+      "Monday",
+      "Tuesday"
+    ]
+  },
+  "strings": {
+    "internal": "Hidden",
+    "named": "Hi %1$s!",
+    "rich": "Tap Continue & go",
+    "welcome": "Hello %1$s!"
+  },
+  "styledSpans": {
+    "strings": {
+      "rich": [
+        {
+          "name": "b",
+          "start": 4,
+          "end": 11
+        }
+      ]
+    }
+  }
+}

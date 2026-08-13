@@ -1,0 +1,3 @@
+<resources xmlns:platform="http://schemas.android.com/apk/res/android">
+  <string name="solitary" product="tablet" platform:featureFlag="neutral.flags.disabled">Hidden solitary tablet route</string>
+</resources>

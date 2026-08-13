@@ -1,0 +1,22 @@
+{
+  "strings": {
+    "invalid_overflow_size": "Pier"
+  },
+  "styledSpans": {
+    "strings": {
+      "invalid_overflow_size": [
+        {
+          "name": "font",
+          "start": 0,
+          "end": 3,
+          "attributes": {
+            "size": "2147483648"
+          },
+          "encodedTag": "font;size=2147483648",
+          "runtimeStyles": [],
+          "runtimeError": "NumberFormatException"
+        }
+      ]
+    }
+  }
+}

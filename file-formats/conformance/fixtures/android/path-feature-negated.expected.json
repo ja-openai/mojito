@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "anchor": {
+      "defaultMessage": "Path-protected harbor anchor",
+      "metadata": {
+        "androidPathFeatureFlag": "!neutral.path.disabled",
+        "androidResourcePath": "src/main/res/flag(!neutral.path.disabled)/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "bag_lanes[0]": {
+      "defaultMessage": "Visible bag lane",
+      "metadata": {
+        "androidBagType": "string-array",
+        "androidPathFeatureFlag": "!neutral.path.disabled",
+        "androidResourcePath": "src/main/res/flag(!neutral.path.disabled)/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 0,
+        "arrayName": "bag_lanes"
+      }
+    },
+    "display": {
+      "defaultMessage": "Default path display",
+      "metadata": {
+        "androidPathFeatureFlag": "!neutral.path.disabled",
+        "androidResourcePath": "src/main/res/flag(!neutral.path.disabled)/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "display@product=tablet": {
+      "defaultMessage": "Tablet path display",
+      "metadata": {
+        "androidPathFeatureFlag": "!neutral.path.disabled",
+        "androidProduct": "tablet",
+        "androidResourcePath": "src/main/res/flag(!neutral.path.disabled)/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "lanes[2]": {
+      "defaultMessage": "Visible path lane",
+      "metadata": {
+        "androidArrayFeatureFlags": {
+          "0": "neutral.path.enabled"
+        },
+        "androidArrayPrimitives": {
+          "1": "37"
+        },
+        "androidArrayReferences": {
+          "0": "@string/anchor"
+        },
+        "androidGenericArray": true,
+        "androidPathFeatureFlag": "!neutral.path.disabled",
+        "androidResourcePath": "src/main/res/flag(!neutral.path.disabled)/values/strings.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 2,
+        "arrayName": "lanes"
+      }
+    },
+    "route": {
+      "defaultMessage": "Path-protected harbor route",
+      "metadata": {
+        "androidPathFeatureFlag": "!neutral.path.disabled",
+        "androidResourcePath": "src/main/res/flag(!neutral.path.disabled)/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "signals": {
+      "defaultMessage": "{count, plural, one {One visible path signal} other {Several visible path signals}}",
+      "variants": {
+        "one": "One visible path signal",
+        "other": "Several visible path signals"
+      },
+      "metadata": {
+        "androidPathFeatureFlag": "!neutral.path.disabled",
+        "androidResourcePath": "src/main/res/flag(!neutral.path.disabled)/values/strings.xml",
+        "androidResourceQualifiers": []
+      }
+    }
+  }
+}

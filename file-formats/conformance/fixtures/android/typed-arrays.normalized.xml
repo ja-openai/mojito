@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="anchor">"Harbor marker"</string>
+  <array name="forced_routes" format="string">
+    <item>"17"</item>
+    <item>"true"</item>
+    <item>"#AABBCC"</item>
+    <item>@string/anchor</item>
+    <item>"%s beside %d"</item>
+  </array>
+  <array name="mixed_routes">
+    <item>"Sail toward %1$s"</item>
+    <item>17</item>
+    <item>true</item>
+    <item>#112233</item>
+    <item>4dp</item>
+    <item>1.5</item>
+    <item>25%</item>
+    <item>@string/anchor</item>
+    <item>?attr/harbor</item>
+    <item>"17"</item>
+    <item>"#112233"</item>
+    <item>"%s beside %d"</item>
+  </array>
+</resources>

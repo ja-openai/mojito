@@ -1,0 +1,7 @@
+{
+  "strings": {
+    "annotation": "Stay calm",
+    "cdata": "<i>literal</i> & value",
+    "literal_percent": "50%% and %1$s"
+  }
+}

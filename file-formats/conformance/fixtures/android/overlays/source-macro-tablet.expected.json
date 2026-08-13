@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "macro_chain": {
+      "defaultMessage": "An upper harbor",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "macro_lights": {
+      "defaultMessage": "{arg0, plural, one {{arg0} remote lantern} other {{arg0} remote lanterns}}",
+      "variants": {
+        "one": "{arg0} remote lantern",
+        "other": "{arg0} remote lanterns"
+      },
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "macro_private": {
+      "defaultMessage": "A remote channel",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "macro_product": {
+      "defaultMessage": "A remote tablet crossing",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "macro_protected": {
+      "defaultMessage": "Upper {pilot}",
+      "placeholders": [
+        {
+          "name": "pilot",
+          "source": "%1$s",
+          "kind": "string",
+          "position": 1,
+          "example": "D&7"
+        }
+      ],
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "macro_qualified": {
+      "defaultMessage": "An upper harbor",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "macro_routes[0]": {
+      "defaultMessage": "A remote channel",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 0,
+        "arrayName": "macro_routes"
+      }
+    },
+    "macro_routes[1]": {
+      "defaultMessage": "An upper harbor",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": [],
+        "arrayIndex": 1,
+        "arrayName": "macro_routes"
+      }
+    },
+    "macro_scoped": {
+      "defaultMessage": "A remote channel",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "macro_signal": {
+      "defaultMessage": "An upper harbor",
+      "description": "Uses resolve definitions owned by other original resource files.",
+      "metadata": {
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": []
+      }
+    },
+    "macro_styled": {
+      "defaultMessage": "Upper '<'b tone=\"bright\">harbor'<'/b>",
+      "metadata": {
+        "androidMarkupEscaping": "icu-quoted-angle",
+        "androidOverlaySourceSet": "main",
+        "androidResourcePath": "src/main/res/values/usage.xml",
+        "androidResourceQualifiers": []
+      }
+    }
+  }
+}

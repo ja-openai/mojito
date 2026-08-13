@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "locale": "en-US",
+  "messages": {
+    "route": {
+      "defaultMessage": "Waypoint",
+      "metadata": {
+        "androidResourcePath": "res/values-en-rUS-ldrtl-sw600dp-w720dp-h900dp-large-long-round-widecg-highdr-land-car-night-420dpi-finger-keysexposed-qwerty-navexposed-dpad-v34/strings.xml",
+        "androidResourceQualifiers": [
+          "en",
+          "rUS",
+          "ldrtl",
+          "sw600dp",
+          "w720dp",
+          "h900dp",
+          "large",
+          "long",
+          "round",
+          "widecg",
+          "highdr",
+          "land",
+          "car",
+          "night",
+          "420dpi",
+          "finger",
+          "keysexposed",
+          "qwerty",
+          "navexposed",
+          "dpad",
+          "v34"
+        ]
+      }
+    }
+  }
+}

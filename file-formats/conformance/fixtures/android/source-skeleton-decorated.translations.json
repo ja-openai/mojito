@@ -1,0 +1,10 @@
+{
+  "styled_comments": "Après <i tone=\"east\">est & doux</i> puis <b shade=\"north\">nord ]]> & sûr</b>",
+  "protected_comments": "Radar {radar} puis pilote {pilot}",
+  "nested_comments": "<i mood=\"calm\">est</i> puis <b class=\"outer\">nord <u lane=\"inner\">centre & sûr</u></b>",
+  "comment_only": "<i lane=\"south\">sud & doux</i> puis <b lane=\"north\">nord</b>",
+  "routes[0]": "<i path=\"two\">sud</i> puis <b path=\"one\">nord & sûr</b>",
+  "routes[1]": "Pont {deck} puis capitaine {captain}",
+  "signals#one": "<i tone=\"second\">sud & calme</i> puis <b tone=\"first\">{arg0} nord</b>",
+  "signals#other": "<i tone=\"far\">sud</i> puis <b tone=\"many\">{arg0} nord & loin</b>"
+}

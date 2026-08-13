@@ -1,0 +1,6 @@
+<resources>
+  <plurals name="signals">
+    <item quantity="&#x2003;one&#x2003;">One signal</item>
+    <item quantity="other">Signals</item>
+  </plurals>
+</resources>

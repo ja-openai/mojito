@@ -1,0 +1,18 @@
+<resources xmlns:tools="http://schemas.android.com/tools"
+    xmlns:vendor="urn:mojito:neutral:annotation"
+    tools:locale="pt_BR">
+  <!-- Generic declarations retain their translator notes. -->
+  <item type="string" name="general">Signal %1$s</item>
+  <string name="wrapped">keep <vendor:note>this part</vendor:note> visible</string>
+  <string name="literal_hash">\#flag</string>
+  <string name="literal_question">\?question</string>
+  <string name="literal_at">\@named</string>
+  <string name="quote_boundaries">start"  mid  "end</string>
+  <string name="null_value">@null</string>
+  <string name="empty_value">@empty</string>
+  <string-array name="signals">
+    <item></item>
+    <item>"  held  "</item>
+    <item>@string/general</item>
+  </string-array>
+</resources>
