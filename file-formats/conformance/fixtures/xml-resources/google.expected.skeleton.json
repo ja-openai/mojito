@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "xtb",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE translationbundle>\n<translationbundle lang=\"en-US\">\n  <!-- Protected source context -->\n  <translation id=\"17\" key=\"harbor\" source=\"pier.js\" desc=\"Visible harbor status\">  Calm &amp; steady 🧭  </translation>\n  <translation key=\"count\" desc=\"Number of docked vessels\">Welcome <ph name=\"COUNT\" example=\"3\"/> vessels</translation>\n  <translation key=\"empty\"></translation>\n</translationbundle>\n",
+  "slots": [
+    {
+      "id": "harbor",
+      "start": 219,
+      "end": 245
+    },
+    {
+      "id": "count",
+      "start": 319,
+      "end": 365
+    }
+  ]
+}

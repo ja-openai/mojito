@@ -16,6 +16,7 @@ pub enum FileFormat {
     JavaScript,
     TypeScript,
     Resx,
+    Xtb,
 }
 
 impl FileFormat {
@@ -32,6 +33,7 @@ impl FileFormat {
             "javascript" => Self::JavaScript,
             "typescript" => Self::TypeScript,
             "resx" => Self::Resx,
+            "xtb" => Self::Xtb,
             _ => return None,
         })
     }
@@ -49,6 +51,7 @@ impl FileFormat {
             Self::JavaScript => "javascript",
             Self::TypeScript => "typescript",
             Self::Resx => "resx",
+            Self::Xtb => "xtb",
         }
     }
 }

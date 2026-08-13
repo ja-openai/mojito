@@ -30,6 +30,7 @@ FORMATS = {
     "javascript",
     "typescript",
     "resx",
+    "xtb",
 }
 ENCODINGS = {
     None,
@@ -1221,6 +1222,13 @@ def main() -> None:
             )
             assert (ROOT / case["resxNormalized"]).is_file(), (
                 f"{case_id}: missing normalized Microsoft resource snapshot"
+            )
+        if "xtbNormalized" in case:
+            assert case["format"] == "xtb" and "expected" in case, (
+                f"{case_id}: normalized Google bundles require a canonical XTB catalog"
+            )
+            assert (ROOT / case["xtbNormalized"]).is_file(), (
+                f"{case_id}: missing normalized Google bundle snapshot"
             )
         if "writerReject" in case:
             rejected = case["writerReject"]
@@ -2960,6 +2968,7 @@ def main() -> None:
             "javascript",
             "typescript",
             "resx",
+            "xtb",
         }, f"{case_id}: unsupported source-skeleton format"
         assert case.get("encoding") in {
             None,

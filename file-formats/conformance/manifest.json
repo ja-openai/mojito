@@ -997,6 +997,19 @@
       },
       "removeUntranslated": false,
       "localized": "fixtures/xml-resources/microsoft.localized.resx"
+    },
+    {
+      "id": "xtb-mojito-output-preserves-original-inline-placeholders-and-source-metadata",
+      "format": "xtb",
+      "input": "fixtures/xml-resources/google.xtb",
+      "expected": "fixtures/xml-resources/google.expected.json",
+      "filterOptions": [],
+      "translations": {
+        "harbor": "  Paisible & stable 🧭  ",
+        "count": "Bienvenue {COUNT} navires"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/xml-resources/google.localized.xtb"
     }
   ],
   "cases": [
@@ -25608,6 +25621,25 @@
       "input": "fixtures/xml-resources/microsoft.resx",
       "expected": "fixtures/xml-resources/microsoft.expected.json",
       "resxNormalized": "fixtures/xml-resources/microsoft.normalized.resx"
+    },
+    {
+      "id": "xtb-customized-rules-preserve-language-notes-whitespace-and-inline-codes",
+      "format": "xtb",
+      "input": "fixtures/xml-resources/google.xtb",
+      "expected": "fixtures/xml-resources/google.expected.json",
+      "xtbNormalized": "fixtures/xml-resources/google.normalized.xtb"
+    },
+    {
+      "id": "xtb-rejects-external-doctype-before-entity-resolution",
+      "format": "xtb",
+      "input": "fixtures/xml-resources/unsafe-external.xtb",
+      "error": "UNSAFE_XML"
+    },
+    {
+      "id": "xtb-rejects-internal-entity-doctype",
+      "format": "xtb",
+      "input": "fixtures/xml-resources/unsafe-internal.xtb",
+      "error": "UNSAFE_XML"
     }
   ],
   "androidOverlays": [
@@ -52532,6 +52564,14 @@
       "expected": "fixtures/xml-resources/microsoft.expected.skeleton.json",
       "translations": "fixtures/xml-resources/microsoft.translations.json",
       "localized": "fixtures/xml-resources/microsoft.localized.resx"
+    },
+    {
+      "id": "xtb-source-skeleton-preserves-benign-doctype-inline-code-attributes-and-bytes",
+      "format": "xtb",
+      "input": "fixtures/xml-resources/google.xtb",
+      "expected": "fixtures/xml-resources/google.expected.skeleton.json",
+      "translations": "fixtures/xml-resources/google.translations.json",
+      "localized": "fixtures/xml-resources/google.localized.xtb"
     }
   ],
   "appleBinarySourceSkeletons": [

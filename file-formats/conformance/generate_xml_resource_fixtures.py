@@ -24,7 +24,7 @@ def write(name: str, value: str | dict[str, object]) -> str:
 def skeleton(format_name: str, source: str, ids: dict[str, str]) -> dict[str, object]:
     slots = []
     for identity, value in ids.items():
-        marker = f">{value}</value>"
+        marker = f">{value}</{'translation' if format_name == 'xtb' else 'value'}>"
         start = source.index(marker) + 1
         slots.append(
             {
@@ -146,6 +146,123 @@ def resx(manifest: dict[str, object]) -> None:
     )
 
 
+def xtb(manifest: dict[str, object]) -> None:
+    source = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE translationbundle>
+<translationbundle lang="en-US">
+  <!-- Protected source context -->
+  <translation id="17" key="harbor" source="pier.js" desc="Visible harbor status">  Calm &amp; steady 🧭  </translation>
+  <translation key="count" desc="Number of docked vessels">Welcome <ph name="COUNT" example="3"/> vessels</translation>
+  <translation key="empty"></translation>
+</translationbundle>
+"""
+    expected = {
+        "schemaVersion": 1,
+        "sourceFormat": "xtb",
+        "locale": "en-US",
+        "messages": {
+            "harbor": {
+                "defaultMessage": "  Calm & steady 🧭  ",
+                "description": "Visible harbor status",
+            },
+            "count": {
+                "defaultMessage": "Welcome {COUNT} vessels",
+                "description": "Number of docked vessels",
+                "placeholders": [
+                    {
+                        "name": "COUNT",
+                        "source": '<ph name="COUNT"/>',
+                        "kind": "value",
+                        "example": "3",
+                    }
+                ],
+            },
+        },
+    }
+    source_path = write("google.xtb", source)
+    expected_path = write("google.expected.json", expected)
+    normalized = """<?xml version="1.0" encoding="UTF-8"?>
+<translationbundle lang="en-US">
+  <translation key="count" desc="Number of docked vessels">Welcome <ph name="COUNT" example="3"/> vessels</translation>
+  <translation key="harbor" desc="Visible harbor status">  Calm &amp; steady 🧭  </translation>
+</translationbundle>
+"""
+    localized = source.replace(
+        "  Calm &amp; steady 🧭  ", "  Paisible &amp; stable 🧭  "
+    ).replace(
+        'Welcome <ph name="COUNT" example="3"/> vessels',
+        'Bienvenue <ph name="COUNT" example="3"/> navires',
+    )
+    ids = {
+        "harbor": "  Calm &amp; steady 🧭  ",
+        "count": 'Welcome <ph name="COUNT" example="3"/> vessels',
+    }
+    manifest["cases"].extend(
+        [
+            {
+                "id": "xtb-customized-rules-preserve-language-notes-whitespace-and-inline-codes",
+                "format": "xtb",
+                "input": source_path,
+                "expected": expected_path,
+                "xtbNormalized": write("google.normalized.xtb", normalized),
+            },
+            {
+                "id": "xtb-rejects-external-doctype-before-entity-resolution",
+                "format": "xtb",
+                "input": write(
+                    "unsafe-external.xtb",
+                    '<!DOCTYPE translationbundle SYSTEM "file:///etc/passwd">\n'
+                    '<translationbundle lang="en"><translation key="a">A</translation></translationbundle>\n',
+                ),
+                "error": "UNSAFE_XML",
+            },
+            {
+                "id": "xtb-rejects-internal-entity-doctype",
+                "format": "xtb",
+                "input": write(
+                    "unsafe-internal.xtb",
+                    '<!DOCTYPE translationbundle [<!ENTITY hidden "secret">]>\n'
+                    '<translationbundle lang="en"><translation key="a">&hidden;</translation></translationbundle>\n',
+                ),
+                "error": "UNSAFE_XML",
+            },
+        ]
+    )
+    manifest["workflowCases"].append(
+        {
+            "id": "xtb-mojito-output-preserves-original-inline-placeholders-and-source-metadata",
+            "format": "xtb",
+            "input": source_path,
+            "expected": expected_path,
+            "filterOptions": [],
+            "translations": {
+                "harbor": "  Paisible & stable 🧭  ",
+                "count": "Bienvenue {COUNT} navires",
+            },
+            "removeUntranslated": False,
+            "localized": write("google.localized.xtb", localized),
+        }
+    )
+    manifest["sourceSkeletons"].append(
+        {
+            "id": "xtb-source-skeleton-preserves-benign-doctype-inline-code-attributes-and-bytes",
+            "format": "xtb",
+            "input": source_path,
+            "expected": write(
+                "google.expected.skeleton.json", skeleton("xtb", source, ids)
+            ),
+            "translations": write(
+                "google.translations.json",
+                {
+                    "harbor": "  Paisible & stable 🧭  ",
+                    "count": "Bienvenue {COUNT} navires",
+                },
+            ),
+            "localized": write("google.localized.xtb", localized),
+        }
+    )
+
+
 def main() -> None:
     original = MANIFEST.read_text(encoding="utf-8")
     manifest = json.loads(original)
@@ -153,7 +270,11 @@ def main() -> None:
         name: len(manifest[name])
         for name in ("workflowCases", "cases", "sourceSkeletons")
     }
-    resx(manifest)
+    formats = {case["format"] for case in manifest["cases"]}
+    if "resx" not in formats:
+        resx(manifest)
+    if "xtb" not in formats:
+        xtb(manifest)
     sections = {
         "workflowCases": "cases",
         "cases": "androidOverlays",

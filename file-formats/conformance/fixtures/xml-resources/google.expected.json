@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "xtb",
+  "locale": "en-US",
+  "messages": {
+    "harbor": {
+      "defaultMessage": "  Calm & steady 🧭  ",
+      "description": "Visible harbor status"
+    },
+    "count": {
+      "defaultMessage": "Welcome {COUNT} vessels",
+      "description": "Number of docked vessels",
+      "placeholders": [
+        {
+          "name": "COUNT",
+          "source": "<ph name=\"COUNT\"/>",
+          "kind": "value",
+          "example": "3"
+        }
+      ]
+    }
+  }
+}

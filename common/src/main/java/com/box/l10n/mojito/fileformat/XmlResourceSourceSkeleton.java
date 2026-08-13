@@ -49,8 +49,14 @@ final class XmlResourceSourceSkeleton {
       }
       int end = tagEnd(source, position);
       String token = source.substring(position + 1, end).trim();
-      if (token.startsWith("!")) {
+      if (token.startsWith("!")
+          && !(format == LocalizationFileFormat.XTB
+              && token.matches("!DOCTYPE\\s+translationbundle\\s*"))) {
         throw invalid("UNSUPPORTED_SKELETON_MARKUP", "Unsupported XML resource declaration");
+      }
+      if (token.startsWith("!")) {
+        position = end + 1;
+        continue;
       }
       if (token.startsWith("/")) {
         if (elements.isEmpty()) {
@@ -58,8 +64,13 @@ final class XmlResourceSourceSkeleton {
         }
         OpenElement current = elements.pop();
         OpenElement parent = elements.peek();
-        if ("value".equals(current.name()) && parent != null && "data".equals(parent.name())) {
-          String identity = parent.identity();
+        if (format == LocalizationFileFormat.RESX
+                && "value".equals(current.name())
+                && parent != null
+                && "data".equals(parent.name())
+            || format == LocalizationFileFormat.XTB && "translation".equals(current.name())) {
+          String identity =
+              format == LocalizationFileFormat.XTB ? current.identity() : parent.identity();
           if (catalog.messages().containsKey(identity)) {
             if (!assigned.add(identity)) {
               throw invalid("INVALID_SKELETON", "Duplicate XML resource source slot");
@@ -75,10 +86,11 @@ final class XmlResourceSourceSkeleton {
       } else if (!token.endsWith("/")) {
         String name = token.split("\\s+", 2)[0];
         String identity = null;
-        if ("data".equals(name)) {
+        if (format == LocalizationFileFormat.RESX && "data".equals(name)
+            || format == LocalizationFileFormat.XTB && "translation".equals(name)) {
           Matcher matcher = ATTRIBUTE.matcher(token.substring(name.length()));
           while (matcher.find()) {
-            if ("name".equals(matcher.group(1))) {
+            if ((format == LocalizationFileFormat.RESX ? "name" : "key").equals(matcher.group(1))) {
               identity = StringEscapeUtils.unescapeXml(matcher.group(3));
               break;
             }
@@ -123,10 +135,16 @@ final class XmlResourceSourceSkeleton {
       if (translation == null) {
         localized.write(source, slot.start(), slot.end() - slot.start());
       } else {
-        if (!catalog.messages().containsKey(slot.id())) {
+        LocalizationMessage message = catalog.messages().get(slot.id());
+        if (message == null) {
           throw invalid("INVALID_SKELETON", "Missing XML resource source descriptor");
         }
-        byte[] replacement = XmlResourceParser.escapeText(translation).getBytes(encoding.charset());
+        String rendered =
+            format == LocalizationFileFormat.XTB
+                ? XmlResourceParser.renderXtb(
+                    message, translation, encoding.decode(source, slot.start(), slot.end()))
+                : XmlResourceParser.escapeText(translation);
+        byte[] replacement = rendered.getBytes(encoding.charset());
         localized.write(replacement, 0, replacement.length);
       }
       previous = slot.end();

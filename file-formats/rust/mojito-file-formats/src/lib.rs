@@ -172,7 +172,7 @@ pub fn write(format: FileFormat, catalog: &Catalog) -> Result<String, ParseError
         FileFormat::AppleXcstrings => apple_xcstrings_writer::write(catalog),
         FileFormat::GettextPo => gettext_writer::write(catalog),
         FileFormat::JavaProperties => properties_writer::write(catalog),
-        FileFormat::Resx => xml_resources::write(format, catalog),
+        FileFormat::Resx | FileFormat::Xtb => xml_resources::write(format, catalog),
         _ => Err(ParseError::new(
             "UNSUPPORTED_OUTPUT_FORMAT",
             format!("Normalized writing is not available for {}", format.id()),
@@ -428,6 +428,7 @@ pub fn parse_with_feature_flags(
         FileFormat::Yaml => yaml::parse(&source),
         FileFormat::JavaScript | FileFormat::TypeScript => javascript::parse(format, &source),
         FileFormat::Resx => xml_resources::parse(format, &source),
+        FileFormat::Resx | FileFormat::Xtb => xml_resources::parse(format, &source),
     }
 }
 
@@ -441,6 +442,7 @@ pub(crate) fn xml_encoding(
             | FileFormat::AppleStrings
             | FileFormat::AppleStringsdict
             | FileFormat::Resx
+            | FileFormat::Xtb
     ) {
         return Ok(None);
     }
