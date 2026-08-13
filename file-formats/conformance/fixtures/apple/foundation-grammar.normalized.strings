@@ -1,0 +1,23 @@
+"arabic.hex" = "\U0000٠٠٤١!";
+// Vertical tab and form feed are native grammar whitespace.
+"ascii.control.whitespace" = "Expected ASCII boundary";
+// Shortcut resources can carry structural comments.
+"commented.shortcut" = "commented.shortcut";
+// Foundation recognizes only ASCII hexadecimal escape digits.
+"fullwidth.hex" = "\U0000００４１!";
+// Bare slashes remain identifiers, including URL-looking spellings.
+"https://neutral.route" = "https://safe.harbor";
+// Structural line comments can precede every grammar separator.
+"line.route" = "Steady orbital route";
+// Only leading translator notes survive structural comments.
+"quoted.route" = "Visible amber route";
+// Nonseparator Unicode remains valid inside a quoted value.
+"quoted.unicode.spaces" = "alpha betagamma delta​omega";
+// Only comments before the key describe this unquoted resource.
+"route_7.$/north:west-2" = "south_3.$/east:bank-1";
+// Padded translator context
+"unicode.block.context" = "Normalized block context";
+// Padded line context
+"unicode.line.context" = "Normalized line context";
+// Foundation accepts its two explicit Unicode line separators.
+"unicode.separators" = "Expected landing";

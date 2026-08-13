@@ -1,0 +1,34 @@
+{
+  "harbor.device.🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": "Touchez %@%n quai tranquille",
+      "mac": "Cliquez %@%n quai profond",
+      "applewatch": "Suivez %@ montre"
+    }
+  },
+  "harbor.device.literal": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": "Touchez %@%%n quai",
+      "mac": "Cliquez %@%%n port"
+    }
+  },
+  "harbor.width": {
+    "NSStringVariableWidthRuleType": {
+      "8": "Près%n",
+      "040": "Suivez%n%n la rive calme",
+      "80": "Suivez%n%n la vaste rive claire"
+    }
+  },
+  "harbor.width.line": {
+    "NSStringVariableWidthRuleType": {
+      "5": "Bas\nquai",
+      "18": "Eau\ncalme devant"
+    }
+  },
+  "harbor.width.literal": {
+    "NSStringVariableWidthRuleType": {
+      "4": "B%%n",
+      "12": "B%%n baie calme"
+    }
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"sourceLanguage\": \"en\",\n  \"strings\": {\n    \"harbor.after\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Guide %#@count@\"\n          },\n          \"substitutions\": {\n            \"count\": {\n              \"argNum\": 1,\n              \"formatSpecifier\": \"lld\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld%n %@ lane\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld%n %@ lanes\"\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"harbor.repeated\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Guide %#@count@\"\n          },\n          \"substitutions\": {\n            \"count\": {\n              \"argNum\": 1,\n              \"formatSpecifier\": \"lld\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld%n%n %@ lane\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld%n%n %@ lanes\"\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"harbor.explicit\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Guide %1$@ %2$#@count@\"\n          },\n          \"substitutions\": {\n            \"count\": {\n              \"argNum\": 2,\n              \"formatSpecifier\": \"lld\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%2$lld %3$n %4$@ lane\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%2$lld %3$n %4$@ lanes\"\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"harbor.overlap\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Guide %#@count@\"\n          },\n          \"substitutions\": {\n            \"count\": {\n              \"argNum\": 1,\n              \"formatSpecifier\": \"lld\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld %2$n %@ lane\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld %2$n %@ lanes\"\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"harbor.escaped\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Guide %#@count@\"\n          },\n          \"substitutions\": {\n            \"count\": {\n              \"argNum\": 1,\n              \"formatSpecifier\": \"lld\",\n              \"variations\": {\n                \"plural\": {\n                  \"one\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld%%n %@ lane\"\n                    }\n                  },\n                  \"other\": {\n                    \"stringUnit\": {\n                      \"state\": \"translated\",\n                      \"value\": \"%lld%%n %@ lanes\"\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  },\n  \"version\": \"1.0\"\n}\n",
+  "slots": [
+    {
+      "id": "harbor.after",
+      "start": 189,
+      "end": 204
+    },
+    {
+      "id": "harbor.after",
+      "start": 536,
+      "end": 550,
+      "selector": "count",
+      "variant": "one"
+    },
+    {
+      "id": "harbor.after",
+      "start": 737,
+      "end": 752,
+      "selector": "count",
+      "variant": "other"
+    },
+    {
+      "id": "harbor.repeated",
+      "start": 1030,
+      "end": 1045
+    },
+    {
+      "id": "harbor.repeated",
+      "start": 1377,
+      "end": 1393,
+      "selector": "count",
+      "variant": "one"
+    },
+    {
+      "id": "harbor.repeated",
+      "start": 1580,
+      "end": 1597,
+      "selector": "count",
+      "variant": "other"
+    },
+    {
+      "id": "harbor.explicit",
+      "start": 1875,
+      "end": 1897
+    },
+    {
+      "id": "harbor.explicit",
+      "start": 2229,
+      "end": 2250,
+      "selector": "count",
+      "variant": "one"
+    },
+    {
+      "id": "harbor.explicit",
+      "start": 2437,
+      "end": 2459,
+      "selector": "count",
+      "variant": "other"
+    },
+    {
+      "id": "harbor.overlap",
+      "start": 2736,
+      "end": 2751
+    },
+    {
+      "id": "harbor.overlap",
+      "start": 3083,
+      "end": 3100,
+      "selector": "count",
+      "variant": "one"
+    },
+    {
+      "id": "harbor.overlap",
+      "start": 3287,
+      "end": 3305,
+      "selector": "count",
+      "variant": "other"
+    },
+    {
+      "id": "harbor.escaped",
+      "start": 3582,
+      "end": 3597
+    },
+    {
+      "id": "harbor.escaped",
+      "start": 3929,
+      "end": 3944,
+      "selector": "count",
+      "variant": "one"
+    },
+    {
+      "id": "harbor.escaped",
+      "start": 4131,
+      "end": 4147,
+      "selector": "count",
+      "variant": "other"
+    }
+  ]
+}

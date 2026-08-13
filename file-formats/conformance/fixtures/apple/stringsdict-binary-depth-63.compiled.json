@@ -1,0 +1,138 @@
+{
+  "files.remaining": {
+    "NSStringLocalizedFormatKey": "%#@files@ remaining",
+    "files": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d file",
+      "other": "%d files"
+    },
+    "futureNestedMetadata": {
+      "level62": {
+        "level61": {
+          "level60": {
+            "level59": {
+              "level58": {
+                "level57": {
+                  "level56": {
+                    "level55": {
+                      "level54": {
+                        "level53": {
+                          "level52": {
+                            "level51": {
+                              "level50": {
+                                "level49": {
+                                  "level48": {
+                                    "level47": {
+                                      "level46": {
+                                        "level45": {
+                                          "level44": {
+                                            "level43": {
+                                              "level42": {
+                                                "level41": {
+                                                  "level40": {
+                                                    "level39": {
+                                                      "level38": {
+                                                        "level37": {
+                                                          "level36": {
+                                                            "level35": {
+                                                              "level34": {
+                                                                "level33": {
+                                                                  "level32": {
+                                                                    "level31": {
+                                                                      "level30": {
+                                                                        "level29": {
+                                                                          "level28": {
+                                                                            "level27": {
+                                                                              "level26": {
+                                                                                "level25": {
+                                                                                  "level24": {
+                                                                                    "level23": {
+                                                                                      "level22": {
+                                                                                        "level21": {
+                                                                                          "level20": {
+                                                                                            "level19": {
+                                                                                              "level18": {
+                                                                                                "level17": {
+                                                                                                  "level16": {
+                                                                                                    "level15": {
+                                                                                                      "level14": {
+                                                                                                        "level13": {
+                                                                                                          "level12": {
+                                                                                                            "level11": {
+                                                                                                              "level10": {
+                                                                                                                "level09": {
+                                                                                                                  "level08": {
+                                                                                                                    "level07": {
+                                                                                                                      "level06": {
+                                                                                                                        "level05": {
+                                                                                                                          "level04": {
+                                                                                                                            "level03": {
+                                                                                                                              "level02": {
+                                                                                                                                "level01": {
+                                                                                                                                  "level00": "neutral leaf"
+                                                                                                                                }
+                                                                                                                              }
+                                                                                                                            }
+                                                                                                                          }
+                                                                                                                        }
+                                                                                                                      }
+                                                                                                                    }
+                                                                                                                  }
+                                                                                                                }
+                                                                                                              }
+                                                                                                            }
+                                                                                                          }
+                                                                                                        }
+                                                                                                      }
+                                                                                                    }
+                                                                                                  }
+                                                                                                }
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

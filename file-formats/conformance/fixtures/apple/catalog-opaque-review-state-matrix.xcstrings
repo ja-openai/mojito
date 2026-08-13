@@ -1,0 +1,239 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "harbor.review.0.new🧭": {
+      "comment": "Unknown state strings remain platform-owned opaque metadata",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Source new %@"
+          }
+        },
+        "fr_CA": {
+          "stringUnit": {
+            "state": "invalid_future_state",
+            "value": "Ancien new %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "preserved_future_state_0",
+            "value": "Geschützt new %@"
+          }
+        }
+      }
+    },
+    "harbor.review.1.needs_review🧭": {
+      "comment": "Unknown state strings remain platform-owned opaque metadata",
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Source needs_review %@"
+          }
+        },
+        "fr_CA": {
+          "stringUnit": {
+            "state": "untranslated",
+            "value": "Ancien needs_review %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "preserved_future_state_1",
+            "value": "Geschützt needs_review %@"
+          }
+        }
+      }
+    },
+    "harbor.review.2.translated🧭": {
+      "comment": "Unknown state strings remain platform-owned opaque metadata",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source translated %@"
+          }
+        },
+        "fr_CA": {
+          "stringUnit": {
+            "state": "future_review",
+            "value": "Ancien translated %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "preserved_future_state_2",
+            "value": "Geschützt translated %@"
+          }
+        }
+      }
+    },
+    "harbor.review.3.machine_translated🧭": {
+      "comment": "Unknown state strings remain platform-owned opaque metadata",
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "machine_translated",
+            "value": "Source machine_translated %@"
+          }
+        },
+        "fr_CA": {
+          "stringUnit": {
+            "state": "stale",
+            "value": "Ancien machine_translated %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "preserved_future_state_3",
+            "value": "Geschützt machine_translated %@"
+          }
+        }
+      }
+    },
+    "harbor.review.4.stale🧭": {
+      "comment": "Unknown state strings remain platform-owned opaque metadata",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "stale",
+            "value": "Source stale %@"
+          }
+        },
+        "fr_CA": {
+          "stringUnit": {
+            "state": "machine_translated",
+            "value": "Ancien stale %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "preserved_future_state_4",
+            "value": "Geschützt stale %@"
+          }
+        }
+      }
+    },
+    "harbor.review.5.future_review🧭": {
+      "comment": "Unknown state strings remain platform-owned opaque metadata",
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "future_review",
+            "value": "Source future_review %@"
+          }
+        },
+        "fr_CA": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancien future_review %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "preserved_future_state_5",
+            "value": "Geschützt future_review %@"
+          }
+        }
+      }
+    },
+    "harbor.review.6.untranslated🧭": {
+      "comment": "Unknown state strings remain platform-owned opaque metadata",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "untranslated",
+            "value": "Source untranslated %@"
+          }
+        },
+        "fr_CA": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ancien untranslated %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "preserved_future_state_6",
+            "value": "Geschützt untranslated %@"
+          }
+        }
+      }
+    },
+    "harbor.review.7.invalid_future_state🧭": {
+      "comment": "Unknown state strings remain platform-owned opaque metadata",
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "invalid_future_state",
+            "value": "Source invalid_future_state %@"
+          }
+        },
+        "fr_CA": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Ancien invalid_future_state %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "preserved_future_state_7",
+            "value": "Geschützt invalid_future_state %@"
+          }
+        }
+      }
+    },
+    "harbor.review.source.new.automatic🧭": {
+      "comment": "Automatic new source entries remain absent from the development bundle",
+      "extractionState": "invalid_future_extraction",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Automatic new source %@"
+          }
+        },
+        "fr_CA": {
+          "stringUnit": {
+            "state": "invalid_future_state",
+            "value": "Automatique %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "machine_translated",
+            "value": "Automatisch %@"
+          }
+        }
+      }
+    },
+    "Private future review state": {
+      "shouldTranslate": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "invalid_future_state",
+            "value": "Private"
+          }
+        },
+        "fr_CA": {
+          "stringUnit": {
+            "state": "future_review",
+            "value": "Privé préservé"
+          }
+        }
+      }
+    }
+  }
+}

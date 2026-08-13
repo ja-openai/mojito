@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "encoding": "UTF-8",
+  "source": "<dict>\n  <!-- Direct Foundation dictionary roots remain native .strings files. -->\n  <key>direct&amp;route</key><string>North &amp; pier</string>\n  <key><![CDATA[direct<&>cdata]]></key><string><![CDATA[<quiet> & calm]]></string>\n  <key>direct.empty</key><string />\n</dict>\n",
+  "slots": [
+    {
+      "id": "direct&route",
+      "start": 120,
+      "end": 136
+    },
+    {
+      "id": "direct<&>cdata",
+      "start": 193,
+      "end": 219
+    },
+    {
+      "id": "direct.empty",
+      "start": 262,
+      "end": 264
+    }
+  ]
+}

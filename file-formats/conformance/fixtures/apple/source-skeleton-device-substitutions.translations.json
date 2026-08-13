@@ -1,0 +1,13 @@
+{
+  "device.harbor🧭": "Touchez {arg2}: {lights} avant {lanes}",
+  "device.harbor🧭#lanes#one": "{lanes} voie légère",
+  "device.harbor🧭#lanes#other": "{lanes} voies légères",
+  "device.harbor🧭#lights#one": "{lights} lueur calme",
+  "device.harbor🧭#lights#other": "{lights} lueurs calmes",
+  "device.unicode": "Suivez {信号}",
+  "device.unicode#信号#one": "{信号} signal doux",
+  "device.unicode#信号#other": "{信号} signaux doux",
+  "device.echo": "{count} autour de {count}",
+  "device.echo#count#one": "{count} écho léger",
+  "device.echo#count#other": "{count} échos légers"
+}

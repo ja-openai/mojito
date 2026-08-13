@@ -1,0 +1,274 @@
+{
+  "de.lproj/catalog.strings": {
+    "harbor.first.device.missing.scalar🧭": "Source other %1$@ %2$n beacon",
+    "harbor.first.device.null.scalar🧭": "Source other %1$@ %2$n beacon"
+  },
+  "de.lproj/catalog.stringsdict": {
+    "harbor.first.device.missing.plural🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "futurecar": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n source-futurecar beacon %2$@",
+            "other": "%1$lld %3$n source-futurecar beacons %2$@"
+          }
+        },
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n mobile beacon %2$@",
+            "other": "%1$lld %3$n mobile beacons %2$@"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n desktop beacon %2$@",
+            "other": "%1$lld %3$n desktop beacons %2$@"
+          }
+        },
+        "raft": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n source-raft beacon %2$@",
+            "other": "%1$lld %3$n source-raft beacons %2$@"
+          }
+        },
+        "🧭raft": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n source-🧭raft beacon %2$@",
+            "other": "%1$lld %3$n source-🧭raft beacons %2$@"
+          }
+        }
+      }
+    },
+    "harbor.first.device.missing.scalar🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "futurecar": "Source futurecar %1$@ %2$n beacon",
+        "iphone": "Touch %1$@ %2$n beacon",
+        "mac": "Click %1$@ %2$n beacon",
+        "raft": "Source raft %1$@ %2$n beacon",
+        "🧭raft": "Source 🧭raft %1$@ %2$n beacon"
+      }
+    },
+    "harbor.first.device.null.plural🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "futurecar": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n source-futurecar beacon %2$@",
+            "other": "%1$lld %3$n source-futurecar beacons %2$@"
+          }
+        },
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n mobile beacon %2$@",
+            "other": "%1$lld %3$n mobile beacons %2$@"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n desktop beacon %2$@",
+            "other": "%1$lld %3$n desktop beacons %2$@"
+          }
+        },
+        "raft": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n source-raft beacon %2$@",
+            "other": "%1$lld %3$n source-raft beacons %2$@"
+          }
+        },
+        "🧭raft": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n source-🧭raft beacon %2$@",
+            "other": "%1$lld %3$n source-🧭raft beacons %2$@"
+          }
+        }
+      }
+    },
+    "harbor.first.device.null.scalar🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "futurecar": "Source futurecar %1$@ %2$n beacon",
+        "iphone": "Touch %1$@ %2$n beacon",
+        "mac": "Click %1$@ %2$n beacon",
+        "raft": "Source raft %1$@ %2$n beacon",
+        "🧭raft": "Source 🧭raft %1$@ %2$n beacon"
+      }
+    }
+  },
+  "en.lproj/catalog.strings": {
+    "harbor.first.device.missing.scalar🧭": "Source other %1$@ %2$n beacon",
+    "harbor.first.device.null.scalar🧭": "Source other %1$@ %2$n beacon"
+  },
+  "en.lproj/catalog.stringsdict": {
+    "Private first missing Russian device": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "Touch %1$@ %2$n beacon",
+        "mac": "Click %1$@ %2$n beacon"
+      }
+    },
+    "Private first null Russian device": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n mobile beacon %2$@",
+            "other": "%1$lld %3$n mobile beacons %2$@"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n desktop beacon %2$@",
+            "other": "%1$lld %3$n desktop beacons %2$@"
+          }
+        }
+      }
+    },
+    "harbor.first.device.missing.plural🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "futurecar": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n source-futurecar beacon %2$@",
+            "other": "%1$lld %3$n source-futurecar beacons %2$@"
+          }
+        },
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n mobile beacon %2$@",
+            "other": "%1$lld %3$n mobile beacons %2$@"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n desktop beacon %2$@",
+            "other": "%1$lld %3$n desktop beacons %2$@"
+          }
+        },
+        "raft": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n source-raft beacon %2$@",
+            "other": "%1$lld %3$n source-raft beacons %2$@"
+          }
+        },
+        "🧭raft": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n source-🧭raft beacon %2$@",
+            "other": "%1$lld %3$n source-🧭raft beacons %2$@"
+          }
+        }
+      }
+    },
+    "harbor.first.device.missing.scalar🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "futurecar": "Source futurecar %1$@ %2$n beacon",
+        "iphone": "Touch %1$@ %2$n beacon",
+        "mac": "Click %1$@ %2$n beacon",
+        "raft": "Source raft %1$@ %2$n beacon",
+        "🧭raft": "Source 🧭raft %1$@ %2$n beacon"
+      }
+    },
+    "harbor.first.device.null.plural🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "futurecar": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n source-futurecar beacon %2$@",
+            "other": "%1$lld %3$n source-futurecar beacons %2$@"
+          }
+        },
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n mobile beacon %2$@",
+            "other": "%1$lld %3$n mobile beacons %2$@"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n desktop beacon %2$@",
+            "other": "%1$lld %3$n desktop beacons %2$@"
+          }
+        },
+        "raft": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n source-raft beacon %2$@",
+            "other": "%1$lld %3$n source-raft beacons %2$@"
+          }
+        },
+        "🧭raft": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n source-🧭raft beacon %2$@",
+            "other": "%1$lld %3$n source-🧭raft beacons %2$@"
+          }
+        }
+      }
+    },
+    "harbor.first.device.null.scalar🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "futurecar": "Source futurecar %1$@ %2$n beacon",
+        "iphone": "Touch %1$@ %2$n beacon",
+        "mac": "Click %1$@ %2$n beacon",
+        "raft": "Source raft %1$@ %2$n beacon",
+        "🧭raft": "Source 🧭raft %1$@ %2$n beacon"
+      }
+    }
+  }
+}

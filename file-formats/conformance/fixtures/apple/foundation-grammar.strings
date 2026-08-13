@@ -1,0 +1,44 @@
+/* Only comments before the key describe this unquoted resource. */
+route_7.$/north:west-2
+    /* This structural note belongs between the key and separator. */
+    =
+    // This structural note belongs before the unquoted value.
+    south_3.$/east:bank-1
+    /* This structural note belongs before the terminator. */
+    ;
+
+/* Only leading translator notes survive structural comments. */
+"quoted.route" /* Hidden key separator note. */ =
+    /* Hidden value separator note. */ "Visible amber route"
+    /* Hidden terminator note. */;
+
+/* Structural line comments can precede every grammar separator. */
+"line.route" // Hidden after-key note.
+    = // Hidden after-equals note.
+    "Steady orbital route" // Hidden before-terminator note.
+    ;
+
+/* Shortcut resources can carry structural comments. */
+"commented.shortcut" /* Hidden shortcut note. */;
+
+/* Foundation recognizes only ASCII hexadecimal escape digits. */
+"fullwidth.hex" = "\U００４１!";
+"arabic.hex" = "\U٠٠٤١!";
+
+/* Nonseparator Unicode remains valid inside a quoted value. */
+"quoted.unicode.spaces" = "alpha betagamma delta​omega";
+
+/* Bare slashes remain identifiers, including URL-looking spellings. */
+https://neutral.route = https://safe.harbor;
+
+/* Foundation accepts its two explicit Unicode line separators. */
+"unicode.separators" = "Expected landing" ;
+
+/* Padded translator context */
+"unicode.block.context" = "Normalized block context";
+
+//  Padded line context 
+"unicode.line.context" = "Normalized line context";
+
+/* Vertical tab and form feed are native grammar whitespace. */
+"ascii.control.whitespace"	=	"Expected ASCII boundary"	;

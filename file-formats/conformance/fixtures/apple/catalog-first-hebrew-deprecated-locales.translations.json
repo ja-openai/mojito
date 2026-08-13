@@ -1,0 +1,4 @@
+{
+  "harbor.first.hebrew.deprecated🧭": "{count, plural, one {{arg1} {count}  עברית one} other {{arg1} {count}  עברית other} two {{arg1} {count}  עברית two}}",
+  "harbor.first.hebrew.deprecated.region🧭": "{count, plural, one {{arg1} {count}  ישראלית one} other {{arg1} {count}  ישראלית other} two {{arg1} {count}  ישראלית two}}"
+}

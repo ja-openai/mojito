@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <!-- Preserve the entire native Foundation property-list document. -->
+  <dict>
+    <!-- Escaped message IDs and these structural notes remain untouched. -->
+    <key>dock&amp;count&#x1F9ED;</key>
+    <dict>
+      <key>NSStringLocalizedFormatKey</key>
+      <string>%#@signals@ near harbor</string>
+
+      <!-- The native plural variable and formatter declarations are protected. -->
+      <key>signals</key>
+      <dict>
+        <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+        <key>NSStringFormatValueTypeKey</key><string>ld</string>
+
+        <!-- Self-closing plural branches retain their original attribute spacing. -->
+        <key>zero</key><string custom="reserved" />
+        <key>one</key><string><![CDATA[%ld calm & clear]]></string>
+        <key>other</key><string>%ld steady &amp; visible</string>
+
+        <!-- Typed future rule metadata is never translator-owned. -->
+        <key>NSStringFutureRuleMetadata</key><string>Keep &amp; protect</string>
+        <key>futureRuleEnabled</key><true/>
+        <key>futureRuleCount</key><integer>+007</integer>
+      </dict>
+
+      <!-- Nonselected device branches remain byte-identical. -->
+      <key>NSStringDeviceSpecificRuleType</key>
+      <dict>
+        <key>mac</key><string>Protected desktop instruction</string>
+        <key>iphone</key><string>Protected mobile instruction</string>
+      </dict>
+      <key>futureMessageList</key><array><string>Protected 🧭 metadata</string><false/></array>
+    </dict>
+
+    <!-- A pure plural remains executable by Foundation without a device override. -->
+    <key>solo.count</key>
+    <dict>
+      <key>NSStringLocalizedFormatKey</key><string>%#@lights@ near water</string>
+      <key>lights</key>
+      <dict>
+        <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+        <key>NSStringFormatValueTypeKey</key><string>ld</string>
+        <key>one</key><string>%ld bright light</string>
+        <key>other</key><string><![CDATA[%ld bright lights]]></string>
+      </dict>
+    </dict>
+
+    <!-- Each independent native selector owns its own plural-category slots. -->
+    <key>paired.route</key>
+    <dict>
+      <key>NSStringLocalizedFormatKey</key>
+      <string>%1$#@beacons@ across %2$#@lanes@</string>
+      <!-- Selector order and native formatter positions remain untouched. -->
+      <key>beacons</key>
+      <dict>
+        <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+        <key>NSStringFormatValueTypeKey</key><string>ld</string>
+        <key>one</key><string>%1$ld clear beacon</string>
+        <key>other</key><string><![CDATA[%1$ld clear beacons]]></string>
+      </dict>
+      <key>lanes</key>
+      <dict>
+        <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+        <key>NSStringFormatValueTypeKey</key><string>ld</string>
+        <key>one</key><string>%2$ld quiet lane</string>
+        <key>other</key><string>%2$ld quiet lanes</string>
+      </dict>
+      <key>futurePairedRule</key><true/>
+    </dict>
+
+    <!-- The widest native width owns the only canonical width translation. -->
+    <key>width.route</key>
+    <dict>
+      <key>NSStringVariableWidthRuleType</key>
+      <dict>
+        <key>008</key><string>Keep narrow %@</string>
+        <key>32</key><string><![CDATA[Broad %@ & clear]]></string>
+      </dict>
+      <key>futureWidthMetadata</key><integer>-0x10</integer>
+    </dict>
+
+    <!-- Only the Foundation-selected iPhone value belongs to this source slot. -->
+    <key>device.route</key>
+    <dict>
+      <key>NSStringDeviceSpecificRuleType</key>
+      <dict>
+        <key>mac</key><string>Keep desktop %@</string>
+        <key>iphone</key><string>Touch %@ &amp; continue</string>
+      </dict>
+      <key>futureDeviceMetadata</key><true/>
+    </dict>
+  </dict>
+</plist>

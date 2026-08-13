@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "machine.signal": {
+      "defaultMessage": "Orbital route {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleCatalogMetadata": {
+          "nullableCatalogMetadata": null,
+          "rolloutRevision": 4
+        },
+        "appleCatalogVersion": 7,
+        "appleDescriptorMetadata": {
+          "customDescriptorMetadata": null
+        },
+        "appleLocalizationSources": {
+          "fr": {
+            "stringUnit": {
+              "state": "future_review",
+              "value": "Trajet orbital %@"
+            }
+          }
+        },
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "machine_translated",
+            "value": "Orbital route %@"
+          }
+        },
+        "extractionState": "future_extraction",
+        "localizations": {
+          "fr": {
+            "state": "future_review",
+            "value": "Trajet orbital %@"
+          }
+        },
+        "sourceState": "machine_translated"
+      }
+    },
+    "nullable.signal": {
+      "defaultMessage": "Quiet harbor",
+      "metadata": {
+        "appleCatalogMetadata": {
+          "nullableCatalogMetadata": null,
+          "rolloutRevision": 4
+        },
+        "appleCatalogVersion": 7,
+        "appleLocalizationSources": {
+          "fr": {
+            "stringUnit": {
+              "state": "machine_translated",
+              "value": "Port paisible"
+            }
+          }
+        },
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Quiet harbor"
+          }
+        },
+        "localizations": {
+          "fr": {
+            "state": "machine_translated",
+            "value": "Port paisible"
+          }
+        },
+        "sourceState": "new"
+      }
+    }
+  }
+}

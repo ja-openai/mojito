@@ -1,0 +1,14 @@
+{
+  "commented.shortcut": "commented.shortcut",
+  "quoted.route": "Visible amber route",
+  "line.route": "Steady orbital route",
+  "unicode.separators": "Expected landing",
+  "quoted.unicode.spaces": "alpha betagamma delta​omega",
+  "unicode.line.context": "Normalized line context",
+  "route_7.$/north:west-2": "south_3.$/east:bank-1",
+  "arabic.hex": "\u0000٠٠٤١!",
+  "fullwidth.hex": "\u0000００４１!",
+  "https://neutral.route": "https://safe.harbor",
+  "unicode.block.context": "Normalized block context",
+  "ascii.control.whitespace": "Expected ASCII boundary"
+}

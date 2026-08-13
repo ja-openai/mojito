@@ -1,0 +1,73 @@
+{
+  "de.lproj/catalog.stringsdict": {
+    "harbor.first.brazilian.portuguese🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld Signal %2$@",
+        "other": "%1$lld Signale %2$@"
+      }
+    },
+    "harbor.first.european.portuguese🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld Signal %2$@",
+        "other": "%1$lld Signale %2$@"
+      }
+    }
+  },
+  "en.lproj/catalog.stringsdict": {
+    "Private regional Portuguese harbor": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld %3$n beacon %2$@",
+        "other": "%1$lld %3$n beacons %2$@"
+      }
+    },
+    "harbor.first.brazilian.portuguese🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld %3$n beacon %2$@",
+        "other": "%1$lld %3$n beacons %2$@"
+      }
+    },
+    "harbor.first.european.portuguese🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld %3$n beacon %2$@",
+        "other": "%1$lld %3$n beacons %2$@"
+      }
+    }
+  },
+  "pt_BR.lproj/catalog.stringsdict": {
+    "harbor.first.brazilian.portuguese🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "many": "%2$@ %1$lld %3$n Brasil many",
+        "one": "%2$@ %1$lld %3$n Brasil one",
+        "other": "%2$@ %1$lld %3$n Brasil other"
+      }
+    },
+    "harbor.first.european.portuguese🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "many": "%2$@ %1$lld %3$n Portugal many",
+        "one": "%2$@ %1$lld %3$n Portugal one",
+        "other": "%2$@ %1$lld %3$n Portugal other"
+      }
+    }
+  }
+}

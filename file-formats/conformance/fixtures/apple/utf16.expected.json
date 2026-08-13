@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "bonjour": {
+      "defaultMessage": "Café ☕",
+      "description": "Non-ASCII survives UTF-16 decoding."
+    }
+  }
+}

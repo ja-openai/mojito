@@ -1,0 +1,18 @@
+{
+  "dock.namespace": {
+    "NSStringLocalizedFormatKey": "%#@signals@ across sheltered water",
+    "futureFlags": [
+      true,
+      false,
+      "Protected & stable"
+    ],
+    "futurePriority": 7,
+    "signals": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "ld",
+      "futureRulePriority": 11,
+      "one": "%ld harbor signal",
+      "other": "%ld harbor signals"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "sourceLanguage": "zh",
+  "version": "1.0",
+  "strings": {
+    "harbor.competing.development.source🧭": {
+      "localizations": {
+        "cmn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First source owner"
+          }
+        },
+        "zh-cmn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Second source owner"
+          }
+        }
+      }
+    }
+  }
+}

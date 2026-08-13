@@ -1,0 +1,62 @@
+{
+  "device.route": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": "Touch %@ & continue",
+      "mac": "Keep desktop %@"
+    },
+    "futureDeviceMetadata": true
+  },
+  "dock&count🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": "Protected mobile instruction",
+      "mac": "Protected desktop instruction"
+    },
+    "NSStringLocalizedFormatKey": "%#@signals@ near harbor",
+    "futureMessageList": [
+      "Protected 🧭 metadata",
+      false
+    ],
+    "signals": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "ld",
+      "NSStringFutureRuleMetadata": "Keep & protect",
+      "futureRuleCount": 7,
+      "futureRuleEnabled": true,
+      "one": "%ld calm & clear",
+      "other": "%ld steady & visible",
+      "zero": ""
+    }
+  },
+  "paired.route": {
+    "NSStringLocalizedFormatKey": "%1$#@beacons@ across %2$#@lanes@",
+    "beacons": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "ld",
+      "one": "%1$ld clear beacon",
+      "other": "%1$ld clear beacons"
+    },
+    "futurePairedRule": true,
+    "lanes": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "ld",
+      "one": "%2$ld quiet lane",
+      "other": "%2$ld quiet lanes"
+    }
+  },
+  "solo.count": {
+    "NSStringLocalizedFormatKey": "%#@lights@ near water",
+    "lights": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "ld",
+      "one": "%ld bright light",
+      "other": "%ld bright lights"
+    }
+  },
+  "width.route": {
+    "NSStringVariableWidthRuleType": {
+      "008": "Keep narrow %@",
+      "32": "Broad %@ & clear"
+    },
+    "futureWidthMetadata": -16
+  }
+}

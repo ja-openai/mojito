@@ -1,0 +1,445 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "harbor.after": {
+      "defaultMessage": "Guide {count, plural, one {{count} {arg2} lane} other {{count} {arg2} lanes}}",
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg2",
+          "source": "%@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guide %#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%n %@ lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%n %@ lanes"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "translated",
+        "sourceSubstitutions": {
+          "count": {
+            "argNum": 1,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld%n %@ lane"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld%n %@ lanes"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 2
+              }
+            ],
+            "other": [
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 2
+              }
+            ]
+          }
+        }
+      }
+    },
+    "harbor.escaped": {
+      "defaultMessage": "Guide {count, plural, one {{count}%n {arg1} lane} other {{count}%n {arg1} lanes}}",
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guide %#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%%n %@ lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%%n %@ lanes"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "translated",
+        "sourceSubstitutions": {
+          "count": {
+            "argNum": 1,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld%%n %@ lane"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld%%n %@ lanes"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.explicit": {
+      "defaultMessage": "Guide {arg0} {count, plural, one {{count}  {arg3} lane} other {{count}  {arg3} lanes}}",
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%2$lld",
+          "kind": "integer",
+          "position": 2
+        },
+        {
+          "name": "arg3",
+          "source": "%4$@",
+          "kind": "string",
+          "position": 4
+        },
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guide %1$@ %2$#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$lld %3$n %4$@ lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$lld %3$n %4$@ lanes"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "translated",
+        "sourceSubstitutions": {
+          "count": {
+            "argNum": 2,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%2$lld %3$n %4$@ lane"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%2$lld %3$n %4$@ lanes"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ],
+            "other": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ]
+          }
+        }
+      }
+    },
+    "harbor.overlap": {
+      "defaultMessage": "Guide {count, plural, one {{count}  {arg1} lane} other {{count}  {arg1} lanes}}",
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guide %#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld %2$n %@ lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld %2$n %@ lanes"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "translated",
+        "sourceSubstitutions": {
+          "count": {
+            "argNum": 1,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld %2$n %@ lane"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld %2$n %@ lanes"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 8,
+                "source": "%2$n",
+                "argumentPosition": 2
+              }
+            ],
+            "other": [
+              {
+                "position": 8,
+                "source": "%2$n",
+                "argumentPosition": 2
+              }
+            ]
+          }
+        }
+      }
+    },
+    "harbor.repeated": {
+      "defaultMessage": "Guide {count, plural, one {{count} {arg3} lane} other {{count} {arg3} lanes}}",
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg3",
+          "source": "%@",
+          "kind": "string",
+          "position": 4
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guide %#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%n%n %@ lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%n%n %@ lanes"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "translated",
+        "sourceSubstitutions": {
+          "count": {
+            "argNum": 1,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld%n%n %@ lane"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld%n%n %@ lanes"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 2
+              },
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 3
+              }
+            ],
+            "other": [
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 2
+              },
+              {
+                "position": 7,
+                "source": "%n",
+                "argumentPosition": 3
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

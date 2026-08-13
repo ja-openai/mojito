@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n  <key>harbor.after</key>\n  <dict>\n    <key>NSStringLocalizedFormatKey</key>\n    <string>%#@count@</string>\n    <key>count</key>\n    <dict>\n      <key>NSStringFormatSpecTypeKey</key>\n      <string>NSStringPluralRuleType</string>\n      <key>NSStringFormatValueTypeKey</key>\n      <string>d</string>\n      <key>one</key>\n      <string>%d%n %@ beacon</string>\n      <key>other</key>\n      <string>%d%n %@ beacons</string>\n    </dict>\n  </dict>\n  <key>harbor.repeated</key>\n  <dict>\n    <key>NSStringLocalizedFormatKey</key>\n    <string>%#@count@</string>\n    <key>count</key>\n    <dict>\n      <key>NSStringFormatSpecTypeKey</key>\n      <string>NSStringPluralRuleType</string>\n      <key>NSStringFormatValueTypeKey</key>\n      <string>d</string>\n      <key>one</key>\n      <string>%d%n%n %@ beacon</string>\n      <key>other</key>\n      <string>%d%n%n %@ beacons</string>\n    </dict>\n  </dict>\n  <key>harbor.explicit</key>\n  <dict>\n    <key>NSStringLocalizedFormatKey</key>\n    <string>%#@count@</string>\n    <key>count</key>\n    <dict>\n      <key>NSStringFormatSpecTypeKey</key>\n      <string>NSStringPluralRuleType</string>\n      <key>NSStringFormatValueTypeKey</key>\n      <string>d</string>\n      <key>one</key>\n      <string>%d %3$n %2$@ beacon</string>\n      <key>other</key>\n      <string>%d %3$n %2$@ beacons</string>\n    </dict>\n  </dict>\n  <key>harbor.overlap</key>\n  <dict>\n    <key>NSStringLocalizedFormatKey</key>\n    <string>%#@count@</string>\n    <key>count</key>\n    <dict>\n      <key>NSStringFormatSpecTypeKey</key>\n      <string>NSStringPluralRuleType</string>\n      <key>NSStringFormatValueTypeKey</key>\n      <string>d</string>\n      <key>one</key>\n      <string>%d %2$n %@ beacon</string>\n      <key>other</key>\n      <string>%d %2$n %@ beacons</string>\n    </dict>\n  </dict>\n  <key>harbor.positioned</key>\n  <dict>\n    <key>NSStringLocalizedFormatKey</key>\n    <string>%#@count@</string>\n    <key>count</key>\n    <dict>\n      <key>NSStringFormatSpecTypeKey</key>\n      <string>NSStringPluralRuleType</string>\n      <key>NSStringFormatValueTypeKey</key>\n      <string>d</string>\n      <key>one</key>\n      <string>%d%n %3$@ beacon</string>\n      <key>other</key>\n      <string>%d%n %3$@ beacons</string>\n    </dict>\n  </dict>\n  <key>harbor.escaped</key>\n  <dict>\n    <key>NSStringLocalizedFormatKey</key>\n    <string>%#@count@</string>\n    <key>count</key>\n    <dict>\n      <key>NSStringFormatSpecTypeKey</key>\n      <string>NSStringPluralRuleType</string>\n      <key>NSStringFormatValueTypeKey</key>\n      <string>d</string>\n      <key>one</key>\n      <string>%d%%n %@ beacon</string>\n      <key>other</key>\n      <string>%d%%n %@ beacons</string>\n    </dict>\n  </dict>\n  <key>harbor.unicode.🧭</key>\n  <dict>\n    <key>NSStringLocalizedFormatKey</key>\n    <string>%#@count@</string>\n    <key>count</key>\n    <dict>\n      <key>NSStringFormatSpecTypeKey</key>\n      <string>NSStringPluralRuleType</string>\n      <key>NSStringFormatValueTypeKey</key>\n      <string>d</string>\n      <key>one</key>\n      <string>%d%n %@ 🧭</string>\n      <key>other</key>\n      <string>%d%n %@ 🧭🧭</string>\n    </dict>\n  </dict>\n</dict>\n</plist>\n",
+  "slots": [
+    {
+      "id": "harbor.after",
+      "variant": "one",
+      "start": 504,
+      "end": 518
+    },
+    {
+      "id": "harbor.after",
+      "variant": "other",
+      "start": 565,
+      "end": 580
+    },
+    {
+      "id": "harbor.repeated",
+      "variant": "one",
+      "start": 948,
+      "end": 964
+    },
+    {
+      "id": "harbor.repeated",
+      "variant": "other",
+      "start": 1011,
+      "end": 1028
+    },
+    {
+      "id": "harbor.explicit",
+      "variant": "one",
+      "start": 1396,
+      "end": 1415
+    },
+    {
+      "id": "harbor.explicit",
+      "variant": "other",
+      "start": 1462,
+      "end": 1482
+    },
+    {
+      "id": "harbor.overlap",
+      "variant": "one",
+      "start": 1849,
+      "end": 1866
+    },
+    {
+      "id": "harbor.overlap",
+      "variant": "other",
+      "start": 1913,
+      "end": 1931
+    },
+    {
+      "id": "harbor.positioned",
+      "variant": "one",
+      "start": 2301,
+      "end": 2317
+    },
+    {
+      "id": "harbor.positioned",
+      "variant": "other",
+      "start": 2364,
+      "end": 2381
+    },
+    {
+      "id": "harbor.escaped",
+      "variant": "one",
+      "start": 2748,
+      "end": 2763
+    },
+    {
+      "id": "harbor.escaped",
+      "variant": "other",
+      "start": 2810,
+      "end": 2826
+    },
+    {
+      "id": "harbor.unicode.🧭",
+      "variant": "one",
+      "start": 3198,
+      "end": 3210
+    },
+    {
+      "id": "harbor.unicode.🧭",
+      "variant": "other",
+      "start": 3257,
+      "end": 3273
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "futureRoot" : { "signal" : "Protected 🧭 metadata", "priority" : [3, 1] },
+  "version" : 2.5,
+  "sourceLanguage" : "en_US",
+  "strings" : {
+    "escaped\u002Eroute_🧭" : {
+      "comment" : "Preserve original JSON key escapes, spacing, and states.",
+      "futureDescriptor" : { "literal" : "Keep \\/ this exact source spelling" },
+      "localizations" : {
+        "fr_CA" : { "stringUnit" : { "state" : "machine_translated", "value" : "Quai déjà traduit %@" } },
+        "en_US" : {
+          "stringUnit" : { "state" : "needs_review", "value" : "North \"pier\" \/ \u263A %@" }
+        }
+      }
+    },
+
+    "plural.count" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en_US" : {
+          "variations" : {
+            "plural" : {
+              "other" : { "stringUnit" : { "state" : "machine_translated", "value" : "%lld quiet signals" } },
+              "one" : { "stringUnit" : { "state" : "needs_review", "value" : "%lld quiet signal" } }
+            }
+          }
+        },
+        "fr_CA" : {
+          "variations" : {
+            "plural" : {
+              "one" : { "stringUnit" : { "state" : "translated", "value" : "%lld signal existant" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%lld signaux existants" } }
+            }
+          }
+        }
+      }
+    },
+
+    "device.route" : {
+      "futureDescriptor" : { "color" : "amber" },
+      "localizations" : {
+        "en_US" : {
+          "variations" : {
+            "device" : {
+              "mac" : { "stringUnit" : { "state" : "translated", "value" : "Click protected %@" } },
+              "iphone" : { "stringUnit" : { "state" : "needs_review", "value" : "Tap source %@" } }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "device" : {
+              "iphone" : { "stringUnit" : { "state" : "translated", "value" : "Touchez la traduction %@" } }
+            }
+          }
+        }
+      }
+    },
+
+    "device.count" : {
+      "localizations" : {
+        "en_US" : {
+          "variations" : {
+            "device" : {
+              "mac" : {
+                "variations" : {
+                  "plural" : {
+                    "one" : { "stringUnit" : { "state" : "translated", "value" : "%lld protected desktop" } },
+                    "other" : { "stringUnit" : { "state" : "translated", "value" : "%lld protected desktops" } }
+                  }
+                }
+              },
+              "iphone" : {
+                "variations" : {
+                  "plural" : {
+                    "one" : { "stringUnit" : { "state" : "needs_review", "value" : "%lld mobile route" } },
+                    "other" : { "stringUnit" : { "state" : "translated", "value" : "%lld mobile routes" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "do.not.translate" : {
+      "shouldTranslate" : false,
+      "localizations" : { "en_US" : { "stringUnit" : { "state" : "translated", "value" : "Internal protected source" } } }
+    }
+  }
+}

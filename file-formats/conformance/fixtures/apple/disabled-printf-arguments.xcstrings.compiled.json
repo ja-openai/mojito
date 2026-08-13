@@ -1,0 +1,13 @@
+{
+  "en.lproj/catalog.strings": {
+    "harbor.escaped": "%%n %@ tide",
+    "harbor.explicit": "%2$n %1$@ dock",
+    "harbor.implicit": "North %n %@",
+    "harbor.integer": "%n %d markers",
+    "harbor.middle": "%@ dock %n %@",
+    "harbor.mixed": "%2$n %@ dock",
+    "harbor.overlap": "%n %1$@ lane",
+    "harbor.repeated": "%n%n %@ port",
+    "harbor.unicode.🧭": "🧭%n %@ reef"
+  }
+}

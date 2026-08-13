@@ -1,0 +1,40 @@
+{
+  "en.lproj/catalog.stringsdict": {
+    "device.counter": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld mobile signal",
+            "other": "%lld mobile signals"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld desktop signal",
+            "other": "%lld desktop signals"
+          }
+        }
+      }
+    },
+    "instruction": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "Touch %@",
+        "mac": "Click %@"
+      }
+    }
+  },
+  "fr.lproj/catalog.stringsdict": {
+    "instruction": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "Touchez %@",
+        "mac": "Cliquez sur %@"
+      }
+    }
+  }
+}

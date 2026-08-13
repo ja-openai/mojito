@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"sourceLanguage\": \"en\",\n  \"version\": \"1.0\",\n  \"strings\": {\n    \"harbor.target.missing🧭\": {\n      \"comment\": \"A neutral target missing from its active localization map\",\n      \"extractionState\": \"stale\",\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"needs_review\",\n            \"value\": \"Calm harbor 🧭\"\n          }\n        },\n        \"de\": {\n          \"stringUnit\": {\n            \"state\": \"machine_translated\",\n            \"value\": \"Ruhiger Hafen\"\n          }\n        }\n      }\n    },\n    \"North %n %@ 🧭\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"North %n %@ 🧭\"\n          }\n        },\n        \"fr_CA\": null,\n        \"de\": {\n          \"stringUnit\": {\n            \"state\": \"future_review\",\n            \"value\": \"Nord %@ geschützt\"\n          }\n        }\n      }\n    },\n    \"%@ %n %@ anchorage\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"needs_review\",\n            \"value\": \"%@ %n %@ anchorage\"\n          }\n        },\n        \"fr\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"%@ %@ mouillage distinct\"\n          }\n        }\n      }\n    },\n    \"West %2$n %1$@ pier\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"machine_translated\",\n            \"value\": \"West %2$n %1$@ pier\"\n          }\n        },\n        \"fr_CA\": {\n          \"stringUnit\": {\n            \"state\": \"needs_review\",\n            \"value\": \"Ancien %2$n %1$@ quai\"\n          }\n        }\n      }\n    },\n    \"Tide %%n %@ marker\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Tide %%n %@ marker\"\n          }\n        },\n        \"fr_CA\": {\n          \"stringUnit\": {\n            \"state\": \"new\",\n            \"value\": \"Marée %%n %@ existante\"\n          }\n        }\n      }\n    },\n    \"owned.scalar\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"needs_review\",\n            \"value\": \"Steady %@ shore\"\n          }\n        },\n        \"fr_CA\": {\n          \"stringUnit\": {\n            \"state\": \"future_review\",\n            \"value\": \"Rive %@ existante\"\n          }\n        }\n      }\n    },\n    \"Private target null pier\": {\n      \"shouldTranslate\": false,\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Private %@ source\"\n          }\n        },\n        \"fr_CA\": null\n      }\n    },\n    \"Private target missing pier\": {\n      \"shouldTranslate\": false,\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Private %@ missing source\"\n          }\n        }\n      }\n    }\n  }\n}\n",
+  "appleTargetLocale": "fr_CA",
+  "slots": [
+    {
+      "id": "harbor.target.missing🧭",
+      "start": 520,
+      "end": 520
+    },
+    {
+      "id": "North %n %@ 🧭",
+      "start": 744,
+      "end": 748
+    },
+    {
+      "id": "%@ %n %@ anchorage",
+      "start": 1252,
+      "end": 1252
+    },
+    {
+      "id": "West %2$n %1$@ pier",
+      "start": 1577,
+      "end": 1598
+    },
+    {
+      "id": "Tide %%n %@ marker",
+      "start": 1927,
+      "end": 1950
+    },
+    {
+      "id": "owned.scalar",
+      "start": 2282,
+      "end": 2299
+    }
+  ]
+}

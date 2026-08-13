@@ -1,0 +1,22 @@
+{
+  "sourceLanguage": "",
+  "version": "1.0",
+  "strings": {
+    "neutral.signal": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neutral orbital signal"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signal orbital neutre"
+          }
+        }
+      }
+    }
+  }
+}

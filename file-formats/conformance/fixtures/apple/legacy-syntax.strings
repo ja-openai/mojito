@@ -1,0 +1,14 @@
+/* Single-quoted keys and values are accepted by Foundation. */
+'single key' = 'Route "north"';
+'pilot\'s code' = 'crew\'s marker';
+
+// A missing equals/value means the key itself is the value.
+"quoted shortcut";
+'single shortcut';
+bare_shortcut;
+
+/* Unicode block comment spacing collapses consistently. */
+'block_separator' = 'Stable context';
+
+// Unicode line context "line_separator_key" = "Line boundary";
+// Unicode paragraph context "paragraph_separator_key" = "Paragraph boundary";

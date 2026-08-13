@@ -1,0 +1,22 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "nullable.target": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "future_review",
+            "value": "Quiet source"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "machine_translated",
+            "value": "Fuente silenciosa"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

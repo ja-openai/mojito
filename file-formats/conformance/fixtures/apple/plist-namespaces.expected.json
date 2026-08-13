@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "harbor.route": {
+      "defaultMessage": "Guide {arg0} across namespaced water",
+      "description": "Bound attributes and namespace declarations are platform-owned source bytes.",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ]
+    },
+    "quiet.empty": {
+      "defaultMessage": ""
+    },
+    "signal&calm": {
+      "defaultMessage": "'<'calm> & clear",
+      "metadata": {
+        "appleMarkupEscaping": "icu-quoted-angle"
+      }
+    }
+  }
+}

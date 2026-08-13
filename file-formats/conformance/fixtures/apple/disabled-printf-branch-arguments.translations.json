@@ -1,0 +1,16 @@
+{
+  "harbor.after#one": "{count} {arg2} balise",
+  "harbor.after#other": "{count} {arg2} balises",
+  "harbor.escaped#one": "{count}%n {arg1} balise",
+  "harbor.escaped#other": "{count}%n {arg1} balises",
+  "harbor.explicit#one": "{count}  {arg1} balise",
+  "harbor.explicit#other": "{count}  {arg1} balises",
+  "harbor.overlap#one": "{count}  {arg1} balise",
+  "harbor.overlap#other": "{count}  {arg1} balises",
+  "harbor.positioned#one": "{count} {arg2} balise",
+  "harbor.positioned#other": "{count} {arg2} balises",
+  "harbor.repeated#one": "{count} {arg3} balise",
+  "harbor.repeated#other": "{count} {arg3} balises",
+  "harbor.unicode.🧭#one": "{count} {arg2} 🧭",
+  "harbor.unicode.🧭#other": "{count} {arg2} 🧭🧭"
+}

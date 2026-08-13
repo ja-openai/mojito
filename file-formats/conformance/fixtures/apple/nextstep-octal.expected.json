@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "accent": {
+      "defaultMessage": "ë"
+    },
+    "ascii": {
+      "defaultMessage": "A",
+      "description": "Octal bytes use Foundation's historic NextStep character set."
+    },
+    "bell": {
+      "defaultMessage": "\u0007"
+    },
+    "capital": {
+      "defaultMessage": "À"
+    },
+    "division": {
+      "defaultMessage": "÷"
+    },
+    "ligature": {
+      "defaultMessage": "ﬁ"
+    },
+    "nbsp": {
+      "defaultMessage": " "
+    },
+    "nextstep_full_table": {
+      "defaultMessage": " ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖÙÚÛÜÝÞµ×÷©¡¢£⁄¥ƒ§¤’“«‹›ﬁﬂ®–†‡·¦¶•‚„”»…‰¬¿¹ˋ´ˆ˜¯˘˙¨²˚¸³˝˛ˇ—±¼½¾àáâãäåçèéêëìÆíªîïðñŁØŒºòóôõöæùúûıüýłøœßþÿ\u0000\u0000"
+    },
+    "short_octal_boundary": {
+      "defaultMessage": "\u001f8"
+    },
+    "superscript": {
+      "defaultMessage": "¹"
+    },
+    "typographic_quote": {
+      "defaultMessage": "’"
+    },
+    "undefined_fe": {
+      "defaultMessage": "\u0000"
+    },
+    "undefined_ff": {
+      "defaultMessage": "\u0000"
+    },
+    "unknown": {
+      "defaultMessage": "qx41"
+    },
+    "vertical": {
+      "defaultMessage": "\u000b"
+    },
+    "wrapped_one": {
+      "defaultMessage": "\u0001"
+    },
+    "wrapped_undefined": {
+      "defaultMessage": "\u0000"
+    },
+    "wrapped_zero": {
+      "defaultMessage": "\u0000"
+    }
+  }
+}

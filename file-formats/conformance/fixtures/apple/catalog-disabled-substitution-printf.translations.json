@@ -1,0 +1,14 @@
+{
+  "harbor.zero": "Regardez {count}",
+  "harbor.zero#count#one": "{count} balise",
+  "harbor.zero#count#other": "{count} balises",
+  "harbor.literal": "Regardez {count}",
+  "harbor.literal#count#one": "{count}%n balise",
+  "harbor.literal#count#other": "{count}%n balises",
+  "harbor.line": "Regardez {count}",
+  "harbor.line#count#one": "{count}\nbalise",
+  "harbor.line#count#other": "{count}\nbalises",
+  "harbor.device.🧭": "Touchez {count}",
+  "harbor.device.🧭#count#one": "{count} voie",
+  "harbor.device.🧭#count#other": "{count} voies"
+}

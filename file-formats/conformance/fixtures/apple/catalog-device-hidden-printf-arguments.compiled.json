@@ -1,0 +1,92 @@
+{
+  "en.lproj/catalog.stringsdict": {
+    "device.after🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld%n %@ pocket marker",
+            "other": "%lld%n %@ pocket markers"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld%n %@ desktop marker",
+            "other": "%lld%n %@ desktop markers"
+          }
+        }
+      }
+    },
+    "device.escaped": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld%%n %@ pocket marker",
+            "other": "%lld%%n %@ pocket markers"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld%%n %@ desktop marker",
+            "other": "%lld%%n %@ desktop markers"
+          }
+        }
+      }
+    },
+    "device.explicit": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n %2$@ pocket marker",
+            "other": "%1$lld %3$n %2$@ pocket markers"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n %2$@ desktop marker",
+            "other": "%1$lld %3$n %2$@ desktop markers"
+          }
+        }
+      }
+    },
+    "device.repeated": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld%n%n %@ pocket marker",
+            "other": "%lld%n%n %@ pocket markers"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld%n%n %@ desktop marker",
+            "other": "%lld%n%n %@ desktop markers"
+          }
+        }
+      }
+    }
+  }
+}

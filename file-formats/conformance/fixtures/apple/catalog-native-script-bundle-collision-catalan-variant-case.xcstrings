@@ -1,0 +1,28 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "harbor.native.script.collision🧭": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        },
+        "ca-ES-valencia": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First catalog locale ca-ES-valencia"
+          }
+        },
+        "ca-ES-VALENCIA": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Second catalog locale ca-ES-VALENCIA"
+          }
+        }
+      }
+    }
+  }
+}

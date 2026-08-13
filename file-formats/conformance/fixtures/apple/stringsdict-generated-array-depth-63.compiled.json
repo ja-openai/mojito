@@ -1,0 +1,169 @@
+{
+  "files.remaining": {
+    "NSStringLocalizedFormatKey": "%#@files@ remaining",
+    "files": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "NSStringFutureRuleMetadata": "Fresh <rule> & annotation",
+      "futureRuleDictionary": {
+        "NSStringFormatSpecTypeKey": "nested lookalike",
+        "count": 23,
+        "enabled": false
+      },
+      "futureRuleEnabled": true,
+      "futureRuleNegative": -19,
+      "one": "%d file",
+      "other": "%d files"
+    },
+    "futureDeepArray": [
+      [
+        [
+          [
+            [
+              [
+                [
+                  [
+                    [
+                      [
+                        [
+                          [
+                            [
+                              [
+                                [
+                                  [
+                                    [
+                                      [
+                                        [
+                                          [
+                                            [
+                                              [
+                                                [
+                                                  [
+                                                    [
+                                                      [
+                                                        [
+                                                          [
+                                                            [
+                                                              [
+                                                                [
+                                                                  [
+                                                                    [
+                                                                      [
+                                                                        [
+                                                                          [
+                                                                            [
+                                                                              [
+                                                                                [
+                                                                                  [
+                                                                                    [
+                                                                                      [
+                                                                                        [
+                                                                                          [
+                                                                                            [
+                                                                                              [
+                                                                                                [
+                                                                                                  [
+                                                                                                    [
+                                                                                                      [
+                                                                                                        [
+                                                                                                          [
+                                                                                                            [
+                                                                                                              [
+                                                                                                                [
+                                                                                                                  [
+                                                                                                                    [
+                                                                                                                      [
+                                                                                                                        [
+                                                                                                                          [
+                                                                                                                            [
+                                                                                                                              [
+                                                                                                                                [
+                                                                                                                                  "quiet original leaf"
+                                                                                                                                ]
+                                                                                                                              ]
+                                                                                                                            ]
+                                                                                                                          ]
+                                                                                                                        ]
+                                                                                                                      ]
+                                                                                                                    ]
+                                                                                                                  ]
+                                                                                                                ]
+                                                                                                              ]
+                                                                                                            ]
+                                                                                                          ]
+                                                                                                        ]
+                                                                                                      ]
+                                                                                                    ]
+                                                                                                  ]
+                                                                                                ]
+                                                                                              ]
+                                                                                            ]
+                                                                                          ]
+                                                                                        ]
+                                                                                      ]
+                                                                                    ]
+                                                                                  ]
+                                                                                ]
+                                                                              ]
+                                                                            ]
+                                                                          ]
+                                                                        ]
+                                                                      ]
+                                                                    ]
+                                                                  ]
+                                                                ]
+                                                              ]
+                                                            ]
+                                                          ]
+                                                        ]
+                                                      ]
+                                                    ]
+                                                  ]
+                                                ]
+                                              ]
+                                            ]
+                                          ]
+                                        ]
+                                      ]
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ]
+      ]
+    ],
+    "futureDisabled": false,
+    "futureEmptyDictionary": {},
+    "futureEnabled": true,
+    "futureHexadecimal": 255,
+    "futureLabel": "Fresh <amber> & quiet harbor",
+    "futureMaximum": 18446744073709551615,
+    "futureMinimum": -9223372036854775808,
+    "futureNegative": -16,
+    "futureNestedMetadata": {
+      "NSStringLocalizedFormatKey": "reserved-looking nested value",
+      "child": {
+        "count": -12,
+        "enabled": false,
+        "notes": "A neutral & original signal"
+      },
+      "": "private-use sorting",
+      "🛰": "supplementary sorting"
+    },
+    "futurePositive": 7,
+    "futureUnknownRule": {
+      "NSStringFormatSpecTypeKey": "NSStringFutureRuleType",
+      "enabled": true
+    }
+  }
+}

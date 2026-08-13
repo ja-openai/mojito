@@ -1,0 +1,8 @@
+<!DOCTYPE plist [<!ENTITY hidden SYSTEM "file:///etc/passwd">]>
+<plist version="1.0"><dict>
+  <key>hidden</key><dict>
+    <key>NSStringVariableWidthRuleType</key><dict>
+      <key>1</key><string>&hidden;</string>
+    </dict>
+  </dict>
+</dict></plist>

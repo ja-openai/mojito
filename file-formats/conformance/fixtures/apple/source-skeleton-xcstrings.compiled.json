@@ -1,0 +1,66 @@
+{
+  "en_US.lproj/catalog.strings": {
+    "do.not.translate": "Internal protected source",
+    "escaped.route_🧭": "North \"pier\" / ☺ %@"
+  },
+  "en_US.lproj/catalog.stringsdict": {
+    "device.count": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld mobile route",
+            "other": "%lld mobile routes"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld protected desktop",
+            "other": "%lld protected desktops"
+          }
+        }
+      }
+    },
+    "device.route": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "Tap source %@",
+        "mac": "Click protected %@"
+      }
+    },
+    "plural.count": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld quiet signal",
+        "other": "%lld quiet signals"
+      }
+    }
+  },
+  "fr.lproj/catalog.stringsdict": {
+    "device.route": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "Touchez la traduction %@"
+      }
+    }
+  },
+  "fr_CA.lproj/catalog.strings": {
+    "escaped.route_🧭": "Quai déjà traduit %@"
+  },
+  "fr_CA.lproj/catalog.stringsdict": {
+    "plural.count": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld signal existant",
+        "other": "%lld signaux existants"
+      }
+    }
+  }
+}

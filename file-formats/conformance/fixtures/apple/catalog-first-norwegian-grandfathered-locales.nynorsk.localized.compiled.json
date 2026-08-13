@@ -1,0 +1,71 @@
+{
+  "de.lproj/catalog.stringsdict": {
+    "harbor.first.norwegian.bokmal.grandfathered🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld Signal %2$@",
+        "other": "%1$lld Signale %2$@"
+      }
+    },
+    "harbor.first.norwegian.nynorsk.grandfathered🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld Signal %2$@",
+        "other": "%1$lld Signale %2$@"
+      }
+    }
+  },
+  "en.lproj/catalog.stringsdict": {
+    "Private Norwegian language harbor": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld %3$n beacon %2$@",
+        "other": "%1$lld %3$n beacons %2$@"
+      }
+    },
+    "harbor.first.norwegian.bokmal.grandfathered🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld %3$n beacon %2$@",
+        "other": "%1$lld %3$n beacons %2$@"
+      }
+    },
+    "harbor.first.norwegian.nynorsk.grandfathered🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld %3$n beacon %2$@",
+        "other": "%1$lld %3$n beacons %2$@"
+      }
+    }
+  },
+  "nn.lproj/catalog.stringsdict": {
+    "harbor.first.norwegian.bokmal.grandfathered🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%2$@ %1$lld %3$n Bokmål one",
+        "other": "%2$@ %1$lld %3$n Bokmål other"
+      }
+    },
+    "harbor.first.norwegian.nynorsk.grandfathered🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%2$@ %1$lld %3$n Nynorsk one",
+        "other": "%2$@ %1$lld %3$n Nynorsk other"
+      }
+    }
+  }
+}

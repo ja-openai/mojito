@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+  <key>dock.empty</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%#@signals@ across the inlet</string>
+    <key>signals</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%ld visible beacon</string>
+      <key>other</key>
+      <string>%ld visible beacons</string>
+      <key>futureRuleData</key>
+      <data></data>
+    </dict>
+    <key>futureEmptyArray</key>
+    <array>
+    </array>
+    <key>futureEmptyData</key>
+    <data></data>
+    <key>futureEmptyDictionary</key>
+    <dict>
+    </dict>
+    <key>futureEmptyString</key>
+    <string></string>
+    <key>futureExplicitArray</key>
+    <array>
+    </array>
+    <key>futureExplicitDictionary</key>
+    <dict>
+    </dict>
+    <key>futureExplicitString</key>
+    <string></string>
+    <key>futureFalse</key>
+    <false/>
+    <key>futureLiteralMarker</key>
+    <string>Literal &lt;data/&gt; remains visible</string>
+    <key>futurePayload</key>
+    <data>YQ==</data>
+    <key>futureStructured</key>
+    <array>
+      <data></data>
+      <dict>
+        <key>nestedEmptyData</key>
+        <data></data>
+      </dict>
+      <array>
+      </array>
+    </array>
+    <key>futureTrue</key>
+    <true/>
+    <key>futureWhitespaceData</key>
+    <data></data>
+  </dict>
+</dict>
+</plist>

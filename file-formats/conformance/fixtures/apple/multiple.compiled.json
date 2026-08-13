@@ -1,0 +1,17 @@
+{
+  "summary": {
+    "NSStringLocalizedFormatKey": "%#@files@ in %#@folders@",
+    "files": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d file",
+      "other": "%d files"
+    },
+    "folders": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d folder",
+      "other": "%d folders"
+    }
+  }
+}

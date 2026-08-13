@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "status": {
+      "defaultMessage": "{signals, plural, one {{signals} signal} other {{signals} signals}} available",
+      "variants": {
+        "one": "{signals} signal",
+        "other": "{signals} signals"
+      },
+      "placeholders": [
+        {
+          "name": "signals",
+          "source": "%ld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@signals@ available",
+        "applePluralRules": {
+          "signals": {
+            "valueType": "ld",
+            "variants": {
+              "one": "%ld signal",
+              "other": "%ld signals"
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "deviceVariants": {
+          "applewatch": "Open signal list",
+          "iphone": "Touch signal list"
+        },
+        "pluralVariable": "signals",
+        "valueType": "ld"
+      }
+    }
+  }
+}

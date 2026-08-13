@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"sourceLanguage\": \"en\",\n  \"version\": \"1.0\",\n  \"strings\": {\n    \"harbor.review.0.new🧭\": {\n      \"comment\": \"Unknown state strings remain platform-owned opaque metadata\",\n      \"extractionState\": \"manual\",\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"new\",\n            \"value\": \"Source new %@\"\n          }\n        },\n        \"fr_CA\": {\n          \"stringUnit\": {\n            \"state\": \"invalid_future_state\",\n            \"value\": \"Ancien new %@\"\n          }\n        },\n        \"de\": {\n          \"stringUnit\": {\n            \"state\": \"preserved_future_state_0\",\n            \"value\": \"Geschützt new %@\"\n          }\n        }\n      }\n    },\n    \"harbor.review.1.needs_review🧭\": {\n      \"comment\": \"Unknown state strings remain platform-owned opaque metadata\",\n      \"extractionState\": \"stale\",\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"needs_review\",\n            \"value\": \"Source needs_review %@\"\n          }\n        },\n        \"fr_CA\": {\n          \"stringUnit\": {\n            \"state\": \"untranslated\",\n            \"value\": \"Ancien needs_review %@\"\n          }\n        },\n        \"de\": {\n          \"stringUnit\": {\n            \"state\": \"preserved_future_state_1\",\n            \"value\": \"Geschützt needs_review %@\"\n          }\n        }\n      }\n    },\n    \"harbor.review.2.translated🧭\": {\n      \"comment\": \"Unknown state strings remain platform-owned opaque metadata\",\n      \"extractionState\": \"manual\",\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Source translated %@\"\n          }\n        },\n        \"fr_CA\": {\n          \"stringUnit\": {\n            \"state\": \"future_review\",\n            \"value\": \"Ancien translated %@\"\n          }\n        },\n        \"de\": {\n          \"stringUnit\": {\n            \"state\": \"preserved_future_state_2\",\n            \"value\": \"Geschützt translated %@\"\n          }\n        }\n      }\n    },\n    \"harbor.review.3.machine_translated🧭\": {\n      \"comment\": \"Unknown state strings remain platform-owned opaque metadata\",\n      \"extractionState\": \"stale\",\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"machine_translated\",\n            \"value\": \"Source machine_translated %@\"\n          }\n        },\n        \"fr_CA\": {\n          \"stringUnit\": {\n            \"state\": \"stale\",\n            \"value\": \"Ancien machine_translated %@\"\n          }\n        },\n        \"de\": {\n          \"stringUnit\": {\n            \"state\": \"preserved_future_state_3\",\n            \"value\": \"Geschützt machine_translated %@\"\n          }\n        }\n      }\n    },\n    \"harbor.review.4.stale🧭\": {\n      \"comment\": \"Unknown state strings remain platform-owned opaque metadata\",\n      \"extractionState\": \"manual\",\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"stale\",\n            \"value\": \"Source stale %@\"\n          }\n        },\n        \"fr_CA\": {\n          \"stringUnit\": {\n            \"state\": \"machine_translated\",\n            \"value\": \"Ancien stale %@\"\n          }\n        },\n        \"de\": {\n          \"stringUnit\": {\n            \"state\": \"preserved_future_state_4\",\n            \"value\": \"Geschützt stale %@\"\n          }\n        }\n      }\n    },\n    \"harbor.review.5.future_review🧭\": {\n      \"comment\": \"Unknown state strings remain platform-owned opaque metadata\",\n      \"extractionState\": \"stale\",\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"future_review\",\n            \"value\": \"Source future_review %@\"\n          }\n        },\n        \"fr_CA\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Ancien future_review %@\"\n          }\n        },\n        \"de\": {\n          \"stringUnit\": {\n            \"state\": \"preserved_future_state_5\",\n            \"value\": \"Geschützt future_review %@\"\n          }\n        }\n      }\n    },\n    \"harbor.review.6.untranslated🧭\": {\n      \"comment\": \"Unknown state strings remain platform-owned opaque metadata\",\n      \"extractionState\": \"manual\",\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"untranslated\",\n            \"value\": \"Source untranslated %@\"\n          }\n        },\n        \"fr_CA\": {\n          \"stringUnit\": {\n            \"state\": \"needs_review\",\n            \"value\": \"Ancien untranslated %@\"\n          }\n        },\n        \"de\": {\n          \"stringUnit\": {\n            \"state\": \"preserved_future_state_6\",\n            \"value\": \"Geschützt untranslated %@\"\n          }\n        }\n      }\n    },\n    \"harbor.review.7.invalid_future_state🧭\": {\n      \"comment\": \"Unknown state strings remain platform-owned opaque metadata\",\n      \"extractionState\": \"stale\",\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"invalid_future_state\",\n            \"value\": \"Source invalid_future_state %@\"\n          }\n        },\n        \"fr_CA\": {\n          \"stringUnit\": {\n            \"state\": \"new\",\n            \"value\": \"Ancien invalid_future_state %@\"\n          }\n        },\n        \"de\": {\n          \"stringUnit\": {\n            \"state\": \"preserved_future_state_7\",\n            \"value\": \"Geschützt invalid_future_state %@\"\n          }\n        }\n      }\n    },\n    \"harbor.review.source.new.automatic🧭\": {\n      \"comment\": \"Automatic new source entries remain absent from the development bundle\",\n      \"extractionState\": \"invalid_future_extraction\",\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"new\",\n            \"value\": \"Automatic new source %@\"\n          }\n        },\n        \"fr_CA\": {\n          \"stringUnit\": {\n            \"state\": \"invalid_future_state\",\n            \"value\": \"Automatique %@\"\n          }\n        },\n        \"de\": {\n          \"stringUnit\": {\n            \"state\": \"machine_translated\",\n            \"value\": \"Automatisch %@\"\n          }\n        }\n      }\n    },\n    \"Private future review state\": {\n      \"shouldTranslate\": false,\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"invalid_future_state\",\n            \"value\": \"Private\"\n          }\n        },\n        \"fr_CA\": {\n          \"stringUnit\": {\n            \"state\": \"future_review\",\n            \"value\": \"Privé préservé\"\n          }\n        }\n      }\n    }\n  }\n}\n",
+  "appleTargetLocale": "fr_CA",
+  "slots": [
+    {
+      "id": "harbor.review.0.new🧭",
+      "start": 478,
+      "end": 491
+    },
+    {
+      "id": "harbor.review.1.needs_review🧭",
+      "start": 1118,
+      "end": 1140
+    },
+    {
+      "id": "harbor.review.2.translated🧭",
+      "start": 1772,
+      "end": 1792
+    },
+    {
+      "id": "harbor.review.3.machine_translated🧭",
+      "start": 2437,
+      "end": 2465
+    },
+    {
+      "id": "harbor.review.4.stale🧭",
+      "start": 3093,
+      "end": 3108
+    },
+    {
+      "id": "harbor.review.5.future_review🧭",
+      "start": 3738,
+      "end": 3761
+    },
+    {
+      "id": "harbor.review.6.untranslated🧭",
+      "start": 4399,
+      "end": 4421
+    },
+    {
+      "id": "harbor.review.7.invalid_future_state🧭",
+      "start": 5072,
+      "end": 5102
+    },
+    {
+      "id": "harbor.review.source.new.automatic🧭",
+      "start": 5783,
+      "end": 5797
+    }
+  ]
+}

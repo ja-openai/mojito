@@ -1,0 +1,7 @@
+"escaped" = "North%%nSouth";
+"mixed.🧭" = "🧭%nSnow\nLine%%n";
+"physical" = "North\nSouth";
+// Foundation disables `%n`; a physical newline is a different runtime value.
+"plain" = "North%nSouth";
+"positional" = "West%2$nEast";
+"repeated" = "%nStart%n%nEnd%n";

@@ -1,0 +1,107 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "harbor.future.device🧭": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Téléphone %@ quai"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Bureau %@ quai"
+                }
+              },
+              "futurecar": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Vaisseau %@ quai"
+                }
+              },
+              "raft": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Privé %@ quai"
+                }
+              },
+              "🧭raft": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Boussole %@ quai"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Repli %@ quai"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.future.device.only🧭": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "device": {
+              "futurecar": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Futur seul %@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.future.device.fallback🧭": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "device": {
+              "futurecar": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Futur repli %@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Repli ordinaire %@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Private future-device harbor": {
+      "shouldTranslate": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "device": {
+              "futurecar": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Protected %@"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

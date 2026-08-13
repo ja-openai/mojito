@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\r\n  \"sourceLanguage\" : \"en\",\r\n  \"catalogMarker\" : { \"leave\" : \"untouched\" },\r\n  \"strings\" : {\r\n    \"device.harbor🧭\" : {\r\n      \"comment\" : \"Root-owned harbor substitutions shared by protected device branches.\",\r\n      \"customDeviceMetadata\" : [ 7, \"preserve\" ],\r\n      \"localizations\" : {\r\n        \"en\" : {\r\n          \"substitutions\" : {\r\n            \"lanes\" : {\r\n              \"argNum\" : 1,\r\n              \"formatSpecifier\" : \"lld\",\r\n              \"variations\" : { \"plural\" : {\r\n                \"one\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%lld open lane\" } },\r\n                \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld open lanes\" } }\r\n              } }\r\n            },\r\n            \"lights\" : {\r\n              \"argNum\" : 2,\r\n              \"formatSpecifier\" : \"d\",\r\n              \"variations\" : { \"plural\" : {\r\n                \"one\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"%d dock light\" } },\r\n                \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%d dock lights\" } }\r\n              } }\r\n            }\r\n          },\r\n          \"variations\" : { \"device\" : {\r\n            \"iphone\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"Touch %3$@: %#@lanes@ beside %2$#@lights@\" } },\r\n            \"mac\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Click %3$@: %2$#@lights@ around %#@lanes@\" } },\r\n            \"applewatch\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"Watch %3$@: %#@lanes@ / %2$#@lights@\" } }\r\n          } }\r\n        },\r\n        \"fr\" : {\r\n          \"substitutions\" : {\r\n            \"lanes\" : { \"argNum\" : 1, \"formatSpecifier\" : \"lld\", \"variations\" : { \"plural\" : {\r\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld voie protégée\" } },\r\n              \"other\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%lld voies protégées\" } }\r\n            } } },\r\n            \"lights\" : { \"argNum\" : 2, \"formatSpecifier\" : \"d\", \"variations\" : { \"plural\" : {\r\n              \"one\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"%d feu protégé\" } },\r\n              \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%d feux protégés\" } }\r\n            } } }\r\n          },\r\n          \"variations\" : { \"device\" : {\r\n            \"iphone\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"Touchez %3$@: %#@lanes@ près de %2$#@lights@\" } },\r\n            \"mac\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Cliquez %3$@: %2$#@lights@ vers %#@lanes@\" } }\r\n          } }\r\n        }\r\n      }\r\n    },\r\n    \"device.unicode\" : {\r\n      \"localizations\" : {\r\n        \"en\" : {\r\n          \"substitutions\" : {\r\n            \"信号\" : { \"argNum\" : 1, \"formatSpecifier\" : \"lld\", \"variations\" : { \"plural\" : {\r\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld soft signal\" } },\r\n              \"other\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%lld soft signals\" } }\r\n            } } }\r\n          },\r\n          \"variations\" : { \"device\" : {\r\n            \"ipad\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"Guide %#@信号@\" } },\r\n            \"mac\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Desktop %#@信号@\" } }\r\n          } }\r\n        }\r\n      }\r\n    },\r\n    \"device.echo\" : {\r\n      \"localizations\" : {\r\n        \"en\" : {\r\n          \"substitutions\" : {\r\n            \"count\" : { \"argNum\" : 1, \"formatSpecifier\" : \"d\", \"variations\" : { \"plural\" : {\r\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%d clear echo\" } },\r\n              \"other\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"%d clear echoes\" } }\r\n            } } }\r\n          },\r\n          \"variations\" : { \"device\" : {\r\n            \"iphone\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%#@count@ before %1$#@count@\" } },\r\n            \"mac\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%1$#@count@ after %#@count@\" } }\r\n          } }\r\n        }\r\n      }\r\n    }\r\n  },\r\n  \"version\" : \"1.0\"\r\n}\r\n",
+  "slots": [
+    {
+      "id": "device.harbor🧭",
+      "selector": "lanes",
+      "variant": "one",
+      "start": 564,
+      "end": 578
+    },
+    {
+      "id": "device.harbor🧭",
+      "selector": "lanes",
+      "variant": "other",
+      "start": 666,
+      "end": 681
+    },
+    {
+      "id": "device.harbor🧭",
+      "selector": "lights",
+      "variant": "one",
+      "start": 949,
+      "end": 962
+    },
+    {
+      "id": "device.harbor🧭",
+      "selector": "lights",
+      "variant": "other",
+      "start": 1050,
+      "end": 1064
+    },
+    {
+      "id": "device.harbor🧭",
+      "start": 1239,
+      "end": 1280
+    },
+    {
+      "id": "device.unicode",
+      "selector": "信号",
+      "variant": "one",
+      "start": 2900,
+      "end": 2916
+    },
+    {
+      "id": "device.unicode",
+      "selector": "信号",
+      "variant": "other",
+      "start": 3004,
+      "end": 3021
+    },
+    {
+      "id": "device.unicode",
+      "start": 3179,
+      "end": 3195
+    },
+    {
+      "id": "device.echo",
+      "selector": "count",
+      "variant": "one",
+      "start": 3614,
+      "end": 3627
+    },
+    {
+      "id": "device.echo",
+      "selector": "count",
+      "variant": "other",
+      "start": 3721,
+      "end": 3736
+    },
+    {
+      "id": "device.echo",
+      "start": 3894,
+      "end": 3922
+    }
+  ]
+}

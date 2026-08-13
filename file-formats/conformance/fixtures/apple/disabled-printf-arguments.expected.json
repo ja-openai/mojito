@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "harbor.escaped": {
+      "defaultMessage": "%n {arg0} tide",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ]
+    },
+    "harbor.explicit": {
+      "defaultMessage": " {arg0} dock",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 0,
+            "source": "%2$n",
+            "argumentPosition": 2
+          }
+        ]
+      }
+    },
+    "harbor.implicit": {
+      "defaultMessage": "North  {arg1}",
+      "placeholders": [
+        {
+          "name": "arg1",
+          "source": "%@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 6,
+            "source": "%n",
+            "argumentPosition": 1
+          }
+        ]
+      }
+    },
+    "harbor.integer": {
+      "defaultMessage": " {arg1} markers",
+      "placeholders": [
+        {
+          "name": "arg1",
+          "source": "%d",
+          "kind": "integer",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 0,
+            "source": "%n",
+            "argumentPosition": 1
+          }
+        ]
+      }
+    },
+    "harbor.middle": {
+      "defaultMessage": "{arg0} dock  {arg2}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        },
+        {
+          "name": "arg2",
+          "source": "%@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 12,
+            "source": "%n",
+            "argumentPosition": 2
+          }
+        ]
+      }
+    },
+    "harbor.mixed": {
+      "defaultMessage": " {arg0} dock",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 0,
+            "source": "%2$n",
+            "argumentPosition": 2
+          }
+        ]
+      }
+    },
+    "harbor.overlap": {
+      "defaultMessage": " {arg0} lane",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 0,
+            "source": "%n",
+            "argumentPosition": 1
+          }
+        ]
+      }
+    },
+    "harbor.repeated": {
+      "defaultMessage": " {arg2} port",
+      "placeholders": [
+        {
+          "name": "arg2",
+          "source": "%@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 0,
+            "source": "%n",
+            "argumentPosition": 1
+          },
+          {
+            "position": 0,
+            "source": "%n",
+            "argumentPosition": 2
+          }
+        ]
+      }
+    },
+    "harbor.unicode.🧭": {
+      "defaultMessage": "🧭 {arg1} reef",
+      "placeholders": [
+        {
+          "name": "arg1",
+          "source": "%@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 1,
+            "source": "%n",
+            "argumentPosition": 1
+          }
+        ]
+      }
+    }
+  }
+}

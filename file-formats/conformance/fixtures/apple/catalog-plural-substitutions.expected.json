@@ -1,0 +1,368 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "implicit.argument": {
+      "defaultMessage": "Observed {amount, plural, one {{amount} beacon} other {{amount} beacons}}",
+      "placeholders": [
+        {
+          "name": "amount",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Observed %#@amount@"
+          },
+          "substitutions": {
+            "amount": {
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld beacon"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld beacons"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "translated",
+        "sourceSubstitutions": {
+          "amount": {
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld beacon"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld beacons"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "independent.counts": {
+      "defaultMessage": "Operator {arg2} tracks {signals, plural, one {{signals} orbital signal} other {{signals} orbital signals}} across {routes, plural, one {{routes} quiet route} other {{routes} quiet routes}}",
+      "description": "Two independent neutral plural substitutions and one positional operator.",
+      "placeholders": [
+        {
+          "name": "signals",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "routes",
+          "source": "%d",
+          "kind": "integer",
+          "position": 2
+        },
+        {
+          "name": "arg2",
+          "source": "%3$@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "appleLocalizationSources": {
+          "fr": {
+            "stringUnit": {
+              "state": "needs_review",
+              "value": "Opérateur %3$@ suit %#@signals@ sur %#@routes@"
+            },
+            "substitutions": {
+              "routes": {
+                "argNum": 2,
+                "formatSpecifier": "d",
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%d route tranquille"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "machine_translated",
+                        "value": "%d routes tranquilles"
+                      }
+                    }
+                  }
+                }
+              },
+              "signals": {
+                "argNum": 1,
+                "formatSpecifier": "lld",
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%lld signal orbital"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld signaux orbitaux"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Operator %3$@ tracks %#@signals@ across %#@routes@"
+          },
+          "substitutions": {
+            "routes": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%d quiet route"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%d quiet routes"
+                    }
+                  }
+                }
+              }
+            },
+            "signals": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld orbital signal"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld orbital signals"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "localizations": {
+          "fr": {
+            "state": "needs_review",
+            "value": "Opérateur %3$@ suit %#@signals@ sur %#@routes@"
+          }
+        },
+        "sourceState": "translated",
+        "sourceSubstitutions": {
+          "routes": {
+            "argNum": 2,
+            "formatSpecifier": "d",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "%d quiet route"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%d quiet routes"
+                  }
+                }
+              }
+            }
+          },
+          "signals": {
+            "argNum": 1,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld orbital signal"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld orbital signals"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "repeated.substitution": {
+      "defaultMessage": "{count, plural, one {{count} marker} other {{count} markers}} before {count, plural, one {{count} marker} other {{count} markers}}",
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@ before %#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%d marker"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%d markers"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "translated",
+        "sourceSubstitutions": {
+          "count": {
+            "argNum": 1,
+            "formatSpecifier": "d",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%d marker"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%d markers"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "unicode.substitution": {
+      "defaultMessage": "Received {信号, plural, one {{信号} pulse} other {{信号} pulses}}",
+      "placeholders": [
+        {
+          "name": "信号",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Received %#@信号@"
+          },
+          "substitutions": {
+            "信号": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld pulse"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld pulses"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "translated",
+        "sourceSubstitutions": {
+          "信号": {
+            "argNum": 1,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld pulse"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld pulses"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

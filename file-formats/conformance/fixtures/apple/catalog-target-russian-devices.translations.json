@@ -1,0 +1,12 @@
+{
+  "harbor.target.device.scalar🧭#@device#iphone": "На iPhone {arg0}  у маяка",
+  "harbor.target.device.scalar🧭#@device#mac": "На Mac {arg0}  у маяка",
+  "harbor.target.device.plural🧭#@device=iphone#one": "{arg1}  {count} обновлённый мобильный маяк",
+  "harbor.target.device.plural🧭#@device=iphone#few": "{arg1}  {count} обновлённый мобильный маяка",
+  "harbor.target.device.plural🧭#@device=iphone#many": "{arg1}  {count} обновлённый мобильный маяков",
+  "harbor.target.device.plural🧭#@device=iphone#other": "{arg1}  {count} обновлённый мобильный маяка",
+  "harbor.target.device.plural🧭#@device=mac#one": "{arg1}  {count} обновлённый настольный маяк",
+  "harbor.target.device.plural🧭#@device=mac#few": "{arg1}  {count} обновлённый настольный маяка",
+  "harbor.target.device.plural🧭#@device=mac#many": "{arg1}  {count} обновлённый настольный маяков",
+  "harbor.target.device.plural🧭#@device=mac#other": "{arg1}  {count} обновлённый настольный маяка"
+}

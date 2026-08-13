@@ -1,0 +1,96 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "harbor.escaped": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%%n %@ tide"
+          }
+        }
+      }
+    },
+    "harbor.explicit": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$n %1$@ dock"
+          }
+        }
+      }
+    },
+    "harbor.implicit": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "North %n %@"
+          }
+        }
+      }
+    },
+    "harbor.integer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%n %d markers"
+          }
+        }
+      }
+    },
+    "harbor.middle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ dock %n %@"
+          }
+        }
+      }
+    },
+    "harbor.mixed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$n %@ dock"
+          }
+        }
+      }
+    },
+    "harbor.overlap": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%n %1$@ lane"
+          }
+        }
+      }
+    },
+    "harbor.repeated": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%n%n %@ port"
+          }
+        }
+      }
+    },
+    "harbor.unicode.🧭": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🧭%n %@ reef"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\"?>\r\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\r\n<plist version=\"1.0\">\r\n  <!-- Preserve the entire native Foundation property-list document. -->\r\n  <dict>\r\n    <!-- Escaped message IDs and these structural notes remain untouched. -->\r\n    <key>dock&amp;count&#x1F9ED;</key>\r\n    <dict>\r\n      <key>NSStringLocalizedFormatKey</key>\r\n      <string>%#@signals@ near harbor</string>\r\n\r\n      <!-- The native plural variable and formatter declarations are protected. -->\r\n      <key>signals</key>\r\n      <dict>\r\n        <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>\r\n        <key>NSStringFormatValueTypeKey</key><string>ld</string>\r\n\r\n        <!-- Self-closing plural branches retain their original attribute spacing. -->\r\n        <key>zero</key><string custom=\"reserved\" />\r\n        <key>one</key><string><![CDATA[%ld calm & clear]]></string>\r\n        <key>other</key><string>%ld steady &amp; visible</string>\r\n\r\n        <!-- Typed future rule metadata is never translator-owned. -->\r\n        <key>NSStringFutureRuleMetadata</key><string>Keep &amp; protect</string>\r\n        <key>futureRuleEnabled</key><true/>\r\n        <key>futureRuleCount</key><integer>+007</integer>\r\n      </dict>\r\n\r\n      <!-- Nonselected device branches remain byte-identical. -->\r\n      <key>NSStringDeviceSpecificRuleType</key>\r\n      <dict>\r\n        <key>mac</key><string>Protected desktop instruction</string>\r\n        <key>iphone</key><string>Protected mobile instruction</string>\r\n      </dict>\r\n      <key>futureMessageList</key><array><string>Protected 🧭 metadata</string><false/></array>\r\n    </dict>\r\n\r\n    <!-- A pure plural remains executable by Foundation without a device override. -->\r\n    <key>solo.count</key>\r\n    <dict>\r\n      <key>NSStringLocalizedFormatKey</key><string>%#@lights@ near water</string>\r\n      <key>lights</key>\r\n      <dict>\r\n        <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>\r\n        <key>NSStringFormatValueTypeKey</key><string>ld</string>\r\n        <key>one</key><string>%ld bright light</string>\r\n        <key>other</key><string><![CDATA[%ld bright lights]]></string>\r\n      </dict>\r\n    </dict>\r\n\r\n    <!-- Each independent native selector owns its own plural-category slots. -->\r\n    <key>paired.route</key>\r\n    <dict>\r\n      <key>NSStringLocalizedFormatKey</key>\r\n      <string>%1$#@beacons@ across %2$#@lanes@</string>\r\n      <!-- Selector order and native formatter positions remain untouched. -->\r\n      <key>beacons</key>\r\n      <dict>\r\n        <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>\r\n        <key>NSStringFormatValueTypeKey</key><string>ld</string>\r\n        <key>one</key><string>%1$ld clear beacon</string>\r\n        <key>other</key><string><![CDATA[%1$ld clear beacons]]></string>\r\n      </dict>\r\n      <key>lanes</key>\r\n      <dict>\r\n        <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>\r\n        <key>NSStringFormatValueTypeKey</key><string>ld</string>\r\n        <key>one</key><string>%2$ld quiet lane</string>\r\n        <key>other</key><string>%2$ld quiet lanes</string>\r\n      </dict>\r\n      <key>futurePairedRule</key><true/>\r\n    </dict>\r\n\r\n    <!-- The widest native width owns the only canonical width translation. -->\r\n    <key>width.route</key>\r\n    <dict>\r\n      <key>NSStringVariableWidthRuleType</key>\r\n      <dict>\r\n        <key>008</key><string>Keep narrow %@</string>\r\n        <key>32</key><string><![CDATA[Broad %@ & clear]]></string>\r\n      </dict>\r\n      <key>futureWidthMetadata</key><integer>-0x10</integer>\r\n    </dict>\r\n\r\n    <!-- Only the Foundation-selected iPhone value belongs to this source slot. -->\r\n    <key>device.route</key>\r\n    <dict>\r\n      <key>NSStringDeviceSpecificRuleType</key>\r\n      <dict>\r\n        <key>mac</key><string>Keep desktop %@</string>\r\n        <key>iphone</key><string>Touch %@ &amp; continue</string>\r\n      </dict>\r\n      <key>futureDeviceMetadata</key><true/>\r\n    </dict>\r\n  </dict>\r\n</plist>\r\n",
+  "slots": [
+    {
+      "id": "dock&count🧭",
+      "variant": "zero",
+      "start": 875,
+      "end": 877
+    },
+    {
+      "id": "dock&count🧭",
+      "variant": "one",
+      "start": 909,
+      "end": 937
+    },
+    {
+      "id": "dock&count🧭",
+      "variant": "other",
+      "start": 980,
+      "end": 1004
+    },
+    {
+      "id": "solo.count",
+      "variant": "one",
+      "start": 2123,
+      "end": 2139
+    },
+    {
+      "id": "solo.count",
+      "variant": "other",
+      "start": 2182,
+      "end": 2211
+    },
+    {
+      "id": "paired.route",
+      "selector": "beacons",
+      "variant": "one",
+      "start": 2779,
+      "end": 2797
+    },
+    {
+      "id": "paired.route",
+      "selector": "beacons",
+      "variant": "other",
+      "start": 2840,
+      "end": 2871
+    },
+    {
+      "id": "paired.route",
+      "selector": "lanes",
+      "variant": "one",
+      "start": 3116,
+      "end": 3132
+    },
+    {
+      "id": "paired.route",
+      "selector": "lanes",
+      "variant": "other",
+      "start": 3175,
+      "end": 3192
+    },
+    {
+      "id": "width.route",
+      "start": 3542,
+      "end": 3570
+    },
+    {
+      "id": "device.route",
+      "start": 3951,
+      "end": 3974
+    }
+  ]
+}

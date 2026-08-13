@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+  <key>device.after🧭</key>
+  <dict>
+    <key>NSStringDeviceSpecificRuleType</key>
+    <dict>
+      <key>iphone</key>
+      <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+          <key>NSStringFormatSpecTypeKey</key>
+          <string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key>
+          <string>lld</string>
+          <key>one</key>
+          <string>%lld%n %@ pocket marker</string>
+          <key>other</key>
+          <string>%lld%n %@ pocket markers</string>
+        </dict>
+      </dict>
+      <key>mac</key>
+      <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+          <key>NSStringFormatSpecTypeKey</key>
+          <string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key>
+          <string>lld</string>
+          <key>one</key>
+          <string>%lld%n %@ desktop marker</string>
+          <key>other</key>
+          <string>%lld%n %@ desktop markers</string>
+        </dict>
+      </dict>
+    </dict>
+  </dict>
+  <key>device.escaped</key>
+  <dict>
+    <key>NSStringDeviceSpecificRuleType</key>
+    <dict>
+      <key>iphone</key>
+      <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+          <key>NSStringFormatSpecTypeKey</key>
+          <string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key>
+          <string>lld</string>
+          <key>one</key>
+          <string>%lld%%n %@ pocket marker</string>
+          <key>other</key>
+          <string>%lld%%n %@ pocket markers</string>
+        </dict>
+      </dict>
+      <key>mac</key>
+      <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+          <key>NSStringFormatSpecTypeKey</key>
+          <string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key>
+          <string>lld</string>
+          <key>one</key>
+          <string>%lld%%n %@ desktop marker</string>
+          <key>other</key>
+          <string>%lld%%n %@ desktop markers</string>
+        </dict>
+      </dict>
+    </dict>
+  </dict>
+  <key>device.explicit</key>
+  <dict>
+    <key>NSStringDeviceSpecificRuleType</key>
+    <dict>
+      <key>iphone</key>
+      <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+          <key>NSStringFormatSpecTypeKey</key>
+          <string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key>
+          <string>lld</string>
+          <key>one</key>
+          <string>%1$lld %3$n %2$@ pocket marker</string>
+          <key>other</key>
+          <string>%1$lld %3$n %2$@ pocket markers</string>
+        </dict>
+      </dict>
+      <key>mac</key>
+      <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+          <key>NSStringFormatSpecTypeKey</key>
+          <string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key>
+          <string>lld</string>
+          <key>one</key>
+          <string>%1$lld %3$n %2$@ desktop marker</string>
+          <key>other</key>
+          <string>%1$lld %3$n %2$@ desktop markers</string>
+        </dict>
+      </dict>
+    </dict>
+  </dict>
+  <key>device.repeated</key>
+  <dict>
+    <key>NSStringDeviceSpecificRuleType</key>
+    <dict>
+      <key>iphone</key>
+      <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+          <key>NSStringFormatSpecTypeKey</key>
+          <string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key>
+          <string>lld</string>
+          <key>one</key>
+          <string>%lld%n%n %@ pocket marker</string>
+          <key>other</key>
+          <string>%lld%n%n %@ pocket markers</string>
+        </dict>
+      </dict>
+      <key>mac</key>
+      <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+          <key>NSStringFormatSpecTypeKey</key>
+          <string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key>
+          <string>lld</string>
+          <key>one</key>
+          <string>%lld%n%n %@ desktop marker</string>
+          <key>other</key>
+          <string>%lld%n%n %@ desktop markers</string>
+        </dict>
+      </dict>
+    </dict>
+  </dict>
+</dict>
+</plist>

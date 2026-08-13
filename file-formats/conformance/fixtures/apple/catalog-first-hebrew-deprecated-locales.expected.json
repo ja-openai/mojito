@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "harbor.first.hebrew.deprecated.region🧭": {
+      "defaultMessage": "{count, plural, one {{count}  beacon {arg1}} other {{count}  beacons {arg1}}}",
+      "description": "Deprecated Hebrew locale spelling remains source-owned",
+      "variants": {
+        "one": "{count}  beacon {arg1}",
+        "other": "{count}  beacons {arg1}"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%1$lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%2$@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld %3$n beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld %3$n beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "sourcePluralStates": {
+          "one": "needs_review",
+          "other": "translated"
+        },
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ],
+            "other": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ]
+          }
+        },
+        "localizations": {
+          "de": {
+            "variants": {
+              "one": "%1$lld Signal %2$@",
+              "other": "%1$lld Signale %2$@"
+            },
+            "variantStates": {
+              "one": "translated",
+              "other": "future_review"
+            }
+          }
+        },
+        "appleLocalizationSources": {
+          "de": {
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%1$lld Signal %2$@"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "future_review",
+                    "value": "%1$lld Signale %2$@"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.first.hebrew.deprecated🧭": {
+      "defaultMessage": "{count, plural, one {{count}  beacon {arg1}} other {{count}  beacons {arg1}}}",
+      "description": "Deprecated Hebrew locale spelling remains source-owned",
+      "variants": {
+        "one": "{count}  beacon {arg1}",
+        "other": "{count}  beacons {arg1}"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%1$lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%2$@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld %3$n beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld %3$n beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "sourcePluralStates": {
+          "one": "needs_review",
+          "other": "translated"
+        },
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ],
+            "other": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ]
+          }
+        },
+        "localizations": {
+          "de": {
+            "variants": {
+              "one": "%1$lld Signal %2$@",
+              "other": "%1$lld Signale %2$@"
+            },
+            "variantStates": {
+              "one": "translated",
+              "other": "future_review"
+            }
+          }
+        },
+        "appleLocalizationSources": {
+          "de": {
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%1$lld Signal %2$@"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "future_review",
+                    "value": "%1$lld Signale %2$@"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

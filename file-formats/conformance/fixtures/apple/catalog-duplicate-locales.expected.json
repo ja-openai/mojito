@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "duplicate": {
+      "defaultMessage": "Source",
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        },
+        "sourceState": "translated",
+        "localizations": {
+          "fr-CA": {
+            "state": "translated",
+            "value": "Second"
+          },
+          "fr_CA": {
+            "state": "translated",
+            "value": "First"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr-CA": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Second"
+            }
+          },
+          "fr_CA": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "First"
+            }
+          }
+        }
+      }
+    }
+  }
+}

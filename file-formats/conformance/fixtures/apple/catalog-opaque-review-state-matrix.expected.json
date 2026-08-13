@@ -1,0 +1,448 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "harbor.review.0.new🧭": {
+      "defaultMessage": "Source new {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Source new %@"
+          }
+        },
+        "sourceState": "new",
+        "extractionState": "manual",
+        "localizations": {
+          "fr-CA": {
+            "value": "Ancien new %@",
+            "state": "invalid_future_state"
+          },
+          "de": {
+            "value": "Geschützt new %@",
+            "state": "preserved_future_state_0"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr-CA": {
+            "stringUnit": {
+              "state": "invalid_future_state",
+              "value": "Ancien new %@"
+            }
+          },
+          "de": {
+            "stringUnit": {
+              "state": "preserved_future_state_0",
+              "value": "Geschützt new %@"
+            }
+          }
+        },
+        "appleLocalizationIdentifiers": {
+          "fr-CA": "fr_CA"
+        }
+      },
+      "description": "Unknown state strings remain platform-owned opaque metadata"
+    },
+    "harbor.review.1.needs_review🧭": {
+      "defaultMessage": "Source needs_review {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Source needs_review %@"
+          }
+        },
+        "sourceState": "needs_review",
+        "extractionState": "stale",
+        "localizations": {
+          "fr-CA": {
+            "value": "Ancien needs_review %@",
+            "state": "untranslated"
+          },
+          "de": {
+            "value": "Geschützt needs_review %@",
+            "state": "preserved_future_state_1"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr-CA": {
+            "stringUnit": {
+              "state": "untranslated",
+              "value": "Ancien needs_review %@"
+            }
+          },
+          "de": {
+            "stringUnit": {
+              "state": "preserved_future_state_1",
+              "value": "Geschützt needs_review %@"
+            }
+          }
+        },
+        "appleLocalizationIdentifiers": {
+          "fr-CA": "fr_CA"
+        }
+      },
+      "description": "Unknown state strings remain platform-owned opaque metadata"
+    },
+    "harbor.review.2.translated🧭": {
+      "defaultMessage": "Source translated {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source translated %@"
+          }
+        },
+        "sourceState": "translated",
+        "extractionState": "manual",
+        "localizations": {
+          "fr-CA": {
+            "value": "Ancien translated %@",
+            "state": "future_review"
+          },
+          "de": {
+            "value": "Geschützt translated %@",
+            "state": "preserved_future_state_2"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr-CA": {
+            "stringUnit": {
+              "state": "future_review",
+              "value": "Ancien translated %@"
+            }
+          },
+          "de": {
+            "stringUnit": {
+              "state": "preserved_future_state_2",
+              "value": "Geschützt translated %@"
+            }
+          }
+        },
+        "appleLocalizationIdentifiers": {
+          "fr-CA": "fr_CA"
+        }
+      },
+      "description": "Unknown state strings remain platform-owned opaque metadata"
+    },
+    "harbor.review.3.machine_translated🧭": {
+      "defaultMessage": "Source machine_translated {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "machine_translated",
+            "value": "Source machine_translated %@"
+          }
+        },
+        "sourceState": "machine_translated",
+        "extractionState": "stale",
+        "localizations": {
+          "fr-CA": {
+            "value": "Ancien machine_translated %@",
+            "state": "stale"
+          },
+          "de": {
+            "value": "Geschützt machine_translated %@",
+            "state": "preserved_future_state_3"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr-CA": {
+            "stringUnit": {
+              "state": "stale",
+              "value": "Ancien machine_translated %@"
+            }
+          },
+          "de": {
+            "stringUnit": {
+              "state": "preserved_future_state_3",
+              "value": "Geschützt machine_translated %@"
+            }
+          }
+        },
+        "appleLocalizationIdentifiers": {
+          "fr-CA": "fr_CA"
+        }
+      },
+      "description": "Unknown state strings remain platform-owned opaque metadata"
+    },
+    "harbor.review.4.stale🧭": {
+      "defaultMessage": "Source stale {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "stale",
+            "value": "Source stale %@"
+          }
+        },
+        "sourceState": "stale",
+        "extractionState": "manual",
+        "localizations": {
+          "fr-CA": {
+            "value": "Ancien stale %@",
+            "state": "machine_translated"
+          },
+          "de": {
+            "value": "Geschützt stale %@",
+            "state": "preserved_future_state_4"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr-CA": {
+            "stringUnit": {
+              "state": "machine_translated",
+              "value": "Ancien stale %@"
+            }
+          },
+          "de": {
+            "stringUnit": {
+              "state": "preserved_future_state_4",
+              "value": "Geschützt stale %@"
+            }
+          }
+        },
+        "appleLocalizationIdentifiers": {
+          "fr-CA": "fr_CA"
+        }
+      },
+      "description": "Unknown state strings remain platform-owned opaque metadata"
+    },
+    "harbor.review.5.future_review🧭": {
+      "defaultMessage": "Source future_review {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "future_review",
+            "value": "Source future_review %@"
+          }
+        },
+        "sourceState": "future_review",
+        "extractionState": "stale",
+        "localizations": {
+          "fr-CA": {
+            "value": "Ancien future_review %@",
+            "state": "translated"
+          },
+          "de": {
+            "value": "Geschützt future_review %@",
+            "state": "preserved_future_state_5"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr-CA": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Ancien future_review %@"
+            }
+          },
+          "de": {
+            "stringUnit": {
+              "state": "preserved_future_state_5",
+              "value": "Geschützt future_review %@"
+            }
+          }
+        },
+        "appleLocalizationIdentifiers": {
+          "fr-CA": "fr_CA"
+        }
+      },
+      "description": "Unknown state strings remain platform-owned opaque metadata"
+    },
+    "harbor.review.6.untranslated🧭": {
+      "defaultMessage": "Source untranslated {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "untranslated",
+            "value": "Source untranslated %@"
+          }
+        },
+        "sourceState": "untranslated",
+        "extractionState": "manual",
+        "localizations": {
+          "fr-CA": {
+            "value": "Ancien untranslated %@",
+            "state": "needs_review"
+          },
+          "de": {
+            "value": "Geschützt untranslated %@",
+            "state": "preserved_future_state_6"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr-CA": {
+            "stringUnit": {
+              "state": "needs_review",
+              "value": "Ancien untranslated %@"
+            }
+          },
+          "de": {
+            "stringUnit": {
+              "state": "preserved_future_state_6",
+              "value": "Geschützt untranslated %@"
+            }
+          }
+        },
+        "appleLocalizationIdentifiers": {
+          "fr-CA": "fr_CA"
+        }
+      },
+      "description": "Unknown state strings remain platform-owned opaque metadata"
+    },
+    "harbor.review.7.invalid_future_state🧭": {
+      "defaultMessage": "Source invalid_future_state {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "invalid_future_state",
+            "value": "Source invalid_future_state %@"
+          }
+        },
+        "sourceState": "invalid_future_state",
+        "extractionState": "stale",
+        "localizations": {
+          "fr-CA": {
+            "value": "Ancien invalid_future_state %@",
+            "state": "new"
+          },
+          "de": {
+            "value": "Geschützt invalid_future_state %@",
+            "state": "preserved_future_state_7"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr-CA": {
+            "stringUnit": {
+              "state": "new",
+              "value": "Ancien invalid_future_state %@"
+            }
+          },
+          "de": {
+            "stringUnit": {
+              "state": "preserved_future_state_7",
+              "value": "Geschützt invalid_future_state %@"
+            }
+          }
+        },
+        "appleLocalizationIdentifiers": {
+          "fr-CA": "fr_CA"
+        }
+      },
+      "description": "Unknown state strings remain platform-owned opaque metadata"
+    },
+    "harbor.review.source.new.automatic🧭": {
+      "defaultMessage": "Automatic new source {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Automatic new source %@"
+          }
+        },
+        "sourceState": "new",
+        "extractionState": "invalid_future_extraction",
+        "localizations": {
+          "fr-CA": {
+            "value": "Automatique %@",
+            "state": "invalid_future_state"
+          },
+          "de": {
+            "value": "Automatisch %@",
+            "state": "machine_translated"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr-CA": {
+            "stringUnit": {
+              "state": "invalid_future_state",
+              "value": "Automatique %@"
+            }
+          },
+          "de": {
+            "stringUnit": {
+              "state": "machine_translated",
+              "value": "Automatisch %@"
+            }
+          }
+        },
+        "appleLocalizationIdentifiers": {
+          "fr-CA": "fr_CA"
+        }
+      },
+      "description": "Automatic new source entries remain absent from the development bundle"
+    }
+  }
+}

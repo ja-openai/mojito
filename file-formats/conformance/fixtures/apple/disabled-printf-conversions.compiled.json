@@ -1,0 +1,8 @@
+{
+  "escaped": "North%%nSouth",
+  "mixed.🧭": "🧭%nSnow\nLine%%n",
+  "physical": "North\nSouth",
+  "plain": "North%nSouth",
+  "positional": "West%2$nEast",
+  "repeated": "%nStart%n%nEnd%n"
+}

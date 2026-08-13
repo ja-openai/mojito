@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "encoding": "BINARY_PLIST",
+  "source": "62706c6973743030d2010203025b686172626f722e736166655c686172626f722e616c69617356737465616479080d1926000000000000010100000000000000040000000000000000000000000000002d",
+  "slots": [
+    {
+      "id": "harbor.alias",
+      "start": 12,
+      "end": 13,
+      "appleObjectIndex": 2
+    },
+    {
+      "id": "harbor.safe",
+      "start": 38,
+      "end": 45
+    }
+  ]
+}

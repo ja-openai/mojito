@@ -1,0 +1,33 @@
+{
+  "en.lproj/catalog.strings": {
+    "harbor.device": "Wide\nDock",
+    "harbor.line": "North\nSouth",
+    "harbor.literal": "North%%nSouth",
+    "harbor.positioned.🧭": "🧭West%2$nEast%n",
+    "harbor.zero": "North%nSouth"
+  },
+  "en.lproj/catalog.stringsdict": {
+    "harbor.device": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "Palm%nDock",
+        "mac": "Desk%%nDock"
+      }
+    },
+    "harbor.plural": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "d",
+        "one": "%d%n beacon",
+        "other": "%d%n%n beacons"
+      }
+    }
+  },
+  "fr.lproj/catalog.stringsdict": {
+    "harbor.device": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "Quai existant"
+      }
+    }
+  }
+}

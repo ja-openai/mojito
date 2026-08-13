@@ -1,0 +1,24 @@
+{
+  "en_US.lproj/catalog.stringsdict": {
+    "files": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld file",
+        "other": "%lld files"
+      }
+    }
+  },
+  "fr.lproj/catalog.stringsdict": {
+    "files": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%lld fichier",
+        "other": "%lld fichiers"
+      }
+    }
+  }
+}

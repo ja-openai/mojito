@@ -1,0 +1,21 @@
+{
+  "signal.width": {
+    "NSStringVariableWidthRuleType": {
+      "4": "Now",
+      "18": "Signal ready",
+      "48": "The neutral signal is ready"
+    }
+  },
+  "signal.device": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": "Touch %@",
+      "mac": "Click %@",
+      "applevision": "Focus on %@"
+    }
+  },
+  "literal.doctype": {
+    "NSStringVariableWidthRuleType": {
+      "12": "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">"
+    }
+  }
+}

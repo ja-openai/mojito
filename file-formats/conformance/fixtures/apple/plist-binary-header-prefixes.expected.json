@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "bplist": {
+      "defaultMessage": "Plain bplist harbor"
+    },
+    "bplist0": {
+      "defaultMessage": "Plain bplist0 harbor"
+    },
+    "bplist00": {
+      "defaultMessage": "Plain bplist00 harbor"
+    },
+    "bplist10": {
+      "defaultMessage": "Plain bplist10 harbor"
+    },
+    "bplista": {
+      "defaultMessage": "Plain bplista harbor"
+    }
+  }
+}

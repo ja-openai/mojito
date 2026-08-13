@@ -1,0 +1,27 @@
+{
+  "sourceLanguage": "en_US",
+  "strings": {
+    "files": {
+      "comment": "Downloaded file count",
+      "localizations": {
+        "en_US": {
+          "variations": {
+            "plural": {
+              "one": { "stringUnit": { "state": "translated", "value": "%lld file" } },
+              "other": { "stringUnit": { "state": "translated", "value": "%lld files" } }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": { "stringUnit": { "state": "translated", "value": "%lld fichier" } },
+              "other": { "stringUnit": { "state": "translated", "value": "%lld fichiers" } }
+            }
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

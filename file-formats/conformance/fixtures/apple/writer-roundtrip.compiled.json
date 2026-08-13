@@ -1,0 +1,9 @@
+{
+  "emoji🙂": "雪🙂",
+  "positioned": "%2$@ guides %1$lld routes at 75%%",
+  "snow☃": "Quiet snow",
+  "punctuation\\\"=;key": "Pilot \"north\"\nDeck\tA\\B",
+  "printf_line": "north%nready",
+  "-private": "Private-use sort boundary",
+  "controls": "zero\u0000 one\u0001 bell\u0007 back\b form\f del"
+}

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+  <dict>
+    <!-- Native empty typed metadata must survive without changing its source spelling. -->
+    <key>dock.empty</key>
+    <dict>
+      <key>NSStringLocalizedFormatKey</key>
+      <string>%#@signals@ across the inlet</string>
+      <key>signals</key>
+      <dict>
+        <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+        <key>NSStringFormatValueTypeKey</key><string>ld</string>
+        <key>one</key><string>%ld visible beacon</string>
+        <key>other</key><string><![CDATA[%ld visible beacons]]></string>
+        <!-- Rule-owned zero-length data is legal only with an explicit end tag. -->
+        <key>futureRuleData</key><data></data>
+      </dict>
+
+      <!-- Literal <data/> inside comments must not be mistaken for a typed tag. -->
+      <?native preserve="literal <data/> marker"?>
+      <!-- Whitespace inside explicit data is ignored by native base64 decoding. -->
+      <key>futureEmptyData</key><data></data>
+      <key>futureWhitespaceData</key><data> 	
+      </data>
+      <key>futurePayload</key><data>YQ==</data>
+
+      <!-- Both self-closing and explicit empty collections are native-valid. -->
+      <key>futureEmptyArray</key><array />
+      <key>futureExplicitArray</key><array></array>
+      <key>futureEmptyDictionary</key><dict />
+      <key>futureExplicitDictionary</key><dict></dict>
+
+      <!-- Empty string and boolean representations retain their original bytes. -->
+      <key>futureEmptyString</key><string />
+      <key>futureExplicitString</key><string></string>
+      <key>futureLiteralMarker</key><string><![CDATA[Literal <data/> remains visible]]></string>
+      <key>futureTrue</key><true></true>
+      <key>futureFalse</key><false/>
+
+      <!-- Nested containers have the same explicit-only empty-data contract. -->
+      <key>futureStructured</key>
+      <array>
+        <data></data>
+        <dict><key>nestedEmptyData</key><data></data></dict>
+        <array></array>
+      </array>
+    </dict>
+  </dict>
+</plist>

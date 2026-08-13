@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "dock.signals": {
+      "defaultMessage": "{signals, plural, one {{signals} steady beacon} other {{signals} steady beacons}} near shore",
+      "variants": {
+        "one": "{signals} steady beacon",
+        "other": "{signals} steady beacons"
+      },
+      "placeholders": [
+        {
+          "name": "signals",
+          "source": "%ld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@signals@ near shore",
+        "applePlistExtras": {
+          "futureRulePriority": 7
+        },
+        "applePluralRules": {
+          "signals": {
+            "valueType": "ld",
+            "variants": {
+              "one": "%ld steady beacon",
+              "other": "%ld steady beacons"
+            }
+          }
+        },
+        "pluralVariable": "signals",
+        "valueType": "ld"
+      }
+    }
+  }
+}

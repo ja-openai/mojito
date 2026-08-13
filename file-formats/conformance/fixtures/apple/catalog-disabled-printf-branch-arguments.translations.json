@@ -1,0 +1,17 @@
+{
+  "harbor.after": "Suive {count}",
+  "harbor.after#count#one": "{count} {arg2} voie",
+  "harbor.after#count#other": "{count} {arg2} voies",
+  "harbor.escaped": "Suive {count}",
+  "harbor.escaped#count#one": "{count}%n {arg1} voie",
+  "harbor.escaped#count#other": "{count}%n {arg1} voies",
+  "harbor.explicit": "Suive {arg0} {count}",
+  "harbor.explicit#count#one": "{count}  {arg3} voie",
+  "harbor.explicit#count#other": "{count}  {arg3} voies",
+  "harbor.overlap": "Suive {count}",
+  "harbor.overlap#count#one": "{count}  {arg1} voie",
+  "harbor.overlap#count#other": "{count}  {arg1} voies",
+  "harbor.repeated": "Suive {count}",
+  "harbor.repeated#count#one": "{count} {arg3} voie",
+  "harbor.repeated#count#other": "{count} {arg3} voies"
+}

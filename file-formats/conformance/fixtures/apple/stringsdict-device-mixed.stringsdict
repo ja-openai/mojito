@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>neutral.scalar-plural🧭</key><dict>
+    <key>NSStringDeviceSpecificRuleType</key><dict>
+      <key>iphone</key><string>Tap mobile coast</string>
+      <key>mac</key><dict>
+        <key>NSStringLocalizedFormatKey</key><string>%#@lights@</string>
+        <key>lights</key><dict>
+          <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key><string>lld</string>
+          <key>one</key><string>%lld desktop beacon</string>
+          <key>other</key><string>%lld desktop beacons</string>
+        </dict>
+      </dict>
+    </dict>
+  </dict>
+  <key>neutral.plural-scalar🧭</key><dict>
+    <key>NSStringDeviceSpecificRuleType</key><dict>
+      <key>iphone</key><dict>
+        <key>NSStringLocalizedFormatKey</key><string>%#@lights@</string>
+        <key>lights</key><dict>
+          <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key><string>lld</string>
+          <key>one</key><string>%lld mobile lamp</string>
+          <key>other</key><string>%lld mobile lamps</string>
+        </dict>
+      </dict>
+      <key>mac</key><string>Click desktop pier</string>
+    </dict>
+  </dict>
+  <key>neutral.scalar-width🧭</key><dict>
+    <key>NSStringDeviceSpecificRuleType</key><dict>
+      <key>iphone</key><string>Tap mobile quay</string>
+      <key>mac</key><dict>
+        <key>NSStringVariableWidthRuleType</key><dict>
+          <key>5</key><string>Mac%n near</string>
+          <key>040</key><string>Mac
+open coast</string>
+        </dict>
+      </dict>
+    </dict>
+  </dict>
+  <key>neutral.width-scalar🧭</key><dict>
+    <key>NSStringDeviceSpecificRuleType</key><dict>
+      <key>iphone</key><dict>
+        <key>NSStringVariableWidthRuleType</key><dict>
+          <key>5</key><string>Tap%n cove</string>
+          <key>040</key><string>Tap%%n open tide</string>
+        </dict>
+      </dict>
+      <key>mac</key><string>Click desktop harbor</string>
+    </dict>
+  </dict>
+  <key>neutral.plural-width🧭</key><dict>
+    <key>NSStringDeviceSpecificRuleType</key><dict>
+      <key>iphone</key><dict>
+        <key>NSStringLocalizedFormatKey</key><string>%#@lights@</string>
+        <key>lights</key><dict>
+          <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key><string>lld</string>
+          <key>one</key><string>%lld mobile signal</string>
+          <key>other</key><string>%lld mobile signals</string>
+        </dict>
+      </dict>
+      <key>mac</key><dict>
+        <key>NSStringVariableWidthRuleType</key><dict>
+          <key>5</key><string>West%n cove</string>
+          <key>040</key><string>West
+open shore</string>
+        </dict>
+      </dict>
+    </dict>
+  </dict>
+  <key>neutral.width-plural🧭</key><dict>
+    <key>NSStringDeviceSpecificRuleType</key><dict>
+      <key>iphone</key><dict>
+        <key>NSStringVariableWidthRuleType</key><dict>
+          <key>5</key><string>East%n point</string>
+          <key>040</key><string>East%%n open bay</string>
+        </dict>
+      </dict>
+      <key>mac</key><dict>
+        <key>NSStringLocalizedFormatKey</key><string>%#@lights@</string>
+        <key>lights</key><dict>
+          <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key><string>lld</string>
+          <key>one</key><string>%lld desktop buoy</string>
+          <key>other</key><string>%lld desktop buoys</string>
+        </dict>
+      </dict>
+    </dict>
+  </dict>
+  <key>neutral.three-shapes🧭</key><dict>
+    <key>NSStringDeviceSpecificRuleType</key><dict>
+      <key>iphone</key><dict>
+        <key>NSStringLocalizedFormatKey</key><string>%#@lights@</string>
+        <key>lights</key><dict>
+          <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key><string>lld</string>
+          <key>one</key><string>%lld mobile trail</string>
+          <key>other</key><string>%lld mobile trails</string>
+        </dict>
+      </dict>
+      <key>mac</key><dict>
+        <key>NSStringVariableWidthRuleType</key><dict>
+          <key>5</key><string>Bay%n near</string>
+          <key>040</key><string>Bay
+open water</string>
+        </dict>
+      </dict>
+      <key>other</key><string>Plain fallback harbor</string>
+    </dict>
+  </dict>
+</dict></plist>

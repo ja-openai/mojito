@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-16LE-BOM",
+  "source": "{\n  \"sourceLanguage\": \"en\",\n  \"version\": \"1.0\",\n  \"strings\": {\n    \"harbor.first.english.british.obsolete🧭\": {\n      \"comment\": \"Obsolete territories and numeric world regions remain source-owned\",\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"%1$lld %3$n beacon %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld %3$n beacons %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"de\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld Signal %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"future_review\",\n                  \"value\": \"%1$lld Signale %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"en-UK\": null\n      }\n    },\n    \"harbor.first.english.world.numeric🧭\": {\n      \"comment\": \"Obsolete territories and numeric world regions remain source-owned\",\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"%1$lld %3$n beacon %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld %3$n beacons %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"de\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld Signal %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"future_review\",\n                  \"value\": \"%1$lld Signale %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"en-001\": null\n      }\n    },\n    \"Private English territory harbor\": {\n      \"shouldTranslate\": false,\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"%1$lld %3$n beacon %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld %3$n beacons %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"en-UK\": null,\n        \"en-001\": null\n      }\n    }\n  }\n}\n",
+  "appleTargetLocale": "en-001",
+  "slots": [
+    {
+      "id": "harbor.first.english.british.obsolete🧭",
+      "start": 2374,
+      "end": 2374
+    },
+    {
+      "id": "harbor.first.english.world.numeric🧭",
+      "start": 4640,
+      "end": 4648
+    }
+  ]
+}

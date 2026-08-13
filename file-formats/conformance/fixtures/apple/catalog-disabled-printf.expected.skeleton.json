@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"sourceLanguage\": \"en\",\n  \"strings\": {\n    \"harbor.zero\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"North%nSouth\"\n          }\n        }\n      }\n    },\n    \"harbor.literal\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"North%%nSouth\"\n          }\n        }\n      }\n    },\n    \"harbor.line\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"North\\nSouth\"\n          }\n        }\n      }\n    },\n    \"harbor.positioned.🧭\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"🧭West%2$nEast%n\"\n          }\n        }\n      }\n    },\n    \"harbor.device\": {\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Palm%nDock\"\n                }\n              },\n              \"mac\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Desk%%nDock\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Wide\\nDock\"\n                }\n              }\n            }\n          }\n        },\n        \"fr\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Quai existant\"\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"harbor.plural\": {\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%d%n beacon\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%d%n%n beacons\"\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  },\n  \"version\": \"1.0\"\n}\n",
+  "slots": [
+    {
+      "id": "harbor.zero",
+      "start": 188,
+      "end": 200
+    },
+    {
+      "id": "harbor.literal",
+      "start": 387,
+      "end": 400
+    },
+    {
+      "id": "harbor.line",
+      "start": 584,
+      "end": 596
+    },
+    {
+      "id": "harbor.positioned.🧭",
+      "start": 791,
+      "end": 809
+    },
+    {
+      "id": "harbor.device",
+      "start": 1089,
+      "end": 1099
+    },
+    {
+      "id": "harbor.plural",
+      "start": 2048,
+      "end": 2059,
+      "variant": "one"
+    },
+    {
+      "id": "harbor.plural",
+      "start": 2222,
+      "end": 2236,
+      "variant": "other"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "neutral.harbor🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringLocalizedFormatKey": "%#@lights@",
+        "lights": {
+          "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+          "NSStringFormatValueTypeKey": "lld",
+          "one": "%lld mobile lantern",
+          "other": "%lld mobile lanterns"
+        }
+      },
+      "mac": {
+        "NSStringLocalizedFormatKey": "%#@lights@",
+        "lights": {
+          "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+          "NSStringFormatValueTypeKey": "lld",
+          "one": "%lld desktop beacon",
+          "other": "%lld desktop beacons"
+        }
+      }
+    }
+  }
+}

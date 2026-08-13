@@ -1,0 +1,762 @@
+{
+  "sourceLanguage": "zh-Hans",
+  "version": "1.0",
+  "strings": {
+    "harbor.target.substitution.scalar🧭": {
+      "comment": "Russian target definitions own plural categories independently",
+      "localizations": {
+        "zh-cmn-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guide %3$@: %#@lanes@ beside %2$#@lights@"
+          },
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "future_review",
+            "value": "Маршрут %3$@: %#@lanes@ рядом %2$#@lights@"
+          },
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld %4$n полоса"
+                    }
+                  },
+                  "few": {
+                    "stringUnit": {
+                      "state": "new",
+                      "value": "%1$lld %4$n полосы"
+                    }
+                  },
+                  "many": {
+                    "stringUnit": {
+                      "state": "future_review",
+                      "value": "%1$lld %4$n полос"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %4$n полосы"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d %4$n огонь"
+                    }
+                  },
+                  "few": {
+                    "stringUnit": {
+                      "state": "new",
+                      "value": "%2$d %4$n огня"
+                    }
+                  },
+                  "many": {
+                    "stringUnit": {
+                      "state": "future_review",
+                      "value": "%2$d %4$n огней"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d %4$n огня"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.target.substitution.device🧭": {
+      "comment": "Russian target substitutions are shared by iPhone and Mac roots",
+      "localizations": {
+        "zh-cmn-Hans": {
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld %4$n полоса"
+                    }
+                  },
+                  "few": {
+                    "stringUnit": {
+                      "state": "new",
+                      "value": "%1$lld %4$n полосы"
+                    }
+                  },
+                  "many": {
+                    "stringUnit": {
+                      "state": "future_review",
+                      "value": "%1$lld %4$n полос"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %4$n полосы"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d %4$n огонь"
+                    }
+                  },
+                  "few": {
+                    "stringUnit": {
+                      "state": "new",
+                      "value": "%2$d %4$n огня"
+                    }
+                  },
+                  "many": {
+                    "stringUnit": {
+                      "state": "future_review",
+                      "value": "%2$d %4$n огней"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d %4$n огня"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "new",
+                  "value": "На iPhone %3$@: %#@lanes@ рядом %2$#@lights@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "future_review",
+                  "value": "На Mac %3$@: %2$#@lights@ вокруг %#@lanes@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Private target Russian substitution branches": {
+      "shouldTranslate": false,
+      "localizations": {
+        "zh-cmn-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guide %3$@: %#@lanes@ beside %2$#@lights@"
+          },
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "future_review",
+            "value": "Маршрут %3$@: %#@lanes@ рядом %2$#@lights@"
+          },
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld %4$n полоса"
+                    }
+                  },
+                  "few": {
+                    "stringUnit": {
+                      "state": "new",
+                      "value": "%1$lld %4$n полосы"
+                    }
+                  },
+                  "many": {
+                    "stringUnit": {
+                      "state": "future_review",
+                      "value": "%1$lld %4$n полос"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld %4$n полосы"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d %4$n огонь"
+                    }
+                  },
+                  "few": {
+                    "stringUnit": {
+                      "state": "new",
+                      "value": "%2$d %4$n огня"
+                    }
+                  },
+                  "many": {
+                    "stringUnit": {
+                      "state": "future_review",
+                      "value": "%2$d %4$n огней"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d %4$n огня"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.target.substitution.missing.scalar🧭": {
+      "comment": "One complete ICU message atomically owns target substitution trees",
+      "localizations": {
+        "zh-cmn-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guide %3$@: %#@lanes@ beside %2$#@lights@"
+          },
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.target.substitution.null.scalar🧭": {
+      "comment": "One complete ICU message atomically owns target substitution trees",
+      "localizations": {
+        "zh-cmn-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guide %3$@: %#@lanes@ beside %2$#@lights@"
+          },
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "ru": null
+      }
+    },
+    "harbor.target.substitution.missing.device🧭": {
+      "comment": "One complete ICU message atomically owns target substitution trees",
+      "localizations": {
+        "zh-cmn-Hans": {
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.target.substitution.null.device🧭": {
+      "comment": "One complete ICU message atomically owns target substitution trees",
+      "localizations": {
+        "zh-cmn-Hans": {
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+                }
+              }
+            }
+          }
+        },
+        "ru": null
+      }
+    },
+    "Private missing Russian substitution tree": {
+      "shouldTranslate": false,
+      "localizations": {
+        "zh-cmn-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guide %3$@: %#@lanes@ beside %2$#@lights@"
+          },
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Private null Russian substitution tree": {
+      "shouldTranslate": false,
+      "localizations": {
+        "zh-cmn-Hans": {
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+                }
+              }
+            }
+          }
+        },
+        "ru": null
+      }
+    }
+  }
+}

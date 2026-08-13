@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "direct.navigation": {
+      "defaultMessage": "North & 🧭",
+      "description": "Ampersands and supplementary scalars remain native values."
+    },
+    "direct.route": {
+      "defaultMessage": "Direct {arg0} harbor",
+      "description": "Direct dictionary roots load through real Foundation bundles.",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "arabic.hex": {
+      "defaultMessage": "\u0000٠٠٤١!"
+    },
+    "ascii.control.whitespace": {
+      "defaultMessage": "Expected ASCII boundary",
+      "description": "Vertical tab and form feed are native grammar whitespace."
+    },
+    "commented.shortcut": {
+      "defaultMessage": "commented.shortcut",
+      "description": "Shortcut resources can carry structural comments."
+    },
+    "fullwidth.hex": {
+      "defaultMessage": "\u0000００４１!",
+      "description": "Foundation recognizes only ASCII hexadecimal escape digits."
+    },
+    "https://neutral.route": {
+      "defaultMessage": "https://safe.harbor",
+      "description": "Bare slashes remain identifiers, including URL-looking spellings."
+    },
+    "line.route": {
+      "defaultMessage": "Steady orbital route",
+      "description": "Structural line comments can precede every grammar separator."
+    },
+    "quoted.route": {
+      "defaultMessage": "Visible amber route",
+      "description": "Only leading translator notes survive structural comments."
+    },
+    "quoted.unicode.spaces": {
+      "defaultMessage": "alpha betagamma delta​omega",
+      "description": "Nonseparator Unicode remains valid inside a quoted value."
+    },
+    "route_7.$/north:west-2": {
+      "defaultMessage": "south_3.$/east:bank-1",
+      "description": "Only comments before the key describe this unquoted resource."
+    },
+    "unicode.block.context": {
+      "defaultMessage": "Normalized block context",
+      "description": "Padded translator context"
+    },
+    "unicode.line.context": {
+      "defaultMessage": "Normalized line context",
+      "description": "Padded line context"
+    },
+    "unicode.separators": {
+      "defaultMessage": "Expected landing",
+      "description": "Foundation accepts its two explicit Unicode line separators."
+    }
+  }
+}

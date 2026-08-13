@@ -1,0 +1,47 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "future.device": {
+      "comment": "Original neutral future-device fallback.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "device": {
+              "future_": {
+                "stringUnit": {
+                  "state": "future_review",
+                  "value": "Private orbital %@"
+                }
+              },
+              "future_😃": {
+                "stringUnit": {
+                  "state": "machine_translated",
+                  "value": "Bright orbital %@"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "device": {
+              "future_": {
+                "stringUnit": {
+                  "state": "machine_translated",
+                  "value": "Orbital privé %@"
+                }
+              },
+              "future_😃": {
+                "stringUnit": {
+                  "state": "new",
+                  "value": "Orbital lumineux %@"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

@@ -1,0 +1,65 @@
+{
+  "harbor.after": {
+    "NSStringLocalizedFormatKey": "%#@count@",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%n %@ beacon",
+      "other": "%d%n %@ beacons"
+    }
+  },
+  "harbor.repeated": {
+    "NSStringLocalizedFormatKey": "%#@count@",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%n%n %@ beacon",
+      "other": "%d%n%n %@ beacons"
+    }
+  },
+  "harbor.explicit": {
+    "NSStringLocalizedFormatKey": "%#@count@",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d %3$n %2$@ beacon",
+      "other": "%d %3$n %2$@ beacons"
+    }
+  },
+  "harbor.overlap": {
+    "NSStringLocalizedFormatKey": "%#@count@",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d %2$n %@ beacon",
+      "other": "%d %2$n %@ beacons"
+    }
+  },
+  "harbor.positioned": {
+    "NSStringLocalizedFormatKey": "%#@count@",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%n %3$@ beacon",
+      "other": "%d%n %3$@ beacons"
+    }
+  },
+  "harbor.escaped": {
+    "NSStringLocalizedFormatKey": "%#@count@",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%%n %@ beacon",
+      "other": "%d%%n %@ beacons"
+    }
+  },
+  "harbor.unicode.🧭": {
+    "NSStringLocalizedFormatKey": "%#@count@",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%n %@ 🧭",
+      "other": "%d%n %@ 🧭🧭"
+    }
+  }
+}

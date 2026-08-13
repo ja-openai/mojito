@@ -1,0 +1,42 @@
+{
+  "files.remaining": {
+    "NSStringLocalizedFormatKey": "%#@files@ remaining",
+    "files": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d file",
+      "other": "%d files",
+      "NSStringFutureRuleMetadata": "Fresh <rule> & annotation",
+      "futureRuleEnabled": true,
+      "futureRuleNegative": -19,
+      "futureRuleDictionary": {
+        "NSStringFormatSpecTypeKey": "nested lookalike",
+        "enabled": false,
+        "count": 23
+      }
+    },
+    "futureEnabled": true,
+    "futureDisabled": false,
+    "futureNegative": -16,
+    "futurePositive": 7,
+    "futureHexadecimal": 255,
+    "futureMinimum": -9223372036854775808,
+    "futureMaximum": 18446744073709551615,
+    "futureLabel": "Fresh <amber> & quiet harbor",
+    "futureEmptyDictionary": {},
+    "futureNestedMetadata": {
+      "NSStringLocalizedFormatKey": "reserved-looking nested value",
+      "child": {
+        "enabled": false,
+        "count": -12,
+        "notes": "A neutral & original signal"
+      },
+      "": "private-use sorting",
+      "🛰": "supplementary sorting"
+    },
+    "futureUnknownRule": {
+      "NSStringFormatSpecTypeKey": "NSStringFutureRuleType",
+      "enabled": true
+    }
+  }
+}

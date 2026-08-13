@@ -1,0 +1,6 @@
+{
+  "quoted\"key": "Line one\nLine two\t\"quoted\"",
+  "unicode": "Snowman: ☃, smile: 😃",
+  "octal": "AB",
+  "continued": "hello\nworld"
+}

@@ -1,0 +1,91 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "harbor.null.plain🧭": {
+      "comment": "A neutral nullable source with existing review ownership",
+      "extractionState": "stale",
+      "localizations": {
+        "en": {"stringUnit":{"state":"translated","value":"Abri \"paisible\" 🧭"}},
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Abri existant"
+          }
+        }
+      }
+    },
+    "North %n %@ 🧭": {
+      "localizations": {
+        "en": {"stringUnit":{"state":"translated","value":"Ouest %n %@ 🧭"}},
+        "fr": {
+          "stringUnit": {
+            "state": "machine_translated",
+            "value": "Nord %@ conservé"
+          }
+        }
+      }
+    },
+    "%@ %n %@ anchorage": {
+      "localizations": {
+        "en": {"stringUnit":{"state":"translated","value":"%@ %n %@ mouillage"}},
+        "fr": {
+          "stringUnit": {
+            "state": "future_review",
+            "value": "%@ %@ mouillage existant"
+          }
+        }
+      }
+    },
+    "West %2$n %1$@ pier": {
+      "localizations": {
+        "en": {"stringUnit":{"state":"translated","value":"Ouest %2$n %1$@ jetée"}},
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouest %1$@ jetée existante"
+          }
+        }
+      }
+    },
+    "Tide %%n %@ marker": {
+      "localizations": {
+        "en": {"stringUnit":{"state":"translated","value":"Marée %%n %@ balise"}},
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Marée %%n %@ existante"
+          }
+        }
+      }
+    },
+    "owned.scalar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Stable %@ rive"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "stale",
+            "value": "Rive %@ protégée"
+          }
+        }
+      }
+    },
+    "Private null pier": {
+      "shouldTranslate": false,
+      "localizations": {
+        "en": null,
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetée privée protégée"
+          }
+        }
+      }
+    }
+  }
+}

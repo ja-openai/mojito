@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "fallback.key": {
+      "defaultMessage": "fallback.key",
+      "metadata": {
+        "appleLocalizationSources": {
+          "de": {
+            "stringUnit": {
+              "state": "needs_review",
+              "value": "Ersatz"
+            }
+          }
+        },
+        "localizations": {
+          "de": {
+            "state": "needs_review",
+            "value": "Ersatz"
+          }
+        }
+      }
+    },
+    "welcome": {
+      "defaultMessage": "Hello, {arg0}!",
+      "description": "Welcome screen greeting",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizationSources": {
+          "fr": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Bonjour, %@ !"
+            }
+          }
+        },
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hello, %@!"
+          }
+        },
+        "extractionState": "manual",
+        "localizations": {
+          "fr": {
+            "state": "translated",
+            "value": "Bonjour, %@ !"
+          }
+        },
+        "sourceState": "translated"
+      }
+    }
+  }
+}

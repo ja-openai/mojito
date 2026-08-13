@@ -1,0 +1,24 @@
+{
+  "de.lproj/catalog.strings": {
+    "North %n %@ 🧭": "Nord %@ geschützt",
+    "harbor.target.missing🧭": "Ruhiger Hafen"
+  },
+  "en.lproj/catalog.strings": {
+    "%@ %n %@ anchorage": "%@ %n %@ anchorage",
+    "North %n %@ 🧭": "North %n %@ 🧭",
+    "Private target missing pier": "Private %@ missing source",
+    "Private target null pier": "Private %@ source",
+    "Tide %%n %@ marker": "Tide %%n %@ marker",
+    "West %2$n %1$@ pier": "West %2$n %1$@ pier",
+    "harbor.target.missing🧭": "Calm harbor 🧭",
+    "owned.scalar": "Steady %@ shore"
+  },
+  "fr.lproj/catalog.strings": {
+    "%@ %n %@ anchorage": "%@ %@ mouillage distinct"
+  },
+  "fr_CA.lproj/catalog.strings": {
+    "Tide %%n %@ marker": "Marée %%n %@ existante",
+    "West %2$n %1$@ pier": "Ancien %2$n %1$@ quai",
+    "owned.scalar": "Rive %@ existante"
+  }
+}

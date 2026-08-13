@@ -1,0 +1,18 @@
+[
+  {
+    "en.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "Source"
+    },
+    "zh-Hant.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "First catalog locale cmn-Hant"
+    }
+  },
+  {
+    "en.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "Source"
+    },
+    "zh-Hant.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "Second catalog locale zh-Hant"
+    }
+  }
+]

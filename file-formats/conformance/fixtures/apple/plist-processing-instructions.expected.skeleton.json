@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<?route source=\"north\"?>\n<!-- Preserve native preamble instructions before the trusted public declaration. -->\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<?after-doctype owner=\"platform\"?>\n<plist version=\"1.0\">\n  <?plist-state mode=\"protected\"?>\n  <dict>\n    <?dictionary-start signal=\"kept\"?>\n    <!-- Explain the formatted harbor route to translators. -->\n    <?before-key owner=\"structure\"?>\n    <key>harbor.route</key>\n    <?between-key-value owner=\"structure\"?>\n    <string>Guide %1$@ across north water</string>\n    <?after-value owner=\"structure\"?>\n\n    <!-- Keep an originally self-closing entry source-preserving. -->\n    <key>quiet.empty</key>\n    <?before-empty signal=\"stable\"?>\n    <string custom=\"protected\" />\n\n    <!-- Native CDATA and literal markup remain visible text. -->\n    <key>wrapped&amp;signal</key>\n    <?before-cdata signal=\"stable\"?>\n    <string><![CDATA[<calm> & clear]]></string>\n    <?dictionary-end signal=\"kept\"?>\n  </dict>\n  <?plist-end mode=\"protected\"?>\n</plist>\n<?document-end source=\"north\"?>\n",
+  "slots": [
+    {
+      "id": "harbor.route",
+      "start": 578,
+      "end": 607
+    },
+    {
+      "id": "quiet.empty",
+      "start": 821,
+      "end": 823
+    },
+    {
+      "id": "wrapped&signal",
+      "start": 974,
+      "end": 1000
+    }
+  ]
+}

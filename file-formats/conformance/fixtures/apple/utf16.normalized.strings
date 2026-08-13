@@ -1,0 +1,2 @@
+// Non-ASCII survives UTF-16 decoding.
+"bonjour" = "Café ☕";

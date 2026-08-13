@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "quoted\"key": {
+      "defaultMessage": "Line one\nLine two\t\"quoted\"",
+      "description": "Escaped quotes, line feeds, and tabs"
+    },
+    "unicode": { "defaultMessage": "Snowman: ☃, smile: 😃" },
+    "octal": { "defaultMessage": "AB" },
+    "continued": { "defaultMessage": "hello\nworld" }
+  }
+}

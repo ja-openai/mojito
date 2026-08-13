@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"sourceLanguage\": \"en\",\n  \"strings\": {\n    \"device.after🧭\": {\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%lld%n %@ pocket marker\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%lld%n %@ pocket markers\"\n                      }\n                    }\n                  }\n                }\n              },\n              \"mac\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%lld%n %@ desktop marker\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%lld%n %@ desktop markers\"\n                      }\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"device.repeated\": {\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%lld%n%n %@ pocket marker\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%lld%n%n %@ pocket markers\"\n                      }\n                    }\n                  }\n                }\n              },\n              \"mac\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%lld%n%n %@ desktop marker\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%lld%n%n %@ desktop markers\"\n                      }\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"device.explicit\": {\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%1$lld %3$n %2$@ pocket marker\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%1$lld %3$n %2$@ pocket markers\"\n                      }\n                    }\n                  }\n                }\n              },\n              \"mac\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%1$lld %3$n %2$@ desktop marker\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%1$lld %3$n %2$@ desktop markers\"\n                      }\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"device.escaped\": {\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%lld%%n %@ pocket marker\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%lld%%n %@ pocket markers\"\n                      }\n                    }\n                  }\n                }\n              },\n              \"mac\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%lld%%n %@ desktop marker\"\n                      }\n                    },\n                    \"other\": {\n                      \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"%lld%%n %@ desktop markers\"\n                      }\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  },\n  \"version\": \"1.0\"\n}\n",
+  "slots": [
+    {
+      "id": "device.after🧭",
+      "selector": "@device=iphone",
+      "variant": "one",
+      "start": 396,
+      "end": 419
+    },
+    {
+      "id": "device.after🧭",
+      "selector": "@device=iphone",
+      "variant": "other",
+      "start": 618,
+      "end": 642
+    },
+    {
+      "id": "device.after🧭",
+      "selector": "@device=mac",
+      "variant": "one",
+      "start": 978,
+      "end": 1002
+    },
+    {
+      "id": "device.after🧭",
+      "selector": "@device=mac",
+      "variant": "other",
+      "start": 1201,
+      "end": 1226
+    },
+    {
+      "id": "device.repeated",
+      "selector": "@device=iphone",
+      "variant": "one",
+      "start": 1731,
+      "end": 1756
+    },
+    {
+      "id": "device.repeated",
+      "selector": "@device=iphone",
+      "variant": "other",
+      "start": 1955,
+      "end": 1981
+    },
+    {
+      "id": "device.repeated",
+      "selector": "@device=mac",
+      "variant": "one",
+      "start": 2317,
+      "end": 2343
+    },
+    {
+      "id": "device.repeated",
+      "selector": "@device=mac",
+      "variant": "other",
+      "start": 2542,
+      "end": 2569
+    },
+    {
+      "id": "device.explicit",
+      "selector": "@device=iphone",
+      "variant": "one",
+      "start": 3074,
+      "end": 3104
+    },
+    {
+      "id": "device.explicit",
+      "selector": "@device=iphone",
+      "variant": "other",
+      "start": 3303,
+      "end": 3334
+    },
+    {
+      "id": "device.explicit",
+      "selector": "@device=mac",
+      "variant": "one",
+      "start": 3670,
+      "end": 3701
+    },
+    {
+      "id": "device.explicit",
+      "selector": "@device=mac",
+      "variant": "other",
+      "start": 3900,
+      "end": 3932
+    },
+    {
+      "id": "device.escaped",
+      "selector": "@device=iphone",
+      "variant": "one",
+      "start": 4436,
+      "end": 4460
+    },
+    {
+      "id": "device.escaped",
+      "selector": "@device=iphone",
+      "variant": "other",
+      "start": 4659,
+      "end": 4684
+    },
+    {
+      "id": "device.escaped",
+      "selector": "@device=mac",
+      "variant": "one",
+      "start": 5020,
+      "end": 5045
+    },
+    {
+      "id": "device.escaped",
+      "selector": "@device=mac",
+      "variant": "other",
+      "start": 5244,
+      "end": 5270
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "sourceLanguage": "he",
+  "version": "1.0",
+  "strings": {
+    "harbor.competing.development.source🧭": {
+      "localizations": {
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First source owner"
+          }
+        },
+        "iw": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Second source owner"
+          }
+        }
+      },
+      "shouldTranslate": false
+    }
+  }
+}

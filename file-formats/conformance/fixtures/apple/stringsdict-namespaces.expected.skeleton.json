@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist xmlns=\"urn:neutral:property-list\"\n       xmlns:portable=\"urn:neutral:source-metadata\"\n       portable:document=\"preserve\"\n       version=\"1.0\">\n  <dict portable:container=\"north\">\n    <key portable:identity=\"message\">dock.namespace</key>\n    <dict portable:ownership=\"protected\">\n      <key portable:identity=\"format\">NSStringLocalizedFormatKey</key>\n      <string portable:note=\"keep\">%#@signals@ across sheltered water</string>\n      <key portable:identity=\"plural\">signals</key>\n      <dict portable:ownership=\"plural\">\n        <key portable:identity=\"type\">NSStringFormatSpecTypeKey</key>\n        <string portable:note=\"platform\">NSStringPluralRuleType</string>\n        <key portable:identity=\"value-type\">NSStringFormatValueTypeKey</key>\n        <string portable:note=\"platform\">ld</string>\n        <key portable:identity=\"singular\">one</key>\n        <string portable:note=\"translate\">%ld harbor signal</string>\n        <key portable:identity=\"plural\">other</key>\n        <string portable:note=\"translate\"><![CDATA[%ld harbor signals]]></string>\n        <key portable:identity=\"protected-rule\">futureRulePriority</key>\n        <integer portable:note=\"rule-owned\">11</integer>\n      </dict>\n\n      <key portable:identity=\"protected-message\">futurePriority</key>\n      <integer portable:note=\"message-owned\">7</integer>\n      <key portable:identity=\"protected-array\">futureFlags</key>\n      <array portable:note=\"platform-owned\">\n        <true portable:flag=\"first\" />\n        <false portable:flag=\"second\"></false>\n        <string portable:note=\"untouched\">Protected &amp; stable</string>\n      </array>\n    </dict>\n  </dict>\n</plist>\n",
+  "slots": [
+    {
+      "id": "dock.namespace",
+      "variant": "one",
+      "start": 936,
+      "end": 953
+    },
+    {
+      "id": "dock.namespace",
+      "variant": "other",
+      "start": 1057,
+      "end": 1087
+    }
+  ]
+}

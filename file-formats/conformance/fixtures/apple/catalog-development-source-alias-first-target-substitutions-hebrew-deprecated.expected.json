@@ -1,0 +1,813 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "he",
+  "messages": {
+    "harbor.first.substitution.missing.device🧭": {
+      "defaultMessage": "Touch {arg2}: {lanes, plural, one {{lanes} open lane} other {{lanes} open lanes}} beside {lights, plural, one {{lights} dock light} other {{lights} dock lights}}",
+      "description": "Pinned CLDR owns first-locale Xcode substitutions",
+      "placeholders": [
+        {
+          "name": "lanes",
+          "source": "%1$lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "lights",
+          "source": "%2$d",
+          "kind": "integer",
+          "position": 2
+        },
+        {
+          "name": "arg2",
+          "source": "%3$@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "sourceSubstitutions": {
+          "lanes": {
+            "argNum": 1,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "%1$lld open lane"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%1$lld open lanes"
+                  }
+                }
+              }
+            }
+          },
+          "lights": {
+            "argNum": 2,
+            "formatSpecifier": "d",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "%2$d dock light"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%2$d dock lights"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleSourceLocalization": {
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "needs_review",
+        "localizations": {
+          "de": {
+            "variationAxes": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+                  }
+                },
+                "mac": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleLocalizationSources": {
+          "de": {
+            "substitutions": {
+              "lanes": {
+                "argNum": 1,
+                "formatSpecifier": "lld",
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%1$lld open lane"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld open lanes"
+                      }
+                    }
+                  }
+                }
+              },
+              "lights": {
+                "argNum": 2,
+                "formatSpecifier": "d",
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%2$d dock light"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%2$d dock lights"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "variations": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+                  }
+                },
+                "mac": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+              }
+            },
+            "mac": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "appleSourceLocalizationIdentifier": "iw"
+      }
+    },
+    "harbor.first.substitution.missing.scalar🧭": {
+      "defaultMessage": "Guide {arg2}: {lanes, plural, one {{lanes} open lane} other {{lanes} open lanes}} beside {lights, plural, one {{lights} dock light} other {{lights} dock lights}}",
+      "description": "Pinned CLDR owns first-locale Xcode substitutions",
+      "placeholders": [
+        {
+          "name": "lanes",
+          "source": "%1$lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "lights",
+          "source": "%2$d",
+          "kind": "integer",
+          "position": 2
+        },
+        {
+          "name": "arg2",
+          "source": "%3$@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "sourceSubstitutions": {
+          "lanes": {
+            "argNum": 1,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "%1$lld open lane"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%1$lld open lanes"
+                  }
+                }
+              }
+            }
+          },
+          "lights": {
+            "argNum": 2,
+            "formatSpecifier": "d",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "%2$d dock light"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%2$d dock lights"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guide %3$@: %#@lanes@ beside %2$#@lights@"
+          },
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "needs_review",
+        "localizations": {
+          "de": {
+            "value": "Guide %3$@: %#@lanes@ beside %2$#@lights@",
+            "state": "needs_review"
+          }
+        },
+        "appleLocalizationSources": {
+          "de": {
+            "stringUnit": {
+              "state": "needs_review",
+              "value": "Guide %3$@: %#@lanes@ beside %2$#@lights@"
+            },
+            "substitutions": {
+              "lanes": {
+                "argNum": 1,
+                "formatSpecifier": "lld",
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%1$lld open lane"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld open lanes"
+                      }
+                    }
+                  }
+                }
+              },
+              "lights": {
+                "argNum": 2,
+                "formatSpecifier": "d",
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%2$d dock light"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%2$d dock lights"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleSourceLocalizationIdentifier": "iw"
+      }
+    },
+    "harbor.first.substitution.null.device🧭": {
+      "defaultMessage": "Touch {arg2}: {lanes, plural, one {{lanes} open lane} other {{lanes} open lanes}} beside {lights, plural, one {{lights} dock light} other {{lights} dock lights}}",
+      "description": "Pinned CLDR owns first-locale Xcode substitutions",
+      "placeholders": [
+        {
+          "name": "lanes",
+          "source": "%1$lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "lights",
+          "source": "%2$d",
+          "kind": "integer",
+          "position": 2
+        },
+        {
+          "name": "arg2",
+          "source": "%3$@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "sourceSubstitutions": {
+          "lanes": {
+            "argNum": 1,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "%1$lld open lane"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%1$lld open lanes"
+                  }
+                }
+              }
+            }
+          },
+          "lights": {
+            "argNum": 2,
+            "formatSpecifier": "d",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "%2$d dock light"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%2$d dock lights"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleSourceLocalization": {
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "needs_review",
+        "localizations": {
+          "de": {
+            "variationAxes": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+                  }
+                },
+                "mac": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleLocalizationSources": {
+          "de": {
+            "substitutions": {
+              "lanes": {
+                "argNum": 1,
+                "formatSpecifier": "lld",
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%1$lld open lane"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld open lanes"
+                      }
+                    }
+                  }
+                }
+              },
+              "lights": {
+                "argNum": 2,
+                "formatSpecifier": "d",
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%2$d dock light"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%2$d dock lights"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "variations": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+                  }
+                },
+                "mac": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+              }
+            },
+            "mac": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "appleSourceLocalizationIdentifier": "iw"
+      }
+    },
+    "harbor.first.substitution.null.scalar🧭": {
+      "defaultMessage": "Guide {arg2}: {lanes, plural, one {{lanes} open lane} other {{lanes} open lanes}} beside {lights, plural, one {{lights} dock light} other {{lights} dock lights}}",
+      "description": "Pinned CLDR owns first-locale Xcode substitutions",
+      "placeholders": [
+        {
+          "name": "lanes",
+          "source": "%1$lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "lights",
+          "source": "%2$d",
+          "kind": "integer",
+          "position": 2
+        },
+        {
+          "name": "arg2",
+          "source": "%3$@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "sourceSubstitutions": {
+          "lanes": {
+            "argNum": 1,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "%1$lld open lane"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%1$lld open lanes"
+                  }
+                }
+              }
+            }
+          },
+          "lights": {
+            "argNum": 2,
+            "formatSpecifier": "d",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "%2$d dock light"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%2$d dock lights"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guide %3$@: %#@lanes@ beside %2$#@lights@"
+          },
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%1$lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%2$d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "needs_review",
+        "localizations": {
+          "de": {
+            "value": "Guide %3$@: %#@lanes@ beside %2$#@lights@",
+            "state": "needs_review"
+          }
+        },
+        "appleLocalizationSources": {
+          "de": {
+            "stringUnit": {
+              "state": "needs_review",
+              "value": "Guide %3$@: %#@lanes@ beside %2$#@lights@"
+            },
+            "substitutions": {
+              "lanes": {
+                "argNum": 1,
+                "formatSpecifier": "lld",
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%1$lld open lane"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$lld open lanes"
+                      }
+                    }
+                  }
+                }
+              },
+              "lights": {
+                "argNum": 2,
+                "formatSpecifier": "d",
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%2$d dock light"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%2$d dock lights"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleSourceLocalizationIdentifier": "iw"
+      }
+    }
+  }
+}

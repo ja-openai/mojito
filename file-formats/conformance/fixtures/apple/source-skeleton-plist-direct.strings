@@ -1,0 +1,6 @@
+<dict>
+  <!-- Direct Foundation dictionary roots remain native .strings files. -->
+  <key>direct&amp;route</key><string>North &amp; pier</string>
+  <key><![CDATA[direct<&>cdata]]></key><string><![CDATA[<quiet> & calm]]></string>
+  <key>direct.empty</key><string />
+</dict>

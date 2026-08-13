@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"sourceLanguage\": \"en\",\n  \"strings\": {\n    \"harbor.implicit\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"North %n %@\"\n          }\n        }\n      }\n    },\n    \"harbor.middle\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"%@ dock %n %@\"\n          }\n        }\n      }\n    },\n    \"harbor.repeated\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"%n%n %@ port\"\n          }\n        }\n      }\n    },\n    \"harbor.explicit\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"%2$n %1$@ dock\"\n          }\n        }\n      }\n    },\n    \"harbor.mixed\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"%2$n %@ dock\"\n          }\n        }\n      }\n    },\n    \"harbor.overlap\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"%n %1$@ lane\"\n          }\n        }\n      }\n    },\n    \"harbor.integer\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"%n %d markers\"\n          }\n        }\n      }\n    },\n    \"harbor.escaped\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"%%n %@ tide\"\n          }\n        }\n      }\n    },\n    \"harbor.unicode.🧭\": {\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"🧭%n %@ reef\"\n          }\n        }\n      }\n    }\n  },\n  \"version\": \"1.0\"\n}\n",
+  "slots": [
+    {
+      "id": "harbor.implicit",
+      "start": 192,
+      "end": 203
+    },
+    {
+      "id": "harbor.middle",
+      "start": 389,
+      "end": 402
+    },
+    {
+      "id": "harbor.repeated",
+      "start": 590,
+      "end": 602
+    },
+    {
+      "id": "harbor.explicit",
+      "start": 790,
+      "end": 804
+    },
+    {
+      "id": "harbor.mixed",
+      "start": 989,
+      "end": 1001
+    },
+    {
+      "id": "harbor.overlap",
+      "start": 1188,
+      "end": 1200
+    },
+    {
+      "id": "harbor.integer",
+      "start": 1387,
+      "end": 1400
+    },
+    {
+      "id": "harbor.escaped",
+      "start": 1587,
+      "end": 1598
+    },
+    {
+      "id": "harbor.unicode.🧭",
+      "start": 1790,
+      "end": 1804
+    }
+  ]
+}

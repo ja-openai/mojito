@@ -1,0 +1,262 @@
+{
+  "en.lproj/catalog.stringsdict": {
+    "Private missing Russian device tree": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "Touch %1$@ %2$n beacon",
+        "mac": "Click %1$@ %2$n beacon"
+      }
+    },
+    "Private null Russian device tree": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n mobile beacon %2$@",
+            "other": "%1$lld %3$n mobile beacons %2$@"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n desktop beacon %2$@",
+            "other": "%1$lld %3$n desktop beacons %2$@"
+          }
+        }
+      }
+    },
+    "Private target Russian device branches": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n mobile beacon %2$@",
+            "other": "%1$lld %3$n mobile beacons %2$@"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n desktop beacon %2$@",
+            "other": "%1$lld %3$n desktop beacons %2$@"
+          }
+        }
+      }
+    },
+    "harbor.target.device.missing.plural🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n mobile beacon %2$@",
+            "other": "%1$lld %3$n mobile beacons %2$@"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n desktop beacon %2$@",
+            "other": "%1$lld %3$n desktop beacons %2$@"
+          }
+        }
+      }
+    },
+    "harbor.target.device.missing.scalar🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "Touch %1$@ %2$n beacon",
+        "mac": "Click %1$@ %2$n beacon"
+      }
+    },
+    "harbor.target.device.null.plural🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n mobile beacon %2$@",
+            "other": "%1$lld %3$n mobile beacons %2$@"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n desktop beacon %2$@",
+            "other": "%1$lld %3$n desktop beacons %2$@"
+          }
+        }
+      }
+    },
+    "harbor.target.device.null.scalar🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "Touch %1$@ %2$n beacon",
+        "mac": "Click %1$@ %2$n beacon"
+      }
+    },
+    "harbor.target.device.plural🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n mobile beacon %2$@",
+            "other": "%1$lld %3$n mobile beacons %2$@"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld %3$n desktop beacon %2$@",
+            "other": "%1$lld %3$n desktop beacons %2$@"
+          }
+        }
+      }
+    },
+    "harbor.target.device.scalar🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "Touch %1$@ %2$n beacon",
+        "mac": "Click %1$@ %2$n beacon"
+      }
+    }
+  },
+  "ru.lproj/catalog.stringsdict": {
+    "Private target Russian device branches": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "few": "%2$@ %3$n %1$lld мобильный маяка",
+            "many": "%2$@ %3$n %1$lld мобильный маяков",
+            "one": "%2$@ %3$n %1$lld мобильный маяк",
+            "other": "%2$@ %3$n %1$lld мобильный маяка"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "few": "%2$@ %3$n %1$lld настольный маяка",
+            "many": "%2$@ %3$n %1$lld настольный маяков",
+            "one": "%2$@ %3$n %1$lld настольный маяк",
+            "other": "%2$@ %3$n %1$lld настольный маяка"
+          }
+        }
+      }
+    },
+    "harbor.target.device.missing.plural🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "few": "%2$@  %1$lld %3$nмобильный маяка в гавани",
+            "many": "%2$@  %1$lld %3$nмобильный маяков в гавани",
+            "one": "%2$@  %1$lld %3$nмобильный маяк в гавани",
+            "other": "%2$@  %1$lld %3$nмобильный маяка в гавани"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "few": "%2$@  %1$lld %3$nнастольный маяка в гавани",
+            "many": "%2$@  %1$lld %3$nнастольный маяков в гавани",
+            "one": "%2$@  %1$lld %3$nнастольный маяк в гавани",
+            "other": "%2$@  %1$lld %3$nнастольный маяка в гавани"
+          }
+        }
+      }
+    },
+    "harbor.target.device.missing.scalar🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "На iphone %1$@ %2$n в порту",
+        "mac": "На mac %1$@ %2$n в порту"
+      }
+    },
+    "harbor.target.device.null.plural🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "few": "%2$@  %1$lld %3$nмобильный маяка у причала",
+            "many": "%2$@  %1$lld %3$nмобильный маяков у причала",
+            "one": "%2$@  %1$lld %3$nмобильный маяк у причала",
+            "other": "%2$@  %1$lld %3$nмобильный маяка у причала"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "few": "%2$@  %1$lld %3$nнастольный маяка у причала",
+            "many": "%2$@  %1$lld %3$nнастольный маяков у причала",
+            "one": "%2$@  %1$lld %3$nнастольный маяк у причала",
+            "other": "%2$@  %1$lld %3$nнастольный маяка у причала"
+          }
+        }
+      }
+    },
+    "harbor.target.device.null.scalar🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "На iphone %1$@ %2$n у берега",
+        "mac": "На mac %1$@ %2$n у берега"
+      }
+    },
+    "harbor.target.device.plural🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "few": "%2$@ %3$n %1$lld обновлённый мобильный маяка",
+            "many": "%2$@ %3$n %1$lld обновлённый мобильный маяков",
+            "one": "%2$@ %3$n %1$lld обновлённый мобильный маяк",
+            "other": "%2$@ %3$n %1$lld обновлённый мобильный маяка"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "few": "%2$@ %3$n %1$lld обновлённый настольный маяка",
+            "many": "%2$@ %3$n %1$lld обновлённый настольный маяков",
+            "one": "%2$@ %3$n %1$lld обновлённый настольный маяк",
+            "other": "%2$@ %3$n %1$lld обновлённый настольный маяка"
+          }
+        }
+      }
+    },
+    "harbor.target.device.scalar🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "На iPhone %1$@ %2$n у маяка",
+        "mac": "На Mac %1$@ %2$n у маяка"
+      }
+    }
+  }
+}

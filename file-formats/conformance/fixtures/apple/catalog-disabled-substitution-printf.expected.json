@@ -1,0 +1,395 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "harbor.device.🧭": {
+      "defaultMessage": "Touch {count, plural, one {{count} mobile lane} other {{count} mobile lanes}}",
+      "description": "Root-owned native plural definitions shared by protected device branches.",
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 7,
+                "source": "%n"
+              }
+            ],
+            "other": [
+              {
+                "position": 7,
+                "source": "%n"
+              },
+              {
+                "position": 7,
+                "source": "%n"
+              }
+            ]
+          }
+        },
+        "appleLocalizationSources": {
+          "fr": {
+            "substitutions": {
+              "count": {
+                "argNum": 1,
+                "formatSpecifier": "lld",
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld voie protégée"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld voies protégées"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "variations": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Touchez %#@count@"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleSourceLocalization": {
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%n mobile lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%n%n mobile lanes"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Touch %#@count@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %#@count@"
+                }
+              },
+              "applewatch": {
+                "stringUnit": {
+                  "state": "machine_translated",
+                  "value": "Watch %#@count@"
+                }
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "localizations": {
+          "fr": {
+            "variationAxes": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Touchez %#@count@"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "needs_review",
+        "sourceSubstitutions": {
+          "count": {
+            "argNum": 1,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld%n mobile lane"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld%n%n mobile lanes"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "Touch %#@count@"
+              }
+            },
+            "mac": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Click %#@count@"
+              }
+            },
+            "applewatch": {
+              "stringUnit": {
+                "state": "machine_translated",
+                "value": "Watch %#@count@"
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.line": {
+      "defaultMessage": "Observe {count, plural, one {{count}\nbeacon} other {{count}\nbeacons}}",
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Observe %#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld\nbeacon"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld\nbeacons"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "translated",
+        "sourceSubstitutions": {
+          "count": {
+            "argNum": 1,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld\nbeacon"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld\nbeacons"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.literal": {
+      "defaultMessage": "Observe {count, plural, one {{count}%n beacon} other {{count}%n beacons}}",
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Observe %#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%%n beacon"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%%n beacons"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "translated",
+        "sourceSubstitutions": {
+          "count": {
+            "argNum": 1,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld%%n beacon"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld%%n beacons"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.zero": {
+      "defaultMessage": "Observe {count, plural, one {{count} beacon} other {{count} beacons}}",
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Observe %#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%n beacon"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld%n%n beacons"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "translated",
+        "sourceSubstitutions": {
+          "count": {
+            "argNum": 1,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld%n beacon"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld%n%n beacons"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 7,
+                "source": "%n"
+              }
+            ],
+            "other": [
+              {
+                "position": 7,
+                "source": "%n"
+              },
+              {
+                "position": 7,
+                "source": "%n"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

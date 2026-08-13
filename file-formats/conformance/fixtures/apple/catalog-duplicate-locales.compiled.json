@@ -1,0 +1,11 @@
+{
+  "en.lproj/catalog.strings": {
+    "duplicate": "Source"
+  },
+  "fr-CA.lproj/catalog.strings": {
+    "duplicate": "Second"
+  },
+  "fr_CA.lproj/catalog.strings": {
+    "duplicate": "First"
+  }
+}

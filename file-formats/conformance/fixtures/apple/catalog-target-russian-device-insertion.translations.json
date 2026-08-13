@@ -1,0 +1,16 @@
+{
+  "harbor.target.device.scalar🧭#@device#iphone": "На iPhone {arg0}  у маяка",
+  "harbor.target.device.scalar🧭#@device#mac": "На Mac {arg0}  у маяка",
+  "harbor.target.device.plural🧭#@device=iphone#one": "{arg1}  {count} обновлённый мобильный маяк",
+  "harbor.target.device.plural🧭#@device=iphone#few": "{arg1}  {count} обновлённый мобильный маяка",
+  "harbor.target.device.plural🧭#@device=iphone#many": "{arg1}  {count} обновлённый мобильный маяков",
+  "harbor.target.device.plural🧭#@device=iphone#other": "{arg1}  {count} обновлённый мобильный маяка",
+  "harbor.target.device.plural🧭#@device=mac#one": "{arg1}  {count} обновлённый настольный маяк",
+  "harbor.target.device.plural🧭#@device=mac#few": "{arg1}  {count} обновлённый настольный маяка",
+  "harbor.target.device.plural🧭#@device=mac#many": "{arg1}  {count} обновлённый настольный маяков",
+  "harbor.target.device.plural🧭#@device=mac#other": "{arg1}  {count} обновлённый настольный маяка",
+  "harbor.target.device.missing.scalar🧭": "{device, select, iphone {На iphone {arg0}  в порту} mac {На mac {arg0}  в порту} other {На iphone {arg0}  в порту}}",
+  "harbor.target.device.null.scalar🧭": "{device, select, iphone {На iphone {arg0}  у берега} mac {На mac {arg0}  у берега} other {На iphone {arg0}  у берега}}",
+  "harbor.target.device.missing.plural🧭": "{device, select, iphone {{count, plural, one {{arg1}  {count} мобильный маяк в гавани} few {{arg1}  {count} мобильный маяка в гавани} many {{arg1}  {count} мобильный маяков в гавани} other {{arg1}  {count} мобильный маяка в гавани}}} mac {{count, plural, one {{arg1}  {count} настольный маяк в гавани} few {{arg1}  {count} настольный маяка в гавани} many {{arg1}  {count} настольный маяков в гавани} other {{arg1}  {count} настольный маяка в гавани}}} other {{count, plural, one {{arg1}  {count} мобильный маяк в гавани} few {{arg1}  {count} мобильный маяка в гавани} many {{arg1}  {count} мобильный маяков в гавани} other {{arg1}  {count} мобильный маяка в гавани}}}}",
+  "harbor.target.device.null.plural🧭": "{device, select, iphone {{count, plural, one {{arg1}  {count} мобильный маяк у причала} few {{arg1}  {count} мобильный маяка у причала} many {{arg1}  {count} мобильный маяков у причала} other {{arg1}  {count} мобильный маяка у причала}}} mac {{count, plural, one {{arg1}  {count} настольный маяк у причала} few {{arg1}  {count} настольный маяка у причала} many {{arg1}  {count} настольный маяков у причала} other {{arg1}  {count} настольный маяка у причала}}} other {{count, plural, one {{arg1}  {count} мобильный маяк у причала} few {{arg1}  {count} мобильный маяка у причала} many {{arg1}  {count} мобильный маяков у причала} other {{arg1}  {count} мобильный маяка у причала}}}}"
+}

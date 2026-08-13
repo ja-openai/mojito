@@ -1,0 +1,14 @@
+{
+  "en.lproj/catalog.strings": {
+    "owned.scalar": "Stable %@ rive"
+  },
+  "fr.lproj/catalog.strings": {
+    "%@ %n %@ anchorage": "%@ %@ mouillage existant",
+    "North %n %@ 🧭": "Nord %@ conservé",
+    "Private null pier": "Jetée privée protégée",
+    "Tide %%n %@ marker": "Marée %%n %@ existante",
+    "West %2$n %1$@ pier": "Ouest %1$@ jetée existante",
+    "harbor.null.plain🧭": "Abri existant",
+    "owned.scalar": "Rive %@ protégée"
+  }
+}

@@ -1,0 +1,6 @@
+// Explain the formatted harbor route to translators.
+"harbor.route" = "Guide %1$@ across north water";
+// Keep an originally self-closing entry source-preserving.
+"quiet.empty" = "";
+// Native CDATA and literal markup remain visible text.
+"wrapped&signal" = "<calm> & clear";

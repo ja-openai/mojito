@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\" neutral=\"&#00000000065;\">\n  <!-- Ignore long reference-looking text in comments and platform instructions. -->\n  <?platform protected=\"&#00000000065;\"?>\n  <dict>\n    <key>dock&#00000046;entities</key>\n    <dict>\n      <key>NSStringLocalizedFormatKey</key>\n      <string>%#@signals@ near &#00000065; dock</string>\n      <key>sig&#00000110;als</key>\n      <dict>\n        <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>\n        <key>NSStringFormatValueTypeKey</key><string>ld</string>\n        <key>&#00000111;ne</key><string>%ld safe &amp; &#x00000042; beacon</string>\n        <key>&#x0000006F;ther</key><string><![CDATA[%ld safe beacons &#00000000065;]]></string>\n        <key>futureRuleRatio</key><real>&#x00000031;.25</real>\n      </dict>\n      <key>futureRatio</key><real>&#00000049;.5</real>\n      <key>futureLiteral</key><string><![CDATA[Protected &#00000000065;]]></string>\n      <key>futureAttribute</key><string neutral=\"&#00000000065;\">Untouched</string>\n      <key>futureFlags</key><array><true/><false/></array>\n    </dict>\n  </dict>\n</plist>\n",
+  "slots": [
+    {
+      "id": "dock.entities",
+      "variant": "one",
+      "start": 610,
+      "end": 644
+    },
+    {
+      "id": "dock.entities",
+      "variant": "other",
+      "start": 697,
+      "end": 740
+    }
+  ]
+}

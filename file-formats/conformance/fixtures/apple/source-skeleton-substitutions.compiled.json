@@ -1,0 +1,63 @@
+{
+  "en.lproj/catalog.stringsdict": {
+    "harbor.route🧭": {
+      "lanes": {
+        "one": "%lld quiet lane",
+        "other": "%lld quiet lanes",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld"
+      },
+      "lights": {
+        "one": "%d north light",
+        "other": "%d north lights",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "d"
+      },
+      "NSStringLocalizedFormatKey": "Pilot %3$@ escorts %1$#@lanes@ beyond %2$#@lights@"
+    },
+    "echo.route": {
+      "count": {
+        "one": "%d echo",
+        "other": "%d echoes",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "d"
+      },
+      "NSStringLocalizedFormatKey": "%1$#@count@ before %1$#@count@"
+    },
+    "implicit.lane": {
+      "amount": {
+        "one": "%lld green berth",
+        "other": "%lld green berths",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld"
+      },
+      "NSStringLocalizedFormatKey": "Observed %#@amount@"
+    },
+    "unicode.route": {
+      "value": {
+        "one": "%lld soft pulse",
+        "other": "%lld soft pulses",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld"
+      },
+      "NSStringLocalizedFormatKey": "Follow %1$#@value@"
+    }
+  },
+  "fr.lproj/catalog.stringsdict": {
+    "harbor.route🧭": {
+      "lanes": {
+        "one": "%lld voie calme",
+        "other": "%lld voies calmes",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld"
+      },
+      "lights": {
+        "one": "%d feu nord",
+        "other": "%d feux nord",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "d"
+      },
+      "NSStringLocalizedFormatKey": "Pilote %3$@ escorte %1$#@lanes@ au-delà de %2$#@lights@"
+    }
+  }
+}

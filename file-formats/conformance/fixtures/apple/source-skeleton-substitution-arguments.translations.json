@@ -1,0 +1,17 @@
+{
+  "mixed.route": "Pilote {arg0} suit {lights}",
+  "mixed.route#lights#one": "{lights} lueur près de {arg2}",
+  "mixed.route#lights#other": "{lights} lueurs près de {arg2}",
+  "extra.numeric": "Pilote {arg0} compte {signals}",
+  "extra.numeric#signals#one": "{signals} signal près de {arg2} balise",
+  "extra.numeric#signals#other": "{signals} signaux près de {arg2} balises",
+  "reversed.route": "Pilote {arg0} annonce {routes}",
+  "reversed.route#routes#one": "{arg2} protège {routes} voie",
+  "reversed.route#routes#other": "{arg2} protège {routes} voies",
+  "unicode.mixed": "{arg0} suit {信号}",
+  "unicode.mixed#信号#one": "{信号} pulsation vers {arg2}",
+  "unicode.mixed#信号#other": "{信号} pulsations vers {arg2}",
+  "device.mixed": "Touchez {arg0} pour {beacons}",
+  "device.mixed#beacons#one": "{beacons} balise vers {arg2}",
+  "device.mixed#beacons#other": "{beacons} balises vers {arg2}"
+}

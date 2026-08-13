@@ -1,0 +1,4 @@
+{
+  "harbor.first.russian.missing🧭": "{count, plural, few {{arg1} {count}  маяка в проливе} many {{arg1} {count}  маяков в проливе} one {{arg1} {count}  маяк в проливе} other {{arg1} {count}  маяка в проливе}}",
+  "harbor.first.russian.null🧭": "{count, plural, few {{arg1} {count}  маяка у маяка} many {{arg1} {count}  маяков у маяка} one {{arg1} {count}  маяк у маяка} other {{arg1} {count}  маяка у маяка}}"
+}

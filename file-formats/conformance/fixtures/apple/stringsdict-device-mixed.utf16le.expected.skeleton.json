@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "encoding": "UTF-16LE-BOM",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\"><dict>\n  <key>neutral.scalar-plural🧭</key><dict>\n    <key>NSStringDeviceSpecificRuleType</key><dict>\n      <key>iphone</key><string>Tap mobile coast</string>\n      <key>mac</key><dict>\n        <key>NSStringLocalizedFormatKey</key><string>%#@lights@</string>\n        <key>lights</key><dict>\n          <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>\n          <key>NSStringFormatValueTypeKey</key><string>lld</string>\n          <key>one</key><string>%lld desktop beacon</string>\n          <key>other</key><string>%lld desktop beacons</string>\n        </dict>\n      </dict>\n    </dict>\n  </dict>\n  <key>neutral.plural-scalar🧭</key><dict>\n    <key>NSStringDeviceSpecificRuleType</key><dict>\n      <key>iphone</key><dict>\n        <key>NSStringLocalizedFormatKey</key><string>%#@lights@</string>\n        <key>lights</key><dict>\n          <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>\n          <key>NSStringFormatValueTypeKey</key><string>lld</string>\n          <key>one</key><string>%lld mobile lamp</string>\n          <key>other</key><string>%lld mobile lamps</string>\n        </dict>\n      </dict>\n      <key>mac</key><string>Click desktop pier</string>\n    </dict>\n  </dict>\n  <key>neutral.scalar-width🧭</key><dict>\n    <key>NSStringDeviceSpecificRuleType</key><dict>\n      <key>iphone</key><string>Tap mobile quay</string>\n      <key>mac</key><dict>\n        <key>NSStringVariableWidthRuleType</key><dict>\n          <key>5</key><string>Mac%n near</string>\n          <key>040</key><string>Mac\nopen coast</string>\n        </dict>\n      </dict>\n    </dict>\n  </dict>\n  <key>neutral.width-scalar🧭</key><dict>\n    <key>NSStringDeviceSpecificRuleType</key><dict>\n      <key>iphone</key><dict>\n        <key>NSStringVariableWidthRuleType</key><dict>\n          <key>5</key><string>Tap%n cove</string>\n          <key>040</key><string>Tap%%n open tide</string>\n        </dict>\n      </dict>\n      <key>mac</key><string>Click desktop harbor</string>\n    </dict>\n  </dict>\n  <key>neutral.plural-width🧭</key><dict>\n    <key>NSStringDeviceSpecificRuleType</key><dict>\n      <key>iphone</key><dict>\n        <key>NSStringLocalizedFormatKey</key><string>%#@lights@</string>\n        <key>lights</key><dict>\n          <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>\n          <key>NSStringFormatValueTypeKey</key><string>lld</string>\n          <key>one</key><string>%lld mobile signal</string>\n          <key>other</key><string>%lld mobile signals</string>\n        </dict>\n      </dict>\n      <key>mac</key><dict>\n        <key>NSStringVariableWidthRuleType</key><dict>\n          <key>5</key><string>West%n cove</string>\n          <key>040</key><string>West\nopen shore</string>\n        </dict>\n      </dict>\n    </dict>\n  </dict>\n  <key>neutral.width-plural🧭</key><dict>\n    <key>NSStringDeviceSpecificRuleType</key><dict>\n      <key>iphone</key><dict>\n        <key>NSStringVariableWidthRuleType</key><dict>\n          <key>5</key><string>East%n point</string>\n          <key>040</key><string>East%%n open bay</string>\n        </dict>\n      </dict>\n      <key>mac</key><dict>\n        <key>NSStringLocalizedFormatKey</key><string>%#@lights@</string>\n        <key>lights</key><dict>\n          <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>\n          <key>NSStringFormatValueTypeKey</key><string>lld</string>\n          <key>one</key><string>%lld desktop buoy</string>\n          <key>other</key><string>%lld desktop buoys</string>\n        </dict>\n      </dict>\n    </dict>\n  </dict>\n  <key>neutral.three-shapes🧭</key><dict>\n    <key>NSStringDeviceSpecificRuleType</key><dict>\n      <key>iphone</key><dict>\n        <key>NSStringLocalizedFormatKey</key><string>%#@lights@</string>\n        <key>lights</key><dict>\n          <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>\n          <key>NSStringFormatValueTypeKey</key><string>lld</string>\n          <key>one</key><string>%lld mobile trail</string>\n          <key>other</key><string>%lld mobile trails</string>\n        </dict>\n      </dict>\n      <key>mac</key><dict>\n        <key>NSStringVariableWidthRuleType</key><dict>\n          <key>5</key><string>Bay%n near</string>\n          <key>040</key><string>Bay\nopen water</string>\n        </dict>\n      </dict>\n      <key>other</key><string>Plain fallback harbor</string>\n    </dict>\n  </dict>\n</dict></plist>\n",
+  "slots": [
+    {
+      "id": "neutral.scalar-plural🧭",
+      "selector": "@device",
+      "variant": "iphone",
+      "start": 594,
+      "end": 626
+    },
+    {
+      "id": "neutral.scalar-plural🧭",
+      "selector": "@device=mac",
+      "variant": "one",
+      "start": 1282,
+      "end": 1320
+    },
+    {
+      "id": "neutral.scalar-plural🧭",
+      "selector": "@device=mac",
+      "variant": "other",
+      "start": 1408,
+      "end": 1448
+    },
+    {
+      "id": "neutral.plural-scalar🧭",
+      "selector": "@device=iphone",
+      "variant": "one",
+      "start": 2404,
+      "end": 2436
+    },
+    {
+      "id": "neutral.plural-scalar🧭",
+      "selector": "@device=iphone",
+      "variant": "other",
+      "start": 2524,
+      "end": 2558
+    },
+    {
+      "id": "neutral.plural-scalar🧭",
+      "selector": "@device",
+      "variant": "mac",
+      "start": 2694,
+      "end": 2730
+    },
+    {
+      "id": "neutral.scalar-width🧭",
+      "selector": "@device",
+      "variant": "iphone",
+      "start": 3044,
+      "end": 3074
+    },
+    {
+      "id": "neutral.scalar-width🧭",
+      "selector": "@device=mac",
+      "variant": "5",
+      "start": 3318,
+      "end": 3338
+    },
+    {
+      "id": "neutral.scalar-width🧭",
+      "selector": "@device=mac",
+      "variant": "040",
+      "start": 3422,
+      "end": 3450
+    },
+    {
+      "id": "neutral.width-scalar🧭",
+      "selector": "@device=iphone",
+      "variant": "5",
+      "start": 3992,
+      "end": 4012
+    },
+    {
+      "id": "neutral.width-scalar🧭",
+      "selector": "@device=iphone",
+      "variant": "040",
+      "start": 4096,
+      "end": 4128
+    },
+    {
+      "id": "neutral.width-scalar🧭",
+      "selector": "@device",
+      "variant": "mac",
+      "start": 4264,
+      "end": 4304
+    },
+    {
+      "id": "neutral.plural-width🧭",
+      "selector": "@device=iphone",
+      "variant": "one",
+      "start": 5198,
+      "end": 5234
+    },
+    {
+      "id": "neutral.plural-width🧭",
+      "selector": "@device=iphone",
+      "variant": "other",
+      "start": 5322,
+      "end": 5360
+    },
+    {
+      "id": "neutral.plural-width🧭",
+      "selector": "@device=mac",
+      "variant": "5",
+      "start": 5664,
+      "end": 5686
+    },
+    {
+      "id": "neutral.plural-width🧭",
+      "selector": "@device=mac",
+      "variant": "040",
+      "start": 5770,
+      "end": 5800
+    },
+    {
+      "id": "neutral.width-plural🧭",
+      "selector": "@device=iphone",
+      "variant": "5",
+      "start": 6342,
+      "end": 6366
+    },
+    {
+      "id": "neutral.width-plural🧭",
+      "selector": "@device=iphone",
+      "variant": "040",
+      "start": 6450,
+      "end": 6482
+    },
+    {
+      "id": "neutral.width-plural🧭",
+      "selector": "@device=mac",
+      "variant": "one",
+      "start": 7198,
+      "end": 7232
+    },
+    {
+      "id": "neutral.width-plural🧭",
+      "selector": "@device=mac",
+      "variant": "other",
+      "start": 7320,
+      "end": 7356
+    },
+    {
+      "id": "neutral.three-shapes🧭",
+      "selector": "@device=iphone",
+      "variant": "one",
+      "start": 8310,
+      "end": 8344
+    },
+    {
+      "id": "neutral.three-shapes🧭",
+      "selector": "@device=iphone",
+      "variant": "other",
+      "start": 8432,
+      "end": 8468
+    },
+    {
+      "id": "neutral.three-shapes🧭",
+      "selector": "@device=mac",
+      "variant": "5",
+      "start": 8772,
+      "end": 8792
+    },
+    {
+      "id": "neutral.three-shapes🧭",
+      "selector": "@device=mac",
+      "variant": "040",
+      "start": 8876,
+      "end": 8904
+    },
+    {
+      "id": "neutral.three-shapes🧭",
+      "selector": "@device",
+      "variant": "other",
+      "start": 9044,
+      "end": 9086
+    }
+  ]
+}

@@ -1,0 +1,112 @@
+{
+  "width.after🧭": {
+    "NSStringVariableWidthRuleType": {
+      "5": "%n %@ near marker",
+      "040": "%n %@ open marker"
+    }
+  },
+  "width.middle": {
+    "NSStringVariableWidthRuleType": {
+      "5": "%@ %n %@ near marker",
+      "040": "%@ %n %@ open marker"
+    }
+  },
+  "width.repeated": {
+    "NSStringVariableWidthRuleType": {
+      "5": "%n%n %@ near marker",
+      "040": "%n%n %@ open marker"
+    }
+  },
+  "width.explicit": {
+    "NSStringVariableWidthRuleType": {
+      "5": "%2$n %1$@ near marker",
+      "040": "%2$n %1$@ open marker"
+    }
+  },
+  "width.escaped": {
+    "NSStringVariableWidthRuleType": {
+      "5": "%%n %@ near marker",
+      "040": "%%n %@ open marker"
+    }
+  },
+  "device.after🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%n %@ pocket near marker",
+          "040": "%n %@ pocket open marker"
+        }
+      },
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%n %@ desktop near marker",
+          "040": "%n %@ desktop open marker"
+        }
+      }
+    }
+  },
+  "device.middle": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%@ %n %@ pocket near marker",
+          "040": "%@ %n %@ pocket open marker"
+        }
+      },
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%@ %n %@ desktop near marker",
+          "040": "%@ %n %@ desktop open marker"
+        }
+      }
+    }
+  },
+  "device.repeated": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%n%n %@ pocket near marker",
+          "040": "%n%n %@ pocket open marker"
+        }
+      },
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%n%n %@ desktop near marker",
+          "040": "%n%n %@ desktop open marker"
+        }
+      }
+    }
+  },
+  "device.explicit": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%2$n %1$@ pocket near marker",
+          "040": "%2$n %1$@ pocket open marker"
+        }
+      },
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%2$n %1$@ desktop near marker",
+          "040": "%2$n %1$@ desktop open marker"
+        }
+      }
+    }
+  },
+  "device.escaped": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%%n %@ pocket near marker",
+          "040": "%%n %@ pocket open marker"
+        }
+      },
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "%%n %@ desktop near marker",
+          "040": "%%n %@ desktop open marker"
+        }
+      }
+    }
+  }
+}

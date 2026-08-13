@@ -1,0 +1,11 @@
+{
+  "beacon.shared": {
+    "NSStringLocalizedFormatKey": "%#@count@",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "ld",
+      "one": "%ld shared beacon",
+      "other": "%ld shared beacon"
+    }
+  }
+}

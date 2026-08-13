@@ -1,0 +1,17 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "neutral.substitution": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@signal@"
+          },
+          "substitutions": {}
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

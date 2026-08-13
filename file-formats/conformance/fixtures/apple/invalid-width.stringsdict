@@ -1,0 +1,7 @@
+<plist version="1.0"><dict>
+  <key>invalid</key><dict>
+    <key>NSStringVariableWidthRuleType</key><dict>
+      <key>wide</key><string>Width cannot be named</string>
+    </dict>
+  </dict>
+</dict></plist>

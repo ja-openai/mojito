@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n\t<key>device.after🧭</key>\n\t<dict>\n\t\t<key>NSStringDeviceSpecificRuleType</key>\n\t\t<dict>\n\t\t\t<key>iphone</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringLocalizedFormatKey</key>\n\t\t\t\t<string>%#@count@</string>\n\t\t\t\t<key>count</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>NSStringFormatSpecTypeKey</key>\n\t\t\t\t\t<string>NSStringPluralRuleType</string>\n\t\t\t\t\t<key>NSStringFormatValueTypeKey</key>\n\t\t\t\t\t<string>lld</string>\n\t\t\t\t\t<key>one</key>\n\t\t\t\t\t<string>%lld%n %@ pocket marker</string>\n\t\t\t\t\t<key>other</key>\n\t\t\t\t\t<string>%lld%n %@ pocket markers</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t\t<key>mac</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringLocalizedFormatKey</key>\n\t\t\t\t<string>%#@count@</string>\n\t\t\t\t<key>count</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>NSStringFormatSpecTypeKey</key>\n\t\t\t\t\t<string>NSStringPluralRuleType</string>\n\t\t\t\t\t<key>NSStringFormatValueTypeKey</key>\n\t\t\t\t\t<string>lld</string>\n\t\t\t\t\t<key>one</key>\n\t\t\t\t\t<string>%lld%n %@ desktop marker</string>\n\t\t\t\t\t<key>other</key>\n\t\t\t\t\t<string>%lld%n %@ desktop markers</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t</dict>\n\t</dict>\n\t<key>device.repeated</key>\n\t<dict>\n\t\t<key>NSStringDeviceSpecificRuleType</key>\n\t\t<dict>\n\t\t\t<key>iphone</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringLocalizedFormatKey</key>\n\t\t\t\t<string>%#@count@</string>\n\t\t\t\t<key>count</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>NSStringFormatSpecTypeKey</key>\n\t\t\t\t\t<string>NSStringPluralRuleType</string>\n\t\t\t\t\t<key>NSStringFormatValueTypeKey</key>\n\t\t\t\t\t<string>lld</string>\n\t\t\t\t\t<key>one</key>\n\t\t\t\t\t<string>%lld%n%n %@ pocket marker</string>\n\t\t\t\t\t<key>other</key>\n\t\t\t\t\t<string>%lld%n%n %@ pocket markers</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t\t<key>mac</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringLocalizedFormatKey</key>\n\t\t\t\t<string>%#@count@</string>\n\t\t\t\t<key>count</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>NSStringFormatSpecTypeKey</key>\n\t\t\t\t\t<string>NSStringPluralRuleType</string>\n\t\t\t\t\t<key>NSStringFormatValueTypeKey</key>\n\t\t\t\t\t<string>lld</string>\n\t\t\t\t\t<key>one</key>\n\t\t\t\t\t<string>%lld%n%n %@ desktop marker</string>\n\t\t\t\t\t<key>other</key>\n\t\t\t\t\t<string>%lld%n%n %@ desktop markers</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t</dict>\n\t</dict>\n\t<key>device.explicit</key>\n\t<dict>\n\t\t<key>NSStringDeviceSpecificRuleType</key>\n\t\t<dict>\n\t\t\t<key>iphone</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringLocalizedFormatKey</key>\n\t\t\t\t<string>%#@count@</string>\n\t\t\t\t<key>count</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>NSStringFormatSpecTypeKey</key>\n\t\t\t\t\t<string>NSStringPluralRuleType</string>\n\t\t\t\t\t<key>NSStringFormatValueTypeKey</key>\n\t\t\t\t\t<string>lld</string>\n\t\t\t\t\t<key>one</key>\n\t\t\t\t\t<string>%1$lld %3$n %2$@ pocket marker</string>\n\t\t\t\t\t<key>other</key>\n\t\t\t\t\t<string>%1$lld %3$n %2$@ pocket markers</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t\t<key>mac</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringLocalizedFormatKey</key>\n\t\t\t\t<string>%#@count@</string>\n\t\t\t\t<key>count</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>NSStringFormatSpecTypeKey</key>\n\t\t\t\t\t<string>NSStringPluralRuleType</string>\n\t\t\t\t\t<key>NSStringFormatValueTypeKey</key>\n\t\t\t\t\t<string>lld</string>\n\t\t\t\t\t<key>one</key>\n\t\t\t\t\t<string>%1$lld %3$n %2$@ desktop marker</string>\n\t\t\t\t\t<key>other</key>\n\t\t\t\t\t<string>%1$lld %3$n %2$@ desktop markers</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t</dict>\n\t</dict>\n\t<key>device.escaped</key>\n\t<dict>\n\t\t<key>NSStringDeviceSpecificRuleType</key>\n\t\t<dict>\n\t\t\t<key>iphone</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringLocalizedFormatKey</key>\n\t\t\t\t<string>%#@count@</string>\n\t\t\t\t<key>count</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>NSStringFormatSpecTypeKey</key>\n\t\t\t\t\t<string>NSStringPluralRuleType</string>\n\t\t\t\t\t<key>NSStringFormatValueTypeKey</key>\n\t\t\t\t\t<string>lld</string>\n\t\t\t\t\t<key>one</key>\n\t\t\t\t\t<string>%lld%%n %@ pocket marker</string>\n\t\t\t\t\t<key>other</key>\n\t\t\t\t\t<string>%lld%%n %@ pocket markers</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t\t<key>mac</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringLocalizedFormatKey</key>\n\t\t\t\t<string>%#@count@</string>\n\t\t\t\t<key>count</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>NSStringFormatSpecTypeKey</key>\n\t\t\t\t\t<string>NSStringPluralRuleType</string>\n\t\t\t\t\t<key>NSStringFormatValueTypeKey</key>\n\t\t\t\t\t<string>lld</string>\n\t\t\t\t\t<key>one</key>\n\t\t\t\t\t<string>%lld%%n %@ desktop marker</string>\n\t\t\t\t\t<key>other</key>\n\t\t\t\t\t<string>%lld%%n %@ desktop markers</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t</dict>\n\t</dict>\n</dict>\n</plist>\n",
+  "slots": [
+    {
+      "id": "device.after🧭",
+      "selector": "@device=iphone",
+      "variant": "one",
+      "start": 586,
+      "end": 609
+    },
+    {
+      "id": "device.after🧭",
+      "selector": "@device=iphone",
+      "variant": "other",
+      "start": 654,
+      "end": 678
+    },
+    {
+      "id": "device.after🧭",
+      "selector": "@device=mac",
+      "variant": "one",
+      "start": 1033,
+      "end": 1057
+    },
+    {
+      "id": "device.after🧭",
+      "selector": "@device=mac",
+      "variant": "other",
+      "start": 1102,
+      "end": 1127
+    },
+    {
+      "id": "device.repeated",
+      "selector": "@device=iphone",
+      "variant": "one",
+      "start": 1593,
+      "end": 1618
+    },
+    {
+      "id": "device.repeated",
+      "selector": "@device=iphone",
+      "variant": "other",
+      "start": 1663,
+      "end": 1689
+    },
+    {
+      "id": "device.repeated",
+      "selector": "@device=mac",
+      "variant": "one",
+      "start": 2044,
+      "end": 2070
+    },
+    {
+      "id": "device.repeated",
+      "selector": "@device=mac",
+      "variant": "other",
+      "start": 2115,
+      "end": 2142
+    },
+    {
+      "id": "device.explicit",
+      "selector": "@device=iphone",
+      "variant": "one",
+      "start": 2608,
+      "end": 2638
+    },
+    {
+      "id": "device.explicit",
+      "selector": "@device=iphone",
+      "variant": "other",
+      "start": 2683,
+      "end": 2714
+    },
+    {
+      "id": "device.explicit",
+      "selector": "@device=mac",
+      "variant": "one",
+      "start": 3069,
+      "end": 3100
+    },
+    {
+      "id": "device.explicit",
+      "selector": "@device=mac",
+      "variant": "other",
+      "start": 3145,
+      "end": 3177
+    },
+    {
+      "id": "device.escaped",
+      "selector": "@device=iphone",
+      "variant": "one",
+      "start": 3642,
+      "end": 3666
+    },
+    {
+      "id": "device.escaped",
+      "selector": "@device=iphone",
+      "variant": "other",
+      "start": 3711,
+      "end": 3736
+    },
+    {
+      "id": "device.escaped",
+      "selector": "@device=mac",
+      "variant": "one",
+      "start": 4091,
+      "end": 4116
+    },
+    {
+      "id": "device.escaped",
+      "selector": "@device=mac",
+      "variant": "other",
+      "start": 4161,
+      "end": 4187
+    }
+  ]
+}

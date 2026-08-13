@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "route&east<north>🧭": {
+      "defaultMessage": "Safe & visible 🧭"
+    },
+    "route.attribute": {
+      "defaultMessage": "Visible marker"
+    },
+    "route.empty": {
+      "defaultMessage": ""
+    },
+    "route.format": {
+      "defaultMessage": "Guide {arg0} through '<'amber> & quiet\rwater",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "route.literal.apostrophe": {
+      "defaultMessage": "It''s '<'quiet> {arg0} harbor",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "route.percent.newline": {
+      "defaultMessage": "northwater",
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 5,
+            "source": "%n"
+          }
+        ]
+      }
+    },
+    "route.positioned": {
+      "defaultMessage": "Guide {arg1} past {arg0} steady signals",
+      "placeholders": [
+        {
+          "name": "arg1",
+          "source": "%2$@",
+          "kind": "string",
+          "position": 2
+        },
+        {
+          "name": "arg0",
+          "source": "%1$ld",
+          "kind": "integer",
+          "position": 1
+        }
+      ]
+    },
+    "route<&>": {
+      "defaultMessage": "'<'!DOCTYPE plist> across '<'quiet> & {arg1}",
+      "placeholders": [
+        {
+          "name": "arg1",
+          "source": "%2$@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleMarkupEscaping": "icu-quoted-angle"
+      }
+    }
+  }
+}

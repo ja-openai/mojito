@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\r\n  \"futureRoot\" : { \"signal\" : \"Protected 🧭 metadata\", \"priority\" : [3, 1] },\r\n  \"version\" : 2.5,\r\n  \"sourceLanguage\" : \"en_US\",\r\n  \"strings\" : {\r\n    \"escaped\\u002Eroute_🧭\" : {\r\n      \"comment\" : \"Preserve original JSON key escapes, spacing, and states.\",\r\n      \"futureDescriptor\" : { \"literal\" : \"Keep \\\\/ this exact source spelling\" },\r\n      \"localizations\" : {\r\n        \"fr_CA\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"Quai déjà traduit %@\" } },\r\n        \"en_US\" : {\r\n          \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"North \\\"pier\\\" \\/ \\u263A %@\" }\r\n        }\r\n      }\r\n    },\r\n\r\n    \"plural.count\" : {\r\n      \"extractionState\" : \"manual\",\r\n      \"localizations\" : {\r\n        \"en_US\" : {\r\n          \"variations\" : {\r\n            \"plural\" : {\r\n              \"other\" : { \"stringUnit\" : { \"state\" : \"machine_translated\", \"value\" : \"%lld quiet signals\" } },\r\n              \"one\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%lld quiet signal\" } }\r\n            }\r\n          }\r\n        },\r\n        \"fr_CA\" : {\r\n          \"variations\" : {\r\n            \"plural\" : {\r\n              \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld signal existant\" } },\r\n              \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld signaux existants\" } }\r\n            }\r\n          }\r\n        }\r\n      }\r\n    },\r\n\r\n    \"device.route\" : {\r\n      \"futureDescriptor\" : { \"color\" : \"amber\" },\r\n      \"localizations\" : {\r\n        \"en_US\" : {\r\n          \"variations\" : {\r\n            \"device\" : {\r\n              \"mac\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Click protected %@\" } },\r\n              \"iphone\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"Tap source %@\" } }\r\n            }\r\n          }\r\n        },\r\n        \"fr\" : {\r\n          \"variations\" : {\r\n            \"device\" : {\r\n              \"iphone\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Touchez la traduction %@\" } }\r\n            }\r\n          }\r\n        }\r\n      }\r\n    },\r\n\r\n    \"device.count\" : {\r\n      \"localizations\" : {\r\n        \"en_US\" : {\r\n          \"variations\" : {\r\n            \"device\" : {\r\n              \"mac\" : {\r\n                \"variations\" : {\r\n                  \"plural\" : {\r\n                    \"one\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld protected desktop\" } },\r\n                    \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld protected desktops\" } }\r\n                  }\r\n                }\r\n              },\r\n              \"iphone\" : {\r\n                \"variations\" : {\r\n                  \"plural\" : {\r\n                    \"one\" : { \"stringUnit\" : { \"state\" : \"needs_review\", \"value\" : \"%lld mobile route\" } },\r\n                    \"other\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"%lld mobile routes\" } }\r\n                  }\r\n                }\r\n              }\r\n            }\r\n          }\r\n        }\r\n      }\r\n    },\r\n\r\n    \"do.not.translate\" : {\r\n      \"shouldTranslate\" : false,\r\n      \"localizations\" : { \"en_US\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Internal protected source\" } } }\r\n    }\r\n  }\r\n}\r\n",
+  "slots": [
+    {
+      "id": "escaped.route_🧭",
+      "start": 571,
+      "end": 598
+    },
+    {
+      "id": "plural.count",
+      "variant": "other",
+      "start": 882,
+      "end": 900
+    },
+    {
+      "id": "plural.count",
+      "variant": "one",
+      "start": 986,
+      "end": 1003
+    },
+    {
+      "id": "device.route",
+      "start": 1754,
+      "end": 1767
+    },
+    {
+      "id": "device.count",
+      "variant": "one",
+      "start": 2733,
+      "end": 2750
+    },
+    {
+      "id": "device.count",
+      "variant": "other",
+      "start": 2842,
+      "end": 2860
+    }
+  ]
+}

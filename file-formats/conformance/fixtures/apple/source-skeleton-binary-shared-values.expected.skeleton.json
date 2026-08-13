@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "encoding": "BINARY_PLIST",
+  "source": "62706c6973743030d2010203035c616e63686f722e616c7068615b616e63686f722e626574615c7368617265642076616c7565080d1a260000000000000101000000000000000400000000000000000000000000000033",
+  "slots": [
+    {
+      "id": "anchor.alpha",
+      "start": 11,
+      "end": 12,
+      "appleObjectIndex": 3
+    },
+    {
+      "id": "anchor.beta",
+      "start": 12,
+      "end": 13,
+      "appleObjectIndex": 3
+    }
+  ]
+}

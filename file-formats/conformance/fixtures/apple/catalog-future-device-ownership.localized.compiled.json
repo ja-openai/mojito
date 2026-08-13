@@ -1,0 +1,32 @@
+{
+  "en.lproj/catalog.strings": {
+    "harbor.future.device.fallback🧭": "Repli ordinaire %@",
+    "harbor.future.device🧭": "Repli %@ quai"
+  },
+  "en.lproj/catalog.stringsdict": {
+    "Private future-device harbor": {
+      "NSStringDeviceSpecificRuleType": {
+        "futurecar": "Protected %@"
+      }
+    },
+    "harbor.future.device.fallback🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "futurecar": "Futur repli %@"
+      }
+    },
+    "harbor.future.device.only🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "futurecar": "Futur seul %@"
+      }
+    },
+    "harbor.future.device🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "futurecar": "Vaisseau %@ quai",
+        "iphone": "Téléphone %@ quai",
+        "mac": "Bureau %@ quai",
+        "raft": "Privé %@ quai",
+        "🧭raft": "Boussole %@ quai"
+      }
+    }
+  }
+}

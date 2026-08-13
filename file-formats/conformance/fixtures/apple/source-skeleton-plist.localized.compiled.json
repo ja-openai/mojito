@@ -1,0 +1,12 @@
+{
+  "cdata<&>key": "Port ]]> <doux> & sûr",
+  "empty.key": "Valeur ajoutée",
+  "escaped&key": "Quai & abri sûr",
+  "explicit.empty": "Ouvert & sûr",
+  "mixed.key": "Sud <doux> & sûr quai",
+  "newline.key": "Ouest\nEst",
+  "percent.literal": "Prêt 75%%",
+  "percent.newline": "Nord%nSud",
+  "placeholder.key": "Prêt %1$@",
+  "unicode.🧭": "Équipe 🙂"
+}

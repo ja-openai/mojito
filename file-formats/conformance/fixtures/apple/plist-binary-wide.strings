@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>signal.000</key>
+	<string>Beacon 000</string>
+	<key>signal.001</key>
+	<string>Beacon 001</string>
+	<key>signal.002</key>
+	<string>Beacon 002</string>
+	<key>signal.003</key>
+	<string>Beacon 003</string>
+	<key>signal.004</key>
+	<string>Beacon 004</string>
+	<key>signal.005</key>
+	<string>Beacon 005</string>
+	<key>signal.006</key>
+	<string>Beacon 006</string>
+	<key>signal.007</key>
+	<string>Beacon 007</string>
+	<key>signal.008</key>
+	<string>Beacon 008</string>
+	<key>signal.009</key>
+	<string>Beacon 009</string>
+	<key>signal.010</key>
+	<string>Beacon 010</string>
+	<key>signal.011</key>
+	<string>Beacon 011</string>
+	<key>signal.012</key>
+	<string>Beacon 012</string>
+	<key>signal.013</key>
+	<string>Beacon 013</string>
+	<key>signal.014</key>
+	<string>Beacon 014</string>
+	<key>signal.015</key>
+	<string>Beacon 015</string>
+	<key>signal.016</key>
+	<string>Beacon 016</string>
+	<key>signal.017</key>
+	<string>Beacon 017</string>
+	<key>signal.018</key>
+	<string>Beacon 018</string>
+	<key>signal.019</key>
+	<string>Beacon 019</string>
+	<key>signal.020</key>
+	<string>Beacon 020</string>
+	<key>signal.021</key>
+	<string>Beacon 021</string>
+	<key>signal.022</key>
+	<string>Beacon 022</string>
+	<key>signal.023</key>
+	<string>Beacon 023</string>
+	<key>signal.024</key>
+	<string>Beacon 024</string>
+	<key>signal.025</key>
+	<string>Beacon 025</string>
+	<key>signal.026</key>
+	<string>Beacon 026</string>
+	<key>signal.027</key>
+	<string>Beacon 027</string>
+	<key>signal.028</key>
+	<string>Beacon 028</string>
+	<key>signal.029</key>
+	<string>Beacon 029</string>
+	<key>signal.030</key>
+	<string>Beacon 030</string>
+	<key>signal.031</key>
+	<string>Beacon 031</string>
+	<key>signal.032</key>
+	<string>Beacon 032</string>
+	<key>signal.033</key>
+	<string>Beacon 033</string>
+	<key>signal.034</key>
+	<string>Beacon 034</string>
+	<key>signal.035</key>
+	<string>Beacon 035</string>
+	<key>signal.036</key>
+	<string>Beacon 036</string>
+	<key>signal.037</key>
+	<string>Beacon 037</string>
+	<key>signal.038</key>
+	<string>Beacon 038</string>
+	<key>signal.039</key>
+	<string>Beacon 039</string>
+	<key>signal.040</key>
+	<string>Beacon 040</string>
+	<key>signal.041</key>
+	<string>Beacon 041</string>
+	<key>signal.042</key>
+	<string>Beacon 042</string>
+	<key>signal.043</key>
+	<string>Beacon 043</string>
+	<key>signal.044</key>
+	<string>Beacon 044</string>
+	<key>signal.045</key>
+	<string>Beacon 045</string>
+	<key>signal.046</key>
+	<string>Beacon 046</string>
+	<key>signal.047</key>
+	<string>Beacon 047</string>
+	<key>signal.048</key>
+	<string>Beacon 048</string>
+	<key>signal.049</key>
+	<string>Beacon 049</string>
+	<key>signal.050</key>
+	<string>Beacon 050</string>
+	<key>signal.051</key>
+	<string>Beacon 051</string>
+	<key>signal.052</key>
+	<string>Beacon 052</string>
+	<key>signal.053</key>
+	<string>Beacon 053</string>
+	<key>signal.054</key>
+	<string>Beacon 054</string>
+	<key>signal.055</key>
+	<string>Beacon 055</string>
+	<key>signal.056</key>
+	<string>Beacon 056</string>
+	<key>signal.057</key>
+	<string>Beacon 057</string>
+	<key>signal.058</key>
+	<string>Beacon 058</string>
+	<key>signal.059</key>
+	<string>Beacon 059</string>
+	<key>signal.060</key>
+	<string>Beacon 060</string>
+	<key>signal.061</key>
+	<string>Beacon 061</string>
+	<key>signal.062</key>
+	<string>Beacon 062</string>
+	<key>signal.063</key>
+	<string>Beacon 063</string>
+	<key>signal.064</key>
+	<string>Beacon 064</string>
+	<key>signal.065</key>
+	<string>Beacon 065</string>
+	<key>signal.066</key>
+	<string>Beacon 066</string>
+	<key>signal.067</key>
+	<string>Beacon 067</string>
+	<key>signal.068</key>
+	<string>Beacon 068</string>
+	<key>signal.069</key>
+	<string>Beacon 069</string>
+	<key>signal.070</key>
+	<string>Beacon 070</string>
+	<key>signal.071</key>
+	<string>Beacon 071</string>
+	<key>signal.072</key>
+	<string>Beacon 072</string>
+	<key>signal.073</key>
+	<string>Beacon 073</string>
+	<key>signal.074</key>
+	<string>Beacon 074</string>
+	<key>signal.075</key>
+	<string>Beacon 075</string>
+	<key>signal.076</key>
+	<string>Beacon 076</string>
+	<key>signal.077</key>
+	<string>Beacon 077</string>
+	<key>signal.078</key>
+	<string>Beacon 078</string>
+	<key>signal.079</key>
+	<string>Beacon 079</string>
+	<key>signal.080</key>
+	<string>Beacon 080</string>
+	<key>signal.081</key>
+	<string>Beacon 081</string>
+	<key>signal.082</key>
+	<string>Beacon 082</string>
+	<key>signal.083</key>
+	<string>Beacon 083</string>
+	<key>signal.084</key>
+	<string>Beacon 084</string>
+	<key>signal.085</key>
+	<string>Beacon 085</string>
+	<key>signal.086</key>
+	<string>Beacon 086</string>
+	<key>signal.087</key>
+	<string>Beacon 087</string>
+	<key>signal.088</key>
+	<string>Beacon 088</string>
+	<key>signal.089</key>
+	<string>Beacon 089</string>
+	<key>signal.090</key>
+	<string>Beacon 090</string>
+	<key>signal.091</key>
+	<string>Beacon 091</string>
+	<key>signal.092</key>
+	<string>Beacon 092</string>
+	<key>signal.093</key>
+	<string>Beacon 093</string>
+	<key>signal.094</key>
+	<string>Beacon 094</string>
+	<key>signal.095</key>
+	<string>Beacon 095</string>
+	<key>signal.096</key>
+	<string>Beacon 096</string>
+	<key>signal.097</key>
+	<string>Beacon 097</string>
+	<key>signal.098</key>
+	<string>Beacon 098</string>
+	<key>signal.099</key>
+	<string>Beacon 099</string>
+	<key>signal.100</key>
+	<string>Beacon 100</string>
+	<key>signal.101</key>
+	<string>Beacon 101</string>
+	<key>signal.102</key>
+	<string>Beacon 102</string>
+	<key>signal.103</key>
+	<string>Beacon 103</string>
+	<key>signal.104</key>
+	<string>Beacon 104</string>
+	<key>signal.105</key>
+	<string>Beacon 105</string>
+	<key>signal.106</key>
+	<string>Beacon 106</string>
+	<key>signal.107</key>
+	<string>Beacon 107</string>
+	<key>signal.108</key>
+	<string>Beacon 108</string>
+	<key>signal.109</key>
+	<string>Beacon 109</string>
+	<key>signal.110</key>
+	<string>Beacon 110</string>
+	<key>signal.111</key>
+	<string>Beacon 111</string>
+	<key>signal.112</key>
+	<string>Beacon 112</string>
+	<key>signal.113</key>
+	<string>Beacon 113</string>
+	<key>signal.114</key>
+	<string>Beacon 114</string>
+	<key>signal.115</key>
+	<string>Beacon 115</string>
+	<key>signal.116</key>
+	<string>Beacon 116</string>
+	<key>signal.117</key>
+	<string>Beacon 117</string>
+	<key>signal.118</key>
+	<string>Beacon 118</string>
+	<key>signal.119</key>
+	<string>Beacon 119</string>
+	<key>signal.120</key>
+	<string>Beacon 120</string>
+	<key>signal.121</key>
+	<string>Beacon 121</string>
+	<key>signal.122</key>
+	<string>Beacon 122</string>
+	<key>signal.123</key>
+	<string>Beacon 123</string>
+	<key>signal.124</key>
+	<string>Beacon 124</string>
+	<key>signal.125</key>
+	<string>Beacon 125</string>
+	<key>signal.126</key>
+	<string>Beacon 126</string>
+	<key>signal.127</key>
+	<string>Beacon 127</string>
+	<key>signal.format</key>
+	<string>Follow %@ through 🧭 water</string>
+</dict>
+</plist>

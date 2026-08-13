@@ -1,0 +1,36 @@
+{
+  "de.lproj/catalog.strings": {
+    "harbor.review.0.new🧭": "Geschützt new %@",
+    "harbor.review.1.needs_review🧭": "Geschützt needs_review %@",
+    "harbor.review.2.translated🧭": "Geschützt translated %@",
+    "harbor.review.3.machine_translated🧭": "Geschützt machine_translated %@",
+    "harbor.review.4.stale🧭": "Geschützt stale %@",
+    "harbor.review.5.future_review🧭": "Geschützt future_review %@",
+    "harbor.review.6.untranslated🧭": "Geschützt untranslated %@",
+    "harbor.review.7.invalid_future_state🧭": "Geschützt invalid_future_state %@",
+    "harbor.review.source.new.automatic🧭": "Automatisch %@"
+  },
+  "en.lproj/catalog.strings": {
+    "Private future review state": "Private",
+    "harbor.review.0.new🧭": "Source new %@",
+    "harbor.review.1.needs_review🧭": "Source needs_review %@",
+    "harbor.review.2.translated🧭": "Source translated %@",
+    "harbor.review.3.machine_translated🧭": "Source machine_translated %@",
+    "harbor.review.4.stale🧭": "Source stale %@",
+    "harbor.review.5.future_review🧭": "Source future_review %@",
+    "harbor.review.6.untranslated🧭": "Source untranslated %@",
+    "harbor.review.7.invalid_future_state🧭": "Source invalid_future_state %@"
+  },
+  "fr_CA.lproj/catalog.strings": {
+    "Private future review state": "Privé préservé",
+    "harbor.review.0.new🧭": "Ancien new %@",
+    "harbor.review.1.needs_review🧭": "Ancien needs_review %@",
+    "harbor.review.2.translated🧭": "Ancien translated %@",
+    "harbor.review.3.machine_translated🧭": "Ancien machine_translated %@",
+    "harbor.review.4.stale🧭": "Ancien stale %@",
+    "harbor.review.5.future_review🧭": "Ancien future_review %@",
+    "harbor.review.6.untranslated🧭": "Ancien untranslated %@",
+    "harbor.review.7.invalid_future_state🧭": "Ancien invalid_future_state %@",
+    "harbor.review.source.new.automatic🧭": "Automatique %@"
+  }
+}

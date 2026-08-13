@@ -1,0 +1,14 @@
+/* A comment outside the dictionary does not describe its first key. */
+{
+  /* OpenStep dictionary translator context. */
+  "wrapped.route" = "Wrapped %@ harbor";
+
+  /* Structural trivia is ignored between OpenStep dictionary tokens. */
+  wrapped.$/north:west-2 /* structural key note */ =
+      /* structural value note */ south.$/east:bank-1
+      /* structural terminator note */;
+
+  /* OpenStep dictionaries support Foundation's key-only shortcut. */
+  "wrapped.shortcut" /* structural shortcut note */;
+}
+// Trailing comments are ignored after the dictionary closes.

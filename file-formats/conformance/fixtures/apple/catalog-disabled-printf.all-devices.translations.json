@@ -1,0 +1,11 @@
+{
+  "harbor.zero": "Quai tranquille",
+  "harbor.literal": "Quai%n tranquille",
+  "harbor.line": "Quai\ntranquille",
+  "harbor.positioned.🧭": "🧭Cap vers le quai",
+  "harbor.plural#one": "{count} balise",
+  "harbor.plural#other": "{count} balises",
+  "harbor.device#@device#iphone": "Port mobile",
+  "harbor.device#@device#mac": "Bureau%n paisible",
+  "harbor.device#@device#other": "Large\nquai"
+}

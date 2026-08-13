@@ -1,0 +1,116 @@
+{
+  "ru.lproj/catalog.stringsdict": {
+    "harbor.target.substitution.device🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "На iPhone %3$@: %1$#@lanes@ рядом %2$#@lights@",
+          "lanes": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "few": "%1$lld %4$n полосы",
+            "many": "%1$lld %4$n полос",
+            "one": "%1$lld %4$n полоса",
+            "other": "%1$lld %4$n полосы"
+          },
+          "lights": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d",
+            "few": "%2$d %4$n огня",
+            "many": "%2$d %4$n огней",
+            "one": "%2$d %4$n огонь",
+            "other": "%2$d %4$n огня"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "На Mac %3$@: %2$#@lights@ вокруг %1$#@lanes@",
+          "lanes": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "few": "%1$lld %4$n полосы",
+            "many": "%1$lld %4$n полос",
+            "one": "%1$lld %4$n полоса",
+            "other": "%1$lld %4$n полосы"
+          },
+          "lights": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d",
+            "few": "%2$d %4$n огня",
+            "many": "%2$d %4$n огней",
+            "one": "%2$d %4$n огонь",
+            "other": "%2$d %4$n огня"
+          }
+        }
+      }
+    },
+    "harbor.target.substitution.scalar🧭": {
+      "NSStringLocalizedFormatKey": "Маршрут %3$@: %1$#@lanes@ рядом %2$#@lights@",
+      "lanes": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "few": "%1$lld %4$n полосы",
+        "many": "%1$lld %4$n полос",
+        "one": "%1$lld %4$n полоса",
+        "other": "%1$lld %4$n полосы"
+      },
+      "lights": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "d",
+        "few": "%2$d %4$n огня",
+        "many": "%2$d %4$n огней",
+        "one": "%2$d %4$n огонь",
+        "other": "%2$d %4$n огня"
+      }
+    }
+  },
+  "zh-Hans.lproj/catalog.stringsdict": {
+    "harbor.target.substitution.device🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "Touch %3$@: %1$#@lanes@ beside %2$#@lights@",
+          "lanes": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld open lane",
+            "other": "%1$lld open lanes"
+          },
+          "lights": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d",
+            "one": "%2$d dock light",
+            "other": "%2$d dock lights"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "Click %3$@: %2$#@lights@ around %1$#@lanes@",
+          "lanes": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld open lane",
+            "other": "%1$lld open lanes"
+          },
+          "lights": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d",
+            "one": "%2$d dock light",
+            "other": "%2$d dock lights"
+          }
+        }
+      }
+    },
+    "harbor.target.substitution.scalar🧭": {
+      "NSStringLocalizedFormatKey": "Guide %3$@: %1$#@lanes@ beside %2$#@lights@",
+      "lanes": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld open lane",
+        "other": "%1$lld open lanes"
+      },
+      "lights": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "d",
+        "one": "%2$d dock light",
+        "other": "%2$d dock lights"
+      }
+    }
+  }
+}

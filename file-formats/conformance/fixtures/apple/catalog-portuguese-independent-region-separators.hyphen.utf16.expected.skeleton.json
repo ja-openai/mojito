@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-16LE-BOM",
+  "source": "{\n  \"sourceLanguage\": \"en\",\n  \"version\": \"1.0\",\n  \"strings\": {\n    \"harbor.portuguese.region.separator🧭\": {\n      \"comment\": \"Underscore and hyphen regional bundles stay independent\",\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Source beacon %@\"\n          }\n        },\n        \"de\": {\n          \"stringUnit\": {\n            \"state\": \"needs_review\",\n            \"value\": \"Signal %@\"\n          }\n        },\n        \"pt_BR\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Sinal sublinhado %@\"\n          }\n        },\n        \"pt-BR\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Sinal hífen %@\"\n          }\n        }\n      }\n    },\n    \"Private independent Portuguese separator\": {\n      \"shouldTranslate\": false,\n      \"localizations\": {\n        \"en\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Private source %@\"\n          }\n        },\n        \"pt_BR\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Private Sinal sublinhado %@\"\n          }\n        },\n        \"pt-BR\": {\n          \"stringUnit\": {\n            \"state\": \"translated\",\n            \"value\": \"Private Sinal hífen %@\"\n          }\n        }\n      }\n    }\n  }\n}\n",
+  "appleTargetLocale": "pt-BR",
+  "slots": [
+    {
+      "id": "harbor.portuguese.region.separator🧭",
+      "start": 1468,
+      "end": 1496
+    }
+  ]
+}

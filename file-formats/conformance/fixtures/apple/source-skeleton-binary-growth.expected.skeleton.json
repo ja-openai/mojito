@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "encoding": "BINARY_PLIST",
+  "source": "62706c6973743030d2010203045d7369676e616c2e616e63686f725c7369676e616c2e73686f7274556e6f72746856737465616479080d1b282e0000000000000101000000000000000500000000000000000000000000000035",
+  "slots": [
+    {
+      "id": "signal.anchor",
+      "start": 40,
+      "end": 46
+    },
+    {
+      "id": "signal.short",
+      "start": 46,
+      "end": 53
+    }
+  ]
+}

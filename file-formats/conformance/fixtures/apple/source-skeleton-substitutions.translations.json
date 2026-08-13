@@ -1,0 +1,16 @@
+{
+  "harbor.route🧭": "Pilote {arg2} suit {lights} puis {lanes}",
+  "harbor.route🧭#lanes#one": "{lanes} voie légère",
+  "harbor.route🧭#lanes#other": "{lanes} voies légères",
+  "harbor.route🧭#lights#one": "{lights} lumière nord",
+  "harbor.route🧭#lights#other": "{lights} lumières nord",
+  "echo.route": "{count} autour de {count}",
+  "echo.route#count#one": "{count} écho calme",
+  "echo.route#count#other": "{count} échos calmes",
+  "unicode.route": "Suivez {信号}",
+  "unicode.route#信号#one": "{信号} pulsation douce",
+  "unicode.route#信号#other": "{信号} pulsations douces",
+  "implicit.lane": "Regardez {amount}",
+  "implicit.lane#amount#one": "{amount} place verte",
+  "implicit.lane#amount#other": "{amount} places vertes"
+}

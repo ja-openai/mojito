@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>files.remaining</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@files@ remaining</string>
+		<key>files</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d file</string>
+			<key>other</key>
+			<string>%d files</string>
+			<key>NSStringFutureRuleMetadata</key>
+			<string>Fresh &lt;rule&gt; &amp; annotation</string>
+			<key>futureRuleEnabled</key>
+			<true/>
+			<key>futureRuleNegative</key>
+			<integer>-19</integer>
+			<key>futureRuleDictionary</key>
+			<dict>
+				<key>NSStringFormatSpecTypeKey</key>
+				<string>nested lookalike</string>
+				<key>enabled</key>
+				<false/>
+				<key>count</key>
+				<integer>23</integer>
+			</dict>
+		</dict>
+		<key>futureEnabled</key>
+		<true/>
+		<key>futureDisabled</key>
+		<false/>
+		<key>futureNegative</key>
+		<integer>-9223372036854775809</integer>
+		<key>futurePositive</key>
+		<integer>+007</integer>
+		<key>futureHexadecimal</key>
+		<integer>0XfF</integer>
+		<key>futureMinimum</key>
+		<integer>-9223372036854775808</integer>
+		<key>futureMaximum</key>
+		<integer>18446744073709551615</integer>
+		<key>futureLabel</key>
+		<string>Fresh &lt;amber&gt; &amp; quiet harbor</string>
+		<key>futureEmptyDictionary</key>
+		<dict/>
+		<key>futureNestedMetadata</key>
+		<dict>
+			<key>NSStringLocalizedFormatKey</key>
+			<string>reserved-looking nested value</string>
+			<key>child</key>
+			<dict>
+				<key>enabled</key>
+				<false/>
+				<key>count</key>
+				<integer>-12</integer>
+				<key>notes</key>
+				<string>A neutral &amp; original signal</string>
+			</dict>
+			<key></key>
+			<string>private-use sorting</string>
+			<key>🛰</key>
+			<string>supplementary sorting</string>
+		</dict>
+		<key>futureUnknownRule</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringFutureRuleType</string>
+			<key>enabled</key>
+			<true/>
+		</dict>
+	</dict>
+</dict>
+</plist>

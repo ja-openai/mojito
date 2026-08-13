@@ -1,0 +1,40 @@
+{
+  "en.lproj/catalog.stringsdict": {
+    "device.counter": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld signal mobile sûr",
+            "other": "%lld signaux mobiles sûrs"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "%#@value@",
+          "value": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%lld balise bureau calme",
+            "other": "%lld balises bureau calmes"
+          }
+        }
+      }
+    },
+    "instruction": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "Touchez %@ rive mobile",
+        "mac": "Cliquez %@ rive bureau"
+      }
+    }
+  },
+  "fr.lproj/catalog.stringsdict": {
+    "instruction": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": "Touchez %@",
+        "mac": "Cliquez sur %@"
+      }
+    }
+  }
+}

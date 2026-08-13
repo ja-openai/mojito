@@ -1,0 +1,86 @@
+{
+  "digit.board": {
+    "2signals": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d numbered pulse",
+      "other": "%d numbered pulses"
+    },
+    "NSStringLocalizedFormatKey": "Counted %1$#@2signals@"
+  },
+  "implicit.board": {
+    "NSStringLocalizedFormatKey": "Observed %#@beacons@",
+    "beacons": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "lld",
+      "one": "%lld active beacon",
+      "other": "%lld active beacons"
+    }
+  },
+  "mixed.branch": {
+    "NSStringLocalizedFormatKey": "Brief %1$#@signals@",
+    "signals": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%1$d signal for %2$@",
+      "other": "%1$d signals for %2$@"
+    }
+  },
+  "positioned.board": {
+    "NSStringLocalizedFormatKey": "Operator %3$@ tracks %1$#@signals@ across %2$#@routes@",
+    "routes": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d quiet corridor",
+      "other": "%d quiet corridors"
+    },
+    "signals": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "lld",
+      "one": "%lld orbital pulse",
+      "other": "%lld orbital pulses"
+    }
+  },
+  "reordered.board": {
+    "NSStringLocalizedFormatKey": "Across %2$#@routes@, observe %1$#@signals@",
+    "routes": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d amber route",
+      "other": "%d amber routes"
+    },
+    "signals": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "lld",
+      "one": "%lld clear signal",
+      "other": "%lld clear signals"
+    }
+  },
+  "repeated.board": {
+    "NSStringLocalizedFormatKey": "%1$#@markers@ before %1$#@markers@",
+    "markers": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d blue marker",
+      "other": "%d blue markers"
+    }
+  },
+  "spelled.board": {
+    "NSStringLocalizedFormatKey": "Showing %1$#@signals@",
+    "signals": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "lld",
+      "one": "a lone signal",
+      "other": "several signals"
+    }
+  },
+  "underscore.board": {
+    "NSStringLocalizedFormatKey": "Tracked %1$#@_signals_2@",
+    "_signals_2": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d hidden route",
+      "other": "%d hidden routes"
+    }
+  }
+}

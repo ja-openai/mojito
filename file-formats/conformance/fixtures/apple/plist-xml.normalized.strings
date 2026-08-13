@@ -1,0 +1,16 @@
+// XML entities and supplementary Unicode remain real message IDs.
+"route&east<north>🧭" = "Safe & visible 🧭";
+// Explicit XML attributes do not change Foundation string content.
+"route.attribute" = "Visible marker";
+// Empty property-list string values remain translatable.
+"route.empty" = "";
+// First translator context with normalized spacing.
+"route.format" = "Guide %1$@ through <amber> & quiet\rwater";
+// ICU literal-angle quoting must not corrupt an ordinary apostrophe.
+"route.literal.apostrophe" = "It's <quiet> %@ harbor";
+// Native percent-newline formatting survives deterministic writing.
+"route.percent.newline" = "north%nwater";
+// Positional arguments preserve original Foundation formatter spellings.
+"route.positioned" = "Guide %2$@ past %1$ld steady signals";
+// CDATA is text, not a second property-list declaration.
+"route<&>" = "<!DOCTYPE plist> across <quiet> & %2$@";

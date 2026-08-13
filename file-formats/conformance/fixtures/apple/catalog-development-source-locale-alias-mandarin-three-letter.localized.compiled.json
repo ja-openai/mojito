@@ -1,0 +1,32 @@
+{
+  "de.lproj/catalog.strings": {
+    "Private development-source harbor": "Geschützter Quellhafen",
+    "harbor.development.source.scalar🧭": "Deutscher geschützter Hafen"
+  },
+  "de.lproj/catalog.stringsdict": {
+    "harbor.development.source.plural🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld Signal %2$@",
+        "other": "%1$lld Signale %2$@"
+      }
+    }
+  },
+  "zh.lproj/catalog.strings": {
+    "Private development-source harbor": "Protected original source",
+    "harbor.development.source.scalar🧭": "%2$@ %1$lld translated beacon"
+  },
+  "zh.lproj/catalog.stringsdict": {
+    "harbor.development.source.plural🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld translated beacon %2$@",
+        "other": "%1$lld translated beacons %2$@"
+      }
+    }
+  }
+}

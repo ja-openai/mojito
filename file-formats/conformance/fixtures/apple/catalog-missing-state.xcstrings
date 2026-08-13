@@ -1,0 +1,11 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "invalid": {
+      "localizations": {
+        "en": { "stringUnit": { "value": "State is required" } }
+      }
+    }
+  }
+}

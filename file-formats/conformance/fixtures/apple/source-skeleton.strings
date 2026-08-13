@@ -1,0 +1,22 @@
+/* Preserve this 🧭 comment, original layout, and Foundation grammar. */
+{
+  /* Keep double-quoted token delimiters. */
+  "double.key" = "North \"pier\"";
+
+  // Single-quoted values must retain their original delimiter.
+  'single.key' = 'Pilot\'s "quiet" lane';
+
+  // Unquoted values become safely quoted only when translated.
+  unquoted.key = open_route;
+
+  // Foundation's key-only shortcut has a zero-width insertion slot.
+  "shorthand.key";
+
+  /* Punctuation in quoted keys must never become a structural delimiter. */
+  "punct;=key" = "Wait // calmly";
+
+  // Original Unicode-escape spelling belongs to the protected key skeleton.
+  "escaped\U002Ekey" = "Trail %1$@";
+
+  "line.break" = "North%nSouth";
+}

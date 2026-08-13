@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?route source="north"?>
+<!-- Preserve platform-owned processing instructions across native plural rules. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<?after-doctype owner="platform"?>
+<plist version="1.0">
+  <?plist-state mode="protected"?>
+  <dict>
+    <?before-message route="dock"?>
+    <key>dock.signals</key>
+    <?between-message owner="structure"?>
+    <dict>
+      <?before-pattern owner="structure"?>
+      <key>NSStringLocalizedFormatKey</key>
+      <?between-pattern owner="structure"?>
+      <string>%#@signals@ near shore</string>
+
+      <?before-rule owner="structure"?>
+      <key>signals</key>
+      <dict>
+        <?before-type owner="structure"?>
+        <key>NSStringFormatSpecTypeKey</key>
+        <?between-type owner="structure"?>
+        <string>NSStringPluralRuleType</string>
+        <key>NSStringFormatValueTypeKey</key>
+        <?between-value-type owner="structure"?>
+        <string>ld</string>
+
+        <?before-one owner="structure"?>
+        <key>one</key>
+        <?between-one owner="structure"?>
+        <string>%ld balise sûre</string>
+        <?before-other owner="structure"?>
+        <key>other</key>
+        <?between-other owner="structure"?>
+        <string><![CDATA[%ld balises sûres]]></string>
+        <?after-other owner="structure"?>
+      </dict>
+
+      <?before-extra owner="structure"?>
+      <key>futureRulePriority</key>
+      <?between-extra owner="structure"?>
+      <integer>7</integer>
+      <?after-extra owner="structure"?>
+    </dict>
+    <?after-message route="dock"?>
+  </dict>
+</plist>
+<?document-end source="north"?>

@@ -1,0 +1,202 @@
+{
+  "de.lproj/catalog.stringsdict": {
+    "harbor.first.substitution.missing.device🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "Touch %3$@: %1$#@lanes@ beside %2$#@lights@",
+          "lanes": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld open lane",
+            "other": "%1$lld open lanes"
+          },
+          "lights": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d",
+            "one": "%2$d dock light",
+            "other": "%2$d dock lights"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "Click %3$@: %2$#@lights@ around %1$#@lanes@",
+          "lanes": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld open lane",
+            "other": "%1$lld open lanes"
+          },
+          "lights": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d",
+            "one": "%2$d dock light",
+            "other": "%2$d dock lights"
+          }
+        }
+      }
+    },
+    "harbor.first.substitution.missing.scalar🧭": {
+      "NSStringLocalizedFormatKey": "Guide %3$@: %1$#@lanes@ beside %2$#@lights@",
+      "lanes": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld open lane",
+        "other": "%1$lld open lanes"
+      },
+      "lights": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "d",
+        "one": "%2$d dock light",
+        "other": "%2$d dock lights"
+      }
+    },
+    "harbor.first.substitution.null.device🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "Touch %3$@: %1$#@lanes@ beside %2$#@lights@",
+          "lanes": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld open lane",
+            "other": "%1$lld open lanes"
+          },
+          "lights": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d",
+            "one": "%2$d dock light",
+            "other": "%2$d dock lights"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "Click %3$@: %2$#@lights@ around %1$#@lanes@",
+          "lanes": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld open lane",
+            "other": "%1$lld open lanes"
+          },
+          "lights": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d",
+            "one": "%2$d dock light",
+            "other": "%2$d dock lights"
+          }
+        }
+      }
+    },
+    "harbor.first.substitution.null.scalar🧭": {
+      "NSStringLocalizedFormatKey": "Guide %3$@: %1$#@lanes@ beside %2$#@lights@",
+      "lanes": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld open lane",
+        "other": "%1$lld open lanes"
+      },
+      "lights": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "d",
+        "one": "%2$d dock light",
+        "other": "%2$d dock lights"
+      }
+    }
+  },
+  "en-GB.lproj/catalog.stringsdict": {
+    "harbor.first.substitution.missing.device🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "Touch %3$@: %1$#@lanes@ beside %2$#@lights@",
+          "lanes": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld open lane",
+            "other": "%1$lld open lanes"
+          },
+          "lights": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d",
+            "one": "%2$d dock light",
+            "other": "%2$d dock lights"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "Click %3$@: %2$#@lights@ around %1$#@lanes@",
+          "lanes": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld open lane",
+            "other": "%1$lld open lanes"
+          },
+          "lights": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d",
+            "one": "%2$d dock light",
+            "other": "%2$d dock lights"
+          }
+        }
+      }
+    },
+    "harbor.first.substitution.missing.scalar🧭": {
+      "NSStringLocalizedFormatKey": "Guide %3$@: %1$#@lanes@ beside %2$#@lights@",
+      "lanes": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld open lane",
+        "other": "%1$lld open lanes"
+      },
+      "lights": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "d",
+        "one": "%2$d dock light",
+        "other": "%2$d dock lights"
+      }
+    },
+    "harbor.first.substitution.null.device🧭": {
+      "NSStringDeviceSpecificRuleType": {
+        "iphone": {
+          "NSStringLocalizedFormatKey": "Touch %3$@: %1$#@lanes@ beside %2$#@lights@",
+          "lanes": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld open lane",
+            "other": "%1$lld open lanes"
+          },
+          "lights": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d",
+            "one": "%2$d dock light",
+            "other": "%2$d dock lights"
+          }
+        },
+        "mac": {
+          "NSStringLocalizedFormatKey": "Click %3$@: %2$#@lights@ around %1$#@lanes@",
+          "lanes": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld",
+            "one": "%1$lld open lane",
+            "other": "%1$lld open lanes"
+          },
+          "lights": {
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "d",
+            "one": "%2$d dock light",
+            "other": "%2$d dock lights"
+          }
+        }
+      }
+    },
+    "harbor.first.substitution.null.scalar🧭": {
+      "NSStringLocalizedFormatKey": "Guide %3$@: %1$#@lanes@ beside %2$#@lights@",
+      "lanes": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld open lane",
+        "other": "%1$lld open lanes"
+      },
+      "lights": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "d",
+        "one": "%2$d dock light",
+        "other": "%2$d dock lights"
+      }
+    }
+  }
+}

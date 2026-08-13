@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "escaped.literal": {
+      "defaultMessage": "A&#00000000065;Z"
+    },
+    "harbor.route&east": {
+      "defaultMessage": "Guide {arg0} toward A, B, 🧭 & '<'north> \"calm\" ''steady''",
+      "description": "Eight-digit decimal and hexadecimal references remain valid native spellings.",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleMarkupEscaping": "icu-quoted-angle"
+      }
+    },
+    "line.break": {
+      "defaultMessage": "North\nSouth\tEast\rWest"
+    },
+    "literal&#000000065;": {
+      "defaultMessage": "Literal &#00000000065; remains protected",
+      "description": "CDATA and escaped ampersands retain reference-looking literal source text."
+    }
+  }
+}

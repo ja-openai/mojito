@@ -1,0 +1,6 @@
+{
+  "welcome": "Hello, %@!",
+  "count": "%1$ld files",
+  "key=with;punctuation": "A value; with = delimiters",
+  "bare_key": "Bare keys also exist"
+}

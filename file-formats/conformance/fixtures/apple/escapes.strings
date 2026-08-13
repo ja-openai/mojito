@@ -1,0 +1,6 @@
+/* Escaped quotes, line feeds, and tabs */
+"quoted\"key" = "Line one\nLine two\t\"quoted\"";
+"unicode" = "Snowman: \U2603, smile: \UD83D\UDE03";
+"octal" = "\101\102";
+"continued" = "hello\
+world";

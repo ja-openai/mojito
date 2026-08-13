@@ -1,0 +1,454 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "device.echo": {
+      "defaultMessage": "{count, plural, one {{count} clear echo} other {{count} clear echoes}} before {count, plural, one {{count} clear echo} other {{count} clear echoes}}",
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleCatalogMetadata": {
+          "catalogMarker": {
+            "leave": "untouched"
+          }
+        },
+        "appleSourceLocalization": {
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%d clear echo"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "machine_translated",
+                      "value": "%d clear echoes"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%#@count@ before %1$#@count@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$#@count@ after %#@count@"
+                }
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "sourceState": "translated",
+        "sourceSubstitutions": {
+          "count": {
+            "argNum": 1,
+            "formatSpecifier": "d",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%d clear echo"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "machine_translated",
+                    "value": "%d clear echoes"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "iphone": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "%#@count@ before %1$#@count@"
+              }
+            },
+            "mac": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "%1$#@count@ after %#@count@"
+              }
+            }
+          }
+        }
+      }
+    },
+    "device.harbor🧭": {
+      "defaultMessage": "Touch {arg2}: {lanes, plural, one {{lanes} open lane} other {{lanes} open lanes}} beside {lights, plural, one {{lights} dock light} other {{lights} dock lights}}",
+      "description": "Root-owned harbor substitutions shared by protected device branches.",
+      "placeholders": [
+        {
+          "name": "lanes",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "lights",
+          "source": "%d",
+          "kind": "integer",
+          "position": 2
+        },
+        {
+          "name": "arg2",
+          "source": "%3$@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "appleCatalogMetadata": {
+          "catalogMarker": {
+            "leave": "untouched"
+          }
+        },
+        "appleDescriptorMetadata": {
+          "customDeviceMetadata": [
+            7,
+            "preserve"
+          ]
+        },
+        "appleLocalizationSources": {
+          "fr": {
+            "substitutions": {
+              "lanes": {
+                "argNum": 1,
+                "formatSpecifier": "lld",
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld voie protégée"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "needs_review",
+                        "value": "%lld voies protégées"
+                      }
+                    }
+                  }
+                }
+              },
+              "lights": {
+                "argNum": 2,
+                "formatSpecifier": "d",
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "machine_translated",
+                        "value": "%d feu protégé"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%d feux protégés"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "variations": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Touchez %3$@: %#@lanes@ près de %2$#@lights@"
+                  }
+                },
+                "mac": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Cliquez %3$@: %2$#@lights@ vers %#@lanes@"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleSourceLocalization": {
+          "substitutions": {
+            "lanes": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%lld open lane"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld open lanes"
+                    }
+                  }
+                }
+              }
+            },
+            "lights": {
+              "argNum": 2,
+              "formatSpecifier": "d",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "machine_translated",
+                      "value": "%d dock light"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%d dock lights"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variations": {
+            "device": {
+              "applewatch": {
+                "stringUnit": {
+                  "state": "machine_translated",
+                  "value": "Watch %3$@: %#@lanes@ / %2$#@lights@"
+                }
+              },
+              "iphone": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+                }
+              }
+            }
+          }
+        },
+        "defaultDevice": "iphone",
+        "localizations": {
+          "fr": {
+            "variationAxes": {
+              "device": {
+                "iphone": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "Touchez %3$@: %#@lanes@ près de %2$#@lights@"
+                  }
+                },
+                "mac": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "Cliquez %3$@: %2$#@lights@ vers %#@lanes@"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "needs_review",
+        "sourceSubstitutions": {
+          "lanes": {
+            "argNum": 1,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "%lld open lane"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld open lanes"
+                  }
+                }
+              }
+            }
+          },
+          "lights": {
+            "argNum": 2,
+            "formatSpecifier": "d",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "machine_translated",
+                    "value": "%d dock light"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%d dock lights"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "applewatch": {
+              "stringUnit": {
+                "state": "machine_translated",
+                "value": "Watch %3$@: %#@lanes@ / %2$#@lights@"
+              }
+            },
+            "iphone": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "Touch %3$@: %#@lanes@ beside %2$#@lights@"
+              }
+            },
+            "mac": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Click %3$@: %2$#@lights@ around %#@lanes@"
+              }
+            }
+          }
+        }
+      }
+    },
+    "device.unicode": {
+      "defaultMessage": "Guide {信号, plural, one {{信号} soft signal} other {{信号} soft signals}}",
+      "placeholders": [
+        {
+          "name": "信号",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleCatalogMetadata": {
+          "catalogMarker": {
+            "leave": "untouched"
+          }
+        },
+        "appleSourceLocalization": {
+          "substitutions": {
+            "信号": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld soft signal"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "needs_review",
+                      "value": "%lld soft signals"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variations": {
+            "device": {
+              "ipad": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "Guide %#@信号@"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Desktop %#@信号@"
+                }
+              }
+            }
+          }
+        },
+        "defaultDevice": "ipad",
+        "sourceState": "needs_review",
+        "sourceSubstitutions": {
+          "信号": {
+            "argNum": 1,
+            "formatSpecifier": "lld",
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld soft signal"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "%lld soft signals"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceVariationAxes": {
+          "device": {
+            "ipad": {
+              "stringUnit": {
+                "state": "needs_review",
+                "value": "Guide %#@信号@"
+              }
+            },
+            "mac": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "Desktop %#@信号@"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

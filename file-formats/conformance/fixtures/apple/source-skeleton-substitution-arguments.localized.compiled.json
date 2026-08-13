@@ -1,0 +1,73 @@
+{
+  "en.lproj/catalog.stringsdict": {
+    "extra.numeric": {
+      "signals": {
+        "one": "%lld signal près de %lld balise",
+        "other": "%lld signaux près de %lld balises",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld"
+      },
+      "NSStringLocalizedFormatKey": "Pilote %1$@ compte %2$#@signals@"
+    },
+    "reversed.route": {
+      "routes": {
+        "one": "%3$@ protège %2$lld voie",
+        "other": "%3$@ protège %2$lld voies",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld"
+      },
+      "NSStringLocalizedFormatKey": "Pilote %1$@ annonce %2$#@routes@"
+    },
+    "mixed.route": {
+      "lights": {
+        "one": "%lld lueur près de %@",
+        "other": "%lld lueurs près de %@",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld"
+      },
+      "NSStringLocalizedFormatKey": "Pilote %1$@ suit %2$#@lights@"
+    },
+    "device.mixed": {
+      "NSStringDeviceSpecificRuleType": {
+        "mac": {
+          "beacons": {
+            "one": "%lld balise vers %@",
+            "other": "%lld balises vers %@",
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld"
+          },
+          "NSStringLocalizedFormatKey": "Click %1$@ for %2$#@beacons@"
+        },
+        "iphone": {
+          "beacons": {
+            "one": "%lld balise vers %@",
+            "other": "%lld balises vers %@",
+            "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+            "NSStringFormatValueTypeKey": "lld"
+          },
+          "NSStringLocalizedFormatKey": "Touchez %1$@ pour %2$#@beacons@"
+        }
+      }
+    },
+    "unicode.mixed": {
+      "value": {
+        "one": "%lld pulsation vers %@",
+        "other": "%lld pulsations vers %@",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld"
+      },
+      "NSStringLocalizedFormatKey": "%1$@ suit %2$#@value@"
+    }
+  },
+  "fr.lproj/catalog.stringsdict": {
+    "mixed.route": {
+      "lights": {
+        "one": "%lld feu protégé près de %@",
+        "other": "%lld feux protégés près de %@",
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld"
+      },
+      "NSStringLocalizedFormatKey": "Pilote %1$@ suit %2$#@lights@"
+    }
+  }
+}

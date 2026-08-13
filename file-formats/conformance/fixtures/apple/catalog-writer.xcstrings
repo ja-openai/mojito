@@ -1,0 +1,43 @@
+{
+  "sourceLanguage": "en_US",
+  "version": "2.0",
+  "experimentalRoot": { "priority": 7, "label": "neutral" },
+  "strings": {
+    "advanced": {
+      "comment": "Neutral catalog metadata and review state.",
+      "extractionState": "manual",
+      "experimentalDescriptor": { "token": "original", "enabled": true },
+      "localizations": {
+        "en_US": {
+          "stringUnit": { "state": "translated", "value": "Ready %@, 50%% complete" },
+          "substitutions": {
+            "person": {
+              "argNum": 1,
+              "formatSpecifier": "@",
+              "variations": {
+                "plural": {
+                  "one": { "stringUnit": { "state": "translated", "value": "one person" } },
+                  "other": { "stringUnit": { "state": "translated", "value": "many people" } }
+                }
+              }
+            }
+          }
+        },
+        "fr_CA": {
+          "stringUnit": { "state": "needs_review", "value": "Prêt %@, terminé à 40%%" },
+          "translatorNote": "Retain unknown localization metadata"
+        }
+      }
+    },
+    "supplementary_😃": {
+      "localizations": {
+        "en_US": { "stringUnit": { "state": "translated", "value": "Bright ☃" } }
+      }
+    },
+    "private_": {
+      "localizations": {
+        "en_US": { "stringUnit": { "state": "translated", "value": "Private value" } }
+      }
+    }
+  }
+}

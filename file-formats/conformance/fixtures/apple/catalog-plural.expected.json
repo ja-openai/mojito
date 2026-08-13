@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en-US",
+  "messages": {
+    "files": {
+      "defaultMessage": "{count, plural, one {{count} file} other {{count} files}}",
+      "description": "Downloaded file count",
+      "variants": {
+        "one": "{count} file",
+        "other": "{count} files"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizationSources": {
+          "fr": {
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld fichier"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%lld fichiers"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleSourceLanguage": "en_US",
+        "appleSourceLocalization": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld file"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld files"
+                }
+              }
+            }
+          }
+        },
+        "localizations": {
+          "fr": {
+            "variantStates": {
+              "one": "translated",
+              "other": "translated"
+            },
+            "variants": {
+              "one": "%lld fichier",
+              "other": "%lld fichiers"
+            }
+          }
+        },
+        "sourcePluralStates": {
+          "one": "translated",
+          "other": "translated"
+        }
+      }
+    }
+  }
+}

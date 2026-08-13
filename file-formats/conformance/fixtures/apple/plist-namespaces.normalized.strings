@@ -1,0 +1,4 @@
+// Bound attributes and namespace declarations are platform-owned source bytes.
+"harbor.route" = "Guide %1$@ across namespaced water";
+"quiet.empty" = "";
+"signal&calm" = "<calm> & clear";

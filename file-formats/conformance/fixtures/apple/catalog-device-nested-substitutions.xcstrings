@@ -1,0 +1,31 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "device.invalid": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "device": {
+              "iphone": {
+                "stringUnit": { "state": "translated", "value": "Touch %#@lanes@" },
+                "substitutions": {
+                  "lanes": {
+                    "argNum": 1,
+                    "formatSpecifier": "lld",
+                    "variations": {
+                      "plural": {
+                        "one": { "stringUnit": { "state": "translated", "value": "%lld quiet lane" } },
+                        "other": { "stringUnit": { "state": "translated", "value": "%lld quiet lanes" } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

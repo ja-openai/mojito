@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<?route source=\"north\"?>\n<!-- Preserve platform-owned processing instructions across native plural rules. -->\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<?after-doctype owner=\"platform\"?>\n<plist version=\"1.0\">\n  <?plist-state mode=\"protected\"?>\n  <dict>\n    <?before-message route=\"dock\"?>\n    <key>dock.signals</key>\n    <?between-message owner=\"structure\"?>\n    <dict>\n      <?before-pattern owner=\"structure\"?>\n      <key>NSStringLocalizedFormatKey</key>\n      <?between-pattern owner=\"structure\"?>\n      <string>%#@signals@ near shore</string>\n\n      <?before-rule owner=\"structure\"?>\n      <key>signals</key>\n      <dict>\n        <?before-type owner=\"structure\"?>\n        <key>NSStringFormatSpecTypeKey</key>\n        <?between-type owner=\"structure\"?>\n        <string>NSStringPluralRuleType</string>\n        <key>NSStringFormatValueTypeKey</key>\n        <?between-value-type owner=\"structure\"?>\n        <string>ld</string>\n\n        <?before-one owner=\"structure\"?>\n        <key>one</key>\n        <?between-one owner=\"structure\"?>\n        <string>%ld steady beacon</string>\n        <?before-other owner=\"structure\"?>\n        <key>other</key>\n        <?between-other owner=\"structure\"?>\n        <string><![CDATA[%ld steady beacons]]></string>\n        <?after-other owner=\"structure\"?>\n      </dict>\n\n      <?before-extra owner=\"structure\"?>\n      <key>futureRulePriority</key>\n      <?between-extra owner=\"structure\"?>\n      <integer>7</integer>\n      <?after-extra owner=\"structure\"?>\n    </dict>\n    <?after-message route=\"dock\"?>\n  </dict>\n</plist>\n<?document-end source=\"north\"?>\n",
+  "slots": [
+    {
+      "id": "dock.signals",
+      "variant": "one",
+      "start": 1150,
+      "end": 1167
+    },
+    {
+      "id": "dock.signals",
+      "variant": "other",
+      "start": 1305,
+      "end": 1335
+    }
+  ]
+}

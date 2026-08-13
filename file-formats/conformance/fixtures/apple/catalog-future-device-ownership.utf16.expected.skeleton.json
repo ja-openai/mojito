@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-16LE-BOM",
+  "source": "{\n  \"sourceLanguage\": \"en\",\n  \"version\": \"1.0\",\n  \"strings\": {\n    \"harbor.future.device🧭\": {\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Phone %@ harbor\"\n                }\n              },\n              \"mac\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Mac %@ harbor\"\n                }\n              },\n              \"futurecar\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Future %@ harbor\"\n                }\n              },\n              \"raft\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Private scalar %@ harbor\"\n                }\n              },\n              \"🧭raft\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Compass %@ harbor\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Fallback %@ harbor\"\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"harbor.future.device.only🧭\": {\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"futurecar\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Future only %@\"\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"harbor.future.device.fallback🧭\": {\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"futurecar\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Future fallback %@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Ordinary fallback %@\"\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    \"Private future-device harbor\": {\n      \"shouldTranslate\": false,\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"futurecar\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Protected %@\"\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n",
+  "slots": [
+    {
+      "id": "harbor.future.device🧭",
+      "selector": "@device",
+      "variant": "iphone",
+      "start": 628,
+      "end": 658
+    },
+    {
+      "id": "harbor.future.device🧭",
+      "selector": "@device",
+      "variant": "mac",
+      "start": 980,
+      "end": 1006
+    },
+    {
+      "id": "harbor.future.device🧭",
+      "selector": "@device",
+      "variant": "futurecar",
+      "start": 1340,
+      "end": 1372
+    },
+    {
+      "id": "harbor.future.device🧭",
+      "selector": "@device",
+      "variant": "raft",
+      "start": 1698,
+      "end": 1746
+    },
+    {
+      "id": "harbor.future.device🧭",
+      "selector": "@device",
+      "variant": "🧭raft",
+      "start": 2074,
+      "end": 2108
+    },
+    {
+      "id": "harbor.future.device🧭",
+      "selector": "@device",
+      "variant": "other",
+      "start": 2434,
+      "end": 2470
+    },
+    {
+      "id": "harbor.future.device.only🧭",
+      "selector": "@device",
+      "variant": "futurecar",
+      "start": 3160,
+      "end": 3188
+    },
+    {
+      "id": "harbor.future.device.fallback🧭",
+      "selector": "@device",
+      "variant": "futurecar",
+      "start": 3886,
+      "end": 3922
+    },
+    {
+      "id": "harbor.future.device.fallback🧭",
+      "selector": "@device",
+      "variant": "other",
+      "start": 4248,
+      "end": 4288
+    }
+  ]
+}

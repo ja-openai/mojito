@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "welcome": {
+      "defaultMessage": "Hello, {arg0}!",
+      "description": "Greeting on the welcome screen",
+      "placeholders": [{ "name": "arg0", "source": "%@", "kind": "string", "position": 1 }]
+    },
+    "count": {
+      "defaultMessage": "{arg0} files",
+      "description": "Counter label",
+      "placeholders": [{ "name": "arg0", "source": "%1$ld", "kind": "integer", "position": 1 }]
+    },
+    "key=with;punctuation": {
+      "defaultMessage": "A value; with = delimiters",
+      "description": "Punctuation in keys must not confuse the lexer."
+    },
+    "bare_key": { "defaultMessage": "Bare keys also exist" }
+  }
+}

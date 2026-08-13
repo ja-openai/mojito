@@ -1,0 +1,10 @@
+{
+  "harbor.after#one": "{count} balise",
+  "harbor.after#other": "{count} balises",
+  "harbor.literal#one": "{count}%n balise",
+  "harbor.literal#other": "{count}%n balises",
+  "harbor.mixed.🧭#one": "{count}\nbalise",
+  "harbor.mixed.🧭#other": "{count}\nbalises",
+  "harbor.repeated#one": "{count} balise",
+  "harbor.repeated#other": "{count} balises"
+}

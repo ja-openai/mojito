@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dict>
+  <!-- Direct dictionary roots load through real Foundation bundles. -->
+  <key>direct.route</key><string>Direct %@ harbor</string>
+  <!-- Ampersands and supplementary scalars remain native values. -->
+  <key>direct.navigation</key><string>North &amp; 🧭</string>
+</dict>

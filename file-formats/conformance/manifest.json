@@ -23477,7 +23477,7 @@
       "okapi": {
         "policy": "unsupported",
         "assetPath": "en.lproj/Localizable.xcstrings",
-        "reason": "Legacy routing cannot discover first-locale plural categories from version-pinned CLDR, materialize Russian branches, preserve protected entries, native hidden arguments, and exact original source bytes."
+        "reason": "Legacy routing cannot discover first-locale plural categories from ICU rules, materialize Russian branches, preserve protected entries, native hidden arguments, and exact original source bytes."
       }
     },
     {
@@ -23489,7 +23489,7 @@
       "okapi": {
         "policy": "unsupported",
         "assetPath": "en.lproj/Localizable.xcstrings",
-        "reason": "Legacy routing cannot derive first-locale scalar/device substitution categories from pinned CLDR, retain source-owned argument definitions, avoid inventing hidden arguments, and preserve exact protected bytes."
+        "reason": "Legacy routing cannot derive first-locale scalar/device substitution categories from ICU rules, retain source-owned argument definitions, avoid inventing hidden arguments, and preserve exact protected bytes."
       }
     },
     {
@@ -23501,7 +23501,7 @@
       "okapi": {
         "policy": "unsupported",
         "assetPath": "en.lproj/Localizable.xcstrings",
-        "reason": "Legacy routing cannot derive first-locale device-owned scalar/plural trees from pinned CLDR, preserve native hidden arguments, protect unrelated locales, and keep every original source byte unchanged."
+        "reason": "Legacy routing cannot derive first-locale device-owned scalar/plural trees from ICU rules, preserve native hidden arguments, protect unrelated locales, and keep every original source byte unchanged."
       }
     },
     {
@@ -25015,7 +25015,7 @@
       "okapi": {
         "policy": "unsupported",
         "assetPath": "en.lproj/Localizable.xcstrings",
-        "reason": "Xcode binds development language he to iw; legacy routing cannot derive first-locale Russian substitution categories from pinned CLDR or preserve alias-owned source bytes."
+        "reason": "Xcode binds development language he to iw; legacy routing cannot derive first-locale Russian substitution categories from ICU rules or preserve alias-owned source bytes."
       }
     },
     {
@@ -25057,7 +25057,7 @@
       "okapi": {
         "policy": "unsupported",
         "assetPath": "en.lproj/Localizable.xcstrings",
-        "reason": "Xcode binds development language nb to no-bok; legacy routing cannot derive first-locale Russian substitution categories from pinned CLDR or preserve alias-owned source bytes."
+        "reason": "Xcode binds development language nb to no-bok; legacy routing cannot derive first-locale Russian substitution categories from ICU rules or preserve alias-owned source bytes."
       }
     },
     {
@@ -25099,7 +25099,7 @@
       "okapi": {
         "policy": "unsupported",
         "assetPath": "en.lproj/Localizable.xcstrings",
-        "reason": "Xcode binds development language sr to sr-Cyrl; legacy routing cannot derive first-locale Russian substitution categories from pinned CLDR or preserve alias-owned source bytes."
+        "reason": "Xcode binds development language sr to sr-Cyrl; legacy routing cannot derive first-locale Russian substitution categories from ICU rules or preserve alias-owned source bytes."
       }
     },
     {
@@ -25141,7 +25141,7 @@
       "okapi": {
         "policy": "unsupported",
         "assetPath": "en.lproj/Localizable.xcstrings",
-        "reason": "Xcode binds development language en-GB to en-UK; legacy routing cannot derive first-locale Russian substitution categories from pinned CLDR or preserve alias-owned source bytes."
+        "reason": "Xcode binds development language en-GB to en-UK; legacy routing cannot derive first-locale Russian substitution categories from ICU rules or preserve alias-owned source bytes."
       }
     },
     {
@@ -25183,7 +25183,7 @@
       "okapi": {
         "policy": "unsupported",
         "assetPath": "en.lproj/Localizable.xcstrings",
-        "reason": "Xcode binds development language zh-Hans to zh-cmn-Hans; legacy routing cannot derive first-locale Russian substitution categories from pinned CLDR or preserve alias-owned source bytes."
+        "reason": "Xcode binds development language zh-Hans to zh-cmn-Hans; legacy routing cannot derive first-locale Russian substitution categories from ICU rules or preserve alias-owned source bytes."
       }
     },
     {

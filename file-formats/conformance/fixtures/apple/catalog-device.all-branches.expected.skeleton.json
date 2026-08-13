@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-8",
+  "source": "{\n  \"sourceLanguage\": \"en\",\n  \"strings\": {\n    \"instruction\": {\n      \"comment\": \"Device-specific neutral instruction\",\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": { \"stringUnit\": { \"state\": \"translated\", \"value\": \"Touch %@\" } },\n              \"mac\": { \"stringUnit\": { \"state\": \"translated\", \"value\": \"Click %@\" } }\n            }\n          }\n        },\n        \"fr\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": { \"stringUnit\": { \"state\": \"translated\", \"value\": \"Touchez %@\" } },\n              \"mac\": { \"stringUnit\": { \"state\": \"translated\", \"value\": \"Cliquez sur %@\" } }\n            }\n          }\n        }\n      }\n    },\n    \"device.counter\": {\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"device\": {\n              \"iphone\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": { \"stringUnit\": { \"state\": \"translated\", \"value\": \"%lld mobile signal\" } },\n                    \"other\": { \"stringUnit\": { \"state\": \"translated\", \"value\": \"%lld mobile signals\" } }\n                  }\n                }\n              },\n              \"mac\": {\n                \"variations\": {\n                  \"plural\": {\n                    \"one\": { \"stringUnit\": { \"state\": \"translated\", \"value\": \"%lld desktop signal\" } },\n                    \"other\": { \"stringUnit\": { \"state\": \"translated\", \"value\": \"%lld desktop signals\" } }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  },\n  \"version\": \"1.0\"\n}\n",
+  "slots": [
+    {
+      "id": "instruction",
+      "selector": "@device",
+      "variant": "iphone",
+      "start": 286,
+      "end": 294
+    },
+    {
+      "id": "instruction",
+      "selector": "@device",
+      "variant": "mac",
+      "start": 373,
+      "end": 381
+    },
+    {
+      "id": "device.counter",
+      "selector": "@device=iphone",
+      "variant": "one",
+      "start": 1006,
+      "end": 1024
+    },
+    {
+      "id": "device.counter",
+      "selector": "@device=iphone",
+      "variant": "other",
+      "start": 1111,
+      "end": 1130
+    },
+    {
+      "id": "device.counter",
+      "selector": "@device=mac",
+      "variant": "one",
+      "start": 1354,
+      "end": 1373
+    },
+    {
+      "id": "device.counter",
+      "selector": "@device=mac",
+      "variant": "other",
+      "start": 1460,
+      "end": 1480
+    }
+  ]
+}

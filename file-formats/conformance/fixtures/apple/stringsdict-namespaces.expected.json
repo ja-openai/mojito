@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "dock.namespace": {
+      "defaultMessage": "{signals, plural, one {{signals} harbor signal} other {{signals} harbor signals}} across sheltered water",
+      "variants": {
+        "one": "{signals} harbor signal",
+        "other": "{signals} harbor signals"
+      },
+      "placeholders": [
+        {
+          "name": "signals",
+          "source": "%ld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@signals@ across sheltered water",
+        "applePlistExtras": {
+          "futureFlags": [
+            true,
+            false,
+            "Protected & stable"
+          ],
+          "futurePriority": 7
+        },
+        "applePluralRules": {
+          "signals": {
+            "applePlistExtras": {
+              "futureRulePriority": 11
+            },
+            "valueType": "ld",
+            "variants": {
+              "one": "%ld harbor signal",
+              "other": "%ld harbor signals"
+            }
+          }
+        },
+        "pluralVariable": "signals",
+        "valueType": "ld"
+      }
+    }
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "sourceLanguage" : "en",
+  "projectMarker" : { "keep" : true },
+  "strings" : {
+    "mixed.route" : {
+      "comment" : "Implicit substitution placeholders start at their assigned native argument.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "needs_review", "value" : "Pilote %1$@ suit %#@lights@" },
+          "substitutions" : {
+            "lights" : { "argNum" : 2, "formatSpecifier" : "lld", "variations" : { "plural" : {
+              "one" : { "stringUnit" : { "state" : "needs_review", "value" : "%lld lueur près de %@" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%lld lueurs près de %@" } }
+            } } }
+          }
+        },
+        "fr" : {
+          "stringUnit" : { "state" : "translated", "value" : "Pilote %1$@ suit %#@lights@" },
+          "substitutions" : {
+            "lights" : { "argNum" : 2, "formatSpecifier" : "lld", "variations" : { "plural" : {
+              "one" : { "stringUnit" : { "state" : "needs_review", "value" : "%lld feu protégé près de %@" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%lld feux protégés près de %@" } }
+            } } }
+          }
+        }
+      }
+    },
+    "extra.numeric" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Pilote %1$@ compte %#@signals@" },
+          "substitutions" : {
+            "signals" : { "argNum" : 2, "formatSpecifier" : "lld", "variations" : { "plural" : {
+              "one" : { "stringUnit" : { "state" : "translated", "value" : "%lld signal près de %lld balise" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%lld signaux près de %lld balises" } }
+            } } }
+          }
+        }
+      }
+    },
+    "reversed.route" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Pilote %1$@ annonce %#@routes@" },
+          "substitutions" : {
+            "routes" : { "argNum" : 2, "formatSpecifier" : "lld", "variations" : { "plural" : {
+              "one" : { "stringUnit" : { "state" : "translated", "value" : "%3$@ protège %2$lld voie" } },
+              "other" : { "stringUnit" : { "state" : "machine_translated", "value" : "%3$@ protège %2$lld voies" } }
+            } } }
+          }
+        }
+      }
+    },
+    "unicode.mixed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "%1$@ suit %#@信号@" },
+          "substitutions" : {
+            "信号" : { "argNum" : 2, "formatSpecifier" : "lld", "variations" : { "plural" : {
+              "one" : { "stringUnit" : { "state" : "translated", "value" : "%lld pulsation vers %@" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%lld pulsations vers %@" } }
+            } } }
+          }
+        }
+      }
+    },
+    "device.mixed" : {
+      "localizations" : {
+        "en" : {
+          "substitutions" : {
+            "beacons" : { "argNum" : 2, "formatSpecifier" : "lld", "variations" : { "plural" : {
+              "one" : { "stringUnit" : { "state" : "translated", "value" : "%lld balise vers %@" } },
+              "other" : { "stringUnit" : { "state" : "needs_review", "value" : "%lld balises vers %@" } }
+            } } }
+          },
+          "variations" : { "device" : {
+            "iphone" : { "stringUnit" : { "state" : "needs_review", "value" : "Touchez %1$@ pour %#@beacons@" } },
+            "mac" : { "stringUnit" : { "state" : "translated", "value" : "Click %1$@ for %#@beacons@" } }
+          } }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

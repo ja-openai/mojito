@@ -1,0 +1,9 @@
+"controls" = "zero\U0000 one\U0001 bell\U0007 back\b form\f del\U007F";
+"emoji🙂" = "雪🙂";
+// Positional object and integer arguments retain their native spellings.
+"positioned" = "%2$@ guides %1$lld routes at 75%%";
+"printf_line" = "north%nready";
+// Translator context safely contains */ and /* without terminating a block.
+"punctuation\\\"=;key" = "Pilot \"north\"\nDeck\tA\\B";
+"snow☃" = "Quiet snow";
+"-private" = "Private-use sort boundary";

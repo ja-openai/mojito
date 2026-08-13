@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "encoding": "UTF-16LE-BOM",
+  "source": "{\n  \"sourceLanguage\": \"en\",\n  \"version\": \"1.0\",\n  \"strings\": {\n    \"harbor.first.serbian.latin🧭\": {\n      \"comment\": \"Distinct Serbian scripts retain their catalog-owned identity\",\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"%1$lld %3$n beacon %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld %3$n beacons %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"de\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld Signal %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"future_review\",\n                  \"value\": \"%1$lld Signale %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"sr_Latn\": null\n      }\n    },\n    \"harbor.first.serbian.cyrillic🧭\": {\n      \"comment\": \"Distinct Serbian scripts retain their catalog-owned identity\",\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"%1$lld %3$n beacon %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld %3$n beacons %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"de\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld Signal %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"future_review\",\n                  \"value\": \"%1$lld Signale %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"sr-Cyrl\": null\n      }\n    },\n    \"Private Serbian script harbor\": {\n      \"shouldTranslate\": false,\n      \"localizations\": {\n        \"en\": {\n          \"variations\": {\n            \"plural\": {\n              \"one\": {\n                \"stringUnit\": {\n                  \"state\": \"needs_review\",\n                  \"value\": \"%1$lld %3$n beacon %2$@\"\n                }\n              },\n              \"other\": {\n                \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"%1$lld %3$n beacons %2$@\"\n                }\n              }\n            }\n          }\n        },\n        \"sr_Latn\": null,\n        \"sr-Cyrl\": null\n      }\n    }\n  }\n}\n",
+  "appleTargetLocale": "sr_Latn",
+  "slots": [
+    {
+      "id": "harbor.first.serbian.latin🧭",
+      "start": 2336,
+      "end": 2344
+    },
+    {
+      "id": "harbor.first.serbian.cyrillic🧭",
+      "start": 4598,
+      "end": 4598
+    }
+  ]
+}

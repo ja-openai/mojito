@@ -1,0 +1,218 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "encoding": "UTF-16LE-BOM",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n\t<key>width.after🧭</key>\n\t<dict>\n\t\t<key>NSStringVariableWidthRuleType</key>\n\t\t<dict>\n\t\t\t<key>5</key>\n\t\t\t<string>%n %@ near marker</string>\n\t\t\t<key>040</key>\n\t\t\t<string>%n %@ open marker</string>\n\t\t</dict>\n\t</dict>\n\t<key>width.middle</key>\n\t<dict>\n\t\t<key>NSStringVariableWidthRuleType</key>\n\t\t<dict>\n\t\t\t<key>5</key>\n\t\t\t<string>%@ %n %@ near marker</string>\n\t\t\t<key>040</key>\n\t\t\t<string>%@ %n %@ open marker</string>\n\t\t</dict>\n\t</dict>\n\t<key>width.repeated</key>\n\t<dict>\n\t\t<key>NSStringVariableWidthRuleType</key>\n\t\t<dict>\n\t\t\t<key>5</key>\n\t\t\t<string>%n%n %@ near marker</string>\n\t\t\t<key>040</key>\n\t\t\t<string>%n%n %@ open marker</string>\n\t\t</dict>\n\t</dict>\n\t<key>width.explicit</key>\n\t<dict>\n\t\t<key>NSStringVariableWidthRuleType</key>\n\t\t<dict>\n\t\t\t<key>5</key>\n\t\t\t<string>%2$n %1$@ near marker</string>\n\t\t\t<key>040</key>\n\t\t\t<string>%2$n %1$@ open marker</string>\n\t\t</dict>\n\t</dict>\n\t<key>width.escaped</key>\n\t<dict>\n\t\t<key>NSStringVariableWidthRuleType</key>\n\t\t<dict>\n\t\t\t<key>5</key>\n\t\t\t<string>%%n %@ near marker</string>\n\t\t\t<key>040</key>\n\t\t\t<string>%%n %@ open marker</string>\n\t\t</dict>\n\t</dict>\n\t<key>device.after🧭</key>\n\t<dict>\n\t\t<key>NSStringDeviceSpecificRuleType</key>\n\t\t<dict>\n\t\t\t<key>iphone</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringVariableWidthRuleType</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>5</key>\n\t\t\t\t\t<string>%n %@ pocket near marker</string>\n\t\t\t\t\t<key>040</key>\n\t\t\t\t\t<string>%n %@ pocket open marker</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t\t<key>mac</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringVariableWidthRuleType</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>5</key>\n\t\t\t\t\t<string>%n %@ desktop near marker</string>\n\t\t\t\t\t<key>040</key>\n\t\t\t\t\t<string>%n %@ desktop open marker</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t</dict>\n\t</dict>\n\t<key>device.middle</key>\n\t<dict>\n\t\t<key>NSStringDeviceSpecificRuleType</key>\n\t\t<dict>\n\t\t\t<key>iphone</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringVariableWidthRuleType</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>5</key>\n\t\t\t\t\t<string>%@ %n %@ pocket near marker</string>\n\t\t\t\t\t<key>040</key>\n\t\t\t\t\t<string>%@ %n %@ pocket open marker</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t\t<key>mac</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringVariableWidthRuleType</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>5</key>\n\t\t\t\t\t<string>%@ %n %@ desktop near marker</string>\n\t\t\t\t\t<key>040</key>\n\t\t\t\t\t<string>%@ %n %@ desktop open marker</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t</dict>\n\t</dict>\n\t<key>device.repeated</key>\n\t<dict>\n\t\t<key>NSStringDeviceSpecificRuleType</key>\n\t\t<dict>\n\t\t\t<key>iphone</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringVariableWidthRuleType</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>5</key>\n\t\t\t\t\t<string>%n%n %@ pocket near marker</string>\n\t\t\t\t\t<key>040</key>\n\t\t\t\t\t<string>%n%n %@ pocket open marker</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t\t<key>mac</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringVariableWidthRuleType</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>5</key>\n\t\t\t\t\t<string>%n%n %@ desktop near marker</string>\n\t\t\t\t\t<key>040</key>\n\t\t\t\t\t<string>%n%n %@ desktop open marker</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t</dict>\n\t</dict>\n\t<key>device.explicit</key>\n\t<dict>\n\t\t<key>NSStringDeviceSpecificRuleType</key>\n\t\t<dict>\n\t\t\t<key>iphone</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringVariableWidthRuleType</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>5</key>\n\t\t\t\t\t<string>%2$n %1$@ pocket near marker</string>\n\t\t\t\t\t<key>040</key>\n\t\t\t\t\t<string>%2$n %1$@ pocket open marker</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t\t<key>mac</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringVariableWidthRuleType</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>5</key>\n\t\t\t\t\t<string>%2$n %1$@ desktop near marker</string>\n\t\t\t\t\t<key>040</key>\n\t\t\t\t\t<string>%2$n %1$@ desktop open marker</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t</dict>\n\t</dict>\n\t<key>device.escaped</key>\n\t<dict>\n\t\t<key>NSStringDeviceSpecificRuleType</key>\n\t\t<dict>\n\t\t\t<key>iphone</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringVariableWidthRuleType</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>5</key>\n\t\t\t\t\t<string>%%n %@ pocket near marker</string>\n\t\t\t\t\t<key>040</key>\n\t\t\t\t\t<string>%%n %@ pocket open marker</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t\t<key>mac</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSStringVariableWidthRuleType</key>\n\t\t\t\t<dict>\n\t\t\t\t\t<key>5</key>\n\t\t\t\t\t<string>%%n %@ desktop near marker</string>\n\t\t\t\t\t<key>040</key>\n\t\t\t\t\t<string>%%n %@ desktop open marker</string>\n\t\t\t\t</dict>\n\t\t\t</dict>\n\t\t</dict>\n\t</dict>\n</dict>\n</plist>\n",
+  "slots": [
+    {
+      "id": "width.after🧭",
+      "selector": "@width",
+      "variant": "5",
+      "start": 570,
+      "end": 604
+    },
+    {
+      "id": "width.after🧭",
+      "selector": "@width",
+      "variant": "040",
+      "start": 682,
+      "end": 716
+    },
+    {
+      "id": "width.middle",
+      "selector": "@width",
+      "variant": "5",
+      "start": 998,
+      "end": 1038
+    },
+    {
+      "id": "width.middle",
+      "selector": "@width",
+      "variant": "040",
+      "start": 1116,
+      "end": 1156
+    },
+    {
+      "id": "width.repeated",
+      "selector": "@width",
+      "variant": "5",
+      "start": 1442,
+      "end": 1480
+    },
+    {
+      "id": "width.repeated",
+      "selector": "@width",
+      "variant": "040",
+      "start": 1558,
+      "end": 1596
+    },
+    {
+      "id": "width.explicit",
+      "selector": "@width",
+      "variant": "5",
+      "start": 1882,
+      "end": 1924
+    },
+    {
+      "id": "width.explicit",
+      "selector": "@width",
+      "variant": "040",
+      "start": 2002,
+      "end": 2044
+    },
+    {
+      "id": "width.escaped",
+      "selector": "@width",
+      "variant": "5",
+      "start": 2328,
+      "end": 2364
+    },
+    {
+      "id": "width.escaped",
+      "selector": "@width",
+      "variant": "040",
+      "start": 2442,
+      "end": 2478
+    },
+    {
+      "id": "device.after🧭",
+      "selector": "@device=iphone",
+      "variant": "5",
+      "start": 2948,
+      "end": 2996
+    },
+    {
+      "id": "device.after🧭",
+      "selector": "@device=iphone",
+      "variant": "040",
+      "start": 3082,
+      "end": 3130
+    },
+    {
+      "id": "device.after🧭",
+      "selector": "@device=mac",
+      "variant": "5",
+      "start": 3426,
+      "end": 3476
+    },
+    {
+      "id": "device.after🧭",
+      "selector": "@device=mac",
+      "variant": "040",
+      "start": 3562,
+      "end": 3612
+    },
+    {
+      "id": "device.middle",
+      "selector": "@device=iphone",
+      "variant": "5",
+      "start": 4126,
+      "end": 4180
+    },
+    {
+      "id": "device.middle",
+      "selector": "@device=iphone",
+      "variant": "040",
+      "start": 4266,
+      "end": 4320
+    },
+    {
+      "id": "device.middle",
+      "selector": "@device=mac",
+      "variant": "5",
+      "start": 4616,
+      "end": 4672
+    },
+    {
+      "id": "device.middle",
+      "selector": "@device=mac",
+      "variant": "040",
+      "start": 4758,
+      "end": 4814
+    },
+    {
+      "id": "device.repeated",
+      "selector": "@device=iphone",
+      "variant": "5",
+      "start": 5332,
+      "end": 5384
+    },
+    {
+      "id": "device.repeated",
+      "selector": "@device=iphone",
+      "variant": "040",
+      "start": 5470,
+      "end": 5522
+    },
+    {
+      "id": "device.repeated",
+      "selector": "@device=mac",
+      "variant": "5",
+      "start": 5818,
+      "end": 5872
+    },
+    {
+      "id": "device.repeated",
+      "selector": "@device=mac",
+      "variant": "040",
+      "start": 5958,
+      "end": 6012
+    },
+    {
+      "id": "device.explicit",
+      "selector": "@device=iphone",
+      "variant": "5",
+      "start": 6530,
+      "end": 6586
+    },
+    {
+      "id": "device.explicit",
+      "selector": "@device=iphone",
+      "variant": "040",
+      "start": 6672,
+      "end": 6728
+    },
+    {
+      "id": "device.explicit",
+      "selector": "@device=mac",
+      "variant": "5",
+      "start": 7024,
+      "end": 7082
+    },
+    {
+      "id": "device.explicit",
+      "selector": "@device=mac",
+      "variant": "040",
+      "start": 7168,
+      "end": 7226
+    },
+    {
+      "id": "device.escaped",
+      "selector": "@device=iphone",
+      "variant": "5",
+      "start": 7742,
+      "end": 7792
+    },
+    {
+      "id": "device.escaped",
+      "selector": "@device=iphone",
+      "variant": "040",
+      "start": 7878,
+      "end": 7928
+    },
+    {
+      "id": "device.escaped",
+      "selector": "@device=mac",
+      "variant": "5",
+      "start": 8224,
+      "end": 8276
+    },
+    {
+      "id": "device.escaped",
+      "selector": "@device=mac",
+      "variant": "040",
+      "start": 8362,
+      "end": 8414
+    }
+  ]
+}

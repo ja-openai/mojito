@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "dock&signals": {
+      "defaultMessage": "{signals, plural, one {{signals} clear signal} other {{signals} clear signals}} near north shore",
+      "variants": {
+        "one": "{signals} clear signal",
+        "other": "{signals} clear signals"
+      },
+      "placeholders": [
+        {
+          "name": "signals",
+          "source": "%ld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@signals@ near north shore",
+        "applePlistExtras": {
+          "futureFlags": [
+            true,
+            false,
+            "Protected <north> & steady",
+            7
+          ],
+          "futureRatio": {
+            "$applePlistType": "real",
+            "bits": "3ff8000000000000"
+          }
+        },
+        "applePluralRules": {
+          "signals": {
+            "valueType": "ld",
+            "variants": {
+              "one": "%ld clear signal",
+              "other": "%ld clear signals"
+            }
+          }
+        },
+        "pluralVariable": "signals",
+        "valueType": "ld"
+      }
+    }
+  }
+}

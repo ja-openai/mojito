@@ -1,0 +1,38 @@
+{
+  "harbor.after": {
+    "NSStringLocalizedFormatKey": "%#@count@ visible",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%n beacon",
+      "other": "%d%n beacons"
+    }
+  },
+  "harbor.literal": {
+    "NSStringLocalizedFormatKey": "%#@count@ visible",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%%n beacon",
+      "other": "%d%%n beacons"
+    }
+  },
+  "harbor.mixed.🧭": {
+    "NSStringLocalizedFormatKey": "%#@count@ visible",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%n\nbeacon",
+      "other": "%d%n\nbeacons"
+    }
+  },
+  "harbor.repeated": {
+    "NSStringLocalizedFormatKey": "%#@count@ visible",
+    "count": {
+      "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+      "NSStringFormatValueTypeKey": "d",
+      "one": "%d%n%n beacon",
+      "other": "%d%n%n beacons"
+    }
+  }
+}

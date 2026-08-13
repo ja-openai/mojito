@@ -1,0 +1,272 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "digit.board": {
+      "defaultMessage": "Counted {2signals, plural, one {{2signals} numbered pulse} other {{2signals} numbered pulses}}",
+      "variants": {
+        "one": "{2signals} numbered pulse",
+        "other": "{2signals} numbered pulses"
+      },
+      "placeholders": [
+        {
+          "name": "2signals",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "Counted %1$#@2signals@",
+        "applePluralRules": {
+          "2signals": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d numbered pulse",
+              "other": "%d numbered pulses"
+            }
+          }
+        },
+        "pluralVariable": "2signals",
+        "valueType": "d"
+      }
+    },
+    "implicit.board": {
+      "defaultMessage": "Observed {beacons, plural, one {{beacons} active beacon} other {{beacons} active beacons}}",
+      "variants": {
+        "one": "{beacons} active beacon",
+        "other": "{beacons} active beacons"
+      },
+      "placeholders": [
+        {
+          "name": "beacons",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "Observed %#@beacons@",
+        "applePluralRules": {
+          "beacons": {
+            "valueType": "lld",
+            "variants": {
+              "one": "%lld active beacon",
+              "other": "%lld active beacons"
+            }
+          }
+        },
+        "pluralVariable": "beacons",
+        "valueType": "lld"
+      }
+    },
+    "mixed.branch": {
+      "defaultMessage": "Brief {signals, plural, one {{signals} signal for {arg1}} other {{signals} signals for {arg1}}}",
+      "variants": {
+        "one": "{signals} signal for {arg1}",
+        "other": "{signals} signals for {arg1}"
+      },
+      "placeholders": [
+        {
+          "name": "signals",
+          "source": "%1$d",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%2$@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "Brief %1$#@signals@",
+        "applePluralRules": {
+          "signals": {
+            "valueType": "d",
+            "variants": {
+              "one": "%1$d signal for %2$@",
+              "other": "%1$d signals for %2$@"
+            }
+          }
+        },
+        "pluralVariable": "signals",
+        "valueType": "d"
+      }
+    },
+    "positioned.board": {
+      "defaultMessage": "Operator {arg2} tracks {signals, plural, one {{signals} orbital pulse} other {{signals} orbital pulses}} across {routes, plural, one {{routes} quiet corridor} other {{routes} quiet corridors}}",
+      "placeholders": [
+        {
+          "name": "signals",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "routes",
+          "source": "%d",
+          "kind": "integer",
+          "position": 2
+        },
+        {
+          "name": "arg2",
+          "source": "%3$@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "Operator %3$@ tracks %1$#@signals@ across %2$#@routes@",
+        "applePluralRules": {
+          "routes": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d quiet corridor",
+              "other": "%d quiet corridors"
+            }
+          },
+          "signals": {
+            "valueType": "lld",
+            "variants": {
+              "one": "%lld orbital pulse",
+              "other": "%lld orbital pulses"
+            }
+          }
+        },
+        "pluralVariables": [
+          "signals",
+          "routes"
+        ]
+      }
+    },
+    "reordered.board": {
+      "defaultMessage": "Across {routes, plural, one {{routes} amber route} other {{routes} amber routes}}, observe {signals, plural, one {{signals} clear signal} other {{signals} clear signals}}",
+      "placeholders": [
+        {
+          "name": "routes",
+          "source": "%d",
+          "kind": "integer",
+          "position": 2
+        },
+        {
+          "name": "signals",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "Across %2$#@routes@, observe %1$#@signals@",
+        "applePluralRules": {
+          "routes": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d amber route",
+              "other": "%d amber routes"
+            }
+          },
+          "signals": {
+            "valueType": "lld",
+            "variants": {
+              "one": "%lld clear signal",
+              "other": "%lld clear signals"
+            }
+          }
+        },
+        "pluralVariables": [
+          "routes",
+          "signals"
+        ]
+      }
+    },
+    "repeated.board": {
+      "defaultMessage": "{markers, plural, one {{markers} blue marker} other {{markers} blue markers}} before {markers, plural, one {{markers} blue marker} other {{markers} blue markers}}",
+      "variants": {
+        "one": "{markers} blue marker",
+        "other": "{markers} blue markers"
+      },
+      "placeholders": [
+        {
+          "name": "markers",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%1$#@markers@ before %1$#@markers@",
+        "applePluralRules": {
+          "markers": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d blue marker",
+              "other": "%d blue markers"
+            }
+          }
+        },
+        "pluralVariable": "markers",
+        "valueType": "d"
+      }
+    },
+    "spelled.board": {
+      "defaultMessage": "Showing {signals, plural, one {a lone signal} other {several signals}}",
+      "variants": {
+        "one": "a lone signal",
+        "other": "several signals"
+      },
+      "placeholders": [
+        {
+          "name": "signals",
+          "source": "%lld",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "Showing %1$#@signals@",
+        "applePluralRules": {
+          "signals": {
+            "valueType": "lld",
+            "variants": {
+              "one": "a lone signal",
+              "other": "several signals"
+            }
+          }
+        },
+        "pluralVariable": "signals",
+        "valueType": "lld"
+      }
+    },
+    "underscore.board": {
+      "defaultMessage": "Tracked {_signals_2, plural, one {{_signals_2} hidden route} other {{_signals_2} hidden routes}}",
+      "variants": {
+        "one": "{_signals_2} hidden route",
+        "other": "{_signals_2} hidden routes"
+      },
+      "placeholders": [
+        {
+          "name": "_signals_2",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "Tracked %1$#@_signals_2@",
+        "applePluralRules": {
+          "_signals_2": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d hidden route",
+              "other": "%d hidden routes"
+            }
+          }
+        },
+        "pluralVariable": "_signals_2",
+        "valueType": "d"
+      }
+    }
+  }
+}

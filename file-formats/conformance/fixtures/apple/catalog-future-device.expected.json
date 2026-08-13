@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "future.device": {
+      "defaultMessage": "Private orbital {arg0}",
+      "description": "Original neutral future-device fallback.",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizationSources": {
+          "fr": {
+            "variations": {
+              "device": {
+                "future_": {
+                  "stringUnit": {
+                    "state": "machine_translated",
+                    "value": "Orbital privé %@"
+                  }
+                },
+                "future_😃": {
+                  "stringUnit": {
+                    "state": "new",
+                    "value": "Orbital lumineux %@"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appleSourceLocalization": {
+          "variations": {
+            "device": {
+              "future_": {
+                "stringUnit": {
+                  "state": "future_review",
+                  "value": "Private orbital %@"
+                }
+              },
+              "future_😃": {
+                "stringUnit": {
+                  "state": "machine_translated",
+                  "value": "Bright orbital %@"
+                }
+              }
+            }
+          }
+        },
+        "defaultDevice": "future_",
+        "localizations": {
+          "fr": {
+            "variationAxes": {
+              "device": {
+                "future_": {
+                  "stringUnit": {
+                    "state": "machine_translated",
+                    "value": "Orbital privé %@"
+                  }
+                },
+                "future_😃": {
+                  "stringUnit": {
+                    "state": "new",
+                    "value": "Orbital lumineux %@"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sourceState": "future_review",
+        "sourceVariationAxes": {
+          "device": {
+            "future_": {
+              "stringUnit": {
+                "state": "future_review",
+                "value": "Private orbital %@"
+              }
+            },
+            "future_😃": {
+              "stringUnit": {
+                "state": "machine_translated",
+                "value": "Bright orbital %@"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

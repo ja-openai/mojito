@@ -1,0 +1,355 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "harbor.target.russian.missing🧭": {
+      "defaultMessage": "{count, plural, one {{count}  beacon {arg1}} other {{count}  beacons {arg1}}}",
+      "description": "One atomic ICU message owns every newly inserted target category",
+      "variants": {
+        "one": "{count}  beacon {arg1}",
+        "other": "{count}  beacons {arg1}"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%1$lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%2$@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld %3$n beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld %3$n beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "sourcePluralStates": {
+          "one": "needs_review",
+          "other": "translated"
+        },
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ],
+            "other": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ]
+          }
+        },
+        "localizations": {
+          "de": {
+            "variants": {
+              "one": "%1$lld Signal %2$@",
+              "other": "%1$lld Signale %2$@"
+            },
+            "variantStates": {
+              "one": "translated",
+              "other": "future_review"
+            }
+          }
+        },
+        "appleLocalizationSources": {
+          "de": {
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%1$lld Signal %2$@"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "future_review",
+                    "value": "%1$lld Signale %2$@"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.target.russian.null🧭": {
+      "defaultMessage": "{count, plural, one {{count}  beacon {arg1}} other {{count}  beacons {arg1}}}",
+      "description": "One atomic ICU message owns every newly inserted target category",
+      "variants": {
+        "one": "{count}  beacon {arg1}",
+        "other": "{count}  beacons {arg1}"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%1$lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%2$@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld %3$n beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld %3$n beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "sourcePluralStates": {
+          "one": "needs_review",
+          "other": "translated"
+        },
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ],
+            "other": [
+              {
+                "position": 8,
+                "source": "%3$n",
+                "argumentPosition": 3
+              }
+            ]
+          }
+        },
+        "localizations": {
+          "de": {
+            "variants": {
+              "one": "%1$lld Signal %2$@",
+              "other": "%1$lld Signale %2$@"
+            },
+            "variantStates": {
+              "one": "translated",
+              "other": "future_review"
+            }
+          }
+        },
+        "appleLocalizationSources": {
+          "de": {
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%1$lld Signal %2$@"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "future_review",
+                    "value": "%1$lld Signale %2$@"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "harbor.target.russian.scalar": {
+      "defaultMessage": "Steady {arg0} shore",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Steady %@ shore"
+          }
+        },
+        "sourceState": "needs_review",
+        "localizations": {
+          "ru": {
+            "value": "Старый %@ берег",
+            "state": "future_review"
+          }
+        },
+        "appleLocalizationSources": {
+          "ru": {
+            "stringUnit": {
+              "state": "future_review",
+              "value": "Старый %@ берег"
+            }
+          }
+        }
+      }
+    },
+    "harbor.target.russian🧭": {
+      "defaultMessage": "{count, plural, one {{count} beacon {arg1}} other {{count} beacons {arg1}}}",
+      "description": "Target languages independently own their native plural categories",
+      "variants": {
+        "one": "{count} beacon {arg1}",
+        "other": "{count} beacons {arg1}"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%1$lld",
+          "kind": "integer",
+          "position": 1
+        },
+        {
+          "name": "arg1",
+          "source": "%2$@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "sourcePluralStates": {
+          "one": "needs_review",
+          "other": "translated"
+        },
+        "localizations": {
+          "ru": {
+            "variants": {
+              "few": "%2$@ %3$n %1$lld маяка",
+              "many": "%2$@ %3$n %1$lld маяков",
+              "one": "%2$@ %3$n %1$lld маяк",
+              "other": "%2$@ %3$n %1$lld маяка"
+            },
+            "variantStates": {
+              "few": "new",
+              "many": "future_review",
+              "one": "needs_review",
+              "other": "translated"
+            }
+          },
+          "de": {
+            "variants": {
+              "one": "%1$lld Signal %2$@",
+              "other": "%1$lld Signale %2$@"
+            },
+            "variantStates": {
+              "one": "translated",
+              "other": "future_review"
+            }
+          }
+        },
+        "appleLocalizationSources": {
+          "ru": {
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "needs_review",
+                    "value": "%2$@ %3$n %1$lld маяк"
+                  }
+                },
+                "few": {
+                  "stringUnit": {
+                    "state": "new",
+                    "value": "%2$@ %3$n %1$lld маяка"
+                  }
+                },
+                "many": {
+                  "stringUnit": {
+                    "state": "future_review",
+                    "value": "%2$@ %3$n %1$lld маяков"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%2$@ %3$n %1$lld маяка"
+                  }
+                }
+              }
+            }
+          },
+          "de": {
+            "variations": {
+              "plural": {
+                "one": {
+                  "stringUnit": {
+                    "state": "translated",
+                    "value": "%1$lld Signal %2$@"
+                  }
+                },
+                "other": {
+                  "stringUnit": {
+                    "state": "future_review",
+                    "value": "%1$lld Signale %2$@"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

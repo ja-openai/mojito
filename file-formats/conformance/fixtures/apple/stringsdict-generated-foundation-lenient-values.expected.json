@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "files.remaining": {
+      "defaultMessage": "{files, plural, one {{files} file} other {{files} files}} remaining",
+      "variants": {
+        "one": "{files} file",
+        "other": "{files} files"
+      },
+      "placeholders": [
+        {
+          "name": "files",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@files@ remaining",
+        "applePluralRules": {
+          "files": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d file",
+              "other": "%d files"
+            },
+            "applePlistExtras": {
+              "futureRuleDate": {
+                "$applePlistType": "date",
+                "value": "2004-05-06T07:08:09Z"
+              },
+              "NSStringFutureRuleMetadata": "Fresh <rule> & annotation",
+              "futureRuleData": {
+                "$applePlistType": "data",
+                "base64": "ZnJlc2ggbmV1dHJhbCBieXRlcw=="
+              },
+              "futureRuleNegative": -19,
+              "futureRuleDictionary": {
+                "NSStringFormatSpecTypeKey": "nested lookalike",
+                "count": 23,
+                "enabled": false
+              },
+              "futureRuleEnabled": true,
+              "futureRuleArray": [
+                "rule text",
+                false,
+                {
+                  "$applePlistType": "data",
+                  "base64": "AP8="
+                },
+                {
+                  "$applePlistType": "real",
+                  "bits": "4004000000000000"
+                }
+              ]
+            }
+          }
+        },
+        "pluralVariable": "files",
+        "valueType": "d",
+        "applePlistExtras": {
+          "futureData": {
+            "$applePlistType": "data",
+            "base64": "AA=="
+          },
+          "futureDate": {
+            "$applePlistType": "date",
+            "value": "2026-08-11T12:34:56Z"
+          },
+          "futureReal": {
+            "$applePlistType": "real",
+            "bits": "3fc0000000000000"
+          },
+          "futurePositive": 7,
+          "futureDisabled": false,
+          "futureMaximum": 18446744073709551615,
+          "futurePositiveInfinity": {
+            "$applePlistType": "real",
+            "bits": "7ff0000000000000"
+          },
+          "futureHexadecimal": 255,
+          "futureTinyReal": {
+            "$applePlistType": "real",
+            "bits": "0c06e93f5da2824c"
+          },
+          "futureNegative": -16,
+          "futureDateBeforeAppleEpoch": {
+            "$applePlistType": "date",
+            "value": "1997-01-02T03:04:05Z"
+          },
+          "futureArray": [
+            "first neutral route",
+            true,
+            -12,
+            {
+              "$applePlistType": "real",
+              "bits": "3fc0000000000000"
+            },
+            {
+              "$applePlistType": "data",
+              "base64": "AA+A/w=="
+            },
+            {
+              "$applePlistType": "date",
+              "value": "2026-03-06T04:40:39Z"
+            },
+            {
+              "nested": [
+                false,
+                "quiet harbor",
+                {
+                  "$applePlistType": "real",
+                  "bits": "8000000000000000"
+                }
+              ]
+            },
+            []
+          ],
+          "futurePreciseReal": {
+            "$applePlistType": "real",
+            "bits": "3ff3c0ca428c59fb"
+          },
+          "futureNegativeZero": {
+            "$applePlistType": "real",
+            "bits": "8000000000000000"
+          },
+          "futureNegativeInfinity": {
+            "$applePlistType": "real",
+            "bits": "fff0000000000000"
+          },
+          "futureNotANumber": {
+            "$applePlistType": "real",
+            "bits": "7ff8000000000000"
+          },
+          "futureEmptyDictionary": {},
+          "futureSentinelDictionary": {
+            "$applePlistType": "dictionary",
+            "entries": [
+              {
+                "key": "$applePlistType",
+                "value": "real native field"
+              },
+              {
+                "key": "bits",
+                "value": "not an encoded number"
+              },
+              {
+                "key": "nested",
+                "value": {
+                  "$applePlistType": "dictionary",
+                  "entries": [
+                    {
+                      "key": "$applePlistType",
+                      "value": "data native field"
+                    },
+                    {
+                      "key": "base64",
+                      "value": "not encoded metadata"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "futureEnabled": true,
+          "futureLabel": "Fresh <amber> & quiet harbor",
+          "futureNestedMetadata": {
+            "NSStringLocalizedFormatKey": "reserved-looking nested value",
+            "child": {
+              "count": -12,
+              "enabled": false,
+              "notes": "A neutral & original signal"
+            },
+            "": "private-use sorting",
+            "🛰": "supplementary sorting"
+          },
+          "futureUnknownRule": {
+            "NSStringFormatSpecTypeKey": "NSStringFutureRuleType",
+            "enabled": true
+          },
+          "futureEmptyData": {
+            "$applePlistType": "data",
+            "base64": ""
+          },
+          "futureMinimum": -9223372036854775808
+        }
+      }
+    }
+  }
+}

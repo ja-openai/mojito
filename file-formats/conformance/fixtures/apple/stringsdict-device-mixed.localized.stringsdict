@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>neutral.scalar-plural🧭</key><dict>
+    <key>NSStringDeviceSpecificRuleType</key><dict>
+      <key>iphone</key><string>Touchez &amp; la rive</string>
+      <key>mac</key><dict>
+        <key>NSStringLocalizedFormatKey</key><string>%#@lights@</string>
+        <key>lights</key><dict>
+          <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key><string>lld</string>
+          <key>one</key><string>%lld balise bureau</string>
+          <key>other</key><string>%lld balises bureau</string>
+        </dict>
+      </dict>
+    </dict>
+  </dict>
+  <key>neutral.plural-scalar🧭</key><dict>
+    <key>NSStringDeviceSpecificRuleType</key><dict>
+      <key>iphone</key><dict>
+        <key>NSStringLocalizedFormatKey</key><string>%#@lights@</string>
+        <key>lights</key><dict>
+          <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key><string>lld</string>
+          <key>one</key><string>%lld lampe mobile</string>
+          <key>other</key><string>%lld lampes mobiles</string>
+        </dict>
+      </dict>
+      <key>mac</key><string>Cliquez sur la jetée</string>
+    </dict>
+  </dict>
+  <key>neutral.scalar-width🧭</key><dict>
+    <key>NSStringDeviceSpecificRuleType</key><dict>
+      <key>iphone</key><string>Touchez le quai</string>
+      <key>mac</key><dict>
+        <key>NSStringVariableWidthRuleType</key><dict>
+          <key>5</key><string>Sud%n doux</string>
+          <key>040</key><string>Sud&#10;ouest calme</string>
+        </dict>
+      </dict>
+    </dict>
+  </dict>
+  <key>neutral.width-scalar🧭</key><dict>
+    <key>NSStringDeviceSpecificRuleType</key><dict>
+      <key>iphone</key><dict>
+        <key>NSStringVariableWidthRuleType</key><dict>
+          <key>5</key><string>Est%n quai</string>
+          <key>040</key><string>Nord%%n vaste rive</string>
+        </dict>
+      </dict>
+      <key>mac</key><string>Cliquez sur le port</string>
+    </dict>
+  </dict>
+  <key>neutral.plural-width🧭</key><dict>
+    <key>NSStringDeviceSpecificRuleType</key><dict>
+      <key>iphone</key><dict>
+        <key>NSStringLocalizedFormatKey</key><string>%#@lights@</string>
+        <key>lights</key><dict>
+          <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key><string>lld</string>
+          <key>one</key><string>%lld signal mobile</string>
+          <key>other</key><string>%lld signaux mobiles</string>
+        </dict>
+      </dict>
+      <key>mac</key><dict>
+        <key>NSStringVariableWidthRuleType</key><dict>
+          <key>5</key><string>Nord%n quai</string>
+          <key>040</key><string>Sud&#10;rive ouverte</string>
+        </dict>
+      </dict>
+    </dict>
+  </dict>
+  <key>neutral.width-plural🧭</key><dict>
+    <key>NSStringDeviceSpecificRuleType</key><dict>
+      <key>iphone</key><dict>
+        <key>NSStringVariableWidthRuleType</key><dict>
+          <key>5</key><string>Nord%n pointe</string>
+          <key>040</key><string>Nord%%n baie vaste</string>
+        </dict>
+      </dict>
+      <key>mac</key><dict>
+        <key>NSStringLocalizedFormatKey</key><string>%#@lights@</string>
+        <key>lights</key><dict>
+          <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key><string>lld</string>
+          <key>one</key><string>%lld bouée bureau</string>
+          <key>other</key><string>%lld bouées bureau</string>
+        </dict>
+      </dict>
+    </dict>
+  </dict>
+  <key>neutral.three-shapes🧭</key><dict>
+    <key>NSStringDeviceSpecificRuleType</key><dict>
+      <key>iphone</key><dict>
+        <key>NSStringLocalizedFormatKey</key><string>%#@lights@</string>
+        <key>lights</key><dict>
+          <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+          <key>NSStringFormatValueTypeKey</key><string>lld</string>
+          <key>one</key><string>%lld sentier mobile</string>
+          <key>other</key><string>%lld sentiers mobiles</string>
+        </dict>
+      </dict>
+      <key>mac</key><dict>
+        <key>NSStringVariableWidthRuleType</key><dict>
+          <key>5</key><string>Cap%n doux</string>
+          <key>040</key><string>Cap&#10;eau claire</string>
+        </dict>
+      </dict>
+      <key>other</key><string>Port de repli</string>
+    </dict>
+  </dict>
+</dict></plist>

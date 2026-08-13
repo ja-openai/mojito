@@ -1,0 +1,110 @@
+{
+  "neutral.scalar-plural🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": "Touchez & la rive",
+      "mac": {
+        "NSStringLocalizedFormatKey": "%#@lights@",
+        "lights": {
+          "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+          "NSStringFormatValueTypeKey": "lld",
+          "one": "%lld balise bureau",
+          "other": "%lld balises bureau"
+        }
+      }
+    }
+  },
+  "neutral.plural-scalar🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringLocalizedFormatKey": "%#@lights@",
+        "lights": {
+          "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+          "NSStringFormatValueTypeKey": "lld",
+          "one": "%lld lampe mobile",
+          "other": "%lld lampes mobiles"
+        }
+      },
+      "mac": "Cliquez sur la jetée"
+    }
+  },
+  "neutral.scalar-width🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": "Touchez le quai",
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "Sud%n doux",
+          "040": "Sud\nouest calme"
+        }
+      }
+    }
+  },
+  "neutral.width-scalar🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringVariableWidthRuleType": {
+          "5": "Est%n quai",
+          "040": "Nord%%n vaste rive"
+        }
+      },
+      "mac": "Cliquez sur le port"
+    }
+  },
+  "neutral.plural-width🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringLocalizedFormatKey": "%#@lights@",
+        "lights": {
+          "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+          "NSStringFormatValueTypeKey": "lld",
+          "one": "%lld signal mobile",
+          "other": "%lld signaux mobiles"
+        }
+      },
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "Nord%n quai",
+          "040": "Sud\nrive ouverte"
+        }
+      }
+    }
+  },
+  "neutral.width-plural🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringVariableWidthRuleType": {
+          "5": "Nord%n pointe",
+          "040": "Nord%%n baie vaste"
+        }
+      },
+      "mac": {
+        "NSStringLocalizedFormatKey": "%#@lights@",
+        "lights": {
+          "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+          "NSStringFormatValueTypeKey": "lld",
+          "one": "%lld bouée bureau",
+          "other": "%lld bouées bureau"
+        }
+      }
+    }
+  },
+  "neutral.three-shapes🧭": {
+    "NSStringDeviceSpecificRuleType": {
+      "iphone": {
+        "NSStringLocalizedFormatKey": "%#@lights@",
+        "lights": {
+          "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+          "NSStringFormatValueTypeKey": "lld",
+          "one": "%lld sentier mobile",
+          "other": "%lld sentiers mobiles"
+        }
+      },
+      "mac": {
+        "NSStringVariableWidthRuleType": {
+          "5": "Cap%n doux",
+          "040": "Cap\neau claire"
+        }
+      },
+      "other": "Port de repli"
+    }
+  }
+}

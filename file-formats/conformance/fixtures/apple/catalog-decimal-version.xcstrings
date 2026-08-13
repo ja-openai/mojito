@@ -1,0 +1,22 @@
+{
+  "sourceLanguage": "en",
+  "version": 1.5,
+  "strings": {
+    "decimal.version": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "machine_translated",
+            "value": "Fractional catalog revision"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signal orbital neutre"
+          }
+        }
+      }
+    }
+  }
+}

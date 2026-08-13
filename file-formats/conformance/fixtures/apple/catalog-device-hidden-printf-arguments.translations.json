@@ -1,0 +1,18 @@
+{
+  "device.after🧭#@device=iphone#one": "{count} {arg2} mobile repère",
+  "device.after🧭#@device=iphone#other": "{count} {arg2} mobile repères",
+  "device.after🧭#@device=mac#one": "{count} {arg2} bureau repère",
+  "device.after🧭#@device=mac#other": "{count} {arg2} bureau repères",
+  "device.repeated#@device=iphone#one": "{count} {arg3} mobile repère",
+  "device.repeated#@device=iphone#other": "{count} {arg3} mobile repères",
+  "device.repeated#@device=mac#one": "{count} {arg3} bureau repère",
+  "device.repeated#@device=mac#other": "{count} {arg3} bureau repères",
+  "device.explicit#@device=iphone#one": "{count}  {arg1} mobile repère",
+  "device.explicit#@device=iphone#other": "{count}  {arg1} mobile repères",
+  "device.explicit#@device=mac#one": "{count}  {arg1} bureau repère",
+  "device.explicit#@device=mac#other": "{count}  {arg1} bureau repères",
+  "device.escaped#@device=iphone#one": "{count}%n {arg1} mobile repère",
+  "device.escaped#@device=iphone#other": "{count}%n {arg1} mobile repères",
+  "device.escaped#@device=mac#one": "{count}%n {arg1} bureau repère",
+  "device.escaped#@device=mac#other": "{count}%n {arg1} bureau repères"
+}

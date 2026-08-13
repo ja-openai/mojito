@@ -1,0 +1,7 @@
+{
+  "harbor.target.russian🧭#one": "{arg1}  {count} маяк у причала",
+  "harbor.target.russian🧭#few": "{arg1}  {count} маяка у причала",
+  "harbor.target.russian🧭#many": "{arg1}  {count} маяков у причала",
+  "harbor.target.russian🧭#other": "{arg1}  {count} маяка у причала",
+  "harbor.target.russian.scalar": "У причала {arg0}"
+}

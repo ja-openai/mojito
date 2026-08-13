@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "wrapped.$/north:west-2": {
+      "defaultMessage": "south.$/east:bank-1",
+      "description": "Structural trivia is ignored between OpenStep dictionary tokens."
+    },
+    "wrapped.route": {
+      "defaultMessage": "Wrapped {arg0} harbor",
+      "description": "OpenStep dictionary translator context.",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ]
+    },
+    "wrapped.shortcut": {
+      "defaultMessage": "wrapped.shortcut",
+      "description": "OpenStep dictionaries support Foundation's key-only shortcut."
+    }
+  }
+}

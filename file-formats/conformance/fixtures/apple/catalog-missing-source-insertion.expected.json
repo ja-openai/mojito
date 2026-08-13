@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_xcstrings",
+  "locale": "en",
+  "messages": {
+    "%@ %n %@ anchorage": {
+      "defaultMessage": "{arg0}  {arg2} anchorage",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        },
+        {
+          "name": "arg2",
+          "source": "%@",
+          "kind": "string",
+          "position": 3
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 7,
+            "source": "%n",
+            "argumentPosition": 2
+          }
+        ],
+        "localizations": {
+          "fr": {
+            "value": "%@ %@ mouillage existant",
+            "state": "future_review"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr": {
+            "stringUnit": {
+              "state": "future_review",
+              "value": "%@ %@ mouillage existant"
+            }
+          }
+        }
+      }
+    },
+    "North %n %@ 🧭": {
+      "defaultMessage": "North  {arg1} 🧭",
+      "placeholders": [
+        {
+          "name": "arg1",
+          "source": "%@",
+          "kind": "string",
+          "position": 2
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 6,
+            "source": "%n",
+            "argumentPosition": 1
+          }
+        ],
+        "localizations": {
+          "fr": {
+            "value": "Nord %@ conservé",
+            "state": "machine_translated"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr": {
+            "stringUnit": {
+              "state": "machine_translated",
+              "value": "Nord %@ conservé"
+            }
+          }
+        }
+      }
+    },
+    "Tide %%n %@ marker": {
+      "defaultMessage": "Tide %n {arg0} marker",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "localizations": {
+          "fr": {
+            "value": "Marée %%n %@ existante",
+            "state": "needs_review"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr": {
+            "stringUnit": {
+              "state": "needs_review",
+              "value": "Marée %%n %@ existante"
+            }
+          }
+        }
+      }
+    },
+    "West %2$n %1$@ pier": {
+      "defaultMessage": "West  {arg0} pier",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%1$@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleDisabledPrintfConversions": [
+          {
+            "position": 5,
+            "source": "%2$n",
+            "argumentPosition": 2
+          }
+        ],
+        "localizations": {
+          "fr": {
+            "value": "Ouest %1$@ jetée existante",
+            "state": "translated"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Ouest %1$@ jetée existante"
+            }
+          }
+        }
+      }
+    },
+    "harbor.missing.plain🧭": {
+      "defaultMessage": "harbor.missing.plain🧭",
+      "metadata": {
+        "extractionState": "stale",
+        "localizations": {
+          "fr": {
+            "value": "Abri existant",
+            "state": "needs_review"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr": {
+            "stringUnit": {
+              "state": "needs_review",
+              "value": "Abri existant"
+            }
+          }
+        }
+      },
+      "description": "A neutral missing source with existing review ownership"
+    },
+    "owned.scalar": {
+      "defaultMessage": "Steady {arg0} shore",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleSourceLocalization": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Steady %@ shore"
+          }
+        },
+        "sourceState": "needs_review",
+        "localizations": {
+          "fr": {
+            "value": "Rive %@ protégée",
+            "state": "stale"
+          }
+        },
+        "appleLocalizationSources": {
+          "fr": {
+            "stringUnit": {
+              "state": "stale",
+              "value": "Rive %@ protégée"
+            }
+          }
+        }
+      }
+    }
+  }
+}

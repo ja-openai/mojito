@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>neutral.unsafe.width</key>
+	<dict>
+		<key>NSStringVariableWidthRuleType</key>
+		<dict>
+			<key>5</key>
+			<dict>
+				<key>NSStringDeviceSpecificRuleType</key>
+				<dict>
+					<key>iphone</key>
+					<string>Touch near</string>
+					<key>mac</key>
+					<string>Click near</string>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+</dict>
+</plist>

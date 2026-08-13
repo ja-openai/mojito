@@ -1,0 +1,25 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "substitution.counter": {
+      "localizations": {
+        "en": {
+          "stringUnit": { "state": "translated", "value": "%lld ready" },
+          "substitutions": {
+            "quantity": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": { "stringUnit": { "state": "translated", "value": "one signal" } },
+                  "other": { "stringUnit": { "state": "translated", "value": "many signals" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n  <!-- Structural comments belong to the container, never to scalar content. -->\n  <?native preserve=\"structure\"?>\n  <dict>\n    <!-- A dictionary key may contain native CDATA text. -->\n    <key><![CDATA[dock&signals]]></key>\n    <!-- Comments between dictionary keys and values are valid. -->\n    <dict>\n      <!-- Literal and CDATA string fragments remain one native format. -->\n      <key>NSStringLocalizedFormatKey</key>\n      <string>%#@signals@<![CDATA[ near north shore]]></string>\n\n      <!-- Comments and processing instructions between plural fields are valid. -->\n      <key>signals</key>\n      <dict>\n        <!-- The required Foundation selector type is protected. -->\n        <key>NSStringFormatSpecTypeKey</key>\n        <string>NSStringPluralRuleType</string>\n        <key>NSStringFormatValueTypeKey</key>\n        <string>ld</string>\n        <key><![CDATA[one]]></key>\n        <string><![CDATA[%ld clear signal]]></string>\n        <!-- Preserve this structural note while replacing only owned categories. -->\n        <key>other</key>\n        <string>%ld clear signals</string>\n      </dict>\n\n      <!-- Typed future metadata has strict scalar and container boundaries. -->\n      <key>futureFlags</key>\n      <array>\n        <!-- Explicitly empty booleans are equivalent to self-closing booleans. -->\n        <true></true>\n        <?native preserve=\"array\"?>\n        <false/>\n        <string><![CDATA[Protected <north> & steady]]></string>\n        <integer>7</integer>\n      </array>\n      <!-- Real numbers accept CDATA even though integers, dates, and data do not. -->\n      <key>futureRatio</key><real><![CDATA[1.5]]></real>\n    </dict>\n  </dict>\n</plist>\n",
+  "slots": [
+    {
+      "id": "dock&signals",
+      "variant": "one",
+      "start": 960,
+      "end": 988
+    },
+    {
+      "id": "dock&signals",
+      "variant": "other",
+      "start": 1125,
+      "end": 1142
+    }
+  ]
+}

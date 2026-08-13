@@ -1,0 +1,21 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "welcome": {
+      "comment": "Welcome screen greeting",
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Hello, %@!" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Bonjour, %@ !" } }
+      }
+    },
+    "not.translated": {
+      "shouldTranslate": false,
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Internal" } } }
+    },
+    "fallback.key": {
+      "localizations": { "de": { "stringUnit": { "state": "needs_review", "value": "Ersatz" } } }
+    }
+  },
+  "version": "1.0"
+}

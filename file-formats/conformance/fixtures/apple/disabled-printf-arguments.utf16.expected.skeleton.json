@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "encoding": "UTF-16LE-BOM",
+  "source": "\"harbor.implicit\" = \"North %n %@\";\n\"harbor.middle\" = \"%@ dock %n %@\";\n\"harbor.repeated\" = \"%n%n %@ port\";\n\"harbor.explicit\" = \"%2$n %1$@ dock\";\n\"harbor.mixed\" = \"%2$n %@ dock\";\n\"harbor.overlap\" = \"%n %1$@ lane\";\n\"harbor.integer\" = \"%n %d markers\";\n\"harbor.escaped\" = \"%%n %@ tide\";\n\"harbor.unicode.🧭\" = \"🧭%n %@ reef\";\n",
+  "slots": [
+    {
+      "id": "harbor.implicit",
+      "start": 44,
+      "end": 66
+    },
+    {
+      "id": "harbor.middle",
+      "start": 110,
+      "end": 136
+    },
+    {
+      "id": "harbor.repeated",
+      "start": 184,
+      "end": 208
+    },
+    {
+      "id": "harbor.explicit",
+      "start": 256,
+      "end": 284
+    },
+    {
+      "id": "harbor.mixed",
+      "start": 326,
+      "end": 350
+    },
+    {
+      "id": "harbor.overlap",
+      "start": 396,
+      "end": 420
+    },
+    {
+      "id": "harbor.integer",
+      "start": 466,
+      "end": 492
+    },
+    {
+      "id": "harbor.escaped",
+      "start": 538,
+      "end": 560
+    },
+    {
+      "id": "harbor.unicode.🧭",
+      "start": 612,
+      "end": 636
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "de.lproj/catalog.strings": {
+    "harbor.development.source.scalar🧭": "Deutscher geschützter Hafen"
+  },
+  "de.lproj/catalog.stringsdict": {
+    "harbor.development.source.plural🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld Signal %2$@",
+        "other": "%1$lld Signale %2$@"
+      }
+    }
+  },
+  "en-GB.lproj/catalog.strings": {
+    "harbor.development.source.scalar🧭": "%2$@ %1$lld original beacon"
+  },
+  "en-GB.lproj/catalog.stringsdict": {
+    "harbor.development.source.plural🧭": {
+      "NSStringLocalizedFormatKey": "%#@value@",
+      "value": {
+        "NSStringFormatSpecTypeKey": "NSStringPluralRuleType",
+        "NSStringFormatValueTypeKey": "lld",
+        "one": "%1$lld original beacon %2$@",
+        "other": "%1$lld original beacons %2$@"
+      }
+    }
+  }
+}

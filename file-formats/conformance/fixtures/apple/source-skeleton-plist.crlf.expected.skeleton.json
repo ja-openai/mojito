@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\"?>\r\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\r\n<plist version=\"1.0\">\r\n  <!-- This root note does not describe a dictionary entry. -->\r\n  <dict>\r\n    <!-- Preserve the original entity spelling in this native key. -->\r\n    <key>escaped&amp;key</key>\r\n    <!-- Structural comments between key and value remain untouched. -->\r\n    <string>North &amp; pier</string>\r\n\r\n    <!-- Both the key and its source value use literal CDATA. -->\r\n    <key><![CDATA[cdata<&>key]]></key>\r\n    <string><![CDATA[<quiet> & calm]]></string>\r\n\r\n    <!-- Mixed XML text and CDATA retain their original boundaries. -->\r\n    <key>mixed.key</key><string>North <![CDATA[<quiet> & calm]]> pier</string>\r\n\r\n    <!-- A self-closing value expands without rewriting its attributes. -->\r\n    <key>empty.key</key><string custom=\"reserved\" />\r\n\r\n    <!-- Explicit empty elements use a zero-width source slot. -->\r\n    <key>explicit.empty</key><string></string>\r\n\r\n    <!-- Numeric references and positional Foundation formatters remain native. -->\r\n    <key>newline.key</key><string>North&#13;South</string>\r\n    <key>placeholder.key</key><string>Ready %1$@</string>\r\n    <key>percent.newline</key><string>North%nSouth</string>\r\n    <key>percent.literal</key><string>Ready 50%%</string>\r\n\r\n    <!-- Supplementary characters precede later byte-owned values. -->\r\n    <key>unicode.🧭</key><string>équipe</string>\r\n  </dict>\r\n</plist>\r\n",
+  "slots": [
+    {
+      "id": "escaped&key",
+      "start": 415,
+      "end": 431
+    },
+    {
+      "id": "cdata<&>key",
+      "start": 563,
+      "end": 589
+    },
+    {
+      "id": "mixed.key",
+      "start": 707,
+      "end": 744
+    },
+    {
+      "id": "empty.key",
+      "start": 884,
+      "end": 886
+    },
+    {
+      "id": "explicit.empty",
+      "start": 995,
+      "end": 995
+    },
+    {
+      "id": "newline.key",
+      "start": 1127,
+      "end": 1142
+    },
+    {
+      "id": "placeholder.key",
+      "start": 1191,
+      "end": 1201
+    },
+    {
+      "id": "percent.newline",
+      "start": 1250,
+      "end": 1262
+    },
+    {
+      "id": "percent.literal",
+      "start": 1311,
+      "end": 1321
+    },
+    {
+      "id": "unicode.🧭",
+      "start": 1441,
+      "end": 1448
+    }
+  ]
+}

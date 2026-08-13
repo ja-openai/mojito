@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "mixed": {
+      "defaultMessage": "{arg1} has {arg0} items (100%)",
+      "description": "Apple positional substitutions and percent escaping",
+      "placeholders": [
+        { "name": "arg1", "source": "%2$@", "kind": "string", "position": 2 },
+        { "name": "arg0", "source": "%1$lld", "kind": "integer", "position": 1 }
+      ]
+    },
+    "simple": { "defaultMessage": "Value", "description": "Multiple comments are joined" }
+  }
+}

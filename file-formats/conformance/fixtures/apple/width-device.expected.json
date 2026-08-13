@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "literal.doctype": {
+      "defaultMessage": "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">",
+      "metadata": {
+        "defaultWidth": 12,
+        "widthVariants": {
+          "12": "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">"
+        }
+      }
+    },
+    "signal.device": {
+      "defaultMessage": "Touch {arg0}",
+      "placeholders": [
+        {
+          "name": "arg0",
+          "source": "%@",
+          "kind": "string",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "defaultDevice": "iphone",
+        "deviceVariants": {
+          "applevision": "Focus on %@",
+          "iphone": "Touch %@",
+          "mac": "Click %@"
+        }
+      }
+    },
+    "signal.width": {
+      "defaultMessage": "The neutral signal is ready",
+      "metadata": {
+        "defaultWidth": 48,
+        "widthVariants": {
+          "18": "Signal ready",
+          "4": "Now",
+          "48": "The neutral signal is ready"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "harbor.zero": "Regardez {count}",
+  "harbor.zero#count#one": "{count} balise",
+  "harbor.zero#count#other": "{count} balises",
+  "harbor.literal": "Regardez {count}",
+  "harbor.literal#count#one": "{count}%n balise",
+  "harbor.literal#count#other": "{count}%n balises",
+  "harbor.line": "Regardez {count}",
+  "harbor.line#count#one": "{count}\nbalise",
+  "harbor.line#count#other": "{count}\nbalises",
+  "harbor.device.🧭#count#one": "{count} voie",
+  "harbor.device.🧭#count#other": "{count} voies",
+  "harbor.device.🧭#@device#iphone": "Touchez {count}",
+  "harbor.device.🧭#@device#mac": "Cliquez {count} au port",
+  "harbor.device.🧭#@device#applewatch": "Montre {count} au quai"
+}

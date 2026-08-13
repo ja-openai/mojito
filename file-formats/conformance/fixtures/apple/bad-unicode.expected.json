@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "bad": { "defaultMessage": "\u0012XX" }
+  }
+}

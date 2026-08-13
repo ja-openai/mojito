@@ -1,0 +1,19 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "nullable.source": {
+      "localizations": {
+        "en": null,
+        "fr": {
+          "stringUnit": {
+            "state": "machine_translated",
+            "value": "Chemin orbital"
+          }
+        }
+      },
+      "comment": null,
+      "shouldTranslate": null
+    }
+  }
+}

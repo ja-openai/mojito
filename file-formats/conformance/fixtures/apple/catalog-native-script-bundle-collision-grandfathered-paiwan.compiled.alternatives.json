@@ -1,0 +1,18 @@
+[
+  {
+    "en.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "Source"
+    },
+    "pwn.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "First catalog locale i-pwn"
+    }
+  },
+  {
+    "en.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "Source"
+    },
+    "pwn.lproj/catalog.strings": {
+      "harbor.native.script.collision🧭": "Second catalog locale pwn"
+    }
+  }
+]

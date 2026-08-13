@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "harbor.after": {
+      "defaultMessage": "{count, plural, one {{count} beacon} other {{count} beacons}} visible",
+      "variants": {
+        "one": "{count} beacon",
+        "other": "{count} beacons"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@count@ visible",
+        "applePluralRules": {
+          "count": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d%n beacon",
+              "other": "%d%n beacons"
+            }
+          }
+        },
+        "pluralVariable": "count",
+        "valueType": "d",
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 7,
+                "source": "%n"
+              }
+            ],
+            "other": [
+              {
+                "position": 7,
+                "source": "%n"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "harbor.literal": {
+      "defaultMessage": "{count, plural, one {{count}%n beacon} other {{count}%n beacons}} visible",
+      "variants": {
+        "one": "{count}%n beacon",
+        "other": "{count}%n beacons"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@count@ visible",
+        "applePluralRules": {
+          "count": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d%%n beacon",
+              "other": "%d%%n beacons"
+            }
+          }
+        },
+        "pluralVariable": "count",
+        "valueType": "d"
+      }
+    },
+    "harbor.mixed.🧭": {
+      "defaultMessage": "{count, plural, one {{count}\nbeacon} other {{count}\nbeacons}} visible",
+      "variants": {
+        "one": "{count}\nbeacon",
+        "other": "{count}\nbeacons"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@count@ visible",
+        "applePluralRules": {
+          "count": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d%n\nbeacon",
+              "other": "%d%n\nbeacons"
+            }
+          }
+        },
+        "pluralVariable": "count",
+        "valueType": "d",
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 7,
+                "source": "%n"
+              }
+            ],
+            "other": [
+              {
+                "position": 7,
+                "source": "%n"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "harbor.repeated": {
+      "defaultMessage": "{count, plural, one {{count} beacon} other {{count} beacons}} visible",
+      "variants": {
+        "one": "{count} beacon",
+        "other": "{count} beacons"
+      },
+      "placeholders": [
+        {
+          "name": "count",
+          "source": "%d",
+          "kind": "integer",
+          "position": 1
+        }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@count@ visible",
+        "applePluralRules": {
+          "count": {
+            "valueType": "d",
+            "variants": {
+              "one": "%d%n%n beacon",
+              "other": "%d%n%n beacons"
+            }
+          }
+        },
+        "pluralVariable": "count",
+        "valueType": "d",
+        "applePluralDisabledPrintfConversions": {
+          "count": {
+            "one": [
+              {
+                "position": 7,
+                "source": "%n"
+              },
+              {
+                "position": 7,
+                "source": "%n"
+              }
+            ],
+            "other": [
+              {
+                "position": 7,
+                "source": "%n"
+              },
+              {
+                "position": 7,
+                "source": "%n"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "encoding": "UTF-8",
+  "source": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n  <dict>\n    <!-- Native empty typed metadata must survive without changing its source spelling. -->\n    <key>dock.empty</key>\n    <dict>\n      <key>NSStringLocalizedFormatKey</key>\n      <string>%#@signals@ across the inlet</string>\n      <key>signals</key>\n      <dict>\n        <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>\n        <key>NSStringFormatValueTypeKey</key><string>ld</string>\n        <key>one</key><string>%ld visible beacon</string>\n        <key>other</key><string><![CDATA[%ld visible beacons]]></string>\n        <!-- Rule-owned zero-length data is legal only with an explicit end tag. -->\n        <key>futureRuleData</key><data></data>\n      </dict>\n\n      <!-- Literal <data/> inside comments must not be mistaken for a typed tag. -->\n      <?native preserve=\"literal <data/> marker\"?>\n      <!-- Whitespace inside explicit data is ignored by native base64 decoding. -->\n      <key>futureEmptyData</key><data></data>\n      <key>futureWhitespaceData</key><data> \t\n      </data>\n      <key>futurePayload</key><data>YQ==</data>\n\n      <!-- Both self-closing and explicit empty collections are native-valid. -->\n      <key>futureEmptyArray</key><array />\n      <key>futureExplicitArray</key><array></array>\n      <key>futureEmptyDictionary</key><dict />\n      <key>futureExplicitDictionary</key><dict></dict>\n\n      <!-- Empty string and boolean representations retain their original bytes. -->\n      <key>futureEmptyString</key><string />\n      <key>futureExplicitString</key><string></string>\n      <key>futureLiteralMarker</key><string><![CDATA[Literal <data/> remains visible]]></string>\n      <key>futureTrue</key><true></true>\n      <key>futureFalse</key><false/>\n\n      <!-- Nested containers have the same explicit-only empty-data contract. -->\n      <key>futureStructured</key>\n      <array>\n        <data></data>\n        <dict><key>nestedEmptyData</key><data></data></dict>\n        <array></array>\n      </array>\n    </dict>\n  </dict>\n</plist>\n",
+  "slots": [
+    {
+      "id": "dock.empty",
+      "variant": "one",
+      "start": 512,
+      "end": 530
+    },
+    {
+      "id": "dock.empty",
+      "variant": "other",
+      "start": 572,
+      "end": 603
+    }
+  ]
+}

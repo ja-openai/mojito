@@ -1,0 +1,115 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "harbor.first.serbian.latin🧭": {
+      "comment": "Distinct Serbian scripts retain their catalog-owned identity",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld %3$n beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld %3$n beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld Signal %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "future_review",
+                  "value": "%1$lld Signale %2$@"
+                }
+              }
+            }
+          }
+        },
+        "sr_Latn": null,"sr-Cyrl":{"variations":{"plural":{"few":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n Латинични few"}},"one":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n Латинични one"}},"other":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n Латинични other"}}}}}
+      }
+    },
+    "harbor.first.serbian.cyrillic🧭": {
+      "comment": "Distinct Serbian scripts retain their catalog-owned identity",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld %3$n beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld %3$n beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld Signal %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "future_review",
+                  "value": "%1$lld Signale %2$@"
+                }
+              }
+            }
+          }
+        },
+        "sr-Cyrl": {"variations":{"plural":{"few":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n Ћирилични few"}},"one":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n Ћирилични one"}},"other":{"stringUnit":{"state":"translated","value":"%2$@ %1$lld %3$n Ћирилични other"}}}}}
+      }
+    },
+    "Private Serbian script harbor": {
+      "shouldTranslate": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%1$lld %3$n beacon %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld %3$n beacons %2$@"
+                }
+              }
+            }
+          }
+        },
+        "sr_Latn": null,
+        "sr-Cyrl": null
+      }
+    }
+  }
+}
