@@ -113,14 +113,25 @@ public class BranchStatisticService {
 
       List<Branch> branchesToCheck = getBranchesToProcess(repositoryId);
       computeAndSaveBranchStatistics(repositoryId, updateType, branchesToCheck);
-      sendBranchNotifications(branchesToCheck);
+      sendBranchNotifications(repositoryId, branchesToCheck);
     }
   }
 
-  private void sendBranchNotifications(List<Branch> branchesToCheck) {
+  private void sendBranchNotifications(Long repositoryId, List<Branch> branchesToCheck) {
+    if (branchesToCheck.isEmpty()) {
+      return;
+    }
+
+    Set<Long> branchIdsWithNotifiers =
+        branchRepository.findIdsWithNotifiersByRepositoryId(repositoryId);
+    if (branchIdsWithNotifiers.isEmpty()) {
+      return;
+    }
+
     waitForAllFutures(
         branchesToCheck.stream()
-            .map(branch -> scheduleBranchNotification(branch))
+            .filter(branch -> branchIdsWithNotifiers.contains(branch.getId()))
+            .map(this::scheduleBranchNotification)
             .collect(Collectors.toList()));
   }
 

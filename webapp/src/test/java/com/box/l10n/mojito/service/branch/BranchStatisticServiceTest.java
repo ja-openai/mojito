@@ -12,6 +12,7 @@ import com.box.l10n.mojito.entity.Branch;
 import com.box.l10n.mojito.entity.BranchStatistic;
 import com.box.l10n.mojito.entity.BranchTextUnitStatistic;
 import com.box.l10n.mojito.entity.RepositoryLocale;
+import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
 import com.box.l10n.mojito.service.asset.AssetService;
 import com.box.l10n.mojito.service.assetExtraction.AssetExtractionService;
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
@@ -21,13 +22,16 @@ import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
+import com.box.l10n.mojito.service.tm.textunitdtocache.UpdateType;
 import com.box.l10n.mojito.test.TestIdWatcher;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import org.hibernate.Hibernate;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +44,8 @@ public class BranchStatisticServiceTest extends ServiceTestBase {
   @Autowired BranchStatisticService branchStatisticService;
 
   @Autowired BranchService branchService;
+
+  @Autowired BranchRepository branchRepository;
 
   @Autowired RepositoryService repositoryService;
 
@@ -68,6 +74,44 @@ public class BranchStatisticServiceTest extends ServiceTestBase {
     assertEquals("branch1", branchesToCheck.get(0).getName());
     assertEquals("branch2", branchesToCheck.get(1).getName());
     assertEquals(2, branchesToCheck.size());
+  }
+
+  @Test
+  public void findsOnlyBranchIdsWithNotifiers() throws Exception {
+    BranchTestData branchTestData = new BranchTestData(testIdWatcher);
+    branchService.createBranch(branchTestData.getRepository(), "without-notifier", null, Set.of());
+
+    assertEquals(
+        Set.of(
+            branchTestData.getMaster().getId(),
+            branchTestData.getBranch1().getId(),
+            branchTestData.getBranch2().getId()),
+        branchRepository.findIdsWithNotifiersByRepositoryId(
+            branchTestData.getRepository().getId()));
+  }
+
+  @Test
+  public void skipsSchedulingNotificationsWhenNoNotifiersAreConfigured() {
+    Long repositoryId = 123L;
+    List<Branch> branches = List.of(Mockito.mock(Branch.class));
+    BranchStatisticService service = Mockito.spy(new BranchStatisticService());
+    BranchRepository branchRepositoryMock = Mockito.mock(BranchRepository.class);
+    QuartzPollableTaskScheduler quartzPollableTaskSchedulerMock =
+        Mockito.mock(QuartzPollableTaskScheduler.class);
+    service.branchRepository = branchRepositoryMock;
+    service.quartzPollableTaskScheduler = quartzPollableTaskSchedulerMock;
+    service.meterRegistry = new SimpleMeterRegistry();
+
+    Mockito.doReturn(branches).when(service).getBranchesToProcess(repositoryId);
+    Mockito.doNothing()
+        .when(service)
+        .computeAndSaveBranchStatistics(repositoryId, UpdateType.ALWAYS, branches);
+    Mockito.when(branchRepositoryMock.findIdsWithNotifiersByRepositoryId(repositoryId))
+        .thenReturn(Set.of());
+
+    service.computeAndSaveBranchStatistics(repositoryId, "repository", UpdateType.ALWAYS);
+
+    Mockito.verifyNoInteractions(quartzPollableTaskSchedulerMock);
   }
 
   @Test

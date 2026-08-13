@@ -22,9 +22,11 @@ import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.box.l10n.mojito.test.TestIdWatcher;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public class BranchNotificationServiceTest extends ServiceTestBase {
@@ -50,6 +52,20 @@ public class BranchNotificationServiceTest extends ServiceTestBase {
   @Rule public TestIdWatcher testIdWatcher = new TestIdWatcher();
 
   String branchNotifierId = "noop-1";
+
+  @Test
+  public void skipsLoadingBranchContentsWhenNoNotifiersAreConfigured() {
+    Branch branch = new Branch();
+    branch.setNotifiers(Set.of());
+
+    BranchStatisticService branchStatisticServiceMock = Mockito.mock(BranchStatisticService.class);
+    BranchNotificationService notificationService = new BranchNotificationService();
+    notificationService.branchStatisticService = branchStatisticServiceMock;
+
+    notificationService.sendNotificationsForBranch(branch);
+
+    Mockito.verifyNoInteractions(branchStatisticServiceMock);
+  }
 
   @Test
   public void allNotfication() throws Exception {

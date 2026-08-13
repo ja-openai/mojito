@@ -105,6 +105,10 @@ public class BranchNotificationService {
     Preconditions.checkNotNull(branch);
     Preconditions.checkNotNull(branch.getNotifiers());
 
+    if (branch.getNotifiers().isEmpty()) {
+      return;
+    }
+
     logger.debug("sendNotificationsForBranch: {} ({})", branch.getId(), branch.getName());
 
     BranchNotificationInfo branchNotificationInfo = getBranchNotificationInfo(branch);

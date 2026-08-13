@@ -5,11 +5,14 @@ import com.box.l10n.mojito.entity.Repository;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.EntityGraph.EntityGraphType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
 /**
@@ -49,6 +52,15 @@ public interface BranchRepository
 
   List<Branch> findByRepositoryIdAndDeletedFalseAndNameNotNullAndNameNot(
       Long repositoryId, String primaryBranch);
+
+  @Query(
+      """
+      select distinct branch.id
+      from Branch branch
+      join branch.notifiers notifier
+      where branch.repository.id = :repositoryId
+      """)
+  Set<Long> findIdsWithNotifiersByRepositoryId(@Param("repositoryId") Long repositoryId);
 
   List<Branch> findByDeletedFalseAndNameNotNullAndNameNot(String primaryBranch);
 }
