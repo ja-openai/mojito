@@ -374,6 +374,15 @@ public class PullCommandTest extends CLITestBase {
   }
 
   @Test
+  public void portableConverterReusesExistingXtbDataset() throws Exception {
+    assertPortableMatchesExistingDataset(
+        "pullXtb",
+        "Resources-en-US.xtb",
+        new String[] {"-sl", "en-US"},
+        new String[] {"-sl", "en-US"});
+  }
+
+  @Test
   public void portableConverterReusesExistingAndroidDataset() throws Exception {
     Repository repository = createTestRepoUsingRepoService();
     Path source = getTargetTestDir("source").toPath();
@@ -642,8 +651,27 @@ public class PullCommandTest extends CLITestBase {
       assertEquivalentProperties(input.resolve("expected/target"), output.toPath());
     } else if (assetPath.endsWith(".stringsdict")) {
       assertEquivalentApplePluralResources(input.resolve("expected/target"), output.toPath());
+    } else if (assetPath.endsWith(".xtb")) {
+      assertEquivalentXmlResources(input.resolve("expected/target"), output.toPath());
     } else {
       checkDirectoriesContainSameContent(input.resolve("expected/target").toFile(), output);
+    }
+  }
+
+  private void assertEquivalentXmlResources(Path expected, Path actual) throws IOException {
+    try (var expectedFiles = Files.walk(expected)) {
+      for (Path expectedFile : expectedFiles.filter(Files::isRegularFile).toList()) {
+        Path actualFile = actual.resolve(expected.relativize(expectedFile));
+        assertTrue("Missing localized file: " + actualFile, Files.exists(actualFile));
+        LocalizationCatalog expectedCatalog =
+            LocalizationFileConverters.parse(
+                LocalizationFileFormat.XTB, Files.readAllBytes(expectedFile));
+        LocalizationCatalog actualCatalog =
+            LocalizationFileConverters.parse(
+                LocalizationFileFormat.XTB, Files.readAllBytes(actualFile));
+        assertEquals(expectedFile.toString(), expectedCatalog.locale(), actualCatalog.locale());
+        assertEquals(expectedFile.toString(), expectedCatalog.messages(), actualCatalog.messages());
+      }
     }
   }
 

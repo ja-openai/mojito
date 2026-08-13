@@ -19,7 +19,9 @@
         "yaml",
         "javascript",
         "typescript",
-        "resx"
+        "resx",
+        "resx",
+        "xtb"
       ]
     },
     "locale": { "type": "string", "minLength": 1 },

@@ -83,6 +83,9 @@ public final class LocalizationConverterSelection {
     if (path.endsWith(".resx") || path.endsWith(".resw")) {
       return LocalizationFileFormat.RESX;
     }
+    if (path.endsWith(".xtb")) {
+      return LocalizationFileFormat.XTB;
+    }
     if (path.endsWith(".json")) {
       return LocalizationFileFormat.FORMATJS_JSON;
     }

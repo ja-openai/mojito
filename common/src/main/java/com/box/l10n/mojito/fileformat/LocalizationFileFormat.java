@@ -12,7 +12,8 @@ public enum LocalizationFileFormat {
   YAML("yaml"),
   JAVASCRIPT("javascript"),
   TYPESCRIPT("typescript"),
-  RESX("resx");
+  RESX("resx"),
+  XTB("xtb");
 
   private final String id;
 

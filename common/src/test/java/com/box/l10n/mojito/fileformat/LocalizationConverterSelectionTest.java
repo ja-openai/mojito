@@ -111,6 +111,8 @@ public class LocalizationConverterSelectionTest {
         LocalizationFileFormat.RESX, LocalizationConverterSelection.format("Messages.RESX", null));
     assertEquals(
         LocalizationFileFormat.RESX, LocalizationConverterSelection.format("Messages.resw", null));
+    assertEquals(
+        LocalizationFileFormat.XTB, LocalizationConverterSelection.format("Messages.XTB", null));
   }
 
   @Test

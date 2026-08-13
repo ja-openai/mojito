@@ -26,6 +26,7 @@ FORMAT_NAMES = {
     "javascript": "JavaScript source",
     "typescript": "TypeScript source",
     "resx": "Microsoft RESX/RESW",
+    "xtb": "Google XTB translation bundles",
 }
 CATEGORY_NAMES = {
     "missing_legacy": "real platform-localizable units that Okapi omitted",

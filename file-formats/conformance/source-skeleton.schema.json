@@ -42,7 +42,9 @@
         "yaml",
         "javascript",
         "typescript",
-        "resx"
+        "resx",
+        "resx",
+        "xtb"
       ]
     },
     "encoding": {

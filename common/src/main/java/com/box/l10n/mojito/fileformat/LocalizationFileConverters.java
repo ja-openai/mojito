@@ -208,7 +208,7 @@ public final class LocalizationFileConverters {
       case FORMATJS_JSON -> parseFormatJs(decoded);
       case YAML -> YamlSourceFormat.parse(decoded);
       case JAVASCRIPT, TYPESCRIPT -> JavaScriptSourceFormat.parse(format, decoded);
-      case RESX -> XmlResourceParser.parse(format, decoded);
+      case RESX, XTB -> XmlResourceParser.parse(format, decoded);
     };
   }
 
@@ -313,7 +313,7 @@ public final class LocalizationFileConverters {
       case APPLE_XCSTRINGS -> new AppleXcstringsWriter().write(catalog);
       case GETTEXT_PO -> new GettextPoWriter().write(catalog);
       case JAVA_PROPERTIES -> new JavaPropertiesWriter().write(catalog);
-      case RESX -> XmlResourceParser.write(format, catalog);
+      case RESX, XTB -> XmlResourceParser.write(format, catalog);
       default ->
           throw new LocalizationParseException(
               "UNSUPPORTED_OUTPUT_FORMAT",
@@ -371,7 +371,7 @@ public final class LocalizationFileConverters {
       case JAVA_PROPERTIES -> JavaPropertiesSourceSkeleton.extract(source, propertiesCharset);
       case YAML -> YamlSourceFormat.extract(source);
       case JAVASCRIPT, TYPESCRIPT -> JavaScriptSourceFormat.extract(format, source);
-      case RESX -> XmlResourceSourceSkeleton.extract(format, source);
+      case RESX, XTB -> XmlResourceSourceSkeleton.extract(format, source);
       default ->
           throw new LocalizationParseException(
               "UNSUPPORTED_SKELETON_FORMAT",
@@ -430,7 +430,7 @@ public final class LocalizationFileConverters {
       case "java_properties" -> JavaPropertiesSourceSkeleton.render(skeleton, translations);
       case "yaml" -> YamlSourceFormat.render(skeleton, translations);
       case "javascript", "typescript" -> JavaScriptSourceFormat.render(skeleton, translations);
-      case "resx" -> XmlResourceSourceSkeleton.render(skeleton, translations);
+      case "resx", "xtb" -> XmlResourceSourceSkeleton.render(skeleton, translations);
       default ->
           throw new LocalizationParseException(
               "UNSUPPORTED_SKELETON_FORMAT", "Unsupported source-preserving skeleton format");
@@ -470,7 +470,8 @@ public final class LocalizationFileConverters {
     if (format != LocalizationFileFormat.ANDROID
         && format != LocalizationFileFormat.APPLE_STRINGS
         && format != LocalizationFileFormat.APPLE_STRINGSDICT
-        && format != LocalizationFileFormat.RESX) {
+        && format != LocalizationFileFormat.RESX
+        && format != LocalizationFileFormat.XTB) {
       return null;
     }
 

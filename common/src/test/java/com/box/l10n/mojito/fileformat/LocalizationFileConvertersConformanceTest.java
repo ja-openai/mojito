@@ -311,7 +311,8 @@ public class LocalizationFileConvertersConformanceTest {
             || fixture.has("xcstringsNormalized")
             || fixture.has("propertiesNormalized")
             || fixture.has("gettextNormalized")
-            || fixture.has("resxNormalized")) {
+            || fixture.has("resxNormalized")
+            || fixture.has("xtbNormalized")) {
           String normalizedFixture =
               fixture.has("androidNormalized")
                   ? fixture.get("androidNormalized").asText()
@@ -325,7 +326,9 @@ public class LocalizationFileConvertersConformanceTest {
                                   ? fixture.get("propertiesNormalized").asText()
                                   : fixture.has("gettextNormalized")
                                       ? fixture.get("gettextNormalized").asText()
-                                      : fixture.get("resxNormalized").asText();
+                                      : fixture.has("resxNormalized")
+                                          ? fixture.get("resxNormalized").asText()
+                                          : fixture.get("xtbNormalized").asText();
           String normalized = LocalizationFileConverters.write(format, actual);
           assertEquals(
               id + ": deterministic normalized resource",
@@ -3355,7 +3358,7 @@ public class LocalizationFileConvertersConformanceTest {
               entry.getValue(),
               localized.messages().get(entry.getKey()).defaultMessage());
         }
-      } else if (format == LocalizationFileFormat.RESX) {
+      } else if (format == LocalizationFileFormat.RESX || format == LocalizationFileFormat.XTB) {
         for (Map.Entry<String, String> entry : translations.entrySet()) {
           assertEquals(
               id + ": translated Microsoft resource " + entry.getKey(),

@@ -323,6 +323,7 @@ fn all_shared_localization_format_fixtures() {
                 .or_else(|| case.get("propertiesNormalized"))
                 .or_else(|| case.get("gettextNormalized"))
                 .or_else(|| case.get("resxNormalized"))
+                .or_else(|| case.get("xtbNormalized"))
                 .and_then(Value::as_str)
             {
                 let normalized = write(format, &catalog)
@@ -4087,6 +4088,7 @@ fn all_shared_source_preserving_skeletons() {
                 );
             }
         } else if format == FileFormat::Resx {
+        } else if matches!(format, FileFormat::Resx | FileFormat::Xtb) {
             for (key, translation) in &translations {
                 assert_eq!(
                     parsed.messages[key].default_message, *translation,

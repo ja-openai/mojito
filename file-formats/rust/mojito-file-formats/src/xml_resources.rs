@@ -1,4 +1,4 @@
-use crate::model::{Catalog, FileFormat, Message, ParseError};
+use crate::model::{Catalog, FileFormat, Message, ParseError, Placeholder};
 use crate::source_skeleton::{SourceSkeleton, SourceSlot};
 use crate::xml::{self, XmlElement, XmlNode};
 use quick_xml::escape::unescape;
@@ -8,16 +8,101 @@ use std::collections::{BTreeMap, HashSet};
 use std::sync::OnceLock;
 
 pub(crate) fn parse(format: FileFormat, source: &str) -> Result<Catalog, ParseError> {
-    let root = xml::parse(source)?;
-    if root.name != "root" {
+    let safe;
+    let input = if format == FileFormat::Xtb {
+        static DOCTYPE: OnceLock<Regex> = OnceLock::new();
+        let declaration = DOCTYPE.get_or_init(|| {
+            Regex::new(r"(?s)^(\s*(?:<\?xml\b.*?\?>\s*)?)<!DOCTYPE\s+translationbundle\s*>(\s*<translationbundle\b)")
+                .expect("valid safe XTB doctype expression")
+        });
+        safe = declaration.replace(source, "$1$2").into_owned();
+        safe.as_str()
+    } else {
+        source
+    };
+    let root = xml::parse(input)?;
+    if root.name
+        != if format == FileFormat::Xtb {
+            "translationbundle"
+        } else {
+            "root"
+        }
+    {
         return Err(ParseError::new(
             "INVALID_XML_ROOT",
-            "RESX resources require a root element",
+            "XML resources require their format-owned root element",
         ));
     }
     let mut catalog = Catalog::new(format);
-    add_resx_entries(&root, &mut catalog)?;
+    if format == FileFormat::Xtb {
+        catalog.locale = root
+            .attribute("lang")
+            .filter(|locale| !locale.trim().is_empty())
+            .map(str::to_owned);
+        add_xtb_entries(&root, &mut catalog)?;
+    } else {
+        add_resx_entries(&root, &mut catalog)?;
+    }
     Ok(catalog)
+}
+
+fn add_xtb_entries(element: &XmlElement, catalog: &mut Catalog) -> Result<(), ParseError> {
+    if element.name == "translation" && has_text(element) {
+        let mut value = String::new();
+        let mut placeholders = Vec::new();
+        for child in &element.children {
+            match child {
+                XmlNode::Text(text) => value.push_str(text),
+                XmlNode::Element(code) if code.name == "ph" => {
+                    let name = code
+                        .attribute("name")
+                        .filter(|name| !name.trim().is_empty())
+                        .ok_or_else(|| {
+                            error(
+                                "INVALID_XTB_PLACEHOLDER",
+                                "XTB placeholder names must not be empty",
+                            )
+                        })?;
+                    value.push('{');
+                    value.push_str(name);
+                    value.push('}');
+                    let placeholder = Placeholder {
+                        name: name.to_owned(),
+                        source: format!("<ph name=\"{}\"/>", escape_attribute(name)),
+                        kind: "value",
+                        position: None,
+                        example: code.attribute("example").map(str::to_owned),
+                    };
+                    if !placeholders.contains(&placeholder) {
+                        placeholders.push(placeholder);
+                    }
+                }
+                XmlNode::Element(_) => {
+                    return Err(error(
+                        "INVALID_XTB_PLACEHOLDER",
+                        "Unsupported XTB inline element",
+                    ))
+                }
+                XmlNode::Comment(_) => {}
+            }
+        }
+        catalog.insert(
+            element.attribute("key").unwrap_or_default().to_owned(),
+            Message::new(
+                value,
+                element.attribute("desc").map(str::to_owned),
+                None,
+                placeholders,
+                Map::new(),
+            ),
+        )?;
+    }
+    for child in element.elements() {
+        if child.name != "ph" {
+            add_xtb_entries(child, catalog)?;
+        }
+    }
+    Ok(())
 }
 
 fn add_resx_entries(element: &XmlElement, catalog: &mut Catalog) -> Result<(), ParseError> {
@@ -64,24 +149,54 @@ pub(crate) fn write(format: FileFormat, catalog: &Catalog) -> Result<String, Par
     if catalog.source_format != format.id() {
         return Err(ParseError::new(
             "INVALID_SOURCE_FORMAT",
-            "Catalog does not contain RESX resources",
+            "Catalog does not contain the expected XML resources",
         ));
     }
-    let mut result = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<root>\n".to_owned();
-    for (id, descriptor) in &catalog.messages {
-        result.push_str("  <data name=\"");
-        result.push_str(&escape_attribute(id));
-        result.push_str("\" xml:space=\"preserve\">\n    <value>");
-        result.push_str(&escape_text(&descriptor.default_message));
-        result.push_str("</value>");
-        if let Some(description) = &descriptor.description {
-            result.push_str("\n    <comment>");
-            result.push_str(&escape_text(description));
-            result.push_str("</comment>");
+    let xtb = format == FileFormat::Xtb;
+    let mut result = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".to_owned();
+    if xtb {
+        result.push_str("<translationbundle");
+        if let Some(locale) = &catalog.locale {
+            result.push_str(" lang=\"");
+            result.push_str(&escape_attribute(locale));
+            result.push('"');
         }
-        result.push_str("\n  </data>\n");
+        result.push_str(">\n");
+    } else {
+        result.push_str("<root>\n");
     }
-    result.push_str("</root>\n");
+    for (id, descriptor) in &catalog.messages {
+        if xtb {
+            result.push_str("  <translation key=\"");
+            result.push_str(&escape_attribute(id));
+            result.push('"');
+            if let Some(description) = &descriptor.description {
+                result.push_str(" desc=\"");
+                result.push_str(&escape_attribute(description));
+                result.push('"');
+            }
+            result.push('>');
+            result.push_str(&render_xtb(descriptor, &descriptor.default_message, None)?);
+            result.push_str("</translation>\n");
+        } else {
+            result.push_str("  <data name=\"");
+            result.push_str(&escape_attribute(id));
+            result.push_str("\" xml:space=\"preserve\">\n    <value>");
+            result.push_str(&escape_text(&descriptor.default_message));
+            result.push_str("</value>");
+            if let Some(description) = &descriptor.description {
+                result.push_str("\n    <comment>");
+                result.push_str(&escape_text(description));
+                result.push_str("</comment>");
+            }
+            result.push_str("\n  </data>\n");
+        }
+    }
+    result.push_str(if xtb {
+        "</translationbundle>\n"
+    } else {
+        "</root>\n"
+    });
     Ok(result)
 }
 
@@ -116,20 +231,36 @@ pub(crate) fn extract_skeleton(
         }
         let end = tag_end(&source, position)?;
         let token = source[position + 1..end].trim();
-        if token.starts_with('!') {
+        if token.starts_with('!')
+            && !(format == FileFormat::Xtb
+                && Regex::new(r"^!DOCTYPE\s+translationbundle\s*$")
+                    .expect("valid XTB doctype")
+                    .is_match(token))
+        {
             return Err(error(
                 "UNSUPPORTED_SKELETON_MARKUP",
                 "Unsupported XML resource declaration",
             ));
         }
+        if token.starts_with('!') {
+            position = end + 1;
+            continue;
+        }
         if token.starts_with('/') {
             let current = elements
                 .pop()
                 .ok_or_else(|| error("INVALID_SKELETON", "Unbalanced XML resource elements"))?;
-            if current.name == "value" {
+            if format == FileFormat::Resx && current.name == "value"
+                || format == FileFormat::Xtb && current.name == "translation"
+            {
                 if let Some(parent) = elements.last() {
-                    if parent.name == "data" {
-                        if let Some(identity) = &parent.identity {
+                    if format == FileFormat::Xtb || parent.name == "data" {
+                        let identity = if format == FileFormat::Xtb {
+                            current.identity.as_ref()
+                        } else {
+                            parent.identity.as_ref()
+                        };
+                        if let Some(identity) = identity {
                             if catalog.messages.contains_key(identity) {
                                 if !assigned.insert(identity.clone()) {
                                     return Err(error(
@@ -152,8 +283,10 @@ pub(crate) fn extract_skeleton(
             }
         } else if !token.ends_with('/') {
             let name = token.split_whitespace().next().unwrap();
-            let identity = if name == "data" {
+            let identity = if format == FileFormat::Resx && name == "data" {
                 attribute(&token[name.len()..], "name")?
+            } else if format == FileFormat::Xtb && name == "translation" {
+                attribute(&token[name.len()..], "key")?
             } else {
                 None
             };
@@ -221,16 +354,20 @@ pub(crate) fn render_skeleton(
         }
         output.extend_from_slice(&original[previous..slot.start]);
         if let Some(translation) = translations.get(&slot.id) {
-            if !catalog.messages.contains_key(&slot.id) {
-                return Err(error(
-                    "INVALID_SKELETON",
-                    "Missing XML resource source descriptor",
-                ));
-            }
-            output.extend(encode_without_bom(
-                &escape_text(translation),
-                &skeleton.encoding,
-            )?);
+            let descriptor = catalog.messages.get(&slot.id).ok_or_else(|| {
+                error("INVALID_SKELETON", "Missing XML resource source descriptor")
+            })?;
+            let body = if format == FileFormat::Xtb {
+                decode_without_bom(&original[slot.start..slot.end], &skeleton.encoding)?
+            } else {
+                String::new()
+            };
+            let rendered = if format == FileFormat::Xtb {
+                render_xtb(descriptor, translation, Some(&body))?
+            } else {
+                escape_text(translation)
+            };
+            output.extend(encode_without_bom(&rendered, &skeleton.encoding)?);
         } else {
             output.extend_from_slice(&original[slot.start..slot.end]);
         }
@@ -316,6 +453,37 @@ fn encode_without_bom(source: &str, encoding: &str) -> Result<Vec<u8>, ParseErro
     }
 }
 
+fn decode_without_bom(source: &[u8], encoding: &str) -> Result<String, ParseError> {
+    match encoding {
+        "UTF-8" | "UTF-8-BOM" | "US-ASCII" => std::str::from_utf8(source)
+            .map(str::to_owned)
+            .map_err(|_| error("INVALID_SKELETON", "Invalid XTB source encoding")),
+        "ISO-8859-1" => Ok(source.iter().map(|value| char::from(*value)).collect()),
+        "UTF-16LE" | "UTF-16LE-BOM" | "UTF-16BE" | "UTF-16BE-BOM" => {
+            let mut pairs = source.chunks_exact(2);
+            let values = pairs
+                .by_ref()
+                .map(|pair| {
+                    if encoding.contains("LE") {
+                        u16::from_le_bytes([pair[0], pair[1]])
+                    } else {
+                        u16::from_be_bytes([pair[0], pair[1]])
+                    }
+                })
+                .collect::<Vec<_>>();
+            if !pairs.remainder().is_empty() {
+                return Err(error("INVALID_SKELETON", "Invalid XTB source encoding"));
+            }
+            String::from_utf16(&values)
+                .map_err(|_| error("INVALID_SKELETON", "Invalid XTB source encoding"))
+        }
+        _ => Err(error(
+            "INVALID_SKELETON",
+            "Unsupported XML resource encoding",
+        )),
+    }
+}
+
 fn attribute(source: &str, expected: &str) -> Result<Option<String>, ParseError> {
     static ATTRIBUTE: OnceLock<Regex> = OnceLock::new();
     let matcher = ATTRIBUTE.get_or_init(|| {
@@ -368,6 +536,49 @@ fn escape_text(value: &str) -> String {
 
 fn escape_attribute(value: &str) -> String {
     escape_text(value).replace('"', "&quot;")
+}
+
+fn render_xtb(
+    message: &Message,
+    translation: &str,
+    source: Option<&str>,
+) -> Result<String, ParseError> {
+    let mut result = escape_text(translation);
+    for placeholder in message.placeholders.as_deref().unwrap_or_default() {
+        let marker = format!("{{{}}}", placeholder.name);
+        if !result.contains(&marker) {
+            return Err(error("INVALID_SKELETON_MARKUP", "Missing XTB placeholder"));
+        }
+        let native = if let Some(original) = source {
+            let pattern = Regex::new(&format!(
+                r#"<ph\b[^>]*\bname\s*=\s*(?:\"{}\"|'{}')[^>]*/>"#,
+                regex::escape(&placeholder.name),
+                regex::escape(&placeholder.name)
+            ))
+            .expect("valid XTB source placeholder expression");
+            pattern
+                .find(original)
+                .map(|matched| matched.as_str().to_owned())
+                .ok_or_else(|| {
+                    error(
+                        "INVALID_SKELETON_MARKUP",
+                        "Missing source-owned XTB placeholder",
+                    )
+                })?
+        } else {
+            if let Some(example) = &placeholder.example {
+                format!(
+                    "{} example=\"{}\"/>",
+                    placeholder.source.trim_end_matches("/>"),
+                    escape_attribute(example)
+                )
+            } else {
+                placeholder.source.clone()
+            }
+        };
+        result = result.replace(&marker, &native);
+    }
+    Ok(result)
 }
 
 fn error(code: &'static str, message: impl Into<String>) -> ParseError {
