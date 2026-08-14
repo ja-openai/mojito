@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,7 +37,7 @@ final class YamlSourceFormat {
 
   private static LocalizationCatalog parse(String source, LocalizationFilterOptions options) {
     LocalizationCatalog catalog = new LocalizationCatalog(LocalizationFileFormat.YAML);
-    collect(compose(source), "", options, catalog);
+    collect(compose(source), "", "", options, catalog);
     return catalog;
   }
 
@@ -108,9 +109,22 @@ final class YamlSourceFormat {
       }
       String indent = original.substring(newline + 1, content);
       String lineSeparator = original.contains("\r\n") ? "\r\n" : "\n";
-      return original.substring(0, newline + 1)
-          + indent
-          + translated.replace("\n", lineSeparator + indent);
+      String[] sourceLines = original.substring(newline + 1).split("\\R", -1);
+      String[] translatedLines = translated.split("\\n", -1);
+      StringBuilder result = new StringBuilder(original.substring(0, newline + 1));
+      for (int index = 0; index < translatedLines.length; index++) {
+        if (index > 0) {
+          result.append(lineSeparator);
+        }
+        result.append(
+            translatedLines[index].isEmpty()
+                    && index < sourceLines.length
+                    && sourceLines[index].isBlank()
+                ? sourceLines[index]
+                : indent);
+        result.append(translatedLines[index]);
+      }
+      return result.toString();
     }
     if (translated.indexOf('\n') >= 0 || translated.contains(": ") || translated.contains(" #")) {
       return "'" + translated.replace("'", "''") + "'";
@@ -119,31 +133,48 @@ final class YamlSourceFormat {
   }
 
   private static void collect(
-      Node node, String parent, LocalizationFilterOptions options, LocalizationCatalog catalog) {
+      Node node,
+      String parent,
+      String legacyParent,
+      LocalizationFilterOptions options,
+      LocalizationCatalog catalog) {
     if (node instanceof MappingNode mapping) {
       for (NodeTuple entry : mapping.getValue()) {
         if (!(entry.getKeyNode() instanceof ScalarNode key)) {
           throw invalid("INVALID_YAML", "YAML mapping keys must be scalars");
         }
         String path = parent.isEmpty() ? key.getValue() : parent + "/" + key.getValue();
-        collect(entry.getValueNode(), path, options, catalog);
+        String legacyPath =
+            legacyParent.isEmpty() ? key.getValue() : legacyParent + "/" + key.getValue();
+        collect(entry.getValueNode(), path, legacyPath, options, catalog);
       }
     } else if (node instanceof SequenceNode sequence) {
-      if (sequence.getValue().size() > 1) {
-        throw invalid("UNSUPPORTED_YAML_SEQUENCE", "Repeated YAML sequence keys are ambiguous");
-      }
-      for (Node entry : sequence.getValue()) {
-        collect(entry, parent, options, catalog);
+      for (int index = 0; index < sequence.getValue().size(); index++) {
+        collect(
+            sequence.getValue().get(index),
+            parent + "[" + index + "]",
+            legacyParent,
+            options,
+            catalog);
       }
     } else if (node instanceof ScalarNode value && !parent.isEmpty()) {
-      String key = parent.substring(parent.lastIndexOf('/') + 1);
+      String key = legacyParent.substring(legacyParent.lastIndexOf('/') + 1);
       Pattern exceptions = options.pattern("exceptions");
-      boolean exception = exceptions != null && exceptions.matcher(parent).find();
+      boolean exception = exceptions != null && exceptions.matcher(legacyParent).find();
       boolean all = !options.contains("extractAllPairs") || options.enabled("extractAllPairs");
       if (all != exception) {
         String id =
             options.contains("useFullKeyPath") && !options.enabled("useFullKeyPath") ? key : parent;
-        catalog.add(id, LocalizationMessage.of(value.getValue(), null, null, null, Map.of()));
+        if (!parent.equals(legacyParent)
+            && options.contains("useFullKeyPath")
+            && !options.enabled("useFullKeyPath")) {
+          id += parent.substring(parent.lastIndexOf('['));
+        }
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        if (!id.equals(legacyParent)) {
+          metadata.put("yamlLegacyId", legacyParent);
+        }
+        catalog.add(id, LocalizationMessage.of(value.getValue(), null, null, null, metadata));
       }
     }
   }
@@ -163,11 +194,9 @@ final class YamlSourceFormat {
         collectSlots(entry.getValueNode(), path, source, encoding, slots);
       }
     } else if (node instanceof SequenceNode sequence) {
-      if (sequence.getValue().size() > 1) {
-        throw invalid("UNSUPPORTED_YAML_SEQUENCE", "Repeated YAML sequence keys are ambiguous");
-      }
-      for (Node entry : sequence.getValue()) {
-        collectSlots(entry, parent, source, encoding, slots);
+      for (int index = 0; index < sequence.getValue().size(); index++) {
+        collectSlots(
+            sequence.getValue().get(index), parent + "[" + index + "]", source, encoding, slots);
       }
     } else if (node instanceof ScalarNode value && !parent.isEmpty()) {
       int start = value.getStartMark().getIndex();

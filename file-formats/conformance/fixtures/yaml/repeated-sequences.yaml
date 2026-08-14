@@ -1,0 +1,15 @@
+routes:
+  labels: [North, South, West]
+  stops:
+    - name: Dock
+      hint: 'First stop'
+    - name: Pier
+      hint: 'Second stop'
+  note: |-
+    North
+
+    South
+  padded: |-
+    North
+      
+    South

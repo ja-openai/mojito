@@ -148,6 +148,9 @@ public final class LocalizationShadowComparator {
                 : restore(message.defaultMessage(), message, format, metadata);
         if (LocalizationFileFormat.GETTEXT_PO.id().equals(format)) {
           id = gettextId(source, metadata);
+        } else if (LocalizationFileFormat.YAML.id().equals(format)
+            && metadata.get("yamlLegacyId") instanceof String legacyId) {
+          id = legacyId;
         }
         projected.add(
             new Unit(id, source, message.description(), null, null, usages, entry.getKey()));
