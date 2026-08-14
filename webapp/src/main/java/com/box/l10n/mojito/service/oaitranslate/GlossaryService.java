@@ -20,7 +20,6 @@ import com.box.l10n.mojito.service.tm.textunitdtocache.UpdateType;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.micrometer.core.instrument.MeterRegistry;
-import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -46,7 +45,6 @@ public class GlossaryService {
   static final String CACHE_LOOKUP_METRIC = "GlossaryService.cache.lookup";
   static final String CACHE_LOAD_DURATION_METRIC = "GlossaryService.cache.loadDuration";
   static final int MAX_CACHED_GLOSSARIES = 128;
-  static final Duration CACHE_TTL = Duration.ofSeconds(30);
 
   TextUnitSearcher textUnitSearcher;
   GlossaryRepository glossaryRepository;
@@ -57,8 +55,7 @@ public class GlossaryService {
   private final TextUnitDTOsCacheService textUnitDTOsCacheService;
   private final LocaleService localeService;
   private final MeterRegistry meterRegistry;
-  private final Cache<GlossaryCacheKey, GlossaryTrie> glossaryTrieCache =
-      Caffeine.newBuilder().maximumSize(MAX_CACHED_GLOSSARIES).expireAfterWrite(CACHE_TTL).build();
+  private final Cache<GlossaryCacheKey, GlossaryTrie> glossaryTrieCache;
 
   public GlossaryService(
       TextUnitSearcher textUnitSearcher,
@@ -69,7 +66,8 @@ public class GlossaryService {
       RepositoryRepository repositoryRepository,
       TextUnitDTOsCacheService textUnitDTOsCacheService,
       LocaleService localeService,
-      MeterRegistry meterRegistry) {
+      MeterRegistry meterRegistry,
+      GlossaryCacheConfigurationProperties glossaryCacheConfigurationProperties) {
     this.textUnitSearcher = textUnitSearcher;
     this.glossaryRepository = glossaryRepository;
     this.glossaryStorageService = glossaryStorageService;
@@ -79,6 +77,11 @@ public class GlossaryService {
     this.textUnitDTOsCacheService = textUnitDTOsCacheService;
     this.localeService = localeService;
     this.meterRegistry = meterRegistry;
+    this.glossaryTrieCache =
+        Caffeine.newBuilder()
+            .maximumSize(MAX_CACHED_GLOSSARIES)
+            .expireAfterWrite(glossaryCacheConfigurationProperties.getTtl())
+            .build();
   }
 
   /**

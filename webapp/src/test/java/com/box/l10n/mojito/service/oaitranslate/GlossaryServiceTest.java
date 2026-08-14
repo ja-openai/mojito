@@ -228,7 +228,8 @@ public class GlossaryServiceTest {
             repositoryRepository,
             mock(TextUnitDTOsCacheService.class),
             mock(LocaleService.class),
-            new SimpleMeterRegistry());
+            new SimpleMeterRegistry(),
+            new GlossaryCacheConfigurationProperties());
 
     Glossary coreGlossary = glossary(201L, "Core", "core-glossary");
     Glossary brandGlossary = glossary(202L, "Brand", "brand-glossary");
@@ -287,7 +288,8 @@ public class GlossaryServiceTest {
             repositoryRepository,
             mock(TextUnitDTOsCacheService.class),
             mock(LocaleService.class),
-            new SimpleMeterRegistry());
+            new SimpleMeterRegistry(),
+            new GlossaryCacheConfigurationProperties());
 
     Glossary glossary = glossary(201L, "Core", "core-glossary");
     when(glossaryRepository.findEnabledByRepositoryId(77L)).thenReturn(List.of(glossary));
@@ -322,7 +324,8 @@ public class GlossaryServiceTest {
             mock(RepositoryRepository.class),
             mock(TextUnitDTOsCacheService.class),
             mock(LocaleService.class),
-            new SimpleMeterRegistry());
+            new SimpleMeterRegistry(),
+            new GlossaryCacheConfigurationProperties());
 
     when(glossaryService.glossaryRepository.findEnabledByRepositoryId(88L)).thenReturn(List.of());
 
@@ -349,7 +352,8 @@ public class GlossaryServiceTest {
             repositoryRepository,
             mock(TextUnitDTOsCacheService.class),
             mock(LocaleService.class),
-            new SimpleMeterRegistry());
+            new SimpleMeterRegistry(),
+            new GlossaryCacheConfigurationProperties());
 
     Glossary glossary = glossary(201L, "Core", "core-glossary");
     when(glossaryRepository.findEnabledByRepositoryId(77L)).thenReturn(List.of(glossary));
@@ -390,7 +394,8 @@ public class GlossaryServiceTest {
             repositoryRepository,
             mock(TextUnitDTOsCacheService.class),
             mock(LocaleService.class),
-            new SimpleMeterRegistry());
+            new SimpleMeterRegistry(),
+            new GlossaryCacheConfigurationProperties());
 
     Glossary glossary = glossary(201L, "Core", "core-glossary");
     Asset canonicalAsset = asset(301L);
@@ -439,7 +444,8 @@ public class GlossaryServiceTest {
             repositoryRepository,
             mock(TextUnitDTOsCacheService.class),
             mock(LocaleService.class),
-            new SimpleMeterRegistry());
+            new SimpleMeterRegistry(),
+            new GlossaryCacheConfigurationProperties());
 
     Glossary glossary = glossary(201L, "Core", "core-glossary");
     when(glossaryRepository.findEnabledByRepositoryId(77L)).thenReturn(List.of(glossary));
@@ -675,7 +681,8 @@ public class GlossaryServiceTest {
             mock(RepositoryRepository.class),
             textUnitDTOsCacheService,
             localeService,
-            new SimpleMeterRegistry());
+            new SimpleMeterRegistry(),
+            new GlossaryCacheConfigurationProperties());
     Glossary glossary = glossary(201L, "Core", "core-glossary");
     com.box.l10n.mojito.entity.Locale sourceLocale = locale(1L, "en-US");
     com.box.l10n.mojito.entity.Locale targetLocale = locale(2L, "fr-FR");
@@ -726,7 +733,8 @@ public class GlossaryServiceTest {
             mock(RepositoryRepository.class),
             textUnitDTOsCacheService,
             localeService,
-            new SimpleMeterRegistry());
+            new SimpleMeterRegistry(),
+            new GlossaryCacheConfigurationProperties());
     Glossary glossary = glossary(201L, "Core", "core-glossary");
     glossary.setLastModifiedDate(ZonedDateTime.parse("2026-08-11T17:00:00Z"));
     com.box.l10n.mojito.entity.Locale sourceLocale = locale(1L, "en-US");
@@ -777,7 +785,8 @@ public class GlossaryServiceTest {
             mock(RepositoryRepository.class),
             textUnitDTOsCacheService,
             localeService,
-            new SimpleMeterRegistry());
+            new SimpleMeterRegistry(),
+            new GlossaryCacheConfigurationProperties());
     Glossary glossary = glossary(201L, "Core", "core-glossary");
     com.box.l10n.mojito.entity.Locale sourceLocale = locale(1L, "en-US");
     glossary.getBackingRepository().setSourceLocale(sourceLocale);
@@ -812,7 +821,8 @@ public class GlossaryServiceTest {
         mock(RepositoryRepository.class),
         mock(TextUnitDTOsCacheService.class),
         mock(LocaleService.class),
-        meterRegistry);
+        meterRegistry,
+        new GlossaryCacheConfigurationProperties());
   }
 
   void assertMatches(GlossaryTrie trie, String text) {
