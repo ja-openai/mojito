@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties("l10n.glossary.cache")
 public class GlossaryCacheConfigurationProperties {
 
-  private Duration ttl = Duration.ofMinutes(10);
+  private Duration ttl = Duration.ofMinutes(5);
 
   public Duration getTtl() {
     return ttl;

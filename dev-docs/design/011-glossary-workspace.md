@@ -211,7 +211,7 @@ effective glossary ids, their existing last-modified dates, and the target local
 Repositories linked to the same glossaries and explicit lookups of one managed
 glossary therefore share the same trie. Legacy repository-name lookup keeps a
 separate repository+locale cache scope. The Caffeine cache holds at most 128
-entries, defaults to a ten-minute lifetime, and coalesces concurrent loads. The
+entries, defaults to a five-minute lifetime, and coalesces concurrent loads. The
 lifetime can be configured with `l10n.glossary.cache.ttl` or the
 `L10N_GLOSSARY_CACHE_TTL` environment variable.
 
@@ -264,7 +264,7 @@ avoided, or 99.8% fewer full glossary rebuilds in that example. Concurrent
 requests for the same scope share a single load. Translating 65 locales does not
 update a shared glossary row or serialize the locale transactions; each locale
 refreshes independently through its existing DTO-cache watermark. Increasing the
-default TTL from 30 seconds to ten minutes cuts time-based rebuilds by up to 20
+default TTL from 30 seconds to five minutes cuts time-based rebuilds by up to 10
 times per active pod and locale. Managed-glossary cold loads reuse shared
 JSON/blob text-unit snapshots instead of directly executing the former full
 source and target text-unit searches.

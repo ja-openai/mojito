@@ -16,11 +16,11 @@ public class GlossaryCacheConfigurationPropertiesTest {
               GlossaryCacheConfigurationProperties.class, TestConfiguration.class);
 
   @Test
-  public void cacheLifetimeDefaultsToTenMinutes() {
+  public void cacheLifetimeDefaultsToFiveMinutes() {
     applicationContextRunner.run(
         context ->
             assertThat(context.getBean(GlossaryCacheConfigurationProperties.class).getTtl())
-                .isEqualTo(Duration.ofMinutes(10)));
+                .isEqualTo(Duration.ofMinutes(5)));
   }
 
   @Test
