@@ -1318,6 +1318,9 @@ public class TMService {
     if (format == LocalizationFileFormat.GETTEXT_PO) {
       localized = localizeGettextPluralForms(localized, repositoryLocale);
       localized = addGettextPluralForms(localized, catalog, sourceSkeleton, gettextAdditionalForms);
+      if (!localized.endsWith("\n")) {
+        localized += "\n";
+      }
     } else if (format == LocalizationFileFormat.JAVA_PROPERTIES) {
       if (!localized.endsWith("\n")) {
         localized += "\n";

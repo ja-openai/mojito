@@ -269,11 +269,16 @@ fn flush(catalog: &mut Catalog, entry: &Entry, state: &mut ParseState) -> Result
         }
     }
     state.pending.push(Pending {
-        id: entry.context.clone().unwrap_or_else(|| id.clone()),
+        id: entry
+            .context
+            .as_ref()
+            .filter(|context| !context.is_empty())
+            .cloned()
+            .unwrap_or_else(|| id.clone()),
         domain: effective_domain(entry.domain.as_deref()).to_owned(),
         message: Message::new(
             default_message,
-            Some(entry.extracted.join(" ")),
+            Some(entry.extracted.join("\n")),
             variants,
             placeholders,
             metadata,

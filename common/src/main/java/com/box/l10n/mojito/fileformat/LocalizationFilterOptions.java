@@ -71,6 +71,9 @@ public final class LocalizationFilterOptions {
         int separator = option.indexOf('=');
         String key = option.substring(0, separator);
         if (!supported.contains(key)) {
+          if (format == LocalizationFileFormat.GETTEXT_PO) {
+            continue;
+          }
           throw new LocalizationParseException(
               "UNSUPPORTED_FILTER_OPTION", "Unsupported " + format.id() + " filter option: " + key);
         }

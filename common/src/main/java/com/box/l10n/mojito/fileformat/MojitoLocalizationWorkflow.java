@@ -239,7 +239,27 @@ final class MojitoLocalizationWorkflow {
     String original = new String(source, StandardCharsets.ISO_8859_1);
     String localized =
         original.replace("\"Language: \\n\"", "\"Language: " + targetLocale + "\\n\"");
-    return localized.equals(original) ? source : localized.getBytes(StandardCharsets.ISO_8859_1);
+    if (!localized.equals(original)) {
+      return localized.getBytes(StandardCharsets.ISO_8859_1);
+    }
+    if (original.contains("\"Language: ")) {
+      return source;
+    }
+    int header = original.indexOf("msgid \"\"");
+    int translated = header < 0 ? -1 : original.indexOf("msgstr \"\"", header);
+    int next = translated < 0 ? -1 : original.indexOf('\n', translated);
+    if (next < 0) {
+      return source;
+    }
+    String newline = next > 0 && original.charAt(next - 1) == '\r' ? "\r\n" : "\n";
+    localized =
+        original.substring(0, next + 1)
+            + "\"Language: "
+            + targetLocale
+            + "\\n\""
+            + newline
+            + original.substring(next + 1);
+    return localized.getBytes(StandardCharsets.ISO_8859_1);
   }
 
   private static Map<String, String> completeVariants(
