@@ -32,7 +32,6 @@ import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.box.l10n.mojito.service.tm.search.UsedFilter;
 import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -480,16 +479,13 @@ public class GlossaryTermService {
                         .toList())
             .getOrDefault(termKey, List.of());
 
-    TermView termView =
-        toTermView(
-            refreshedSource,
-            metadata,
-            localizedTextUnits,
-            evidenceByMetadataId,
-            primaryLinksByMetadataId,
-            Map.of());
-    touchGlossary(glossary);
-    return termView;
+    return toTermView(
+        refreshedSource,
+        metadata,
+        localizedTextUnits,
+        evidenceByMetadataId,
+        primaryLinksByMetadataId,
+        Map.of());
   }
 
   @Transactional
@@ -532,16 +528,13 @@ public class GlossaryTermService {
                 metadata.getId()));
     Map<Long, GlossaryTermIndexLink> primaryLinksByMetadataId =
         getPrimaryLinksByMetadataId(List.of(metadata));
-    TermView termView =
-        toTermView(
-            sourceTextUnit,
-            metadata,
-            List.of(),
-            evidenceByMetadataId,
-            primaryLinksByMetadataId,
-            Map.of());
-    touchGlossary(glossary);
-    return termView;
+    return toTermView(
+        sourceTextUnit,
+        metadata,
+        List.of(),
+        evidenceByMetadataId,
+        primaryLinksByMetadataId,
+        Map.of());
   }
 
   @Transactional
@@ -563,7 +556,6 @@ public class GlossaryTermService {
     glossaryTermTranslationProposalRepository.deleteByGlossaryIdAndTmTextUnitId(
         glossaryId, tmTextUnitId);
     virtualAssetService.deleteTextUnit(asset.getId(), sourceTextUnit.getName());
-    touchGlossary(glossary);
   }
 
   private TermView updateReaderTermTranslations(
@@ -588,18 +580,13 @@ public class GlossaryTermService {
                 asset, allowedTranslations.stream().map(TranslationInput::localeTag).toList())
             .getOrDefault(sourceTextUnit.getName(), List.of());
 
-    TermView termView =
-        toTermView(
-            sourceTextUnit,
-            metadata,
-            localizedTextUnits,
-            evidenceByMetadataId,
-            primaryLinksByMetadataId,
-            Map.of());
-    if (!allowedTranslations.isEmpty()) {
-      touchGlossary(glossary);
-    }
-    return termView;
+    return toTermView(
+        sourceTextUnit,
+        metadata,
+        localizedTextUnits,
+        evidenceByMetadataId,
+        primaryLinksByMetadataId,
+        Map.of());
   }
 
   private TermUpsertCommand sanitizeReaderProposalCommand(TermUpsertCommand command) {
@@ -711,7 +698,6 @@ public class GlossaryTermService {
       updateVirtualAssetTerms(asset, sourceUpdates);
     }
     glossaryTermMetadataRepository.saveAll(toSave);
-    touchGlossary(glossary);
     return new BatchUpdateResult(toSave.size());
   }
 
@@ -915,7 +901,6 @@ public class GlossaryTermService {
                   proposal.getLocaleTag(),
                   proposal.getProposedTarget(),
                   proposal.getProposedTargetComment())));
-      touchGlossary(glossary);
     }
 
     proposal.setStatus(decision);
@@ -928,11 +913,6 @@ public class GlossaryTermService {
                 proposal.getTmTextUnit().getId())
             .getSource();
     return toTranslationProposalView(proposal, source);
-  }
-
-  public void touchGlossary(Glossary glossary) {
-    glossaryRepository.advanceLastModifiedDate(
-        glossary.getId(), ZonedDateTime.now().truncatedTo(ChronoUnit.SECONDS));
   }
 
   private List<ExtractedCandidateView> refineCandidatesWithAi(

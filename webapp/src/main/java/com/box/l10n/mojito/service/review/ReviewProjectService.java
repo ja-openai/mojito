@@ -2750,7 +2750,6 @@ public class ReviewProjectService {
                               + textUnit.getTmTextUnit().getId()));
       metadata.setStatus(normalizedStatus);
       glossaryTermMetadataRepository.saveAndFlush(metadata);
-      glossaryTermService.touchGlossary(metadata.getGlossary());
       if (project.getType() == ReviewProjectType.TERM_CANDIDATE) {
         updateLinkedCandidateReview(metadata, normalizedStatus, notes);
       }

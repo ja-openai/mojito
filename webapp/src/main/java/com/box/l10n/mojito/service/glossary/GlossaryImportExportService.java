@@ -20,8 +20,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
-import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -126,8 +124,6 @@ public class GlossaryImportExportService {
 
     TranslationDelta translationDelta =
         importTranslations(glossary, importedTerms, refreshedTermsByKey);
-    glossaryRepository.advanceLastModifiedDate(
-        glossary.getId(), ZonedDateTime.now().truncatedTo(ChronoUnit.SECONDS));
     return new ImportResult(
         createdTermCount,
         updatedTermCount,

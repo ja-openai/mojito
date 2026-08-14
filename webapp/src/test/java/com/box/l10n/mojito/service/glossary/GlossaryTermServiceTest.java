@@ -27,7 +27,6 @@ import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
-import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -163,27 +162,12 @@ public class GlossaryTermServiceTest {
     verify(termIndexExtractedTermRepository)
         .findBySourceLocaleTagAndNormalizedKey("en", "new chat");
     verifyNoMoreInteractions(termIndexExtractedTermRepository);
-    verify(glossaryRepository)
-        .advanceLastModifiedDate(eq(glossary.getId()), any(ZonedDateTime.class));
     assertThat(view.termIndexExtractedTermId()).isEqualTo(extractedTerm.getId());
     assertThat(savedLink.get().getTermIndexCandidate().getSourceType())
         .isEqualTo(TermIndexCandidate.SOURCE_TYPE_EXTRACTION);
     assertThat(savedLink.get().getTermIndexCandidate().getSourceLocaleTag()).isEqualTo("en");
     assertThat(savedLink.get().getTermIndexCandidate().getTermIndexExtractedTerm())
         .isSameAs(extractedTerm);
-  }
-
-  @Test
-  public void touchGlossaryAdvancesPersistedVersionAtDatabasePrecision() {
-    Glossary glossary = glossary(1L, "en");
-
-    glossaryTermService.touchGlossary(glossary);
-
-    org.mockito.ArgumentCaptor<ZonedDateTime> timestampCaptor =
-        org.mockito.ArgumentCaptor.forClass(ZonedDateTime.class);
-    verify(glossaryRepository)
-        .advanceLastModifiedDate(eq(glossary.getId()), timestampCaptor.capture());
-    assertThat(timestampCaptor.getValue().getNano()).isZero();
   }
 
   @Test
