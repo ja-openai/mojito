@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "yaml",
+  "messages": {
+    "routes/labels[0]": {
+      "defaultMessage": "North",
+      "metadata": { "yamlLegacyId": "routes/labels" }
+    },
+    "routes/labels[1]": {
+      "defaultMessage": "South",
+      "metadata": { "yamlLegacyId": "routes/labels" }
+    },
+    "routes/labels[2]": {
+      "defaultMessage": "West",
+      "metadata": { "yamlLegacyId": "routes/labels" }
+    },
+    "routes/stops[0]/name": {
+      "defaultMessage": "Dock",
+      "metadata": { "yamlLegacyId": "routes/stops/name" }
+    },
+    "routes/stops[0]/hint": {
+      "defaultMessage": "First stop",
+      "metadata": { "yamlLegacyId": "routes/stops/hint" }
+    },
+    "routes/stops[1]/name": {
+      "defaultMessage": "Pier",
+      "metadata": { "yamlLegacyId": "routes/stops/name" }
+    },
+    "routes/stops[1]/hint": {
+      "defaultMessage": "Second stop",
+      "metadata": { "yamlLegacyId": "routes/stops/hint" }
+    },
+    "routes/note": {
+      "defaultMessage": "North\n\nSouth"
+    },
+    "routes/padded": {
+      "defaultMessage": "North\n  \nSouth"
+    }
+  }
+}

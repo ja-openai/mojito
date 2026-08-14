@@ -9,6 +9,7 @@ use yaml_rust2::scanner::TScalarStyle;
 #[derive(Debug)]
 struct Scalar {
     path: String,
+    legacy_path: String,
     value: String,
     start: usize,
     end: usize,
@@ -17,8 +18,10 @@ struct Scalar {
 #[derive(Debug)]
 struct Frame {
     path: String,
+    legacy_path: String,
     key: Option<String>,
     sequence: bool,
+    flow: bool,
     count: usize,
 }
 
@@ -45,18 +48,24 @@ pub(crate) fn parse_configured(
     for scalar in scalars(source)? {
         let exception = options
             .pattern("exceptions")
-            .is_some_and(|pattern| pattern.is_match(&scalar.path));
+            .is_some_and(|pattern| pattern.is_match(&scalar.legacy_path));
         let all = !options.contains("extractAllPairs") || options.enabled("extractAllPairs");
         if all != exception {
             let id = if options.contains("useFullKeyPath") && !options.enabled("useFullKeyPath") {
-                scalar.path.rsplit('/').next().unwrap().to_owned()
+                let key = scalar.legacy_path.rsplit('/').next().unwrap();
+                if scalar.path == scalar.legacy_path {
+                    key.to_owned()
+                } else {
+                    format!("{key}{}", &scalar.path[scalar.path.rfind('[').unwrap()..])
+                }
             } else {
-                scalar.path
+                scalar.path.clone()
             };
-            result.insert(
-                id,
-                Message::new(scalar.value, None, None, vec![], Map::new()),
-            )?;
+            let mut metadata = Map::new();
+            if id != scalar.legacy_path {
+                metadata.insert("yamlLegacyId".into(), scalar.legacy_path.into());
+            }
+            result.insert(id, Message::new(scalar.value, None, None, vec![], metadata))?;
         }
     }
     Ok(result)
@@ -159,12 +168,27 @@ fn encode_scalar(source: &str, translated: &str) -> String {
         } else {
             "\n"
         };
-        format!(
-            "{}{}{}",
-            &source[..newline.saturating_add(1)],
-            indent,
-            translated.replace('\n', &format!("{separator}{indent}"))
-        )
+        let source_lines = body
+            .split('\n')
+            .map(|line| line.strip_suffix('\r').unwrap_or(line))
+            .collect::<Vec<_>>();
+        let mut result = source[..newline.saturating_add(1)].to_owned();
+        for (index, line) in translated.split('\n').enumerate() {
+            if index > 0 {
+                result.push_str(separator);
+            }
+            if line.is_empty()
+                && source_lines
+                    .get(index)
+                    .is_some_and(|original| original.trim().is_empty())
+            {
+                result.push_str(source_lines[index]);
+            } else {
+                result.push_str(&indent);
+            }
+            result.push_str(line);
+        }
+        result
     } else if translated.contains('\n') || translated.contains(": ") || translated.contains(" #") {
         format!("'{}'", translated.replace('\'', "''"))
     } else {
@@ -183,11 +207,13 @@ fn scalars(source: &str) -> Result<Vec<Scalar>, ParseError> {
         match event {
             Event::StreamEnd => break,
             Event::MappingStart(_, _) => {
-                let path = next_path(&mut stack)?;
+                let (path, legacy_path) = next_path(&mut stack)?;
                 stack.push(Frame {
                     path,
+                    legacy_path,
                     key: None,
                     sequence: false,
+                    flow: source.chars().nth(marker.index()) == Some('{'),
                     count: 0,
                 });
             }
@@ -195,11 +221,13 @@ fn scalars(source: &str) -> Result<Vec<Scalar>, ParseError> {
                 stack.pop();
             }
             Event::SequenceStart(_, _) => {
-                let path = next_path(&mut stack)?;
+                let (path, legacy_path) = next_path(&mut stack)?;
                 stack.push(Frame {
                     path,
+                    legacy_path,
                     key: None,
                     sequence: true,
+                    flow: source.chars().nth(marker.index()) == Some('['),
                     count: 0,
                 });
             }
@@ -211,22 +239,26 @@ fn scalars(source: &str) -> Result<Vec<Scalar>, ParseError> {
                     current.key = Some(value);
                     continue;
                 }
-                let path = if current.sequence {
+                let (path, legacy_path) = if current.sequence {
                     current.count += 1;
-                    if current.count > 1 {
-                        return Err(error(
-                            "UNSUPPORTED_YAML_SEQUENCE",
-                            "Repeated YAML sequence keys are ambiguous",
-                        ));
-                    }
-                    current.path.clone()
+                    (
+                        format!("{}[{}]", current.path, current.count - 1),
+                        current.legacy_path.clone(),
+                    )
                 } else {
                     let key = current.key.take().unwrap();
-                    if current.path.is_empty() {
-                        key
-                    } else {
-                        format!("{}/{}", current.path, key)
-                    }
+                    (
+                        if current.path.is_empty() {
+                            key.clone()
+                        } else {
+                            format!("{}/{}", current.path, key)
+                        },
+                        if current.legacy_path.is_empty() {
+                            key
+                        } else {
+                            format!("{}/{}", current.legacy_path, key)
+                        },
+                    )
                 };
                 let marked = source
                     .char_indices()
@@ -240,9 +272,10 @@ fn scalars(source: &str) -> Result<Vec<Scalar>, ParseError> {
                 } else {
                     marked
                 };
-                let end = scalar_end(source, start, style)?;
+                let end = scalar_end(source, start, style, current.flow)?;
                 result.push(Scalar {
                     path,
+                    legacy_path,
                     value,
                     start,
                     end,
@@ -266,25 +299,29 @@ fn scalars(source: &str) -> Result<Vec<Scalar>, ParseError> {
     Ok(result)
 }
 
-fn next_path(stack: &mut [Frame]) -> Result<String, ParseError> {
+fn next_path(stack: &mut [Frame]) -> Result<(String, String), ParseError> {
     let Some(parent) = stack.last_mut() else {
-        return Ok(String::new());
+        return Ok((String::new(), String::new()));
     };
     if parent.sequence {
         parent.count += 1;
-        if parent.count > 1 {
-            return Err(error(
-                "UNSUPPORTED_YAML_SEQUENCE",
-                "Repeated YAML sequence keys are ambiguous",
-            ));
-        }
-        Ok(parent.path.clone())
+        Ok((
+            format!("{}[{}]", parent.path, parent.count - 1),
+            parent.legacy_path.clone(),
+        ))
     } else if let Some(key) = parent.key.take() {
-        Ok(if parent.path.is_empty() {
-            key
-        } else {
-            format!("{}/{}", parent.path, key)
-        })
+        Ok((
+            if parent.path.is_empty() {
+                key.clone()
+            } else {
+                format!("{}/{}", parent.path, key)
+            },
+            if parent.legacy_path.is_empty() {
+                key
+            } else {
+                format!("{}/{}", parent.legacy_path, key)
+            },
+        ))
     } else {
         Err(error(
             "INVALID_YAML",
@@ -293,7 +330,12 @@ fn next_path(stack: &mut [Frame]) -> Result<String, ParseError> {
     }
 }
 
-fn scalar_end(source: &str, start: usize, style: TScalarStyle) -> Result<usize, ParseError> {
+fn scalar_end(
+    source: &str,
+    start: usize,
+    style: TScalarStyle,
+    flow: bool,
+) -> Result<usize, ParseError> {
     let bytes = source.as_bytes();
     match style {
         TScalarStyle::SingleQuoted => {
@@ -323,7 +365,11 @@ fn scalar_end(source: &str, start: usize, style: TScalarStyle) -> Result<usize, 
         }
         TScalarStyle::Plain => {
             let tail = &source[start..];
-            let line = tail.find(['\r', '\n']).unwrap_or(tail.len());
+            let line = if flow {
+                tail.find(['\r', '\n', ',', ']', '}']).unwrap_or(tail.len())
+            } else {
+                tail.find(['\r', '\n']).unwrap_or(tail.len())
+            };
             let comment = tail[..line].find(" #").unwrap_or(line);
             return Ok(start + tail[..comment].trim_end().len());
         }

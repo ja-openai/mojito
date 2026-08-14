@@ -1,0 +1,15 @@
+routes:
+  labels: [Nord, Sud, Ouest]
+  stops:
+    - name: Quai
+      hint: 'Premier arrêt'
+    - name: Jetée
+      hint: 'Deuxième arrêt'
+  note: |-
+    Nord
+
+    Sud
+  padded: |-
+    Nord
+      
+    Sud

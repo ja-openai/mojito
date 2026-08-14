@@ -1107,6 +1107,26 @@
       "localized": "fixtures/yaml/native-styles.localized.yaml"
     },
     {
+      "id": "yaml-mojito-preserves-repeated-sequence-identities-and-source-owned-layout",
+      "format": "yaml",
+      "input": "fixtures/yaml/repeated-sequences.yaml",
+      "expected": "fixtures/yaml/repeated-sequences.expected.json",
+      "filterOptions": [],
+      "translations": {
+        "routes/labels[0]": "Nord",
+        "routes/labels[1]": "Sud",
+        "routes/labels[2]": "Ouest",
+        "routes/stops[0]/name": "Quai",
+        "routes/stops[0]/hint": "Premier arrêt",
+        "routes/stops[1]/name": "Jetée",
+        "routes/stops[1]/hint": "Deuxième arrêt",
+        "routes/note": "Nord\n\nSud",
+        "routes/padded": "Nord\n\nSud"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/yaml/repeated-sequences.localized.yaml"
+    },
+    {
       "id": "yaml-mojito-honors-configured-scalar-selection",
       "format": "yaml",
       "input": "fixtures/yaml/native-styles.yaml",
@@ -25900,6 +25920,12 @@
       "format": "yaml",
       "input": "fixtures/yaml/native-styles.yaml",
       "expected": "fixtures/yaml/native-styles.expected.json"
+    },
+    {
+      "id": "yaml-mojito-preserves-flow-and-block-sequence-identities",
+      "format": "yaml",
+      "input": "fixtures/yaml/repeated-sequences.yaml",
+      "expected": "fixtures/yaml/repeated-sequences.expected.json"
     },
     {
       "id": "resx-customized-mojito-rules-preserve-notes-space-and-protected-content",
