@@ -28,6 +28,9 @@ export type LinguistTimeSpentSummary = {
   selfReportedSeconds: number | null;
   estimatedActiveSeconds: number;
   rawDecisionSpanSeconds: number;
+  decisionIntervalCount: number;
+  rapidDecisionIntervalCount: number;
+  rapidDecisionIntervalPercent: number;
   projectSpanSeconds?: number;
   pauseSeconds: number;
   pauseCount: number;
@@ -60,6 +63,10 @@ export type LinguistTimeSpentTranslatorScorecard = {
   reviewFlagPercent: number;
   selfReportedSeconds: number | null;
   estimatedActiveSeconds: number;
+  rawDecisionSpanSeconds: number;
+  decisionIntervalCount: number;
+  rapidDecisionIntervalCount: number;
+  rapidDecisionIntervalPercent: number;
   reportedComputedRatio: number | null;
   lastComputedAt: string | null;
 };
@@ -93,6 +100,12 @@ export type LinguistTimeSpentWindow = {
   reportedComputedRatio: number | null;
   estimatedActiveSeconds: number;
   rawDecisionSpanSeconds: number;
+  decisionIntervalCount: number | null;
+  rapidDecisionIntervalCount: number | null;
+  rapidDecisionIntervalPercent: number | null;
+  medianDecisionIntervalSeconds: number | null;
+  p90DecisionIntervalSeconds: number | null;
+  p95DecisionIntervalSeconds: number | null;
   projectSpanSeconds: number;
   pauseSeconds: number;
   pauseCount: number;

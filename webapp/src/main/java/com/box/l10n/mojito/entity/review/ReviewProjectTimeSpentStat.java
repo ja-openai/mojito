@@ -110,6 +110,21 @@ public class ReviewProjectTimeSpentStat extends AuditableEntity {
   @Column(name = "raw_decision_span_seconds", nullable = false)
   private long rawDecisionSpanSeconds;
 
+  @Column(name = "decision_interval_count")
+  private Long decisionIntervalCount;
+
+  @Column(name = "rapid_decision_interval_count")
+  private Long rapidDecisionIntervalCount;
+
+  @Column(name = "median_decision_interval_seconds")
+  private Long medianDecisionIntervalSeconds;
+
+  @Column(name = "p90_decision_interval_seconds")
+  private Long p90DecisionIntervalSeconds;
+
+  @Column(name = "p95_decision_interval_seconds")
+  private Long p95DecisionIntervalSeconds;
+
   @Column(name = "project_span_seconds", nullable = false)
   private long projectSpanSeconds;
 
@@ -344,6 +359,46 @@ public class ReviewProjectTimeSpentStat extends AuditableEntity {
 
   public void setRawDecisionSpanSeconds(long rawDecisionSpanSeconds) {
     this.rawDecisionSpanSeconds = rawDecisionSpanSeconds;
+  }
+
+  public Long getDecisionIntervalCount() {
+    return decisionIntervalCount;
+  }
+
+  public void setDecisionIntervalCount(Long decisionIntervalCount) {
+    this.decisionIntervalCount = decisionIntervalCount;
+  }
+
+  public Long getRapidDecisionIntervalCount() {
+    return rapidDecisionIntervalCount;
+  }
+
+  public void setRapidDecisionIntervalCount(Long rapidDecisionIntervalCount) {
+    this.rapidDecisionIntervalCount = rapidDecisionIntervalCount;
+  }
+
+  public Long getMedianDecisionIntervalSeconds() {
+    return medianDecisionIntervalSeconds;
+  }
+
+  public void setMedianDecisionIntervalSeconds(Long medianDecisionIntervalSeconds) {
+    this.medianDecisionIntervalSeconds = medianDecisionIntervalSeconds;
+  }
+
+  public Long getP90DecisionIntervalSeconds() {
+    return p90DecisionIntervalSeconds;
+  }
+
+  public void setP90DecisionIntervalSeconds(Long p90DecisionIntervalSeconds) {
+    this.p90DecisionIntervalSeconds = p90DecisionIntervalSeconds;
+  }
+
+  public Long getP95DecisionIntervalSeconds() {
+    return p95DecisionIntervalSeconds;
+  }
+
+  public void setP95DecisionIntervalSeconds(Long p95DecisionIntervalSeconds) {
+    this.p95DecisionIntervalSeconds = p95DecisionIntervalSeconds;
   }
 
   public long getProjectSpanSeconds() {

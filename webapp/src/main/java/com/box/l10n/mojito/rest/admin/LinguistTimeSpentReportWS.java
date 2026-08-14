@@ -267,6 +267,9 @@ public class LinguistTimeSpentReportWS {
       Long selfReportedSeconds,
       long estimatedActiveSeconds,
       long rawDecisionSpanSeconds,
+      long decisionIntervalCount,
+      long rapidDecisionIntervalCount,
+      double rapidDecisionIntervalPercent,
       long pauseSeconds,
       long pauseCount,
       long reportedMissingCount,
@@ -285,6 +288,11 @@ public class LinguistTimeSpentReportWS {
           projection.getSelfReportedSeconds(),
           safeLong(projection.getEstimatedActiveSeconds()),
           safeLong(projection.getRawDecisionSpanSeconds()),
+          safeLong(projection.getDecisionIntervalCount()),
+          safeLong(projection.getRapidDecisionIntervalCount()),
+          percent(
+              projection.getRapidDecisionIntervalCount(),
+              safeLong(projection.getDecisionIntervalCount())),
           safeLong(projection.getPauseSeconds()),
           safeLong(projection.getPauseCount()),
           safeLong(projection.getReportedMissingCount()),
@@ -293,7 +301,7 @@ public class LinguistTimeSpentReportWS {
     }
 
     private static SummaryResponse empty() {
-      return new SummaryResponse(0, 0, 0, null, 0, 0, 0, 0, 0, 0, null);
+      return new SummaryResponse(0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, null);
     }
   }
 
@@ -330,6 +338,10 @@ public class LinguistTimeSpentReportWS {
       double reviewFlagPercent,
       Long selfReportedSeconds,
       long estimatedActiveSeconds,
+      long rawDecisionSpanSeconds,
+      long decisionIntervalCount,
+      long rapidDecisionIntervalCount,
+      double rapidDecisionIntervalPercent,
       Double reportedComputedRatio,
       ZonedDateTime lastComputedAt) {
 
@@ -338,6 +350,7 @@ public class LinguistTimeSpentReportWS {
       long windowCount = safeLong(projection.getWindowCount());
       Long selfReportedSeconds = projection.getSelfReportedSeconds();
       long estimatedActiveSeconds = safeLong(projection.getEstimatedActiveSeconds());
+      long decisionIntervalCount = safeLong(projection.getDecisionIntervalCount());
       return new TranslatorScorecardResponse(
           projection.getAssignedTranslatorUserId(),
           projection.getAssignedTranslatorUsername(),
@@ -355,9 +368,11 @@ public class LinguistTimeSpentReportWS {
           percent(projection.getReviewFlagCount(), windowCount),
           selfReportedSeconds,
           estimatedActiveSeconds,
-          selfReportedSeconds == null || estimatedActiveSeconds <= 0
-              ? null
-              : selfReportedSeconds / (double) estimatedActiveSeconds,
+          safeLong(projection.getRawDecisionSpanSeconds()),
+          decisionIntervalCount,
+          safeLong(projection.getRapidDecisionIntervalCount()),
+          percent(projection.getRapidDecisionIntervalCount(), decisionIntervalCount),
+          null,
           projection.getLastComputedAt());
     }
   }
@@ -391,6 +406,12 @@ public class LinguistTimeSpentReportWS {
       Double reportedComputedRatio,
       long estimatedActiveSeconds,
       long rawDecisionSpanSeconds,
+      Long decisionIntervalCount,
+      Long rapidDecisionIntervalCount,
+      Double rapidDecisionIntervalPercent,
+      Long medianDecisionIntervalSeconds,
+      Long p90DecisionIntervalSeconds,
+      Long p95DecisionIntervalSeconds,
       long projectSpanSeconds,
       long pauseSeconds,
       long pauseCount,
@@ -432,6 +453,14 @@ public class LinguistTimeSpentReportWS {
           stat.getReportedComputedRatio(),
           stat.getEstimatedActiveSeconds(),
           stat.getRawDecisionSpanSeconds(),
+          stat.getDecisionIntervalCount(),
+          stat.getRapidDecisionIntervalCount(),
+          stat.getDecisionIntervalCount() == null || stat.getDecisionIntervalCount() <= 0
+              ? null
+              : percent(stat.getRapidDecisionIntervalCount(), stat.getDecisionIntervalCount()),
+          stat.getMedianDecisionIntervalSeconds(),
+          stat.getP90DecisionIntervalSeconds(),
+          stat.getP95DecisionIntervalSeconds(),
           stat.getProjectSpanSeconds(),
           stat.getPauseSeconds(),
           stat.getPauseCount(),

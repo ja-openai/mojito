@@ -69,6 +69,16 @@ describe('App', () => {
     expect(screen.queryByRole('link', { name: 'String Authoring' })).not.toBeInTheDocument();
   });
 
+  it('hides global linguist reporting from project managers', () => {
+    setUserRole('ROLE_PM');
+    window.history.pushState({}, '', '/settings/system');
+
+    render(<App />);
+
+    expect(screen.getByRole('button', { name: /Teams/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Linguist time spent/ })).not.toBeInTheDocument();
+  });
+
   it('hides the string authoring tab from users without source authoring access', () => {
     setUserRole('ROLE_TRANSLATOR');
 

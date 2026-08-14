@@ -129,7 +129,7 @@ export function AdminSettingsPage() {
               >
                 <div className="settings-directory__title">Linguist time spent</div>
                 <div className="settings-directory__description">
-                  Compare self-reported and computed review time by linguist, language, and project.
+                  Review self-reported time and decision cadence by linguist, language, and project.
                 </div>
               </button>
             </div>
@@ -282,26 +282,6 @@ export function AdminSettingsPage() {
                 <div className="settings-directory__title">Teams</div>
                 <div className="settings-directory__description">
                   Review teams and pools you manage.
-                </div>
-              </button>
-            </div>
-          </section>
-
-          <section className="settings-card" aria-labelledby="settings-pm-review-reporting">
-            <div className="settings-card__header">
-              <h2 id="settings-pm-review-reporting">Review reporting</h2>
-            </div>
-            <div className="settings-directory">
-              <button
-                type="button"
-                className="settings-directory__card"
-                onClick={() => {
-                  void navigate('/settings/system/linguist-time-spent');
-                }}
-              >
-                <div className="settings-directory__title">Linguist time spent</div>
-                <div className="settings-directory__description">
-                  Compare reported and computed review time by linguist, language, and project.
                 </div>
               </button>
             </div>

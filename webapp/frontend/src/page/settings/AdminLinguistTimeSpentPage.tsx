@@ -135,10 +135,6 @@ function formatDate(value: string | null | undefined) {
   return new Date(value).toLocaleDateString();
 }
 
-function formatRatio(value: number | null | undefined) {
-  return value === null || value === undefined ? '-' : `${value.toFixed(2)}x`;
-}
-
 function formatPercent(value: number | null | undefined) {
   return value === null || value === undefined ? '-' : `${value.toFixed(0)}%`;
 }
@@ -147,18 +143,11 @@ function formatCountWithPercent(count: number, percent: number) {
   return `${formatNumber(count)} / ${formatPercent(percent)}`;
 }
 
-function formatFlag(value: string) {
-  switch (value) {
-    case 'MISSING_REPORT':
-      return 'Missing report';
-    case 'CHECK_HIGH':
-      return 'Check high';
-    case 'CHECK_LOW':
-      return 'Check low';
-    case 'OK':
-    default:
-      return 'OK';
+function formatRapidIntervals(count: number | null | undefined, total: number | null | undefined) {
+  if (count === null || count === undefined || !total) {
+    return '-';
   }
+  return `${formatNumber(count)} / ${((count / total) * 100).toFixed(1)}%`;
 }
 
 function formatWindowStatus(window: LinguistTimeSpentWindow) {
@@ -175,13 +164,6 @@ function formatWindowStatus(window: LinguistTimeSpentWindow) {
     default:
       return window.assignmentWindowEndReason ?? 'Ended';
   }
-}
-
-function discrepancyLabel(window: LinguistTimeSpentWindow) {
-  if (window.reportedMissing) {
-    return 'Missing report';
-  }
-  return formatRatio(window.reportedComputedRatio);
 }
 
 function formatAcceptDelay(window: LinguistTimeSpentWindow) {
@@ -223,28 +205,28 @@ function ReportHelp() {
           An assignment window is one period where one linguist is assigned to one review project.
           Reassignment creates a new window, so the same project can appear more than once.
         </p>
+        <p>
+          Decision timestamps are review signals, not session tracking or proof of time worked. A
+          later edit can replace a final-decision timestamp, and assignment-window fallback can
+          include another reviewer&apos;s decisions when actor attribution is unavailable.
+        </p>
         <dl>
           <dt>Reported</dt>
           <dd>
             Self-reported time entered by the linguist. This should include project-level research
             or coordination that is not visible from decision timestamps.
           </dd>
-          <dt>Computed</dt>
+          <dt>Observed span</dt>
+          <dd>Elapsed time between the first and last decisions, including any actual breaks.</dd>
+          <dt>p50 / p90 / p95</dt>
           <dd>
-            Estimated active decision/editing time from attributed decisions. Long gaps are capped
-            from word count so breaks are not counted as work.
+            Decision interval percentiles. For example, p95 is the interval at or below which 95% of
+            decisions were made. Intervals use the one-second precision of decision timestamps.
           </dd>
-          <dt>Raw time</dt>
-          <dd>
-            Uncapped measured time before pause caps. This includes an estimated cost for the first
-            decision and full gaps between later decisions.
-          </dd>
-          <dt>Pauses</dt>
-          <dd>
-            Estimated excluded break time and count of decision gaps treated as likely breaks.
-          </dd>
-          <dt>Flags</dt>
-          <dd>Missing self-reports or reported/computed ratios that need PM review.</dd>
+          <dt>≤1s intervals</dt>
+          <dd>Count and percentage of consecutive decisions recorded within one second.</dd>
+          <dt>Missing reports</dt>
+          <dd>Assignment windows that do not have self-reported time.</dd>
         </dl>
       </div>
     </details>
@@ -253,7 +235,6 @@ function ReportHelp() {
 
 export function AdminLinguistTimeSpentPage() {
   const user = useUser();
-  const canView = user.role === 'ROLE_ADMIN' || user.role === 'ROLE_PM';
   const isAdmin = user.role === 'ROLE_ADMIN';
   const resolveLocaleName = useLocaleDisplayNameResolver();
   const { data: locales, isLoading: localesLoading } = useLocales();
@@ -284,7 +265,7 @@ export function AdminLinguistTimeSpentPage() {
   const reportQuery = useQuery({
     queryKey: ['linguist-time-spent-report', reportParams],
     queryFn: () => fetchLinguistTimeSpentReport(reportParams),
-    enabled: canView,
+    enabled: isAdmin,
   });
 
   const recomputeMutation = useMutation({
@@ -309,7 +290,7 @@ export function AdminLinguistTimeSpentPage() {
     },
   });
 
-  if (!canView) {
+  if (!isAdmin) {
     return <Navigate to="/settings/me" replace />;
   }
 
@@ -496,10 +477,9 @@ export function AdminLinguistTimeSpentPage() {
                     <th>Projects</th>
                     <th>Words</th>
                     <th>Reported</th>
-                    <th>Computed</th>
-                    <th>Raw time</th>
-                    <th>Pauses</th>
-                    <th>Flags</th>
+                    <th>Observed span</th>
+                    <th>≤1s intervals</th>
+                    <th>Missing reports</th>
                     <th>Last computed</th>
                   </tr>
                 </thead>
@@ -509,16 +489,14 @@ export function AdminLinguistTimeSpentPage() {
                     <td>{formatNumber(report.summary.projectCount)}</td>
                     <td>{formatNumber(report.summary.decidedWordCount)}</td>
                     <td>{formatDuration(report.summary.selfReportedSeconds)}</td>
-                    <td>{formatDuration(report.summary.estimatedActiveSeconds)}</td>
                     <td>{formatDuration(report.summary.rawDecisionSpanSeconds)}</td>
                     <td>
-                      {formatDuration(report.summary.pauseSeconds)} /{' '}
-                      {formatNumber(report.summary.pauseCount)}
+                      {formatRapidIntervals(
+                        report.summary.rapidDecisionIntervalCount,
+                        report.summary.decisionIntervalCount,
+                      )}
                     </td>
-                    <td>
-                      {formatNumber(report.summary.reportedMissingCount)} missing,{' '}
-                      {formatNumber(report.summary.reviewFlagCount)} check
-                    </td>
+                    <td>{formatNumber(report.summary.reportedMissingCount)}</td>
                     <td>{formatDateTime(report.summary.lastComputedAt)}</td>
                   </tr>
                 </tbody>
@@ -546,8 +524,8 @@ export function AdminLinguistTimeSpentPage() {
                     <th>Not accepted</th>
                     <th>Deadline misses</th>
                     <th>Missing reports</th>
-                    <th>Checks</th>
-                    <th>Reported / computed</th>
+                    <th>≤1s intervals</th>
+                    <th>Reported / observed</th>
                     <th>Last computed</th>
                   </tr>
                 </thead>
@@ -571,11 +549,15 @@ export function AdminLinguistTimeSpentPage() {
                           row.reportedMissingPercent,
                         )}
                       </td>
-                      <td>{formatCountWithPercent(row.reviewFlagCount, row.reviewFlagPercent)}</td>
+                      <td>
+                        {formatRapidIntervals(
+                          row.rapidDecisionIntervalCount,
+                          row.decisionIntervalCount,
+                        )}
+                      </td>
                       <td>
                         {formatDuration(row.selfReportedSeconds)} /{' '}
-                        {formatDuration(row.estimatedActiveSeconds)} (
-                        {formatRatio(row.reportedComputedRatio)})
+                        {formatDuration(row.rawDecisionSpanSeconds)}
                       </td>
                       <td>{formatDateTime(row.lastComputedAt)}</td>
                     </tr>
@@ -605,10 +587,9 @@ export function AdminLinguistTimeSpentPage() {
                     <th>Assignment windows</th>
                     <th>Words</th>
                     <th>Reported</th>
-                    <th>Computed</th>
-                    <th>Raw time</th>
-                    <th>Pauses</th>
-                    <th>Flags</th>
+                    <th>Observed span</th>
+                    <th>≤1s intervals</th>
+                    <th>Missing reports</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -622,16 +603,14 @@ export function AdminLinguistTimeSpentPage() {
                       <td>{formatNumber(row.metrics.windowCount)}</td>
                       <td>{formatNumber(row.metrics.decidedWordCount)}</td>
                       <td>{formatDuration(row.metrics.selfReportedSeconds)}</td>
-                      <td>{formatDuration(row.metrics.estimatedActiveSeconds)}</td>
                       <td>{formatDuration(row.metrics.rawDecisionSpanSeconds)}</td>
                       <td>
-                        {formatDuration(row.metrics.pauseSeconds)} /{' '}
-                        {formatNumber(row.metrics.pauseCount)}
+                        {formatRapidIntervals(
+                          row.metrics.rapidDecisionIntervalCount,
+                          row.metrics.decisionIntervalCount,
+                        )}
                       </td>
-                      <td>
-                        {formatNumber(row.metrics.reportedMissingCount)} missing,{' '}
-                        {formatNumber(row.metrics.reviewFlagCount)} check
-                      </td>
+                      <td>{formatNumber(row.metrics.reportedMissingCount)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -660,14 +639,14 @@ export function AdminLinguistTimeSpentPage() {
                     <th>Language</th>
                     <th>Decisions</th>
                     <th>Reported</th>
-                    <th>Computed</th>
-                    <th>Raw time</th>
-                    <th>Pause count</th>
+                    <th>Observed span</th>
+                    <th>p50</th>
+                    <th>p90</th>
+                    <th>p95</th>
+                    <th>≤1s intervals</th>
                     <th>Accepted after</th>
                     <th>First decision</th>
                     <th>Deadline</th>
-                    <th>Discrepancy</th>
-                    <th>Flag</th>
                     <th>Last decision</th>
                   </tr>
                 </thead>
@@ -699,14 +678,19 @@ export function AdminLinguistTimeSpentPage() {
                           ? 'Missing'
                           : formatDuration(window.selfReportedSeconds)}
                       </td>
-                      <td>{formatDuration(window.estimatedActiveSeconds)}</td>
                       <td>{formatDuration(window.rawDecisionSpanSeconds)}</td>
-                      <td>{formatNumber(window.pauseCount)}</td>
+                      <td>{formatDuration(window.medianDecisionIntervalSeconds)}</td>
+                      <td>{formatDuration(window.p90DecisionIntervalSeconds)}</td>
+                      <td>{formatDuration(window.p95DecisionIntervalSeconds)}</td>
+                      <td>
+                        {formatRapidIntervals(
+                          window.rapidDecisionIntervalCount,
+                          window.decisionIntervalCount,
+                        )}
+                      </td>
                       <td>{formatAcceptDelay(window)}</td>
                       <td>{formatFirstDecisionDelay(window)}</td>
                       <td>{formatDeadlineStatus(window)}</td>
-                      <td>{discrepancyLabel(window)}</td>
-                      <td>{formatFlag(window.reviewFlag)}</td>
                       <td>{formatDateTime(window.lastDecisionAt)}</td>
                     </tr>
                   ))}

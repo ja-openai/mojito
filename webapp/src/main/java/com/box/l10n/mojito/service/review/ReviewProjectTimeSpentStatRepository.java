@@ -57,6 +57,8 @@ public interface ReviewProjectTimeSpentStatRepository
         sum(stat.selfReportedSeconds) as selfReportedSeconds,
         sum(stat.estimatedActiveSeconds) as estimatedActiveSeconds,
         sum(stat.rawDecisionSpanSeconds) as rawDecisionSpanSeconds,
+        sum(stat.decisionIntervalCount) as decisionIntervalCount,
+        sum(stat.rapidDecisionIntervalCount) as rapidDecisionIntervalCount,
         sum(stat.pauseSeconds) as pauseSeconds,
         sum(stat.pauseCount) as pauseCount,
         sum(case when stat.reportedMissing = true then 1 else 0 end) as reportedMissingCount,
@@ -90,6 +92,8 @@ public interface ReviewProjectTimeSpentStatRepository
         sum(stat.selfReportedSeconds) as selfReportedSeconds,
         sum(stat.estimatedActiveSeconds) as estimatedActiveSeconds,
         sum(stat.rawDecisionSpanSeconds) as rawDecisionSpanSeconds,
+        sum(stat.decisionIntervalCount) as decisionIntervalCount,
+        sum(stat.rapidDecisionIntervalCount) as rapidDecisionIntervalCount,
         sum(stat.pauseSeconds) as pauseSeconds,
         sum(stat.pauseCount) as pauseCount,
         sum(case when stat.reportedMissing = true then 1 else 0 end) as reportedMissingCount,
@@ -132,6 +136,9 @@ public interface ReviewProjectTimeSpentStatRepository
         sum(case when stat.reviewFlag <> :okFlag and stat.reviewFlag <> :missingReportFlag then 1 else 0 end) as reviewFlagCount,
         sum(stat.selfReportedSeconds) as selfReportedSeconds,
         sum(stat.estimatedActiveSeconds) as estimatedActiveSeconds,
+        sum(stat.rawDecisionSpanSeconds) as rawDecisionSpanSeconds,
+        sum(stat.decisionIntervalCount) as decisionIntervalCount,
+        sum(stat.rapidDecisionIntervalCount) as rapidDecisionIntervalCount,
         max(stat.computedAt) as lastComputedAt
       from ReviewProjectTimeSpentStat stat
       where (:activityAfter is null or stat.lastDecisionAt >= :activityAfter)
@@ -169,6 +176,10 @@ public interface ReviewProjectTimeSpentStatRepository
     Long getEstimatedActiveSeconds();
 
     Long getRawDecisionSpanSeconds();
+
+    Long getDecisionIntervalCount();
+
+    Long getRapidDecisionIntervalCount();
 
     Long getPauseSeconds();
 
@@ -213,6 +224,12 @@ public interface ReviewProjectTimeSpentStatRepository
     Long getSelfReportedSeconds();
 
     Long getEstimatedActiveSeconds();
+
+    Long getRawDecisionSpanSeconds();
+
+    Long getDecisionIntervalCount();
+
+    Long getRapidDecisionIntervalCount();
 
     ZonedDateTime getLastComputedAt();
   }

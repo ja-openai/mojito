@@ -10,6 +10,7 @@ import com.box.l10n.mojito.entity.review.ReviewProjectTimeSpentStat;
 import com.box.l10n.mojito.entity.security.user.User;
 import java.time.Duration;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.data.domain.PageRequest;
@@ -18,9 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ReviewProjectTimeSpentStatService {
-
-  private static final long SECONDS_PER_WORD = 2L;
-  private static final long PAUSE_MULTIPLIER = 2L;
 
   private final ReviewProjectAssignmentWindowRepository assignmentWindowRepository;
   private final ReviewProjectRepository reviewProjectRepository;
@@ -159,7 +157,7 @@ public class ReviewProjectTimeSpentStatService {
     List<ReviewProjectTimeSpentDecisionRow> projectDecisions =
         decisionRepository.findTimeSpentDecisionRowsByReviewProjectId(reviewProject.getId());
     AttributedDecisions attributedDecisions = attributedDecisions(window, projectDecisions);
-    PauseEstimate pauseEstimate = estimateActiveTime(attributedDecisions.decisions());
+    DecisionCadence decisionCadence = measureDecisionCadence(attributedDecisions.decisions());
 
     ReviewProjectTimeSpentStat stat =
         statRepository
@@ -182,13 +180,6 @@ public class ReviewProjectTimeSpentStatService {
         window.getSelfReportedMinutes() == null
             ? null
             : window.getSelfReportedMinutes().longValue() * 60L;
-    Long reportedComputedDeltaSeconds =
-        selfReportedSeconds == null ? null : selfReportedSeconds - pauseEstimate.activeSeconds();
-    Double reportedComputedRatio =
-        selfReportedSeconds == null || pauseEstimate.activeSeconds() <= 0
-            ? null
-            : selfReportedSeconds / (double) pauseEstimate.activeSeconds();
-
     stat.setAssignmentWindow(window);
     stat.setReviewProject(reviewProject);
     stat.setReviewProjectRequestId(
@@ -221,24 +212,26 @@ public class ReviewProjectTimeSpentStatService {
         attributedDecisions.decisions().stream().mapToLong(row -> safeLong(row.wordCount())).sum());
     stat.setFirstDecisionAt(firstDecisionAt);
     stat.setLastDecisionAt(lastDecisionAt);
-    stat.setRawDecisionSpanSeconds(pauseEstimate.rawSeconds());
+    stat.setRawDecisionSpanSeconds(decisionCadence.rawSeconds());
+    stat.setDecisionIntervalCount(decisionCadence.intervalCount());
+    stat.setRapidDecisionIntervalCount(decisionCadence.rapidIntervalCount());
+    stat.setMedianDecisionIntervalSeconds(decisionCadence.medianSeconds());
+    stat.setP90DecisionIntervalSeconds(decisionCadence.p90Seconds());
+    stat.setP95DecisionIntervalSeconds(decisionCadence.p95Seconds());
     stat.setProjectSpanSeconds(secondsBetween(reviewProject.getCreatedDate(), lastDecisionAt));
     stat.setAcceptedToFirstDecisionSeconds(
         nullableSecondsBetween(window.getAcceptedAt(), firstDecisionAt));
     stat.setAssignedToAcceptedSeconds(
         nullableSecondsBetween(window.getAssignedAt(), window.getAcceptedAt()));
-    stat.setEstimatedActiveSeconds(pauseEstimate.activeSeconds());
-    stat.setPauseSeconds(pauseEstimate.pauseSeconds());
-    stat.setPauseCount(pauseEstimate.pauseCount());
-    stat.setPauseRatio(
-        stat.getRawDecisionSpanSeconds() <= 0
-            ? 0
-            : pauseEstimate.pauseSeconds() / (double) stat.getRawDecisionSpanSeconds());
+    stat.setEstimatedActiveSeconds(decisionCadence.rawSeconds());
+    stat.setPauseSeconds(0);
+    stat.setPauseCount(0);
+    stat.setPauseRatio(0);
     stat.setSelfReportedSeconds(selfReportedSeconds);
-    stat.setReportedComputedDeltaSeconds(reportedComputedDeltaSeconds);
-    stat.setReportedComputedRatio(reportedComputedRatio);
+    stat.setReportedComputedDeltaSeconds(null);
+    stat.setReportedComputedRatio(null);
     stat.setReportedMissing(selfReportedSeconds == null);
-    stat.setReviewFlag(reviewFlag(selfReportedSeconds, reportedComputedRatio));
+    stat.setReviewFlag(reviewFlag(selfReportedSeconds));
     long pendingCount =
         Math.max(
             0,
@@ -292,47 +285,48 @@ public class ReviewProjectTimeSpentStatService {
     return window.getEndedAt() == null || decidedAt.isBefore(window.getEndedAt());
   }
 
-  private PauseEstimate estimateActiveTime(List<ReviewProjectTimeSpentDecisionRow> decisions) {
+  private DecisionCadence measureDecisionCadence(
+      List<ReviewProjectTimeSpentDecisionRow> decisions) {
     long rawSeconds = 0;
-    long activeSeconds = 0;
-    long pauseSeconds = 0;
-    long pauseCount = 0;
+    long rapidIntervalCount = 0;
+    List<Long> intervals = new ArrayList<>(Math.max(0, decisions.size() - 1));
     ZonedDateTime previousDecisionAt = null;
 
     for (ReviewProjectTimeSpentDecisionRow decision : decisions) {
-      long expectedSeconds = Math.max(1L, safeLong(decision.wordCount()) * SECONDS_PER_WORD);
-      long allowedSeconds = expectedSeconds * PAUSE_MULTIPLIER;
-      long measuredSeconds =
-          previousDecisionAt == null
-              ? expectedSeconds
-              : Math.max(0, secondsBetween(previousDecisionAt, decision.decidedAt()));
-      rawSeconds += measuredSeconds;
-      activeSeconds += Math.min(measuredSeconds, allowedSeconds);
-      if (measuredSeconds > allowedSeconds) {
-        pauseCount++;
-        pauseSeconds += measuredSeconds - allowedSeconds;
+      if (previousDecisionAt != null) {
+        long measuredSeconds =
+            Math.max(0, secondsBetween(previousDecisionAt, decision.decidedAt()));
+        intervals.add(measuredSeconds);
+        rawSeconds += measuredSeconds;
+        if (measuredSeconds <= 1) {
+          rapidIntervalCount++;
+        }
       }
       previousDecisionAt = decision.decidedAt();
     }
 
-    return new PauseEstimate(rawSeconds, activeSeconds, pauseSeconds, pauseCount);
+    intervals.sort(Long::compareTo);
+    return new DecisionCadence(
+        rawSeconds,
+        intervals.size(),
+        rapidIntervalCount,
+        percentile(intervals, 0.50d),
+        percentile(intervals, 0.90d),
+        percentile(intervals, 0.95d));
   }
 
-  private ReviewProjectTimeSpentReviewFlag reviewFlag(
-      Long selfReportedSeconds, Double reportedComputedRatio) {
-    if (selfReportedSeconds == null) {
-      return ReviewProjectTimeSpentReviewFlag.MISSING_REPORT;
+  private Long percentile(List<Long> sortedIntervals, double percentile) {
+    if (sortedIntervals.isEmpty()) {
+      return null;
     }
-    if (reportedComputedRatio == null) {
-      return ReviewProjectTimeSpentReviewFlag.OK;
-    }
-    if (reportedComputedRatio >= 2.0d) {
-      return ReviewProjectTimeSpentReviewFlag.CHECK_HIGH;
-    }
-    if (reportedComputedRatio <= 0.5d) {
-      return ReviewProjectTimeSpentReviewFlag.CHECK_LOW;
-    }
-    return ReviewProjectTimeSpentReviewFlag.OK;
+    int index = Math.max(0, (int) Math.ceil(sortedIntervals.size() * percentile) - 1);
+    return sortedIntervals.get(index);
+  }
+
+  private ReviewProjectTimeSpentReviewFlag reviewFlag(Long selfReportedSeconds) {
+    return selfReportedSeconds == null
+        ? ReviewProjectTimeSpentReviewFlag.MISSING_REPORT
+        : ReviewProjectTimeSpentReviewFlag.OK;
   }
 
   private Long nullableSecondsBetween(ZonedDateTime start, ZonedDateTime end) {
@@ -368,8 +362,13 @@ public class ReviewProjectTimeSpentStatService {
       List<ReviewProjectTimeSpentDecisionRow> decisions,
       ReviewProjectTimeSpentAttributionConfidence confidence) {}
 
-  private record PauseEstimate(
-      long rawSeconds, long activeSeconds, long pauseSeconds, long pauseCount) {}
+  private record DecisionCadence(
+      long rawSeconds,
+      long intervalCount,
+      long rapidIntervalCount,
+      Long medianSeconds,
+      Long p90Seconds,
+      Long p95Seconds) {}
 
   private record BackfilledAssignmentWindows(
       List<ReviewProjectAssignmentWindow> assignmentWindows, int backfilledWindowCount) {}
