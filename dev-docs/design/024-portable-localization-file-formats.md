@@ -3268,8 +3268,9 @@ Microsoft `.resx`/`.resw`, Google `.xtb`, JavaScript, TypeScript, HTML, and YAML
 reuse the existing real CLI push/pull datasets. Format-specific implementations
 preserve customized extraction identities, translator comments, protected
 content, source-owned markup, configured key selection, indexed YAML sequence
-ownership, exact customized Java-properties comment whitespace, Apple escaped
-source identities and owner comments/usages, and exact original
+ownership, exact customized Java-properties comment whitespace, correctly
+decoded JSON translator notes, Apple escaped source identities and owner
+comments/usages, and exact original
 source templates instead of treating upstream Okapi defaults as the compatibility
 target. The legacy Android dataset has compiler-invalid numeric
 resource names, so its portable integration test repairs only those identifiers

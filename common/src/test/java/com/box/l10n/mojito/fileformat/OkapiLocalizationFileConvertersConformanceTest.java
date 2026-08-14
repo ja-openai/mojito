@@ -359,6 +359,21 @@ public class OkapiLocalizationFileConvertersConformanceTest {
             configured.get(name).has("usages"));
         canonical.get(name).remove("usages");
       }
+      for (JsonNode value : fixture.path("legacyEscapedComments")) {
+        String name = value.asText();
+        String decoded = canonical.get(name).path("comments").asText();
+        String escaped = JSON.writeValueAsString(decoded);
+        escaped = escaped.substring(1, escaped.length() - 1);
+        assertEquals(
+            id + ": actual customized filter incorrectly retains JSON string escapes",
+            escaped,
+            configured.get(name).path("comments").asText());
+        assertFalse(
+            id + ": correctly decoded comment deliberately changes the old identity",
+            canonical.get(name).path("md5").equals(configured.get(name).path("md5")));
+        configured.get(name).put("comments", decoded);
+        configured.get(name).put("md5", canonical.get(name).path("md5").asText());
+      }
       assertEquals(id + ": configured custom-filter extraction", canonical, configured);
       checked++;
     }

@@ -57,6 +57,27 @@ public class AssetExtractionServicePortableSelectionTest {
   }
 
   @Test
+  public void portableJsonDescriptionsContainDecodedJsonCharacters() throws Exception {
+    AssetExtractionService assetExtractionService = new AssetExtractionService();
+    String content =
+        "{\"quoted\":{\"defaultMessage\":\"Hello\",\"description\":\"A \\\"quoted\\\" label\\nnext line\"}}";
+
+    List<AssetExtractorTextUnit> textUnits =
+        assetExtractionService.getExtractorTextUnitsForAssetContent(
+            assetContent("messages.json", content),
+            List.of(
+                LocalizationConverterSelection.PORTABLE_OPTION,
+                "noteKeyPattern=description",
+                "extractAllPairs=false",
+                "exceptions=defaultMessage",
+                "removeKeySuffix=/defaultMessage"),
+            null);
+
+    assertEquals(1, textUnits.size());
+    assertEquals("A \"quoted\" label\nnext line", textUnits.getFirst().getComments());
+  }
+
+  @Test
   public void backendDefaultUnsupportedFormatUsesOkapiExtractor() throws Exception {
     AssetExtractor assetExtractor = mock(AssetExtractor.class);
     when(assetExtractor.getAssetExtractorTextUnitsForAsset(

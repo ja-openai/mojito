@@ -624,6 +624,14 @@ def main() -> None:
             assert isinstance(usages, list) and usages and all(
                 isinstance(name, str) and name for name in usages
             ), f"{workflow_id}: dropped legacy usages require explicit message identities"
+        if "legacyEscapedComments" in workflow:
+            assert workflow.get("format") == "formatjs_json" and "legacyAssetPath" in workflow, (
+                f"{workflow_id}: escaped legacy comments require an actual configured JSON comparison"
+            )
+            comments = workflow["legacyEscapedComments"]
+            assert isinstance(comments, list) and comments and all(
+                isinstance(name, str) and name for name in comments
+            ), f"{workflow_id}: escaped legacy comments require explicit message identities"
         if "legacyMissingPluralSelectors" in workflow:
             assert workflow.get("legacyImportFilter") == "apple_stringsdict", (
                 f"{workflow_id}: missing legacy selectors require an actual Apple comparison"
