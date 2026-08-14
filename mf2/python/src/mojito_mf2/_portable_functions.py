@@ -9,7 +9,6 @@ from decimal import (
     ROUND_DOWN,
     localcontext,
 )
-import re
 from typing import TYPE_CHECKING
 
 from .errors import MF2Error
@@ -41,7 +40,6 @@ def _passthrough(call: "FunctionCall") -> str:
     return call.value
 
 
-_DECIMAL_RE = re.compile(r"^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$")
 _MAX_DECIMAL_DIGITS = 1_000
 _MAX_FRACTION_DIGITS = 1_000
 
@@ -95,13 +93,21 @@ def _offset(call: "FunctionCall") -> str:
     add = call.option_value("add")
     subtract = call.option_value("subtract")
     if (add is None and subtract is None) or (add is not None and subtract is not None):
-        raise MF2Error("bad-option", "Offset function requires exactly one of add or subtract.")
+        raise MF2Error(
+            "bad-option", "Offset function requires exactly one of add or subtract."
+        )
     delta = _parse_integer(
         add if add is not None else subtract,
-        "Offset add option must be an integer." if add is not None else "Offset subtract option must be an integer.",
+        "Offset add option must be an integer."
+        if add is not None
+        else "Offset subtract option must be an integer.",
     )
     result = value + (delta if add is not None else -delta)
-    return f"+{result}" if _inherited_sign_display_always(call.inherited_source) and result >= 0 else str(result)
+    return (
+        f"+{result}"
+        if _inherited_sign_display_always(call.inherited_source) and result >= 0
+        else str(result)
+    )
 
 
 def _select_number(match: "FunctionMatch") -> int | None:
@@ -185,7 +191,7 @@ def _parse_source_decimal(source: object | None) -> Decimal | None:
 
 def _parse_decimal(value: str | None, message: str) -> Decimal:
     text = str(value if value is not None else "")
-    if len(text) > _MAX_DECIMAL_DIGITS or not _DECIMAL_RE.fullmatch(text):
+    if not _has_decimal_syntax(text):
         raise MF2Error("bad-operand", message)
     try:
         parsed = Decimal(text)
@@ -310,17 +316,32 @@ def _inherited_sign_display_always(source: object | None) -> bool:
     if source is None:
         return False
     function = getattr(source, "function")
-    if function.get("name") in {"number", "integer"} and _source_option_value(source, "signDisplay") == "always":
+    if (
+        function.get("name") in {"number", "integer"}
+        and _source_option_value(source, "signDisplay") == "always"
+    ):
         return True
     return _inherited_sign_display_always(getattr(source, "inherited_source"))
 
 
-def _function_option_literal(function_ref: dict[str, object], name: str, fallback: str | None = None) -> str | None:
-    option = function_ref.get("options", {}).get(name) if isinstance(function_ref.get("options"), dict) else None
-    return str(option.get("value", "")) if isinstance(option, dict) and option.get("type") == "literal" else fallback
+def _function_option_literal(
+    function_ref: dict[str, object], name: str, fallback: str | None = None
+) -> str | None:
+    option = (
+        function_ref.get("options", {}).get(name)
+        if isinstance(function_ref.get("options"), dict)
+        else None
+    )
+    return (
+        str(option.get("value", ""))
+        if isinstance(option, dict) and option.get("type") == "literal"
+        else fallback
+    )
 
 
-def _source_option_value(source: object | None, name: str, fallback: str | None = None) -> str | None:
+def _source_option_value(
+    source: object | None, name: str, fallback: str | None = None
+) -> str | None:
     if source is None:
         return fallback
     option_value = getattr(source, "option_value")
@@ -345,14 +366,21 @@ def _inherited_exact_numeric_source(source: object | None) -> bool:
     if source is None:
         return False
     function = getattr(source, "function")
-    if _is_numeric_function(function) and _source_option_value(source, "select") == "exact":
+    if (
+        _is_numeric_function(function)
+        and _source_option_value(source, "select") == "exact"
+    ):
         return True
     return _inherited_exact_numeric_source(getattr(source, "inherited_source"))
 
 
-def _invalid_numeric_selector(function_ref: dict[str, object], source: object | None) -> bool:
+def _invalid_numeric_selector(
+    function_ref: dict[str, object], source: object | None
+) -> bool:
     select = _function_option_literal(function_ref, "select")
-    return _numeric_select_uses_variable(function_ref) or (select != "exact" and _inherited_exact_numeric_source(source))
+    return _numeric_select_uses_variable(function_ref) or (
+        select != "exact" and _inherited_exact_numeric_source(source)
+    )
 
 
 def _parse_integer(value: str | None, message: str) -> int:
@@ -385,10 +413,29 @@ def _parse_integer_or_none(value: str) -> int | None:
 
 def _parse_decimal_or_none(value: str) -> Decimal | None:
     text = str(value)
-    if len(text) > _MAX_DECIMAL_DIGITS or not _DECIMAL_RE.fullmatch(text):
+    if not _has_decimal_syntax(text):
         return None
     try:
         parsed = Decimal(text)
     except InvalidOperation:
         return None
     return parsed if parsed.is_finite() else None
+
+
+def _has_decimal_syntax(text: str) -> bool:
+    if not text or len(text) > _MAX_DECIMAL_DIGITS or not text.isascii():
+        return False
+
+    unsigned = text.removeprefix("-")
+    significand, separator, exponent = unsigned.partition("e")
+    if not separator:
+        significand, separator, exponent = unsigned.partition("E")
+    if separator:
+        exponent_digits = exponent[1:] if exponent.startswith(("+", "-")) else exponent
+        if not exponent_digits.isdecimal():
+            return False
+
+    integer, decimal_point, fraction = significand.partition(".")
+    if not integer.isdecimal() or (len(integer) > 1 and integer.startswith("0")):
+        return False
+    return not decimal_point or bool(fraction) and fraction.isdecimal()
