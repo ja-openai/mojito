@@ -129,6 +129,19 @@
       "localized": "fixtures/workflow/apple-french-legacy-plurals.localized.stringsdict"
     },
     {
+      "id": "apple-mojito-output-completes-russian-plural-categories-from-other",
+      "format": "apple_stringsdict",
+      "input": "fixtures/workflow/import-apple-plurals.stringsdict",
+      "filterOptions": [],
+      "targetLocale": "ru-RU",
+      "translations": {
+        "lanterns.remaining#one": "{lanterns} фонарь",
+        "lanterns.remaining#other": "{lanterns} фонарей"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/workflow/apple-russian-plurals.localized.stringsdict"
+    },
+    {
       "id": "apple-mojito-output-retains-only-target-locale-plural-categories",
       "format": "apple_stringsdict",
       "input": "fixtures/apple/multiple.stringsdict",
@@ -1088,6 +1101,20 @@
       "translations": {"visible": "Bonjour"},
       "removeUntranslated": true,
       "localized": "fixtures/workflow/apple-output.localized.strings"
+    },
+    {
+      "id": "apple-mojito-preserves-escaped-source-identities-and-suppresses-empty-engineer-notes",
+      "format": "apple_strings",
+      "input": "fixtures/workflow/apple-legacy-identity.strings",
+      "expected": "fixtures/workflow/apple-legacy-identity.expected.json",
+      "filterOptions": []
+    },
+    {
+      "id": "apple-stringsdict-mojito-preserves-owner-comments-and-source-usages",
+      "format": "apple_stringsdict",
+      "input": "fixtures/workflow/apple-stringsdict-owned-comments.stringsdict",
+      "expected": "fixtures/workflow/apple-stringsdict-owned-comments.expected.json",
+      "filterOptions": []
     },
     {
       "id": "yaml-mojito-localizes-original-scalar-styles",

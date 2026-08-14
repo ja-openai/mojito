@@ -861,6 +861,8 @@ fn retain_apple_plural_categories(source: &[u8], locale: &str) -> Result<Vec<u8>
     if categories.is_empty() || source.starts_with(b"bplist") {
         return Ok(source.to_vec());
     }
+    let completed = complete_apple_plural_categories(source, &categories)?;
+    let source = completed.as_slice();
     let skeleton = crate::extract_skeleton_with_apple_variations(source)?;
     let encoding = crate::source_skeleton::Encoding::named(&skeleton.encoding)?;
     let mut text = skeleton.source;
@@ -935,6 +937,138 @@ fn retain_apple_plural_categories(source: &[u8], locale: &str) -> Result<Vec<u8>
     Ok(encoding.encode(&text))
 }
 
+fn complete_apple_plural_categories(
+    source: &[u8],
+    categories: &std::collections::HashSet<String>,
+) -> Result<Vec<u8>, ParseError> {
+    let skeleton = crate::extract_skeleton_with_apple_variations(source)?;
+    let encoding = crate::source_skeleton::Encoding::named(&skeleton.encoding)?;
+    let text = skeleton.source;
+    let mut groups = BTreeMap::<(String, String), Vec<ApplePluralSourceValue>>::new();
+    for slot in &skeleton.slots {
+        let Some(category) = slot.variant.as_deref() else {
+            continue;
+        };
+        if !PLURAL_CATEGORIES.contains(&category)
+            || matches!(slot.selector.as_deref(), Some("@width" | "@device"))
+        {
+            continue;
+        }
+        let value_start = encoding
+            .decode(&source[encoding.bom_length()..slot.start])?
+            .len();
+        let value_end = encoding
+            .decode(&source[encoding.bom_length()..slot.end])?
+            .len();
+        let value_opening = text[..value_start]
+            .rfind('<')
+            .ok_or_else(|| invalid_plural_output("Foundation plural has no opening string tag"))?;
+        let key_end = text[..value_opening]
+            .rfind("</key>")
+            .ok_or_else(|| invalid_plural_output("Foundation plural value has no source key"))?;
+        let key_opening = text[..key_end]
+            .rfind("<key")
+            .ok_or_else(|| invalid_plural_output("Foundation plural source key is incomplete"))?;
+        let key_start = key_opening
+            + text[key_opening..]
+                .find('>')
+                .ok_or_else(|| invalid_plural_output("Foundation plural key is not closed"))?
+            + 1;
+        if text[key_start..key_end].trim() != category {
+            return Err(invalid_plural_output(
+                "Foundation plural key does not own its source value",
+            ));
+        }
+        let mut end = if text[value_end..].starts_with("</string>") {
+            value_end + "</string>".len()
+        } else if text[value_start..].starts_with('/') && text[..value_end].ends_with('>') {
+            value_end
+        } else {
+            return Err(invalid_plural_output(
+                "Foundation plural value has no closing string tag",
+            ));
+        };
+        let line_start = text[..key_opening]
+            .rfind(['\n', '\r'])
+            .map_or(0, |index| index + 1);
+        let start = if text[line_start..key_opening].trim().is_empty() {
+            line_start
+        } else {
+            key_opening
+        };
+        while matches!(text.as_bytes().get(end), Some(b' ' | b'\t')) {
+            end += 1;
+        }
+        if text.as_bytes().get(end) == Some(&b'\r') {
+            end += 1;
+        }
+        if text.as_bytes().get(end) == Some(&b'\n') {
+            end += 1;
+        }
+        groups
+            .entry((slot.id.clone(), slot.selector.clone().unwrap_or_default()))
+            .or_default()
+            .push(ApplePluralSourceValue {
+                category: category.to_owned(),
+                start,
+                end,
+                key_start,
+                key_end,
+            });
+    }
+
+    let mut insertions = BTreeMap::<usize, String>::new();
+    for group in groups.values() {
+        let Some(fallback) = group.iter().find(|value| value.category == "other") else {
+            continue;
+        };
+        for (rank, category) in PLURAL_CATEGORIES.iter().enumerate() {
+            if !categories.contains(*category)
+                || group.iter().any(|value| value.category == *category)
+            {
+                continue;
+            }
+            let position = group
+                .iter()
+                .find(|value| {
+                    PLURAL_CATEGORIES
+                        .iter()
+                        .position(|candidate| *candidate == value.category)
+                        .is_some_and(|candidate| candidate > rank)
+                })
+                .map_or(group.last().expect("nonempty plural group").end, |next| {
+                    next.start
+                });
+            let template = &text[fallback.start..fallback.end];
+            let key_start = fallback.key_start - fallback.start;
+            let key_end = fallback.key_end - fallback.start;
+            let cloned = format!(
+                "{}{}{}",
+                &template[..key_start],
+                category,
+                &template[key_end..]
+            );
+            insertions.entry(position).or_default().push_str(&cloned);
+        }
+    }
+    if insertions.is_empty() {
+        return Ok(source.to_vec());
+    }
+    let mut completed = text;
+    for (position, values) in insertions.into_iter().rev() {
+        completed.insert_str(position, &values);
+    }
+    Ok(encoding.encode(&completed))
+}
+
+struct ApplePluralSourceValue {
+    category: String,
+    start: usize,
+    end: usize,
+    key_start: usize,
+    key_end: usize,
+}
+
 fn invalid_plural_output(message: impl Into<String>) -> ParseError {
     ParseError::new("INVALID_SKELETON", message)
 }
@@ -950,9 +1084,24 @@ fn apply_extraction(
     } else {
         BTreeMap::new()
     };
-    let apple_notes = if options.format == FileFormat::AppleStrings {
-        let declared = crate::xml_encoding(FileFormat::AppleStrings, source)?;
-        apple_notes(&crate::decode(source, declared)?)?
+    let apple_source = if matches!(
+        options.format,
+        FileFormat::AppleStrings | FileFormat::AppleStringsdict
+    ) {
+        Some(crate::decode(
+            source,
+            crate::xml_encoding(options.format, source)?,
+        )?)
+    } else {
+        None
+    };
+    let apple_notes = match options.format {
+        FileFormat::AppleStrings => apple_notes(apple_source.as_deref().unwrap())?,
+        FileFormat::AppleStringsdict => apple_stringsdict_notes(apple_source.as_deref().unwrap())?,
+        _ => BTreeMap::new(),
+    };
+    let apple_legacy_names = if options.format == FileFormat::AppleStrings {
+        apple_legacy_names(apple_source.as_deref().unwrap())?
     } else {
         BTreeMap::new()
     };
@@ -970,8 +1119,23 @@ fn apply_extraction(
             message.description = Some(note.clone());
         }
         if options.format == FileFormat::AppleStrings {
+            if let Some(name) = apple_legacy_names.get(&id) {
+                if name != &id {
+                    message
+                        .metadata
+                        .get_or_insert_with(Map::new)
+                        .insert("appleLegacyName".into(), Value::String(name.clone()));
+                }
+            }
+        }
+        if matches!(
+            options.format,
+            FileFormat::AppleStrings | FileFormat::AppleStringsdict
+        ) {
             if let Some(description) = message.description.clone() {
-                if let Some(captures) = locations.captures(&description) {
+                if description.trim() == "No comment provided by engineer." {
+                    message.description = None;
+                } else if let Some(captures) = locations.captures(&description) {
                     let usages = captures[1]
                         .lines()
                         .map(str::trim)
@@ -1021,6 +1185,51 @@ fn apple_notes(source: &str) -> Result<BTreeMap<String, String>, ParseError> {
         );
     }
     Ok(result)
+}
+
+fn apple_legacy_names(source: &str) -> Result<BTreeMap<String, String>, ParseError> {
+    static PATTERN: std::sync::OnceLock<Regex> = std::sync::OnceLock::new();
+    let pattern = PATTERN.get_or_init(|| {
+        Regex::new(r#"(\"((?:\\.|[^\"\\])*)\")\s*="#)
+            .expect("valid Apple raw-key ownership pattern")
+    });
+    let mut result = BTreeMap::new();
+    for captured in pattern.captures_iter(source) {
+        result.insert(
+            crate::apple::decode_source_token(&captured[1])?,
+            captured[2].to_owned(),
+        );
+    }
+    Ok(result)
+}
+
+fn apple_stringsdict_notes(source: &str) -> Result<BTreeMap<String, String>, ParseError> {
+    let root = xml::parse_apple_plist(source)?;
+    let Some(dictionary) = root.elements().find(|element| element.name == "dict") else {
+        return Ok(BTreeMap::new());
+    };
+    let mut notes = BTreeMap::new();
+    let mut id = None;
+    for child in &dictionary.children {
+        match child {
+            XmlNode::Element(element) if element.name == "key" => id = Some(element.text()),
+            XmlNode::Element(element) if element.name == "dict" => {
+                if let Some(name) = id.take() {
+                    for field in &element.children {
+                        match field {
+                            XmlNode::Comment(comment) if !comment.trim().is_empty() => {
+                                notes.insert(name.clone(), comment.trim().to_owned());
+                            }
+                            XmlNode::Element(_) => break,
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(notes)
 }
 
 fn android_notes(source: &str) -> Result<BTreeMap<String, String>, ParseError> {

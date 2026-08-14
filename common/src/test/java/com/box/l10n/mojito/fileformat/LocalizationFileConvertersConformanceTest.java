@@ -70,6 +70,26 @@ public class LocalizationFileConvertersConformanceTest {
   }
 
   @Test
+  public void appleStringsdictProjectionPreservesFormatUnitsCommentsAndUsages() throws Exception {
+    Path root = findFixtureRoot();
+    LocalizationCatalog catalog =
+        LocalizationFileConverters.parseForMojito(
+            LocalizationFileFormat.APPLE_STRINGSDICT,
+            Files.readAllBytes(
+                root.resolve("fixtures/workflow/apple-stringsdict-owned-comments.stringsdict")),
+            List.of());
+    var projected = LocalizationShadowComparator.projectTextUnitsWithIds(catalog);
+
+    assertEquals(7, projected.size());
+    assertEquals(
+        "dock.count_NSStringLocalizedFormatKey", projected.getFirst().textUnit().getName());
+    assertEquals("%#@files@", projected.getFirst().textUnit().getSource());
+    assertEquals("Dock instructions", projected.getFirst().textUnit().getComments());
+    assertEquals(Set.of("src/dock.m:4"), projected.getFirst().textUnit().getUsages());
+    assertEquals("dock.count_files_other", projected.getLast().textUnit().getName());
+  }
+
+  @Test
   public void allSharedMojitoWorkflowFixtures() throws Exception {
     Path root = findFixtureRoot();
     JsonNode manifest = JSON.readTree(root.resolve("manifest.json").toFile());

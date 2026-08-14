@@ -7,9 +7,11 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /** Exact Foundation XML source ownership for independent plural, width, and device rules. */
 final class AppleStringsdictSourceSkeleton {
@@ -184,6 +186,7 @@ final class AppleStringsdictSourceSkeleton {
     if (categories.isEmpty() || AppleBinaryPlistParser.matches(original)) {
       return original;
     }
+    original = completePluralCategories(original, categories);
     LocalizationSourceSkeleton skeleton = extract(original, true);
     SourceSkeletonEncoding encoding = SourceSkeletonEncoding.named(skeleton.encoding());
     String source = skeleton.source();
@@ -240,6 +243,107 @@ final class AppleStringsdictSourceSkeleton {
     }
     return encoding.encode(source);
   }
+
+  private static byte[] completePluralCategories(byte[] original, Set<String> categories) {
+    LocalizationSourceSkeleton skeleton = extract(original, true);
+    SourceSkeletonEncoding encoding = SourceSkeletonEncoding.named(skeleton.encoding());
+    String source = skeleton.source();
+    Map<List<String>, List<PluralSourceValue>> groups = new LinkedHashMap<>();
+    for (LocalizationSourceSlot slot : skeleton.slots()) {
+      if (slot.variant() == null
+          || !PLURAL_CATEGORIES.contains(slot.variant())
+          || "@width".equals(slot.selector())
+          || "@device".equals(slot.selector())) {
+        continue;
+      }
+      groups
+          .computeIfAbsent(
+              List.of(slot.id(), slot.selector() == null ? "" : slot.selector()),
+              ignored -> new ArrayList<>())
+          .add(pluralSourceValue(original, source, encoding, slot));
+    }
+    Map<Integer, StringBuilder> insertions = new TreeMap<>();
+    List<String> order = List.of("zero", "one", "two", "few", "many", "other");
+    for (List<PluralSourceValue> group : groups.values()) {
+      PluralSourceValue fallback =
+          group.stream().filter(value -> "other".equals(value.category())).findFirst().orElse(null);
+      if (fallback == null) {
+        continue;
+      }
+      for (String category : order) {
+        if (!categories.contains(category)
+            || group.stream().anyMatch(value -> category.equals(value.category()))) {
+          continue;
+        }
+        int rank = order.indexOf(category);
+        PluralSourceValue next =
+            group.stream()
+                .filter(value -> order.indexOf(value.category()) > rank)
+                .findFirst()
+                .orElse(null);
+        int position = next == null ? group.get(group.size() - 1).end() : next.start();
+        String template = source.substring(fallback.start(), fallback.end());
+        int keyStart = fallback.keyStart() - fallback.start();
+        int keyEnd = fallback.keyEnd() - fallback.start();
+        String cloned = template.substring(0, keyStart) + category + template.substring(keyEnd);
+        insertions.computeIfAbsent(position, ignored -> new StringBuilder()).append(cloned);
+      }
+    }
+    if (insertions.isEmpty()) {
+      return original;
+    }
+    StringBuilder completed = new StringBuilder(source);
+    List<Integer> positions = new ArrayList<>(insertions.keySet());
+    for (int index = positions.size() - 1; index >= 0; index--) {
+      int position = positions.get(index);
+      completed.insert(position, insertions.get(position));
+    }
+    return encoding.encode(completed.toString());
+  }
+
+  private static PluralSourceValue pluralSourceValue(
+      byte[] original,
+      String source,
+      SourceSkeletonEncoding encoding,
+      LocalizationSourceSlot slot) {
+    int valueStart = encoding.decode(original, encoding.bom().length, slot.start()).length();
+    int valueEnd = encoding.decode(original, encoding.bom().length, slot.end()).length();
+    int valueOpening = source.lastIndexOf('<', valueStart - 1);
+    int keyClosing = source.lastIndexOf("</key>", valueOpening);
+    int keyOpening = source.lastIndexOf("<key", keyClosing);
+    int keyBody = source.indexOf('>', keyOpening) + 1;
+    if (valueOpening < 0
+        || keyClosing < 0
+        || keyOpening < 0
+        || keyBody <= keyOpening
+        || !source.substring(keyBody, keyClosing).trim().equals(slot.variant())) {
+      throw invalid("INVALID_SKELETON", "Foundation plural value has no owned source key");
+    }
+    int end;
+    if (source.startsWith("</string>", valueEnd)) {
+      end = valueEnd + "</string>".length();
+    } else if (source.charAt(valueStart) == '/' && source.charAt(valueEnd - 1) == '>') {
+      end = valueEnd;
+    } else {
+      throw invalid("INVALID_SKELETON", "Foundation plural value has no closing string tag");
+    }
+    int lineStart =
+        Math.max(source.lastIndexOf('\n', keyOpening - 1), source.lastIndexOf('\r', keyOpening - 1))
+            + 1;
+    int start = source.substring(lineStart, keyOpening).isBlank() ? lineStart : keyOpening;
+    while (end < source.length() && (source.charAt(end) == ' ' || source.charAt(end) == '\t')) {
+      end++;
+    }
+    if (end < source.length() && source.charAt(end) == '\r') {
+      end++;
+    }
+    if (end < source.length() && source.charAt(end) == '\n') {
+      end++;
+    }
+    return new PluralSourceValue(slot.variant(), start, end, keyBody, keyClosing);
+  }
+
+  private record PluralSourceValue(String category, int start, int end, int keyStart, int keyEnd) {}
 
   static Map<List<String>, SlotIdentity> expectedPaths(LocalizationCatalog catalog) {
     return expectedPaths(catalog, false);

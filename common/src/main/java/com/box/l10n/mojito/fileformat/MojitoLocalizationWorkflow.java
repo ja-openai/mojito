@@ -35,6 +35,8 @@ final class MojitoLocalizationWorkflow {
       Pattern.compile("\\s*<locations>\\s*(.*?)\\s*</locations>", Pattern.DOTALL);
   private static final Pattern APPLE_COMMENTS =
       Pattern.compile("(?s)/\\*(.*?)\\*/\\s*(\\\"(?:\\\\.|[^\\\"\\\\])*\\\")\\s*=");
+  private static final Pattern APPLE_KEY =
+      Pattern.compile("(\\\"((?:\\\\.|[^\\\"\\\\])*)\\\")\\s*=");
   private static final Pattern HTML_CODE = Pattern.compile("<br id='(p[1-9][0-9]*)'/>");
   private static final Pattern PLURAL_SELECTOR = Pattern.compile("\\{([^,{}]+),\\s*plural,");
   private static final Pattern APPLE_OUTPUT_ENTRY =
@@ -605,11 +607,21 @@ final class MojitoLocalizationWorkflow {
       LocalizationCatalog original, byte[] source, LocalizationFilterOptions options) {
     Map<String, String> androidNotes =
         options.format() == LocalizationFileFormat.ANDROID ? androidNotes(source) : Map.of();
+    String appleSource =
+        options.format() == LocalizationFileFormat.APPLE_STRINGS
+                || options.format() == LocalizationFileFormat.APPLE_STRINGSDICT
+            ? LocalizationFileConverters.decode(
+                source, LocalizationFileConverters.xmlCharset(options.format(), source))
+            : null;
     Map<String, String> appleNotes =
         options.format() == LocalizationFileFormat.APPLE_STRINGS
-            ? appleNotes(
-                LocalizationFileConverters.decode(
-                    source, LocalizationFileConverters.xmlCharset(options.format(), source)))
+            ? appleNotes(appleSource)
+            : options.format() == LocalizationFileFormat.APPLE_STRINGSDICT
+                ? appleStringsdictNotes(appleSource)
+                : Map.of();
+    Map<String, String> appleLegacyNames =
+        options.format() == LocalizationFileFormat.APPLE_STRINGS
+            ? appleLegacyNames(appleSource)
             : Map.of();
     LocalizationCatalog result = new LocalizationCatalog(options.format());
     result.setLocale(original.locale());
@@ -626,9 +638,21 @@ final class MojitoLocalizationWorkflow {
           message.metadata() == null
               ? new LinkedHashMap<>()
               : new LinkedHashMap<>(message.metadata());
-      if (options.format() == LocalizationFileFormat.APPLE_STRINGS && description != null) {
-        Matcher locations = LOCATIONS.matcher(description);
-        if (locations.find()) {
+      if (options.format() == LocalizationFileFormat.APPLE_STRINGS
+          && appleLegacyNames.containsKey(entry.getKey())) {
+        String legacyName = appleLegacyNames.get(entry.getKey());
+        if (!legacyName.equals(entry.getKey())) {
+          metadata.put("appleLegacyName", legacyName);
+        }
+      }
+      if ((options.format() == LocalizationFileFormat.APPLE_STRINGS
+              || options.format() == LocalizationFileFormat.APPLE_STRINGSDICT)
+          && description != null) {
+        if ("No comment provided by engineer.".equals(description.trim())) {
+          description = null;
+        }
+        Matcher locations = description == null ? null : LOCATIONS.matcher(description);
+        if (locations != null && locations.find()) {
           Set<String> usages = new LinkedHashSet<>();
           for (String line : locations.group(1).split("\\R")) {
             if (!line.isBlank()) {
@@ -669,6 +693,56 @@ final class MojitoLocalizationWorkflow {
     Matcher matcher = APPLE_COMMENTS.matcher(source);
     while (matcher.find()) {
       notes.put(AppleStringsParser.decodeSourceToken(matcher.group(2)), matcher.group(1));
+    }
+    return notes;
+  }
+
+  private static Map<String, String> appleLegacyNames(String source) {
+    Map<String, String> names = new LinkedHashMap<>();
+    Matcher matcher = APPLE_KEY.matcher(source);
+    while (matcher.find()) {
+      names.put(AppleStringsParser.decodeSourceToken(matcher.group(1)), matcher.group(2));
+    }
+    return names;
+  }
+
+  private static Map<String, String> appleStringsdictNotes(String source) {
+    Map<String, String> notes = new LinkedHashMap<>();
+    Element root = SecureXmlParser.parseApplePlist(source).getDocumentElement();
+    Element dictionary = null;
+    NodeList roots = root.getChildNodes();
+    for (int index = 0; index < roots.getLength(); index++) {
+      if (roots.item(index) instanceof Element child && "dict".equals(child.getTagName())) {
+        dictionary = child;
+        break;
+      }
+    }
+    if (dictionary == null) {
+      return notes;
+    }
+    String id = null;
+    NodeList entries = dictionary.getChildNodes();
+    for (int index = 0; index < entries.getLength(); index++) {
+      if (!(entries.item(index) instanceof Element entry)) {
+        continue;
+      }
+      if ("key".equals(entry.getTagName())) {
+        id = entry.getTextContent();
+      } else if ("dict".equals(entry.getTagName()) && id != null) {
+        NodeList fields = entry.getChildNodes();
+        for (int field = 0; field < fields.getLength(); field++) {
+          Node node = fields.item(field);
+          if (node.getNodeType() == Node.COMMENT_NODE) {
+            String note = node.getNodeValue().trim();
+            if (!note.isBlank()) {
+              notes.put(id, note);
+            }
+          } else if (node instanceof Element) {
+            break;
+          }
+        }
+        id = null;
+      }
     }
     return notes;
   }
