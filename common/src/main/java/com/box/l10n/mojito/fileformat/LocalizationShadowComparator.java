@@ -32,7 +32,7 @@ public final class LocalizationShadowComparator {
   /** Keep canonical source-slot identity beside each legacy-compatible translation-memory unit. */
   public static List<ProjectedTextUnit> projectTextUnitsWithIds(LocalizationCatalog catalog) {
     List<ProjectedTextUnit> extracted = new ArrayList<>();
-    for (Unit projected : project(catalog)) {
+    for (Unit projected : project(catalog, true)) {
       AssetExtractorTextUnit unit = new AssetExtractorTextUnit();
       unit.setName(projected.name());
       unit.setSource(projected.source());
@@ -51,7 +51,7 @@ public final class LocalizationShadowComparator {
 
   public static LocalizationShadowReport compare(
       LocalizationCatalog catalog, List<AssetExtractorTextUnit> extracted) {
-    List<Unit> canonical = project(catalog);
+    List<Unit> canonical = project(catalog, false);
     Map<String, List<Unit>> expected = group(canonical);
     List<Unit> legacy =
         extracted.stream()
@@ -128,7 +128,7 @@ public final class LocalizationShadowComparator {
     return grouped;
   }
 
-  private static List<Unit> project(LocalizationCatalog catalog) {
+  private static List<Unit> project(LocalizationCatalog catalog, boolean includeWorkflowUnits) {
     List<Unit> projected = new ArrayList<>();
     String format = catalog.sourceFormat();
     for (Map.Entry<String, LocalizationMessage> entry : catalog.messages().entrySet()) {
@@ -136,6 +136,23 @@ public final class LocalizationShadowComparator {
       LocalizationMessage message = entry.getValue();
       Map<String, Object> metadata = message.metadata() == null ? Map.of() : message.metadata();
       List<String> usages = usages(metadata);
+      if (LocalizationFileFormat.APPLE_STRINGS.id().equals(format)
+          && metadata.get("appleLegacyName") instanceof String legacyName) {
+        id = legacyName;
+      }
+      if (includeWorkflowUnits
+          && LocalizationFileFormat.APPLE_STRINGSDICT.id().equals(format)
+          && metadata.get("appleLocalizedFormat") instanceof String localizedFormat) {
+        projected.add(
+            new Unit(
+                id + "_NSStringLocalizedFormatKey",
+                localizedFormat,
+                message.description(),
+                null,
+                null,
+                usages,
+                entry.getKey() + "#@format"));
+      }
       if (message.variants() == null) {
         if (LocalizationFileFormat.ANDROID.id().equals(format)) {
           id = ANDROID_PRODUCT.matcher(id).replaceFirst("");

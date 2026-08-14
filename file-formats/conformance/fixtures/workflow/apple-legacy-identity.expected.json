@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_strings",
+  "messages": {
+    "silent": { "defaultMessage": "Silent" },
+    "Add to \"%@\"": {
+      "defaultMessage": "Add to \"{arg0}\"",
+      "description": " Escaped title ",
+      "placeholders": [
+        { "name": "arg0", "source": "%@", "kind": "string", "position": 1 }
+      ],
+      "metadata": { "appleLegacyName": "Add to \\\"%@\\\"" }
+    }
+  }
+}

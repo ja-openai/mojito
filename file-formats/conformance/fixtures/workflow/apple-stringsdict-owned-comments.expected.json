@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "apple_stringsdict",
+  "messages": {
+    "dock.count": {
+      "defaultMessage": "{files, plural, one {{files} file} other {{files} files}}",
+      "description": "Dock instructions",
+      "variants": { "one": "{files} file", "other": "{files} files" },
+      "placeholders": [
+        { "name": "files", "source": "%d", "kind": "integer", "position": 1 }
+      ],
+      "metadata": {
+        "appleLocalizedFormat": "%#@files@",
+        "applePluralRules": {
+          "files": {
+            "valueType": "d",
+            "variants": { "one": "%d file", "other": "%d files" }
+          }
+        },
+        "pluralVariable": "files",
+        "valueType": "d",
+        "references": ["src/dock.m:4"]
+      }
+    }
+  }
+}
