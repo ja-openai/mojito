@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "gettext_po",
+  "messages": {
+    "Harbor status": {
+      "defaultMessage": "Harbor status",
+      "description": "First developer note\nSecond developer note",
+      "metadata": {
+        "gettextUntranslated": true,
+        "references": ["source.py:7"],
+        "context": ""
+      }
+    }
+  }
+}

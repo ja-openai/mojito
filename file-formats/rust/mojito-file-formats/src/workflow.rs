@@ -30,6 +30,9 @@ impl FilterOptions {
                 return Err(invalid_option("Filter option names cannot be empty"));
             }
             if !supported(format, key) {
+                if format == FileFormat::GettextPo {
+                    continue;
+                }
                 return Err(ParseError::new(
                     "UNSUPPORTED_FILTER_OPTION",
                     format!("Unsupported {} filter option: {key}", format.id()),
@@ -439,18 +442,59 @@ fn gettext_import_categories(
 
 fn gettext_import_locale<'a>(source: &'a [u8], target_locale: &str) -> Cow<'a, [u8]> {
     const EMPTY_LANGUAGE: &[u8] = b"\"Language: \\n\"";
-    let Some(start) = source
+    if let Some(start) = source
         .windows(EMPTY_LANGUAGE.len())
         .position(|candidate| candidate == EMPTY_LANGUAGE)
+    {
+        let mut localized = Vec::with_capacity(source.len() + target_locale.len());
+        localized.extend_from_slice(&source[..start]);
+        localized.extend_from_slice(b"\"Language: ");
+        localized.extend_from_slice(target_locale.as_bytes());
+        localized.extend_from_slice(b"\\n\"");
+        localized.extend_from_slice(&source[start + EMPTY_LANGUAGE.len()..]);
+        return Cow::Owned(localized);
+    }
+    const LANGUAGE: &[u8] = b"\"Language: ";
+    if source
+        .windows(LANGUAGE.len())
+        .any(|entry| entry == LANGUAGE)
+    {
+        return Cow::Borrowed(source);
+    }
+    const HEADER: &[u8] = b"msgid \"\"";
+    const TRANSLATION: &[u8] = b"msgstr \"\"";
+    let Some(header) = source
+        .windows(HEADER.len())
+        .position(|value| value == HEADER)
     else {
         return Cow::Borrowed(source);
     };
-    let mut localized = Vec::with_capacity(source.len() + target_locale.len());
-    localized.extend_from_slice(&source[..start]);
-    localized.extend_from_slice(b"\"Language: ");
+    let Some(translation) = source[header..]
+        .windows(TRANSLATION.len())
+        .position(|value| value == TRANSLATION)
+        .map(|position| header + position)
+    else {
+        return Cow::Borrowed(source);
+    };
+    let Some(next) = source[translation..]
+        .iter()
+        .position(|value| *value == b'\n')
+        .map(|position| translation + position)
+    else {
+        return Cow::Borrowed(source);
+    };
+    let newline = if next > 0 && source[next - 1] == b'\r' {
+        b"\r\n".as_slice()
+    } else {
+        b"\n".as_slice()
+    };
+    let mut localized = Vec::with_capacity(source.len() + target_locale.len() + 16);
+    localized.extend_from_slice(&source[..=next]);
+    localized.extend_from_slice(LANGUAGE);
     localized.extend_from_slice(target_locale.as_bytes());
     localized.extend_from_slice(b"\\n\"");
-    localized.extend_from_slice(&source[start + EMPTY_LANGUAGE.len()..]);
+    localized.extend_from_slice(newline);
+    localized.extend_from_slice(&source[next + 1..]);
     Cow::Owned(localized)
 }
 

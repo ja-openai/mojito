@@ -898,6 +898,15 @@
       "localized": "fixtures/workflow/apple-legacy-untranslated.localized.strings"
     },
     {
+      "id": "gettext-mojito-ignores-legacy-filter-options",
+      "format": "gettext_po",
+      "input": "fixtures/workflow/gettext-output.po",
+      "filterOptions": ["testoption=something", "sometestoption=value1"],
+      "translations": {"Hello": "Bonjour"},
+      "removeUntranslated": true,
+      "localized": "fixtures/workflow/gettext-output.localized.po"
+    },
+    {
       "id": "gettext-mojito-removes-untranslated-entries",
       "format": "gettext_po",
       "input": "fixtures/workflow/gettext-output.po",
@@ -1246,9 +1255,26 @@
         "targetLocale": "ja-JP",
         "copyFormsOnImport": true
       }
+    },
+    {
+      "id": "gettext-mojito-import-uses-target-locale-when-po-language-header-is-missing",
+      "format": "gettext_po",
+      "input": "fixtures/gettext/import-russian-missing-language.po",
+      "expected": "fixtures/gettext/import-russian-missing-language.expected.json",
+      "filterOptions": [],
+      "importPolicy": {
+        "targetLocale": "ru-RU",
+        "copyFormsOnImport": true
+      }
     }
   ],
   "cases": [
+    {
+      "id": "gettext-empty-context-preserves-source-id-and-multiline-developer-comments",
+      "format": "gettext_po",
+      "input": "fixtures/gettext/empty-context-multiline-comments.po",
+      "expected": "fixtures/gettext/empty-context-multiline-comments.expected.json"
+    },
     {
       "id": "html-alpha-preserves-customized-context-aware-inline-identities",
       "format": "html",

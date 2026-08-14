@@ -152,8 +152,8 @@ final class GettextPoParser {
     }
     List<LocalizationPlaceholder> placeholders = PlaceholderNormalizer.placeholders();
     Map<String, Object> metadata = new LinkedHashMap<>();
-    String id = entry.context == null ? entry.id : entry.context;
-    String description = String.join(" ", entry.extractedComments);
+    String id = entry.context == null || entry.context.isEmpty() ? entry.id : entry.context;
+    String description = String.join("\n", entry.extractedComments);
     String message;
     Map<String, String> variants = null;
     if (entry.plural != null) {
