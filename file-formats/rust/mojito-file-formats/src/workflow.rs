@@ -238,6 +238,8 @@ pub(crate) fn parse(
     }
     let catalog = if format == FileFormat::Yaml {
         crate::yaml::parse_configured_bytes(source, &options)?
+    } else if format == FileFormat::JavaProperties {
+        crate::properties::parse_for_mojito(&crate::decode(source, None)?)?
     } else if format == FileFormat::FormatJsJson
         && (!options.values.is_empty() || json_without_comments(source)?.is_some())
     {

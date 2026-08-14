@@ -81,11 +81,14 @@ final class MojitoLocalizationWorkflow {
     LocalizationCatalog catalog =
         format == LocalizationFileFormat.YAML
             ? YamlSourceFormat.parse(source, options)
-            : format == LocalizationFileFormat.FORMATJS_JSON
-                    && (filterOptions != null && !filterOptions.isEmpty()
-                        || containsJsonComments(source))
-                ? parseConfiguredJson(source, options)
-                : LocalizationFileConverters.parse(format, source);
+            : format == LocalizationFileFormat.JAVA_PROPERTIES
+                ? new JavaPropertiesParser()
+                    .parseForMojito(LocalizationFileConverters.decode(source, null))
+                : format == LocalizationFileFormat.FORMATJS_JSON
+                        && (filterOptions != null && !filterOptions.isEmpty()
+                            || containsJsonComments(source))
+                    ? parseConfiguredJson(source, options)
+                    : LocalizationFileConverters.parse(format, source);
     return applyExtractionPolicy(catalog, source, options);
   }
 

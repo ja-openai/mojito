@@ -4,19 +4,19 @@
   "messages": {
     "keep": {
       "defaultMessage": "North pier",
-      "description": "Preserve the translated harbor label."
+      "description": " Preserve the translated harbor label."
     },
     "missing": {
       "defaultMessage": "Closed crossing",
-      "description": "Remove the complete untranslated continuation."
+      "description": " Remove the complete untranslated continuation."
     },
     "duplicate": {
       "defaultMessage": "Spare gate",
-      "description": "Preserve both source comments for identical duplicate declarations."
+      "description": " Preserve both source comments for identical duplicate declarations."
     },
     "literal": {
       "defaultMessage": "Reserved display",
-      "description": "A translated value may legitimately equal Mojito's private cleanup marker."
+      "description": " A translated value may legitimately equal Mojito's private cleanup marker."
     }
   }
 }

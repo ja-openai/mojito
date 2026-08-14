@@ -3,6 +3,17 @@ use crate::placeholders;
 use serde_json::{json, Map};
 
 pub(crate) fn parse(source: &str) -> Result<Catalog, ParseError> {
+    parse_properties(source, false)
+}
+
+pub(crate) fn parse_for_mojito(source: &str) -> Result<Catalog, ParseError> {
+    parse_properties(source, true)
+}
+
+fn parse_properties(
+    source: &str,
+    preserve_comment_whitespace: bool,
+) -> Result<Catalog, ParseError> {
     let mut catalog = Catalog::new(FileFormat::JavaProperties);
     let mut comments = Vec::new();
     for logical in logical_lines(source) {
@@ -12,11 +23,14 @@ pub(crate) fn parse(source: &str) -> Result<Catalog, ParseError> {
             continue;
         }
         if line.starts_with('#') || line.starts_with('!') {
-            comments.push(
-                line[1..]
+            let comment = &line[1..];
+            comments.push(if preserve_comment_whitespace {
+                comment.to_owned()
+            } else {
+                comment
                     .trim_matches(crate::model::java_whitespace)
-                    .to_owned(),
-            );
+                    .to_owned()
+            });
             continue;
         }
         let mut key_end = 0;

@@ -4,7 +4,7 @@
   "messages": {
     "gate": {
       "defaultMessage": "South pier",
-      "description": "Gate label shown in the harbor terminal."
+      "description": " Gate label shown in the harbor terminal."
     }
   }
 }

@@ -8,6 +8,14 @@ import java.util.Map;
 final class JavaPropertiesParser {
 
   LocalizationCatalog parse(String source) {
+    return parse(source, false);
+  }
+
+  LocalizationCatalog parseForMojito(String source) {
+    return parse(source, true);
+  }
+
+  private LocalizationCatalog parse(String source, boolean preserveCommentWhitespace) {
     LocalizationCatalog catalog = new LocalizationCatalog(LocalizationFileFormat.JAVA_PROPERTIES);
     List<String> comments = new ArrayList<>();
     for (String logical : logicalLines(source)) {
@@ -17,7 +25,8 @@ final class JavaPropertiesParser {
         continue;
       }
       if (leading.startsWith("#") || leading.startsWith("!")) {
-        comments.add(leading.substring(1).strip());
+        String comment = leading.substring(1);
+        comments.add(preserveCommentWhitespace ? comment : comment.strip());
         continue;
       }
       int keyEnd = 0;
