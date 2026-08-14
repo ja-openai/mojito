@@ -1,0 +1,1305 @@
+{
+  "articleStrategy": {
+    "articleClassCounts": {
+      "elision": 11709,
+      "lo": 1911,
+      "standard": 38922
+    },
+    "articleForms": [
+      {
+        "article": "definite",
+        "articleClass": "standard",
+        "form": "il",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "article": "definite",
+        "articleClass": "lo",
+        "form": "lo",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "article": "definite",
+        "articleClass": "elision",
+        "form": "l'",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "article": "definite",
+        "articleClass": "standard",
+        "form": "i",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "article": "definite",
+        "articleClass": "lo",
+        "form": "gli",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "article": "definite",
+        "articleClass": "elision",
+        "form": "gli",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "article": "definite",
+        "articleClass": "standard",
+        "form": "la",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "article": "definite",
+        "articleClass": "elision",
+        "form": "l'",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "article": "definite",
+        "articleClass": "standard",
+        "form": "le",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "article": "definite",
+        "articleClass": "elision",
+        "form": "le",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "article": "indefinite",
+        "articleClass": "standard",
+        "form": "un",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "article": "indefinite",
+        "articleClass": "lo",
+        "form": "uno",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "article": "indefinite",
+        "articleClass": "elision",
+        "form": "un",
+        "gender": "masculine",
+        "number": "singular"
+      },
+      {
+        "article": "indefinite",
+        "articleClass": "standard",
+        "form": "dei",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "article": "indefinite",
+        "articleClass": "lo",
+        "form": "degli",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "article": "indefinite",
+        "articleClass": "elision",
+        "form": "degli",
+        "gender": "masculine",
+        "number": "plural"
+      },
+      {
+        "article": "indefinite",
+        "articleClass": "standard",
+        "form": "una",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "article": "indefinite",
+        "articleClass": "elision",
+        "form": "un'",
+        "gender": "feminine",
+        "number": "singular"
+      },
+      {
+        "article": "indefinite",
+        "articleClass": "standard",
+        "form": "delle",
+        "gender": "feminine",
+        "number": "plural"
+      },
+      {
+        "article": "indefinite",
+        "articleClass": "elision",
+        "form": "delle",
+        "gender": "feminine",
+        "number": "plural"
+      }
+    ],
+    "counts": {
+      "articleCandidateSurfaces": 52542,
+      "dictionaryVowelStartSurfaces": 7,
+      "masculineLoClassSurfaces": 1911,
+      "surfaceVowelStartSurfaces": 11709
+    },
+    "samples": {
+      "articleCandidates": [
+        {
+          "articleClass": "standard",
+          "dictionaryVowelStart": false,
+          "gender": "feminine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "la 'n drangheta",
+            "indefinite": "una 'n drangheta"
+          },
+          "surface": "'n drangheta",
+          "surfaceVowelStart": false
+        },
+        {
+          "articleClass": "standard",
+          "dictionaryVowelStart": false,
+          "gender": "feminine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "la 'ndrangheta",
+            "indefinite": "una 'ndrangheta"
+          },
+          "surface": "'ndrangheta",
+          "surfaceVowelStart": false
+        },
+        {
+          "articleClass": "standard",
+          "dictionaryVowelStart": false,
+          "gender": "feminine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "la 'ndranghita",
+            "indefinite": "una 'ndranghita"
+          },
+          "surface": "'ndranghita",
+          "surfaceVowelStart": false
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "plural",
+          "phraseForms": {
+            "definite": "gli abachi",
+            "indefinite": "degli abachi"
+          },
+          "surface": "abachi",
+          "surfaceVowelStart": true
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "l'abaco",
+            "indefinite": "un abaco"
+          },
+          "surface": "abaco",
+          "surfaceVowelStart": true
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": false,
+          "gender": "feminine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "l'abadessa",
+            "indefinite": "un'abadessa"
+          },
+          "surface": "abadessa",
+          "surfaceVowelStart": true
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": false,
+          "gender": "feminine",
+          "number": "plural",
+          "phraseForms": {
+            "definite": "le abadesse",
+            "indefinite": "delle abadesse"
+          },
+          "surface": "abadesse",
+          "surfaceVowelStart": true
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": false,
+          "gender": "feminine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "l'abalienazione",
+            "indefinite": "un'abalienazione"
+          },
+          "surface": "abalienazione",
+          "surfaceVowelStart": true
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": false,
+          "gender": "feminine",
+          "number": "plural",
+          "phraseForms": {
+            "definite": "le abalienazioni",
+            "indefinite": "delle abalienazioni"
+          },
+          "surface": "abalienazioni",
+          "surfaceVowelStart": true
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "l'abate",
+            "indefinite": "un abate"
+          },
+          "surface": "abate",
+          "surfaceVowelStart": true
+        }
+      ],
+      "loClassCandidates": [
+        {
+          "articleClass": "lo",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "plural",
+          "phraseForms": {
+            "definite": "gli gnocchi",
+            "indefinite": "degli gnocchi"
+          },
+          "surface": "gnocchi",
+          "surfaceVowelStart": false
+        },
+        {
+          "articleClass": "lo",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "lo gnocco",
+            "indefinite": "uno gnocco"
+          },
+          "surface": "gnocco",
+          "surfaceVowelStart": false
+        },
+        {
+          "articleClass": "lo",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "plural",
+          "phraseForms": {
+            "definite": "gli gnomi",
+            "indefinite": "degli gnomi"
+          },
+          "surface": "gnomi",
+          "surfaceVowelStart": false
+        },
+        {
+          "articleClass": "lo",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "lo gnomo",
+            "indefinite": "uno gnomo"
+          },
+          "surface": "gnomo",
+          "surfaceVowelStart": false
+        },
+        {
+          "articleClass": "lo",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "lo gnomone",
+            "indefinite": "uno gnomone"
+          },
+          "surface": "gnomone",
+          "surfaceVowelStart": false
+        },
+        {
+          "articleClass": "lo",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "plural",
+          "phraseForms": {
+            "definite": "gli gnomoni",
+            "indefinite": "degli gnomoni"
+          },
+          "surface": "gnomoni",
+          "surfaceVowelStart": false
+        },
+        {
+          "articleClass": "lo",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "plural",
+          "phraseForms": {
+            "definite": "gli gnosticismi",
+            "indefinite": "degli gnosticismi"
+          },
+          "surface": "gnosticismi",
+          "surfaceVowelStart": false
+        },
+        {
+          "articleClass": "lo",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "lo gnosticismo",
+            "indefinite": "uno gnosticismo"
+          },
+          "surface": "gnosticismo",
+          "surfaceVowelStart": false
+        },
+        {
+          "articleClass": "lo",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "plural",
+          "phraseForms": {
+            "definite": "gli pneumatici",
+            "indefinite": "degli pneumatici"
+          },
+          "surface": "pneumatici",
+          "surfaceVowelStart": false
+        },
+        {
+          "articleClass": "lo",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "lo pneumatico",
+            "indefinite": "uno pneumatico"
+          },
+          "surface": "pneumatico",
+          "surfaceVowelStart": false
+        }
+      ],
+      "targetedArticleCandidates": [
+        {
+          "articleClass": "lo",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "lo gnomo",
+            "indefinite": "uno gnomo"
+          },
+          "surface": "gnomo",
+          "surfaceVowelStart": false
+        },
+        {
+          "articleClass": "lo",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "plural",
+          "phraseForms": {
+            "definite": "gli gnomi",
+            "indefinite": "degli gnomi"
+          },
+          "surface": "gnomi",
+          "surfaceVowelStart": false
+        },
+        {
+          "articleClass": "standard",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "il libro",
+            "indefinite": "un libro"
+          },
+          "surface": "libro",
+          "surfaceVowelStart": false
+        },
+        {
+          "articleClass": "standard",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "plural",
+          "phraseForms": {
+            "definite": "i cani",
+            "indefinite": "dei cani"
+          },
+          "surface": "cani",
+          "surfaceVowelStart": false
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": true,
+          "gender": "feminine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "l'acqua",
+            "indefinite": "un'acqua"
+          },
+          "surface": "acqua",
+          "surfaceVowelStart": true
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": true,
+          "gender": "feminine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "l'ape",
+            "indefinite": "un'ape"
+          },
+          "surface": "ape",
+          "surfaceVowelStart": true
+        }
+      ],
+      "vowelStartCandidates": [
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "plural",
+          "phraseForms": {
+            "definite": "gli abachi",
+            "indefinite": "degli abachi"
+          },
+          "surface": "abachi",
+          "surfaceVowelStart": true
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "l'abaco",
+            "indefinite": "un abaco"
+          },
+          "surface": "abaco",
+          "surfaceVowelStart": true
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": false,
+          "gender": "feminine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "l'abadessa",
+            "indefinite": "un'abadessa"
+          },
+          "surface": "abadessa",
+          "surfaceVowelStart": true
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": false,
+          "gender": "feminine",
+          "number": "plural",
+          "phraseForms": {
+            "definite": "le abadesse",
+            "indefinite": "delle abadesse"
+          },
+          "surface": "abadesse",
+          "surfaceVowelStart": true
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": false,
+          "gender": "feminine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "l'abalienazione",
+            "indefinite": "un'abalienazione"
+          },
+          "surface": "abalienazione",
+          "surfaceVowelStart": true
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": false,
+          "gender": "feminine",
+          "number": "plural",
+          "phraseForms": {
+            "definite": "le abalienazioni",
+            "indefinite": "delle abalienazioni"
+          },
+          "surface": "abalienazioni",
+          "surfaceVowelStart": true
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "l'abate",
+            "indefinite": "un abate"
+          },
+          "surface": "abate",
+          "surfaceVowelStart": true
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": false,
+          "gender": "feminine",
+          "number": "singular",
+          "phraseForms": {
+            "definite": "l'abatessa",
+            "indefinite": "un'abatessa"
+          },
+          "surface": "abatessa",
+          "surfaceVowelStart": true
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": false,
+          "gender": "feminine",
+          "number": "plural",
+          "phraseForms": {
+            "definite": "le abatesse",
+            "indefinite": "delle abatesse"
+          },
+          "surface": "abatesse",
+          "surfaceVowelStart": true
+        },
+        {
+          "articleClass": "elision",
+          "dictionaryVowelStart": false,
+          "gender": "masculine",
+          "number": "plural",
+          "phraseForms": {
+            "definite": "gli abati",
+            "indefinite": "degli abati"
+          },
+          "surface": "abati",
+          "surfaceVowelStart": true
+        }
+      ]
+    },
+    "sizeEstimates": {
+      "eagerPhrasePack": {
+        "binaryLowerBoundBytes": 2774943,
+        "phraseRowBytes": 1261008,
+        "phraseRows": 105084,
+        "stringPoolBytes": 1513935
+      }
+    }
+  },
+  "counts": {
+    "ambiguousSupportedSurfaces": 17706,
+    "dictionaryEntries": 412265,
+    "dictionaryInflectionPatterns": 539,
+    "exactGenderNumberSurfaces": 45823,
+    "genderNumberCandidateSurfaces": 52542,
+    "inflectionalPatterns": 634,
+    "missingInflectionPatterns": 0,
+    "nounInflectionalPatterns": 384,
+    "skippedLines": 104,
+    "supportedEntries": 63567,
+    "uniqueSupportedSurfaces": 63529,
+    "usedInflectionalPatterns": 539
+  },
+  "features": {
+    "ambiguityReasons": {
+      "missing-gender": 736,
+      "missing-number": 1598,
+      "multiple-analyses": 33,
+      "multiple-genders": 1351,
+      "multiple-inflections": 9444,
+      "multiple-numbers": 8227,
+      "multiple-parts-of-speech": 9274
+    },
+    "gender": {
+      "<missing>": 745,
+      "feminine": 31698,
+      "masculine": 32475
+    },
+    "number": {
+      "<missing>": 1620,
+      "plural": 34308,
+      "singular": 35867
+    },
+    "partOfSpeech": {
+      "adjective": 5126,
+      "adverb": 80,
+      "noun": 62120,
+      "numeral": 8,
+      "proper-noun": 1447,
+      "verb": 4941
+    },
+    "patternPartOfSpeech": {
+      "abbreviation": 1,
+      "adjective": 71,
+      "article": 2,
+      "noun": 384,
+      "verb": 176
+    },
+    "patternSlotGenders": {
+      "<missing>": 8765,
+      "feminine": 678,
+      "masculine": 1133,
+      "neuter": 1
+    },
+    "patternSlotNumbers": {
+      "<missing>": 892,
+      "plural": 4878,
+      "singular": 4807
+    }
+  },
+  "locale": "it",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/it_noun_pack_report.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_it.lst",
+      "inflection/resources/org/unicode/inflection/dictionary/inflectional_it.xml"
+    ],
+    "sources": [
+      {
+        "byteSize": 27327567,
+        "gitLfsPointer": false,
+        "path": "dictionary_it.lst",
+        "sha256": "c5836997d872f7e5833fe0c338109591235b91f0306fa3e317f1e7aabbfe42a9"
+      },
+      {
+        "byteSize": 1394074,
+        "gitLfsPointer": false,
+        "path": "inflectional_it.xml",
+        "sha256": "70ad7ba37f88b96607ba367549cc2260453ff774eebb3533d728da0b7c072653"
+      }
+    ]
+  },
+  "reviewPolicy": {
+    "automaticExportSurfaces": 45823,
+    "blockedReasons": {
+      "missing-gender": 736,
+      "missing-number": 1598,
+      "multiple-analyses": 7,
+      "multiple-genders": 1351,
+      "multiple-inflections": 2773,
+      "multiple-numbers": 8227,
+      "multiple-parts-of-speech": 2698
+    },
+    "blockedSurfaces": 10987,
+    "compactRuntime": "article-shell-composition",
+    "reviewRequiredReasons": {
+      "multiple-analyses": 26,
+      "multiple-inflections": 6671,
+      "multiple-parts-of-speech": 6576
+    },
+    "reviewRequiredSurfaces": 6719
+  },
+  "samples": {
+    "blockingAmbiguities": [
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "ec"
+        ],
+        "numbers": [],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [
+          "missing-number"
+        ],
+        "stressed": false,
+        "surface": "a"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "10",
+          "b"
+        ],
+        "numbers": [
+          "plural",
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-numbers",
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abbacchi"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "10",
+          "b"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abbacchio"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "10",
+          "b"
+        ],
+        "numbers": [
+          "plural",
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-numbers",
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abbagli"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "1",
+          "10",
+          "b"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abbaglio"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "1",
+          "4f"
+        ],
+        "numbers": [
+          "plural",
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-numbers",
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abbaino"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "1",
+          "5"
+        ],
+        "numbers": [
+          "plural",
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-numbers",
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abbandoni"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "1",
+          "5"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abbandono"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "a"
+        ],
+        "numbers": [
+          "plural",
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [
+          "multiple-numbers"
+        ],
+        "stressed": false,
+        "surface": "abbassalingua"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "1",
+          "5"
+        ],
+        "numbers": [
+          "plural",
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "reasons": [
+          "multiple-numbers",
+          "multiple-parts-of-speech",
+          "multiple-inflections"
+        ],
+        "stressed": false,
+        "surface": "abbozzi"
+      }
+    ],
+    "entries": [
+      {
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "31"
+        ],
+        "line": 1,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "'n drangheta"
+      },
+      {
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "31"
+        ],
+        "line": 2,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "'ndrangheta"
+      },
+      {
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "ec"
+        ],
+        "line": 144,
+        "number": [],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "A"
+      },
+      {
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "17f"
+        ],
+        "line": 145,
+        "number": [
+          "singular",
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "ATM"
+      },
+      {
+        "gender": [],
+        "inflections": [],
+        "line": 146,
+        "number": [],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Abramo"
+      },
+      {
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [],
+        "line": 147,
+        "number": [],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Abruzzi"
+      },
+      {
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [],
+        "line": 148,
+        "number": [],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Abruzzo"
+      },
+      {
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [],
+        "line": 149,
+        "number": [],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Achille"
+      },
+      {
+        "gender": [],
+        "inflections": [],
+        "line": 150,
+        "number": [],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Acireale"
+      },
+      {
+        "gender": [],
+        "inflections": [],
+        "line": 151,
+        "number": [],
+        "partOfSpeech": [
+          "proper-noun"
+        ],
+        "surface": "Acquaviva"
+      }
+    ],
+    "genderNumberCandidates": [
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "feminine"
+        ],
+        "inflections": [
+          "31"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "'n drangheta"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "feminine"
+        ],
+        "inflections": [
+          "31"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "'ndrangheta"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "feminine"
+        ],
+        "inflections": [
+          "31"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "'ndranghita"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "13"
+        ],
+        "numbers": [
+          "plural"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abachi"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "13"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abaco"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "feminine"
+        ],
+        "inflections": [
+          "1c1"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abadessa"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "feminine"
+        ],
+        "inflections": [
+          "1c1"
+        ],
+        "numbers": [
+          "plural"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abadesse"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "feminine"
+        ],
+        "inflections": [
+          "6"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abalienazione"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "feminine"
+        ],
+        "inflections": [
+          "6"
+        ],
+        "numbers": [
+          "plural"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abalienazioni"
+      },
+      {
+        "dictionaryVowelStart": false,
+        "entries": 1,
+        "genders": [
+          "masculine"
+        ],
+        "inflections": [
+          "9"
+        ],
+        "numbers": [
+          "singular"
+        ],
+        "partsOfSpeech": [
+          "noun"
+        ],
+        "reasons": [],
+        "stressed": false,
+        "surface": "abate"
+      }
+    ],
+    "missingInflectionPatterns": []
+  },
+  "schema": "mojito-mf2-inflection/it-noun-pack-report/v0",
+  "sizeEstimates": {
+    "genderNumberMetadataPack": {
+      "binaryLowerBoundBytes": 990008,
+      "rowBytes": 420336,
+      "stringPoolBytes": 569672
+    }
+  },
+  "sources": [
+    {
+      "byteSize": 27327567,
+      "gitLfsPointer": false,
+      "path": "dictionary_it.lst",
+      "sha256": "c5836997d872f7e5833fe0c338109591235b91f0306fa3e317f1e7aabbfe42a9"
+    },
+    {
+      "byteSize": 1394074,
+      "gitLfsPointer": false,
+      "path": "inflectional_it.xml",
+      "sha256": "70ad7ba37f88b96607ba367549cc2260453ff774eebb3533d728da0b7c072653"
+    }
+  ]
+}

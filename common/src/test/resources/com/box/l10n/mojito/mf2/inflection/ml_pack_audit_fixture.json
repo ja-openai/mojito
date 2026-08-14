@@ -1,0 +1,1569 @@
+{
+  "counts": {
+    "agreementEntries": 733006,
+    "agreementSurfaces": 732772,
+    "ambiguousTermSurfaces": 3707,
+    "caseTaggedAgreementEntries": 721993,
+    "dictionaryEntries": 748662,
+    "genderTaggedAgreementEntries": 2262,
+    "inflectionPatterns": 363,
+    "missingAgreementPatterns": 0,
+    "skippedDictionaryLines": 75,
+    "termEntries": 730439,
+    "termSurfaces": 730205,
+    "uniqueSurfaces": 748420,
+    "usedAgreementPatterns": 363,
+    "usedTermPatterns": 363
+  },
+  "description": "Generator-side audit for Malayalam Unicode Inflection data before choosing a runtime pack family.",
+  "features": {
+    "agreementInflections": {
+      "1": 257530,
+      "10": 2925,
+      "100": 20,
+      "101": 22,
+      "102": 1,
+      "103": 23,
+      "104": 32,
+      "105": 20,
+      "106": 21,
+      "107": 19,
+      "108": 24,
+      "109": 20,
+      "10a": 22,
+      "10b": 21,
+      "10c": 20,
+      "10d": 16,
+      "10e": 18,
+      "10f": 14,
+      "11": 2848,
+      "110": 14,
+      "111": 14,
+      "112": 7,
+      "113": 7,
+      "114": 16,
+      "115": 1,
+      "116": 2,
+      "117": 2,
+      "118": 1,
+      "119": 8,
+      "11a": 14,
+      "11b": 3,
+      "11c": 23,
+      "11d": 19,
+      "11e": 7,
+      "11f": 25,
+      "12": 3440,
+      "120": 24,
+      "121": 7,
+      "122": 24,
+      "123": 20,
+      "124": 20,
+      "125": 3,
+      "126": 2,
+      "127": 17,
+      "128": 14,
+      "129": 15,
+      "12a": 14,
+      "12b": 16,
+      "12c": 8,
+      "12d": 16,
+      "12e": 9,
+      "12f": 19,
+      "13": 2394,
+      "130": 19,
+      "131": 24,
+      "132": 20,
+      "133": 23,
+      "134": 18,
+      "135": 21,
+      "136": 20,
+      "137": 2,
+      "138": 21,
+      "139": 24,
+      "13a": 6,
+      "13b": 18,
+      "13c": 18,
+      "13d": 22,
+      "13e": 23,
+      "13f": 23,
+      "14": 2432,
+      "140": 18,
+      "141": 19,
+      "142": 20,
+      "143": 22,
+      "144": 16,
+      "145": 17,
+      "146": 25,
+      "147": 19,
+      "148": 23,
+      "149": 14,
+      "14a": 7,
+      "14b": 16,
+      "14c": 15,
+      "14d": 9,
+      "14e": 24,
+      "14f": 1,
+      "15": 2208,
+      "150": 2,
+      "151": 15,
+      "152": 10,
+      "153": 9,
+      "154": 16,
+      "155": 1,
+      "156": 24,
+      "157": 21,
+      "158": 23,
+      "159": 19,
+      "15a": 22,
+      "15b": 22,
+      "15c": 33,
+      "15d": 23,
+      "15e": 20,
+      "15f": 17,
+      "16": 868,
+      "160": 19,
+      "161": 23,
+      "162": 8,
+      "163": 19,
+      "164": 11,
+      "165": 18,
+      "166": 23,
+      "167": 20,
+      "168": 13,
+      "169": 14,
+      "16a": 14,
+      "16b": 15,
+      "17": 2737,
+      "18": 1900,
+      "19": 1692,
+      "1a": 1566,
+      "1b": 1204,
+      "1c": 80,
+      "1d": 1078,
+      "1e": 1350,
+      "1f": 592,
+      "2": 145628,
+      "20": 826,
+      "21": 832,
+      "22": 864,
+      "23": 817,
+      "24": 756,
+      "25": 638,
+      "26": 406,
+      "27": 352,
+      "28": 38,
+      "29": 270,
+      "2a": 272,
+      "2b": 210,
+      "2c": 336,
+      "2d": 266,
+      "2e": 28,
+      "2f": 322,
+      "3": 118776,
+      "30": 216,
+      "31": 180,
+      "32": 180,
+      "33": 27,
+      "34": 171,
+      "35": 189,
+      "36": 153,
+      "37": 152,
+      "38": 160,
+      "39": 128,
+      "3a": 224,
+      "3b": 120,
+      "3c": 96,
+      "3d": 12,
+      "3e": 120,
+      "3f": 84,
+      "4": 81732,
+      "40": 84,
+      "41": 80,
+      "42": 80,
+      "43": 92,
+      "44": 84,
+      "45": 64,
+      "46": 88,
+      "47": 8,
+      "48": 64,
+      "49": 4,
+      "4a": 8,
+      "4b": 4,
+      "4c": 76,
+      "4d": 6,
+      "4e": 3,
+      "4f": 54,
+      "5": 2589,
+      "50": 51,
+      "51": 3,
+      "52": 54,
+      "53": 51,
+      "54": 48,
+      "55": 21,
+      "56": 6,
+      "57": 42,
+      "58": 6,
+      "59": 66,
+      "5a": 45,
+      "5b": 6,
+      "5c": 42,
+      "5d": 46,
+      "5e": 32,
+      "5f": 34,
+      "6": 22974,
+      "60": 36,
+      "61": 16,
+      "62": 32,
+      "63": 16,
+      "64": 38,
+      "65": 42,
+      "66": 4,
+      "67": 36,
+      "68": 32,
+      "69": 50,
+      "6a": 28,
+      "6b": 50,
+      "6c": 42,
+      "6d": 42,
+      "6e": 38,
+      "6f": 4,
+      "7": 9056,
+      "70": 28,
+      "71": 14,
+      "72": 2,
+      "73": 46,
+      "74": 28,
+      "75": 4,
+      "76": 36,
+      "77": 32,
+      "78": 14,
+      "79": 16,
+      "7a": 2,
+      "7b": 2,
+      "7c": 3,
+      "7d": 2,
+      "7e": 3,
+      "7f": 2,
+      "8": 3952,
+      "80": 2,
+      "81": 16,
+      "82": 16,
+      "83": 8,
+      "84": 24,
+      "85": 18,
+      "86": 15,
+      "87": 12,
+      "88": 19,
+      "89": 16,
+      "8a": 17,
+      "8b": 21,
+      "8c": 18,
+      "8d": 15,
+      "8e": 19,
+      "8f": 19,
+      "9": 7456,
+      "90": 20,
+      "91": 19,
+      "92": 16,
+      "93": 15,
+      "94": 18,
+      "95": 19,
+      "96": 9,
+      "97": 22,
+      "98": 19,
+      "99": 2,
+      "9a": 17,
+      "9b": 10,
+      "9c": 17,
+      "9d": 18,
+      "9e": 7,
+      "9f": 15,
+      "<missing>": 16541,
+      "a": 6208,
+      "a0": 1,
+      "a1": 3,
+      "a2": 2,
+      "a3": 2,
+      "a4": 1,
+      "a5": 8,
+      "a6": 23,
+      "a7": 20,
+      "a8": 16,
+      "a9": 1,
+      "aa": 21,
+      "ab": 15,
+      "ac": 14,
+      "ad": 33,
+      "ae": 16,
+      "af": 17,
+      "b": 6228,
+      "b0": 17,
+      "b1": 19,
+      "b2": 17,
+      "b3": 8,
+      "b4": 13,
+      "b5": 15,
+      "b6": 14,
+      "b7": 15,
+      "b8": 14,
+      "b9": 16,
+      "ba": 2,
+      "bb": 2,
+      "bc": 6,
+      "bd": 15,
+      "be": 2,
+      "bf": 17,
+      "c": 4560,
+      "c0": 22,
+      "c1": 20,
+      "c2": 21,
+      "c3": 18,
+      "c4": 14,
+      "c5": 18,
+      "c6": 16,
+      "c7": 7,
+      "c8": 6,
+      "c9": 17,
+      "ca": 15,
+      "cb": 21,
+      "cc": 2,
+      "cd": 4,
+      "ce": 16,
+      "cf": 15,
+      "d": 4272,
+      "d0": 17,
+      "d1": 7,
+      "d2": 16,
+      "d3": 24,
+      "d4": 16,
+      "d5": 14,
+      "d6": 16,
+      "d7": 17,
+      "d8": 8,
+      "d9": 3,
+      "da": 3,
+      "db": 26,
+      "dc": 21,
+      "dd": 23,
+      "de": 22,
+      "df": 14,
+      "e": 1519,
+      "e0": 16,
+      "e1": 23,
+      "e2": 20,
+      "e3": 22,
+      "e4": 14,
+      "e5": 17,
+      "e6": 17,
+      "e7": 18,
+      "e8": 18,
+      "e9": 13,
+      "ea": 16,
+      "eb": 14,
+      "ec": 14,
+      "ed": 15,
+      "ee": 2,
+      "ef": 1,
+      "f": 213,
+      "f0": 7,
+      "f1": 4,
+      "f2": 9,
+      "f3": 17,
+      "f4": 25,
+      "f5": 24,
+      "f6": 23,
+      "f7": 22,
+      "f8": 20,
+      "f9": 26,
+      "fa": 22,
+      "fb": 19,
+      "fc": 21,
+      "fd": 22,
+      "fe": 7,
+      "ff": 22
+    },
+    "agreementPartOfSpeech": {
+      "adjective": 2864,
+      "adposition": 7,
+      "adverb": 28,
+      "determiner": 9,
+      "noun": 716465,
+      "numeral": 13,
+      "particle": 5,
+      "pronoun": 10,
+      "proper-noun": 16439,
+      "verb": 112
+    },
+    "ambiguityReasons": {
+      "multiple-cases": 73,
+      "multiple-entries": 6,
+      "multiple-genders": 1,
+      "multiple-inflections": 717,
+      "multiple-numbers": 90,
+      "multiple-parts-of-speech": 2899
+    },
+    "animacy": {
+      "<missing>": 732947,
+      "animate": 30,
+      "human": 15,
+      "inanimate": 14
+    },
+    "case": {
+      "<missing>": 11013,
+      "accusative": 102845,
+      "dative": 102886,
+      "genitive": 102418,
+      "instrumental": 104969,
+      "locative": 102372,
+      "nominative": 98733,
+      "sociative": 100049,
+      "vocative": 7788
+    },
+    "gender": {
+      "<missing>": 730744,
+      "common": 82,
+      "feminine": 1869,
+      "masculine": 282,
+      "neuter": 30
+    },
+    "number": {
+      "<missing>": 2673,
+      "plural": 351060,
+      "singular": 379357
+    },
+    "partOfSpeech": {
+      "<missing>": 14,
+      "adjective": 2864,
+      "adposition": 23,
+      "adverb": 109,
+      "determiner": 58,
+      "noun": 716465,
+      "numeral": 177,
+      "particle": 30,
+      "pronoun": 127,
+      "proper-noun": 16439,
+      "verb": 15319
+    },
+    "termPartOfSpeech": {
+      "adjective": 297,
+      "adposition": 5,
+      "adverb": 24,
+      "determiner": 8,
+      "noun": 716465,
+      "numeral": 8,
+      "particle": 5,
+      "pronoun": 10,
+      "proper-noun": 16439,
+      "verb": 111
+    },
+    "unknownGrammemes": {
+      "conjunction": 5,
+      "countable": 14,
+      "imperative": 2,
+      "imperfect": 1,
+      "interjection": 21,
+      "interrogative": 17,
+      "ഖം:": 1,
+      "ഖഗ്രാമം:": 1,
+      "ഖഗ്രാമങ്ങളാൽ:": 1,
+      "ഖഗ്രാമങ്ങളിൽ:": 1,
+      "ഖഗ്രാമങ്ങളുടെ:": 1,
+      "ഖഗ്രാമങ്ങളെ:": 1,
+      "ഖഗ്രാമങ്ങളോട്:": 1,
+      "ഖഗ്രാമങ്ങൾ:": 1,
+      "ഖഗ്രാമങ്ങൾക്ക്:": 1,
+      "ഖഗ്രാമത്താൽ:": 1,
+      "ഖഗ്രാമത്തിന്:": 1,
+      "ഖഗ്രാമത്തിന്റെ:": 1,
+      "ഖഗ്രാമത്തിൽ:": 1,
+      "ഖഗ്രാമത്തെ:": 1,
+      "ഖഗ്രാമത്തോട്:": 1,
+      "ഖഘണ്ടാരം:": 1,
+      "ഖഘണ്ടാരങ്ങളാൽ:": 1,
+      "ഖഘണ്ടാരങ്ങളിൽ:": 1,
+      "ഖഘണ്ടാരങ്ങളുടെ:": 1,
+      "ഖഘണ്ടാരങ്ങളെ:": 1,
+      "ഖഘണ്ടാരങ്ങളോട്:": 1,
+      "ഖഘണ്ടാരങ്ങൾ:": 1,
+      "ഖഘണ്ടാരങ്ങൾക്ക്:": 1,
+      "ഖഘണ്ടാരത്താൽ:": 1,
+      "ഖഘണ്ടാരത്തിന്:": 1,
+      "ഖഘണ്ടാരത്തിന്റെ:": 1,
+      "ഖഘണ്ടാരത്തിൽ:": 1,
+      "ഖഘണ്ടാരത്തെ:": 1,
+      "ഖഘണ്ടാരത്തോട്:": 1,
+      "ഖങ്ങളാൽ:": 1,
+      "ഖങ്ങളിൽ:": 1,
+      "ഖങ്ങളുടെ:": 1,
+      "ഖങ്ങളെ:": 1,
+      "ഖങ്ങളോട്:": 1,
+      "ഖങ്ങൾ:": 1,
+      "ഖങ്ങൾക്ക്:": 1,
+      "ഖത്താൽ:": 1,
+      "ഖത്തിന്:": 1,
+      "ഖത്തിന്റെ:": 1,
+      "ഖത്തിൽ:": 1,
+      "ഖത്തെ:": 1,
+      "ഖത്തോട്:": 1,
+      "ഖപരിത്രാണം:": 1,
+      "ഖപരിത്രാണങ്ങളാൽ:": 1,
+      "ഖപരിത്രാണങ്ങളിൽ:": 1,
+      "ഖപരിത്രാണങ്ങളുടെ:": 1,
+      "ഖപരിത്രാണങ്ങളെ:": 1,
+      "ഖപരിത്രാണങ്ങളോട്:": 1,
+      "ഖപരിത്രാണങ്ങൾ:": 1,
+      "ഖപരിത്രാണങ്ങൾക്ക്:": 1,
+      "ഖപരിത്രാണത്താൽ:": 1,
+      "ഖപരിത്രാണത്തിന്:": 1,
+      "ഖപരിത്രാണത്തിന്റെ:": 1,
+      "ഖപരിത്രാണത്തിൽ:": 1,
+      "ഖപരിത്രാണത്തെ:": 1,
+      "ഖപരിത്രാണത്തോട്:": 1,
+      "ഖഭാജന:": 1,
+      "ഖഭാജനകളാൽ:": 1,
+      "ഖഭാജനകളിൽ:": 1,
+      "ഖഭാജനകളുടെ:": 1,
+      "ഖഭാജനകളെ:": 1,
+      "ഖഭാജനകളോട്:": 1,
+      "ഖഭാജനകൾ:": 1,
+      "ഖഭാജനകൾക്ക്:": 1,
+      "ഖഭാജനയാൽ:": 1,
+      "ഖഭാജനയിൽ:": 1,
+      "ഖഭാജനയുടെ:": 1,
+      "ഖഭാജനയെ:": 1,
+      "ഖഭാജനയോട്:": 1,
+      "ഖഭാജനയ്ക്ക്:": 1,
+      "ഖലോകം:": 1,
+      "ഖലോകങ്ങളാൽ:": 1,
+      "ഖലോകങ്ങളിൽ:": 1,
+      "ഖലോകങ്ങളുടെ:": 1,
+      "ഖലോകങ്ങളെ:": 1,
+      "ഖലോകങ്ങളോട്:": 1,
+      "ഖലോകങ്ങൾ:": 1,
+      "ഖലോകങ്ങൾക്ക്:": 1,
+      "ഖലോകത്താൽ:": 1,
+      "ഖലോകത്തിന്:": 1,
+      "ഖലോകത്തിന്റെ:": 1,
+      "ഖലോകത്തിൽ:": 1,
+      "ഖലോകത്തെ:": 1,
+      "ഖലോകത്തോട്:": 1,
+      "ഖവെള്ളിയാഴ്ച:": 1,
+      "ഖവെള്ളിയാഴ്ചകളാൽ:": 1,
+      "ഖവെള്ളിയാഴ്ചകളിൽ:": 1,
+      "ഖവെള്ളിയാഴ്ചകളുടെ:": 1,
+      "ഖവെള്ളിയാഴ്ചകളെ:": 1,
+      "ഖവെള്ളിയാഴ്ചകളോട്:": 1,
+      "ഖവെള്ളിയാഴ്ചകൾ:": 1,
+      "ഖവെള്ളിയാഴ്ചകൾക്ക്:": 1,
+      "ഖവെള്ളിയാഴ്ചയാൽ:": 1,
+      "ഖവെള്ളിയാഴ്ചയിൽ:": 1,
+      "ഖവെള്ളിയാഴ്ചയുടെ:": 1,
+      "ഖവെള്ളിയാഴ്ചയെ:": 1,
+      "ഖവെള്ളിയാഴ്ചയോട്:": 1,
+      "ഖവെള്ളിയാഴ്ചയ്ക്ക്:": 1,
+      "ഖവേഗം:": 1,
+      "ഖവേഗങ്ങളാൽ:": 1,
+      "ഖവേഗങ്ങളിൽ:": 1,
+      "ഖവേഗങ്ങളുടെ:": 1,
+      "ഖവേഗങ്ങളെ:": 1,
+      "ഖവേഗങ്ങളോട്:": 1,
+      "ഖവേഗങ്ങൾ:": 1,
+      "ഖവേഗങ്ങൾക്ക്:": 1,
+      "ഖവേഗത്താൽ:": 1,
+      "ഖവേഗത്തിന്:": 1,
+      "ഖവേഗത്തിന്റെ:": 1,
+      "ഖവേഗത്തിൽ:": 1,
+      "ഖവേഗത്തെ:": 1,
+      "ഖവേഗത്തോട്:": 1,
+      "ഖാചരണം:": 1,
+      "ഖാചരണങ്ങളാൽ:": 1,
+      "ഖാചരണങ്ങളിൽ:": 1,
+      "ഖാചരണങ്ങളുടെ:": 1,
+      "ഖാചരണങ്ങളെ:": 1,
+      "ഖാചരണങ്ങളോട്:": 1,
+      "ഖാചരണങ്ങൾ:": 1,
+      "ഖാചരണങ്ങൾക്ക്:": 1,
+      "ഖാചരണത്താൽ:": 1,
+      "ഖാചരണത്തിന്:": 1,
+      "ഖാചരണത്തിന്റെ:": 1,
+      "ഖാചരണത്തിൽ:": 1,
+      "ഖാചരണത്തെ:": 1,
+      "ഖാചരണത്തോട്:": 1,
+      "ഖാന്തനാടകം:": 1,
+      "ഖാന്തനാടകങ്ങളാൽ:": 1,
+      "ഖാന്തനാടകങ്ങളിൽ:": 1,
+      "ഖാന്തനാടകങ്ങളുടെ:": 1,
+      "ഖാന്തനാടകങ്ങളെ:": 1,
+      "ഖാന്തനാടകങ്ങളോട്:": 1,
+      "ഖാന്തനാടകങ്ങൾ:": 1,
+      "ഖാന്തനാടകങ്ങൾക്ക്:": 1,
+      "ഖാന്തനാടകത്താൽ:": 1,
+      "ഖാന്തനാടകത്തിന്:": 1,
+      "ഖാന്തനാടകത്തിന്റെ:": 1,
+      "ഖാന്തനാടകത്തിൽ:": 1,
+      "ഖാന്തനാടകത്തെ:": 1,
+      "ഖാന്തനാടകത്തോട്:": 1,
+      "ഖി:": 1,
+      "ഖികളാൽ:": 1,
+      "ഖികളിൽ:": 1,
+      "ഖികളുടെ:": 1,
+      "ഖികളെ:": 1,
+      "ഖികളോട്:": 1,
+      "ഖിക്കും:": 1,
+      "ഖിക്കുക:": 1,
+      "ഖിക്കുന്നു:": 1,
+      "ഖിക്ക്:": 1,
+      "ഖികൾ:": 1,
+      "ഖികൾക്ക്:": 1,
+      "ഖിച്ചു:": 1,
+      "ഖിതം:": 1,
+      "ഖിതങ്ങളാൽ:": 1,
+      "ഖിതങ്ങളിൽ:": 1,
+      "ഖിതങ്ങളുടെ:": 1,
+      "ഖിതങ്ങളെ:": 1,
+      "ഖിതങ്ങളോട്:": 1,
+      "ഖിതങ്ങൾ:": 1,
+      "ഖിതങ്ങൾക്ക്:": 1,
+      "ഖിതത്താൽ:": 1,
+      "ഖിതത്തിന്:": 1,
+      "ഖിതത്തിന്റെ:": 1,
+      "ഖിതത്തിൽ:": 1,
+      "ഖിതത്തെ:": 1,
+      "ഖിതത്തോട്:": 1,
+      "ഖിപ്പിക്കും:": 1,
+      "ഖിപ്പിക്കുക:": 1,
+      "ഖിപ്പിക്കുന്നു:": 1,
+      "ഖിപ്പിച്ചു:": 1,
+      "ഖിയാൽ:": 1,
+      "ഖിയിൽ:": 1,
+      "ഖിയുടെ:": 1,
+      "ഖിയെ:": 1,
+      "ഖിയോട്:": 1,
+      "ഖോപശമനം:": 1,
+      "ഖോപശമനങ്ങളാൽ:": 1,
+      "ഖോപശമനങ്ങളിൽ:": 1,
+      "ഖോപശമനങ്ങളുടെ:": 1,
+      "ഖോപശമനങ്ങളെ:": 1,
+      "ഖോപശമനങ്ങളോട്:": 1,
+      "ഖോപശമനങ്ങൾ:": 1,
+      "ഖോപശമനങ്ങൾക്ക്:": 1,
+      "ഖോപശമനത്താൽ:": 1,
+      "ഖോപശമനത്തിന്:": 1,
+      "ഖോപശമനത്തിന്റെ:": 1,
+      "ഖോപശമനത്തിൽ:": 1,
+      "ഖോപശമനത്തെ:": 1,
+      "ഖോപശമനത്തോട്:": 1,
+      "പ്രഭ:": 1,
+      "പ്രഭകളാൽ:": 1,
+      "പ്രഭകളിൽ:": 1,
+      "പ്രഭകളുടെ:": 1,
+      "പ്രഭകളെ:": 1,
+      "പ്രഭകളോട്:": 1,
+      "പ്രഭകൾ:": 1,
+      "പ്രഭകൾക്ക്:": 1,
+      "പ്രഭയാൽ:": 1,
+      "പ്രഭയിൽ:": 1,
+      "പ്രഭയുടെ:": 1,
+      "പ്രഭയെ:": 1,
+      "പ്രഭയോട്:": 1,
+      "പ്രഭയ്ക്ക്:": 1,
+      "പ്രീതി:": 1,
+      "പ്രീതികളാൽ:": 1,
+      "പ്രീതികളിൽ:": 1,
+      "പ്രീതികളുടെ:": 1,
+      "പ്രീതികളെ:": 1,
+      "പ്രീതികളോട്:": 1,
+      "പ്രീതിക്ക്:": 1,
+      "പ്രീതികൾ:": 1,
+      "പ്രീതികൾക്ക്:": 1,
+      "പ്രീതിയാൽ:": 1,
+      "പ്രീതിയിൽ:": 1,
+      "പ്രീതിയുടെ:": 1,
+      "പ്രീതിയെ:": 1,
+      "പ്രീതിയോട്:": 1,
+      "സ്ഥായിവാദ്യം:": 1,
+      "സ്ഥായിവാദ്യങ്ങളാൽ:": 1,
+      "സ്ഥായിവാദ്യങ്ങളിൽ:": 1,
+      "സ്ഥായിവാദ്യങ്ങളുടെ:": 1,
+      "സ്ഥായിവാദ്യങ്ങളെ:": 1,
+      "സ്ഥായിവാദ്യങ്ങളോട്:": 1,
+      "സ്ഥായിവാദ്യങ്ങൾ:": 1,
+      "സ്ഥായിവാദ്യങ്ങൾക്ക്:": 1,
+      "സ്ഥായിവാദ്യത്താൽ:": 1,
+      "സ്ഥായിവാദ്യത്തിന്:": 1,
+      "സ്ഥായിവാദ്യത്തിന്റെ:": 1,
+      "സ്ഥായിവാദ്യത്തിൽ:": 1,
+      "സ്ഥായിവാദ്യത്തെ:": 1,
+      "സ്ഥായിവാദ്യത്തോട്:": 1,
+      "സ്ഥിതി:": 1,
+      "സ്ഥിതികളാൽ:": 1,
+      "സ്ഥിതികളിൽ:": 1,
+      "സ്ഥിതികളുടെ:": 1,
+      "സ്ഥിതികളെ:": 1,
+      "സ്ഥിതികളോട്:": 1,
+      "സ്ഥിതിക്ക്:": 1,
+      "സ്ഥിതികൾ:": 1,
+      "സ്ഥിതികൾക്ക്:": 1,
+      "സ്ഥിതിയാൽ:": 1,
+      "സ്ഥിതിയിൽ:": 1,
+      "സ്ഥിതിയുടെ:": 1,
+      "സ്ഥിതിയെ:": 1,
+      "സ്ഥിതിയോട്:": 1
+    }
+  },
+  "locale": "ml",
+  "packPolicy": {
+    "caseMode": "explicit-form-key",
+    "laterOptimization": "suffix-composition audit after closed-world fixture",
+    "metadataBits": [
+      "partOfSpeech",
+      "gender",
+      "animacy"
+    ],
+    "numberMode": "explicit-number-option",
+    "openWorldGeneration": false,
+    "pronounAgreementPolicy": "separate-malayalam-pronoun-profile-later",
+    "pronounScope": "inventory-only-v0",
+    "reason": "Malayalam has broad noun case coverage and very large dictionary data; V0 should validate product terms through explicit case/number rows before attempting suffix composition.",
+    "recommendation": "closed-world multi-case explicit-form pack first",
+    "runtimeOptions": [
+      "case",
+      "number"
+    ],
+    "termScope": [
+      "noun",
+      "proper-noun"
+    ]
+  },
+  "patterns": {
+    "all": {
+      "caseSlots": 5254,
+      "duplicateSlotRows": 1270,
+      "patternsWithDuplicateSlots": 207,
+      "slotAttributes": {
+        "animacy": {
+          "animate": 30,
+          "human": 15,
+          "inanimate": 14
+        },
+        "case": {
+          "accusative": 658,
+          "dative": 874,
+          "genitive": 661,
+          "instrumental": 955,
+          "locative": 755,
+          "nominative": 450,
+          "sociative": 647,
+          "vocative": 254
+        },
+        "count": {
+          "countable": 14
+        },
+        "gender": {
+          "common": 56,
+          "feminine": 189,
+          "masculine": 224,
+          "neuter": 16
+        },
+        "number": {
+          "plural": 2296,
+          "singular": 3172
+        }
+      },
+      "slotsPerPattern": {
+        "0": 1,
+        "1": 12,
+        "10": 1,
+        "11": 2,
+        "12": 2,
+        "13": 2,
+        "14": 34,
+        "15": 17,
+        "16": 43,
+        "17": 15,
+        "18": 27,
+        "19": 27,
+        "2": 32,
+        "20": 19,
+        "21": 13,
+        "22": 22,
+        "23": 17,
+        "24": 9,
+        "25": 14,
+        "26": 4,
+        "27": 1,
+        "3": 10,
+        "32": 2,
+        "33": 1,
+        "34": 2,
+        "4": 1,
+        "5": 1,
+        "6": 2,
+        "7": 15,
+        "8": 7,
+        "9": 8
+      }
+    },
+    "usedAgreement": {
+      "caseSlots": 5254,
+      "duplicateSlotRows": 1270,
+      "patternsWithDuplicateSlots": 207,
+      "slotAttributes": {
+        "animacy": {
+          "animate": 30,
+          "human": 15,
+          "inanimate": 14
+        },
+        "case": {
+          "accusative": 658,
+          "dative": 874,
+          "genitive": 661,
+          "instrumental": 955,
+          "locative": 755,
+          "nominative": 450,
+          "sociative": 647,
+          "vocative": 254
+        },
+        "count": {
+          "countable": 14
+        },
+        "gender": {
+          "common": 56,
+          "feminine": 189,
+          "masculine": 224,
+          "neuter": 16
+        },
+        "number": {
+          "plural": 2296,
+          "singular": 3172
+        }
+      },
+      "slotsPerPattern": {
+        "0": 1,
+        "1": 12,
+        "10": 1,
+        "11": 2,
+        "12": 2,
+        "13": 2,
+        "14": 34,
+        "15": 17,
+        "16": 43,
+        "17": 15,
+        "18": 27,
+        "19": 27,
+        "2": 32,
+        "20": 19,
+        "21": 13,
+        "22": 22,
+        "23": 17,
+        "24": 9,
+        "25": 14,
+        "26": 4,
+        "27": 1,
+        "3": 10,
+        "32": 2,
+        "33": 1,
+        "34": 2,
+        "4": 1,
+        "5": 1,
+        "6": 2,
+        "7": 15,
+        "8": 7,
+        "9": 8
+      }
+    },
+    "usedTerms": {
+      "caseSlots": 5254,
+      "duplicateSlotRows": 1270,
+      "patternsWithDuplicateSlots": 207,
+      "slotAttributes": {
+        "animacy": {
+          "animate": 30,
+          "human": 15,
+          "inanimate": 14
+        },
+        "case": {
+          "accusative": 658,
+          "dative": 874,
+          "genitive": 661,
+          "instrumental": 955,
+          "locative": 755,
+          "nominative": 450,
+          "sociative": 647,
+          "vocative": 254
+        },
+        "count": {
+          "countable": 14
+        },
+        "gender": {
+          "common": 56,
+          "feminine": 189,
+          "masculine": 224,
+          "neuter": 16
+        },
+        "number": {
+          "plural": 2296,
+          "singular": 3172
+        }
+      },
+      "slotsPerPattern": {
+        "0": 1,
+        "1": 12,
+        "10": 1,
+        "11": 2,
+        "12": 2,
+        "13": 2,
+        "14": 34,
+        "15": 17,
+        "16": 43,
+        "17": 15,
+        "18": 27,
+        "19": 27,
+        "2": 32,
+        "20": 19,
+        "21": 13,
+        "22": 22,
+        "23": 17,
+        "24": 9,
+        "25": 14,
+        "26": 4,
+        "27": 1,
+        "3": 10,
+        "32": 2,
+        "33": 1,
+        "34": 2,
+        "4": 1,
+        "5": 1,
+        "6": 2,
+        "7": 15,
+        "8": 7,
+        "9": 8
+      }
+    }
+  },
+  "pronouns": {
+    "cases": {
+      "accusative": 10,
+      "dative": 6,
+      "genitive": 20,
+      "instrumental": 9,
+      "locative": 9,
+      "nominative": 12,
+      "sociative": 9
+    },
+    "determination": {
+      "determination=dependent": 10,
+      "determination=independent": 10
+    },
+    "features": {
+      "accusative": 10,
+      "dative": 6,
+      "determination=dependent": 10,
+      "determination=independent": 10,
+      "exclusive": 12,
+      "feminine": 7,
+      "first": 21,
+      "formal": 17,
+      "genitive": 20,
+      "inclusive": 5,
+      "informal": 8,
+      "instrumental": 9,
+      "locative": 9,
+      "masculine": 7,
+      "neuter": 7,
+      "nominative": 12,
+      "plural": 29,
+      "reflexive": 2,
+      "second": 24,
+      "singular": 46,
+      "sociative": 9,
+      "third": 30
+    },
+    "genders": {
+      "feminine": 7,
+      "masculine": 7,
+      "neuter": 7
+    },
+    "numbers": {
+      "plural": 29,
+      "singular": 46
+    },
+    "persons": {
+      "first": 21,
+      "second": 24,
+      "third": 30
+    },
+    "registers": {
+      "formal": 17,
+      "informal": 8
+    },
+    "rows": 75,
+    "uniqueValues": 75
+  },
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/ml_pack_audit.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_ml.lst",
+      "inflection/resources/org/unicode/inflection/dictionary/inflectional_ml.xml",
+      "inflection/resources/org/unicode/inflection/inflection/pronoun_ml.csv"
+    ],
+    "sources": [
+      {
+        "byteSize": 53958746,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_ml.lst",
+        "sha256": "6bda9371a2aa17c08328381e678b77e769269f4ee74749dd4f9e0bd5890cf59c"
+      },
+      {
+        "byteSize": 613479,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/inflectional_ml.xml",
+        "sha256": "1868dab352ff2648c2ba495bc08a3877409eadf177f573817fd03ae07174b12f"
+      },
+      {
+        "byteSize": 4450,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_ml.csv",
+        "sha256": "6806fdc7db0c9e944e7e4e68b607cc5eaff843ead9c29798f1ae3b2832d7e41b"
+      }
+    ]
+  },
+  "samples": {
+    "ambiguousTermSurfaces": [
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-parts-of-speech"
+        ],
+        "sampleEntries": [
+          {
+            "animacy": [],
+            "case": [
+              "nominative"
+            ],
+            "gender": [],
+            "inflections": [
+              "3"
+            ],
+            "line": 2148,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun",
+              "proper-noun"
+            ],
+            "surface": "അംബിക"
+          }
+        ],
+        "surface": "അംബിക"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-parts-of-speech"
+        ],
+        "sampleEntries": [
+          {
+            "animacy": [],
+            "case": [
+              "instrumental"
+            ],
+            "gender": [],
+            "inflections": [
+              "3"
+            ],
+            "line": 2156,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun",
+              "proper-noun"
+            ],
+            "surface": "അംബികയാൽ"
+          }
+        ],
+        "surface": "അംബികയാൽ"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-parts-of-speech"
+        ],
+        "sampleEntries": [
+          {
+            "animacy": [],
+            "case": [
+              "locative"
+            ],
+            "gender": [],
+            "inflections": [
+              "3"
+            ],
+            "line": 2157,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun",
+              "proper-noun"
+            ],
+            "surface": "അംബികയിൽ"
+          }
+        ],
+        "surface": "അംബികയിൽ"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-parts-of-speech"
+        ],
+        "sampleEntries": [
+          {
+            "animacy": [],
+            "case": [
+              "genitive"
+            ],
+            "gender": [],
+            "inflections": [
+              "3"
+            ],
+            "line": 2158,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun",
+              "proper-noun"
+            ],
+            "surface": "അംബികയുടെ"
+          }
+        ],
+        "surface": "അംബികയുടെ"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-parts-of-speech"
+        ],
+        "sampleEntries": [
+          {
+            "animacy": [],
+            "case": [
+              "accusative"
+            ],
+            "gender": [],
+            "inflections": [
+              "3"
+            ],
+            "line": 2159,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun",
+              "proper-noun"
+            ],
+            "surface": "അംബികയെ"
+          }
+        ],
+        "surface": "അംബികയെ"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-parts-of-speech"
+        ],
+        "sampleEntries": [
+          {
+            "animacy": [],
+            "case": [
+              "sociative"
+            ],
+            "gender": [],
+            "inflections": [
+              "3"
+            ],
+            "line": 2160,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun",
+              "proper-noun"
+            ],
+            "surface": "അംബികയോട്"
+          }
+        ],
+        "surface": "അംബികയോട്"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-parts-of-speech"
+        ],
+        "sampleEntries": [
+          {
+            "animacy": [],
+            "case": [
+              "dative"
+            ],
+            "gender": [],
+            "inflections": [
+              "3"
+            ],
+            "line": 2161,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun",
+              "proper-noun"
+            ],
+            "surface": "അംബികയ്ക്ക്"
+          }
+        ],
+        "surface": "അംബികയ്ക്ക്"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-numbers"
+        ],
+        "sampleEntries": [
+          {
+            "animacy": [],
+            "case": [
+              "nominative"
+            ],
+            "gender": [],
+            "inflections": [
+              "bc"
+            ],
+            "line": 4346,
+            "number": [
+              "singular",
+              "plural"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "അകത്തവർ"
+          }
+        ],
+        "surface": "അകത്തവർ"
+      }
+    ],
+    "caseTaggedAgreementEntries": [
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "gender": [],
+        "inflections": [
+          "9a"
+        ],
+        "line": 9,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "അംഗം"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "instrumental"
+        ],
+        "gender": [],
+        "inflections": [
+          "9a"
+        ],
+        "line": 10,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "അംഗംകൊണ്ട്"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "gender": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 11,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "അംഗകം"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "instrumental"
+        ],
+        "gender": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 12,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "അംഗകങ്ങളാൽ"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "locative"
+        ],
+        "gender": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 13,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "അംഗകങ്ങളിൽ"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "genitive"
+        ],
+        "gender": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 14,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "അംഗകങ്ങളുടെ"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "accusative"
+        ],
+        "gender": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 15,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "അംഗകങ്ങളെ"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "sociative"
+        ],
+        "gender": [],
+        "inflections": [
+          "1"
+        ],
+        "line": 16,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "അംഗകങ്ങളോട്"
+      }
+    ],
+    "genderTaggedAgreementEntries": [
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "e"
+        ],
+        "line": 4824,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "അകമ്പടിക്കാരി"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "instrumental"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "e"
+        ],
+        "line": 4825,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "അകമ്പടിക്കാരിയാൽ"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "locative"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "e"
+        ],
+        "line": 4826,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "അകമ്പടിക്കാരിയിൽ"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "genitive"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "e"
+        ],
+        "line": 4827,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "അകമ്പടിക്കാരിയുടെ"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "accusative"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "e"
+        ],
+        "line": 4828,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "അകമ്പടിക്കാരിയെ"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "sociative"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "e"
+        ],
+        "line": 4829,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "അകമ്പടിക്കാരിയോട്"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "dative"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "e"
+        ],
+        "line": 4830,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "അകമ്പടിക്കാരിയ്ക്ക്"
+      },
+      {
+        "animacy": [],
+        "case": [],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "51"
+        ],
+        "line": 8708,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "അഖില"
+      }
+    ],
+    "missingAgreementPatterns": []
+  },
+  "schema": "mojito-mf2-inflection/ml-pack-audit/v0"
+}

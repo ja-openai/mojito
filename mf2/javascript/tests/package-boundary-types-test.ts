@@ -17,6 +17,14 @@ import { formatMessage as formatMessageFromFormatter } from "@mojito-mf2/core/fo
 import { createIntlFunctionRegistry } from "@mojito-mf2/core/intl";
 import { parseToModel as parseToModelFromParser } from "@mojito-mf2/core/parser";
 import { createPortableFunctionRegistry } from "@mojito-mf2/core/portable";
+// @ts-expect-error Inflection runtime types stay out of the root package until a product API is approved.
+import type { MF2CompiledTermPack } from "@mojito-mf2/core";
+// @ts-expect-error No inflection subpath is published while JavaScript remains release-validation-only.
+import type {} from "@mojito-mf2/core/inflection";
+// @ts-expect-error No M2IF subpath is published while JavaScript remains release-validation-only.
+import type {} from "@mojito-mf2/core/m2if";
+// @ts-expect-error No compiled term-pack subpath is published while JavaScript remains release-validation-only.
+import type {} from "@mojito-mf2/core/compiled-term-pack";
 
 const model: MF2PatternMessage = {
   type: "message",

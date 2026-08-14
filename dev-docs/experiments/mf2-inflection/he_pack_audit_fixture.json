@@ -1,0 +1,5421 @@
+{
+  "approvedFixtureCandidateSearch": {
+    "cleanPartOfSpeech": [
+      "noun",
+      "proper-noun"
+    ],
+    "completeCleanGroups": 0,
+    "constructDualCleanGroupSamples": [
+      {
+        "cleanEntries": 2,
+        "formKeys": [
+          "construct.dual"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "11d3"
+        ],
+        "missingFormKeys": [
+          "bare.singular",
+          "bare.plural",
+          "construct.singular",
+          "construct.plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "sampleEntriesByFormKey": {
+          "construct.dual": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11d3"
+              ],
+              "line": 125125,
+              "number": [
+                "dual"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "שיפוליי"
+            }
+          ]
+        }
+      }
+    ],
+    "constructDualCleanGroups": 1,
+    "excludedPartOfSpeech": [
+      "adjective",
+      "verb"
+    ],
+    "maxObservedCleanFormKeys": 4,
+    "nearCompleteCleanGroupSamples": [
+      {
+        "cleanEntries": 1,
+        "formKeys": [
+          "bare.singular",
+          "bare.plural",
+          "construct.singular",
+          "construct.plural"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "1",
+          "17"
+        ],
+        "missingFormKeys": [
+          "construct.dual"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "sampleEntriesByFormKey": {
+          "bare.plural": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "1",
+                "17"
+              ],
+              "line": 105141,
+              "number": [
+                "singular",
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "עדי"
+            }
+          ],
+          "bare.singular": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "1",
+                "17"
+              ],
+              "line": 105141,
+              "number": [
+                "singular",
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "עדי"
+            }
+          ],
+          "construct.plural": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "1",
+                "17"
+              ],
+              "line": 105141,
+              "number": [
+                "singular",
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "עדי"
+            }
+          ],
+          "construct.singular": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "1",
+                "17"
+              ],
+              "line": 105141,
+              "number": [
+                "singular",
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "עדי"
+            }
+          ]
+        }
+      },
+      {
+        "cleanEntries": 3,
+        "formKeys": [
+          "bare.singular",
+          "bare.plural",
+          "construct.singular",
+          "construct.plural"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "1061"
+        ],
+        "missingFormKeys": [
+          "construct.dual"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "sampleEntriesByFormKey": {
+          "bare.plural": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "1061"
+              ],
+              "line": 45098,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "חזיונות"
+            }
+          ],
+          "bare.singular": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "1061"
+              ],
+              "line": 45097,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "חזיון"
+            },
+            {
+              "case": [],
+              "definiteness": [],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "1061"
+              ],
+              "line": 45401,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "חיזיון"
+            }
+          ],
+          "construct.plural": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "1061"
+              ],
+              "line": 45098,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "חזיונות"
+            }
+          ],
+          "construct.singular": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "1061"
+              ],
+              "line": 45097,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "חזיון"
+            }
+          ]
+        }
+      },
+      {
+        "cleanEntries": 435,
+        "formKeys": [
+          "bare.singular",
+          "bare.plural",
+          "construct.singular",
+          "construct.plural"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "11"
+        ],
+        "missingFormKeys": [
+          "construct.dual"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "sampleEntriesByFormKey": {
+          "bare.plural": [
+            {
+              "case": [],
+              "definiteness": [],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 799,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אגפים"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 825,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אגרופי"
+            },
+            {
+              "case": [],
+              "definiteness": [],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 826,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אגרופים"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 3761,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "איגופי"
+            },
+            {
+              "case": [],
+              "definiteness": [],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 3762,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "איגופים"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 4247,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אילופי"
+            },
+            {
+              "case": [],
+              "definiteness": [],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 4248,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אילופים"
+            },
+            {
+              "case": [],
+              "definiteness": [],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 4632,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אינסופים"
+            }
+          ],
+          "bare.singular": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 824,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אגרוף"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 3760,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "איגוף"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 4246,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אילוף"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 4627,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אינסוף"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 4710,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "איסוף"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 5341,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אלוף"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 6596,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אנפוף"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 6944,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אסיף"
+            }
+          ],
+          "construct.plural": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 825,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אגרופי"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 3761,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "איגופי"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 4247,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אילופי"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 4711,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "איסופי"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 5346,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אלופי"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 6597,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אנפופי"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 6945,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אסיפי"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 8946,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "ארכיבישופי"
+            }
+          ],
+          "construct.singular": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 824,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אגרוף"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 3760,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "איגוף"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 4246,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אילוף"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 4627,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אינסוף"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 4710,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "איסוף"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 5341,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אלוף"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 6596,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אנפוף"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11"
+              ],
+              "line": 6944,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "אסיף"
+            }
+          ]
+        }
+      },
+      {
+        "cleanEntries": 3,
+        "formKeys": [
+          "bare.singular",
+          "bare.plural",
+          "construct.singular",
+          "construct.plural"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "118a"
+        ],
+        "missingFormKeys": [
+          "construct.dual"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "sampleEntriesByFormKey": {
+          "bare.plural": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "feminine"
+              ],
+              "inflections": [
+                "118a"
+              ],
+              "line": 131515,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "תופתות"
+            },
+            {
+              "case": [],
+              "definiteness": [],
+              "gender": [
+                "feminine"
+              ],
+              "inflections": [
+                "118a"
+              ],
+              "line": 141548,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "תפתות"
+            }
+          ],
+          "bare.singular": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "feminine"
+              ],
+              "inflections": [
+                "118a"
+              ],
+              "line": 131514,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "תופת"
+            }
+          ],
+          "construct.plural": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "feminine"
+              ],
+              "inflections": [
+                "118a"
+              ],
+              "line": 131515,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "תופתות"
+            }
+          ],
+          "construct.singular": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "feminine"
+              ],
+              "inflections": [
+                "118a"
+              ],
+              "line": 131514,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "תופת"
+            }
+          ]
+        }
+      },
+      {
+        "cleanEntries": 3,
+        "formKeys": [
+          "bare.singular",
+          "bare.plural",
+          "construct.singular",
+          "construct.plural"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "1190"
+        ],
+        "missingFormKeys": [
+          "construct.dual"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "sampleEntriesByFormKey": {
+          "bare.plural": [
+            {
+              "case": [],
+              "definiteness": [],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "1190"
+              ],
+              "line": 135121,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "תיילים"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "1190"
+              ],
+              "line": 135394,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "תילי"
+            }
+          ],
+          "bare.singular": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "1190"
+              ],
+              "line": 135361,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "תיל"
+            }
+          ],
+          "construct.plural": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "1190"
+              ],
+              "line": 135394,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "תילי"
+            }
+          ],
+          "construct.singular": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "1190"
+              ],
+              "line": 135361,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "תיל"
+            }
+          ]
+        }
+      },
+      {
+        "cleanEntries": 3,
+        "formKeys": [
+          "bare.singular",
+          "bare.plural",
+          "construct.singular",
+          "construct.plural"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "11bb"
+        ],
+        "missingFormKeys": [
+          "construct.dual"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "sampleEntriesByFormKey": {
+          "bare.plural": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11bb"
+              ],
+              "line": 42179,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "וילאות"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11bb"
+              ],
+              "line": 42182,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "וילונות"
+            }
+          ],
+          "bare.singular": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11bb"
+              ],
+              "line": 42181,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "וילון"
+            }
+          ],
+          "construct.plural": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11bb"
+              ],
+              "line": 42179,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "וילאות"
+            },
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11bb"
+              ],
+              "line": 42182,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "וילונות"
+            }
+          ],
+          "construct.singular": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11bb"
+              ],
+              "line": 42181,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "וילון"
+            }
+          ]
+        }
+      },
+      {
+        "cleanEntries": 2,
+        "formKeys": [
+          "bare.singular",
+          "bare.plural",
+          "construct.singular",
+          "construct.plural"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "11bf"
+        ],
+        "missingFormKeys": [
+          "construct.dual"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "sampleEntriesByFormKey": {
+          "bare.plural": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11bf"
+              ],
+              "line": 62542,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "לבות"
+            }
+          ],
+          "bare.singular": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11bf"
+              ],
+              "line": 62507,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "לב"
+            }
+          ],
+          "construct.plural": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11bf"
+              ],
+              "line": 62542,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "לבות"
+            }
+          ],
+          "construct.singular": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11bf"
+              ],
+              "line": 62507,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "לב"
+            }
+          ]
+        }
+      },
+      {
+        "cleanEntries": 3,
+        "formKeys": [
+          "bare.singular",
+          "bare.plural",
+          "construct.singular",
+          "construct.plural"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "11c0"
+        ],
+        "missingFormKeys": [
+          "construct.dual"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "sampleEntriesByFormKey": {
+          "bare.plural": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11c0"
+              ],
+              "line": 62951,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "לוטמי"
+            },
+            {
+              "case": [],
+              "definiteness": [],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11c0"
+              ],
+              "line": 63329,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "לטמים"
+            }
+          ],
+          "bare.singular": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11c0"
+              ],
+              "line": 62950,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "לוטם"
+            }
+          ],
+          "construct.plural": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11c0"
+              ],
+              "line": 62951,
+              "number": [
+                "plural"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "לוטמי"
+            }
+          ],
+          "construct.singular": [
+            {
+              "case": [],
+              "definiteness": [
+                "construct"
+              ],
+              "gender": [
+                "masculine"
+              ],
+              "inflections": [
+                "11c0"
+              ],
+              "line": 62950,
+              "number": [
+                "singular"
+              ],
+              "partOfSpeech": [
+                "noun"
+              ],
+              "surface": "לוטם"
+            }
+          ]
+        }
+      }
+    ],
+    "nearCompleteCleanGroups": 181,
+    "requiredFormKeys": [
+      "bare.singular",
+      "bare.plural",
+      "construct.singular",
+      "construct.plural",
+      "construct.dual"
+    ],
+    "singleGenderRequired": true,
+    "singlePartOfSpeechRequired": true
+  },
+  "counts": {
+    "agreementEntries": 49836,
+    "agreementSurfaces": 49836,
+    "ambiguousTermSurfaces": 6902,
+    "caseTaggedAgreementEntries": 3,
+    "constructAgreementEntries": 35005,
+    "dictionaryEntries": 147765,
+    "dualAgreementEntries": 19,
+    "inflectionPatterns": 5299,
+    "missingAgreementPatterns": 0,
+    "skippedDictionaryLines": 74,
+    "termEntries": 31039,
+    "termSurfaces": 31039,
+    "uniqueSurfaces": 147765,
+    "usedAgreementPatterns": 2674,
+    "usedTermPatterns": 2377
+  },
+  "description": "Generator-side audit for Hebrew Unicode Inflection data before choosing a runtime pack family.",
+  "features": {
+    "agreementInflections": {
+      "1": 8187,
+      "10": 955,
+      "100": 1,
+      "100a": 5,
+      "101": 1,
+      "1017": 1,
+      "1018": 5,
+      "102": 3,
+      "1023": 1,
+      "102d": 5,
+      "102e": 1,
+      "103d": 8,
+      "104": 1,
+      "1044": 1,
+      "104b": 2,
+      "104c": 2,
+      "104d": 7,
+      "1052": 2,
+      "1053": 4,
+      "1055": 2,
+      "1057": 5,
+      "1058": 3,
+      "105e": 2,
+      "105f": 6,
+      "1060": 8,
+      "1061": 3,
+      "1062": 2,
+      "1063": 5,
+      "1064": 2,
+      "1065": 1,
+      "1066": 2,
+      "1067": 2,
+      "1068": 6,
+      "106a": 1,
+      "106b": 6,
+      "106c": 5,
+      "106d": 5,
+      "106e": 3,
+      "106f": 3,
+      "1071": 2,
+      "1073": 3,
+      "1075": 5,
+      "1077": 4,
+      "1078": 2,
+      "1079": 4,
+      "107a": 1,
+      "107b": 5,
+      "107c": 6,
+      "107f": 2,
+      "108": 1,
+      "1081": 2,
+      "1082": 7,
+      "1083": 6,
+      "1084": 9,
+      "108b": 5,
+      "108c": 2,
+      "108d": 2,
+      "108e": 2,
+      "108f": 3,
+      "109": 2,
+      "1092": 2,
+      "1093": 4,
+      "1095": 2,
+      "1096": 4,
+      "1098": 2,
+      "109f": 1,
+      "10a0": 1,
+      "10a1": 1,
+      "10a4": 5,
+      "10a5": 2,
+      "10a6": 4,
+      "10a7": 5,
+      "10a8": 3,
+      "10a9": 2,
+      "10ad": 2,
+      "10ae": 2,
+      "10b": 1,
+      "10b2": 2,
+      "10b7": 5,
+      "10b8": 2,
+      "10bb": 6,
+      "10bd": 2,
+      "10c2": 6,
+      "10c5": 2,
+      "10c6": 2,
+      "10cb": 1,
+      "10d": 1,
+      "10d9": 1,
+      "10dd": 5,
+      "10df": 4,
+      "10ec": 2,
+      "10f1": 6,
+      "10f5": 2,
+      "10f9": 2,
+      "10fa": 3,
+      "10fc": 1,
+      "10fd": 5,
+      "10fe": 5,
+      "11": 567,
+      "1100": 4,
+      "1101": 2,
+      "1102": 2,
+      "1104": 1,
+      "1107": 3,
+      "1108": 1,
+      "1109": 1,
+      "110a": 5,
+      "110d": 3,
+      "110e": 2,
+      "110f": 2,
+      "1110": 5,
+      "1111": 6,
+      "1112": 3,
+      "1113": 4,
+      "1115": 1,
+      "111a": 1,
+      "111c": 5,
+      "111d": 2,
+      "111e": 4,
+      "112": 5,
+      "1120": 5,
+      "1121": 5,
+      "1123": 6,
+      "1127": 6,
+      "1128": 3,
+      "112e": 1,
+      "112f": 1,
+      "1134": 2,
+      "1135": 3,
+      "1136": 3,
+      "1137": 4,
+      "1138": 5,
+      "1139": 2,
+      "113b": 2,
+      "113c": 4,
+      "113d": 2,
+      "1141": 2,
+      "1142": 1,
+      "1143": 6,
+      "1144": 4,
+      "1146": 2,
+      "1147": 5,
+      "1148": 1,
+      "1149": 5,
+      "114c": 1,
+      "114d": 1,
+      "114e": 3,
+      "114f": 1,
+      "1150": 9,
+      "1153": 9,
+      "1155": 6,
+      "1159": 1,
+      "115e": 5,
+      "115f": 8,
+      "1160": 7,
+      "1161": 5,
+      "1162": 3,
+      "1165": 7,
+      "1166": 5,
+      "1168": 1,
+      "116c": 2,
+      "116e": 1,
+      "116f": 3,
+      "1170": 3,
+      "1171": 3,
+      "1172": 7,
+      "1173": 2,
+      "1174": 1,
+      "1177": 2,
+      "1178": 3,
+      "1179": 5,
+      "117d": 2,
+      "117f": 2,
+      "118": 5,
+      "1180": 3,
+      "1186": 5,
+      "1187": 3,
+      "118a": 3,
+      "118d": 2,
+      "118e": 3,
+      "1190": 3,
+      "1191": 4,
+      "1193": 5,
+      "1194": 7,
+      "1195": 1,
+      "1196": 2,
+      "119b": 11,
+      "119c": 3,
+      "119f": 6,
+      "11a0": 2,
+      "11a1": 3,
+      "11a2": 6,
+      "11a6": 2,
+      "11a7": 4,
+      "11ab": 1,
+      "11ad": 3,
+      "11ae": 3,
+      "11af": 1,
+      "11b5": 3,
+      "11b6": 2,
+      "11b7": 3,
+      "11b8": 2,
+      "11b9": 2,
+      "11ba": 1,
+      "11bb": 3,
+      "11bc": 3,
+      "11bd": 2,
+      "11be": 4,
+      "11bf": 3,
+      "11c": 1,
+      "11c0": 3,
+      "11c2": 1,
+      "11c3": 3,
+      "11c4": 2,
+      "11c5": 3,
+      "11c6": 5,
+      "11c7": 4,
+      "11c8": 4,
+      "11c9": 3,
+      "11ca": 3,
+      "11cb": 4,
+      "11cc": 3,
+      "11cd": 3,
+      "11ce": 4,
+      "11d0": 2,
+      "11d1": 3,
+      "11d2": 1,
+      "11d3": 2,
+      "11d4": 3,
+      "11d8": 1,
+      "11db": 2,
+      "11dd": 1,
+      "11e1": 2,
+      "11e2": 2,
+      "11e4": 5,
+      "11e5": 7,
+      "11e6": 1,
+      "11e9": 5,
+      "11eb": 1,
+      "11ee": 4,
+      "11f0": 1,
+      "11f1": 2,
+      "11f2": 2,
+      "11f3": 6,
+      "11f5": 2,
+      "11f9": 7,
+      "11fa": 2,
+      "11ff": 3,
+      "12": 495,
+      "120": 5,
+      "1200": 1,
+      "1201": 5,
+      "1204": 9,
+      "1205": 2,
+      "1209": 1,
+      "120a": 5,
+      "120c": 4,
+      "120e": 1,
+      "120f": 5,
+      "121": 1,
+      "1210": 4,
+      "1211": 1,
+      "1212": 1,
+      "1213": 1,
+      "1214": 1,
+      "1216": 2,
+      "1217": 1,
+      "1219": 1,
+      "121a": 1,
+      "121b": 6,
+      "121c": 1,
+      "1222": 1,
+      "1225": 6,
+      "122c": 5,
+      "122e": 1,
+      "1230": 3,
+      "1231": 5,
+      "1233": 2,
+      "123d": 7,
+      "123e": 2,
+      "1244": 1,
+      "1251": 4,
+      "1254": 1,
+      "1255": 1,
+      "125d": 3,
+      "125e": 1,
+      "1266": 1,
+      "1269": 1,
+      "126a": 1,
+      "126c": 2,
+      "126d": 1,
+      "126f": 6,
+      "1273": 2,
+      "1274": 1,
+      "1275": 1,
+      "1276": 1,
+      "1277": 1,
+      "1278": 1,
+      "1279": 1,
+      "127a": 4,
+      "127b": 1,
+      "127c": 1,
+      "127d": 1,
+      "127e": 1,
+      "127f": 1,
+      "1286": 4,
+      "1287": 9,
+      "1288": 1,
+      "1289": 1,
+      "128a": 1,
+      "129": 1,
+      "1290": 2,
+      "1291": 1,
+      "1292": 1,
+      "1293": 1,
+      "1294": 1,
+      "1295": 1,
+      "1296": 1,
+      "1298": 5,
+      "1299": 3,
+      "129a": 6,
+      "129b": 1,
+      "129c": 1,
+      "129d": 6,
+      "129e": 7,
+      "12a0": 1,
+      "12a1": 4,
+      "12a2": 1,
+      "12a3": 2,
+      "12a4": 1,
+      "12a5": 3,
+      "12a6": 1,
+      "12b": 3,
+      "12bb": 2,
+      "12c7": 5,
+      "12d": 1,
+      "12e": 7,
+      "12f9": 1,
+      "12fa": 2,
+      "12fc": 2,
+      "12fd": 5,
+      "12fe": 5,
+      "12ff": 1,
+      "13": 216,
+      "1300": 6,
+      "1302": 3,
+      "1304": 1,
+      "1305": 1,
+      "1308": 4,
+      "1309": 5,
+      "130a": 1,
+      "130d": 7,
+      "130e": 2,
+      "130f": 2,
+      "1310": 2,
+      "1311": 3,
+      "1312": 3,
+      "1313": 7,
+      "1314": 2,
+      "1315": 2,
+      "1316": 2,
+      "1317": 2,
+      "1318": 2,
+      "1319": 2,
+      "131a": 5,
+      "131c": 2,
+      "131d": 2,
+      "131e": 5,
+      "131f": 3,
+      "1321": 2,
+      "1322": 1,
+      "1323": 2,
+      "1324": 2,
+      "1326": 5,
+      "1327": 5,
+      "1328": 5,
+      "132b": 2,
+      "132d": 3,
+      "132e": 3,
+      "132f": 5,
+      "1331": 2,
+      "1332": 2,
+      "1335": 5,
+      "1336": 3,
+      "1337": 6,
+      "1338": 5,
+      "1339": 6,
+      "133a": 4,
+      "133f": 2,
+      "1342": 1,
+      "1344": 3,
+      "1345": 6,
+      "1347": 7,
+      "134d": 3,
+      "134f": 3,
+      "1353": 1,
+      "1355": 2,
+      "135b": 5,
+      "135f": 2,
+      "1363": 2,
+      "1364": 2,
+      "1367": 5,
+      "1369": 2,
+      "136a": 2,
+      "136c": 2,
+      "1372": 1,
+      "1373": 1,
+      "1375": 1,
+      "1376": 2,
+      "1379": 3,
+      "137c": 6,
+      "138": 2,
+      "1385": 1,
+      "1386": 2,
+      "139": 1,
+      "1390": 1,
+      "1391": 4,
+      "1396": 1,
+      "139a": 5,
+      "139b": 3,
+      "139e": 5,
+      "139f": 5,
+      "13a": 1,
+      "13a2": 1,
+      "13a3": 1,
+      "13a4": 2,
+      "13a5": 5,
+      "13a7": 1,
+      "13a8": 4,
+      "13a9": 2,
+      "13ab": 3,
+      "13ac": 2,
+      "13ad": 2,
+      "13ae": 2,
+      "13af": 5,
+      "13b": 1,
+      "13b0": 7,
+      "13b4": 3,
+      "13b5": 4,
+      "13b7": 3,
+      "13b8": 7,
+      "13bb": 5,
+      "13bc": 3,
+      "13bd": 4,
+      "13be": 5,
+      "13bf": 6,
+      "13c1": 3,
+      "13c2": 2,
+      "13c3": 10,
+      "13c5": 2,
+      "13c6": 1,
+      "13c7": 6,
+      "13c8": 5,
+      "13c9": 7,
+      "13cc": 1,
+      "13cf": 2,
+      "13d": 7,
+      "13d0": 1,
+      "13d1": 2,
+      "13d3": 4,
+      "13d4": 1,
+      "13d5": 9,
+      "13d6": 4,
+      "13d7": 4,
+      "13d8": 2,
+      "13d9": 2,
+      "13da": 1,
+      "13db": 5,
+      "13dc": 2,
+      "13dd": 2,
+      "13df": 2,
+      "13e": 4,
+      "13e3": 2,
+      "13e4": 2,
+      "13e5": 6,
+      "13e6": 2,
+      "13e7": 10,
+      "13e8": 5,
+      "13eb": 2,
+      "13ed": 2,
+      "13ee": 1,
+      "13f": 6,
+      "13f0": 2,
+      "13f1": 7,
+      "13f2": 5,
+      "13f3": 3,
+      "13f4": 7,
+      "13f5": 5,
+      "13f6": 5,
+      "13f7": 4,
+      "13f8": 4,
+      "13f9": 1,
+      "13fa": 2,
+      "13fb": 2,
+      "13fc": 1,
+      "13fd": 4,
+      "13fe": 6,
+      "14": 101,
+      "140": 1,
+      "1402": 2,
+      "1405": 7,
+      "1406": 1,
+      "1407": 5,
+      "1408": 3,
+      "1409": 1,
+      "140a": 5,
+      "140b": 1,
+      "140c": 3,
+      "140d": 1,
+      "140f": 4,
+      "141": 1,
+      "1412": 2,
+      "1415": 5,
+      "141b": 2,
+      "141f": 5,
+      "142": 3,
+      "1422": 1,
+      "1424": 1,
+      "1425": 10,
+      "1426": 5,
+      "1428": 1,
+      "1429": 6,
+      "142b": 1,
+      "142f": 2,
+      "1430": 5,
+      "1431": 3,
+      "1432": 5,
+      "1434": 3,
+      "143d": 9,
+      "144": 2,
+      "1448": 1,
+      "144e": 1,
+      "144f": 2,
+      "145": 2,
+      "1451": 2,
+      "1452": 8,
+      "1454": 1,
+      "145c": 3,
+      "145d": 2,
+      "145e": 3,
+      "145f": 2,
+      "146": 6,
+      "1460": 2,
+      "1462": 5,
+      "1463": 1,
+      "1464": 4,
+      "1465": 3,
+      "1466": 3,
+      "1467": 2,
+      "1468": 3,
+      "1469": 2,
+      "146a": 3,
+      "146b": 1,
+      "146c": 3,
+      "146d": 4,
+      "146e": 1,
+      "146f": 3,
+      "147": 1,
+      "1471": 2,
+      "1472": 2,
+      "1473": 3,
+      "1474": 3,
+      "1475": 4,
+      "1476": 1,
+      "1477": 4,
+      "1478": 2,
+      "1479": 5,
+      "147a": 3,
+      "147b": 2,
+      "147c": 2,
+      "147d": 4,
+      "147e": 4,
+      "147f": 4,
+      "1480": 3,
+      "1482": 7,
+      "1489": 2,
+      "148a": 1,
+      "148b": 1,
+      "148c": 1,
+      "148d": 2,
+      "1490": 8,
+      "1491": 4,
+      "1493": 3,
+      "1494": 5,
+      "1499": 6,
+      "149a": 6,
+      "149b": 1,
+      "149c": 1,
+      "149d": 4,
+      "14a": 2,
+      "14a0": 2,
+      "14a2": 4,
+      "14a8": 2,
+      "14a9": 4,
+      "14aa": 2,
+      "14ab": 5,
+      "14ac": 3,
+      "14ad": 4,
+      "14ae": 3,
+      "14b": 1,
+      "14b3": 1,
+      "14d": 3,
+      "14e": 6,
+      "14f": 8,
+      "15": 279,
+      "150": 1,
+      "152": 4,
+      "153": 4,
+      "154": 8,
+      "155": 1,
+      "156": 1,
+      "157": 1,
+      "158": 1,
+      "159": 2,
+      "15b": 1,
+      "16": 273,
+      "162": 1,
+      "163": 2,
+      "164": 1,
+      "165": 1,
+      "166": 9,
+      "167": 1,
+      "168": 1,
+      "169": 4,
+      "16a": 1,
+      "16b": 1,
+      "16f": 1,
+      "17": 270,
+      "170": 1,
+      "171": 8,
+      "172": 7,
+      "173": 1,
+      "175": 1,
+      "176": 1,
+      "177": 3,
+      "178": 6,
+      "179": 1,
+      "17a": 8,
+      "17b": 2,
+      "17c": 1,
+      "17d": 5,
+      "17e": 1,
+      "17f": 1,
+      "18": 174,
+      "180": 1,
+      "181": 7,
+      "183": 3,
+      "184": 3,
+      "186": 1,
+      "187": 1,
+      "19": 400,
+      "193": 1,
+      "1a": 148,
+      "1b": 148,
+      "1b1": 2,
+      "1bb": 8,
+      "1c": 67,
+      "1c4": 3,
+      "1c6": 8,
+      "1c8": 1,
+      "1ca": 5,
+      "1d": 134,
+      "1d7": 2,
+      "1db": 2,
+      "1df": 2,
+      "1e": 124,
+      "1e1": 3,
+      "1e2": 6,
+      "1e3": 5,
+      "1e4": 1,
+      "1e5": 3,
+      "1e6": 3,
+      "1e8": 4,
+      "1eb": 1,
+      "1ec": 2,
+      "1ed": 3,
+      "1f": 122,
+      "1f0": 3,
+      "1f1": 2,
+      "1f2": 2,
+      "1f3": 5,
+      "1f4": 2,
+      "1f5": 3,
+      "1f6": 8,
+      "1f8": 8,
+      "1f9": 1,
+      "1fa": 3,
+      "1fb": 10,
+      "1fe": 2,
+      "2": 6840,
+      "20": 360,
+      "200": 1,
+      "203": 2,
+      "204": 1,
+      "207": 1,
+      "208": 3,
+      "20a": 1,
+      "20b": 3,
+      "20d": 6,
+      "20e": 5,
+      "20f": 7,
+      "21": 116,
+      "212": 2,
+      "213": 3,
+      "214": 1,
+      "215": 4,
+      "217": 2,
+      "218": 2,
+      "219": 1,
+      "21a": 2,
+      "21b": 4,
+      "21d": 2,
+      "21e": 1,
+      "21f": 5,
+      "22": 285,
+      "221": 3,
+      "224": 7,
+      "226": 1,
+      "228": 1,
+      "22a": 3,
+      "22b": 4,
+      "22c": 1,
+      "22d": 2,
+      "22e": 2,
+      "22f": 1,
+      "23": 324,
+      "230": 2,
+      "231": 3,
+      "233": 1,
+      "234": 3,
+      "235": 3,
+      "236": 1,
+      "237": 2,
+      "238": 10,
+      "239": 8,
+      "23b": 1,
+      "23d": 2,
+      "24": 324,
+      "240": 2,
+      "244": 2,
+      "24e": 1,
+      "25": 306,
+      "250": 2,
+      "251": 1,
+      "253": 3,
+      "254": 6,
+      "256": 4,
+      "259": 9,
+      "25b": 3,
+      "25f": 1,
+      "26": 88,
+      "267": 1,
+      "269": 1,
+      "26a": 4,
+      "26f": 1,
+      "27": 84,
+      "271": 4,
+      "276": 6,
+      "279": 2,
+      "27d": 5,
+      "28": 200,
+      "280": 2,
+      "286": 4,
+      "28a": 2,
+      "28c": 5,
+      "29": 72,
+      "291": 1,
+      "295": 3,
+      "296": 6,
+      "297": 1,
+      "299": 2,
+      "29a": 2,
+      "29c": 6,
+      "29d": 7,
+      "29e": 1,
+      "29f": 5,
+      "2a": 175,
+      "2a0": 9,
+      "2a2": 3,
+      "2a4": 2,
+      "2a5": 1,
+      "2a9": 1,
+      "2aa": 6,
+      "2ad": 3,
+      "2ae": 1,
+      "2af": 2,
+      "2b": 160,
+      "2b0": 6,
+      "2b2": 5,
+      "2b3": 1,
+      "2b5": 1,
+      "2b6": 5,
+      "2b7": 3,
+      "2b9": 1,
+      "2bc": 7,
+      "2bd": 5,
+      "2be": 2,
+      "2bf": 3,
+      "2c": 93,
+      "2c1": 2,
+      "2c2": 5,
+      "2c3": 2,
+      "2c4": 2,
+      "2c6": 4,
+      "2c7": 3,
+      "2c9": 3,
+      "2ca": 1,
+      "2cb": 5,
+      "2ce": 1,
+      "2cf": 1,
+      "2d": 168,
+      "2d0": 2,
+      "2d1": 2,
+      "2d2": 4,
+      "2d3": 7,
+      "2d5": 1,
+      "2d6": 4,
+      "2dc": 2,
+      "2dd": 2,
+      "2de": 2,
+      "2df": 2,
+      "2e": 104,
+      "2e0": 2,
+      "2e1": 3,
+      "2e2": 4,
+      "2e3": 5,
+      "2e4": 3,
+      "2e6": 1,
+      "2e7": 9,
+      "2e8": 6,
+      "2eb": 5,
+      "2ee": 1,
+      "2ef": 2,
+      "2f": 104,
+      "2f0": 1,
+      "2f1": 3,
+      "2f3": 4,
+      "2f4": 6,
+      "2f5": 3,
+      "2f6": 2,
+      "2f8": 2,
+      "2f9": 3,
+      "2fa": 4,
+      "2fc": 5,
+      "2ff": 5,
+      "3": 9875,
+      "30": 96,
+      "306": 6,
+      "307": 1,
+      "308": 5,
+      "30a": 5,
+      "30b": 2,
+      "30c": 5,
+      "30d": 3,
+      "30e": 1,
+      "30f": 5,
+      "31": 120,
+      "310": 6,
+      "312": 3,
+      "313": 1,
+      "314": 6,
+      "31b": 1,
+      "31d": 1,
+      "32": 110,
+      "320": 2,
+      "321": 2,
+      "322": 2,
+      "323": 3,
+      "329": 7,
+      "32b": 2,
+      "32e": 1,
+      "32f": 8,
+      "33": 22,
+      "33c": 4,
+      "33e": 6,
+      "33f": 1,
+      "34": 44,
+      "340": 2,
+      "341": 3,
+      "342": 2,
+      "343": 3,
+      "344": 4,
+      "345": 3,
+      "346": 3,
+      "347": 3,
+      "348": 2,
+      "349": 2,
+      "34a": 3,
+      "34c": 3,
+      "34d": 5,
+      "34e": 2,
+      "34f": 5,
+      "35": 132,
+      "350": 3,
+      "351": 3,
+      "352": 3,
+      "353": 3,
+      "354": 6,
+      "355": 3,
+      "356": 3,
+      "357": 2,
+      "358": 3,
+      "359": 6,
+      "35c": 1,
+      "36": 20,
+      "363": 4,
+      "364": 2,
+      "365": 2,
+      "366": 2,
+      "367": 2,
+      "36a": 1,
+      "36d": 3,
+      "36e": 6,
+      "37": 18,
+      "371": 4,
+      "374": 1,
+      "376": 4,
+      "378": 3,
+      "379": 3,
+      "37c": 5,
+      "37f": 5,
+      "38": 34,
+      "381": 4,
+      "382": 4,
+      "383": 2,
+      "384": 5,
+      "386": 5,
+      "389": 1,
+      "38a": 1,
+      "38b": 3,
+      "38c": 7,
+      "38d": 7,
+      "38e": 1,
+      "39": 80,
+      "390": 4,
+      "391": 4,
+      "392": 1,
+      "393": 7,
+      "394": 1,
+      "395": 1,
+      "396": 1,
+      "397": 3,
+      "398": 1,
+      "399": 1,
+      "39a": 3,
+      "39b": 1,
+      "39c": 1,
+      "39d": 5,
+      "3a": 80,
+      "3a3": 1,
+      "3a5": 5,
+      "3ac": 5,
+      "3b": 30,
+      "3b9": 5,
+      "3bd": 1,
+      "3c": 75,
+      "3c4": 2,
+      "3c6": 8,
+      "3cb": 13,
+      "3cd": 1,
+      "3cf": 4,
+      "3d4": 5,
+      "3dd": 1,
+      "3de": 2,
+      "3df": 1,
+      "3e": 42,
+      "3e0": 1,
+      "3e1": 3,
+      "3e5": 1,
+      "3e6": 1,
+      "3e7": 3,
+      "3e8": 1,
+      "3e9": 1,
+      "3ea": 8,
+      "3eb": 1,
+      "3ed": 1,
+      "3ee": 1,
+      "3ef": 7,
+      "3f": 13,
+      "3f0": 2,
+      "3f1": 2,
+      "3f2": 3,
+      "3f3": 1,
+      "3f4": 3,
+      "3fc": 1,
+      "3fd": 1,
+      "3fe": 1,
+      "3ff": 1,
+      "4": 2534,
+      "40": 48,
+      "400": 3,
+      "401": 1,
+      "402": 1,
+      "403": 8,
+      "404": 3,
+      "405": 1,
+      "407": 1,
+      "408": 1,
+      "409": 1,
+      "40e": 7,
+      "40f": 1,
+      "410": 2,
+      "411": 3,
+      "412": 1,
+      "413": 5,
+      "414": 1,
+      "415": 1,
+      "416": 2,
+      "418": 1,
+      "419": 4,
+      "41a": 1,
+      "41b": 7,
+      "42": 36,
+      "43": 44,
+      "435": 2,
+      "44": 30,
+      "45": 45,
+      "450": 2,
+      "453": 1,
+      "45e": 1,
+      "46": 54,
+      "461": 2,
+      "462": 2,
+      "465": 1,
+      "466": 2,
+      "467": 4,
+      "468": 1,
+      "469": 2,
+      "46a": 1,
+      "46b": 6,
+      "46d": 9,
+      "47": 45,
+      "470": 1,
+      "471": 2,
+      "472": 5,
+      "473": 4,
+      "474": 2,
+      "476": 3,
+      "477": 5,
+      "478": 3,
+      "479": 7,
+      "47b": 2,
+      "47e": 7,
+      "47f": 7,
+      "48": 18,
+      "480": 3,
+      "481": 8,
+      "482": 4,
+      "483": 4,
+      "485": 3,
+      "486": 7,
+      "487": 2,
+      "489": 2,
+      "48a": 1,
+      "48b": 5,
+      "48f": 1,
+      "49": 48,
+      "490": 5,
+      "491": 1,
+      "494": 2,
+      "495": 2,
+      "496": 3,
+      "497": 5,
+      "498": 3,
+      "499": 6,
+      "49b": 1,
+      "49d": 5,
+      "49e": 5,
+      "4a": 16,
+      "4a0": 5,
+      "4a1": 2,
+      "4a2": 5,
+      "4a5": 2,
+      "4a6": 1,
+      "4ab": 1,
+      "4ac": 3,
+      "4ae": 3,
+      "4af": 1,
+      "4b": 16,
+      "4b1": 3,
+      "4b3": 1,
+      "4b4": 5,
+      "4b5": 2,
+      "4b7": 4,
+      "4b8": 2,
+      "4b9": 3,
+      "4ba": 4,
+      "4bb": 4,
+      "4bc": 1,
+      "4bd": 5,
+      "4c": 40,
+      "4c2": 9,
+      "4c6": 1,
+      "4c8": 2,
+      "4ca": 1,
+      "4cb": 4,
+      "4ce": 2,
+      "4d": 35,
+      "4d0": 1,
+      "4d8": 4,
+      "4db": 2,
+      "4de": 6,
+      "4e": 21,
+      "4e0": 1,
+      "4e1": 2,
+      "4e3": 3,
+      "4e4": 2,
+      "4e5": 2,
+      "4e6": 2,
+      "4e7": 2,
+      "4e9": 6,
+      "4f": 7,
+      "4f7": 5,
+      "4fc": 7,
+      "4fd": 6,
+      "5": 968,
+      "50": 35,
+      "504": 1,
+      "51": 35,
+      "51a": 8,
+      "51c": 1,
+      "51e": 6,
+      "51f": 2,
+      "52": 12,
+      "520": 2,
+      "521": 2,
+      "522": 2,
+      "523": 1,
+      "524": 1,
+      "525": 4,
+      "526": 3,
+      "528": 2,
+      "52a": 3,
+      "52b": 2,
+      "52d": 2,
+      "52f": 2,
+      "53": 6,
+      "530": 1,
+      "531": 6,
+      "532": 7,
+      "533": 6,
+      "534": 1,
+      "535": 6,
+      "53b": 4,
+      "53c": 2,
+      "53d": 5,
+      "53f": 5,
+      "54": 12,
+      "542": 2,
+      "544": 2,
+      "548": 7,
+      "54a": 2,
+      "54b": 2,
+      "54c": 4,
+      "54d": 3,
+      "55": 42,
+      "551": 2,
+      "552": 1,
+      "554": 1,
+      "557": 5,
+      "558": 3,
+      "559": 1,
+      "55b": 7,
+      "55c": 4,
+      "55d": 4,
+      "55e": 2,
+      "55f": 2,
+      "56": 24,
+      "560": 5,
+      "561": 1,
+      "563": 6,
+      "564": 3,
+      "56a": 5,
+      "56f": 5,
+      "57": 24,
+      "570": 6,
+      "571": 1,
+      "574": 8,
+      "575": 5,
+      "576": 2,
+      "577": 8,
+      "578": 1,
+      "579": 2,
+      "57a": 8,
+      "57b": 3,
+      "57e": 5,
+      "58": 18,
+      "580": 3,
+      "581": 7,
+      "583": 7,
+      "584": 6,
+      "585": 1,
+      "586": 5,
+      "587": 6,
+      "589": 2,
+      "58c": 1,
+      "59": 6,
+      "590": 1,
+      "593": 7,
+      "594": 5,
+      "595": 5,
+      "598": 3,
+      "599": 2,
+      "59b": 2,
+      "59e": 2,
+      "59f": 2,
+      "5a": 18,
+      "5a0": 3,
+      "5a5": 3,
+      "5a8": 1,
+      "5aa": 7,
+      "5ac": 1,
+      "5ad": 2,
+      "5af": 2,
+      "5b": 6,
+      "5b2": 1,
+      "5b3": 1,
+      "5b9": 5,
+      "5be": 1,
+      "5c": 12,
+      "5c3": 2,
+      "5d": 10,
+      "5d2": 3,
+      "5d4": 1,
+      "5d5": 4,
+      "5da": 2,
+      "5df": 5,
+      "5e": 5,
+      "5f": 10,
+      "5f6": 2,
+      "5fd": 3,
+      "5fe": 1,
+      "5ff": 3,
+      "6": 1790,
+      "60": 10,
+      "600": 3,
+      "601": 4,
+      "602": 6,
+      "605": 1,
+      "606": 4,
+      "607": 1,
+      "608": 3,
+      "609": 2,
+      "60b": 5,
+      "60d": 4,
+      "60f": 3,
+      "61": 25,
+      "611": 2,
+      "612": 1,
+      "613": 1,
+      "614": 4,
+      "615": 2,
+      "617": 6,
+      "618": 5,
+      "619": 6,
+      "61a": 2,
+      "61b": 7,
+      "61d": 1,
+      "61e": 3,
+      "61f": 3,
+      "62": 20,
+      "620": 8,
+      "621": 3,
+      "623": 1,
+      "624": 1,
+      "627": 5,
+      "62c": 5,
+      "62e": 2,
+      "63": 10,
+      "630": 2,
+      "632": 3,
+      "633": 2,
+      "634": 4,
+      "635": 4,
+      "636": 2,
+      "637": 5,
+      "638": 5,
+      "63a": 6,
+      "63f": 5,
+      "64": 20,
+      "640": 1,
+      "641": 3,
+      "642": 1,
+      "643": 9,
+      "645": 7,
+      "646": 3,
+      "647": 2,
+      "64b": 2,
+      "64c": 3,
+      "64d": 1,
+      "64e": 2,
+      "65": 20,
+      "652": 2,
+      "653": 5,
+      "654": 1,
+      "655": 2,
+      "656": 2,
+      "657": 3,
+      "658": 1,
+      "65b": 2,
+      "65c": 9,
+      "65d": 2,
+      "65e": 9,
+      "66": 35,
+      "660": 4,
+      "661": 1,
+      "662": 3,
+      "664": 2,
+      "665": 2,
+      "66b": 3,
+      "66d": 2,
+      "67": 25,
+      "670": 1,
+      "672": 3,
+      "673": 1,
+      "674": 1,
+      "675": 3,
+      "67a": 3,
+      "68": 25,
+      "685": 1,
+      "686": 1,
+      "687": 2,
+      "688": 2,
+      "69": 20,
+      "691": 3,
+      "692": 4,
+      "698": 5,
+      "6a": 28,
+      "6a3": 1,
+      "6a4": 1,
+      "6a9": 1,
+      "6aa": 7,
+      "6ab": 5,
+      "6af": 5,
+      "6b": 7,
+      "6b1": 3,
+      "6b2": 3,
+      "6b3": 2,
+      "6b4": 3,
+      "6b6": 2,
+      "6b8": 2,
+      "6b9": 6,
+      "6bb": 6,
+      "6bc": 1,
+      "6bd": 7,
+      "6be": 3,
+      "6bf": 1,
+      "6c": 20,
+      "6c0": 3,
+      "6c2": 3,
+      "6c3": 3,
+      "6c4": 10,
+      "6c6": 2,
+      "6cf": 2,
+      "6d": 28,
+      "6d1": 1,
+      "6d4": 7,
+      "6d7": 3,
+      "6d9": 7,
+      "6da": 6,
+      "6db": 3,
+      "6dd": 2,
+      "6de": 5,
+      "6e": 12,
+      "6e0": 3,
+      "6e2": 3,
+      "6e5": 6,
+      "6e6": 2,
+      "6ec": 1,
+      "6ed": 2,
+      "6ee": 2,
+      "6ef": 2,
+      "6f": 12,
+      "6f0": 2,
+      "6f1": 2,
+      "6f2": 3,
+      "6f3": 1,
+      "6f4": 2,
+      "6f5": 3,
+      "6f6": 3,
+      "6f7": 4,
+      "6f9": 5,
+      "6fa": 4,
+      "6fb": 7,
+      "6fc": 3,
+      "6fd": 2,
+      "6fe": 4,
+      "6ff": 2,
+      "7": 893,
+      "70": 8,
+      "700": 2,
+      "701": 1,
+      "702": 4,
+      "706": 5,
+      "707": 5,
+      "70a": 1,
+      "70b": 4,
+      "70c": 2,
+      "70e": 2,
+      "71": 20,
+      "710": 6,
+      "712": 2,
+      "713": 3,
+      "714": 5,
+      "716": 2,
+      "717": 2,
+      "71b": 8,
+      "71c": 3,
+      "71d": 4,
+      "71f": 9,
+      "72": 20,
+      "723": 8,
+      "724": 1,
+      "725": 7,
+      "72a": 1,
+      "72c": 5,
+      "73": 12,
+      "733": 3,
+      "734": 1,
+      "739": 2,
+      "73a": 1,
+      "73c": 5,
+      "74": 12,
+      "743": 2,
+      "747": 4,
+      "748": 3,
+      "749": 5,
+      "74a": 2,
+      "74b": 4,
+      "74c": 3,
+      "74d": 3,
+      "74e": 3,
+      "74f": 3,
+      "75": 8,
+      "750": 3,
+      "751": 1,
+      "752": 3,
+      "753": 2,
+      "754": 3,
+      "755": 2,
+      "756": 3,
+      "757": 2,
+      "758": 2,
+      "759": 3,
+      "75a": 2,
+      "75b": 4,
+      "75c": 2,
+      "75d": 3,
+      "75e": 6,
+      "76": 8,
+      "764": 1,
+      "765": 2,
+      "766": 2,
+      "768": 2,
+      "769": 5,
+      "76a": 4,
+      "76c": 1,
+      "76d": 5,
+      "76f": 8,
+      "77": 32,
+      "774": 1,
+      "775": 2,
+      "777": 4,
+      "778": 2,
+      "779": 4,
+      "77a": 1,
+      "77d": 2,
+      "780": 5,
+      "782": 1,
+      "783": 3,
+      "784": 6,
+      "785": 3,
+      "786": 2,
+      "787": 2,
+      "78a": 3,
+      "78b": 3,
+      "78e": 5,
+      "79": 4,
+      "790": 1,
+      "791": 3,
+      "793": 2,
+      "794": 1,
+      "795": 1,
+      "796": 2,
+      "797": 1,
+      "798": 2,
+      "799": 1,
+      "79a": 1,
+      "79b": 4,
+      "79c": 1,
+      "79d": 4,
+      "79e": 8,
+      "7a": 12,
+      "7a8": 2,
+      "7ac": 4,
+      "7af": 1,
+      "7b": 6,
+      "7bf": 3,
+      "7c": 15,
+      "7c0": 1,
+      "7c2": 2,
+      "7c4": 1,
+      "7c6": 1,
+      "7ca": 1,
+      "7cc": 2,
+      "7cd": 1,
+      "7d": 6,
+      "7d2": 3,
+      "7d6": 1,
+      "7d9": 1,
+      "7db": 5,
+      "7e": 12,
+      "7e1": 1,
+      "7e5": 2,
+      "7ec": 7,
+      "7ed": 4,
+      "7ee": 1,
+      "7ef": 1,
+      "7f": 9,
+      "7f0": 1,
+      "7f1": 1,
+      "7f2": 1,
+      "7f4": 1,
+      "7f5": 3,
+      "7f6": 1,
+      "7f7": 2,
+      "7f8": 1,
+      "7fb": 1,
+      "7fc": 1,
+      "7fd": 1,
+      "7ff": 2,
+      "8": 2133,
+      "80": 9,
+      "800": 1,
+      "801": 1,
+      "802": 8,
+      "804": 1,
+      "805": 7,
+      "806": 1,
+      "807": 3,
+      "808": 1,
+      "809": 1,
+      "80a": 5,
+      "80c": 1,
+      "81": 6,
+      "812": 4,
+      "813": 2,
+      "814": 1,
+      "815": 7,
+      "816": 1,
+      "817": 1,
+      "818": 2,
+      "819": 7,
+      "81e": 1,
+      "81f": 1,
+      "82": 6,
+      "820": 1,
+      "821": 2,
+      "822": 3,
+      "823": 2,
+      "824": 1,
+      "825": 7,
+      "826": 1,
+      "827": 2,
+      "828": 1,
+      "829": 1,
+      "82a": 1,
+      "82b": 2,
+      "82c": 3,
+      "82d": 1,
+      "82e": 3,
+      "83": 15,
+      "832": 5,
+      "833": 5,
+      "83f": 2,
+      "84": 9,
+      "84e": 1,
+      "85": 3,
+      "850": 3,
+      "859": 1,
+      "86": 3,
+      "863": 2,
+      "87": 12,
+      "879": 3,
+      "88": 18,
+      "883": 1,
+      "884": 2,
+      "885": 5,
+      "887": 2,
+      "889": 2,
+      "88a": 2,
+      "88d": 9,
+      "88e": 2,
+      "88f": 1,
+      "89": 15,
+      "890": 5,
+      "892": 3,
+      "893": 6,
+      "894": 7,
+      "896": 2,
+      "897": 1,
+      "898": 3,
+      "899": 1,
+      "89a": 4,
+      "89b": 4,
+      "89c": 4,
+      "89d": 2,
+      "8a": 3,
+      "8a0": 5,
+      "8a2": 6,
+      "8a3": 2,
+      "8a4": 2,
+      "8a5": 4,
+      "8a6": 5,
+      "8a7": 8,
+      "8a8": 5,
+      "8ac": 1,
+      "8af": 3,
+      "8b": 6,
+      "8b0": 2,
+      "8b2": 5,
+      "8b3": 2,
+      "8b4": 3,
+      "8b7": 5,
+      "8b8": 3,
+      "8b9": 1,
+      "8ba": 2,
+      "8bb": 3,
+      "8bc": 4,
+      "8bd": 2,
+      "8be": 2,
+      "8bf": 1,
+      "8c": 6,
+      "8c0": 1,
+      "8c1": 9,
+      "8c3": 1,
+      "8c4": 5,
+      "8c5": 3,
+      "8ca": 2,
+      "8cb": 2,
+      "8cc": 4,
+      "8ce": 8,
+      "8cf": 2,
+      "8d": 15,
+      "8da": 2,
+      "8dc": 3,
+      "8de": 1,
+      "8e": 18,
+      "8e2": 7,
+      "8e8": 4,
+      "8eb": 2,
+      "8ed": 2,
+      "8f": 3,
+      "8f7": 2,
+      "8fa": 4,
+      "9": 3456,
+      "90": 9,
+      "900": 6,
+      "908": 5,
+      "909": 1,
+      "90a": 6,
+      "90b": 3,
+      "90c": 3,
+      "90d": 2,
+      "91": 12,
+      "913": 6,
+      "914": 2,
+      "915": 3,
+      "918": 1,
+      "91a": 1,
+      "91b": 1,
+      "91f": 2,
+      "92": 6,
+      "920": 3,
+      "921": 4,
+      "922": 3,
+      "923": 2,
+      "924": 3,
+      "928": 5,
+      "92c": 7,
+      "92d": 2,
+      "92e": 3,
+      "92f": 1,
+      "93": 4,
+      "931": 2,
+      "932": 1,
+      "936": 2,
+      "938": 5,
+      "939": 2,
+      "93b": 1,
+      "93c": 1,
+      "93d": 6,
+      "93e": 2,
+      "93f": 2,
+      "94": 4,
+      "942": 3,
+      "943": 5,
+      "944": 3,
+      "945": 5,
+      "946": 2,
+      "947": 3,
+      "948": 4,
+      "94b": 5,
+      "94d": 5,
+      "94e": 5,
+      "94f": 4,
+      "95": 3,
+      "950": 5,
+      "951": 2,
+      "952": 9,
+      "958": 2,
+      "959": 2,
+      "95a": 2,
+      "95b": 2,
+      "95c": 2,
+      "95f": 2,
+      "96": 12,
+      "960": 2,
+      "962": 5,
+      "963": 5,
+      "964": 6,
+      "967": 5,
+      "969": 6,
+      "96a": 2,
+      "96c": 3,
+      "96d": 3,
+      "96e": 2,
+      "96f": 3,
+      "97": 14,
+      "970": 4,
+      "971": 2,
+      "972": 4,
+      "973": 1,
+      "974": 6,
+      "975": 1,
+      "976": 6,
+      "97d": 5,
+      "97f": 2,
+      "98": 2,
+      "986": 5,
+      "987": 6,
+      "988": 5,
+      "98a": 2,
+      "98b": 3,
+      "98d": 9,
+      "98e": 2,
+      "98f": 5,
+      "99": 6,
+      "990": 2,
+      "991": 5,
+      "992": 6,
+      "993": 6,
+      "994": 8,
+      "995": 6,
+      "997": 1,
+      "999": 5,
+      "99a": 3,
+      "99b": 2,
+      "9a": 6,
+      "9a3": 2,
+      "9a4": 2,
+      "9aa": 2,
+      "9ab": 2,
+      "9ac": 2,
+      "9af": 2,
+      "9b": 2,
+      "9b7": 3,
+      "9b9": 3,
+      "9bb": 3,
+      "9be": 1,
+      "9c": 4,
+      "9c0": 3,
+      "9c1": 3,
+      "9c2": 1,
+      "9c3": 5,
+      "9c4": 2,
+      "9c5": 4,
+      "9c6": 2,
+      "9c7": 1,
+      "9c8": 4,
+      "9c9": 3,
+      "9ca": 4,
+      "9cb": 3,
+      "9cd": 4,
+      "9ce": 2,
+      "9cf": 3,
+      "9d": 10,
+      "9d0": 3,
+      "9d1": 2,
+      "9d2": 5,
+      "9d3": 4,
+      "9d4": 4,
+      "9d5": 4,
+      "9d6": 2,
+      "9d7": 3,
+      "9d8": 3,
+      "9d9": 3,
+      "9da": 3,
+      "9db": 4,
+      "9dc": 2,
+      "9dd": 3,
+      "9de": 2,
+      "9df": 5,
+      "9e": 4,
+      "9e0": 2,
+      "9e1": 2,
+      "9e2": 2,
+      "9e3": 5,
+      "9ea": 2,
+      "9eb": 2,
+      "9ed": 4,
+      "9ee": 3,
+      "9ef": 3,
+      "9f": 4,
+      "9f0": 2,
+      "9f1": 7,
+      "9f2": 3,
+      "9f3": 10,
+      "9f6": 1,
+      "9f7": 6,
+      "9f9": 3,
+      "9fd": 1,
+      "9ff": 2,
+      "<missing>": 57,
+      "a": 437,
+      "a0": 2,
+      "a02": 2,
+      "a03": 5,
+      "a06": 6,
+      "a07": 2,
+      "a09": 5,
+      "a0d": 7,
+      "a0f": 3,
+      "a1": 4,
+      "a10": 2,
+      "a12": 5,
+      "a14": 1,
+      "a15": 2,
+      "a16": 3,
+      "a1a": 5,
+      "a1b": 3,
+      "a1d": 2,
+      "a1e": 2,
+      "a2": 6,
+      "a20": 2,
+      "a21": 3,
+      "a22": 1,
+      "a23": 2,
+      "a24": 1,
+      "a25": 1,
+      "a26": 1,
+      "a27": 1,
+      "a28": 1,
+      "a29": 1,
+      "a2a": 3,
+      "a2b": 1,
+      "a2e": 1,
+      "a3": 6,
+      "a30": 3,
+      "a39": 4,
+      "a3c": 5,
+      "a3f": 1,
+      "a4": 10,
+      "a41": 3,
+      "a45": 1,
+      "a5": 2,
+      "a52": 5,
+      "a55": 5,
+      "a58": 1,
+      "a5b": 7,
+      "a5d": 7,
+      "a5f": 1,
+      "a6": 6,
+      "a60": 5,
+      "a65": 1,
+      "a6a": 9,
+      "a6b": 1,
+      "a6c": 9,
+      "a6e": 2,
+      "a6f": 3,
+      "a7": 8,
+      "a70": 1,
+      "a71": 2,
+      "a73": 2,
+      "a74": 2,
+      "a76": 5,
+      "a77": 1,
+      "a78": 1,
+      "a79": 1,
+      "a7a": 2,
+      "a7b": 1,
+      "a7c": 1,
+      "a7d": 3,
+      "a7e": 1,
+      "a7f": 1,
+      "a8": 8,
+      "a80": 1,
+      "a81": 1,
+      "a82": 1,
+      "a83": 1,
+      "a88": 1,
+      "a89": 1,
+      "a8a": 1,
+      "a8b": 2,
+      "a8c": 2,
+      "a8d": 3,
+      "a8e": 1,
+      "a8f": 7,
+      "a9": 6,
+      "a91": 3,
+      "a92": 1,
+      "a93": 1,
+      "a94": 1,
+      "a98": 1,
+      "a99": 2,
+      "a9a": 2,
+      "a9b": 2,
+      "a9c": 9,
+      "a9d": 3,
+      "a9e": 1,
+      "a9f": 12,
+      "aa": 4,
+      "aa0": 7,
+      "aa3": 1,
+      "aa4": 1,
+      "aa6": 1,
+      "aa7": 1,
+      "aa8": 2,
+      "aa9": 1,
+      "aaa": 8,
+      "aab": 1,
+      "aac": 1,
+      "aad": 1,
+      "ab": 12,
+      "aba": 1,
+      "ac": 14,
+      "ad": 12,
+      "ad3": 1,
+      "ad4": 1,
+      "ae": 10,
+      "ae3": 6,
+      "af": 14,
+      "af6": 5,
+      "afc": 1,
+      "afd": 4,
+      "afe": 2,
+      "aff": 2,
+      "b": 1065,
+      "b0": 6,
+      "b00": 3,
+      "b01": 6,
+      "b02": 2,
+      "b04": 3,
+      "b05": 2,
+      "b0b": 1,
+      "b0c": 3,
+      "b0d": 7,
+      "b0e": 2,
+      "b0f": 6,
+      "b1": 8,
+      "b10": 5,
+      "b11": 5,
+      "b12": 4,
+      "b14": 2,
+      "b15": 4,
+      "b17": 3,
+      "b18": 1,
+      "b19": 4,
+      "b1a": 1,
+      "b1f": 3,
+      "b2": 6,
+      "b20": 5,
+      "b21": 1,
+      "b23": 2,
+      "b24": 2,
+      "b25": 3,
+      "b26": 2,
+      "b27": 1,
+      "b29": 2,
+      "b2a": 1,
+      "b2b": 1,
+      "b2c": 1,
+      "b2d": 5,
+      "b2e": 1,
+      "b2f": 2,
+      "b3": 8,
+      "b31": 3,
+      "b32": 1,
+      "b33": 3,
+      "b34": 7,
+      "b37": 5,
+      "b39": 2,
+      "b3b": 2,
+      "b3c": 8,
+      "b3e": 5,
+      "b3f": 5,
+      "b4": 6,
+      "b40": 2,
+      "b43": 2,
+      "b45": 2,
+      "b46": 6,
+      "b47": 1,
+      "b48": 4,
+      "b4a": 7,
+      "b4b": 5,
+      "b4d": 2,
+      "b5": 6,
+      "b52": 3,
+      "b55": 6,
+      "b56": 1,
+      "b57": 1,
+      "b5b": 5,
+      "b5d": 5,
+      "b5f": 2,
+      "b6": 10,
+      "b60": 4,
+      "b69": 6,
+      "b6a": 6,
+      "b6d": 2,
+      "b6e": 5,
+      "b7": 6,
+      "b70": 2,
+      "b71": 4,
+      "b73": 2,
+      "b75": 1,
+      "b76": 2,
+      "b77": 2,
+      "b79": 5,
+      "b7a": 2,
+      "b7c": 5,
+      "b8": 4,
+      "b9": 20,
+      "b98": 1,
+      "b99": 1,
+      "b9b": 3,
+      "b9c": 2,
+      "b9f": 4,
+      "ba": 4,
+      "ba4": 4,
+      "ba5": 2,
+      "ba8": 3,
+      "ba9": 5,
+      "baf": 5,
+      "bb": 6,
+      "bb1": 2,
+      "bb2": 1,
+      "bb9": 2,
+      "bba": 1,
+      "bbc": 10,
+      "bbd": 3,
+      "bbe": 1,
+      "bc": 14,
+      "bc2": 5,
+      "bc6": 9,
+      "bc7": 2,
+      "bc9": 3,
+      "bcb": 4,
+      "bcc": 2,
+      "bcd": 3,
+      "bce": 1,
+      "bcf": 1,
+      "bd": 20,
+      "bd0": 1,
+      "bd2": 3,
+      "bd5": 2,
+      "bda": 2,
+      "bdb": 3,
+      "bdc": 3,
+      "bdd": 5,
+      "bde": 5,
+      "bdf": 2,
+      "be": 4,
+      "be1": 4,
+      "be2": 1,
+      "be3": 8,
+      "be4": 1,
+      "be5": 2,
+      "be6": 3,
+      "be8": 5,
+      "beb": 3,
+      "bed": 5,
+      "bee": 2,
+      "bef": 4,
+      "bf": 12,
+      "bf0": 2,
+      "bf1": 2,
+      "bf2": 6,
+      "bf3": 5,
+      "bf4": 2,
+      "bf5": 7,
+      "bf6": 5,
+      "bf7": 5,
+      "bf8": 2,
+      "bf9": 4,
+      "bfa": 6,
+      "bfb": 1,
+      "bfc": 2,
+      "bfd": 3,
+      "c": 1685,
+      "c0": 4,
+      "c00": 2,
+      "c01": 2,
+      "c02": 3,
+      "c04": 8,
+      "c06": 2,
+      "c07": 3,
+      "c08": 4,
+      "c09": 3,
+      "c0b": 5,
+      "c0c": 8,
+      "c0e": 2,
+      "c0f": 3,
+      "c1": 20,
+      "c13": 1,
+      "c15": 2,
+      "c17": 7,
+      "c1a": 2,
+      "c1d": 1,
+      "c1e": 10,
+      "c1f": 7,
+      "c2": 6,
+      "c20": 3,
+      "c22": 2,
+      "c23": 1,
+      "c24": 2,
+      "c25": 1,
+      "c26": 1,
+      "c2a": 3,
+      "c2b": 2,
+      "c2c": 3,
+      "c2d": 7,
+      "c3": 10,
+      "c34": 6,
+      "c35": 1,
+      "c36": 5,
+      "c37": 1,
+      "c3c": 1,
+      "c4": 8,
+      "c40": 1,
+      "c41": 5,
+      "c44": 5,
+      "c46": 7,
+      "c4a": 2,
+      "c4b": 2,
+      "c4c": 2,
+      "c4d": 2,
+      "c4e": 2,
+      "c5": 6,
+      "c5c": 5,
+      "c5d": 3,
+      "c5e": 4,
+      "c5f": 4,
+      "c6": 4,
+      "c60": 3,
+      "c61": 3,
+      "c62": 3,
+      "c63": 4,
+      "c64": 4,
+      "c65": 3,
+      "c66": 2,
+      "c67": 5,
+      "c68": 3,
+      "c6a": 3,
+      "c6b": 3,
+      "c6c": 3,
+      "c6d": 4,
+      "c6e": 5,
+      "c6f": 2,
+      "c7": 4,
+      "c70": 3,
+      "c71": 3,
+      "c72": 4,
+      "c73": 2,
+      "c74": 1,
+      "c75": 3,
+      "c76": 3,
+      "c78": 2,
+      "c79": 2,
+      "c7a": 5,
+      "c7b": 6,
+      "c7e": 6,
+      "c8": 8,
+      "c81": 1,
+      "c84": 4,
+      "c85": 1,
+      "c88": 1,
+      "c89": 1,
+      "c8b": 2,
+      "c8d": 5,
+      "c8f": 6,
+      "c9": 6,
+      "c90": 3,
+      "c91": 5,
+      "c95": 3,
+      "c99": 7,
+      "c9c": 1,
+      "c9d": 2,
+      "c9e": 5,
+      "ca": 2,
+      "ca0": 4,
+      "ca1": 2,
+      "ca5": 1,
+      "ca6": 4,
+      "ca9": 4,
+      "cab": 1,
+      "cac": 3,
+      "cad": 5,
+      "cae": 6,
+      "caf": 2,
+      "cb": 12,
+      "cb0": 5,
+      "cb6": 1,
+      "cba": 1,
+      "cbb": 5,
+      "cbc": 3,
+      "cbe": 2,
+      "cbf": 1,
+      "cc": 12,
+      "cc0": 1,
+      "cc1": 2,
+      "cc2": 1,
+      "cc3": 2,
+      "cc4": 1,
+      "cc5": 1,
+      "cc6": 1,
+      "cc7": 1,
+      "cc9": 2,
+      "cca": 2,
+      "cd": 4,
+      "cd8": 5,
+      "ce1": 4,
+      "ce4": 2,
+      "ce6": 5,
+      "ce9": 5,
+      "cea": 2,
+      "cec": 3,
+      "cf": 10,
+      "cf5": 4,
+      "cfd": 1,
+      "d": 693,
+      "d0": 4,
+      "d04": 2,
+      "d05": 5,
+      "d06": 1,
+      "d09": 3,
+      "d0a": 1,
+      "d0b": 1,
+      "d0c": 6,
+      "d0d": 1,
+      "d0e": 1,
+      "d0f": 2,
+      "d1": 6,
+      "d11": 1,
+      "d12": 6,
+      "d16": 1,
+      "d17": 1,
+      "d18": 7,
+      "d19": 2,
+      "d1a": 7,
+      "d1b": 1,
+      "d1c": 4,
+      "d1e": 1,
+      "d1f": 4,
+      "d2": 10,
+      "d20": 1,
+      "d21": 1,
+      "d26": 1,
+      "d27": 1,
+      "d28": 1,
+      "d29": 1,
+      "d2a": 4,
+      "d2b": 1,
+      "d2c": 1,
+      "d2d": 1,
+      "d2e": 3,
+      "d2f": 1,
+      "d3": 6,
+      "d30": 1,
+      "d31": 3,
+      "d33": 4,
+      "d36": 3,
+      "d37": 3,
+      "d38": 1,
+      "d39": 1,
+      "d3a": 1,
+      "d3b": 6,
+      "d3c": 5,
+      "d3d": 1,
+      "d3e": 1,
+      "d40": 4,
+      "d41": 1,
+      "d42": 1,
+      "d43": 1,
+      "d44": 1,
+      "d45": 4,
+      "d46": 1,
+      "d47": 1,
+      "d48": 2,
+      "d49": 7,
+      "d4a": 1,
+      "d4b": 1,
+      "d4c": 1,
+      "d5": 6,
+      "d54": 1,
+      "d57": 5,
+      "d59": 3,
+      "d6": 4,
+      "d61": 1,
+      "d7": 6,
+      "d72": 1,
+      "d75": 3,
+      "d77": 3,
+      "d8a": 1,
+      "d9": 2,
+      "d94": 3,
+      "d9e": 1,
+      "da": 1,
+      "da4": 1,
+      "da5": 1,
+      "da8": 2,
+      "dab": 5,
+      "dad": 3,
+      "dae": 3,
+      "db0": 2,
+      "db1": 9,
+      "db5": 3,
+      "db8": 4,
+      "dbc": 4,
+      "dbd": 2,
+      "dbe": 8,
+      "dc0": 5,
+      "dc1": 2,
+      "dc3": 6,
+      "dc4": 1,
+      "dc6": 1,
+      "dc7": 5,
+      "dc8": 3,
+      "dc9": 2,
+      "dcb": 2,
+      "dcc": 5,
+      "dce": 5,
+      "dd1": 4,
+      "dd2": 2,
+      "dd4": 2,
+      "dd5": 3,
+      "dd6": 4,
+      "dd7": 4,
+      "dd8": 3,
+      "dd9": 6,
+      "dda": 2,
+      "ddc": 2,
+      "ddd": 3,
+      "dde": 2,
+      "ddf": 2,
+      "de1": 7,
+      "de4": 1,
+      "de6": 1,
+      "de7": 4,
+      "de8": 1,
+      "de9": 2,
+      "dea": 1,
+      "deb": 2,
+      "dec": 3,
+      "dee": 2,
+      "df3": 2,
+      "df6": 5,
+      "df7": 5,
+      "df8": 1,
+      "dfb": 7,
+      "e": 1070,
+      "e03": 4,
+      "e05": 1,
+      "e09": 4,
+      "e0a": 3,
+      "e0b": 2,
+      "e0c": 3,
+      "e0d": 6,
+      "e0e": 4,
+      "e0f": 2,
+      "e12": 5,
+      "e17": 5,
+      "e1a": 2,
+      "e1b": 5,
+      "e1e": 2,
+      "e2": 2,
+      "e20": 2,
+      "e21": 5,
+      "e27": 5,
+      "e2b": 1,
+      "e2c": 1,
+      "e2f": 2,
+      "e3": 4,
+      "e33": 4,
+      "e34": 5,
+      "e3a": 2,
+      "e3b": 5,
+      "e3c": 3,
+      "e3d": 5,
+      "e3e": 3,
+      "e3f": 7,
+      "e4": 2,
+      "e40": 3,
+      "e41": 2,
+      "e42": 1,
+      "e43": 3,
+      "e44": 3,
+      "e47": 5,
+      "e4a": 5,
+      "e4b": 2,
+      "e4c": 1,
+      "e4d": 4,
+      "e4e": 5,
+      "e50": 3,
+      "e52": 2,
+      "e54": 5,
+      "e55": 1,
+      "e57": 4,
+      "e59": 1,
+      "e5a": 2,
+      "e5c": 2,
+      "e5d": 2,
+      "e6": 3,
+      "e60": 8,
+      "e61": 2,
+      "e62": 3,
+      "e63": 2,
+      "e64": 2,
+      "e66": 1,
+      "e68": 5,
+      "e69": 1,
+      "e6a": 2,
+      "e6b": 3,
+      "e6c": 2,
+      "e6d": 3,
+      "e6e": 2,
+      "e6f": 3,
+      "e7": 3,
+      "e70": 4,
+      "e74": 3,
+      "e75": 1,
+      "e76": 1,
+      "e77": 11,
+      "e7a": 1,
+      "e7c": 4,
+      "e7d": 1,
+      "e8": 2,
+      "e82": 4,
+      "e84": 2,
+      "e85": 5,
+      "e87": 6,
+      "e88": 2,
+      "e8a": 6,
+      "e8b": 3,
+      "e8c": 11,
+      "e8d": 3,
+      "e9": 4,
+      "e90": 2,
+      "e94": 3,
+      "e98": 2,
+      "e9c": 5,
+      "e9e": 2,
+      "e9f": 1,
+      "ea2": 2,
+      "ea5": 3,
+      "ea6": 2,
+      "ea8": 5,
+      "ea9": 3,
+      "eab": 6,
+      "eac": 1,
+      "eae": 3,
+      "eaf": 9,
+      "eb0": 3,
+      "eb1": 1,
+      "eb2": 4,
+      "eb3": 1,
+      "eb4": 2,
+      "eb5": 2,
+      "eb7": 2,
+      "eb8": 11,
+      "eba": 5,
+      "ebb": 2,
+      "ebf": 2,
+      "ec8": 6,
+      "eca": 5,
+      "ecc": 5,
+      "ecf": 8,
+      "ed": 1,
+      "ed3": 2,
+      "ed5": 1,
+      "ed7": 1,
+      "ed8": 1,
+      "edf": 2,
+      "ee": 6,
+      "ee0": 4,
+      "ee2": 7,
+      "ee3": 5,
+      "ee4": 3,
+      "ee5": 2,
+      "ee6": 2,
+      "ee7": 2,
+      "ee8": 4,
+      "ee9": 3,
+      "eea": 1,
+      "eeb": 3,
+      "eec": 4,
+      "eed": 3,
+      "eee": 4,
+      "eef": 5,
+      "ef0": 4,
+      "ef1": 3,
+      "ef2": 3,
+      "ef3": 2,
+      "ef4": 4,
+      "ef5": 3,
+      "ef6": 4,
+      "ef7": 3,
+      "ef8": 3,
+      "ef9": 3,
+      "efa": 4,
+      "efb": 3,
+      "efd": 3,
+      "efe": 2,
+      "eff": 1,
+      "f": 207,
+      "f0": 2,
+      "f00": 4,
+      "f01": 3,
+      "f02": 3,
+      "f03": 4,
+      "f09": 2,
+      "f0a": 10,
+      "f0b": 2,
+      "f0c": 1,
+      "f0d": 3,
+      "f0f": 5,
+      "f10": 1,
+      "f11": 3,
+      "f12": 6,
+      "f16": 2,
+      "f18": 3,
+      "f1a": 4,
+      "f1b": 1,
+      "f1c": 4,
+      "f1d": 1,
+      "f1e": 4,
+      "f1f": 3,
+      "f2": 1,
+      "f21": 3,
+      "f22": 1,
+      "f23": 3,
+      "f25": 1,
+      "f26": 5,
+      "f27": 4,
+      "f28": 6,
+      "f2a": 5,
+      "f2c": 4,
+      "f2d": 1,
+      "f3": 1,
+      "f31": 3,
+      "f32": 3,
+      "f33": 3,
+      "f34": 2,
+      "f37": 2,
+      "f38": 1,
+      "f39": 2,
+      "f3a": 1,
+      "f3b": 1,
+      "f3c": 1,
+      "f3f": 1,
+      "f4": 7,
+      "f41": 1,
+      "f42": 2,
+      "f43": 5,
+      "f44": 1,
+      "f45": 1,
+      "f49": 1,
+      "f4b": 1,
+      "f4f": 1,
+      "f58": 3,
+      "f5a": 2,
+      "f6": 1,
+      "f62": 3,
+      "f63": 1,
+      "f64": 1,
+      "f66": 2,
+      "f6c": 5,
+      "f71": 1,
+      "f74": 1,
+      "f8": 1,
+      "f81": 10,
+      "f83": 1,
+      "f84": 1,
+      "f8a": 2,
+      "f8d": 1,
+      "f8e": 1,
+      "f8f": 1,
+      "f9": 1,
+      "f90": 2,
+      "f91": 5,
+      "f92": 1,
+      "f94": 1,
+      "f95": 2,
+      "f96": 1,
+      "f97": 1,
+      "f98": 2,
+      "f99": 1,
+      "f9a": 1,
+      "f9b": 2,
+      "f9c": 1,
+      "fa": 2,
+      "fa0": 6,
+      "fa2": 1,
+      "fa3": 1,
+      "fa5": 1,
+      "fa6": 1,
+      "fa7": 1,
+      "fa8": 4,
+      "fa9": 1,
+      "faa": 7,
+      "fac": 1,
+      "fad": 2,
+      "fae": 1,
+      "faf": 1,
+      "fb": 7,
+      "fb0": 7,
+      "fb1": 1,
+      "fb2": 2,
+      "fb3": 5,
+      "fb6": 1,
+      "fb9": 2,
+      "fbb": 1,
+      "fbc": 1,
+      "fbd": 5,
+      "fbe": 1,
+      "fbf": 1,
+      "fc": 1,
+      "fc0": 1,
+      "fc1": 2,
+      "fc2": 1,
+      "fc4": 7,
+      "fc5": 1,
+      "fc7": 1,
+      "fc8": 1,
+      "fc9": 1,
+      "fca": 2,
+      "fd": 2,
+      "fd2": 5,
+      "fd4": 1,
+      "fd5": 7,
+      "fd6": 4,
+      "fd7": 3,
+      "fd8": 1,
+      "fd9": 1,
+      "fda": 1,
+      "fdb": 3,
+      "fdc": 1,
+      "fdd": 3,
+      "fde": 1,
+      "fdf": 6,
+      "fe": 5,
+      "fe0": 7,
+      "fe1": 1,
+      "fe3": 1,
+      "fe4": 6,
+      "fe5": 2,
+      "fe6": 2,
+      "fe7": 1,
+      "fe8": 8,
+      "fe9": 1,
+      "fea": 4,
+      "feb": 3,
+      "fed": 2,
+      "fee": 3,
+      "fef": 7,
+      "ff": 1
+    },
+    "agreementPartOfSpeech": {
+      "adjective": 21142,
+      "adposition": 6,
+      "adverb": 1,
+      "conjunction": 1,
+      "noun": 30980,
+      "numeral": 4,
+      "proper-noun": 299,
+      "verb": 5622
+    },
+    "ambiguityReasons": {
+      "multiple-definiteness": 6,
+      "multiple-genders": 1819,
+      "multiple-inflections": 6530,
+      "multiple-numbers": 2070,
+      "multiple-parts-of-speech": 6453
+    },
+    "case": {
+      "<missing>": 49833,
+      "nominative": 3
+    },
+    "definiteness": {
+      "<missing>": 14822,
+      "construct": 35005,
+      "definite": 6,
+      "indefinite": 9
+    },
+    "gender": {
+      "<missing>": 31,
+      "feminine": 23623,
+      "masculine": 28275
+    },
+    "number": {
+      "<missing>": 369,
+      "dual": 19,
+      "plural": 27189,
+      "singular": 24770
+    },
+    "partOfSpeech": {
+      "<missing>": 30,
+      "adjective": 21142,
+      "adposition": 222,
+      "adverb": 112,
+      "article": 1,
+      "conjunction": 60,
+      "determiner": 3,
+      "interjection": 37,
+      "noun": 30980,
+      "numeral": 79,
+      "pronoun": 32,
+      "proper-noun": 299,
+      "verb": 103001
+    },
+    "termPartOfSpeech": {
+      "adjective": 2345,
+      "adposition": 5,
+      "adverb": 1,
+      "conjunction": 1,
+      "noun": 30980,
+      "numeral": 3,
+      "proper-noun": 299,
+      "verb": 4250
+    },
+    "unknownGrammemes": {
+      "abbreviation": 8,
+      "animate": 2,
+      "infinitive": 5,
+      "interrogative": 21,
+      "negative": 15
+    }
+  },
+  "locale": "he",
+  "packPolicy": {
+    "articleMode": "not-derived-from-dictionary-v0",
+    "caseMode": "unsupported-for-nouns-v0",
+    "constructMode": "explicit-form-key",
+    "countMode": "singular-plural-only-by-product-policy",
+    "metadataBits": [
+      "gender",
+      "partOfSpeech"
+    ],
+    "numberMode": "explicit-number-option",
+    "openWorldGeneration": false,
+    "pronounAttachmentPolicy": "separate-hebrew-attachment-profile-later",
+    "pronounScope": "inventory-only-v0",
+    "reason": "Hebrew data is rich in gender/number and construct-state forms but has almost no noun case rows; V0 should not inherit Arabic case handling.",
+    "recommendation": "closed-world construct-state explicit-form pack",
+    "runtimeOptions": [
+      "number",
+      "definiteness"
+    ],
+    "termScope": [
+      "noun",
+      "proper-noun"
+    ]
+  },
+  "patterns": {
+    "all": {
+      "caseSlots": 4,
+      "constructSlots": 19917,
+      "dualSlots": 16,
+      "duplicateSlotRows": 1267,
+      "patternsWithDuplicateSlots": 301,
+      "slotAttributes": {
+        "animacy": {
+          "animate": 4
+        },
+        "case": {
+          "nominative": 4
+        },
+        "count": {
+          "countable": 4,
+          "uncountable": 2
+        },
+        "definiteness": {
+          "construct": 19917,
+          "definite": 6,
+          "indefinite": 9
+        },
+        "gender": {
+          "feminine": 64340,
+          "masculine": 64606
+        },
+        "mood": {
+          "imperative": 14116,
+          "jussive": 1
+        },
+        "number": {
+          "dual": 16,
+          "plural": 73864,
+          "singular": 73661
+        },
+        "person": {
+          "first": 18693,
+          "second": 51508,
+          "third": 37285
+        },
+        "tense": {
+          "future": 46477,
+          "past": 46741,
+          "present": 37228
+        },
+        "verb-type": {
+          "infinitive": 5
+        }
+      },
+      "slotsPerPattern": {
+        "0": 5,
+        "1": 43,
+        "10": 25,
+        "11": 2,
+        "12": 7,
+        "13": 4,
+        "14": 6,
+        "15": 3,
+        "16": 9,
+        "17": 6,
+        "18": 11,
+        "19": 8,
+        "2": 66,
+        "20": 5,
+        "22": 3,
+        "23": 1,
+        "24": 2,
+        "25": 1,
+        "26": 2,
+        "27": 1,
+        "28": 1084,
+        "29": 1,
+        "3": 70,
+        "30": 20,
+        "31": 1,
+        "32": 3403,
+        "33": 5,
+        "34": 3,
+        "36": 4,
+        "37": 2,
+        "38": 8,
+        "4": 212,
+        "40": 6,
+        "42": 39,
+        "44": 2,
+        "46": 5,
+        "47": 1,
+        "49": 2,
+        "5": 37,
+        "52": 3,
+        "53": 2,
+        "54": 1,
+        "55": 1,
+        "6": 50,
+        "7": 9,
+        "74": 1,
+        "8": 108,
+        "9": 9
+      }
+    },
+    "usedAgreement": {
+      "caseSlots": 2,
+      "constructSlots": 9600,
+      "dualSlots": 16,
+      "duplicateSlotRows": 707,
+      "patternsWithDuplicateSlots": 211,
+      "slotAttributes": {
+        "animacy": {
+          "animate": 4
+        },
+        "case": {
+          "nominative": 2
+        },
+        "count": {
+          "countable": 4,
+          "uncountable": 2
+        },
+        "definiteness": {
+          "construct": 9600,
+          "definite": 6,
+          "indefinite": 9
+        },
+        "gender": {
+          "feminine": 29740,
+          "masculine": 30130
+        },
+        "mood": {
+          "imperative": 7220
+        },
+        "number": {
+          "dual": 16,
+          "plural": 34110,
+          "singular": 33939
+        },
+        "person": {
+          "first": 8296,
+          "second": 23819,
+          "third": 16548
+        },
+        "tense": {
+          "future": 20731,
+          "past": 20708,
+          "present": 16581
+        },
+        "verb-type": {
+          "infinitive": 3
+        }
+      },
+      "slotsPerPattern": {
+        "0": 3,
+        "1": 36,
+        "10": 22,
+        "12": 6,
+        "14": 2,
+        "16": 6,
+        "18": 3,
+        "2": 62,
+        "24": 1,
+        "26": 1,
+        "27": 1,
+        "28": 260,
+        "29": 1,
+        "3": 69,
+        "30": 8,
+        "31": 1,
+        "32": 1744,
+        "33": 4,
+        "34": 3,
+        "36": 4,
+        "37": 2,
+        "38": 6,
+        "4": 209,
+        "40": 6,
+        "42": 3,
+        "44": 2,
+        "46": 3,
+        "49": 1,
+        "5": 35,
+        "52": 3,
+        "54": 1,
+        "55": 1,
+        "6": 46,
+        "7": 3,
+        "74": 1,
+        "8": 107,
+        "9": 8
+      }
+    },
+    "usedTerms": {
+      "caseSlots": 2,
+      "constructSlots": 8420,
+      "dualSlots": 16,
+      "duplicateSlotRows": 601,
+      "patternsWithDuplicateSlots": 187,
+      "slotAttributes": {
+        "animacy": {
+          "animate": 4
+        },
+        "case": {
+          "nominative": 2
+        },
+        "count": {
+          "countable": 4,
+          "uncountable": 2
+        },
+        "definiteness": {
+          "construct": 8420,
+          "definite": 6,
+          "indefinite": 8
+        },
+        "gender": {
+          "feminine": 26493,
+          "masculine": 26916
+        },
+        "mood": {
+          "imperative": 6640
+        },
+        "number": {
+          "dual": 16,
+          "plural": 30449,
+          "singular": 30260
+        },
+        "person": {
+          "first": 7418,
+          "second": 21483,
+          "third": 14792
+        },
+        "tense": {
+          "future": 18521,
+          "past": 18528,
+          "present": 14828
+        },
+        "verb-type": {
+          "infinitive": 3
+        }
+      },
+      "slotsPerPattern": {
+        "0": 2,
+        "1": 32,
+        "10": 11,
+        "12": 2,
+        "14": 2,
+        "16": 1,
+        "18": 3,
+        "2": 59,
+        "24": 1,
+        "26": 1,
+        "27": 1,
+        "28": 188,
+        "3": 67,
+        "30": 8,
+        "31": 1,
+        "32": 1602,
+        "33": 4,
+        "34": 3,
+        "36": 4,
+        "37": 2,
+        "38": 6,
+        "4": 205,
+        "40": 5,
+        "42": 1,
+        "44": 2,
+        "46": 3,
+        "49": 1,
+        "5": 34,
+        "52": 3,
+        "54": 1,
+        "55": 1,
+        "6": 45,
+        "7": 3,
+        "74": 1,
+        "8": 66,
+        "9": 6
+      }
+    }
+  },
+  "pronouns": {
+    "cases": {
+      "genitive": 11,
+      "nominative": 10,
+      "reflexive": 11
+    },
+    "features": {
+      "feminine": 12,
+      "first": 6,
+      "genitive": 11,
+      "masculine": 12,
+      "nominative": 10,
+      "plural": 15,
+      "reflexive": 11,
+      "second": 14,
+      "singular": 17,
+      "third": 12
+    },
+    "genders": {
+      "feminine": 12,
+      "masculine": 12
+    },
+    "numbers": {
+      "plural": 15,
+      "singular": 17
+    },
+    "persons": {
+      "first": 6,
+      "second": 14,
+      "third": 12
+    },
+    "rows": 32,
+    "uniqueValues": 32
+  },
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/he_pack_audit.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_he.lst",
+      "inflection/resources/org/unicode/inflection/dictionary/inflectional_he.xml",
+      "inflection/resources/org/unicode/inflection/inflection/pronoun_he.csv"
+    ],
+    "sources": [
+      {
+        "byteSize": 9728222,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_he.lst",
+        "sha256": "abece63d2c0f688d156e79860c9a3c97c51a30e07268616be67e4c7dc2d557cd"
+      },
+      {
+        "byteSize": 19306220,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/inflectional_he.xml",
+        "sha256": "991f04b14eda1986ad7521dc76d9ade201fd01989d8c66c50944608d5c19c037"
+      },
+      {
+        "byteSize": 1230,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_he.csv",
+        "sha256": "d2ebdc0e7004e8b20ab15bc6421dac53fe4e9e5aad967994af45855c10f108b3"
+      }
+    ]
+  },
+  "samples": {
+    "ambiguousTermSurfaces": [
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-inflections",
+          "multiple-parts-of-speech"
+        ],
+        "sampleEntries": [
+          {
+            "case": [],
+            "definiteness": [],
+            "gender": [
+              "feminine"
+            ],
+            "inflections": [
+              "2",
+              "75d",
+              "a02",
+              "14a0"
+            ],
+            "line": 173,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun",
+              "verb"
+            ],
+            "surface": "אבדה"
+          }
+        ],
+        "surface": "אבדה"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-numbers",
+          "multiple-inflections",
+          "multiple-parts-of-speech"
+        ],
+        "sampleEntries": [
+          {
+            "case": [],
+            "definiteness": [
+              "construct"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "3",
+              "8"
+            ],
+            "line": 187,
+            "number": [
+              "singular",
+              "plural"
+            ],
+            "partOfSpeech": [
+              "adjective",
+              "noun"
+            ],
+            "surface": "אבדני"
+          }
+        ],
+        "surface": "אבדני"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-genders",
+          "multiple-inflections",
+          "multiple-parts-of-speech"
+        ],
+        "sampleEntries": [
+          {
+            "case": [],
+            "definiteness": [
+              "construct"
+            ],
+            "gender": [
+              "masculine",
+              "feminine"
+            ],
+            "inflections": [
+              "2",
+              "75d"
+            ],
+            "line": 195,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun",
+              "verb"
+            ],
+            "surface": "אבדת"
+          }
+        ],
+        "surface": "אבדת"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-genders",
+          "multiple-inflections",
+          "multiple-parts-of-speech"
+        ],
+        "sampleEntries": [
+          {
+            "case": [],
+            "definiteness": [],
+            "gender": [
+              "masculine",
+              "feminine"
+            ],
+            "inflections": [
+              "c75",
+              "c7a"
+            ],
+            "line": 199,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun",
+              "verb"
+            ],
+            "surface": "אבה"
+          }
+        ],
+        "surface": "אבה"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-numbers",
+          "multiple-inflections"
+        ],
+        "sampleEntries": [
+          {
+            "case": [],
+            "definiteness": [
+              "construct"
+            ],
+            "gender": [
+              "feminine"
+            ],
+            "inflections": [
+              "7",
+              "c75"
+            ],
+            "line": 201,
+            "number": [
+              "singular",
+              "plural"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "אבהות"
+          }
+        ],
+        "surface": "אבהות"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-inflections",
+          "multiple-parts-of-speech"
+        ],
+        "sampleEntries": [
+          {
+            "case": [],
+            "definiteness": [
+              "construct"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "1",
+              "9"
+            ],
+            "line": 255,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "adjective",
+              "noun"
+            ],
+            "surface": "אבוס"
+          }
+        ],
+        "surface": "אבוס"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-inflections",
+          "multiple-parts-of-speech"
+        ],
+        "sampleEntries": [
+          {
+            "case": [],
+            "definiteness": [
+              "construct"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "1",
+              "9"
+            ],
+            "line": 258,
+            "number": [
+              "plural"
+            ],
+            "partOfSpeech": [
+              "adjective",
+              "noun"
+            ],
+            "surface": "אבוסי"
+          }
+        ],
+        "surface": "אבוסי"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-inflections",
+          "multiple-parts-of-speech"
+        ],
+        "sampleEntries": [
+          {
+            "case": [],
+            "definiteness": [],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "1",
+              "9"
+            ],
+            "line": 259,
+            "number": [
+              "plural"
+            ],
+            "partOfSpeech": [
+              "adjective",
+              "noun"
+            ],
+            "surface": "אבוסים"
+          }
+        ],
+        "surface": "אבוסים"
+      }
+    ],
+    "caseTaggedAgreementEntries": [
+      {
+        "case": [
+          "nominative"
+        ],
+        "definiteness": [],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "34"
+        ],
+        "line": 61832,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun",
+          "proper-noun"
+        ],
+        "surface": "כנען"
+      },
+      {
+        "case": [
+          "nominative"
+        ],
+        "definiteness": [],
+        "gender": [],
+        "inflections": [
+          "11b6"
+        ],
+        "line": 101990,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "סופות רעמים"
+      },
+      {
+        "case": [
+          "nominative"
+        ],
+        "definiteness": [],
+        "gender": [],
+        "inflections": [
+          "11b6"
+        ],
+        "line": 102070,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "סופת רעמים"
+      }
+    ],
+    "constructAgreementEntries": [
+      {
+        "case": [],
+        "definiteness": [
+          "construct"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "ee4"
+        ],
+        "line": 159,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "אב"
+      },
+      {
+        "case": [],
+        "definiteness": [
+          "construct"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "6"
+        ],
+        "line": 166,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "אבביות"
+      },
+      {
+        "case": [],
+        "definiteness": [
+          "construct"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "6"
+        ],
+        "line": 167,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "אבבית"
+      },
+      {
+        "case": [],
+        "definiteness": [
+          "construct"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "2"
+        ],
+        "line": 177,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "אבדות"
+      },
+      {
+        "case": [],
+        "definiteness": [
+          "construct"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "2"
+        ],
+        "line": 182,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "אבדלות"
+      },
+      {
+        "case": [],
+        "definiteness": [
+          "construct"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "2"
+        ],
+        "line": 183,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "אבדלת"
+      },
+      {
+        "case": [],
+        "definiteness": [
+          "construct"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "8"
+        ],
+        "line": 184,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "אבדן"
+      },
+      {
+        "case": [],
+        "definiteness": [
+          "construct"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "3",
+          "8"
+        ],
+        "line": 187,
+        "number": [
+          "singular",
+          "plural"
+        ],
+        "partOfSpeech": [
+          "adjective",
+          "noun"
+        ],
+        "surface": "אבדני"
+      }
+    ],
+    "dualAgreementEntries": [
+      {
+        "case": [],
+        "definiteness": [
+          "construct"
+        ],
+        "gender": [
+          "masculine",
+          "feminine"
+        ],
+        "inflections": [
+          "c5f",
+          "c8f"
+        ],
+        "line": 7503,
+        "number": [
+          "singular",
+          "dual"
+        ],
+        "partOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "surface": "אפי"
+      },
+      {
+        "case": [],
+        "definiteness": [],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "c5f"
+        ],
+        "line": 7543,
+        "number": [
+          "dual"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "אפיים"
+      },
+      {
+        "case": [],
+        "definiteness": [],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "3",
+          "7e"
+        ],
+        "line": 44285,
+        "number": [
+          "plural",
+          "dual"
+        ],
+        "partOfSpeech": [
+          "adjective",
+          "noun"
+        ],
+        "surface": "חודשיים"
+      },
+      {
+        "case": [],
+        "definiteness": [
+          "construct"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "62e",
+          "eee"
+        ],
+        "line": 50835,
+        "number": [
+          "singular",
+          "dual"
+        ],
+        "partOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "surface": "ידי"
+      },
+      {
+        "case": [],
+        "definiteness": [],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "eee"
+        ],
+        "line": 50851,
+        "number": [
+          "dual"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "ידיים"
+      },
+      {
+        "case": [],
+        "definiteness": [],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "3",
+          "9cd"
+        ],
+        "line": 51638,
+        "number": [
+          "plural",
+          "dual"
+        ],
+        "partOfSpeech": [
+          "adjective",
+          "noun"
+        ],
+        "surface": "יומיים"
+      },
+      {
+        "case": [],
+        "definiteness": [
+          "construct"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "11be",
+          "21a"
+        ],
+        "line": 61986,
+        "number": [
+          "singular",
+          "dual"
+        ],
+        "partOfSpeech": [
+          "noun",
+          "verb"
+        ],
+        "surface": "כפי"
+      },
+      {
+        "case": [],
+        "definiteness": [],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "11be"
+        ],
+        "line": 61991,
+        "number": [
+          "dual"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "כפיים"
+      }
+    ],
+    "missingAgreementPatterns": []
+  },
+  "schema": "mojito-mf2-inflection/he-pack-audit/v0"
+}

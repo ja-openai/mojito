@@ -1,0 +1,125 @@
+{
+  "diagnostics": [],
+  "locale": "fr",
+  "messages": {
+    "inventory.deleted": {
+      "source": "Vous avez supprim\u00e9 {$item :term article=definite count=$count}.",
+      "termUsages": [
+        {
+          "argument": "item",
+          "options": {
+            "article": "definite",
+            "count": "$count"
+          },
+          "requirements": [
+            "partOfSpeech=noun",
+            "gender",
+            "number",
+            "elision",
+            "forms.definite.singular",
+            "forms.definite.plural",
+            "forms.count.one",
+            "forms.count.other"
+          ],
+          "span": [
+            19,
+            62
+          ],
+          "termIds": [
+            "item.iron_sword",
+            "concept.book",
+            "unit.pound"
+          ],
+          "validations": [
+            {
+              "missing": [],
+              "status": "ok",
+              "termId": "item.iron_sword"
+            },
+            {
+              "missing": [],
+              "status": "ok",
+              "termId": "concept.book"
+            },
+            {
+              "missing": [],
+              "status": "ok",
+              "termId": "unit.pound"
+            }
+          ]
+        }
+      ]
+    },
+    "inventory.found": {
+      "source": "Vous avez trouv\u00e9 {$item :term article=indefinite}.",
+      "termUsages": [
+        {
+          "argument": "item",
+          "options": {
+            "article": "indefinite"
+          },
+          "requirements": [
+            "partOfSpeech=noun",
+            "gender",
+            "number",
+            "elision",
+            "forms.indefinite.singular",
+            "forms.indefinite.plural"
+          ],
+          "span": [
+            17,
+            49
+          ],
+          "termIds": [
+            "item.iron_sword"
+          ],
+          "validations": [
+            {
+              "missing": [],
+              "status": "ok",
+              "termId": "item.iron_sword"
+            }
+          ]
+        }
+      ]
+    },
+    "inventory.weighed": {
+      "source": "Le poids est de {$item :term count=$count}.",
+      "termUsages": [
+        {
+          "argument": "item",
+          "options": {
+            "count": "$count"
+          },
+          "requirements": [
+            "partOfSpeech=noun",
+            "gender",
+            "number",
+            "forms.count.one",
+            "forms.count.other"
+          ],
+          "span": [
+            16,
+            42
+          ],
+          "termIds": [
+            "unit.pound"
+          ],
+          "validations": [
+            {
+              "missing": [],
+              "status": "ok",
+              "termId": "unit.pound"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "schema": "mojito-mf2-inflection/term-requirement-report/v0",
+  "summary": {
+    "diagnostics": 0,
+    "messages": 3,
+    "termUsages": 3
+  }
+}

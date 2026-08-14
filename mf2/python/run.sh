@@ -9,6 +9,9 @@ case "$command" in
   conformance)
     python3 tools/conformance.py "${2:-../conformance/fixtures/source-to-model}"
     ;;
+  inflection-release)
+    python3 ../conformance/validate_inflection_release_fixture.py
+    ;;
   demo)
     python3 examples/translate_demo.py
     ;;

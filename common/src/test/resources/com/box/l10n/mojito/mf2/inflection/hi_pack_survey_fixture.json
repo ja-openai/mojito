@@ -1,0 +1,858 @@
+{
+  "counts": {
+    "agreementEntries": 3485,
+    "agreementSurfaces": 3485,
+    "ambiguousAgreementSurfaces": 1165,
+    "dictionaryEntries": 7533,
+    "dictionarySkippedLines": 90,
+    "inflectionalPatterns": 258,
+    "missingInflectionPatterns": 0,
+    "pronounRows": 38,
+    "termEntries": 2936,
+    "termSurfaces": 2936,
+    "usedAgreementPatterns": 225
+  },
+  "features": {
+    "inflectionPatterns": {
+      "1": 254,
+      "10": 75,
+      "100": 1,
+      "101": 5,
+      "102": 2,
+      "11": 11,
+      "12": 28,
+      "13": 60,
+      "14": 18,
+      "15": 54,
+      "16": 10,
+      "17": 51,
+      "18": 16,
+      "19": 32,
+      "1a": 45,
+      "1b": 13,
+      "1c": 40,
+      "1d": 10,
+      "1e": 18,
+      "1f": 27,
+      "2": 215,
+      "20": 32,
+      "21": 24,
+      "22": 32,
+      "23": 8,
+      "24": 7,
+      "25": 7,
+      "26": 24,
+      "27": 24,
+      "28": 3,
+      "29": 18,
+      "2a": 24,
+      "2b": 5,
+      "2c": 2,
+      "2d": 5,
+      "2f": 1,
+      "3": 310,
+      "30": 20,
+      "32": 4,
+      "33": 4,
+      "34": 16,
+      "35": 4,
+      "36": 12,
+      "37": 12,
+      "38": 8,
+      "39": 9,
+      "3a": 6,
+      "3b": 12,
+      "3c": 9,
+      "3e": 6,
+      "3f": 9,
+      "4": 310,
+      "40": 18,
+      "41": 9,
+      "42": 6,
+      "43": 3,
+      "44": 3,
+      "45": 9,
+      "46": 12,
+      "47": 3,
+      "48": 6,
+      "49": 8,
+      "4a": 2,
+      "4b": 2,
+      "4c": 4,
+      "4e": 14,
+      "4f": 6,
+      "5": 105,
+      "51": 2,
+      "52": 4,
+      "53": 4,
+      "54": 2,
+      "55": 6,
+      "56": 2,
+      "57": 6,
+      "58": 6,
+      "59": 4,
+      "5a": 4,
+      "5b": 14,
+      "5c": 4,
+      "5d": 1,
+      "5e": 6,
+      "5f": 4,
+      "6": 183,
+      "60": 3,
+      "61": 1,
+      "62": 2,
+      "64": 2,
+      "65": 1,
+      "66": 2,
+      "67": 3,
+      "68": 3,
+      "6a": 2,
+      "6b": 4,
+      "6e": 6,
+      "6f": 2,
+      "7": 132,
+      "70": 3,
+      "71": 3,
+      "72": 5,
+      "73": 3,
+      "74": 4,
+      "75": 3,
+      "76": 3,
+      "77": 4,
+      "78": 3,
+      "79": 1,
+      "7a": 8,
+      "7b": 4,
+      "7c": 5,
+      "7e": 1,
+      "7f": 2,
+      "8": 41,
+      "83": 1,
+      "84": 5,
+      "85": 2,
+      "86": 1,
+      "87": 3,
+      "89": 2,
+      "8a": 8,
+      "8b": 2,
+      "8c": 7,
+      "8d": 1,
+      "8e": 6,
+      "8f": 2,
+      "9": 114,
+      "90": 7,
+      "91": 6,
+      "92": 4,
+      "93": 1,
+      "94": 2,
+      "95": 1,
+      "96": 3,
+      "97": 3,
+      "98": 3,
+      "99": 5,
+      "9a": 1,
+      "9c": 3,
+      "9d": 4,
+      "9f": 3,
+      "a": 105,
+      "a0": 7,
+      "a1": 3,
+      "a2": 8,
+      "a3": 3,
+      "a4": 1,
+      "a5": 3,
+      "a6": 2,
+      "a8": 2,
+      "aa": 4,
+      "ac": 2,
+      "ad": 2,
+      "af": 1,
+      "b": 34,
+      "b0": 4,
+      "b1": 5,
+      "b2": 4,
+      "b3": 3,
+      "b4": 1,
+      "b5": 3,
+      "b6": 4,
+      "b7": 3,
+      "b8": 2,
+      "b9": 3,
+      "bb": 4,
+      "bc": 2,
+      "bd": 6,
+      "be": 5,
+      "bf": 3,
+      "c": 102,
+      "c1": 3,
+      "c2": 3,
+      "c3": 3,
+      "c4": 2,
+      "c5": 4,
+      "c6": 3,
+      "c7": 3,
+      "c8": 5,
+      "c9": 5,
+      "ca": 1,
+      "cb": 2,
+      "cc": 7,
+      "cd": 6,
+      "ce": 8,
+      "d": 87,
+      "d0": 1,
+      "d2": 1,
+      "d3": 3,
+      "d4": 2,
+      "d6": 2,
+      "d7": 3,
+      "d8": 6,
+      "d9": 3,
+      "da": 5,
+      "db": 4,
+      "dc": 6,
+      "dd": 4,
+      "de": 3,
+      "e": 1,
+      "e1": 3,
+      "e2": 3,
+      "e3": 5,
+      "e4": 4,
+      "e5": 6,
+      "e6": 4,
+      "e8": 2,
+      "ea": 1,
+      "ec": 2,
+      "ed": 5,
+      "ef": 3,
+      "f": 75,
+      "f0": 1,
+      "f1": 4,
+      "f2": 2,
+      "f4": 7,
+      "f5": 4,
+      "f6": 3,
+      "f7": 8,
+      "f8": 5,
+      "f9": 1,
+      "fa": 3,
+      "fb": 2,
+      "fc": 4,
+      "fe": 2,
+      "ff": 2
+    },
+    "partOfSpeech": {
+      "<missing>": 126,
+      "adjective": 576,
+      "adposition": 35,
+      "adverb": 92,
+      "noun": 2864,
+      "numeral": 131,
+      "proper-noun": 73,
+      "verb": 3877
+    },
+    "patternSlotAnimacy": {
+      "<missing>": 2306,
+      "animate": 255,
+      "inanimate": 257
+    },
+    "patternSlotCases": {
+      "<missing>": 1576,
+      "causative": 166,
+      "direct": 468,
+      "oblique": 451,
+      "vocative": 157
+    },
+    "patternSlotGenders": {
+      "<missing>": 833,
+      "feminine": 964,
+      "masculine": 1021
+    },
+    "patternSlotNumbers": {
+      "<missing>": 350,
+      "plural": 1245,
+      "singular": 1223
+    },
+    "patternSlotOtherAttributes": {
+      "aspect=imperfect": 172,
+      "aspect=perfect": 173,
+      "comparison-degree=comparative": 5,
+      "comparison-degree=positive": 6,
+      "comparison-degree=superlative": 4,
+      "count=uncountable": 14,
+      "definiteness=definite": 547,
+      "mood=imperative": 212,
+      "mood=subjunctive": 757,
+      "person=first": 255,
+      "person=second": 463,
+      "person=third": 256,
+      "tense=future": 8,
+      "transitivity=intransitive": 851,
+      "transitivity=transitive": 680,
+      "verb-type=gerund": 177,
+      "verb-type=infinitive": 1,
+      "verb-type=participle": 471
+    },
+    "pronounDependencyFeatures": {
+      "feminine": 10,
+      "masculine": 10,
+      "plural": 10,
+      "singular": 10
+    },
+    "pronounFeatures": {
+      "accusative": 6,
+      "direct": 6,
+      "ergative": 6,
+      "first": 14,
+      "formal": 7,
+      "genitive": 20,
+      "informal": 7,
+      "intimate": 10,
+      "number": 14,
+      "plural": 10,
+      "second": 24,
+      "singular": 14
+    },
+    "slotsPerPattern": {
+      "0": 4,
+      "1": 18,
+      "10": 2,
+      "11": 3,
+      "12": 16,
+      "126": 1,
+      "128": 1,
+      "13": 1,
+      "16": 1,
+      "17": 1,
+      "170": 1,
+      "174": 1,
+      "2": 24,
+      "3": 9,
+      "4": 56,
+      "42": 15,
+      "5": 1,
+      "50": 1,
+      "6": 39,
+      "7": 3,
+      "8": 21,
+      "84": 6
+    },
+    "templateRows": 2818,
+    "termAnimacy": {
+      "<missing>": 1322,
+      "animate": 343,
+      "inanimate": 1271
+    },
+    "termCase": {
+      "<missing>": 43,
+      "direct": 1803,
+      "oblique": 1856,
+      "vocative": 399
+    },
+    "termGender": {
+      "<missing>": 10,
+      "feminine": 1154,
+      "masculine": 1823
+    },
+    "termNumber": {
+      "<missing>": 18,
+      "plural": 2011,
+      "singular": 1519
+    }
+  },
+  "locale": "hi",
+  "packShape": {
+    "caseFormPack": {
+      "binaryLowerBoundBytes": {
+        "formRowBytes": 46776,
+        "stringPoolBytes": 75942,
+        "termRowBytes": 23740,
+        "totalBytes": 146458
+      },
+      "candidateTerms": 1187,
+      "formRows": 3898,
+      "skippedTerms": {
+        "conflicting-form-key": 16,
+        "missing-direct-singular-form": 4,
+        "missing-or-ambiguous-gender": 38,
+        "missing-or-ambiguous-inflection": 111,
+        "non-direct-singular-surface": 1450,
+        "suffix-mismatch": 127,
+        "unsupported-pattern-part-of-speech": 3
+      }
+    },
+    "metadataBits": [
+      "gender",
+      "number",
+      "animacy",
+      "partOfSpeech"
+    ],
+    "pronounDependencyKeys": [
+      "gender",
+      "number"
+    ],
+    "pronounTableRows": 38,
+    "reason": "Hindi product terms need direct/oblique/vocative noun forms and gender/number agreement; pronoun genitives also depend on the referenced noun's gender/number.",
+    "recommendation": "case-form rows plus pronoun agreement table",
+    "termCases": [
+      "direct",
+      "oblique",
+      "vocative"
+    ]
+  },
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/hi_pack_survey.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_hi.lst",
+      "inflection/resources/org/unicode/inflection/dictionary/inflectional_hi.xml",
+      "inflection/resources/org/unicode/inflection/inflection/pronoun_hi.csv"
+    ]
+  },
+  "samples": {
+    "ambiguousAgreementSurfaces": [
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "अँकवार"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "अँगीठी"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-cases",
+          "multiple-numbers"
+        ],
+        "surface": "अँगीठे"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-cases",
+          "multiple-numbers"
+        ],
+        "surface": "अँब"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-cases",
+          "multiple-numbers"
+        ],
+        "surface": "अंक"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-cases",
+          "multiple-numbers"
+        ],
+        "surface": "अंकम"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-cases",
+          "multiple-genders",
+          "multiple-numbers"
+        ],
+        "surface": "अंकमाल"
+      },
+      {
+        "entries": 1,
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "अंकवारि"
+      }
+    ],
+    "caseFormTerms": [
+      {
+        "animacy": null,
+        "forms": {
+          "direct.singular": "अ"
+        },
+        "gender": "masculine",
+        "pattern": "2",
+        "termId": "hi.case.अ",
+        "text": "अ"
+      },
+      {
+        "animacy": "inanimate",
+        "forms": {
+          "direct.plural": "अँगीठे",
+          "direct.singular": "अँगीठा",
+          "oblique.plural": "अँगीठों",
+          "oblique.singular": "अँगीठे"
+        },
+        "gender": "masculine",
+        "pattern": "40",
+        "termId": "hi.case.अँगीठा",
+        "text": "अँगीठा"
+      },
+      {
+        "animacy": null,
+        "forms": {
+          "direct.plural": "अँब",
+          "direct.singular": "अँब",
+          "oblique.plural": "अँबों",
+          "oblique.singular": "अँब"
+        },
+        "gender": "masculine",
+        "pattern": "4",
+        "termId": "hi.case.अँब",
+        "text": "अँब"
+      },
+      {
+        "animacy": "inanimate",
+        "forms": {
+          "direct.plural": "अंक",
+          "direct.singular": "अंक",
+          "oblique.plural": "अंकों",
+          "oblique.singular": "अंक"
+        },
+        "gender": "masculine",
+        "pattern": "3",
+        "termId": "hi.case.अंक",
+        "text": "अंक"
+      },
+      {
+        "animacy": null,
+        "forms": {
+          "direct.plural": "अंकम",
+          "direct.singular": "अंकम",
+          "oblique.plural": "अंकमों",
+          "oblique.singular": "अंकम"
+        },
+        "gender": "masculine",
+        "pattern": "4",
+        "termId": "hi.case.अंकम",
+        "text": "अंकम"
+      },
+      {
+        "animacy": null,
+        "forms": {
+          "direct.plural": "अंकस",
+          "direct.singular": "अंकस",
+          "oblique.plural": "अंकसों",
+          "oblique.singular": "अंकस"
+        },
+        "gender": "masculine",
+        "pattern": "4",
+        "termId": "hi.case.अंकस",
+        "text": "अंकस"
+      },
+      {
+        "animacy": "inanimate",
+        "forms": {
+          "direct.plural": "अंकुश",
+          "direct.singular": "अंकुश",
+          "oblique.plural": "अंकुशों",
+          "oblique.singular": "अंकुश"
+        },
+        "gender": "masculine",
+        "pattern": "3",
+        "termId": "hi.case.अंकुश",
+        "text": "अंकुश"
+      },
+      {
+        "animacy": null,
+        "forms": {
+          "direct.plural": "अंकुस",
+          "direct.singular": "अंकुस",
+          "oblique.plural": "अंकुसों",
+          "oblique.singular": "अंकुस"
+        },
+        "gender": "masculine",
+        "pattern": "4",
+        "termId": "hi.case.अंकुस",
+        "text": "अंकुस"
+      }
+    ],
+    "missingInflectionPatterns": [],
+    "pronouns": [
+      {
+        "features": [
+          "first",
+          "singular",
+          "direct"
+        ],
+        "line": 1,
+        "value": "मैं"
+      },
+      {
+        "features": [
+          "first",
+          "singular",
+          "ergative"
+        ],
+        "line": 2,
+        "value": "मैंने"
+      },
+      {
+        "features": [
+          "first",
+          "singular",
+          "accusative"
+        ],
+        "line": 3,
+        "value": "मुझे"
+      },
+      {
+        "features": [
+          "first",
+          "plural",
+          "direct"
+        ],
+        "line": 4,
+        "value": "हम"
+      },
+      {
+        "features": [
+          "first",
+          "plural",
+          "ergative"
+        ],
+        "line": 5,
+        "value": "हमने"
+      },
+      {
+        "features": [
+          "first",
+          "plural",
+          "accusative"
+        ],
+        "line": 6,
+        "value": "हमें"
+      },
+      {
+        "features": [
+          "first",
+          "singular",
+          "genitive",
+          "dependency=singular",
+          "dependency=masculine"
+        ],
+        "line": 7,
+        "value": "मेरा"
+      },
+      {
+        "features": [
+          "first",
+          "singular",
+          "genitive",
+          "dependency=plural",
+          "dependency=masculine"
+        ],
+        "line": 8,
+        "value": "मेरे"
+      }
+    ],
+    "termEntries": [
+      {
+        "animacy": [],
+        "case": [
+          "direct"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "2"
+        ],
+        "line": 1,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "अ"
+      },
+      {
+        "animacy": [
+          "inanimate"
+        ],
+        "case": [
+          "direct",
+          "oblique"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "dc"
+        ],
+        "line": 2,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "अँकवार"
+      },
+      {
+        "animacy": [
+          "inanimate"
+        ],
+        "case": [
+          "direct"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "dc"
+        ],
+        "line": 3,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "अँकवारें"
+      },
+      {
+        "animacy": [
+          "inanimate"
+        ],
+        "case": [
+          "oblique"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "dc"
+        ],
+        "line": 4,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "अँकवारों"
+      },
+      {
+        "animacy": [
+          "inanimate"
+        ],
+        "case": [
+          "direct"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "40"
+        ],
+        "line": 5,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "अँगीठा"
+      },
+      {
+        "animacy": [
+          "inanimate"
+        ],
+        "case": [
+          "direct"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "40"
+        ],
+        "line": 6,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "अँगीठियाँ"
+      },
+      {
+        "animacy": [
+          "inanimate"
+        ],
+        "case": [
+          "oblique"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "40"
+        ],
+        "line": 7,
+        "number": [
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "अँगीठियों"
+      },
+      {
+        "animacy": [
+          "inanimate"
+        ],
+        "case": [
+          "direct",
+          "oblique"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "40"
+        ],
+        "line": 8,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "अँगीठी"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/hi-pack-survey/v0",
+  "sources": [
+    {
+      "byteSize": 592562,
+      "gitLfsPointer": false,
+      "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_hi.lst",
+      "sha256": "c5b051852706d4c73188d532a072b4f6642b43ddd2efd506394f234428d93398"
+    },
+    {
+      "byteSize": 635966,
+      "gitLfsPointer": false,
+      "path": "inflection/resources/org/unicode/inflection/dictionary/inflectional_hi.xml",
+      "sha256": "20b67cea017333ce11a041c9150268bb14643fb5185a7a4228f4e1079f1d4f0b"
+    },
+    {
+      "byteSize": 2433,
+      "gitLfsPointer": false,
+      "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_hi.csv",
+      "sha256": "586446abbbdc6d8466912941ac2609d7bdac072af5c3422bf575a8715b1bf810"
+    }
+  ]
+}

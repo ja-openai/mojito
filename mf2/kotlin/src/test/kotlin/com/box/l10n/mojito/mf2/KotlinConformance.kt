@@ -23,6 +23,7 @@ object KotlinConformance {
         var checkedFallbackPartsCases = 0
         var checkedModels = 0
         val conformanceFunctions = Mf2FunctionRegistry.portable()
+        checkPublicApiBoundary()
 
         for (fixturePath in jsonFiles(fixtureDir)) {
             val fixture = KotlinJsonSupport.obj(KotlinJsonSupport.parse(fixturePath))
@@ -298,6 +299,58 @@ object KotlinConformance {
             KotlinFormattedPartJson.toMaps(emptyFormatErrorParts.parts),
         )
     }
+
+    private fun checkPublicApiBoundary() {
+        val sourceDir = Path.of("src/main/kotlin/com/box/l10n/mojito/mf2")
+        if (!Files.isDirectory(sourceDir)) {
+            return
+        }
+        Files.walk(sourceDir).use { paths ->
+            paths
+                .filter { it.fileName.toString().endsWith(".kt") }
+                .forEach { sourcePath ->
+                    Files.readAllLines(sourcePath).forEachIndexed { index, line ->
+                        val trimmed = line.trim()
+                        if (!isPublicDeclaration(trimmed)) {
+                            return@forEachIndexed
+                        }
+                        val normalized = normalizePublicApiName(trimmed)
+                        if (containsInflectionApiName(normalized)) {
+                            throw ConformanceFailure(
+                                "${sourcePath}:${index + 1}: standalone Kotlin MF2 must not expose public inflection/M2IF/term-pack APIs before a product API is approved: $trimmed",
+                            )
+                        }
+                    }
+                }
+        }
+    }
+
+    private fun isPublicDeclaration(line: String): Boolean {
+        if (line.startsWith("private ") || line.startsWith("internal ")) {
+            return false
+        }
+        return line.startsWith("public ") ||
+            line.startsWith("class ") ||
+            line.startsWith("data class ") ||
+            line.startsWith("sealed class ") ||
+            line.startsWith("object ") ||
+            line.startsWith("interface ") ||
+            line.startsWith("enum class ") ||
+            line.startsWith("fun ") ||
+            line.startsWith("val ") ||
+            line.startsWith("var ") ||
+            line.startsWith("typealias ")
+    }
+
+    private fun containsInflectionApiName(normalized: String): Boolean =
+        normalized.contains("inflection") ||
+            normalized.contains("m2if") ||
+            normalized.contains("compiledtermpack") ||
+            normalized.contains("termpack")
+
+    private fun normalizePublicApiName(value: String): String =
+        value.lowercase()
+            .filter { it.isLetterOrDigit() }
 
     private fun parsePublicApiModel(source: String): Mf2Model {
         val result = Mf2Parser.parseToModel(source)

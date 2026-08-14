@@ -1,0 +1,259 @@
+{
+  "bindings": {
+    "inventory.created": {
+      "item": [
+        "de.article_case.1_euro_job",
+        "de.article_case.katze",
+        "de.article_case.maedchen"
+      ]
+    },
+    "inventory.deleted": {
+      "item": [
+        "de.article_case.1_euro_job",
+        "de.article_case.katze",
+        "de.article_case.maedchen"
+      ]
+    },
+    "inventory.with": {
+      "item": [
+        "de.article_case.1_euro_job",
+        "de.article_case.katze",
+        "de.article_case.maedchen"
+      ]
+    }
+  },
+  "diagnostics": [],
+  "formSets": [
+    {
+      "forms": [
+        {
+          "key": 0,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 2,
+          "kind": "pattern",
+          "value": 3
+        },
+        {
+          "key": 4,
+          "kind": "literal",
+          "value": 5
+        },
+        {
+          "key": 6,
+          "kind": "literal",
+          "value": 7
+        },
+        {
+          "key": 8,
+          "kind": "literal",
+          "value": 9
+        },
+        {
+          "key": 10,
+          "kind": "literal",
+          "value": 11
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 13
+        },
+        {
+          "key": 14,
+          "kind": "literal",
+          "value": 15
+        }
+      ],
+      "term": 16
+    },
+    {
+      "forms": [
+        {
+          "key": 0,
+          "kind": "literal",
+          "value": 18
+        },
+        {
+          "key": 2,
+          "kind": "pattern",
+          "value": 19
+        },
+        {
+          "key": 4,
+          "kind": "literal",
+          "value": 20
+        },
+        {
+          "key": 6,
+          "kind": "literal",
+          "value": 21
+        },
+        {
+          "key": 8,
+          "kind": "literal",
+          "value": 22
+        },
+        {
+          "key": 10,
+          "kind": "literal",
+          "value": 23
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 24
+        },
+        {
+          "key": 14,
+          "kind": "literal",
+          "value": 25
+        }
+      ],
+      "term": 26
+    },
+    {
+      "forms": [
+        {
+          "key": 0,
+          "kind": "literal",
+          "value": 28
+        },
+        {
+          "key": 2,
+          "kind": "pattern",
+          "value": 29
+        },
+        {
+          "key": 4,
+          "kind": "literal",
+          "value": 30
+        },
+        {
+          "key": 6,
+          "kind": "literal",
+          "value": 31
+        },
+        {
+          "key": 8,
+          "kind": "literal",
+          "value": 32
+        },
+        {
+          "key": 10,
+          "kind": "literal",
+          "value": 33
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 34
+        },
+        {
+          "key": 14,
+          "kind": "literal",
+          "value": 35
+        }
+      ],
+      "term": 36
+    }
+  ],
+  "locale": "de",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/mf2_term_pack_compile.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "unicode-org/inflection dictionary_de.lst",
+      "unicode-org/inflection inflectional_de.xml"
+    ],
+    "sources": [
+      {
+        "byteSize": 15082193,
+        "gitLfsPointer": false,
+        "path": "dictionary_de.lst",
+        "sha256": "889018ad62df6258da38973ecd8737e21d98d53b3469530f4870e014d6a3280b"
+      },
+      {
+        "byteSize": 1359627,
+        "gitLfsPointer": false,
+        "path": "inflectional_de.xml",
+        "sha256": "eed569d40af669d27e140646e9b706de44d8cb2946e1a97cce537833bd61f2ac"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/compiled-term-pack/v0",
+  "sizeEstimates": {
+    "binaryLowerBoundBytes": {
+      "bindingReferenceBytes": 0,
+      "formRowBytes": 288,
+      "stringPoolBytes": 587,
+      "termRowBytes": 60,
+      "totalBytes": 935
+    },
+    "compactJsonBytes": 2826
+  },
+  "strings": [
+    "count.one",
+    "1 1-Euro-Job",
+    "count.other",
+    "{$count} 1-Euro-Jobs",
+    "definite.accusative.plural",
+    "die 1-Euro-Jobs",
+    "definite.accusative.singular",
+    "den 1-Euro-Job",
+    "definite.dative.plural",
+    "den 1-Euro-Jobs",
+    "definite.dative.singular",
+    "dem 1-Euro-Job",
+    "indefinite.nominative.plural",
+    "1-Euro-Jobs",
+    "indefinite.nominative.singular",
+    "ein 1-Euro-Job",
+    "de.article_case.1_euro_job",
+    "1-Euro-Job",
+    "1 Katze",
+    "{$count} Katzen",
+    "die Katzen",
+    "die Katze",
+    "den Katzen",
+    "der Katze",
+    "Katzen",
+    "eine Katze",
+    "de.article_case.katze",
+    "Katze",
+    "1 Mädchen",
+    "{$count} Mädchen",
+    "die Mädchen",
+    "das Mädchen",
+    "den Mädchen",
+    "dem Mädchen",
+    "Mädchen",
+    "ein Mädchen",
+    "de.article_case.maedchen"
+  ],
+  "terms": [
+    {
+      "featureBits": 8465,
+      "formSet": 0,
+      "id": 16,
+      "sense": null,
+      "text": 17
+    },
+    {
+      "featureBits": 8481,
+      "formSet": 1,
+      "id": 26,
+      "sense": null,
+      "text": 27
+    },
+    {
+      "featureBits": 8497,
+      "formSet": 2,
+      "id": 36,
+      "sense": null,
+      "text": 34
+    }
+  ]
+}

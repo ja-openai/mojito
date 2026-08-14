@@ -92,6 +92,20 @@ Babel exposes one combined datetime style, so `:datetime` currently requires
 handlers for Unicode official tests and demos live under `tools`, `tests`, or
 `examples`, not in the production formatter.
 
+Inflection release-bundle validation is also kept outside the installed package
+API. `sh run.sh inflection-release` invokes the shared MF2 conformance wrapper,
+which materializes the checked inflection JSON/M2IF/Hindi-sidecar artifacts and
+validates their manifest/report contract. This validates selected V0
+release-fixture artifacts only; it is not complete locale or grammar coverage.
+The selected release artifact locales are `ar`, `da`, `de`, `es`, `he`, `hi`,
+`it`, `ml`, `pt`, `ru`, `sr`, `sv`, and `tr`; metadata/profile-only or
+unavailable locales such as `en`, `id`, `ja`, `ko`, `ms`, `nb`, `nl`, `pl`,
+`th`, `vi`, `yue`, and `zh` are excluded from release artifacts.
+The package tests pin that command delegation so the gate cannot silently turn
+into package-local runtime code. This gives Python a package-level release-shape
+gate without making `mojito_mf2` an inflection runtime or exposing inflection
+classes from the public root API.
+
 Catalogs can load the official Unicode MF2 model directly or parse source
 messages into the same model. A future package split can keep source parsing out
 of parser-free formatter deployments.
@@ -132,6 +146,7 @@ Run:
 
 ```sh
 sh run.sh conformance
+sh run.sh inflection-release
 sh run.sh test
 sh run.sh typecheck
 sh run.sh demo

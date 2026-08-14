@@ -1,0 +1,84 @@
+{
+  "description": "Generated suffix-rule fallback from Unicode French noun gender data; heuristic-only, not deterministic production metadata.",
+  "locale": "fr",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/fr_noun_pack_report.py",
+    "license": "Unicode-3.0",
+    "sources": [
+      {
+        "byteSize": 17255961,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_fr.lst",
+        "sha256": "21e1a3d385db927d10d175a322ad72f55cac455ab6c960564c90fe6ac23fc53b"
+      },
+      {
+        "byteSize": 781,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/supplemental_fr.lst",
+        "sha256": "467b42b616096fb7d1ce25ea64a7451f39901e0e76ee594fe40b41fd54908571"
+      }
+    ]
+  },
+  "rules": [
+    {
+      "confidence": 1.0,
+      "gender": "feminine",
+      "suffix": "isations",
+      "support": 86
+    },
+    {
+      "confidence": 1.0,
+      "gender": "masculine",
+      "suffix": "ssements",
+      "support": 60
+    },
+    {
+      "confidence": 1.0,
+      "gender": "feminine",
+      "suffix": "iciennes",
+      "support": 52
+    },
+    {
+      "confidence": 1.0,
+      "gender": "masculine",
+      "suffix": "issement",
+      "support": 51
+    },
+    {
+      "confidence": 1.0,
+      "gender": "feminine",
+      "suffix": "lisation",
+      "support": 47
+    },
+    {
+      "confidence": 1.0,
+      "gender": "feminine",
+      "suffix": "ications",
+      "support": 45
+    },
+    {
+      "confidence": 1.0,
+      "gender": "feminine",
+      "suffix": "fication",
+      "support": 29
+    },
+    {
+      "confidence": 1.0,
+      "gender": "feminine",
+      "suffix": "érations",
+      "support": 27
+    }
+  ],
+  "schema": "mojito-mf2-inflection/fr-gender-suffix-rule-pack/v0",
+  "summary": {
+    "exportedRules": 8,
+    "exportedSuffixRuleBytes": 97,
+    "maxSuffixLen": 8,
+    "minConfidence": 0.88,
+    "minSupport": 20,
+    "rules": 370,
+    "suffixOnlyAccuracy": 0.7907,
+    "suffixRuleBytes": 3117,
+    "trainingSurfaces": 16590
+  }
+}

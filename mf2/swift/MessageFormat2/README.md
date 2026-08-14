@@ -17,6 +17,12 @@ Current package shape:
 `MessageFormat2` is the only package product. `MessageFormat2Conformance`
 and `MessageFormat2TranslateDemo` remain local executable targets for repository
 checks, benchmarks, and demos, but they are not client-facing products.
+There is no `MessageFormat2Inflection` product and no public compiled term-pack,
+M2IF, or inflection API in this Swift package yet. Keep Swift on its existing
+package checks; validate inflection release artifacts through the repo-level
+shared gate rather than adding a Swift package-local wrapper until a concrete
+mobile or embedded caller justifies a private decoder/renderer and a reviewed
+public API.
 
 `MessageFormat2` is split by responsibility:
 

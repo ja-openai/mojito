@@ -1,0 +1,348 @@
+{
+  "counts": {
+    "ambiguousSupportedSurfaces": 558,
+    "dictionaryEntries": 1140,
+    "dictionaryInflectionPatterns": 71,
+    "inflectionalPatterns": 76,
+    "missingInflectionPatterns": 0,
+    "nominativeSingularCandidates": 220,
+    "nounInflectionalPatterns": 71,
+    "skippedLines": 42,
+    "supportedEntries": 1030,
+    "uniqueSupportedSurfaces": 1027,
+    "usedInflectionalPatterns": 71
+  },
+  "features": {
+    "ambiguityReasons": {
+      "multiple-analyses": 3,
+      "multiple-cases": 534,
+      "multiple-genders": 11,
+      "multiple-inflections": 11,
+      "multiple-numbers": 140,
+      "multiple-parts-of-speech": 3
+    },
+    "animacy": {
+      "<missing>": 1014,
+      "inanimate": 16
+    },
+    "case": {
+      "<missing>": 2,
+      "accusative": 275,
+      "dative": 275,
+      "genitive": 228,
+      "instrumental": 273,
+      "locative": 275,
+      "nominative": 275,
+      "vocative": 263
+    },
+    "gender": {
+      "<missing>": 37,
+      "feminine": 454,
+      "masculine": 457,
+      "neuter": 90
+    },
+    "number": {
+      "<missing>": 61,
+      "plural": 355,
+      "singular": 754
+    },
+    "partOfSpeech": {
+      "noun": 838,
+      "proper-noun": 192
+    },
+    "patternSlotCases": {
+      "<missing>": 2,
+      "accusative": 124,
+      "dative": 124,
+      "genitive": 124,
+      "instrumental": 124,
+      "locative": 124,
+      "nominative": 124,
+      "vocative": 124
+    },
+    "patternSlotGenders": {
+      "<missing>": 42,
+      "feminine": 337,
+      "masculine": 393,
+      "neuter": 98
+    },
+    "patternSlotNumbers": {
+      "<missing>": 37,
+      "plural": 385,
+      "singular": 448
+    }
+  },
+  "locale": "sr",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/sr_case_pack_report.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_sr.lst",
+      "inflection/resources/org/unicode/inflection/dictionary/inflectional_sr.xml"
+    ]
+  },
+  "reviewPolicy": {
+    "automaticExportTerms": 159,
+    "blockedDictionaryEntries": 981,
+    "blockedReasons": {
+      "missing-or-ambiguous-gender": 6,
+      "not-nominative": 755,
+      "not-singular": 55,
+      "suffix-mismatch": 55,
+      "unsupported-part-of-speech": 110
+    },
+    "reviewRequiredReasons": {
+      "multiple-analyses": 3,
+      "multiple-cases": 534,
+      "multiple-genders": 11,
+      "multiple-inflections": 11,
+      "multiple-numbers": 140,
+      "multiple-parts-of-speech": 3
+    },
+    "reviewRequiredSurfaces": 558,
+    "runtimeExport": "closed-world-case-forms"
+  },
+  "samples": {
+    "ambiguousSurfaces": [
+      {
+        "entries": [
+          {
+            "animacy": [
+              "inanimate"
+            ],
+            "case": [
+              "nominative",
+              "vocative"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "35"
+            ],
+            "line": 7,
+            "number": [
+              "plural"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "izuzeci"
+          }
+        ],
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "izuzeci"
+      },
+      {
+        "entries": [
+          {
+            "animacy": [
+              "inanimate"
+            ],
+            "case": [
+              "dative",
+              "instrumental",
+              "locative"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "35"
+            ],
+            "line": 8,
+            "number": [
+              "plural"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "izuzecima"
+          }
+        ],
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "izuzecima"
+      },
+      {
+        "entries": [
+          {
+            "animacy": [
+              "inanimate"
+            ],
+            "case": [
+              "accusative",
+              "nominative"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "35"
+            ],
+            "line": 9,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "izuzetak"
+          }
+        ],
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "izuzetak"
+      },
+      {
+        "entries": [
+          {
+            "animacy": [
+              "inanimate"
+            ],
+            "case": [
+              "dative",
+              "locative",
+              "vocative"
+            ],
+            "gender": [
+              "masculine"
+            ],
+            "inflections": [
+              "35"
+            ],
+            "line": 14,
+            "number": [
+              "singular"
+            ],
+            "partOfSpeech": [
+              "noun"
+            ],
+            "surface": "izuzetku"
+          }
+        ],
+        "reasons": [
+          "multiple-cases"
+        ],
+        "surface": "izuzetku"
+      }
+    ],
+    "missingInflectionPatterns": [],
+    "nominativeSingularCandidates": [
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "1f"
+        ],
+        "line": 1,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "Srbija"
+      },
+      {
+        "animacy": [
+          "inanimate"
+        ],
+        "case": [
+          "accusative",
+          "nominative"
+        ],
+        "gender": [
+          "masculine"
+        ],
+        "inflections": [
+          "35"
+        ],
+        "line": 9,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "izuzetak"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "nominative"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "42"
+        ],
+        "line": 16,
+        "number": [
+          "singular"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "mačka"
+      },
+      {
+        "animacy": [],
+        "case": [
+          "accusative",
+          "genitive",
+          "nominative",
+          "vocative"
+        ],
+        "gender": [
+          "feminine"
+        ],
+        "inflections": [
+          "42"
+        ],
+        "line": 18,
+        "number": [
+          "singular",
+          "plural"
+        ],
+        "partOfSpeech": [
+          "noun"
+        ],
+        "surface": "mačke"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/sr-case-pack-report/v0",
+  "sizeEstimates": {
+    "exactSurfaceRowBytes": 10300,
+    "patternSlotRowBytes": 3480,
+    "patternSlotRows": 870,
+    "patternTemplateStringPoolBytes": 1762,
+    "simpleCasePackBytes": 29468,
+    "surfaceStringPoolBytes": 13926
+  },
+  "sources": [
+    {
+      "byteSize": 81741,
+      "gitLfsPointer": false,
+      "path": "dictionary_sr.lst",
+      "sha256": "12d5c2e0becdf55bbdd33b14fd816d5f5b78c1f8a60bb0596914be3a34a6f282"
+    },
+    {
+      "byteSize": 122329,
+      "gitLfsPointer": false,
+      "path": "inflectional_sr.xml",
+      "sha256": "2da11bc75a7220c871f19313609a76607249340a8dcc9e17d22f3e0469690d62"
+    }
+  ]
+}

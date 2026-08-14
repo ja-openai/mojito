@@ -108,6 +108,80 @@ executes the draft unit-selection and CLDR-pattern substitution algorithm
 against the generated CLDR data, but the normal runtime conformance runners do
 not consume it until the function is implemented.
 
+Inflection release artifacts are validated through
+`validate_inflection_release_fixture.py`. It materializes the checked Java
+fixture resources into a temporary release-style bundle, then runs the same
+manifest-backed validation contract used by the Java/common and native release
+gates. The current bundle must contain 35 passing artifacts: compiled JSON
+packs, binary M2IF packs, and the Hindi pronoun-agreement sidecar. The wrapper
+also pins the manifest/report schema, artifact count, artifact ID/kind/path
+pinning, source fixture filename mapping, report summary/status, JSON
+object/array shapes, artifact presence, and path containment so malformed,
+renamed, missing, swapped, or escaping fixtures cannot pass by preserving the
+count, including symlink paths that would resolve outside the bundle.
+Bundle source kind/path/source drift diagnostics name the artifact ID and
+include expected and actual values before manifest/report validation.
+Bundle source artifact specs must contain exactly `artifact_id`, `kind`,
+`source`, and `path`, and each spec must be object-shaped.
+The manifest top-level keys must be exactly `schema` and `artifacts`; the
+report top-level keys must be exactly `schema`, `summary`, and `artifacts`; the
+report summary keys must be exactly `artifacts`, `passed`, and `failed`.
+Manifest/report object and array shape diagnostics name the release fixture
+file.
+Manifest/report artifact count and artifact ID/order drift diagnostics name the
+release fixture file.
+Manifest/report schema, artifact kind/path, materialization, and report status
+diagnostics name the release fixture file.
+Bundle source and manifest/report required-text diagnostics name the source
+inventory row or release fixture artifact row.
+Bundle source and manifest/report row-level unexpected-key diagnostics name the
+source inventory row or release fixture artifact row when an artifact ID is
+available.
+Manifest artifact rows must contain exactly `artifactId`, `kind`, and `path`;
+passed report rows must contain exactly `artifactId`, `kind`, and `status`.
+Artifact-row failure codes are limited to `invalid-release-artifact-path`,
+`unreadable-release-artifact`, `invalid-compiled-term-pack-json`,
+`invalid-compiled-term-pack-m2if`, and
+`invalid-hindi-pronoun-agreement-pack-json`. Malformed manifest/report JSON,
+invalid manifest/report UTF-8, manifest schema, manifest shape, duplicate
+artifact ID, and report invariant failures are pre-row validation errors, not
+additional artifact-row codes.
+The generated `release-validation-report.json` is an all-pass fixture contract:
+every artifact row must have `status: "passed"`, and passed rows must not
+include stale `code` or `message` fields.
+The 35 artifacts are a fixed release-fixture inventory drawn from selected V0
+grammar slices: 17 compiled JSON packs, 17 M2IF packs, and the Hindi sidecar.
+Passing this gate does not mean every locale has runtime inflection coverage or
+that standalone runtime packages expose public inflection APIs; it is not
+complete locale or grammar coverage.
+The selected release artifact locales are `ar`, `da`, `de`, `es`, `he`, `hi`,
+`it`, `ml`, `pt`, `ru`, `sr`, `sv`, and `tr`. Metadata/profile-only or
+unavailable locales such as `en`, `id`, `ja`, `ko`, `ms`, `nb`, `nl`, `pl`,
+`th`, `vi`, `yue`, and `zh` are intentionally excluded from release artifacts
+until a product-backed runtime promotion changes the V0 scope.
+
+This is a release artifact contract, not a core MF2 source-to-model fixture, so
+it stays out of `check_all_languages.sh`. It is wired into the top-level
+`../check.sh`, the Python package gate, and the JavaScript package check:
+
+```sh
+python3 validate_inflection_release_fixture.py
+(cd ../python && sh run.sh inflection-release)
+(cd ../javascript && npm run inflection-release)
+```
+
+This shared command remains the default release-fixture surface. The only
+package-local `inflection-release` wrappers today are Python
+(`sh run.sh inflection-release`) and JavaScript (`npm run inflection-release`).
+Those entries are wrapper command surfaces only: they are included in the first
+review slice for release-fixture validation, delegate back to this script
+instead of package-local runtime code, and are not package-local runtime APIs.
+Java/common exposes release validation as API only, with no published CLI/main
+entry point. Standalone Java/Kotlin, Swift, Rust, Go, and PHP should keep their
+existing conformance or native package commands until a real product caller
+needs package-local term rendering. This release check is intentionally about
+artifact shape, not a public inflection API.
+
 `generate_plural_category_fixtures.py` uses the ICU4J reference harness and the
 generated all-locale CLDR plural data to refresh the `plural-*-cldr-*.json`
 source-to-model fixtures. These fixtures are ordinary conformance data: every

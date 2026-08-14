@@ -50,6 +50,13 @@ formatting.
 Local conformance, demo, and benchmark entry points stay under
 `src/test/kotlin` so they do not ship in the production jar.
 
+Inflection is intentionally not a public surface of this standalone Kotlin MF2
+package. Java/common owns the checked V0 inflection runtime and release
+validators; `mf2/kotlin` remains parser/formatter-only and its conformance
+runner scans public/default declarations to keep compiled term-pack, M2IF, and
+inflection APIs out of the package until a concrete product caller justifies a
+reviewed API.
+
 No global `kotlinc` install is required. `run.sh` uses Maven and
 `kotlin-maven-plugin` to download the Kotlin compiler and standard library into
 the Maven cache.

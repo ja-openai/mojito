@@ -1,0 +1,34 @@
+{
+  "schema": "mojito-mf2-inflection/term-inflection-profile-pack/v0",
+  "locale": "fr",
+  "provenance": {
+    "license": "Mojito-authored",
+    "generator": "glossary-term-inflection-profile/v0",
+    "sourceLabels": [],
+    "sources": []
+  },
+  "profiles": [
+    {
+      "termId": "item.iron_sword",
+      "source": "epee de fer",
+      "status": "APPROVED",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "feminine",
+        "number": "singular",
+        "elision": true
+      },
+      "forms": {
+        "bare.singular": "epee de fer",
+        "bare.plural": "epees de fer",
+        "definite.singular": "l'epee de fer",
+        "definite.plural": "les epees de fer",
+        "indefinite.singular": "une epee de fer",
+        "indefinite.plural": "des epees de fer",
+        "count.one": "{$count} epee de fer",
+        "count.other": "{$count} epees de fer"
+      },
+      "diagnostics": []
+    }
+  ]
+}
