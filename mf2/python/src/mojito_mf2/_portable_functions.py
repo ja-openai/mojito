@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from decimal import Decimal, InvalidOperation, ROUND_DOWN
+from decimal import (
+    Decimal,
+    DecimalException,
+    InvalidOperation,
+    ROUND_DOWN,
+    localcontext,
+)
 import re
 from typing import TYPE_CHECKING
 
@@ -35,7 +41,9 @@ def _passthrough(call: "FunctionCall") -> str:
     return call.value
 
 
-_DECIMAL_RE = re.compile(r"^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$")
+_DECIMAL_RE = re.compile(r"^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$")
+_MAX_DECIMAL_DIGITS = 1_000
+_MAX_FRACTION_DIGITS = 1_000
 
 
 def _format_unlocalized_number(call: "FunctionCall") -> str:
@@ -49,19 +57,37 @@ def _format_unlocalized_number(call: "FunctionCall") -> str:
 
 def _format_unlocalized_percent(call: "FunctionCall") -> str:
     value = _parse_call_decimal(call, "Percent function requires a numeric operand.")
-    formatted = _format_unlocalized_decimal_with_maximum_fraction_digits(
-        value * Decimal(100),
-        _maximum_fraction_digits(call),
-    )
+    maximum_fraction_digits = _maximum_fraction_digits(call)
+    minimum_fraction_digits = _minimum_fraction_digits(call)
+    try:
+        with localcontext() as context:
+            context.prec = _decimal_precision(value, maximum_fraction_digits)
+            percent = value * Decimal(100)
+        _validate_decimal_operand(
+            percent, "Percent function requires a bounded numeric operand."
+        )
+        formatted = _format_unlocalized_decimal_with_maximum_fraction_digits(
+            percent,
+            maximum_fraction_digits,
+        )
+    except DecimalException as error:
+        raise MF2Error(
+            "bad-operand", "Percent function requires a bounded numeric operand."
+        ) from error
     if _sign_display_always(call.function) and value >= 0:
         formatted = f"+{formatted}"
-    return f"{_append_minimum_fraction_digits(formatted, _minimum_fraction_digits(call))}%"
+    return f"{_append_minimum_fraction_digits(formatted, minimum_fraction_digits)}%"
 
 
 def _format_unlocalized_integer(call: "FunctionCall") -> str:
     value = _parse_call_decimal(call, "Integer function requires a numeric operand.")
-    integer = int(value.to_integral_value(rounding=ROUND_DOWN))
-    return f"+{integer}" if _sign_display_always(call.function) and integer >= 0 else str(integer)
+    integer = value.to_integral_value(rounding=ROUND_DOWN)
+    rendered = "0" if integer.is_zero() else format(integer, "f")
+    return (
+        f"+{rendered}"
+        if _sign_display_always(call.function) and integer >= 0
+        else rendered
+    )
 
 
 def _offset(call: "FunctionCall") -> str:
@@ -89,7 +115,20 @@ def _select_number(match: "FunctionMatch") -> int | None:
 def _select_percent(match: "FunctionMatch") -> int | None:
     if _invalid_numeric_selector(match.function, match.inherited_source):
         raise MF2Error("bad-selector", "Percent selector cannot match this operand.")
-    value = _parse_match_decimal(match, "Percent selector requires a numeric operand.") * Decimal(100)
+    operand = _parse_match_decimal(
+        match, "Percent selector requires a numeric operand."
+    )
+    try:
+        with localcontext() as context:
+            context.prec = _decimal_precision(operand) + 2
+            value = operand * Decimal(100)
+        _validate_decimal_operand(
+            value, "Percent selector requires a bounded numeric operand."
+        )
+    except (DecimalException, MF2Error) as error:
+        raise MF2Error(
+            "bad-selector", "Percent selector requires a bounded numeric operand."
+        ) from error
     key = _parse_decimal_or_none(match.key)
     return 1 if key is not None and value == key else None
 
@@ -118,6 +157,7 @@ def _parse_call_decimal(call: "FunctionCall", message: str) -> Decimal:
         parsed = _parse_source_decimal(call.inherited_source)
     if parsed is None:
         raise MF2Error("bad-operand", message)
+    _validate_decimal_operand(parsed, message)
     return parsed
 
 
@@ -127,6 +167,10 @@ def _parse_match_decimal(match: "FunctionMatch", message: str) -> Decimal:
         parsed = _parse_source_decimal(match.inherited_source)
     if parsed is None:
         raise MF2Error("bad-selector", message)
+    try:
+        _validate_decimal_operand(parsed, message)
+    except MF2Error as error:
+        raise MF2Error("bad-selector", message) from error
     return parsed
 
 
@@ -141,14 +185,13 @@ def _parse_source_decimal(source: object | None) -> Decimal | None:
 
 def _parse_decimal(value: str | None, message: str) -> Decimal:
     text = str(value if value is not None else "")
-    if not _DECIMAL_RE.fullmatch(text):
+    if len(text) > _MAX_DECIMAL_DIGITS or not _DECIMAL_RE.fullmatch(text):
         raise MF2Error("bad-operand", message)
     try:
         parsed = Decimal(text)
     except InvalidOperation as error:
         raise MF2Error("bad-operand", message) from error
-    if not parsed.is_finite():
-        raise MF2Error("bad-operand", message)
+    _validate_decimal_operand(parsed, message)
     return parsed
 
 
@@ -157,9 +200,10 @@ def _format_unlocalized_decimal(
     minimum_fraction_digits: int = 0,
     sign_always: bool = False,
 ) -> str:
-    output = format(value.normalize(), "f")
-    if "E" in output or "e" in output:
-        output = format(value, "f")
+    _validate_decimal_operand(
+        value, "Numeric operand exceeds the supported formatting range."
+    )
+    output = format(value, "f")
     if "." in output:
         integer, fraction = output.split(".", 1)
         fraction = fraction.rstrip("0")
@@ -179,7 +223,14 @@ def _format_unlocalized_decimal_with_maximum_fraction_digits(
 ) -> str:
     if maximum_fraction_digits is None:
         return _format_unlocalized_decimal(value)
-    quantized = value.quantize(Decimal(1).scaleb(-maximum_fraction_digits))
+    try:
+        with localcontext() as context:
+            context.prec = _decimal_precision(value, maximum_fraction_digits)
+            quantized = value.quantize(Decimal(1).scaleb(-maximum_fraction_digits))
+    except DecimalException as error:
+        raise MF2Error(
+            "bad-operand", "Numeric operand exceeds the supported formatting range."
+        ) from error
     return _format_unlocalized_decimal(quantized)
 
 
@@ -221,9 +272,34 @@ def _maximum_fraction_digits(call: "FunctionCall") -> int | None:
 
 def _parse_non_negative_integer_option(value: str, message: str) -> int:
     text = str(value)
-    if not text or not text.isdigit():
+    if not text or not text.isascii() or not text.isdecimal() or len(text) > 4:
         raise MF2Error("bad-option", message)
-    return int(text)
+    parsed = int(text)
+    if parsed > _MAX_FRACTION_DIGITS:
+        raise MF2Error(
+            "bad-option",
+            f"{message} The maximum supported value is {_MAX_FRACTION_DIGITS}.",
+        )
+    return parsed
+
+
+def _validate_decimal_operand(value: Decimal, message: str) -> None:
+    if (
+        not value.is_finite()
+        or len(value.as_tuple().digits) > _MAX_DECIMAL_DIGITS
+        or abs(value.adjusted()) > _MAX_DECIMAL_DIGITS
+    ):
+        raise MF2Error("bad-operand", message)
+
+
+def _decimal_precision(
+    value: Decimal, maximum_fraction_digits: int | None = None
+) -> int:
+    integer_digits = max(value.adjusted() + 1, 1)
+    coefficient_digits = len(value.as_tuple().digits)
+    return max(
+        integer_digits + (maximum_fraction_digits or 0) + 4, coefficient_digits + 4
+    )
 
 
 def _sign_display_always(function_ref: dict[str, object]) -> bool:
@@ -281,21 +357,35 @@ def _invalid_numeric_selector(function_ref: dict[str, object], source: object | 
 
 def _parse_integer(value: str | None, message: str) -> int:
     text = str(value if value is not None else "")
-    if not text or not (text.isdigit() or (text[0] in "+-" and text[1:].isdigit())):
-        raise MF2Error("bad-option" if "option" in message.lower() else "bad-operand", message)
+    digits = text[1:] if text and text[0] in "+-" else text
+    if (
+        not digits
+        or not digits.isascii()
+        or not digits.isdecimal()
+        or len(digits) > _MAX_FRACTION_DIGITS
+    ):
+        raise MF2Error(
+            "bad-option" if "option" in message.lower() else "bad-operand", message
+        )
     return int(text)
 
 
 def _parse_integer_or_none(value: str) -> int | None:
     text = str(value)
-    if not text or not (text.isdigit() or (text[0] in "+-" and text[1:].isdigit())):
+    digits = text[1:] if text and text[0] in "+-" else text
+    if (
+        not digits
+        or not digits.isascii()
+        or not digits.isdecimal()
+        or len(digits) > _MAX_FRACTION_DIGITS
+    ):
         return None
     return int(text)
 
 
 def _parse_decimal_or_none(value: str) -> Decimal | None:
     text = str(value)
-    if not _DECIMAL_RE.fullmatch(text):
+    if len(text) > _MAX_DECIMAL_DIGITS or not _DECIMAL_RE.fullmatch(text):
         return None
     try:
         parsed = Decimal(text)

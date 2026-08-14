@@ -82,7 +82,14 @@ result = format_message(
 
 The Babel registry provides locale-pretty `:number`, `:percent`, `:integer`,
 `:currency`, `:date`, `:time`, `:datetime`, and `:relativeTime` formatters where
-Babel supports them. Importing `mojito_mf2` does not import or require Babel;
+Babel supports them. Babel does not expose localized natural relative-time
+terms, so `:relativeTime numeric=auto` reports `bad-option` instead of silently
+producing numeric output. The adapter accepts both BCP47 locale identifiers
+such as `fr-FR` and Babel-style identifiers such as `fr_FR`. Numeric formatters
+reject operands whose coefficient length or absolute decimal exponent exceeds
+1,000, and reject fraction-digit options above 1,000, with structured MF2
+diagnostics.
+Importing `mojito_mf2` does not import or require Babel;
 importing `mojito_mf2.babel` without the optional dependency fails with an
 install hint. Date/time formatting accepts the shared adapter options
 `dateStyle`, `timeStyle`, and `timeZone`; legacy `length`, `precision`,

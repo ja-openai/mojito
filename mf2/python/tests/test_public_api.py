@@ -10,7 +10,6 @@ from mojito_mf2 import (
     FunctionRegistry,
     FunctionSource,
     FormatResult,
-    MF2Error,
     MF2ParseDiagnostic,
     PartsResult,
     MF2RecoveryContext,
@@ -243,6 +242,83 @@ class PublicApiTest(unittest.TestCase):
         self.assertEqual("Total: {$amount}", formatted.value)
         self.assertEqual(["unknown-function"], [error.code for error in formatted.errors])
 
+    def test_portable_numeric_options_reject_non_ascii_and_unbounded_digits(
+        self,
+    ) -> None:
+        cases = [
+            ("{$amount :number minimumFractionDigits=|²|}", {"amount": "1.25"}),
+            ("{$amount :percent maximumFractionDigits=|²|}", {"amount": "1.25"}),
+            ("{$amount :number minimumFractionDigits=|١|}", {"amount": "1.25"}),
+            ("{$amount :percent maximumFractionDigits=1001}", {"amount": "1.25"}),
+            ("{$amount :offset add=|²|}", {"amount": "1"}),
+        ]
+
+        for source, arguments in cases:
+            with self.subTest(source=source):
+                parsed = parse_to_model(source)
+                self.assertIsNotNone(parsed.model, parsed.diagnostics)
+                formatted = format_message(parsed.model, arguments)
+                self.assertEqual(
+                    ["bad-option"], [error.code for error in formatted.errors]
+                )
+
+    def test_portable_numeric_formatting_handles_large_bounded_values(self) -> None:
+        cases = [
+            ("{$amount :number}", "1e100", f"1{'0' * 100}"),
+            ("{$amount :percent maximumFractionDigits=2}", "1e100", f"1{'0' * 102}%"),
+            ("{$amount :percent maximumFractionDigits=2}", "9" * 40, f"{'9' * 40}00%"),
+        ]
+
+        for source, amount, expected in cases:
+            with self.subTest(source=source, amount=amount):
+                parsed = parse_to_model(source)
+                self.assertIsNotNone(parsed.model, parsed.diagnostics)
+                formatted = format_message(parsed.model, {"amount": amount})
+                self.assertEqual(expected, formatted.value)
+                self.assertEqual([], formatted.errors)
+
+    def test_portable_numeric_formatting_recovers_for_unbounded_values(self) -> None:
+        cases = [
+            ("{$amount :number}", "1e1000000"),
+            ("{$amount :percent maximumFractionDigits=2}", "1e1000000"),
+            ("{$amount :integer}", "1e1000000"),
+            ("{$amount :number}", "1e-5000"),
+            ("{$amount :integer}", "9" * 1001),
+            ("{$amount :offset add=1}", "²"),
+        ]
+
+        for source, amount in cases:
+            with self.subTest(source=source, amount=amount):
+                parsed = parse_to_model(source)
+                self.assertIsNotNone(parsed.model, parsed.diagnostics)
+                formatted = format_message(parsed.model, {"amount": amount})
+                self.assertEqual(
+                    ["bad-operand"], [error.code for error in formatted.errors]
+                )
+
+    def test_presence_only_attributes_are_preserved_in_models_and_parts(self) -> None:
+        parsed = parse_to_model("{$name @visible @label=example}")
+        self.assertIsNotNone(parsed.model, parsed.diagnostics)
+        self.assertEqual(
+            {"visible": True, "label": {"type": "literal", "value": "example"}},
+            parsed.model["pattern"][0]["attributes"],
+        )
+
+        parts = format_message_to_parts(parsed.model, {"name": "Mojito"})
+        self.assertEqual(
+            [
+                {
+                    "type": "expression",
+                    "value": "Mojito",
+                    "attributes": {
+                        "visible": True,
+                        "label": {"type": "literal", "value": "example"},
+                    },
+                }
+            ],
+            parts.parts,
+        )
+
     def test_root_exports_stable_api_only(self) -> None:
         self.assertFalse(hasattr(mojito_mf2, "DEFAULT_FUNCTION_REGISTRY"))
         self.assertFalse(hasattr(mojito_mf2, "canonical_locale_key"))
@@ -251,7 +327,6 @@ class PublicApiTest(unittest.TestCase):
         self.assertFalse(hasattr(mojito_mf2, "format_message_strict"))
         self.assertFalse(hasattr(mojito_mf2, "format_message_to_parts_strict"))
         self.assertFalse(hasattr(mojito_mf2.parser, "ParseDiagnostic"))
-
 def _call(name: str, value: str) -> FunctionCall:
     return FunctionCall(
         value=value,
@@ -260,6 +335,5 @@ def _call(name: str, value: str) -> FunctionCall:
         locale="en",
         _option_resolver=lambda _name, default=None: default,
     )
-
 if __name__ == "__main__":
     unittest.main()
