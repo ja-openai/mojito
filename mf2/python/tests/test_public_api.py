@@ -10,7 +10,6 @@ from mojito_mf2 import (
     FunctionRegistry,
     FunctionSource,
     FormatResult,
-    MF2Error,
     MF2ParseDiagnostic,
     PartsResult,
     MF2RecoveryContext,
@@ -68,7 +67,9 @@ class PublicApiTest(unittest.TestCase):
 
         self.assertEqual("Welcome, [missing]!", formatted.value)
         self.assertFalse(formatted.ok)
-        self.assertEqual(["unresolved-variable"], [error.code for error in formatted.errors])
+        self.assertEqual(
+            ["unresolved-variable"], [error.code for error in formatted.errors]
+        )
         self.assertEqual("name", seen[0].variable_name)
         self.assertEqual("{$name}", seen[0].fallback_value)
 
@@ -90,8 +91,12 @@ class PublicApiTest(unittest.TestCase):
             ],
             parts.parts,
         )
-        self.assertEqual(["unresolved-variable"], [error.code for error in formatted.errors])
-        self.assertEqual(["unresolved-variable"], [error.code for error in parts.errors])
+        self.assertEqual(
+            ["unresolved-variable"], [error.code for error in formatted.errors]
+        )
+        self.assertEqual(
+            ["unresolved-variable"], [error.code for error in parts.errors]
+        )
 
     def test_format_error_recovery_can_replace_with_empty_string(self) -> None:
         result = parse_to_model("Welcome, {$name :integer}!")
@@ -99,8 +104,12 @@ class PublicApiTest(unittest.TestCase):
         def recover(context: MF2RecoveryContext) -> str:
             return ""
 
-        formatted = format_message(result.model, {"name": "abc"}, on_format_error=recover)
-        parts = format_message_to_parts(result.model, {"name": "abc"}, on_format_error=recover)
+        formatted = format_message(
+            result.model, {"name": "abc"}, on_format_error=recover
+        )
+        parts = format_message_to_parts(
+            result.model, {"name": "abc"}, on_format_error=recover
+        )
 
         self.assertEqual("Welcome, !", formatted.value)
         self.assertEqual(
@@ -120,8 +129,12 @@ class PublicApiTest(unittest.TestCase):
         def recover(context: MF2RecoveryContext) -> None:
             return None
 
-        formatted = format_message(result.model, {"name": "abc"}, on_format_error=recover)
-        parts = format_message_to_parts(result.model, {"name": "abc"}, on_format_error=recover)
+        formatted = format_message(
+            result.model, {"name": "abc"}, on_format_error=recover
+        )
+        parts = format_message_to_parts(
+            result.model, {"name": "abc"}, on_format_error=recover
+        )
 
         self.assertEqual("Welcome, {$name}!", formatted.value)
         self.assertEqual(
@@ -149,7 +162,9 @@ class PublicApiTest(unittest.TestCase):
             ],
             parts.parts,
         )
-        self.assertEqual(["unknown-function"], [error.code for error in formatted.errors])
+        self.assertEqual(
+            ["unknown-function"], [error.code for error in formatted.errors]
+        )
 
     def test_custom_selector_can_match_variant_key(self) -> None:
         model = {
@@ -171,7 +186,10 @@ class PublicApiTest(unittest.TestCase):
             ],
             "selectors": [{"type": "variable", "name": "state"}],
             "variants": [
-                {"keys": [{"type": "literal", "value": "custom"}], "value": ["selected"]},
+                {
+                    "keys": [{"type": "literal", "value": "custom"}],
+                    "value": ["selected"],
+                },
                 {"keys": [{"type": "*"}], "value": ["fallback"]},
             ],
         }
@@ -181,7 +199,9 @@ class PublicApiTest(unittest.TestCase):
             .with_function("test:select", lambda call: call.value)
             .with_selector(
                 "test:select",
-                lambda match: 1 if match.value == "ready" and match.key == "custom" else None,
+                lambda match: (
+                    1 if match.value == "ready" and match.key == "custom" else None
+                ),
             )
         )
 
@@ -220,7 +240,11 @@ class PublicApiTest(unittest.TestCase):
                     "value": {
                         "type": "expression",
                         "arg": {"type": "variable", "name": "ratio"},
-                        "function": {"type": "function", "name": "percent", "options": {}},
+                        "function": {
+                            "type": "function",
+                            "name": "percent",
+                            "options": {},
+                        },
                     },
                 }
             ],
@@ -241,7 +265,128 @@ class PublicApiTest(unittest.TestCase):
         formatted = format_message(result.model, {"amount": 12.5})
 
         self.assertEqual("Total: {$amount}", formatted.value)
-        self.assertEqual(["unknown-function"], [error.code for error in formatted.errors])
+        self.assertEqual(
+            ["unknown-function"], [error.code for error in formatted.errors]
+        )
+
+    def test_portable_numeric_options_reject_non_ascii_and_unbounded_digits(
+        self,
+    ) -> None:
+        cases = [
+            ("{$amount :number minimumFractionDigits=|²|}", {"amount": "1.25"}),
+            ("{$amount :percent maximumFractionDigits=|²|}", {"amount": "1.25"}),
+            ("{$amount :number minimumFractionDigits=|١|}", {"amount": "1.25"}),
+            ("{$amount :percent maximumFractionDigits=1001}", {"amount": "1.25"}),
+            ("{$amount :offset add=|²|}", {"amount": "1"}),
+        ]
+
+        for source, arguments in cases:
+            with self.subTest(source=source):
+                parsed = parse_to_model(source)
+                self.assertIsNotNone(parsed.model, parsed.diagnostics)
+                formatted = format_message(parsed.model, arguments)
+                self.assertEqual(
+                    ["bad-option"], [error.code for error in formatted.errors]
+                )
+
+    def test_portable_number_accepts_only_ascii_mf2_decimal_syntax(self) -> None:
+        parsed = parse_to_model("{$amount :number}")
+        self.assertIsNotNone(parsed.model, parsed.diagnostics)
+
+        valid = {
+            "0": "0",
+            "-0": "0",
+            "1.250": "1.25",
+            "1e+2": "100",
+            "1E-2": "0.01",
+            "-2.5e2": "-250",
+        }
+        for amount, expected in valid.items():
+            with self.subTest(amount=amount):
+                formatted = format_message(parsed.model, {"amount": amount})
+                self.assertEqual(expected, formatted.value)
+                self.assertEqual([], formatted.errors)
+
+        invalid = [
+            "",
+            "00",
+            "+1",
+            "1.",
+            ".5",
+            "1e",
+            "1e+",
+            "1e1.2",
+            "1e2e3",
+            "١",
+            "1_0",
+            "NaN",
+            "Infinity",
+            " 1",
+            "1 ",
+        ]
+        for amount in invalid:
+            with self.subTest(amount=amount):
+                formatted = format_message(parsed.model, {"amount": amount})
+                self.assertEqual(
+                    ["bad-operand"], [error.code for error in formatted.errors]
+                )
+
+    def test_portable_numeric_formatting_handles_large_bounded_values(self) -> None:
+        cases = [
+            ("{$amount :number}", "1e100", f"1{'0' * 100}"),
+            ("{$amount :percent maximumFractionDigits=2}", "1e100", f"1{'0' * 102}%"),
+            ("{$amount :percent maximumFractionDigits=2}", "9" * 40, f"{'9' * 40}00%"),
+        ]
+
+        for source, amount, expected in cases:
+            with self.subTest(source=source, amount=amount):
+                parsed = parse_to_model(source)
+                self.assertIsNotNone(parsed.model, parsed.diagnostics)
+                formatted = format_message(parsed.model, {"amount": amount})
+                self.assertEqual(expected, formatted.value)
+                self.assertEqual([], formatted.errors)
+
+    def test_portable_numeric_formatting_recovers_for_unbounded_values(self) -> None:
+        cases = [
+            ("{$amount :number}", "1e1000000"),
+            ("{$amount :percent maximumFractionDigits=2}", "1e1000000"),
+            ("{$amount :integer}", "1e1000000"),
+            ("{$amount :number}", "1e-5000"),
+            ("{$amount :integer}", "9" * 1001),
+            ("{$amount :offset add=1}", "²"),
+        ]
+
+        for source, amount in cases:
+            with self.subTest(source=source, amount=amount):
+                parsed = parse_to_model(source)
+                self.assertIsNotNone(parsed.model, parsed.diagnostics)
+                formatted = format_message(parsed.model, {"amount": amount})
+                self.assertEqual(
+                    ["bad-operand"], [error.code for error in formatted.errors]
+                )
+
+    def test_presence_only_attributes_are_preserved_in_models_and_parts(self) -> None:
+        parsed = parse_to_model("{$name @visible @label=example}")
+        self.assertIsNotNone(parsed.model, parsed.diagnostics)
+        self.assertEqual(
+            {"visible": True, "label": {"type": "literal", "value": "example"}},
+            parsed.model["pattern"][0]["attributes"],
+        )
+
+        parts = format_message_to_parts(parsed.model, {"name": "Mojito"})
+        self.assertEqual(
+            [
+                {
+                    "type": "expression",
+                    "value": "Mojito",
+                    "attributes": {
+                        "visible": True,
+                        "label": {"type": "literal", "value": "example"},
+                    },
+                }
+            ],
+            parts.parts,
+        )
 
     def test_root_exports_stable_api_only(self) -> None:
         self.assertFalse(hasattr(mojito_mf2, "DEFAULT_FUNCTION_REGISTRY"))
@@ -252,6 +397,7 @@ class PublicApiTest(unittest.TestCase):
         self.assertFalse(hasattr(mojito_mf2, "format_message_to_parts_strict"))
         self.assertFalse(hasattr(mojito_mf2.parser, "ParseDiagnostic"))
 
+
 def _call(name: str, value: str) -> FunctionCall:
     return FunctionCall(
         value=value,
@@ -260,6 +406,7 @@ def _call(name: str, value: str) -> FunctionCall:
         locale="en",
         _option_resolver=lambda _name, default=None: default,
     )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -6,6 +6,7 @@ from mojito_mf2 import (
     FormatResult,
     FunctionCall,
     FunctionRegistry,
+    MF2AttributeValue,
     MF2FormattedPart,
     MF2FunctionAnnotation,
     MF2MessageModel,
@@ -49,3 +50,9 @@ def upper(call: FunctionCall) -> str:
 registry = FunctionRegistry.portable().with_function("app:upper", upper)
 function: MF2FunctionAnnotation = {"type": "function", "name": "string"}
 assert registry.has_formatter(function)
+
+presence_attribute: MF2AttributeValue = True
+literal_attribute: MF2AttributeValue = {"type": "literal", "value": "visible"}
+assert presence_attribute is True
+assert isinstance(literal_attribute, dict)
+assert literal_attribute["value"] == "visible"

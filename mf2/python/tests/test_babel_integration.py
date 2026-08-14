@@ -92,6 +92,149 @@ class BabelIntegrationTest(unittest.TestCase):
         self.assertEqual(f"Total {format_currency(42, 'EUR', locale='fr')}", babel.value)
         self.assertEqual([], babel.errors)
 
+    @unittest.skipIf(not BABEL_AVAILABLE, "Babel is not installed")
+    def test_babel_registry_accepts_bcp47_and_babel_locale_identifiers(self) -> None:
+        from babel import Locale
+        from babel.numbers import format_decimal
+
+        functions = importlib.import_module(
+            "mojito_mf2.babel"
+        ).babel_function_registry()
+        parsed = parse_to_model("{$amount :number}")
+        self.assertIsNotNone(parsed.model, parsed.diagnostics)
+
+        for provided, expected in [
+            ("fr-FR", "fr_FR"),
+            ("fr_FR", "fr_FR"),
+            ("en-US", "en_US"),
+            ("pt-BR", "pt_BR"),
+            ("zh-Hant-TW", "zh_Hant_TW"),
+            ("en-US-u-ca-gregory", "en_US"),
+            ("iw-IL", "he_IL"),
+        ]:
+            with self.subTest(locale=provided):
+                formatted = format_message(
+                    parsed.model,
+                    {"amount": "1234.5"},
+                    locale=provided,
+                    functions=functions,
+                )
+                self.assertEqual(
+                    format_decimal("1234.5", locale=Locale.parse(expected)),
+                    formatted.value,
+                )
+                self.assertEqual([], formatted.errors)
+
+    @unittest.skipIf(not BABEL_AVAILABLE, "Babel is not installed")
+    def test_babel_registry_recovers_for_invalid_locales(self) -> None:
+        functions = importlib.import_module(
+            "mojito_mf2.babel"
+        ).babel_function_registry()
+        parsed = parse_to_model("{$amount :number}")
+        self.assertIsNotNone(parsed.model, parsed.diagnostics)
+
+        for locale in ["not_a_locale", "invalid__locale", ""]:
+            with self.subTest(locale=locale):
+                formatted = format_message(
+                    parsed.model,
+                    {"amount": 42},
+                    locale=locale,
+                    functions=functions,
+                )
+                self.assertEqual(
+                    ["bad-option"], [error.code for error in formatted.errors]
+                )
+
+    @unittest.skipIf(not BABEL_AVAILABLE, "Babel is not installed")
+    def test_babel_registry_recovers_for_invalid_fraction_options(self) -> None:
+        functions = importlib.import_module(
+            "mojito_mf2.babel"
+        ).babel_function_registry()
+        cases = [
+            "{$amount :number minimumFractionDigits=|²|}",
+            "{$amount :number maximumFractionDigits=|١|}",
+            "{$amount :percent maximumFractionDigits=1001}",
+            "{$amount :number minimumFractionDigits=3 maximumFractionDigits=2}",
+        ]
+
+        for source in cases:
+            with self.subTest(source=source):
+                parsed = parse_to_model(source)
+                self.assertIsNotNone(parsed.model, parsed.diagnostics)
+                formatted = format_message(
+                    parsed.model, {"amount": "1.25"}, functions=functions
+                )
+                self.assertEqual(
+                    ["bad-option"], [error.code for error in formatted.errors]
+                )
+
+    @unittest.skipIf(not BABEL_AVAILABLE, "Babel is not installed")
+    def test_babel_registry_formats_large_bounded_numbers(self) -> None:
+        functions = importlib.import_module(
+            "mojito_mf2.babel"
+        ).babel_function_registry()
+        cases = [
+            "{$amount :number maximumFractionDigits=2}",
+            "{$amount :percent maximumFractionDigits=2}",
+            "{$amount :integer}",
+            "{$amount :currency currency=USD}",
+        ]
+
+        for source in cases:
+            with self.subTest(source=source):
+                parsed = parse_to_model(source)
+                self.assertIsNotNone(parsed.model, parsed.diagnostics)
+                formatted = format_message(
+                    parsed.model, {"amount": "1e100"}, functions=functions
+                )
+                self.assertEqual([], formatted.errors)
+                self.assertNotIn("{$amount}", formatted.value)
+
+    @unittest.skipIf(not BABEL_AVAILABLE, "Babel is not installed")
+    def test_babel_registry_recovers_for_unbounded_numeric_operands(self) -> None:
+        functions = importlib.import_module(
+            "mojito_mf2.babel"
+        ).babel_function_registry()
+        sources = [
+            "{$amount :number maximumFractionDigits=2}",
+            "{$amount :percent maximumFractionDigits=2}",
+            "{$amount :integer}",
+            "{$amount :currency currency=USD}",
+            "{$amount :relativeTime unit=day numeric=always}",
+        ]
+
+        for source in sources:
+            for amount in ["1e1000000", "1e-5000", "9" * 1001]:
+                with self.subTest(source=source, amount=amount[:20]):
+                    parsed = parse_to_model(source)
+                    self.assertIsNotNone(parsed.model, parsed.diagnostics)
+                    formatted = format_message(
+                        parsed.model,
+                        {"amount": amount},
+                        functions=functions,
+                    )
+                    self.assertEqual(
+                        ["bad-operand"], [error.code for error in formatted.errors]
+                    )
+
+    @unittest.skipIf(not BABEL_AVAILABLE, "Babel is not installed")
+    def test_babel_registry_rejects_unsupported_natural_relative_terms(self) -> None:
+        functions = importlib.import_module(
+            "mojito_mf2.babel"
+        ).babel_function_registry()
+        parsed = parse_to_model("{$amount :relativeTime unit=day numeric=auto}")
+        self.assertIsNotNone(parsed.model, parsed.diagnostics)
+
+        for amount in [-1, 0, 1]:
+            with self.subTest(amount=amount):
+                formatted = format_message(
+                    parsed.model, {"amount": amount}, functions=functions
+                )
+                self.assertEqual("{$amount}", formatted.value)
+                self.assertEqual(
+                    ["bad-option"], [error.code for error in formatted.errors]
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
