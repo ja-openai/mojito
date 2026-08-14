@@ -756,6 +756,106 @@ public class PullCommandTest extends CLITestBase {
   }
 
   @Test
+  public void portableJsonMigrationDecodesCommentsAndUsesExistingLeveraging() throws Exception {
+    Repository repository = createTestRepoUsingRepoService();
+    Path source = getTargetTestDir("legacy-json-source").toPath();
+    Path translations = getTargetTestDir("legacy-json-translations").toPath();
+    Path output = getTargetTestDir("migrated-json-output").toPath();
+    Files.createDirectories(source);
+    Files.createDirectories(translations);
+
+    String english =
+        """
+        {
+          "quoted": {
+            "defaultMessage": "The harbor is open",
+            "description": "Label for \\\"Northern Harbor\\\""
+          },
+          "multiline": {
+            "defaultMessage": "Harbor details",
+            "description": "First line\\nsecond line"
+          }
+        }
+        """;
+    String french =
+        english
+            .replace("The harbor is open", "Le port est ouvert")
+            .replace("Harbor details", "Détails du port");
+    String japanese =
+        english.replace("The harbor is open", "港は開いています").replace("Harbor details", "港の詳細");
+    Files.writeString(source.resolve("en.json"), english);
+    Files.writeString(translations.resolve("fr-FR.json"), french);
+    Files.writeString(translations.resolve("fr-CA.json"), french);
+    Files.writeString(translations.resolve("ja-JP.json"), japanese);
+
+    runConfiguredJsonMigrationCommand("push", repository.getName(), source, null, "okapi");
+    runConfiguredJsonMigrationCommand(
+        "import", repository.getName(), source, translations, "okapi");
+
+    TMTextUnit oldQuoted =
+        tmTextUnitRepository.findByTm_id(repository.getTm().getId()).stream()
+            .filter(unit -> unit.getName().equals("quoted"))
+            .findFirst()
+            .orElseThrow();
+    assertEquals("Label for \\\"Northern Harbor\\\"", oldQuoted.getComment());
+    assertNotNull(
+        "Legacy import must populate the existing identity before migration",
+        tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
+            localeService.findByBcp47Tag("fr-FR").getId(), oldQuoted.getId()));
+
+    runConfiguredJsonMigrationCommand("push", repository.getName(), source, null, "portable");
+
+    TMTextUnit correctedQuoted =
+        tmTextUnitRepository.findByTm_id(repository.getTm().getId()).stream()
+            .filter(unit -> unit.getName().equals("quoted"))
+            .filter(unit -> unit.getComment().equals("Label for \"Northern Harbor\""))
+            .findFirst()
+            .orElseThrow();
+    assertFalse(oldQuoted.getId().equals(correctedQuoted.getId()));
+    for (String locale : List.of("fr-FR", "ja-JP")) {
+      var current =
+          tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
+              localeService.findByBcp47Tag(locale).getId(), correctedQuoted.getId());
+      assertNotNull(locale, current);
+      assertEquals(
+          locale,
+          TMTextUnitVariant.Status.TRANSLATION_NEEDED,
+          current.getTmTextUnitVariant().getStatus());
+    }
+
+    runConfiguredJsonMigrationCommand("pull", repository.getName(), source, output, "portable");
+    assertEquals(french, Files.readString(output.resolve("fr-FR.json")));
+    assertEquals(japanese, Files.readString(output.resolve("ja-JP.json")));
+  }
+
+  private void runConfiguredJsonMigrationCommand(
+      String command, String repository, Path source, Path target, String converter) {
+    List<String> arguments =
+        new ArrayList<>(
+            List.of(
+                command,
+                "-r",
+                repository,
+                "-s",
+                source.toString(),
+                "-ft",
+                "JSON_NOBASENAME",
+                "--converter",
+                converter));
+    if (target != null) {
+      arguments.addAll(List.of("-t", target.toString()));
+    }
+    arguments.addAll(
+        List.of(
+            "-fo",
+            "noteKeyPattern=description",
+            "extractAllPairs=false",
+            "exceptions=defaultMessage",
+            "removeKeySuffix=/defaultMessage"));
+    getL10nJCommander().run(arguments.toArray(String[]::new));
+  }
+
+  @Test
   public void portableConverterReusesExistingChromeJsonDataset() throws Exception {
     String[] options = {"-ft", "CHROME_EXT_JSON"};
     assertPortableMatchesExistingDataset(

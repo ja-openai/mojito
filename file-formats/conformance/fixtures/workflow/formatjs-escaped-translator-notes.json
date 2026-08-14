@@ -1,0 +1,10 @@
+{
+  "quoted": {
+    "defaultMessage": "Keep the original \"source\" message.",
+    "description": "Call it \"Fast \\\u0026 Direct\".\nThen continue."
+  },
+  "tabbed": {
+    "defaultMessage": "A second native message",
+    "description": "Column one\tcolumn two"
+  }
+}

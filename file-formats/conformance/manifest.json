@@ -596,6 +596,20 @@
       ]
     },
     {
+      "id": "formatjs-mojito-correctly-decodes-escaped-translator-notes",
+      "format": "formatjs_json",
+      "input": "fixtures/workflow/formatjs-escaped-translator-notes.json",
+      "expected": "fixtures/workflow/formatjs-escaped-translator-notes.expected.json",
+      "legacyAssetPath": "messages.json",
+      "legacyEscapedComments": ["quoted", "tabbed"],
+      "filterOptions": [
+        "noteKeyPattern=description",
+        "extractAllPairs=false",
+        "exceptions=defaultMessage",
+        "removeKeySuffix=/defaultMessage"
+      ]
+    },
+    {
       "id": "formatjs-mojito-retains-source-location-without-translator-note",
       "format": "formatjs_json",
       "input": "fixtures/workflow/formatjs-position-without-description.json",

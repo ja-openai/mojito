@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "formatjs_json",
+  "messages": {
+    "quoted": {
+      "defaultMessage": "Keep the original \"source\" message.",
+      "description": "Call it \"Fast \\& Direct\".\nThen continue."
+    },
+    "tabbed": {
+      "defaultMessage": "A second native message",
+      "description": "Column one\tcolumn two"
+    }
+  }
+}

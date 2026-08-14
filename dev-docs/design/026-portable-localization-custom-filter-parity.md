@@ -385,6 +385,15 @@ and 1,000-unit workloads improving from 175.0 ms to 7.2 ms and from 32.8 ms to
 - FormatJS production defaults exercise `noteKeyPattern=description`,
   `extractAllPairs=false`, `exceptions=defaultMessage`,
   `removeKeySuffix=/defaultMessage`, and file/line/column usage extraction.
+  The customized filter retains JSON string escaping inside translator notes:
+  quotes, backslashes, and control characters remain escaped in the stable
+  translation-memory comment even though message source text is decoded.
+  That behavior is a historical bug, not a compatibility target: independent
+  Java/Rust extraction correctly decodes translator notes. This intentionally
+  changes affected translation-memory identities; existing leveraging may
+  copy their translations but marks them as needing translation. Preserving
+  approval status requires a separately scoped explicit migration. A
+  configured-filter differential records the description and MD5 divergence.
   Line and column positions use the existing customized filter's signed 32-bit
   boundary exactly: minimum and maximum values are retained, overflowing or
   underflowing numbers are ignored, and a column without a valid line is never
@@ -514,6 +523,14 @@ extraction bug, an explicit two-backend differential that cannot run with a
 global override, and conflicting duplicate Java property declarations whose
 separate legacy TM identities are not yet represented by the canonical model.
 No entire service or CLI class is excluded.
+
+A representative large JSON catalog independently matched the configured
+customized JSON filter except for incorrectly escaped translator notes, which
+portable Java and Rust intentionally decode correctly. A separate localhost-only
+push, import, migration, and pull round trip preserved existing approved
+translations across multiple locales. Without the explicit migration option,
+the focused CLI regression continues to prove that existing leveraging marks
+corrected identities `TRANSLATION_NEEDED`.
 
 Direct CLI invocations also initialize their JCommander parser when Spring has
 not run its `@PostConstruct` lifecycle, preventing the intermittent startup
