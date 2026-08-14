@@ -1,0 +1,269 @@
+{
+  "diagnostics": [],
+  "formSets": [
+    {
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 4,
+          "kind": "literal",
+          "value": 5
+        },
+        {
+          "key": 6,
+          "kind": "literal",
+          "value": 7
+        },
+        {
+          "key": 8,
+          "kind": "literal",
+          "value": 9
+        },
+        {
+          "key": 10,
+          "kind": "literal",
+          "value": 11
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 13
+        },
+        {
+          "key": 14,
+          "kind": "literal",
+          "value": 15
+        },
+        {
+          "key": 16,
+          "kind": "literal",
+          "value": 17
+        },
+        {
+          "key": 18,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 19,
+          "kind": "literal",
+          "value": 5
+        }
+      ],
+      "term": 0
+    },
+    {
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 21
+        },
+        {
+          "key": 4,
+          "kind": "literal",
+          "value": 23
+        },
+        {
+          "key": 6,
+          "kind": "literal",
+          "value": 24
+        },
+        {
+          "key": 8,
+          "kind": "literal",
+          "value": 25
+        },
+        {
+          "key": 10,
+          "kind": "literal",
+          "value": 26
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 27
+        },
+        {
+          "key": 14,
+          "kind": "literal",
+          "value": 28
+        },
+        {
+          "key": 16,
+          "kind": "literal",
+          "value": 29
+        },
+        {
+          "key": 18,
+          "kind": "literal",
+          "value": 21
+        },
+        {
+          "key": 19,
+          "kind": "literal",
+          "value": 23
+        }
+      ],
+      "term": 20
+    }
+  ],
+  "generationSummary": {
+    "candidateTerms": 2,
+    "exportedFormKeys": [
+      "indefinite.nominative.singular",
+      "indefinite.nominative.plural",
+      "indefinite.genitive.singular",
+      "indefinite.genitive.plural",
+      "definite.nominative.singular",
+      "definite.nominative.plural",
+      "definite.genitive.singular",
+      "definite.genitive.plural",
+      "bare.singular",
+      "bare.plural"
+    ],
+    "exportedTerms": 2,
+    "formRows": 20,
+    "missingFormKeys": [],
+    "policy": "closed-world genitive/definiteness explicit-form pack",
+    "requiredFormRowsPerTerm": 10,
+    "reviewDiagnostics": [],
+    "terms": [
+      {
+        "gender": "common",
+        "sourceRows": [
+          151189,
+          151193,
+          151190,
+          151194,
+          151192,
+          151196,
+          151191,
+          151195,
+          151189,
+          151193
+        ],
+        "sourceRowsByFormKey": {
+          "bare.plural": 151193,
+          "bare.singular": 151189,
+          "definite.genitive.plural": 151195,
+          "definite.genitive.singular": 151191,
+          "definite.nominative.plural": 151194,
+          "definite.nominative.singular": 151190,
+          "indefinite.genitive.plural": 151196,
+          "indefinite.genitive.singular": 151192,
+          "indefinite.nominative.plural": 151193,
+          "indefinite.nominative.singular": 151189
+        },
+        "termId": "da.definiteness.franskmand"
+      },
+      {
+        "gender": "neuter",
+        "sourceRows": [
+          39112,
+          71556,
+          39113,
+          71557,
+          39115,
+          71559,
+          39114,
+          71558,
+          39112,
+          71556
+        ],
+        "sourceRowsByFormKey": {
+          "bare.plural": 71556,
+          "bare.singular": 39112,
+          "definite.genitive.plural": 71558,
+          "definite.genitive.singular": 39114,
+          "definite.nominative.plural": 71557,
+          "definite.nominative.singular": 39113,
+          "indefinite.genitive.plural": 71559,
+          "indefinite.genitive.singular": 39115,
+          "indefinite.nominative.plural": 71556,
+          "indefinite.nominative.singular": 39112
+        },
+        "termId": "da.definiteness.barnebarn"
+      }
+    ]
+  },
+  "locale": "da",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/da_genitive_definiteness_pack.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_da.lst"
+    ],
+    "sources": [
+      {
+        "byteSize": 38557469,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_da.lst",
+        "sha256": "6226384ce104886c32e6a90432f8b41d96be0f9925eb10896095250d048b6c8b"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/compiled-term-pack/v0",
+  "sizeEstimates": {
+    "binaryLowerBoundBytes": {
+      "bindingReferenceBytes": 0,
+      "formRowBytes": 240,
+      "stringPoolBytes": 541,
+      "termRowBytes": 40,
+      "totalBytes": 821
+    },
+    "compactJsonBytes": 6093
+  },
+  "strings": [
+    "da.definiteness.franskmand",
+    "franskmand",
+    "inflection=6e9",
+    "indefinite.nominative.singular",
+    "indefinite.nominative.plural",
+    "franskmænd",
+    "definite.nominative.singular",
+    "franskmanden",
+    "definite.nominative.plural",
+    "franskmændene",
+    "indefinite.genitive.singular",
+    "franskmands",
+    "indefinite.genitive.plural",
+    "franskmænds",
+    "definite.genitive.singular",
+    "franskmandens",
+    "definite.genitive.plural",
+    "franskmændenes",
+    "bare.singular",
+    "bare.plural",
+    "da.definiteness.barnebarn",
+    "barnebarn",
+    "inflection=4c3",
+    "børnebørn",
+    "barnebarnet",
+    "børnebørnene",
+    "barnebarns",
+    "børnebørns",
+    "barnebarnets",
+    "børnebørnenes"
+  ],
+  "terms": [
+    {
+      "featureBits": 337,
+      "formSet": 0,
+      "id": 0,
+      "sense": 2,
+      "text": 1
+    },
+    {
+      "featureBits": 305,
+      "formSet": 1,
+      "id": 20,
+      "sense": 22,
+      "text": 21
+    }
+  ]
+}

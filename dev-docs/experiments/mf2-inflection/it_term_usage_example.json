@@ -1,0 +1,26 @@
+{
+  "schema": "mojito-mf2-inflection/message-term-binding-manifest/v0",
+  "locale": "it",
+  "messages": {
+    "inventory.deleted": "Hai eliminato {$item :term article=definite count=$count}.",
+    "inventory.found": "Hai trovato {$item :term article=indefinite count=$count}."
+  },
+  "argumentTerms": {
+    "inventory.deleted": {
+      "item": [
+        "item.gnome",
+        "item.book",
+        "item.water",
+        "item.bee"
+      ]
+    },
+    "inventory.found": {
+      "item": [
+        "item.gnome",
+        "item.book",
+        "item.water",
+        "item.bee"
+      ]
+    }
+  }
+}

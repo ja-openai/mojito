@@ -1,0 +1,139 @@
+{
+  "bindings": {
+    "inventory.deleted": {
+      "item": [
+        "item.water",
+        "item.bee",
+        "item.poppy"
+      ]
+    },
+    "inventory.found": {
+      "item": [
+        "item.water",
+        "item.bee",
+        "item.poppy"
+      ]
+    }
+  },
+  "diagnostics": [],
+  "formSets": [
+    {
+      "forms": [
+        {
+          "key": 0,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 2,
+          "kind": "literal",
+          "value": 3
+        }
+      ],
+      "term": 4
+    },
+    {
+      "forms": [
+        {
+          "key": 0,
+          "kind": "literal",
+          "value": 6
+        },
+        {
+          "key": 2,
+          "kind": "literal",
+          "value": 7
+        }
+      ],
+      "term": 8
+    },
+    {
+      "forms": [
+        {
+          "key": 0,
+          "kind": "literal",
+          "value": 10
+        },
+        {
+          "key": 2,
+          "kind": "literal",
+          "value": 11
+        }
+      ],
+      "term": 12
+    }
+  ],
+  "locale": "es",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/mf2_term_pack_compile.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "unicode-org/inflection dictionary_es.lst",
+      "unicode-org/inflection inflectional_es.xml"
+    ],
+    "sources": [
+      {
+        "byteSize": 37232751,
+        "gitLfsPointer": false,
+        "path": "dictionary_es.lst",
+        "sha256": "c027bc481306bbdae35aae1bce50c683c6e1c41e91643e68c9efda4e041d6389"
+      },
+      {
+        "byteSize": 4112171,
+        "gitLfsPointer": false,
+        "path": "inflectional_es.xml",
+        "sha256": "1ed54f3e48d32ac020d22fcb02a52ab05e72e8b73914891429798ebd09a98541"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/compiled-term-pack/v0",
+  "sizeEstimates": {
+    "binaryLowerBoundBytes": {
+      "bindingReferenceBytes": 0,
+      "formRowBytes": 72,
+      "stringPoolBytes": 113,
+      "termRowBytes": 60,
+      "totalBytes": 245
+    },
+    "compactJsonBytes": 1403
+  },
+  "strings": [
+    "bare.plural",
+    "abejas",
+    "bare.singular",
+    "abeja",
+    "item.bee",
+    "bee",
+    "ababoles",
+    "ababol",
+    "item.poppy",
+    "poppy",
+    "aguas",
+    "agua",
+    "item.water",
+    "water"
+  ],
+  "terms": [
+    {
+      "featureBits": 289,
+      "formSet": 0,
+      "id": 4,
+      "sense": 5,
+      "text": 3
+    },
+    {
+      "featureBits": 273,
+      "formSet": 1,
+      "id": 8,
+      "sense": 9,
+      "text": 7
+    },
+    {
+      "featureBits": 16673,
+      "formSet": 2,
+      "id": 12,
+      "sense": 13,
+      "text": 11
+    }
+  ]
+}

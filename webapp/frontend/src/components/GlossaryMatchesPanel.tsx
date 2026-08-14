@@ -225,6 +225,7 @@ function GlossaryMatchDetailsModal({
     : [];
   const matchDetailRows = match
     ? [
+        { label: 'Term ID', value: match.termKey },
         { label: 'Matched source ranges', value: rangeSummary },
         { label: 'Match type', value: matchTypeSummary },
         { label: 'Evidence summary', value: evidenceSummary },

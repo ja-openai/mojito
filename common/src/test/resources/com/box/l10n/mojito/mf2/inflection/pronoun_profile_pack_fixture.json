@@ -1,0 +1,1067 @@
+{
+  "description": "Derived profile-only pronoun metadata pack for low-inflection locales; this is not a runtime term-inflection pack.",
+  "locales": [
+    {
+      "dictionaryState": "git-lfs-pointer",
+      "inflectionalState": "git-lfs-pointer",
+      "locale": "en",
+      "mode": "data-materialization-required",
+      "profileOnly": true,
+      "pronounSource": {
+        "byteSize": 1518,
+        "exists": true,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_en.csv",
+        "sha256": "fa5b5b5a7d414e14582a856ba80520143d880ff6539f53e6f7e472603b02cd6f"
+      },
+      "pronouns": {
+        "cases": {
+          "accusative": 8,
+          "genitive": 12,
+          "nominative": 9
+        },
+        "features": {
+          "accusative": 8,
+          "dependent": 5,
+          "determination": 2,
+          "feminine": 5,
+          "first": 10,
+          "gender": 19,
+          "genitive": 12,
+          "independent": 5,
+          "masculine": 4,
+          "neuter": 4,
+          "nominative": 9,
+          "number": 5,
+          "plural": 10,
+          "reflexive": 9,
+          "second": 7,
+          "singular": 23,
+          "third": 21
+        },
+        "genders": {
+          "feminine": 5,
+          "gender": 19,
+          "masculine": 4,
+          "neuter": 4
+        },
+        "numbers": {
+          "plural": 10,
+          "singular": 23
+        },
+        "persons": {
+          "first": 10,
+          "second": 7,
+          "third": 21
+        },
+        "registers": {},
+        "rows": 38,
+        "samples": [
+          {
+            "features": [
+              "third",
+              "plural",
+              "nominative"
+            ],
+            "line": 1,
+            "value": "they"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "nominative"
+            ],
+            "line": 2,
+            "value": "they"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "masculine",
+              "nominative"
+            ],
+            "line": 3,
+            "value": "he"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "feminine",
+              "nominative"
+            ],
+            "line": 4,
+            "value": "she"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "neuter",
+              "nominative"
+            ],
+            "line": 5,
+            "value": "it"
+          },
+          {
+            "features": [
+              "second",
+              "singular",
+              "gender",
+              "nominative"
+            ],
+            "line": 6,
+            "value": "you"
+          },
+          {
+            "features": [
+              "second",
+              "plural",
+              "gender",
+              "nominative"
+            ],
+            "line": 7,
+            "value": "you"
+          },
+          {
+            "features": [
+              "first",
+              "singular",
+              "gender",
+              "nominative"
+            ],
+            "line": 8,
+            "value": "I"
+          }
+        ],
+        "uniqueValues": 32
+      },
+      "runtimeTermInflection": false
+    },
+    {
+      "dictionaryState": "empty-placeholder",
+      "inflectionalState": "missing",
+      "locale": "id",
+      "mode": "profile-only-noop",
+      "profileOnly": true,
+      "pronounSource": {
+        "byteSize": 447,
+        "exists": true,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_id.csv",
+        "sha256": "3b3a46bc27e2fb318ceae015af49307725e3972388b6741db655e01a10ccf97f"
+      },
+      "pronouns": {
+        "cases": {
+          "genitive": 3,
+          "nominative": 10
+        },
+        "features": {
+          "casual": 3,
+          "exclusive": 1,
+          "first": 5,
+          "formal": 3,
+          "genitive": 3,
+          "inclusive": 1,
+          "nominative": 10,
+          "number": 3,
+          "plural": 4,
+          "second": 4,
+          "singular": 6,
+          "third": 4
+        },
+        "genders": {},
+        "numbers": {
+          "plural": 4,
+          "singular": 6
+        },
+        "persons": {
+          "first": 5,
+          "second": 4,
+          "third": 4
+        },
+        "registers": {
+          "casual": 3,
+          "formal": 3
+        },
+        "rows": 13,
+        "samples": [
+          {
+            "features": [
+              "third",
+              "plural",
+              "nominative"
+            ],
+            "line": 1,
+            "value": "mereka"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "formal",
+              "nominative"
+            ],
+            "line": 2,
+            "value": "beliau"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "casual",
+              "nominative"
+            ],
+            "line": 3,
+            "value": "dia"
+          },
+          {
+            "features": [
+              "second",
+              "plural",
+              "nominative"
+            ],
+            "line": 4,
+            "value": "kalian"
+          },
+          {
+            "features": [
+              "second",
+              "singular",
+              "formal",
+              "nominative"
+            ],
+            "line": 5,
+            "value": "anda"
+          },
+          {
+            "features": [
+              "second",
+              "singular",
+              "casual",
+              "nominative"
+            ],
+            "line": 6,
+            "value": "kamu"
+          },
+          {
+            "features": [
+              "first",
+              "plural",
+              "exclusive",
+              "nominative"
+            ],
+            "line": 7,
+            "value": "kami"
+          },
+          {
+            "features": [
+              "first",
+              "plural",
+              "inclusive",
+              "nominative"
+            ],
+            "line": 8,
+            "value": "kita"
+          }
+        ],
+        "uniqueValues": 13
+      },
+      "runtimeTermInflection": false
+    },
+    {
+      "dictionaryState": "empty-placeholder",
+      "inflectionalState": "missing",
+      "locale": "ja",
+      "mode": "profile-only-noop",
+      "profileOnly": true,
+      "pronounSource": {
+        "byteSize": 88,
+        "exists": true,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_ja.csv",
+        "sha256": "cd6619a7249b415b6d640f98a1f953191647b667d5c65e1368439dabee825a4e"
+      },
+      "pronouns": {
+        "cases": {},
+        "features": {
+          "feminine": 1,
+          "first": 1,
+          "masculine": 1,
+          "neuter": 1,
+          "second": 1,
+          "third": 3
+        },
+        "genders": {
+          "feminine": 1,
+          "masculine": 1,
+          "neuter": 1
+        },
+        "numbers": {},
+        "persons": {
+          "first": 1,
+          "second": 1,
+          "third": 3
+        },
+        "registers": {},
+        "rows": 5,
+        "samples": [
+          {
+            "features": [
+              "third",
+              "masculine"
+            ],
+            "line": 1,
+            "value": "彼"
+          },
+          {
+            "features": [
+              "third",
+              "feminine"
+            ],
+            "line": 2,
+            "value": "彼女"
+          },
+          {
+            "features": [
+              "third",
+              "neuter"
+            ],
+            "line": 3,
+            "value": "それ"
+          },
+          {
+            "features": [
+              "second"
+            ],
+            "line": 4,
+            "value": "あなた"
+          },
+          {
+            "features": [
+              "first"
+            ],
+            "line": 5,
+            "value": "私"
+          }
+        ],
+        "uniqueValues": 5
+      },
+      "runtimeTermInflection": false
+    },
+    {
+      "dictionaryState": "git-lfs-pointer",
+      "inflectionalState": "missing",
+      "locale": "ko",
+      "mode": "data-materialization-required",
+      "profileOnly": true,
+      "pronounSource": {
+        "byteSize": 2221,
+        "exists": true,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_ko.csv",
+        "sha256": "a7ca8f57240148ac6d758970a4b6a4fc8443b57e145fb07abcdb97ff116ea6e9"
+      },
+      "pronouns": {
+        "cases": {
+          "accusative": 16,
+          "genitive": 16,
+          "nominative": 16
+        },
+        "features": {
+          "accusative": 16,
+          "casual": 21,
+          "dependency=pos": 3,
+          "dependency=proper-noun": 3,
+          "exclusive": 3,
+          "feminine": 6,
+          "first": 15,
+          "formal": 27,
+          "genitive": 16,
+          "inclusive": 3,
+          "masculine": 6,
+          "nominative": 16,
+          "plural": 21,
+          "second": 15,
+          "singular": 27,
+          "third": 18
+        },
+        "genders": {
+          "feminine": 6,
+          "masculine": 6
+        },
+        "numbers": {
+          "plural": 21,
+          "singular": 27
+        },
+        "persons": {
+          "first": 15,
+          "second": 15,
+          "third": 18
+        },
+        "registers": {
+          "casual": 21,
+          "formal": 27
+        },
+        "rows": 48,
+        "samples": [
+          {
+            "features": [
+              "third",
+              "singular",
+              "nominative",
+              "casual",
+              "masculine"
+            ],
+            "line": 1,
+            "value": "그"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "nominative",
+              "formal",
+              "masculine"
+            ],
+            "line": 2,
+            "value": "그분"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "nominative",
+              "casual",
+              "feminine"
+            ],
+            "line": 3,
+            "value": "그녀"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "nominative",
+              "formal",
+              "feminine"
+            ],
+            "line": 4,
+            "value": "그분"
+          },
+          {
+            "features": [
+              "third",
+              "plural",
+              "nominative",
+              "casual"
+            ],
+            "line": 5,
+            "value": "그들"
+          },
+          {
+            "features": [
+              "third",
+              "plural",
+              "nominative",
+              "formal"
+            ],
+            "line": 6,
+            "value": "그분들"
+          },
+          {
+            "features": [
+              "second",
+              "singular",
+              "nominative",
+              "casual"
+            ],
+            "line": 7,
+            "value": "너"
+          },
+          {
+            "features": [
+              "second",
+              "singular",
+              "nominative",
+              "formal",
+              "dependency=pos"
+            ],
+            "line": 8,
+            "value": "당신"
+          }
+        ],
+        "uniqueValues": 30
+      },
+      "runtimeTermInflection": false
+    },
+    {
+      "dictionaryState": "empty-placeholder",
+      "inflectionalState": "missing",
+      "locale": "ms",
+      "mode": "profile-only-noop",
+      "profileOnly": true,
+      "pronounSource": {
+        "byteSize": 400,
+        "exists": true,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_ms.csv",
+        "sha256": "fe259889f59853d7eafab8549de0cc18f992704679fb66663c3e4f435746f333"
+      },
+      "pronouns": {
+        "cases": {
+          "genitive": 3,
+          "nominative": 9
+        },
+        "features": {
+          "casual": 2,
+          "exclusive": 1,
+          "first": 5,
+          "formal": 2,
+          "genitive": 3,
+          "inclusive": 1,
+          "nominative": 9,
+          "number": 3,
+          "plural": 4,
+          "second": 4,
+          "singular": 5,
+          "third": 3
+        },
+        "genders": {},
+        "numbers": {
+          "plural": 4,
+          "singular": 5
+        },
+        "persons": {
+          "first": 5,
+          "second": 4,
+          "third": 3
+        },
+        "registers": {
+          "casual": 2,
+          "formal": 2
+        },
+        "rows": 12,
+        "samples": [
+          {
+            "features": [
+              "third",
+              "plural",
+              "nominative"
+            ],
+            "line": 1,
+            "value": "mereka"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "nominative"
+            ],
+            "line": 2,
+            "value": "dia"
+          },
+          {
+            "features": [
+              "second",
+              "plural",
+              "nominative"
+            ],
+            "line": 3,
+            "value": "kalian"
+          },
+          {
+            "features": [
+              "second",
+              "singular",
+              "formal",
+              "nominative"
+            ],
+            "line": 4,
+            "value": "anda"
+          },
+          {
+            "features": [
+              "second",
+              "singular",
+              "casual",
+              "nominative"
+            ],
+            "line": 5,
+            "value": "kamu"
+          },
+          {
+            "features": [
+              "first",
+              "plural",
+              "exclusive",
+              "nominative"
+            ],
+            "line": 6,
+            "value": "kami"
+          },
+          {
+            "features": [
+              "first",
+              "plural",
+              "inclusive",
+              "nominative"
+            ],
+            "line": 7,
+            "value": "kita"
+          },
+          {
+            "features": [
+              "first",
+              "singular",
+              "formal",
+              "nominative"
+            ],
+            "line": 8,
+            "value": "saya"
+          }
+        ],
+        "uniqueValues": 12
+      },
+      "runtimeTermInflection": false
+    },
+    {
+      "dictionaryState": "empty-placeholder",
+      "inflectionalState": "missing",
+      "locale": "th",
+      "mode": "profile-only-noop",
+      "profileOnly": true,
+      "pronounSource": {
+        "byteSize": 1154,
+        "exists": true,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_th.csv",
+        "sha256": "771d4fb7146b6585fbf8bac335e3f1be8427399e20c817e83c3c9d5049c7555a"
+      },
+      "pronouns": {
+        "cases": {
+          "genitive": 8,
+          "nominative": 8
+        },
+        "features": {
+          "first": 6,
+          "genitive": 8,
+          "human": 6,
+          "nominative": 8,
+          "nonhuman": 6,
+          "plural": 12,
+          "reflexive": 8,
+          "second": 6,
+          "singular": 12,
+          "third": 12
+        },
+        "genders": {
+          "human": 6,
+          "nonhuman": 6
+        },
+        "numbers": {
+          "plural": 12,
+          "singular": 12
+        },
+        "persons": {
+          "first": 6,
+          "second": 6,
+          "third": 12
+        },
+        "registers": {},
+        "rows": 24,
+        "samples": [
+          {
+            "features": [
+              "third",
+              "singular",
+              "nominative",
+              "human"
+            ],
+            "line": 1,
+            "value": "เขา"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "nominative",
+              "nonhuman"
+            ],
+            "line": 2,
+            "value": "มัน"
+          },
+          {
+            "features": [
+              "third",
+              "plural",
+              "nominative",
+              "human"
+            ],
+            "line": 3,
+            "value": "พวกเขา"
+          },
+          {
+            "features": [
+              "third",
+              "plural",
+              "nominative",
+              "nonhuman"
+            ],
+            "line": 4,
+            "value": "พวกมัน"
+          },
+          {
+            "features": [
+              "second",
+              "singular",
+              "nominative"
+            ],
+            "line": 5,
+            "value": "คุณ"
+          },
+          {
+            "features": [
+              "second",
+              "plural",
+              "nominative"
+            ],
+            "line": 6,
+            "value": "พวกคุณ"
+          },
+          {
+            "features": [
+              "first",
+              "singular",
+              "nominative"
+            ],
+            "line": 7,
+            "value": "ฉัน"
+          },
+          {
+            "features": [
+              "first",
+              "plural",
+              "nominative"
+            ],
+            "line": 8,
+            "value": "พวกเรา"
+          }
+        ],
+        "uniqueValues": 23
+      },
+      "runtimeTermInflection": false
+    },
+    {
+      "dictionaryState": "empty-placeholder",
+      "inflectionalState": "missing",
+      "locale": "vi",
+      "mode": "profile-only-noop",
+      "profileOnly": true,
+      "pronounSource": {
+        "byteSize": 437,
+        "exists": true,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_vi.csv",
+        "sha256": "60b00dacd186bf450c962ab86e8b29e8de9740e26b1473a009558953db232ad1"
+      },
+      "pronouns": {
+        "cases": {},
+        "features": {
+          "exclusive": 1,
+          "feminine": 1,
+          "first": 5,
+          "formal": 4,
+          "gender": 1,
+          "inclusive": 2,
+          "intimate": 3,
+          "masculine": 1,
+          "neuter": 1,
+          "plural": 7,
+          "second": 2,
+          "singular": 7,
+          "third": 7
+        },
+        "genders": {
+          "feminine": 1,
+          "gender": 1,
+          "masculine": 1,
+          "neuter": 1
+        },
+        "numbers": {
+          "plural": 7,
+          "singular": 7
+        },
+        "persons": {
+          "first": 5,
+          "second": 2,
+          "third": 7
+        },
+        "registers": {
+          "formal": 4
+        },
+        "rows": 14,
+        "samples": [
+          {
+            "features": [
+              "third",
+              "singular",
+              "gender"
+            ],
+            "line": 1,
+            "value": "người đó"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "masculine"
+            ],
+            "line": 2,
+            "value": "anh ấy"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "feminine"
+            ],
+            "line": 3,
+            "value": "cô ấy"
+          },
+          {
+            "features": [
+              "third",
+              "singular",
+              "neuter"
+            ],
+            "line": 4,
+            "value": "nó"
+          },
+          {
+            "features": [
+              "third",
+              "plural"
+            ],
+            "line": 5,
+            "value": "họ"
+          },
+          {
+            "features": [
+              "third",
+              "plural",
+              "formal"
+            ],
+            "line": 6,
+            "value": "chúng"
+          },
+          {
+            "features": [
+              "third",
+              "plural",
+              "intimate"
+            ],
+            "line": 7,
+            "value": "chúng nó"
+          },
+          {
+            "features": [
+              "second",
+              "singular"
+            ],
+            "line": 8,
+            "value": "bạn"
+          }
+        ],
+        "uniqueValues": 14
+      },
+      "runtimeTermInflection": false
+    },
+    {
+      "dictionaryState": "empty-placeholder",
+      "inflectionalState": "missing",
+      "locale": "zh",
+      "mode": "profile-only-noop",
+      "profileOnly": true,
+      "pronounSource": {
+        "byteSize": 76,
+        "exists": true,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_zh.csv",
+        "sha256": "ee17ae96e81316f665ddcfdf9d0260e2f58926ac7756b096c57fae1750604fe7"
+      },
+      "pronouns": {
+        "cases": {},
+        "features": {
+          "feminine": 1,
+          "first": 1,
+          "masculine": 1,
+          "neuter": 1,
+          "second": 1,
+          "third": 3
+        },
+        "genders": {
+          "feminine": 1,
+          "masculine": 1,
+          "neuter": 1
+        },
+        "numbers": {},
+        "persons": {
+          "first": 1,
+          "second": 1,
+          "third": 3
+        },
+        "registers": {},
+        "rows": 5,
+        "samples": [
+          {
+            "features": [
+              "third",
+              "masculine"
+            ],
+            "line": 1,
+            "value": "他"
+          },
+          {
+            "features": [
+              "third",
+              "feminine"
+            ],
+            "line": 2,
+            "value": "她"
+          },
+          {
+            "features": [
+              "third",
+              "neuter"
+            ],
+            "line": 3,
+            "value": "它"
+          },
+          {
+            "features": [
+              "second"
+            ],
+            "line": 4,
+            "value": "你"
+          },
+          {
+            "features": [
+              "first"
+            ],
+            "line": 5,
+            "value": "我"
+          }
+        ],
+        "uniqueValues": 5
+      },
+      "runtimeTermInflection": false
+    },
+    {
+      "dictionaryState": "missing",
+      "inflectionalState": "missing",
+      "locale": "yue",
+      "mode": "profile-only-noop",
+      "profileOnly": true,
+      "pronounSource": {
+        "byteSize": 30,
+        "exists": true,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/inflection/pronoun_yue.csv",
+        "sha256": "a572a183d844204fd0eb7e1686f9959c9858648bca6a40e56a6706a48c8eeba4"
+      },
+      "pronouns": {
+        "cases": {},
+        "features": {
+          "first": 1,
+          "second": 1,
+          "third": 1
+        },
+        "genders": {},
+        "numbers": {},
+        "persons": {
+          "first": 1,
+          "second": 1,
+          "third": 1
+        },
+        "registers": {},
+        "rows": 3,
+        "samples": [
+          {
+            "features": [
+              "third"
+            ],
+            "line": 1,
+            "value": "佢"
+          },
+          {
+            "features": [
+              "second"
+            ],
+            "line": 2,
+            "value": "你"
+          },
+          {
+            "features": [
+              "first"
+            ],
+            "line": 3,
+            "value": "我"
+          }
+        ],
+        "uniqueValues": 3
+      },
+      "runtimeTermInflection": false
+    }
+  ],
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/pronoun_profile_pack.py",
+    "license": "Unicode-3.0",
+    "sourceAudit": "dev-docs/experiments/mf2-inflection/low_inflection_locale_audit_fixture.json",
+    "sourceAuditSchema": "mojito-mf2-inflection/low-inflection-locale-audit/v0"
+  },
+  "schema": "mojito-mf2-inflection/pronoun-profile-pack/v0",
+  "summary": {
+    "dataMaterializationRequiredLocales": [
+      "en",
+      "ko"
+    ],
+    "localeCount": 9,
+    "profileOnlyLocales": [
+      "en",
+      "id",
+      "ja",
+      "ko",
+      "ms",
+      "th",
+      "vi",
+      "zh",
+      "yue"
+    ],
+    "profileOnlyNoopLocales": [
+      "id",
+      "ja",
+      "ms",
+      "th",
+      "vi",
+      "zh",
+      "yue"
+    ],
+    "pronounInventoryLocales": [
+      "en",
+      "id",
+      "ja",
+      "ko",
+      "ms",
+      "th",
+      "vi",
+      "zh",
+      "yue"
+    ],
+    "runtimeTermInflection": false,
+    "totalPronounRows": 162,
+    "totalUniquePronounValues": 137
+  }
+}

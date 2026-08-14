@@ -132,6 +132,7 @@ do {
     let checkedLocaleKeyCases = try runLocaleKeyFixtures(
         fixtureRoot: fixtureDirectory.deletingLastPathComponent()
     )
+    try checkPublicApiBoundary()
     try runPublicApiEdgeChecks()
 
     print(
@@ -302,6 +303,49 @@ private func runPublicApiEdgeChecks() throws {
         emptyFormatErrorParts.parts,
         [.text("Hello "), .fallback(source: "$name", value: "")]
     )
+}
+
+private func checkPublicApiBoundary() throws {
+    let sourceDirectory = URL(fileURLWithPath: "Sources/MessageFormat2", isDirectory: true)
+    guard FileManager.default.fileExists(atPath: sourceDirectory.path) else {
+        return
+    }
+    guard let enumerator = FileManager.default.enumerator(at: sourceDirectory, includingPropertiesForKeys: nil) else {
+        return
+    }
+    for case let sourceURL as URL in enumerator where sourceURL.pathExtension == "swift" {
+        let lines = try String(contentsOf: sourceURL, encoding: .utf8).split(
+            separator: "\n",
+            omittingEmptySubsequences: false
+        )
+        for (index, line) in lines.enumerated() {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.hasPrefix("public ") {
+                continue
+            }
+            let normalized = normalizePublicApiName(trimmed)
+            if containsInflectionApiName(normalized) {
+                throw ConformanceError.publicApiBoundary(
+                    source: sourceURL.path,
+                    line: index + 1,
+                    declaration: trimmed
+                )
+            }
+        }
+    }
+}
+
+private func containsInflectionApiName(_ normalized: String) -> Bool {
+    normalized.contains("inflection")
+        || normalized.contains("m2if")
+        || normalized.contains("compiledtermpack")
+        || normalized.contains("termpack")
+}
+
+private func normalizePublicApiName(_ value: String) -> String {
+    value.lowercased().filter { character in
+        character.isLetter || character.isNumber
+    }
 }
 
 private func parsePublicApiModel(_ source: String) throws -> MF2Message {
@@ -637,6 +681,7 @@ private enum ConformanceError: Error, CustomStringConvertible {
     case errorCodesMismatch(fixture: String, label: String, expected: String, actual: String)
     case sourceDiagnosticsMismatch(fixture: String, expected: String, actual: String)
     case localeKeyMismatch(fixture: String, expected: String, actual: String)
+    case publicApiBoundary(source: String, line: Int, declaration: String)
 
     var description: String {
         switch self {
@@ -662,6 +707,8 @@ private enum ConformanceError: Error, CustomStringConvertible {
             "\(fixture): expected source diagnostics '\(expected)', got '\(actual)'"
         case let .localeKeyMismatch(fixture, expected, actual):
             "\(fixture): expected locale key '\(expected)', got '\(actual)'"
+        case let .publicApiBoundary(source, line, declaration):
+            "\(source):\(line): standalone Swift MF2 must not expose public inflection/M2IF/term-pack APIs before a product API is approved: \(declaration)"
         }
     }
 }

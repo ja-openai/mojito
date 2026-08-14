@@ -14,6 +14,19 @@ This package mirrors the Rust/Java package boundaries:
 Package modules and `.d.ts` files live under `src`. Conformance, Unicode test,
 benchmark, package-boundary, and demo entry points live under `tools`, `tests`,
 and `examples`; `package.json` publishes only the package files via `files`.
+The inflection release-bundle validation script is also package-local tooling:
+`npm run inflection-release` invokes the shared MF2 conformance wrapper and is
+included in `npm run check`, but it does not add inflection exports to
+`@mojito-mf2/core`. This validates selected V0 release-fixture artifacts only;
+it is not complete locale or grammar coverage. The selected release artifact
+locales are `ar`, `da`, `de`, `es`, `he`, `hi`, `it`, `ml`, `pt`, `ru`, `sr`,
+`sv`, and `tr`; metadata/profile-only or unavailable locales such as `en`,
+`id`, `ja`, `ko`, `ms`, `nb`, `nl`, `pl`, `th`, `vi`, `yue`, and `zh` are
+excluded from release artifacts. The package-boundary tests also pin that no
+`@mojito-mf2/core/inflection`, `@mojito-mf2/core/m2if`, or compiled-term-pack
+subpath or root export exists until a product-backed JavaScript term-rendering
+package API is approved. They also pin that `npm run inflection-release` still
+invokes the shared conformance wrapper rather than package-local runtime code.
 
 The package root exports the stable app-facing parser/formatter API:
 
@@ -80,6 +93,7 @@ Run:
 npm run generate:plurals
 npm run check
 npm run check:types
+npm run inflection-release
 npm run demo
 npm run demo:intl
 npm run bench:format

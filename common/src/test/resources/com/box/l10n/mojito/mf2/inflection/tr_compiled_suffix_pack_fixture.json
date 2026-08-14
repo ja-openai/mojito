@@ -1,0 +1,197 @@
+{
+  "bindings": {
+    "inventory.deleted": {
+      "item": [
+        "item.house",
+        "item.school",
+        "item.car",
+        "item.park",
+        "item.rose"
+      ]
+    },
+    "inventory.from": {
+      "item": [
+        "item.house",
+        "item.school",
+        "item.car",
+        "item.park",
+        "item.rose"
+      ]
+    },
+    "inventory.in": {
+      "item": [
+        "item.house",
+        "item.school",
+        "item.car",
+        "item.park",
+        "item.rose"
+      ]
+    },
+    "inventory.listed": {
+      "item": [
+        "item.house",
+        "item.school",
+        "item.car",
+        "item.park",
+        "item.rose"
+      ]
+    },
+    "inventory.to": {
+      "item": [
+        "item.house",
+        "item.school",
+        "item.car",
+        "item.park",
+        "item.rose"
+      ]
+    }
+  },
+  "diagnostics": [],
+  "formSets": [
+    {
+      "forms": [
+        {
+          "key": 0,
+          "kind": "literal",
+          "value": 1
+        }
+      ],
+      "term": 2
+    },
+    {
+      "forms": [
+        {
+          "key": 0,
+          "kind": "literal",
+          "value": 4
+        }
+      ],
+      "term": 5
+    },
+    {
+      "forms": [
+        {
+          "key": 0,
+          "kind": "literal",
+          "value": 7
+        }
+      ],
+      "term": 8
+    },
+    {
+      "forms": [
+        {
+          "key": 0,
+          "kind": "literal",
+          "value": 9
+        }
+      ],
+      "term": 10
+    },
+    {
+      "forms": [
+        {
+          "key": 0,
+          "kind": "literal",
+          "value": 12
+        }
+      ],
+      "term": 13
+    }
+  ],
+  "locale": "tr",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/mf2_term_pack_compile.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "unicode-org/inflection dictionary_tr.lst",
+      "unicode-org/inflection inflectional_tr.xml",
+      "unicode-org/inflection supplemental_tr.lst"
+    ],
+    "sources": [
+      {
+        "byteSize": 57207,
+        "gitLfsPointer": false,
+        "path": "dictionary_tr.lst",
+        "sha256": "32097e8a123c591d4470a51e883b8afb6cebf9b5b60c0857cffd07a7c513e391"
+      },
+      {
+        "byteSize": 21129,
+        "gitLfsPointer": false,
+        "path": "inflectional_tr.xml",
+        "sha256": "810637ded03292c0d48511dcfa1e293d63e044ae312293245a590585640c1445"
+      },
+      {
+        "byteSize": 43876,
+        "gitLfsPointer": false,
+        "path": "supplemental_tr.lst",
+        "sha256": "17fc7f47aea713943bdedf5c25a1cca909120b96b266653f46b817c4ab0c10d5"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/compiled-term-pack/v0",
+  "sizeEstimates": {
+    "binaryLowerBoundBytes": {
+      "bindingReferenceBytes": 0,
+      "formRowBytes": 60,
+      "stringPoolBytes": 112,
+      "termRowBytes": 100,
+      "totalBytes": 272
+    },
+    "compactJsonBytes": 2050
+  },
+  "strings": [
+    "bare.singular",
+    "araba",
+    "item.car",
+    "car",
+    "ev",
+    "item.house",
+    "house",
+    "park",
+    "item.park",
+    "gül",
+    "item.rose",
+    "rose",
+    "okul",
+    "item.school",
+    "school"
+  ],
+  "terms": [
+    {
+      "featureBits": 3145985,
+      "formSet": 0,
+      "id": 2,
+      "sense": 3,
+      "text": 1
+    },
+    {
+      "featureBits": 5243137,
+      "formSet": 1,
+      "id": 5,
+      "sense": 6,
+      "text": 4
+    },
+    {
+      "featureBits": 17826049,
+      "formSet": 2,
+      "id": 8,
+      "sense": 7,
+      "text": 7
+    },
+    {
+      "featureBits": 13631745,
+      "formSet": 3,
+      "id": 10,
+      "sense": 11,
+      "text": 9
+    },
+    {
+      "featureBits": 9437441,
+      "formSet": 4,
+      "id": 13,
+      "sense": 14,
+      "text": 12
+    }
+  ]
+}

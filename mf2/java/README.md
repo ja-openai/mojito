@@ -92,6 +92,12 @@ The conformance and sample demos use test-only fixture/sample registries for
 stable dependency-free output. Those shims live under `src/test/java` and are
 not part of the library jar.
 
+Inflection is intentionally not a public surface of this standalone Java MF2
+package. Java/common owns the checked V0 inflection runtime and release
+validators; `mf2/java` remains parser/formatter-only and its conformance runner
+scans public declarations to keep compiled term-pack, M2IF, and inflection APIs
+out of the package until a concrete product caller justifies a reviewed API.
+
 CLDR plural rules are vendored under `src/main/java` and compiled as normal
 package source. Regenerate them from the shared CLDR generator with
 `sh ../cldr/update_generated.sh`; CI should run `sh ../cldr/check_generated.sh`

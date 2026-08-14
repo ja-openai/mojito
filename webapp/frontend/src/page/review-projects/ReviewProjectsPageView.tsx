@@ -1152,6 +1152,8 @@ function FilterControls({
           noResultsLabel: 'No teams',
           selectionHint:
             filters.teamValues.length === 0 ? 'All teams' : `${filters.teamValues.length} selected`,
+          clearLabel: 'Clear',
+          onClear: filters.teamValues.length > 0 ? () => filters.onTeamChange([]) : undefined,
           indented: true,
         },
       ]

@@ -1,0 +1,88 @@
+{
+  "schema": "mojito-mf2-term-pack/example-v0",
+  "locale": "it",
+  "source": {
+    "messageCatalog": "it_term_usage_example.json",
+    "termCatalog": "it_term_pack_example.json"
+  },
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/mf2_term_pack_compile.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "unicode-org/inflection dictionary_it.lst",
+      "unicode-org/inflection inflectional_it.xml"
+    ],
+    "sources": [
+      {
+        "path": "dictionary_it.lst",
+        "byteSize": 27327567,
+        "sha256": "c5836997d872f7e5833fe0c338109591235b91f0306fa3e317f1e7aabbfe42a9",
+        "gitLfsPointer": false
+      },
+      {
+        "path": "inflectional_it.xml",
+        "byteSize": 1394074,
+        "sha256": "70ad7ba37f88b96607ba367549cc2260453ff774eebb3533d728da0b7c072653",
+        "gitLfsPointer": false
+      }
+    ]
+  },
+  "terms": {
+    "item.bee": {
+      "text": "ape",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "feminine",
+        "number": "singular",
+        "articleClass": "elision",
+        "sense": "bee"
+      },
+      "forms": {
+        "bare.singular": "ape",
+        "bare.plural": "api"
+      }
+    },
+    "item.book": {
+      "text": "libro",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "masculine",
+        "number": "singular",
+        "articleClass": "standard",
+        "sense": "book"
+      },
+      "forms": {
+        "bare.singular": "libro",
+        "bare.plural": "libri"
+      }
+    },
+    "item.gnome": {
+      "text": "gnomo",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "masculine",
+        "number": "singular",
+        "articleClass": "lo",
+        "sense": "gnome"
+      },
+      "forms": {
+        "bare.singular": "gnomo",
+        "bare.plural": "gnomi"
+      }
+    },
+    "item.water": {
+      "text": "acqua",
+      "morphology": {
+        "partOfSpeech": "noun",
+        "gender": "feminine",
+        "number": "singular",
+        "articleClass": "elision",
+        "sense": "water"
+      },
+      "forms": {
+        "bare.singular": "acqua",
+        "bare.plural": "acque"
+      }
+    }
+  }
+}

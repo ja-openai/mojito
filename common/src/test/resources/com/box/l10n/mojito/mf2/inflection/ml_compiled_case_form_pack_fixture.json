@@ -1,0 +1,231 @@
+{
+  "diagnostics": [],
+  "formSets": [
+    {
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 1
+        },
+        {
+          "key": 4,
+          "kind": "literal",
+          "value": 5
+        },
+        {
+          "key": 6,
+          "kind": "literal",
+          "value": 7
+        },
+        {
+          "key": 8,
+          "kind": "literal",
+          "value": 9
+        },
+        {
+          "key": 10,
+          "kind": "literal",
+          "value": 11
+        },
+        {
+          "key": 12,
+          "kind": "literal",
+          "value": 13
+        },
+        {
+          "key": 14,
+          "kind": "literal",
+          "value": 15
+        },
+        {
+          "key": 16,
+          "kind": "literal",
+          "value": 17
+        },
+        {
+          "key": 18,
+          "kind": "literal",
+          "value": 19
+        },
+        {
+          "key": 20,
+          "kind": "literal",
+          "value": 21
+        },
+        {
+          "key": 22,
+          "kind": "literal",
+          "value": 23
+        },
+        {
+          "key": 24,
+          "kind": "literal",
+          "value": 25
+        },
+        {
+          "key": 26,
+          "kind": "literal",
+          "value": 27
+        },
+        {
+          "key": 28,
+          "kind": "literal",
+          "value": 29
+        }
+      ],
+      "term": 0
+    }
+  ],
+  "generationSummary": {
+    "candidateTerms": 1,
+    "exportPolicy": {
+      "automaticExportTerms": 0,
+      "blockedReasons": {},
+      "blockedTerms": 0,
+      "compositionMode": "explicit-form-rows-v0",
+      "deferredComposition": [],
+      "reviewRequiredReasons": {
+        "missing-form-cell": 1
+      },
+      "reviewRequiredTerms": 1,
+      "runtimeExport": "closed-world-multi-case-explicit-forms"
+    },
+    "exportedFormKeys": [
+      "nominative.singular",
+      "accusative.singular",
+      "dative.singular",
+      "genitive.singular",
+      "instrumental.singular",
+      "locative.singular",
+      "sociative.singular",
+      "nominative.plural",
+      "accusative.plural",
+      "dative.plural",
+      "genitive.plural",
+      "instrumental.plural",
+      "locative.plural",
+      "sociative.plural"
+    ],
+    "exportedTerms": 1,
+    "formRows": 14,
+    "missingFormKeys": [
+      "vocative.singular",
+      "vocative.plural"
+    ],
+    "policy": "closed-world multi-case explicit-form pack",
+    "requiredFormRows": 16,
+    "reviewDiagnostics": [
+      {
+        "formKey": "vocative.singular",
+        "reason": "missing-form-cell",
+        "termId": "ml.case.disciple"
+      },
+      {
+        "formKey": "vocative.plural",
+        "reason": "missing-form-cell",
+        "termId": "ml.case.disciple"
+      }
+    ],
+    "sourceRows": [
+      703993,
+      703981,
+      703983,
+      703991,
+      703979,
+      703980,
+      703982,
+      703989,
+      703987,
+      703990,
+      703986,
+      703984,
+      703985,
+      703988
+    ],
+    "sourceRowsByFormKey": {
+      "accusative.plural": 703987,
+      "accusative.singular": 703981,
+      "dative.plural": 703990,
+      "dative.singular": 703983,
+      "genitive.plural": 703986,
+      "genitive.singular": 703991,
+      "instrumental.plural": 703984,
+      "instrumental.singular": 703979,
+      "locative.plural": 703985,
+      "locative.singular": 703980,
+      "nominative.plural": 703989,
+      "nominative.singular": 703993,
+      "sociative.plural": 703988,
+      "sociative.singular": 703982
+    }
+  },
+  "locale": "ml",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/ml_case_form_pack.py",
+    "license": "Unicode-3.0",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_ml.lst"
+    ],
+    "sources": [
+      {
+        "byteSize": 53958746,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_ml.lst",
+        "sha256": "6bda9371a2aa17c08328381e678b77e769269f4ee74749dd4f9e0bd5890cf59c"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/compiled-term-pack/v0",
+  "sizeEstimates": {
+    "binaryLowerBoundBytes": {
+      "bindingReferenceBytes": 0,
+      "formRowBytes": 168,
+      "stringPoolBytes": 715,
+      "termRowBytes": 20,
+      "totalBytes": 903
+    },
+    "compactJsonBytes": 5377
+  },
+  "strings": [
+    "ml.case.disciple",
+    "ശിഷ്യൻ",
+    "inflection=110",
+    "nominative.singular",
+    "accusative.singular",
+    "ശിഷ്യനെ",
+    "dative.singular",
+    "ശിഷ്യന്",
+    "genitive.singular",
+    "ശിഷ്യന്റെ",
+    "instrumental.singular",
+    "ശിഷ്യനാൽ",
+    "locative.singular",
+    "ശിഷ്യനിൽ",
+    "sociative.singular",
+    "ശിഷ്യനോട്",
+    "nominative.plural",
+    "ശിഷ്യന്മാർ",
+    "accusative.plural",
+    "ശിഷ്യന്മാരെ",
+    "dative.plural",
+    "ശിഷ്യന്മാർക്ക്",
+    "genitive.plural",
+    "ശിഷ്യന്മാരുടെ",
+    "instrumental.plural",
+    "ശിഷ്യന്മാരാൽ",
+    "locative.plural",
+    "ശിഷ്യന്മാരിൽ",
+    "sociative.plural",
+    "ശിഷ്യന്മാരോട്"
+  ],
+  "terms": [
+    {
+      "featureBits": 273,
+      "formSet": 0,
+      "id": 0,
+      "sense": 2,
+      "text": 1
+    }
+  ]
+}

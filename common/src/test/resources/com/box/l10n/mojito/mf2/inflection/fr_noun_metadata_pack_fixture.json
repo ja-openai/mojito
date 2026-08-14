@@ -1,0 +1,237 @@
+{
+  "ambiguousRows": [
+    {
+      "analyses": [
+        {
+          "elides": false,
+          "gender": "feminine",
+          "inflectionPattern": null,
+          "number": "singular"
+        },
+        {
+          "elides": false,
+          "gender": "masculine",
+          "inflectionPattern": null,
+          "number": "singular"
+        }
+      ],
+      "reasons": [
+        "multiple-genders",
+        "multiple-parts-of-speech",
+        "multiple-inflections"
+      ],
+      "surface": 12
+    },
+    {
+      "analyses": [
+        {
+          "elides": false,
+          "gender": "feminine",
+          "inflectionPattern": null,
+          "number": "plural"
+        },
+        {
+          "elides": false,
+          "gender": "masculine",
+          "inflectionPattern": null,
+          "number": "plural"
+        }
+      ],
+      "reasons": [
+        "multiple-genders",
+        "multiple-parts-of-speech",
+        "multiple-inflections"
+      ],
+      "surface": 13
+    },
+    {
+      "analyses": [
+        {
+          "elides": false,
+          "gender": "feminine",
+          "inflectionPattern": null,
+          "number": "singular"
+        },
+        {
+          "elides": false,
+          "gender": "masculine",
+          "inflectionPattern": null,
+          "number": "singular"
+        }
+      ],
+      "reasons": [
+        "multiple-genders",
+        "multiple-parts-of-speech",
+        "multiple-inflections"
+      ],
+      "surface": 14
+    },
+    {
+      "analyses": [
+        {
+          "elides": false,
+          "gender": "feminine",
+          "inflectionPattern": null,
+          "number": "plural"
+        },
+        {
+          "elides": false,
+          "gender": "masculine",
+          "inflectionPattern": null,
+          "number": "plural"
+        }
+      ],
+      "reasons": [
+        "multiple-genders",
+        "multiple-parts-of-speech",
+        "multiple-inflections"
+      ],
+      "surface": 15
+    }
+  ],
+  "description": "Generated sample from Unicode French noun V0 article candidates; generator-side fixture, not a runtime format.",
+  "locale": "fr",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/fr_noun_pack_report.py",
+    "license": "Unicode-3.0",
+    "sources": [
+      {
+        "byteSize": 17255961,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_fr.lst",
+        "sha256": "21e1a3d385db927d10d175a322ad72f55cac455ab6c960564c90fe6ac23fc53b"
+      },
+      {
+        "byteSize": 781,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/supplemental_fr.lst",
+        "sha256": "467b42b616096fb7d1ce25ea64a7451f39901e0e76ee594fe40b41fd54908571"
+      }
+    ]
+  },
+  "rows": [
+    {
+      "elides": false,
+      "featureBits": 5,
+      "gender": "masculine",
+      "inflectionPattern": "29",
+      "number": "singular",
+      "surface": 0
+    },
+    {
+      "elides": false,
+      "featureBits": 5,
+      "gender": "masculine",
+      "inflectionPattern": "b1",
+      "number": "singular",
+      "surface": 1
+    },
+    {
+      "elides": false,
+      "featureBits": 9,
+      "gender": "masculine",
+      "inflectionPattern": "b1",
+      "number": "plural",
+      "surface": 2
+    },
+    {
+      "elides": false,
+      "featureBits": 6,
+      "gender": "feminine",
+      "inflectionPattern": "b1",
+      "number": "singular",
+      "surface": 3
+    },
+    {
+      "elides": false,
+      "featureBits": 10,
+      "gender": "feminine",
+      "inflectionPattern": "b1",
+      "number": "plural",
+      "surface": 4
+    },
+    {
+      "elides": false,
+      "featureBits": 10,
+      "gender": "feminine",
+      "inflectionPattern": null,
+      "number": "plural",
+      "surface": 5
+    },
+    {
+      "elides": false,
+      "featureBits": 5,
+      "gender": "masculine",
+      "inflectionPattern": "29",
+      "number": "singular",
+      "surface": 6
+    },
+    {
+      "elides": false,
+      "featureBits": 5,
+      "gender": "masculine",
+      "inflectionPattern": "13",
+      "number": "singular",
+      "surface": 7
+    },
+    {
+      "elides": false,
+      "featureBits": 5,
+      "gender": "masculine",
+      "inflectionPattern": "3",
+      "number": "singular",
+      "surface": 8
+    },
+    {
+      "elides": false,
+      "featureBits": 9,
+      "gender": "masculine",
+      "inflectionPattern": "3",
+      "number": "plural",
+      "surface": 9
+    },
+    {
+      "elides": false,
+      "featureBits": 5,
+      "gender": "masculine",
+      "inflectionPattern": "3",
+      "number": "singular",
+      "surface": 10
+    },
+    {
+      "elides": false,
+      "featureBits": 5,
+      "gender": "masculine",
+      "inflectionPattern": "3",
+      "number": "singular",
+      "surface": 11
+    }
+  ],
+  "schema": "mojito-mf2-inflection/fr-noun-metadata-sample-pack/v0",
+  "strings": [
+    "1990",
+    "1er",
+    "1ers",
+    "1re",
+    "1res",
+    "24 heures du mans",
+    "90",
+    "abaca",
+    "abaissement",
+    "abaissements",
+    "abandon",
+    "abandonnement",
+    "absinthe",
+    "absinthes",
+    "abécédaire",
+    "abécédaires"
+  ],
+  "summary": {
+    "ambiguousRows": 4,
+    "binaryLowerBoundBytes": 303,
+    "jsonBytes": 5295,
+    "rows": 12,
+    "stringPoolBytes": 143,
+    "strings": 16
+  }
+}

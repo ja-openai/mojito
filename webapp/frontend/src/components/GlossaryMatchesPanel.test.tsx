@@ -9,6 +9,7 @@ const match: ApiMatchedGlossaryTerm = {
   glossaryId: 12,
   glossaryName: 'Product UI',
   tmTextUnitId: 34,
+  termKey: 'product.view',
   source: 'View',
   comment: 'Action label in mobile settings.',
   definition: 'A command that opens a detail screen.',
@@ -84,6 +85,8 @@ describe('GlossaryMatchesPanel', () => {
     expect(within(dialog).getByText('Glossary name')).toBeInTheDocument();
     expect(within(dialog).getByText('Product UI')).toBeInTheDocument();
     expect(within(dialog).getByText('Term description')).toBeInTheDocument();
+    expect(within(dialog).getByText('Term ID')).toBeInTheDocument();
+    expect(within(dialog).getByText('product.view')).toBeInTheDocument();
     expect(within(dialog).getByText('Matched source ranges')).toBeInTheDocument();
     expect(within(dialog).getByText('View [0-4]')).toBeInTheDocument();
     expect(within(dialog).getByText('Match type')).toBeInTheDocument();

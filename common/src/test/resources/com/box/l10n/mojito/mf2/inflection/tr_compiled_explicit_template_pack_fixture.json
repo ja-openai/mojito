@@ -1,0 +1,215 @@
+{
+  "diagnostics": [],
+  "formSets": [
+    {
+      "forms": [
+        {
+          "key": 1,
+          "kind": "literal",
+          "value": 2
+        },
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 4
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 6
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 6
+        },
+        {
+          "key": 8,
+          "kind": "literal",
+          "value": 9
+        },
+        {
+          "key": 10,
+          "kind": "literal",
+          "value": 11
+        }
+      ],
+      "term": 0
+    },
+    {
+      "forms": [
+        {
+          "key": 3,
+          "kind": "literal",
+          "value": 14
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 15
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 15
+        },
+        {
+          "key": 8,
+          "kind": "literal",
+          "value": 16
+        }
+      ],
+      "term": 13
+    },
+    {
+      "forms": [
+        {
+          "key": 19,
+          "kind": "literal",
+          "value": 20
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 21
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 21
+        },
+        {
+          "key": 22,
+          "kind": "literal",
+          "value": 20
+        }
+      ],
+      "term": 18
+    },
+    {
+      "forms": [
+        {
+          "key": 19,
+          "kind": "literal",
+          "value": 25
+        },
+        {
+          "key": 5,
+          "kind": "literal",
+          "value": 26
+        },
+        {
+          "key": 7,
+          "kind": "literal",
+          "value": 26
+        },
+        {
+          "key": 22,
+          "kind": "literal",
+          "value": 25
+        }
+      ],
+      "term": 24
+    }
+  ],
+  "generationSummary": {
+    "candidateTerms": 4,
+    "exportedTerms": 4,
+    "formRows": 18,
+    "skippedTerms": {}
+  },
+  "locale": "tr",
+  "provenance": {
+    "generator": "dev-docs/experiments/mf2-inflection/tr_suffix_pack_survey.py",
+    "license": "CC0-1.0 dictionary data; Unicode-3.0 repository packaging",
+    "sourceLabels": [
+      "inflection/resources/org/unicode/inflection/dictionary/dictionary_tr.lst",
+      "inflection/resources/org/unicode/inflection/dictionary/inflectional_tr.xml"
+    ],
+    "sources": [
+      {
+        "byteSize": 57207,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/dictionary_tr.lst",
+        "sha256": "32097e8a123c591d4470a51e883b8afb6cebf9b5b60c0857cffd07a7c513e391"
+      },
+      {
+        "byteSize": 21129,
+        "gitLfsPointer": false,
+        "path": "inflection/resources/org/unicode/inflection/dictionary/inflectional_tr.xml",
+        "sha256": "810637ded03292c0d48511dcfa1e293d63e044ae312293245a590585640c1445"
+      }
+    ]
+  },
+  "schema": "mojito-mf2-inflection/compiled-term-pack/v0",
+  "sizeEstimates": {
+    "binaryLowerBoundBytes": {
+      "bindingReferenceBytes": 0,
+      "formRowBytes": 216,
+      "stringPoolBytes": 351,
+      "termRowBytes": 80,
+      "totalBytes": 647
+    },
+    "compactJsonBytes": 4281
+  },
+  "strings": [
+    "tr.explicit.çakmak",
+    "ablative.singular",
+    "çakmaktan",
+    "accusative.singular",
+    "çakmağı",
+    "bare.singular",
+    "çakmak",
+    "count.one",
+    "dative.singular",
+    "çakmağa",
+    "locative.singular",
+    "çakmakta",
+    "inflection=14",
+    "tr.explicit.gök",
+    "göğü",
+    "gök",
+    "göğe",
+    "inflection=26",
+    "tr.explicit.amel",
+    "bare.plural",
+    "aʼmal",
+    "amel",
+    "count.other",
+    "inflection=44",
+    "tr.explicit.anahtar",
+    "anahtarlar",
+    "anahtar",
+    "inflection=47"
+  ],
+  "terms": [
+    {
+      "featureBits": 257,
+      "formSet": 0,
+      "id": 0,
+      "sense": 12,
+      "text": 6
+    },
+    {
+      "featureBits": 257,
+      "formSet": 1,
+      "id": 13,
+      "sense": 17,
+      "text": 15
+    },
+    {
+      "featureBits": 257,
+      "formSet": 2,
+      "id": 18,
+      "sense": 23,
+      "text": 21
+    },
+    {
+      "featureBits": 257,
+      "formSet": 3,
+      "id": 24,
+      "sense": 27,
+      "text": 26
+    }
+  ]
+}

@@ -1325,6 +1325,149 @@
   padding: 0 var(--space-2);
 }
 
+.workbench-page__mf2-term-preview {
+  margin: var(--space-1) var(--space-2) 0;
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-xs);
+}
+
+.workbench-page__mf2-term-preview.is-error {
+  color: var(--color-danger);
+}
+
+.workbench-page__mf2-term-preview summary {
+  cursor: pointer;
+}
+
+.workbench-page__mf2-term-preview-body {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.workbench-page__mf2-term-preview-label {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-semibold);
+}
+
+.workbench-page__mf2-term-preview-list {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+}
+
+.workbench-page__mf2-term-preview-argument {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.workbench-page__mf2-term-binding-resolver {
+  margin-top: var(--space-2);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.workbench-page__mf2-term-binding-resolver-title {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.workbench-page__mf2-term-binding-resolver-state {
+  color: var(--color-text-subtle);
+}
+
+.workbench-page__mf2-term-binding-resolver-state.is-error {
+  color: var(--color-danger);
+}
+
+.workbench-page__mf2-term-binding-rows {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.workbench-page__mf2-term-binding-row {
+  display: grid;
+  grid-template-columns: minmax(72px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+}
+
+.workbench-page__mf2-term-binding-select {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  padding: 3px 6px;
+}
+
+.workbench-page__mf2-term-binding-report {
+  margin-top: var(--space-1);
+}
+
+.workbench-page__mf2-term-binding-report.is-error {
+  color: var(--color-danger);
+}
+
+.workbench-page__mf2-term-binding-report.is-warning {
+  color: var(--color-warning);
+}
+
+.workbench-page__mf2-term-runtime {
+  margin-top: var(--space-2);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.workbench-page__mf2-term-runtime-title,
+.workbench-page__mf2-term-render-preview-title {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.workbench-page__mf2-term-runtime-rows,
+.workbench-page__mf2-term-render-preview-messages {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.workbench-page__mf2-term-runtime-row,
+.workbench-page__mf2-term-render-preview-message {
+  display: grid;
+  grid-template-columns: minmax(72px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+}
+
+.workbench-page__mf2-term-runtime-input {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  padding: 3px 6px;
+}
+
+.workbench-page__mf2-term-render-preview {
+  margin-top: var(--space-2);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.workbench-page__mf2-term-render-preview.is-error {
+  color: var(--color-danger);
+}
+
+.workbench-page__mf2-term-render-preview-label {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-semibold);
+}
+
 .workbench-page__edited-indicator {
   margin-right: auto;
   display: inline-flex;
