@@ -86,6 +86,151 @@ fn extract_android(bytes: &[u8]) -> Result<SourceSkeleton, ParseError> {
     extract_android_with_context(bytes, None, &[])
 }
 
+pub(crate) fn retain_android_plural_categories(
+    original: &[u8],
+    categories: &HashSet<String>,
+) -> Result<Vec<u8>, ParseError> {
+    if categories.is_empty() {
+        return Ok(original.to_vec());
+    }
+    let skeleton = extract_android(original)?;
+    let encoding = Encoding::named(&skeleton.encoding)?;
+    let source = skeleton.source;
+    static QUANTITY: OnceLock<Regex> = OnceLock::new();
+    let quantity = QUANTITY.get_or_init(|| {
+        Regex::new(r#"(?:^|\s)quantity\s*=\s*(?:"([^"]*)"|'([^']*)')"#)
+            .expect("valid Android plural quantity pattern")
+    });
+    let mut groups = BTreeMap::<String, Vec<AndroidPluralSourceItem>>::new();
+    for slot in &skeleton.slots {
+        let Some(category) = slot.variant.as_deref() else {
+            continue;
+        };
+        let value_start = encoding
+            .decode(&original[encoding.bom_length()..slot.start])?
+            .len();
+        let value_end = encoding
+            .decode(&original[encoding.bom_length()..slot.end])?
+            .len();
+        let opening = source[..=value_start]
+            .rfind("<item")
+            .ok_or_else(|| error("INVALID_SKELETON", "Android plural has no owned item"))?;
+        let opening_end = tag_end(&source, opening)?;
+        let capture = quantity
+            .captures(&source[opening..=opening_end])
+            .ok_or_else(|| error("INVALID_SKELETON", "Android plural has no owned quantity"))?;
+        let spelling = capture.get(1).or_else(|| capture.get(2)).unwrap();
+        let decoded = quick_xml::escape::unescape(spelling.as_str())
+            .map_err(|_| error("INVALID_SKELETON", "Invalid Android plural quantity"))?;
+        if decoded.trim() != category {
+            return Err(error(
+                "INVALID_SKELETON",
+                "Android plural quantity does not own its source value",
+            ));
+        }
+        let mut end = if source[value_end..].starts_with("</item>") {
+            value_end + "</item>".len()
+        } else if source[value_start..].starts_with('/') && source[..value_end].ends_with('>') {
+            value_end
+        } else {
+            return Err(error(
+                "INVALID_SKELETON",
+                "Android plural item has no closing tag",
+            ));
+        };
+        let line_start = source[..opening]
+            .rfind(['\n', '\r'])
+            .map_or(0, |index| index + 1);
+        let start = if source[line_start..opening].trim().is_empty() {
+            line_start
+        } else {
+            opening
+        };
+        while matches!(source.as_bytes().get(end), Some(b' ' | b'\t')) {
+            end += 1;
+        }
+        if source.as_bytes().get(end) == Some(&b'\r') {
+            end += 1;
+        }
+        if source.as_bytes().get(end) == Some(&b'\n') {
+            end += 1;
+        }
+        groups
+            .entry(slot.id.clone())
+            .or_default()
+            .push(AndroidPluralSourceItem {
+                category: category.to_owned(),
+                start,
+                end,
+                quantity_start: opening + spelling.start(),
+                quantity_end: opening + spelling.end(),
+            });
+    }
+    let order = ["zero", "one", "two", "few", "many", "other"];
+    let mut edits = Vec::<(usize, usize, String)>::new();
+    for group in groups.values() {
+        let Some(fallback) = group.iter().find(|item| item.category == "other") else {
+            continue;
+        };
+        for item in group {
+            if !categories.contains(&item.category) {
+                edits.push((item.start, item.end, String::new()));
+            }
+        }
+        let mut additions = BTreeMap::<usize, String>::new();
+        for (rank, category) in order.iter().enumerate() {
+            if !categories.contains(*category)
+                || group.iter().any(|item| item.category == *category)
+            {
+                continue;
+            }
+            let position = group
+                .iter()
+                .find(|item| {
+                    order
+                        .iter()
+                        .position(|candidate| *candidate == item.category)
+                        .is_some_and(|candidate| candidate > rank)
+                })
+                .map_or(
+                    group.last().expect("nonempty Android plural group").end,
+                    |next| next.start,
+                );
+            let template = &source[fallback.start..fallback.end];
+            let value_start = fallback.quantity_start - fallback.start;
+            let value_end = fallback.quantity_end - fallback.start;
+            additions.entry(position).or_default().push_str(&format!(
+                "{}{}{}",
+                &template[..value_start],
+                category,
+                &template[value_end..]
+            ));
+        }
+        edits.extend(
+            additions
+                .into_iter()
+                .map(|(position, value)| (position, position, value)),
+        );
+    }
+    if edits.is_empty() {
+        return Ok(original.to_vec());
+    }
+    edits.sort_by(|left, right| right.0.cmp(&left.0).then_with(|| right.1.cmp(&left.1)));
+    let mut result = source;
+    for (start, end, replacement) in edits {
+        result.replace_range(start..end, &replacement);
+    }
+    Ok(encoding.encode(&result))
+}
+
+struct AndroidPluralSourceItem {
+    category: String,
+    start: usize,
+    end: usize,
+    quantity_start: usize,
+    quantity_end: usize,
+}
+
 pub(crate) fn extract_android_with_context(
     bytes: &[u8],
     resource_path: Option<&str>,

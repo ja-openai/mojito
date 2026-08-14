@@ -7,9 +7,11 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.StringEscapeUtils;
@@ -26,6 +28,130 @@ final class AndroidSourceSkeleton {
   static LocalizationSourceSkeleton extract(byte[] bytes) {
     return extract(bytes, null, null);
   }
+
+  static byte[] retainPluralCategories(byte[] original, Set<String> categories) {
+    if (categories.isEmpty()) {
+      return original;
+    }
+    LocalizationSourceSkeleton skeleton = extract(original);
+    SourceSkeletonEncoding encoding = SourceSkeletonEncoding.named(skeleton.encoding());
+    String source = skeleton.source();
+    Map<String, List<PluralSourceItem>> groups = new LinkedHashMap<>();
+    for (LocalizationSourceSlot slot : skeleton.slots()) {
+      if (slot.variant() != null) {
+        groups
+            .computeIfAbsent(slot.id(), ignored -> new ArrayList<>())
+            .add(pluralSourceItem(original, source, encoding, slot));
+      }
+    }
+    List<PluralEdit> edits = new ArrayList<>();
+    List<String> order = List.of("zero", "one", "two", "few", "many", "other");
+    for (List<PluralSourceItem> group : groups.values()) {
+      PluralSourceItem fallback =
+          group.stream().filter(item -> "other".equals(item.category())).findFirst().orElse(null);
+      if (fallback == null) {
+        continue;
+      }
+      for (PluralSourceItem item : group) {
+        if (!categories.contains(item.category())) {
+          edits.add(new PluralEdit(item.start(), item.end(), ""));
+        }
+      }
+      Map<Integer, StringBuilder> additions = new TreeMap<>();
+      for (String category : order) {
+        if (!categories.contains(category)
+            || group.stream().anyMatch(item -> category.equals(item.category()))) {
+          continue;
+        }
+        int rank = order.indexOf(category);
+        PluralSourceItem next =
+            group.stream()
+                .filter(item -> order.indexOf(item.category()) > rank)
+                .findFirst()
+                .orElse(null);
+        int position = next == null ? group.get(group.size() - 1).end() : next.start();
+        String template = source.substring(fallback.start(), fallback.end());
+        int valueStart = fallback.quantityStart() - fallback.start();
+        int valueEnd = fallback.quantityEnd() - fallback.start();
+        additions
+            .computeIfAbsent(position, ignored -> new StringBuilder())
+            .append(template, 0, valueStart)
+            .append(category)
+            .append(template, valueEnd, template.length());
+      }
+      additions.forEach(
+          (position, values) -> edits.add(new PluralEdit(position, position, values.toString())));
+    }
+    if (edits.isEmpty()) {
+      return original;
+    }
+    edits.sort(
+        (left, right) -> {
+          int start = Integer.compare(right.start(), left.start());
+          return start == 0 ? Integer.compare(right.end(), left.end()) : start;
+        });
+    StringBuilder result = new StringBuilder(source);
+    for (PluralEdit edit : edits) {
+      result.replace(edit.start(), edit.end(), edit.replacement());
+    }
+    return encoding.encode(result.toString());
+  }
+
+  private static PluralSourceItem pluralSourceItem(
+      byte[] original,
+      String source,
+      SourceSkeletonEncoding encoding,
+      LocalizationSourceSlot slot) {
+    int valueStart = encoding.decode(original, encoding.bom().length, slot.start()).length();
+    int valueEnd = encoding.decode(original, encoding.bom().length, slot.end()).length();
+    int opening = source.lastIndexOf("<item", valueStart);
+    if (opening < 0) {
+      throw invalid("INVALID_SKELETON", "Android plural has no owned item element");
+    }
+    int openingEnd = tagEnd(source, opening);
+    Matcher attributes = ATTRIBUTE.matcher(source.substring(opening, openingEnd + 1));
+    int quantityStart = -1;
+    int quantityEnd = -1;
+    while (attributes.find()) {
+      if ("quantity".equals(attributes.group(1))) {
+        if (!StringEscapeUtils.unescapeXml(attributes.group(3)).trim().equals(slot.variant())) {
+          throw invalid("INVALID_SKELETON", "Android plural quantity does not own its value");
+        }
+        quantityStart = opening + attributes.start(3);
+        quantityEnd = opening + attributes.end(3);
+        break;
+      }
+    }
+    if (quantityStart < 0) {
+      throw invalid("INVALID_SKELETON", "Android plural item has no owned quantity");
+    }
+    int end;
+    if (source.startsWith("</item>", valueEnd)) {
+      end = valueEnd + "</item>".length();
+    } else if (source.charAt(valueStart) == '/' && source.charAt(valueEnd - 1) == '>') {
+      end = valueEnd;
+    } else {
+      throw invalid("INVALID_SKELETON", "Android plural item has no closing tag");
+    }
+    int lineStart =
+        Math.max(source.lastIndexOf('\n', opening - 1), source.lastIndexOf('\r', opening - 1)) + 1;
+    int start = source.substring(lineStart, opening).isBlank() ? lineStart : opening;
+    while (end < source.length() && (source.charAt(end) == ' ' || source.charAt(end) == '\t')) {
+      end++;
+    }
+    if (end < source.length() && source.charAt(end) == '\r') {
+      end++;
+    }
+    if (end < source.length() && source.charAt(end) == '\n') {
+      end++;
+    }
+    return new PluralSourceItem(slot.variant(), start, end, quantityStart, quantityEnd);
+  }
+
+  private record PluralSourceItem(
+      String category, int start, int end, int quantityStart, int quantityEnd) {}
+
+  private record PluralEdit(int start, int end, String replacement) {}
 
   static LocalizationSourceSkeleton extract(
       byte[] bytes, String resourcePath, List<AndroidFeatureFlag> featureFlags) {

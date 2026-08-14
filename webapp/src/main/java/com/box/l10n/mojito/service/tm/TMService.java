@@ -1250,6 +1250,9 @@ public class TMService {
       TextUnitDTO translation = translator.getTextUnitDTO(md5);
       String target = translator.getTranslationFromTextUnitDTO(translation, unit.getSource());
       if (target != null) {
+        if (format == LocalizationFileFormat.ANDROID && translation == null) {
+          continue;
+        }
         String canonicalId = projected.canonicalId();
         String messageId =
             projected.textUnit().getPluralForm() == null

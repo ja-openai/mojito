@@ -803,6 +803,14 @@ pub(crate) fn localize(
         selected.retain(|key, _| !untranslated_keys.contains(key));
     }
     let mut localized = crate::render_skeleton(&skeleton, &selected)?;
+    if format == FileFormat::Android {
+        if let Some(locale) = target_locale {
+            localized = crate::source_skeleton::retain_android_plural_categories(
+                &localized,
+                &mojito_plural_categories(locale),
+            )?;
+        }
+    }
     if format == FileFormat::AppleStringsdict {
         if let Some(locale) = target_locale {
             localized = retain_apple_plural_categories(&localized, locale)?;
@@ -1112,6 +1120,15 @@ fn apply_extraction(
         Regex::new(r"(?s)\s*<locations>\s*(.*?)\s*</locations>").expect("valid Apple usage pattern")
     });
     for (id, mut message) in original.messages {
+        if options.format == FileFormat::Android
+            && message.default_message.is_empty()
+            && message
+                .metadata
+                .as_ref()
+                .is_some_and(|metadata| metadata.contains_key("arrayIndex"))
+        {
+            continue;
+        }
         if let Some(note) = android_notes.get(resource_identity(&id)) {
             message.description = Some(note.clone());
         }
@@ -2039,6 +2056,34 @@ fn android_output(
         output.push_str(&original[start..end]);
         output.push('\n');
     }
+    let opening = original
+        .find(&format!("<{}", root.name))
+        .ok_or_else(|| ParseError::new("INVALID_XML", "Android root has no source opening tag"))?;
+    let prefix = &original[..opening];
+    let mut position = 0;
+    while let Some(offset) = prefix[position..].find('<') {
+        position += offset;
+        if prefix[position..].starts_with("<!--") {
+            let end = prefix[position..]
+                .find("-->")
+                .ok_or_else(|| ParseError::new("INVALID_XML", "Unterminated Android comment"))?
+                + position
+                + 3;
+            output.push_str(&prefix[position..end]);
+            position = end;
+        } else if prefix[position..].starts_with("<?") {
+            let end = prefix[position..].find("?>").ok_or_else(|| {
+                ParseError::new("INVALID_XML", "Unterminated Android instruction")
+            })? + position
+                + 2;
+            if !prefix[position..].starts_with("<?xml") {
+                output.push_str(&prefix[position..end]);
+            }
+            position = end;
+        } else {
+            position += 1;
+        }
+    }
     append_xml(&root, &mut output, 0, options.indentation());
     output.push('\n');
     Ok(encoding.encode(&output))
@@ -2125,7 +2170,6 @@ fn append_xml(element: &XmlElement, output: &mut String, level: usize, indent: u
         output.push_str(&escape_xml(value, true));
         output.push('"');
     }
-    output.push('>');
     let nested = element
         .children
         .iter()
@@ -2134,6 +2178,11 @@ fn append_xml(element: &XmlElement, output: &mut String, level: usize, indent: u
         XmlNode::Text(value) => !value.trim().is_empty(),
         _ => false,
     });
+    if element.local_name() == "resources" && !nested && !text {
+        output.push_str("/>");
+        return;
+    }
+    output.push('>');
     for child in &element.children {
         match child {
             XmlNode::Element(child) => {

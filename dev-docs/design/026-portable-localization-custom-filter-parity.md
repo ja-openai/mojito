@@ -91,14 +91,17 @@ counting repeated definitions or silently dropping protected placeholders.
 - HTML preserves actual customized `HTML_ALPHA` document-part placeholders,
   decoded-entity MD5 identities, context-dependent neighboring identities,
   image URL/ALT adaptation, nonbreaking-space suppression, and original markup.
-- YAML preserves nested source mappings, configured key-path selection, block
-  scalars, comments, quoting, and original source-template bytes. Unsupported
-  ambiguous sequence ownership fails closed.
+- YAML preserves nested source mappings, flow/block sequences, repeated
+  source-owned array positions, configured key-path selection, block scalars,
+  comments, quoting, and original source-template bytes. Canonical indexed
+  array identities project back to the customized filter's unindexed stable
+  names, and block-scalar blank lines retain their original indentation.
 - Gettext localized import supplies the actual target locale when a PO header
-  leaves `Language` empty, preserves every CLDR category represented by one
-  native plural index, and renders all locale-owned output slots. The existing
-  import dataset remains byte-identical for French, French Canadian, Japanese,
-  Russian, and Croatian, including Croatian's third `msgstr[2]` branch.
+  leaves `Language` empty or omits it entirely, preserves every CLDR category
+  represented by one native plural index, and renders all locale-owned output
+  slots. Existing import datasets remain byte-identical for Arabic, Czech,
+  French, French Canadian, Japanese, Russian, and Croatian, including
+  Croatian's third `msgstr[2]` branch.
 
 Configured inline-code rules are compiled and ordered once for each parsed option
 set, then reused for every extracted message. A warmed 20,000-message,
@@ -139,12 +142,31 @@ and 1,000-unit workloads improving from 175.0 ms to 7.2 ms and from 32.8 ms to
 - Apple `.strings` comments containing multiline `<locations>...</locations>`
   expose unique ordered usage locations and remove that block while preserving
   all remaining comment whitespace; that whitespace affects legacy TM MD5.
+- Apple `.strings` retains the customized filter's escaped source-key spelling
+  as the stable TM name, and the engineer sentinel `No comment provided by
+  engineer.` remains absent rather than becoming part of the MD5. Apple
+  `.stringsdict` inherits the actual top-level translator comment and source
+  usages across every plural category and its synthetic
+  `NSStringLocalizedFormatKey` unit.
 - GNU gettext `#:` references become usages on every synthesized plural form.
   The existing native parser already preserves these references in metadata.
 - Java properties declarations may repeat the same key when their value and
   translator description are identical. Portable extraction exposes one stable
   translation-memory identity, updates every original declaration on output,
-  and still rejects conflicting duplicate values or descriptions.
+  and still rejects conflicting duplicate values or descriptions. Mojito
+  workflow extraction retains every leading space after comment delimiters,
+  matching customized-filter MD5 inputs; canonical platform parsing remains
+  unchanged.
+- Empty Android string-array items remain in the source template but are not
+  extracted as translatable units, and later entries retain their original
+  indexes and customized `name_index` TM identities. Untranslated source
+  fallbacks are left untouched instead of unnecessarily reparsing/requoting
+  the original resource body.
+- Android plural output independently removes categories unused by the target
+  locale and completes missing required categories from the original `other`
+  item without reformatting protected values or unrelated source markup.
+  Untranslated cleanup also retains XML comments and processing instructions
+  that precede the resource root, including when all strings are removed.
 - Android, JSON, Apple `.strings`, Java properties, Microsoft RESX/RESW,
   Google XTB, and GNU PO remove
   untranslated entries when inheritance mode is `REMOVE_UNTRANSLATED`; Android
@@ -178,6 +200,12 @@ and 1,000-unit workloads improving from 175.0 ms to 7.2 ms and from 32.8 ms to
   and portable localized native dictionaries. Partially translated plural
   categories retain their existing behavior until a separate policy is defined;
   binary dictionaries fail safely when complete-message removal is required.
+- Apple `.stringsdict` translated output independently completes each
+  locale-required plural rule by copying the source-owned translated `other`
+  entry. Russian output therefore contains `one`, `few`, `many`, and `other`
+  in native order; Japanese and the intentional legacy French override keep
+  only their owned categories. Source indentation, original value markup,
+  XML encoding, comments, and independent plural-rule ownership are preserved.
 - AAPT2 itself accepts and retains Android plural bags with no `other`, but a
   canonical ICU/FormatJS plural cannot safely represent them. Independent Java
   and Rust readers/writers reject these bags instead of inventing a fallback;
@@ -394,9 +422,14 @@ and 1,000-unit workloads improving from 175.0 ms to 7.2 ms and from 32.8 ms to
 
 ## Compatibility boundary
 
-Existing `push`, `pull`, and localized-asset `import` support an explicit, default-Okapi
-`--converter portable` integration through the current extraction and
-translated-output services. The CLI parses `--converter okapi|portable`
+Existing `push`, `pull`, localized-asset `import`, and client-side `extract`
+support an explicit, default-Okapi `--converter portable`. `push`, `pull`, and
+`import` select the current backend extraction and translated-output services;
+`extract` selects the independent converter inside the CLI process, with
+`extract-diff` and `extraction-check` consuming the resulting local extraction
+artifacts. The default-off `l10n.converter.portable=true` property enables
+both backend conversion and CLI-local extraction. The CLI parses
+`--converter okapi|portable`
 through the same case-insensitive enum path as existing command modes, and the
 help text documents that casing boundary, so lowercase documented examples work
 while invalid modes fail before any
@@ -441,6 +474,46 @@ Russian, and Croatian. Initial portable imports evaluate existing locale-owned
 translation presence once per asset and perform zero current-variant lookups
 for 100 newly imported strings; reimports still retrieve the existing current
 variant, matching the customized Okapi import step.
+
+Existing client-side extraction, extraction-diff, and extraction-check tests
+also pass with the global portable property. The local service independently
+proves both explicit portable routing and property-based routing invoke no
+Okapi extractor, while default extraction remains on Okapi. Replaying those
+real CLI datasets exposed three customized gettext extraction requirements:
+unknown legacy filter options are ignored, an explicit empty `msgctxt ""` keeps
+the source identity while retaining its empty-context metadata, and consecutive
+developer notes are joined with newlines rather than spaces. Independent Java
+and Rust implementations and shared neutral fixtures preserve all three.
+GNU localized imports additionally inject the actual target locale into either
+an empty or entirely absent `Language:` header before deriving native plural
+index ownership; imported Arabic, Czech, and Russian category values therefore
+remain distinct rather than being silently interpreted as English.
+
+A first genuinely broad property-enabled replay executed all ordinary Maven
+test classes rather than only `PullCommandTest`: 314 common tests and seven
+REST-client tests passed; 1,441 existing webapp tests outside the two
+format-sensitive service classes passed; and 573 of 582 CLI tests passed.
+That run exposed previously untested real gaps: properties comment whitespace
+changed stable MD5 identities and doubled the demo dataset from 1,575 to 3,150
+units; nested YAML arrays were missing; escaped Apple identities,
+`.stringsdict` owner comments/usages and Russian output categories were
+incomplete; and Android empty array items were incorrectly extracted. Each
+regression now has independent Java/Rust fixtures and its actual existing
+service or CLI test. Remaining failures must still be categorized explicitly:
+compiler-invalid Android names, Foundation-invalid `.strings`/`.stringsdict`
+sources, GNU-invalid PO fixtures, source-preserving XML/YAML whitespace versus
+historical rewritten bytes, intentionally protected strings, and deliberately
+rejected `oldEscaping=true` are not proof of missing platform support.
+
+After those repairs, a complete property-enabled reactor replay passed 2,425
+existing tests with zero failures or errors: 315 common, seven REST-client,
+1,528 webapp, and 575 CLI tests. Explicit method exclusions cover only the
+known invalid native fixtures, historical normalized/rewritten byte snapshots,
+one deliberately unsupported `oldEscaping=true` path, the old protected-plural
+extraction bug, an explicit two-backend differential that cannot run with a
+global override, and conflicting duplicate Java property declarations whose
+separate legacy TM identities are not yet represented by the canonical model.
+No entire service or CLI class is excluded.
 
 Direct CLI invocations also initialize their JCommander parser when Spring has
 not run its `@PostConstruct` lifecycle, preventing the intermittent startup
