@@ -1410,6 +1410,9 @@ public class ReviewProjectServiceTest {
     reviewProjectTextUnit.setTmTextUnit(tmTextUnit);
     GlossaryTermMetadata metadata = new GlossaryTermMetadata();
     metadata.setStatus(GlossaryTermMetadata.STATUS_CANDIDATE);
+    Glossary glossary = new Glossary();
+    glossary.setId(17L);
+    metadata.setGlossary(glossary);
 
     when(reviewProjectTextUnitRepository.findById(55L))
         .thenReturn(Optional.of(reviewProjectTextUnit));
@@ -1428,6 +1431,7 @@ public class ReviewProjectServiceTest {
 
     assertEquals(GlossaryTermMetadata.STATUS_APPROVED, metadata.getStatus());
     verify(glossaryTermMetadataRepository).saveAndFlush(metadata);
+    verify(glossaryTermService).touchGlossary(glossary);
     ArgumentCaptor<ReviewProjectTextUnitDecision> decisionCaptor =
         ArgumentCaptor.forClass(ReviewProjectTextUnitDecision.class);
     verify(reviewProjectTextUnitDecisionRepository).saveAndFlush(decisionCaptor.capture());

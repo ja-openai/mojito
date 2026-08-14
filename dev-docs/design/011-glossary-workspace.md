@@ -211,17 +211,26 @@ effective glossary ids, their existing last-modified dates, and the target local
 Repositories linked to the same glossaries and explicit lookups of one managed
 glossary therefore share the same trie. Legacy repository-name lookup keeps a
 separate repository+locale cache scope. The Caffeine cache holds at most 128
-entries for 30 seconds and coalesces concurrent loads.
+entries, defaults to a ten-minute lifetime, and coalesces concurrent loads.
+Operators can adjust the lifetime with `l10n.glossary.cache.ttl` or the
+`L10N_GLOSSARY_CACHE_TTL` environment variable.
 
 Glossary configuration edits already update the glossary's last-modified date,
 which the existing glossary-resolution query observes on every pod. Creating,
 deleting, or changing glossary scope naturally changes the resolved glossary-id
-list. Term, translation, and evidence changes are reconciled independently for
-each glossary and target locale within the 30-second cache lifetime. There is no
-glossary revision column, additional database write, shared-row lock, global
-eviction, transaction callback, pub/sub dependency, or AspectJ-dependent cache
-invalidation. The existing last-modified date has one-second precision, so the
-bounded TTL remains the correctness backstop for rapid configuration edits.
+list. Glossary term, translation, evidence, import, and terminology-resolution
+edits now also update their parent glossary's existing last-modified date within
+the same transaction, so all pods naturally select a new cache key after
+commit. This requires one additional parent-row write per successful glossary
+edit but no revision column, global eviction, transaction callback, pub/sub
+dependency, or distributed cache coordination. The database update atomically
+advances the timestamp by at least one second when multiple edits arrive in the
+same database-resolution tick, so rapid edits cannot reuse a cache key. The
+timestamp can move ahead of wall-clock time during unusually dense sequences of
+individually committed edits; normal glossary imports and batch metadata updates
+advance it only once per batch. The bounded TTL remains the freshness backstop
+for direct backing-repository changes that bypass the managed glossary mutation
+paths.
 
 Managed-glossary cold loads hydrate source and target text-unit DTOs from the
 existing `TEXT_UNIT_DTOS_CACHE` JSON/blob snapshots and refresh them with
@@ -258,10 +267,12 @@ Now those 500 requests normally share one compiled trie per pod, glossary scope,
 and locale within the cache lifetime: roughly 499 of 500 complete rebuilds are
 avoided, or 99.8% fewer full glossary rebuilds in that example. Concurrent
 requests for the same scope share a single load. Translating 65 locales does not
-update a shared glossary row or serialize the locale transactions; each locale
-refreshes independently through its existing DTO-cache watermark. Managed-
-glossary cold loads reuse shared JSON/blob text-unit snapshots instead of
-directly executing the former full source and target text-unit searches.
+rebuild the glossary on every request; each locale still refreshes through its
+existing DTO-cache watermark. Increasing the default TTL from 30 seconds to ten
+minutes also cuts time-based rebuilds by up to 20 times per active pod and
+locale. Managed-glossary cold loads reuse shared JSON/blob text-unit snapshots
+instead of directly executing the former full source and target text-unit
+searches.
 
 If stricter cross-pod freshness is later needed, a best-effort pub/sub
 notification can invalidate only the affected glossary+locale after a committed
