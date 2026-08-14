@@ -536,6 +536,11 @@ final class MojitoLocalizationWorkflow {
       selected.keySet().removeAll(untranslatedKeys);
     }
     byte[] localized = LocalizationFileConverters.renderSkeleton(skeleton, selected);
+    if (format == LocalizationFileFormat.ANDROID && targetLocale != null) {
+      localized =
+          AndroidSourceSkeleton.retainPluralCategories(
+              localized, mojitoPluralCategories(targetLocale));
+    }
     if (format == LocalizationFileFormat.APPLE_STRINGSDICT && targetLocale != null) {
       localized =
           AppleStringsdictSourceSkeleton.retainPluralCategories(
@@ -627,6 +632,12 @@ final class MojitoLocalizationWorkflow {
     result.setLocale(original.locale());
     for (Map.Entry<String, LocalizationMessage> entry : original.messages().entrySet()) {
       LocalizationMessage message = entry.getValue();
+      if (options.format() == LocalizationFileFormat.ANDROID
+          && message.defaultMessage().isEmpty()
+          && message.metadata() != null
+          && message.metadata().containsKey("arrayIndex")) {
+        continue;
+      }
       String description = message.description();
       if (androidNotes.containsKey(resourceIdentity(entry.getKey()))) {
         description = androidNotes.get(resourceIdentity(entry.getKey()));

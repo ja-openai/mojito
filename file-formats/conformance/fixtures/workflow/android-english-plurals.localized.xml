@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <plurals name="signals">
+    <item quantity="one">One signal</item>
+    <item quantity="other">Many signals</item>
+  </plurals>
+  <plurals name="beacons">
+    <item quantity="one">Many beacons</item>
+    <item quantity="other">Many beacons</item>
+  </plurals>
+</resources>

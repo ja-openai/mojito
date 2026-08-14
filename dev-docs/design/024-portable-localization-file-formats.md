@@ -3221,7 +3221,8 @@ to 59–66 ms after removing repeated rule-count scans and per-message list
 allocation. The temporary measurement harness was not retained in production
 or test code.
 
-The existing `push`, `pull`, and localized-asset `import` commands now accept
+The existing `push`, `pull`, localized-asset `import`, and client-side `extract`
+commands now accept
 `--converter portable`; the default remains `--converter okapi`. Selection
 travels through the existing
 filter-option list, including asynchronous and parallel requests, so no new
@@ -3238,7 +3239,7 @@ GNU gettext output also expands each independent English two-slot plural into
 the target locale's native plural-slot count, retains the exact configured
 plural formula, and records only the TM variants actually written; Russian
 three-form output and multiple plural messages are covered by the existing CLI
-dataset. Localized gettext imports resolve blank `Language` headers against
+dataset. Localized gettext imports resolve blank or absent `Language` headers against
 their actual target locale, retain every category owned by each native plural
 index, and emit all required French, Japanese, Russian, and Croatian forms.
 Configured Android, Apple `.strings`/`.stringsdict`, gettext `.pot`, Java
@@ -3246,14 +3247,17 @@ properties, generic/Chrome JSON, FormatJS, ordinary CSV, Adobe Magento CSV,
 Microsoft `.resx`/`.resw`, Google `.xtb`, JavaScript, TypeScript, HTML, and YAML
 reuse the existing real CLI push/pull datasets. Format-specific implementations
 preserve customized extraction identities, translator comments, protected
-content, source-owned markup, configured key selection, and exact original
+content, source-owned markup, configured key selection, indexed YAML sequence
+ownership, exact customized Java-properties comment whitespace, Apple escaped
+source identities and owner comments/usages, and exact original
 source templates instead of treating upstream Okapi defaults as the compatibility
 target. The legacy Android dataset has compiler-invalid numeric
 resource names, so its portable integration test repairs only those identifiers
 in a temporary copy. Existing source skeletons remain request-scoped rather
-than durably persisted. For Japanese `.stringsdict` files, portable rendering
-retains an unused but valid source `one` category that legacy generation drops;
-the runtime-selected `other` category and all translations remain identical.
+than durably persisted. Apple `.stringsdict` output removes source categories
+the target locale does not own and completes missing locale-owned categories
+by copying translated `other` values, preserving both Russian `few`/`many`
+and Japanese `other` without rewriting the surrounding source template.
 Ordinary `.po` and `.xcstrings` still require CLI file
 discovery enrollment; bilingual XLIFF remains unsupported in portable mode.
 

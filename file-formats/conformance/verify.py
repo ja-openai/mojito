@@ -546,8 +546,8 @@ def main() -> None:
             f"{workflow_id}: filter options require strings"
         )
         if "targetLocale" in workflow:
-            assert workflow["format"] == "apple_stringsdict", (
-                f"{workflow_id}: locale-owned output currently applies to Foundation plural dictionaries"
+            assert workflow["format"] in {"android", "apple_stringsdict"}, (
+                f"{workflow_id}: locale-owned output requires Android or Foundation plural resources"
             )
             assert isinstance(workflow["targetLocale"], str) and workflow["targetLocale"], (
                 f"{workflow_id}: locale-owned output requires an explicit target locale"

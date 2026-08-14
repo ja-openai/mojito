@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "android",
+  "messages": {
+    "routes[1]": {
+      "defaultMessage": "First stop",
+      "metadata": {
+        "arrayIndex": 1,
+        "arrayName": "routes"
+      }
+    },
+    "routes[2]": {
+      "defaultMessage": "Other stops",
+      "metadata": {
+        "arrayIndex": 2,
+        "arrayName": "routes"
+      }
+    }
+  }
+}

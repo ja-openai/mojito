@@ -397,6 +397,36 @@
       "filterOptions": []
     },
     {
+      "id": "android-mojito-retains-only-japanese-plural-categories",
+      "format": "android",
+      "input": "fixtures/workflow/android-locale-plurals.xml",
+      "filterOptions": [],
+      "targetLocale": "ja-JP",
+      "translations": {},
+      "localized": "fixtures/workflow/android-japanese-plurals.localized.xml"
+    },
+    {
+      "id": "android-mojito-completes-missing-english-plural-categories",
+      "format": "android",
+      "input": "fixtures/workflow/android-locale-plurals.xml",
+      "filterOptions": [],
+      "targetLocale": "en-GB",
+      "translations": {},
+      "localized": "fixtures/workflow/android-english-plurals.localized.xml"
+    },
+    {
+      "id": "android-mojito-skips-empty-array-items-without-renumbering-source-slots",
+      "format": "android",
+      "input": "fixtures/workflow/android-empty-array-items.xml",
+      "expected": "fixtures/workflow/android-empty-array-items.expected.json",
+      "filterOptions": [],
+      "translations": {
+        "routes[1]": "Premier arrêt",
+        "routes[2]": "Autres arrêts"
+      },
+      "localized": "fixtures/workflow/android-empty-array-items.localized.xml"
+    },
+    {
       "id": "android-mojito-removes-missing-plural-items-protected-values-and-descriptions",
       "format": "android",
       "input": "fixtures/workflow/android-output.xml",
@@ -477,6 +507,15 @@
       "translations": {},
       "removeUntranslated": true,
       "localized": ""
+    },
+    {
+      "id": "android-mojito-preserves-top-level-comments-when-untranslated-output-is-empty",
+      "format": "android",
+      "input": "fixtures/workflow/android-empty-commented.xml",
+      "filterOptions": [],
+      "translations": {},
+      "removeUntranslated": true,
+      "localized": "fixtures/workflow/android-empty-commented.localized.xml"
     },
     {
       "id": "android-mojito-empty-output-preserves-generic-native-resources",

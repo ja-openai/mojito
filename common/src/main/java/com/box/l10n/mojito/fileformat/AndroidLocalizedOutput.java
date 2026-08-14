@@ -2,6 +2,7 @@ package com.box.l10n.mojito.fileformat;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
@@ -21,7 +22,8 @@ final class AndroidLocalizedOutput {
         SourceSkeletonEncoding.detect(
             bytes, LocalizationFileConverters.xmlCharset(LocalizationFileFormat.ANDROID, bytes));
     String source = encoding.decode(bytes, encoding.bom().length, bytes.length);
-    Element root = SecureXmlParser.parse(source).getDocumentElement();
+    Document document = SecureXmlParser.parse(source);
+    Element root = document.getDocumentElement();
     clean(root, options, removeUntranslated, untranslatedMarker);
     if (options.enabled("postEmptyResourcesToEmptyFile") && !containsResource(root)) {
       return new byte[0];
@@ -29,6 +31,19 @@ final class AndroidLocalizedOutput {
     StringBuilder result = new StringBuilder();
     if (source.stripLeading().startsWith("<?xml")) {
       result.append(source, source.indexOf("<?xml"), source.indexOf("?>") + 2).append('\n');
+    }
+    for (Node node = document.getFirstChild();
+        node != null && node != root;
+        node = node.getNextSibling()) {
+      if (node.getNodeType() == Node.COMMENT_NODE) {
+        result.append("<!--").append(node.getNodeValue()).append("-->");
+      } else if (node.getNodeType() == Node.PROCESSING_INSTRUCTION_NODE) {
+        result.append("<?").append(node.getNodeName());
+        if (node.getNodeValue() != null && !node.getNodeValue().isEmpty()) {
+          result.append(' ').append(node.getNodeValue());
+        }
+        result.append("?>");
+      }
     }
     append(root, result, 0, options.indentation());
     result.append('\n');
@@ -126,6 +141,10 @@ final class AndroidLocalizedOutput {
       Node child = children.item(index);
       nested |= child instanceof Element || child.getNodeType() == Node.COMMENT_NODE;
       text |= child.getNodeType() == Node.TEXT_NODE && !child.getNodeValue().isBlank();
+    }
+    if ("resources".equals(element.getLocalName()) && !nested && !text) {
+      output.append("/>");
+      return;
     }
     output.append('>');
     for (int index = 0; index < children.getLength(); index++) {
