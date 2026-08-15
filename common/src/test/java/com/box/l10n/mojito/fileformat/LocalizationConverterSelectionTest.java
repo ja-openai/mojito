@@ -32,6 +32,22 @@ public class LocalizationConverterSelectionTest {
   }
 
   @Test
+  public void explicitOkapiOverridesPortableBackendDefault() {
+    List<String> selected = LocalizationConverterSelection.useOkapi(List.of("escapeMode=legacy"));
+
+    assertEquals(
+        List.of("escapeMode=legacy", LocalizationConverterSelection.OKAPI_OPTION), selected);
+    assertFalse(LocalizationConverterSelection.isPortable(selected, true, "messages.json"));
+    assertEquals(
+        List.of("escapeMode=legacy"), LocalizationConverterSelection.platformOptions(selected));
+    assertEquals(selected, LocalizationConverterSelection.useOkapi(selected));
+    assertEquals(
+        List.of("escapeMode=legacy", LocalizationConverterSelection.PORTABLE_OPTION),
+        LocalizationConverterSelection.usePortable(selected));
+    assertImmutable(selected);
+  }
+
+  @Test
   public void usePortableReturnsImmutableSnapshot() {
     List<String> source = new ArrayList<>(List.of("escapeMode=legacy"));
     List<String> selected = LocalizationConverterSelection.usePortable(source);

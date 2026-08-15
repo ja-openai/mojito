@@ -255,7 +255,10 @@ public class PushCommand extends Command {
                       sourceFileMatch.getFileType().getFilterConfigIdOverride());
                   List<String> filterOptions =
                       commandHelper.getFilterOptionsOrDefaults(
-                          sourceFileMatch.getFileType(), filterOptionsParam, converter);
+                          sourceFileMatch.getFileType(),
+                          filterOptionsParam,
+                          converter,
+                          hasExplicitConverter());
                   sourceAsset.setFilterOptions(
                       migrateLegacyJsonComments
                           ? LocalizationConverterSelection.useLegacyJsonCommentMigration(

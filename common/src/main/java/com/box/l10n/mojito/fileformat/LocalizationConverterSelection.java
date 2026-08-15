@@ -9,6 +9,7 @@ import java.util.Locale;
 public final class LocalizationConverterSelection {
 
   public static final String PORTABLE_OPTION = "mojito.converter=portable";
+  public static final String OKAPI_OPTION = "mojito.converter=okapi";
   public static final String LEGACY_JSON_COMMENT_MIGRATION_OPTION =
       "mojito.migrateLegacyJsonComments=true";
 
@@ -22,6 +23,7 @@ public final class LocalizationConverterSelection {
   public static List<String> usePortable(List<String> filterOptions) {
     List<String> selected =
         filterOptions == null ? new ArrayList<>() : new ArrayList<>(filterOptions);
+    selected.remove(OKAPI_OPTION);
     if (!selected.contains(PORTABLE_OPTION)) {
       selected.add(PORTABLE_OPTION);
     }
@@ -29,7 +31,20 @@ public final class LocalizationConverterSelection {
   }
 
   public static boolean isPortable(List<String> filterOptions) {
-    return filterOptions != null && filterOptions.contains(PORTABLE_OPTION);
+    return filterOptions != null
+        && filterOptions.contains(PORTABLE_OPTION)
+        && !filterOptions.contains(OKAPI_OPTION);
+  }
+
+  public static List<String> useOkapi(List<String> filterOptions) {
+    List<String> selected =
+        filterOptions == null ? new ArrayList<>() : new ArrayList<>(filterOptions);
+    selected.remove(PORTABLE_OPTION);
+    selected.remove(LEGACY_JSON_COMMENT_MIGRATION_OPTION);
+    if (!selected.contains(OKAPI_OPTION)) {
+      selected.add(OKAPI_OPTION);
+    }
+    return List.copyOf(selected);
   }
 
   public static List<String> useLegacyJsonCommentMigration(List<String> filterOptions) {
@@ -46,7 +61,10 @@ public final class LocalizationConverterSelection {
 
   public static boolean isPortable(
       List<String> filterOptions, boolean portableByDefault, String assetPath) {
-    return isPortable(filterOptions) || (portableByDefault && supportedFormat(assetPath) != null);
+    return isPortable(filterOptions)
+        || (portableByDefault
+            && (filterOptions == null || !filterOptions.contains(OKAPI_OPTION))
+            && supportedFormat(assetPath) != null);
   }
 
   public static List<String> platformOptions(List<String> filterOptions) {
@@ -55,6 +73,7 @@ public final class LocalizationConverterSelection {
     }
     return filterOptions.stream()
         .filter(option -> !PORTABLE_OPTION.equals(option))
+        .filter(option -> !OKAPI_OPTION.equals(option))
         .filter(option -> !LEGACY_JSON_COMMENT_MIGRATION_OPTION.equals(option))
         .toList();
   }

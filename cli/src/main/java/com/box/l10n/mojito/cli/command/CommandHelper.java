@@ -373,10 +373,16 @@ public class CommandHelper {
 
   public List<String> getFilterOptionsOrDefaults(
       FileType fileType, List<String> filterOptions, Mode converter) {
+    return getFilterOptionsOrDefaults(fileType, filterOptions, converter, false);
+  }
+
+  public List<String> getFilterOptionsOrDefaults(
+      FileType fileType, List<String> filterOptions, Mode converter, boolean explicitlySelected) {
     List<String> options = getFilterOptionsOrDefaults(fileType, filterOptions);
-    return converter == Mode.PORTABLE
-        ? LocalizationConverterSelection.usePortable(options)
-        : options;
+    if (converter == Mode.PORTABLE) {
+      return LocalizationConverterSelection.usePortable(options);
+    }
+    return explicitlySelected ? LocalizationConverterSelection.useOkapi(options) : options;
   }
 
   /**

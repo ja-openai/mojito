@@ -139,7 +139,7 @@ public class ExtractionCommand extends Command {
       consoleWriter.a("Extracting: ").fg(Color.CYAN).a(sourceFileMatch.getSourcePath()).println();
       List<String> filterOptions =
           commandHelper.getFilterOptionsOrDefaults(
-              sourceFileMatch.getFileType(), filterOptionsParam, converter);
+              sourceFileMatch.getFileType(), filterOptionsParam, converter, hasExplicitConverter());
       extractionService.fileMatchToAssetExtractionAndSaveToJsonFile(
           extractionPaths,
           filterOptions,

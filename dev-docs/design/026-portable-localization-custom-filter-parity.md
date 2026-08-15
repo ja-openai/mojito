@@ -488,6 +488,22 @@ translation-memory cache before testing current usage so a stale cache cannot
 silently skip eligible approved translations. Ordinary portable pushes, Okapi
 pushes, all non-JSON formats, and other leveraging modes retain their existing
 behavior. The migration option without `--converter portable` fails immediately.
+An explicit `--converter okapi` overrides the backend-wide portable property
+for push, pull, import, and client-side extraction; omitting the option still
+allows that property to select portable conversion globally.
+
+The full clean, default-Okapi Maven reactor passes 2,465 tests, and 20 focused
+cutover tests pass with the backend-wide portable property enabled, including
+Android source and Russian plurals, Apple `.strings` and `.stringsdict`,
+approval-preserving JSON identity migration, and explicit Okapi rollback. A
+whole-reactor portable swap is not yet interchangeable: the existing backend
+suite still contains 15 format-sensitive failures or errors, and the broad CLI
+replay had 14 failing cases before the explicit-override fix. Those cases must
+be classified individually rather than hidden by weakening native validation:
+compiler-invalid Android names, Foundation-invalid Apple inputs, malformed
+gettext directives, deliberately rejected Android `oldEscaping`, protected
+plural extraction, duplicate properties, and exact legacy XML/YAML formatting
+are not equivalent to platform-correct portable behavior.
 
 One historical Android CLI dataset contains resource names beginning with
 digits (`100_character_description_`, `15_min_duration`, and similar names).

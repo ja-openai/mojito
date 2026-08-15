@@ -28,6 +28,15 @@ public class CommandHelperTest {
   }
 
   @Test
+  public void explicitOkapiConverterOverridesPortableBackendDefault() {
+    FileType fileType = fileTypeWithDefaultOptions(List.of("escapeMode=legacy"));
+
+    assertEquals(
+        List.of("escapeMode=legacy", LocalizationConverterSelection.OKAPI_OPTION),
+        commandHelper.getFilterOptionsOrDefaults(fileType, null, Mode.OKAPI, true));
+  }
+
+  @Test
   public void portableConverterAddsMarkerToDefaultOptionsWithoutMutatingDefaults() {
     List<String> defaultOptions = new ArrayList<>(List.of("escapeMode=legacy"));
     FileType fileType = fileTypeWithDefaultOptions(defaultOptions);
