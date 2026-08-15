@@ -2,6 +2,7 @@ package com.box.l10n.mojito.service.tm;
 
 import static com.box.l10n.mojito.quartz.QuartzSchedulerManager.DEFAULT_SCHEDULER_NAME;
 
+import com.box.l10n.mojito.cldr.PluralRuleService;
 import com.box.l10n.mojito.common.StreamUtil;
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.Locale;
@@ -1189,6 +1190,11 @@ public class TMService {
             : null;
     Map<String, String> translations = new LinkedHashMap<>();
     Map<String, Map<Integer, String>> gettextAdditionalForms = new LinkedHashMap<>();
+    Set<String> androidTargetCategories =
+        format == LocalizationFileFormat.ANDROID
+            ? PluralRuleService.getKeywordsForLanguageTag(
+                repositoryLocale.getLocale().getBcp47Tag())
+            : Set.of();
     Map<String, String> sourceSlots = new LinkedHashMap<>();
     LocalizationSourceSkeleton sourceSkeleton = null;
     if (format == LocalizationFileFormat.FORMATJS_JSON || format == LocalizationFileFormat.HTML) {
@@ -1217,7 +1223,11 @@ public class TMService {
           gettextIndex = Integer.parseInt(nativeIndex);
         }
       }
-      if (sourceSlot == null && gettextIndex == null) {
+      boolean androidAdditionalForm =
+          format == LocalizationFileFormat.ANDROID
+              && sourceSlot == null
+              && androidTargetCategories.contains(projected.textUnit().getPluralForm());
+      if (sourceSlot == null && gettextIndex == null && !androidAdditionalForm) {
         continue;
       }
       var lookup = projected;
@@ -1293,6 +1303,8 @@ public class TMService {
               }
             }
           }
+        } else if (androidAdditionalForm) {
+          translations.put(canonicalId, target);
         } else {
           gettextAdditionalForms
               .computeIfAbsent(messageId, ignored -> new LinkedHashMap<>())
