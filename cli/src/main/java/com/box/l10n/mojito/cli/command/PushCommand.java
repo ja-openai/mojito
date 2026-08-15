@@ -6,6 +6,7 @@ import com.box.l10n.mojito.cli.command.param.Param;
 import com.box.l10n.mojito.cli.console.ConsoleWriter;
 import com.box.l10n.mojito.cli.filefinder.FileMatch;
 import com.box.l10n.mojito.cli.filefinder.file.FileType;
+import com.box.l10n.mojito.fileformat.LocalizationConverterSelection;
 import com.box.l10n.mojito.fileformat.LocalizationConverterSelection.Mode;
 import com.box.l10n.mojito.rest.client.RepositoryClient;
 import com.box.l10n.mojito.rest.entity.LeveragingType;
@@ -78,6 +79,12 @@ public class PushCommand extends Command {
       converter = LocalizationConverterModeConverter.class,
       description = Param.CONVERTER_DESCRIPTION)
   Mode converter = Mode.OKAPI;
+
+  @Parameter(
+      names = "--migrate-legacy-json-comments",
+      description =
+          "Preserve existing translation approval when portable JSON corrects legacy escaped comments")
+  boolean migrateLegacyJsonComments;
 
   @Parameter(
       names = {Param.SOURCE_LOCALE_LONG, Param.SOURCE_LOCALE_SHORT},
@@ -174,6 +181,10 @@ public class PushCommand extends Command {
   @Override
   public void execute() throws CommandException {
 
+    if (migrateLegacyJsonComments && converter != Mode.PORTABLE) {
+      throw new CommandException("--migrate-legacy-json-comments requires --converter portable");
+    }
+
     commandDirectories = new CommandDirectories(sourceDirectoryParam);
 
     consoleWriter
@@ -242,9 +253,14 @@ public class PushCommand extends Command {
                   sourceAsset.setPushRunName(recordPushRun ? pushRunName : null);
                   sourceAsset.setFilterConfigIdOverride(
                       sourceFileMatch.getFileType().getFilterConfigIdOverride());
-                  sourceAsset.setFilterOptions(
+                  List<String> filterOptions =
                       commandHelper.getFilterOptionsOrDefaults(
-                          sourceFileMatch.getFileType(), filterOptionsParam, converter));
+                          sourceFileMatch.getFileType(), filterOptionsParam, converter);
+                  sourceAsset.setFilterOptions(
+                      migrateLegacyJsonComments
+                          ? LocalizationConverterSelection.useLegacyJsonCommentMigration(
+                              filterOptions)
+                          : filterOptions);
                   sourceAsset.setLeveragingType(leveragingType);
 
                   return sourceAsset;

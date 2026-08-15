@@ -47,6 +47,21 @@ public class LocalizationConverterModeConverterTest {
   }
 
   @Test
+  public void legacyJsonMigrationRequiresExplicitPortableConverter() {
+    PushCommand pushCommand = new PushCommand();
+    pushCommand.migrateLegacyJsonComments = true;
+
+    try {
+      pushCommand.execute();
+    } catch (CommandException expected) {
+      assertEquals(
+          "--migrate-legacy-json-comments requires --converter portable", expected.getMessage());
+      return;
+    }
+    throw new AssertionError("Expected explicit portable converter validation");
+  }
+
+  @Test
   public void parallelPullPreservesSelectedConverter() {
     PullCommand pullCommand = new PullCommand();
     pullCommand.converter = Mode.PORTABLE;

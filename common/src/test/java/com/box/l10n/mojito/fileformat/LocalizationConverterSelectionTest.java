@@ -44,6 +44,34 @@ public class LocalizationConverterSelectionTest {
   }
 
   @Test
+  public void legacyJsonCommentMigrationAddsBothMarkersWithoutChangingPlatformOptions() {
+    List<String> selected =
+        LocalizationConverterSelection.useLegacyJsonCommentMigration(
+            List.of("noteKeyPattern=description"));
+
+    assertEquals(
+        List.of(
+            "noteKeyPattern=description",
+            LocalizationConverterSelection.PORTABLE_OPTION,
+            LocalizationConverterSelection.LEGACY_JSON_COMMENT_MIGRATION_OPTION),
+        selected);
+    assertTrue(LocalizationConverterSelection.isLegacyJsonCommentMigration(selected));
+    assertEquals(
+        List.of("noteKeyPattern=description"),
+        LocalizationConverterSelection.platformOptions(selected));
+    assertEquals(selected, LocalizationConverterSelection.useLegacyJsonCommentMigration(selected));
+    assertImmutable(selected);
+  }
+
+  @Test
+  public void legacyJsonCommentMigrationRequiresExplicitMarker() {
+    assertFalse(LocalizationConverterSelection.isLegacyJsonCommentMigration(null));
+    assertFalse(
+        LocalizationConverterSelection.isLegacyJsonCommentMigration(
+            List.of(LocalizationConverterSelection.PORTABLE_OPTION)));
+  }
+
+  @Test
   public void isPortableOnlyMatchesExplicitMarker() {
     assertFalse(LocalizationConverterSelection.isPortable(null));
     assertFalse(LocalizationConverterSelection.isPortable(List.of("escapeMode=legacy")));

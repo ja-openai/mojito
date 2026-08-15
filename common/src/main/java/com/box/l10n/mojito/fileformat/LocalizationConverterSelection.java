@@ -9,6 +9,8 @@ import java.util.Locale;
 public final class LocalizationConverterSelection {
 
   public static final String PORTABLE_OPTION = "mojito.converter=portable";
+  public static final String LEGACY_JSON_COMMENT_MIGRATION_OPTION =
+      "mojito.migrateLegacyJsonComments=true";
 
   public enum Mode {
     OKAPI,
@@ -30,6 +32,18 @@ public final class LocalizationConverterSelection {
     return filterOptions != null && filterOptions.contains(PORTABLE_OPTION);
   }
 
+  public static List<String> useLegacyJsonCommentMigration(List<String> filterOptions) {
+    List<String> selected = new ArrayList<>(usePortable(filterOptions));
+    if (!selected.contains(LEGACY_JSON_COMMENT_MIGRATION_OPTION)) {
+      selected.add(LEGACY_JSON_COMMENT_MIGRATION_OPTION);
+    }
+    return List.copyOf(selected);
+  }
+
+  public static boolean isLegacyJsonCommentMigration(List<String> filterOptions) {
+    return filterOptions != null && filterOptions.contains(LEGACY_JSON_COMMENT_MIGRATION_OPTION);
+  }
+
   public static boolean isPortable(
       List<String> filterOptions, boolean portableByDefault, String assetPath) {
     return isPortable(filterOptions) || (portableByDefault && supportedFormat(assetPath) != null);
@@ -39,7 +53,10 @@ public final class LocalizationConverterSelection {
     if (filterOptions == null) {
       return null;
     }
-    return filterOptions.stream().filter(option -> !PORTABLE_OPTION.equals(option)).toList();
+    return filterOptions.stream()
+        .filter(option -> !PORTABLE_OPTION.equals(option))
+        .filter(option -> !LEGACY_JSON_COMMENT_MIGRATION_OPTION.equals(option))
+        .toList();
   }
 
   public static LocalizationFileFormat format(

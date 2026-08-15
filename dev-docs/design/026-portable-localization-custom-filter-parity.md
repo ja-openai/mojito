@@ -164,7 +164,10 @@ and 1,000-unit workloads improving from 175.0 ms to 7.2 ms and from 32.8 ms to
   the original resource body.
 - Android plural output independently removes categories unused by the target
   locale and completes missing required categories from the original `other`
-  item without reformatting protected values or unrelated source markup.
+  item without reformatting protected values or unrelated source markup. When
+  a locale provides a distinct translation for a category absent from the
+  English source, including Russian `few` and `many`, both independent
+  converters insert that translated category instead of copying `other`.
   Untranslated cleanup also retains XML comments and processing instructions
   that precede the resource root, including when all strings are removed.
 - Android, JSON, Apple `.strings`, Java properties, Microsoft RESX/RESW,
@@ -391,8 +394,12 @@ and 1,000-unit workloads improving from 175.0 ms to 7.2 ms and from 32.8 ms to
   That behavior is a historical bug, not a compatibility target: independent
   Java/Rust extraction correctly decodes translator notes. This intentionally
   changes affected translation-memory identities; existing leveraging may
-  copy their translations but marks them as needing translation. Preserving
-  approval status requires a separately scoped explicit migration. A
+  copy their translations but marks them as needing translation. An explicit
+  `push --converter portable --migrate-legacy-json-comments` preserves existing
+  approval only when one currently used, asset-local legacy unit has the same
+  name and source and its comment is exactly the JSON-escaped spelling of the
+  corrected comment. Ambiguous matches and noncanonical historical escaping
+  safely fall back to normal leveraging. A
   configured-filter differential records the description and MD5 divergence.
   Line and column positions use the existing customized filter's signed 32-bit
   boundary exactly: minimum and maximum values are retained, overflowing or
@@ -466,6 +473,21 @@ mvn -Pno-local-config -pl cli -am \
   -Dtest=PullCommandTest \
   -Dsurefire.failIfNoSpecifiedTests=false test
 ```
+
+Migration is a separate explicit push action, not a general leveraging change:
+
+```sh
+mojito push ... --converter portable --migrate-legacy-json-comments
+```
+
+The migration marker never reaches format-specific parsers. Only portable JSON
+assets enter the exact name/source/escaped-comment matcher, which accepts one
+currently used candidate from the same asset and reuses Mojito's existing
+status-preserving translation copy. The opt-in path refreshes that asset's
+translation-memory cache before testing current usage so a stale cache cannot
+silently skip eligible approved translations. Ordinary portable pushes, Okapi
+pushes, all non-JSON formats, and other leveraging modes retain their existing
+behavior. The migration option without `--converter portable` fails immediately.
 
 One historical Android CLI dataset contains resource names beginning with
 digits (`100_character_description_`, `15_min_duration`, and similar names).

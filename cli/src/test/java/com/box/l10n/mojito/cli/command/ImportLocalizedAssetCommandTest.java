@@ -1,11 +1,16 @@
 package com.box.l10n.mojito.cli.command;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.box.l10n.mojito.cli.CLITestBase;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Repository;
+import com.box.l10n.mojito.fileformat.LocalizationCatalog;
+import com.box.l10n.mojito.fileformat.LocalizationFileConverters;
+import com.box.l10n.mojito.fileformat.LocalizationFileFormat;
+import com.box.l10n.mojito.fileformat.LocalizationPlaceholder;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,6 +53,152 @@ public class ImportLocalizedAssetCommandTest extends CLITestBase {
   }
 
   @Test
+  public void portableConverterReusesExistingAndroidPluralImportDataset() throws Exception {
+    assertPortableImportMatchesExistingDataset("importAndroidStringsPlural", List.of());
+  }
+
+  @Test
+  public void portableJsonMigrationDoesNotAffectAndroidAndAppleImports() throws Exception {
+    Repository repository = createTestRepoUsingRepoService();
+    Path directory = getTargetTestDir().toPath();
+    Path source = directory.resolve("source");
+    Path translated = directory.resolve("translations");
+    Path output = directory.resolve("output");
+    Files.createDirectories(source.resolve("res/values"));
+    Files.createDirectories(source.resolve("en.lproj"));
+    Files.createDirectories(translated.resolve("res/values-fr-rFR"));
+    Files.createDirectories(translated.resolve("res/values-fr-rCA"));
+    Files.createDirectories(translated.resolve("res/values-ja-rJP"));
+    Files.createDirectories(translated.resolve("fr-FR.lproj"));
+    Files.createDirectories(translated.resolve("fr-CA.lproj"));
+    Files.createDirectories(translated.resolve("ja-JP.lproj"));
+    Files.createDirectories(output);
+
+    String androidSource =
+        """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <resources>
+          <string name="welcome" description="Harbor greeting">Welcome</string>
+          <plurals name="boat_count">
+            <item quantity="one">%d boat</item>
+            <item quantity="other">%d boats</item>
+          </plurals>
+          <string name="protected" translatable="false">Keep untouched</string>
+        </resources>
+        """;
+    String androidFrench =
+        """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <resources>
+          <string name="welcome" description="Harbor greeting">Bienvenue</string>
+          <plurals name="boat_count">
+            <item quantity="one">%d bateau</item>
+            <item quantity="other">%d bateaux</item>
+          </plurals>
+          <string name="protected" translatable="false">Keep untouched</string>
+        </resources>
+        """;
+    String androidJapanese =
+        """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <resources>
+          <string name="welcome" description="Harbor greeting">ようこそ</string>
+          <plurals name="boat_count">
+            <item quantity="other">%d 艇</item>
+          </plurals>
+          <string name="protected" translatable="false">Keep untouched</string>
+        </resources>
+        """;
+    Files.writeString(source.resolve("res/values/strings.xml"), androidSource);
+    Files.writeString(translated.resolve("res/values-fr-rFR/strings.xml"), androidFrench);
+    Files.writeString(translated.resolve("res/values-fr-rCA/strings.xml"), androidFrench);
+    Files.writeString(translated.resolve("res/values-ja-rJP/strings.xml"), androidJapanese);
+
+    Files.writeString(
+        source.resolve("en.lproj/Localizable.strings"),
+        "/* Harbor greeting */\n\"welcome_ios\" = \"Welcome\";\n");
+    Files.writeString(
+        translated.resolve("fr-FR.lproj/Localizable.strings"),
+        "/* Harbor greeting */\n\"welcome_ios\" = \"Bienvenue\";\n");
+    Files.writeString(
+        translated.resolve("fr-CA.lproj/Localizable.strings"),
+        "/* Harbor greeting */\n\"welcome_ios\" = \"Bienvenue\";\n");
+    Files.writeString(
+        translated.resolve("ja-JP.lproj/Localizable.strings"),
+        "/* Harbor greeting */\n\"welcome_ios\" = \"ようこそ\";\n");
+
+    Files.writeString(
+        source.resolve("en.lproj/Localizable.stringsdict"),
+        applePluralDictionary("%d boat", "%d boats"));
+    Files.writeString(
+        translated.resolve("fr-FR.lproj/Localizable.stringsdict"),
+        applePluralDictionary("%d bateau", "%d bateaux"));
+    Files.writeString(
+        translated.resolve("fr-CA.lproj/Localizable.stringsdict"),
+        applePluralDictionary("%d bateau", "%d bateaux"));
+    Files.writeString(
+        translated.resolve("ja-JP.lproj/Localizable.stringsdict"),
+        applePluralDictionary(null, "%d 艇"));
+
+    getL10nJCommander()
+        .run(
+            "push",
+            "-r",
+            repository.getName(),
+            "-s",
+            source.toString(),
+            "--converter",
+            "portable",
+            "--migrate-legacy-json-comments");
+    runPortableCommand("import", repository.getName(), source, translated, List.of());
+    runPortableCommand("pull", repository.getName(), source, output, List.of());
+
+    String frenchAndroid = Files.readString(output.resolve("res/values-fr-rFR/strings.xml"));
+    String japaneseAndroid = Files.readString(output.resolve("res/values-ja-rJP/strings.xml"));
+    assertTrue(frenchAndroid.contains("Bienvenue"));
+    assertTrue(frenchAndroid.contains("%d bateau"));
+    assertTrue(frenchAndroid.contains("%d bateaux"));
+    assertTrue(frenchAndroid.contains("Keep untouched"));
+    assertTrue(japaneseAndroid.contains("ようこそ"));
+    assertTrue(japaneseAndroid.contains("%d 艇"));
+    assertTrue(
+        Files.readString(output.resolve("fr-FR.lproj/Localizable.strings"))
+            .contains("\"welcome_ios\" = \"Bienvenue\""));
+    assertTrue(
+        Files.readString(output.resolve("ja-JP.lproj/Localizable.strings"))
+            .contains("\"welcome_ios\" = \"ようこそ\""));
+    assertTrue(
+        Files.readString(output.resolve("fr-FR.lproj/Localizable.stringsdict"))
+            .contains("%d bateaux"));
+    assertTrue(
+        Files.readString(output.resolve("ja-JP.lproj/Localizable.stringsdict")).contains("%d 艇"));
+  }
+
+  private static String applePluralDictionary(String one, String other) {
+    String oneCategory = one == null ? "" : "      <key>one</key><string>" + one + "</string>\n";
+    return """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <plist version="1.0">
+          <dict>
+            <key>boat_count</key>
+            <dict>
+              <key>NSStringLocalizedFormatKey</key><string>%#@boats@</string>
+              <key>boats</key>
+              <dict>
+                <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+                <key>NSStringFormatValueTypeKey</key><string>d</string>
+        """
+        + oneCategory
+        + "      <key>other</key><string>"
+        + other
+        + "</string>\n"
+        + "    </dict>\n"
+        + "  </dict>\n"
+        + "</dict>\n"
+        + "</plist>\n";
+  }
+
+  @Test
   public void portableConverterReusesExistingJsonImportDataset() throws Exception {
     assertPortableImportMatchesExistingDataset("importJson", List.of("-ft", "JSON"));
   }
@@ -61,8 +212,10 @@ public class ImportLocalizedAssetCommandTest extends CLITestBase {
   private void assertPortableImportMatchesExistingDataset(
       String dataset, List<String> formatOptions) throws Exception {
     Repository repository = createTestRepoUsingRepoService();
-    if ("importPoPlural".equals(dataset)) {
+    if ("importPoPlural".equals(dataset) || "importAndroidStringsPlural".equals(dataset)) {
       repositoryService.addRepositoryLocale(repository, "ru-RU");
+    }
+    if ("importPoPlural".equals(dataset)) {
       repositoryService.addRepositoryLocale(repository, "hr-HR");
     }
     Path fixture =
@@ -84,11 +237,54 @@ public class ImportLocalizedAssetCommandTest extends CLITestBase {
     }
     assertTrue("Existing import dataset must contain expected localized files", !files.isEmpty());
     for (Path file : files) {
-      assertArrayEquals(
-          expected.relativize(file).toString(),
-          Files.readAllBytes(file),
-          Files.readAllBytes(output.resolve(expected.relativize(file))));
+      Path actual = output.resolve(expected.relativize(file));
+      if ("importAndroidStringsPlural".equals(dataset)) {
+        LocalizationCatalog expectedCatalog =
+            LocalizationFileConverters.parse(
+                LocalizationFileFormat.ANDROID, Files.readAllBytes(file));
+        LocalizationCatalog actualCatalog =
+            LocalizationFileConverters.parse(
+                LocalizationFileFormat.ANDROID, Files.readAllBytes(actual));
+        assertEquals(
+            file.toString(),
+            expectedCatalog.messages().keySet(),
+            actualCatalog.messages().keySet());
+        for (var entry : expectedCatalog.messages().entrySet()) {
+          var expectedMessage = entry.getValue();
+          var actualMessage = actualCatalog.messages().get(entry.getKey());
+          assertEquals(
+              entry.getKey(), expectedMessage.defaultMessage(), actualMessage.defaultMessage());
+          assertEquals(entry.getKey(), expectedMessage.description(), actualMessage.description());
+          assertEquals(entry.getKey(), expectedMessage.variants(), actualMessage.variants());
+          assertEquals(entry.getKey(), expectedMessage.metadata(), actualMessage.metadata());
+          assertEquals(
+              entry.getKey(),
+              androidPlaceholderSemantics(expectedMessage.placeholders()),
+              androidPlaceholderSemantics(actualMessage.placeholders()));
+        }
+      } else {
+        assertArrayEquals(
+            expected.relativize(file).toString(),
+            Files.readAllBytes(file),
+            Files.readAllBytes(actual));
+      }
     }
+  }
+
+  private static List<LocalizationPlaceholder> androidPlaceholderSemantics(
+      List<LocalizationPlaceholder> placeholders) {
+    return placeholders == null
+        ? null
+        : placeholders.stream()
+            .map(
+                placeholder ->
+                    new LocalizationPlaceholder(
+                        placeholder.name(),
+                        null,
+                        placeholder.kind(),
+                        placeholder.position(),
+                        placeholder.example()))
+            .toList();
   }
 
   private void runPortableCommand(
