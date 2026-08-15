@@ -2,6 +2,7 @@ package com.box.l10n.mojito.cli.command;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import com.box.l10n.mojito.cli.command.param.Param;
 import com.google.common.base.Preconditions;
 import java.util.Arrays;
 import java.util.List;
@@ -113,5 +114,9 @@ public abstract class Command {
 
   public void setOriginalArgs(List<String> originalArgs) {
     this.originalArgs = originalArgs;
+  }
+
+  boolean hasExplicitConverter() {
+    return originalArgs != null && originalArgs.contains(Param.CONVERTER_LONG);
   }
 }

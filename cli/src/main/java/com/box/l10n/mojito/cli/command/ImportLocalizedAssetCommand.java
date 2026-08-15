@@ -261,7 +261,7 @@ public class ImportLocalizedAssetCommand extends Command {
           statusForEqualTarget,
           fileMatch.getFileType().getFilterConfigIdOverride(),
           commandHelper.getFilterOptionsOrDefaults(
-              fileMatch.getFileType(), filterOptionsParam, converter));
+              fileMatch.getFileType(), filterOptionsParam, converter, hasExplicitConverter()));
     } catch (AssetNotFoundException ex) {
       if (continueOnError) {
         consoleWriter

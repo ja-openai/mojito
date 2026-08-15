@@ -267,7 +267,10 @@ public class PullCommand extends Command {
 
         List<String> filterOptions =
             commandHelper.getFilterOptionsOrDefaults(
-                sourceFileMatch.getFileType(), filterOptionsParam, converter);
+                sourceFileMatch.getFileType(),
+                filterOptionsParam,
+                converter,
+                hasExplicitConverter());
 
         generateLocalizedFiles(repository, sourceFileMatch, filterOptions);
       }

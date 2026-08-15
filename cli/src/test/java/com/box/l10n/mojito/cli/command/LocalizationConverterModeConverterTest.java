@@ -7,6 +7,7 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import com.box.l10n.mojito.fileformat.LocalizationConverterSelection.Mode;
 import java.lang.reflect.Field;
+import java.util.List;
 import org.junit.Test;
 
 public class LocalizationConverterModeConverterTest {
@@ -65,8 +66,11 @@ public class LocalizationConverterModeConverterTest {
   public void parallelPullPreservesSelectedConverter() {
     PullCommand pullCommand = new PullCommand();
     pullCommand.converter = Mode.PORTABLE;
+    pullCommand.setOriginalArgs(List.of("pull", "--converter", "portable"));
 
-    assertEquals(Mode.PORTABLE, new PullCommandParallel(pullCommand).converter);
+    PullCommandParallel parallel = new PullCommandParallel(pullCommand);
+    assertEquals(Mode.PORTABLE, parallel.converter);
+    assertEquals(pullCommand.originalArgs, parallel.originalArgs);
   }
 
   private static Class<? extends IStringConverter<?>> converterFor(Class<?> command)
