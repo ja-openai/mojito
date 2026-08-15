@@ -243,9 +243,20 @@ public class AssetExtractionService {
             assetContent, filterConfigIdOverride, filterOptions, currentTask);
     LeveragingType leveragingType =
         Objects.requireNonNullElse(leveragingTypeForCurrentPush, LeveragingType.LEGACY_SOURCE);
+    boolean migrateLegacyJsonComments =
+        LocalizationConverterSelection.isLegacyJsonCommentMigration(filterOptions)
+            && LocalizationConverterSelection.isPortable(
+                filterOptions, portableConverter, asset.getPath())
+            && LocalizationConverterSelection.format(asset.getPath(), filterConfigIdOverride)
+                == LocalizationFileFormat.FORMATJS_JSON;
 
     CreateTextUnitsForNewContentResult createdTextUnitsResult =
-        createTextUnitsForNewContent(assetContent, stateForNewContent, leveragingType, currentTask);
+        createTextUnitsForNewContent(
+            assetContent,
+            stateForNewContent,
+            leveragingType,
+            migrateLegacyJsonComments,
+            currentTask);
 
     updateBranchAssetExtraction(
         assetContent, createdTextUnitsResult.updatedState(), filterOptions, currentTask);
@@ -455,7 +466,7 @@ public class AssetExtractionService {
       MultiBranchState stateForNewContent,
       @ParentTask PollableTask currentTask) {
     return createTextUnitsForNewContent(
-        assetContent, stateForNewContent, LeveragingType.LEGACY_SOURCE, currentTask);
+        assetContent, stateForNewContent, LeveragingType.LEGACY_SOURCE, false, currentTask);
   }
 
   @Timed("AssetExtractionService.createTextUnitsForNewContent")
@@ -464,6 +475,7 @@ public class AssetExtractionService {
       AssetContent assetContent,
       MultiBranchState stateForNewContent,
       LeveragingType leveragingTypeForCurrentPush,
+      boolean migrateLegacyJsonComments,
       @ParentTask PollableTask currentTask) {
     CreateTmTextUnitResult createTmTextUnitResult =
         retryTemplate.execute(
@@ -474,7 +486,7 @@ public class AssetExtractionService {
                     context.getRetryCount());
               }
 
-              boolean updateCache = context.getRetryCount() > 0;
+              boolean updateCache = context.getRetryCount() > 0 || migrateLegacyJsonComments;
               logger.debug(
                   "Read text unit dto from cache with update: {} (first attempt update if missing)",
                   updateCache);
@@ -524,22 +536,39 @@ public class AssetExtractionService {
                   textUnitDTOsForAssetAndLocaleByMD5.values().asList());
             });
 
-    ImmutableList<TextUnitDTOMatch> leveragingMatches =
+    ImmutableList<TextUnitDTOMatch> migrationMatches =
+        migrateLegacyJsonComments
+            ? getLegacyJsonCommentMigrationMatches(
+                createTmTextUnitResult.createdTextUnits(),
+                createTmTextUnitResult.assetScopedTextUnitDTOs())
+            : ImmutableList.of();
+    if (migrateLegacyJsonComments) {
+      logger.info("Migrating {} legacy JSON comment identities", migrationMatches.size());
+    }
+    ImmutableList<BranchStateTextUnit> remainingTextUnits =
+        getCreatedTextUnitsWithoutLeveragingMatch(
+            createTmTextUnitResult.createdTextUnits(), migrationMatches);
+    ImmutableList<TextUnitDTOMatch> normalLeveragingMatches =
         switch (leveragingTypeForCurrentPush) {
           case LEGACY_SOURCE ->
               getLeveragingMatchesForTextUnits(
-                  createTmTextUnitResult.createdTextUnits(),
-                  createTmTextUnitResult.assetScopedTextUnitDTOs());
+                  remainingTextUnits, createTmTextUnitResult.assetScopedTextUnitDTOs());
           case ASSET_SOURCE_AND_COMMENT ->
               getLeveragingMatchesForTextUnitsBySourceAndComment(
-                  createTmTextUnitResult.createdTextUnits(),
-                  createTmTextUnitResult.assetScopedTextUnitDTOs());
+                  remainingTextUnits, createTmTextUnitResult.assetScopedTextUnitDTOs());
           case CROSS_ASSET_FALLBACK ->
               getCrossAssetLeveragingMatchesForTextUnits(
                   assetContent,
-                  createTmTextUnitResult.createdTextUnits(),
+                  remainingTextUnits,
                   createTmTextUnitResult.assetScopedTextUnitDTOs());
         };
+    ImmutableList<TextUnitDTOMatch> leveragingMatches =
+        migrationMatches.isEmpty()
+            ? normalLeveragingMatches
+            : ImmutableList.<TextUnitDTOMatch>builder()
+                .addAll(migrationMatches)
+                .addAll(normalLeveragingMatches)
+                .build();
 
     return new CreateTextUnitsForNewContentResult(
         createTmTextUnitResult.updatedState(),
@@ -1183,6 +1212,46 @@ public class AssetExtractionService {
 
   String sourceAndCommentKey(String source, String comment) {
     return Objects.toString(source, "") + "\u0001" + Objects.toString(comment, "");
+  }
+
+  ImmutableList<TextUnitDTOMatch> getLegacyJsonCommentMigrationMatches(
+      ImmutableList<BranchStateTextUnit> textUnits, ImmutableList<TextUnitDTO> candidates) {
+    if (textUnits.isEmpty()) {
+      return ImmutableList.of();
+    }
+
+    ImmutableListMultimap<String, TextUnitDTO> usedCandidatesByName =
+        candidates.stream()
+            .filter(TextUnitDTO::isUsed)
+            .filter(candidate -> candidate.getComment() != null)
+            .collect(
+                ImmutableListMultimap.toImmutableListMultimap(TextUnitDTO::getName, identity()));
+
+    return textUnits.stream()
+        .filter(textUnit -> textUnit.getComments() != null)
+        .map(
+            textUnit -> {
+              String serializedComment =
+                  objectMapper.writeValueAsStringUnchecked(textUnit.getComments());
+              String legacyEscapedComment =
+                  serializedComment.substring(1, serializedComment.length() - 1);
+              if (legacyEscapedComment.equals(textUnit.getComments())) {
+                return null;
+              }
+
+              ImmutableList<TextUnitDTO> exactLegacyMatches =
+                  usedCandidatesByName.get(textUnit.getName()).stream()
+                      .filter(
+                          candidate -> Objects.equals(candidate.getSource(), textUnit.getSource()))
+                      .filter(candidate -> legacyEscapedComment.equals(candidate.getComment()))
+                      .collect(ImmutableList.toImmutableList());
+
+              return exactLegacyMatches.size() == 1
+                  ? new TextUnitDTOMatch(textUnit, exactLegacyMatches.getFirst(), true, false)
+                  : null;
+            })
+        .filter(Objects::nonNull)
+        .collect(ImmutableList.toImmutableList());
   }
 
   ImmutableList<TextUnitDTOMatch> getLeveragingMatchesForTextUnits(

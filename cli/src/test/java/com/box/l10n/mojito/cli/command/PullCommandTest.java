@@ -757,6 +757,16 @@ public class PullCommandTest extends CLITestBase {
 
   @Test
   public void portableJsonMigrationDecodesCommentsAndUsesExistingLeveraging() throws Exception {
+    assertPortableJsonMigration(false);
+  }
+
+  @Test
+  public void portableJsonMigrationPreservesApprovedTranslationsWhenExplicitlyRequested()
+      throws Exception {
+    assertPortableJsonMigration(true);
+  }
+
+  private void assertPortableJsonMigration(boolean migrateLegacyComments) throws Exception {
     Repository repository = createTestRepoUsingRepoService();
     Path source = getTargetTestDir("legacy-json-source").toPath();
     Path translations = getTargetTestDir("legacy-json-translations").toPath();
@@ -803,7 +813,8 @@ public class PullCommandTest extends CLITestBase {
         tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
             localeService.findByBcp47Tag("fr-FR").getId(), oldQuoted.getId()));
 
-    runConfiguredJsonMigrationCommand("push", repository.getName(), source, null, "portable");
+    runConfiguredJsonMigrationCommand(
+        "push", repository.getName(), source, null, "portable", migrateLegacyComments);
 
     TMTextUnit correctedQuoted =
         tmTextUnitRepository.findByTm_id(repository.getTm().getId()).stream()
@@ -819,7 +830,9 @@ public class PullCommandTest extends CLITestBase {
       assertNotNull(locale, current);
       assertEquals(
           locale,
-          TMTextUnitVariant.Status.TRANSLATION_NEEDED,
+          migrateLegacyComments
+              ? TMTextUnitVariant.Status.APPROVED
+              : TMTextUnitVariant.Status.TRANSLATION_NEEDED,
           current.getTmTextUnitVariant().getStatus());
     }
 
@@ -830,6 +843,16 @@ public class PullCommandTest extends CLITestBase {
 
   private void runConfiguredJsonMigrationCommand(
       String command, String repository, Path source, Path target, String converter) {
+    runConfiguredJsonMigrationCommand(command, repository, source, target, converter, false);
+  }
+
+  private void runConfiguredJsonMigrationCommand(
+      String command,
+      String repository,
+      Path source,
+      Path target,
+      String converter,
+      boolean migrateLegacyComments) {
     List<String> arguments =
         new ArrayList<>(
             List.of(
@@ -844,6 +867,9 @@ public class PullCommandTest extends CLITestBase {
                 converter));
     if (target != null) {
       arguments.addAll(List.of("-t", target.toString()));
+    }
+    if (migrateLegacyComments) {
+      arguments.add("--migrate-legacy-json-comments");
     }
     arguments.addAll(
         List.of(

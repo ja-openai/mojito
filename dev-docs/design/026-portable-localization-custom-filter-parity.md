@@ -164,7 +164,10 @@ and 1,000-unit workloads improving from 175.0 ms to 7.2 ms and from 32.8 ms to
   the original resource body.
 - Android plural output independently removes categories unused by the target
   locale and completes missing required categories from the original `other`
-  item without reformatting protected values or unrelated source markup.
+  item without reformatting protected values or unrelated source markup. When
+  a locale provides a distinct translation for a category absent from the
+  English source, including Russian `few` and `many`, both independent
+  converters insert that translated category instead of copying `other`.
   Untranslated cleanup also retains XML comments and processing instructions
   that precede the resource root, including when all strings are removed.
 - Android, JSON, Apple `.strings`, Java properties, Microsoft RESX/RESW,
@@ -391,8 +394,12 @@ and 1,000-unit workloads improving from 175.0 ms to 7.2 ms and from 32.8 ms to
   That behavior is a historical bug, not a compatibility target: independent
   Java/Rust extraction correctly decodes translator notes. This intentionally
   changes affected translation-memory identities; existing leveraging may
-  copy their translations but marks them as needing translation. Preserving
-  approval status requires a separately scoped explicit migration. A
+  copy their translations but marks them as needing translation. An explicit
+  `push --converter portable --migrate-legacy-json-comments` preserves existing
+  approval only when one currently used, asset-local legacy unit has the same
+  name and source and its comment is exactly the JSON-escaped spelling of the
+  corrected comment. Ambiguous matches and noncanonical historical escaping
+  safely fall back to normal leveraging. A
   configured-filter differential records the description and MD5 divergence.
   Line and column positions use the existing customized filter's signed 32-bit
   boundary exactly: minimum and maximum values are retained, overflowing or
@@ -467,6 +474,21 @@ mvn -Pno-local-config -pl cli -am \
   -Dsurefire.failIfNoSpecifiedTests=false test
 ```
 
+Migration is a separate explicit push action, not a general leveraging change:
+
+```sh
+mojito push ... --converter portable --migrate-legacy-json-comments
+```
+
+The migration marker never reaches format-specific parsers. Only portable JSON
+assets enter the exact name/source/escaped-comment matcher, which accepts one
+currently used candidate from the same asset and reuses Mojito's existing
+status-preserving translation copy. The opt-in path refreshes that asset's
+translation-memory cache before testing current usage so a stale cache cannot
+silently skip eligible approved translations. Ordinary portable pushes, Okapi
+pushes, all non-JSON formats, and other leveraging modes retain their existing
+behavior. The migration option without `--converter portable` fails immediately.
+
 One historical Android CLI dataset contains resource names beginning with
 digits (`100_character_description_`, `15_min_duration`, and similar names).
 The official Google AAPT2 compiler rejects every one of those entries, even
@@ -527,21 +549,19 @@ No entire service or CLI class is excluded.
 A real 10,001,213-byte ChatGPT web source catalog independently matched the
 configured customized JSON filter across all 40,782 strings except its 193
 incorrectly escaped translator notes. Portable Java/Rust intentionally decode
-those descriptions correctly. An Okapi-to-portable push therefore creates new
-identities; the existing leveraging behavior can copy the affected translations
-but marks them as needing translation, so preserving approved status requires
-an explicit separately scoped migration.
-A localhost-only, in-memory repository was then created through the ordinary
-CLI and populated with 40,777 current source strings shared by the existing
-French and Japanese catalogs. Portable push, existing Okapi localized import,
-and portable pull round-tripped all 81,554 translations with zero message or
-translator-description differences when the repository was initialized with
-correctly decoded identities. The real corpus contains 792 plural messages,
-168 select messages, 501 markup-bearing messages, and 6,147 messages with
-placeholders. An existing repository with escaped descriptions still requires
-an explicit migration if its 386 affected French/Japanese approvals must be
-retained. Portable extraction independently measured 422 ms versus 968 ms for
-customized Okapi.
+those descriptions correctly. Its original 40,777-message French/Japanese round
+trip preserved all 81,554 translations, with 792 plural messages, 168 select
+messages, 501 markup-bearing messages, and 6,147 messages with placeholders;
+portable extraction measured 422 ms versus 968 ms for customized Okapi.
+
+A later localhost-only migration reran the actual CLI against updated ChatGPT
+web catalogs: 40,995 source messages, 203 corrected comment identities, and
+both existing French/Japanese translations. Legacy Okapi push and import,
+followed by portable push with `--migrate-legacy-json-comments` and portable
+pull, preserved all 406 affected approved variants and round-tripped all
+81,990 translations. Without the migration option, the focused CLI regression
+continues to prove that existing leveraging marks corrected identities
+`TRANSLATION_NEEDED`.
 
 Direct CLI invocations also initialize their JCommander parser when Spring has
 not run its `@PostConstruct` lifecycle, preventing the intermittent startup

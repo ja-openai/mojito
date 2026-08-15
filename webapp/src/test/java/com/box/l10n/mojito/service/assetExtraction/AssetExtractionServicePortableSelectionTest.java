@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.assetExtraction;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -12,8 +13,11 @@ import com.box.l10n.mojito.entity.AssetContent;
 import com.box.l10n.mojito.fileformat.LocalizationConverterSelection;
 import com.box.l10n.mojito.fileformat.LocalizationParseException;
 import com.box.l10n.mojito.json.ObjectMapper;
+import com.box.l10n.mojito.localtm.merger.BranchStateTextUnit;
 import com.box.l10n.mojito.okapi.extractor.AssetExtractor;
 import com.box.l10n.mojito.okapi.extractor.AssetExtractorTextUnit;
+import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
+import com.google.common.collect.ImmutableList;
 import java.util.List;
 import org.junit.Test;
 
@@ -75,6 +79,68 @@ public class AssetExtractionServicePortableSelectionTest {
 
     assertEquals(1, textUnits.size());
     assertEquals("A \"quoted\" label\nnext line", textUnits.getFirst().getComments());
+  }
+
+  @Test
+  public void legacyJsonCommentMigrationRequiresExactNameSourceAndEscapedComment() {
+    AssetExtractionService assetExtractionService = new AssetExtractionService();
+    assetExtractionService.objectMapper = new ObjectMapper();
+    BranchStateTextUnit corrected =
+        BranchStateTextUnit.builder()
+            .tmTextUnitId(20L)
+            .name("harbor.label")
+            .source("Open harbor")
+            .comments("A \"quoted\" note\nsecond line")
+            .build();
+    TextUnitDTO legacy =
+        usedTextUnit(10L, "harbor.label", "Open harbor", "A \\\"quoted\\\" note\\nsecond line");
+
+    ImmutableList<TextUnitDTOMatch> matches =
+        assetExtractionService.getLegacyJsonCommentMigrationMatches(
+            ImmutableList.of(corrected), ImmutableList.of(legacy));
+
+    assertEquals(1, matches.size());
+    assertEquals(Long.valueOf(10L), matches.getFirst().match().getTmTextUnitId());
+    assertFalse(matches.getFirst().translationNeededIfUniqueMatch());
+  }
+
+  @Test
+  public void legacyJsonCommentMigrationRejectsChangedSourceAmbiguousAndOrdinaryComments() {
+    AssetExtractionService assetExtractionService = new AssetExtractionService();
+    assetExtractionService.objectMapper = new ObjectMapper();
+    BranchStateTextUnit corrected =
+        BranchStateTextUnit.builder()
+            .tmTextUnitId(20L)
+            .name("harbor.label")
+            .source("Open harbor")
+            .comments("A \"quoted\" note")
+            .build();
+    TextUnitDTO changedSource =
+        usedTextUnit(10L, "harbor.label", "Closed harbor", "A \\\"quoted\\\" note");
+    TextUnitDTO first = usedTextUnit(11L, "harbor.label", "Open harbor", "A \\\"quoted\\\" note");
+    TextUnitDTO duplicate =
+        usedTextUnit(12L, "harbor.label", "Open harbor", "A \\\"quoted\\\" note");
+    BranchStateTextUnit ordinary =
+        BranchStateTextUnit.builder()
+            .tmTextUnitId(21L)
+            .name("ordinary.label")
+            .source("Open harbor")
+            .comments("Ordinary note")
+            .build();
+
+    assertEquals(
+        ImmutableList.of(),
+        assetExtractionService.getLegacyJsonCommentMigrationMatches(
+            ImmutableList.of(corrected), ImmutableList.of(changedSource)));
+    assertEquals(
+        ImmutableList.of(),
+        assetExtractionService.getLegacyJsonCommentMigrationMatches(
+            ImmutableList.of(corrected), ImmutableList.of(first, duplicate)));
+    assertEquals(
+        ImmutableList.of(),
+        assetExtractionService.getLegacyJsonCommentMigrationMatches(
+            ImmutableList.of(ordinary),
+            ImmutableList.of(usedTextUnit(13L, "ordinary.label", "Open harbor", "Ordinary note"))));
   }
 
   @Test
@@ -152,6 +218,17 @@ public class AssetExtractionServicePortableSelectionTest {
     textUnit.setName(name);
     textUnit.setSource(source);
     textUnit.setComments(comments);
+    return textUnit;
+  }
+
+  private static TextUnitDTO usedTextUnit(Long id, String name, String source, String comment) {
+    TextUnitDTO textUnit = new TextUnitDTO();
+    textUnit.setTmTextUnitId(id);
+    textUnit.setName(name);
+    textUnit.setSource(source);
+    textUnit.setComment(comment);
+    textUnit.setAssetExtractionId(1L);
+    textUnit.setLastSuccessfulAssetExtractionId(1L);
     return textUnit;
   }
 }
