@@ -475,8 +475,16 @@ final class MojitoLocalizationWorkflow {
                 : LocalizationFileConverters.parse(format, source),
             source,
             options);
+    Set<String> targetCategories =
+        format == LocalizationFileFormat.ANDROID && targetLocale != null
+            ? mojitoPluralCategories(targetLocale)
+            : Set.of();
+    byte[] skeletonSource =
+        hasAdditionalAndroidPluralTranslations(catalog, translations, targetCategories)
+            ? AndroidSourceSkeleton.retainPluralCategories(source, targetCategories)
+            : source;
     LocalizationSourceSkeleton skeleton =
-        LocalizationFileConverters.extractSkeleton(format, source);
+        LocalizationFileConverters.extractSkeleton(format, skeletonSource);
     Map<String, String> selected = new LinkedHashMap<>();
     Set<String> untranslatedKeys = new LinkedHashSet<>();
     String untranslatedMarker = UNTRANSLATED;
@@ -499,6 +507,11 @@ final class MojitoLocalizationWorkflow {
       String key = slot.translationKey();
       if (translations.containsKey(key)) {
         selected.put(key, translations.get(key));
+      } else if (format == LocalizationFileFormat.ANDROID
+          && slot.variant() != null
+          && !catalog.messages().get(slot.id()).variants().containsKey(slot.variant())
+          && translations.containsKey(slot.id() + "#other")) {
+        selected.put(key, translations.get(slot.id() + "#other"));
       } else if (removeUntranslated) {
         selected.put(key, untranslatedMarker);
         untranslatedKeys.add(key);
@@ -569,6 +582,26 @@ final class MojitoLocalizationWorkflow {
     return CldrCardinalCategories.forLocale(targetLocale).isEmpty()
         ? Set.of()
         : PluralRuleService.getKeywordsForLanguageTag(targetLocale.replace('_', '-'));
+  }
+
+  private static boolean hasAdditionalAndroidPluralTranslations(
+      LocalizationCatalog catalog, Map<String, String> translations, Set<String> categories) {
+    if (categories.isEmpty()) {
+      return false;
+    }
+    for (String key : translations.keySet()) {
+      int separator = key.lastIndexOf('#');
+      if (separator < 0 || !categories.contains(key.substring(separator + 1))) {
+        continue;
+      }
+      LocalizationMessage message = catalog.messages().get(key.substring(0, separator));
+      if (message != null
+          && message.variants() != null
+          && !message.variants().containsKey(key.substring(separator + 1))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   static String normalizeTranslation(

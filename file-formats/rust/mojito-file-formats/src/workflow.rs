@@ -740,7 +740,24 @@ pub(crate) fn localize(
         source,
         &options,
     )?;
-    let mut skeleton = crate::extract_skeleton(format, source)?;
+    let target_categories = if format == FileFormat::Android {
+        target_locale
+            .map(mojito_plural_categories)
+            .unwrap_or_default()
+    } else {
+        std::collections::HashSet::new()
+    };
+    let expanded_source =
+        if has_additional_android_plural_translations(&catalog, translations, &target_categories) {
+            Some(crate::source_skeleton::retain_android_plural_categories(
+                source,
+                &target_categories,
+            )?)
+        } else {
+            None
+        };
+    let mut skeleton =
+        crate::extract_skeleton(format, expanded_source.as_deref().unwrap_or(source))?;
     let mut selected = BTreeMap::new();
     let mut untranslated_keys = BTreeSet::new();
     let mut untranslated_marker = UNTRANSLATED.to_owned();
@@ -764,6 +781,16 @@ pub(crate) fn localize(
         let key = slot.key();
         if let Some(value) = translations.get(&key) {
             selected.insert(key, value.clone());
+        } else if format == FileFormat::Android
+            && slot.variant.as_ref().is_some_and(|category| {
+                !catalog.messages[&slot.id]
+                    .variants
+                    .as_ref()
+                    .is_some_and(|variants| variants.contains_key(category))
+            })
+            && translations.contains_key(&format!("{}#other", slot.id))
+        {
+            selected.insert(key, translations[&format!("{}#other", slot.id)].clone());
         } else if remove_untranslated {
             selected.insert(key.clone(), untranslated_marker.clone());
             untranslated_keys.insert(key);
@@ -862,6 +889,23 @@ fn mojito_plural_categories(locale: &str) -> std::collections::HashSet<String> {
         .iter()
         .map(|category| (*category).to_owned())
         .collect()
+}
+
+fn has_additional_android_plural_translations(
+    catalog: &crate::model::Catalog,
+    translations: &BTreeMap<String, String>,
+    categories: &std::collections::HashSet<String>,
+) -> bool {
+    translations.keys().any(|key| {
+        key.rsplit_once('#').is_some_and(|(id, category)| {
+            categories.contains(category)
+                && catalog
+                    .messages
+                    .get(id)
+                    .and_then(|message| message.variants.as_ref())
+                    .is_some_and(|variants| !variants.contains_key(category))
+        })
+    })
 }
 
 fn retain_apple_plural_categories(source: &[u8], locale: &str) -> Result<Vec<u8>, ParseError> {

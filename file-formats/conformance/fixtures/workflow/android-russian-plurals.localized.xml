@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <plurals name="signals">
+    <item quantity="one">"Один сигнал"</item>
+    <item quantity="few">"Несколько сигналов"</item>
+    <item quantity="many">"Множество сигналов"</item>
+    <item quantity="other">"Другие сигналы"</item>
+  </plurals>
+  <plurals name="beacons">
+    <item quantity="one">"Другие маяки"</item>
+    <item quantity="few">"Другие маяки"</item>
+    <item quantity="many">"Другие маяки"</item>
+    <item quantity="other">"Другие маяки"</item>
+  </plurals>
+</resources>

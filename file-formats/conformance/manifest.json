@@ -415,6 +415,21 @@
       "localized": "fixtures/workflow/android-english-plurals.localized.xml"
     },
     {
+      "id": "android-mojito-renders-translated-russian-plural-categories-absent-from-source",
+      "format": "android",
+      "input": "fixtures/workflow/android-locale-plurals.xml",
+      "filterOptions": [],
+      "targetLocale": "ru-RU",
+      "translations": {
+        "signals#one": "Один сигнал",
+        "signals#few": "Несколько сигналов",
+        "signals#many": "Множество сигналов",
+        "signals#other": "Другие сигналы",
+        "beacons#other": "Другие маяки"
+      },
+      "localized": "fixtures/workflow/android-russian-plurals.localized.xml"
+    },
+    {
       "id": "android-mojito-skips-empty-array-items-without-renumbering-source-slots",
       "format": "android",
       "input": "fixtures/workflow/android-empty-array-items.xml",
