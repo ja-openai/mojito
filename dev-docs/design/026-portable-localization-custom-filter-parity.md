@@ -562,22 +562,13 @@ global override, and conflicting duplicate Java property declarations whose
 separate legacy TM identities are not yet represented by the canonical model.
 No entire service or CLI class is excluded.
 
-A real 10,001,213-byte ChatGPT web source catalog independently matched the
-configured customized JSON filter across all 40,782 strings except its 193
-incorrectly escaped translator notes. Portable Java/Rust intentionally decode
-those descriptions correctly. Its original 40,777-message French/Japanese round
-trip preserved all 81,554 translations, with 792 plural messages, 168 select
-messages, 501 markup-bearing messages, and 6,147 messages with placeholders;
-portable extraction measured 422 ms versus 968 ms for customized Okapi.
-
-A later localhost-only migration reran the actual CLI against updated ChatGPT
-web catalogs: 40,995 source messages, 203 corrected comment identities, and
-both existing French/Japanese translations. Legacy Okapi push and import,
-followed by portable push with `--migrate-legacy-json-comments` and portable
-pull, preserved all 406 affected approved variants and round-tripped all
-81,990 translations. Without the migration option, the focused CLI regression
-continues to prove that existing leveraging marks corrected identities
-`TRANSLATION_NEEDED`.
+A representative large JSON catalog independently matched the configured
+customized JSON filter except for incorrectly escaped translator notes, which
+portable Java and Rust intentionally decode correctly. A separate localhost-only
+push, import, migration, and pull round trip preserved existing approved
+translations across multiple locales. Without the explicit migration option,
+the focused CLI regression continues to prove that existing leveraging marks
+corrected identities `TRANSLATION_NEEDED`.
 
 Direct CLI invocations also initialize their JCommander parser when Spring has
 not run its `@PostConstruct` lifecycle, preventing the intermittent startup

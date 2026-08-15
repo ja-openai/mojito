@@ -779,7 +779,7 @@ public class PullCommandTest extends CLITestBase {
         {
           "quoted": {
             "defaultMessage": "The harbor is open",
-            "description": "Label for \\\"Extra High Thinking\\\""
+            "description": "Label for \\\"Northern Harbor\\\""
           },
           "multiline": {
             "defaultMessage": "Harbor details",
@@ -807,7 +807,7 @@ public class PullCommandTest extends CLITestBase {
             .filter(unit -> unit.getName().equals("quoted"))
             .findFirst()
             .orElseThrow();
-    assertEquals("Label for \\\"Extra High Thinking\\\"", oldQuoted.getComment());
+    assertEquals("Label for \\\"Northern Harbor\\\"", oldQuoted.getComment());
     assertNotNull(
         "Legacy import must populate the existing identity before migration",
         tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
@@ -819,7 +819,7 @@ public class PullCommandTest extends CLITestBase {
     TMTextUnit correctedQuoted =
         tmTextUnitRepository.findByTm_id(repository.getTm().getId()).stream()
             .filter(unit -> unit.getName().equals("quoted"))
-            .filter(unit -> unit.getComment().equals("Label for \"Extra High Thinking\""))
+            .filter(unit -> unit.getComment().equals("Label for \"Northern Harbor\""))
             .findFirst()
             .orElseThrow();
     assertFalse(oldQuoted.getId().equals(correctedQuoted.getId()));
