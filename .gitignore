@@ -41,3 +41,6 @@ release.properties
 /tmp/
 /local/
 .vscode/
+# Python bytecode and caches
+**/__pycache__/
+*.py[cod]
