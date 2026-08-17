@@ -23,6 +23,7 @@ import { AuthCallbackPage } from './page/login/AuthCallbackPage';
 import { LoginPage } from './page/login/LoginPage';
 import { AzureStorageMonitoringPage } from './page/monitoring/AzureStorageMonitoringPage';
 import { MonitoringPage } from './page/monitoring/MonitoringPage';
+import { RedisMonitoringPage } from './page/monitoring/RedisMonitoringPage';
 import { RepositoriesPage } from './page/repositories/RepositoriesPage';
 import { ReviewProjectPage } from './page/review-project/ReviewProjectPage';
 import { ReviewProjectFindReplacePage } from './page/review-project-find-replace/ReviewProjectFindReplacePage';
@@ -183,6 +184,7 @@ export function App() {
             <Route path="/ai-translate" element={<AiTranslatePage />} />
             <Route path="/monitoring" element={<MonitoringPage />} />
             <Route path="/monitoring/azure-storage" element={<AzureStorageMonitoringPage />} />
+            <Route path="/monitoring/redis" element={<RedisMonitoringPage />} />
             <Route path="/monitoring/search-index" element={<SearchIndexPage />} />
             <Route path="/statistics" element={<StatisticsPage />} />
             <Route path="/review-projects/new" element={<ReviewProjectCreatePage />} />

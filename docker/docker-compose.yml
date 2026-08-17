@@ -11,6 +11,16 @@ services:
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_bin
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
   opensearch:
     build:
       context: ./opensearch
@@ -32,6 +42,7 @@ services:
   webapp:
     depends_on:
       - db
+      - redis
       - opensearch
     build:
       dockerfile: docker/Dockerfile-bk8
@@ -55,6 +66,8 @@ services:
       "spring.datasource.username" : "mojito",
       "spring.datasource.password" : "ChangeMe",
       "spring.datasource.driverClassName" : "com.mysql.cj.jdbc.Driver",
+      "l10n.redis.enabled" : "true",
+      "l10n.redis.host" : "redis",
       "l10n.search-index.enabled" : "true",
       "l10n.search-index.base-url" : "http://opensearch:9200"
       }'
