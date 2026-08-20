@@ -516,7 +516,12 @@ mojito push ... --converter portable --migrate-legacy-json-comments
 The migration marker never reaches format-specific parsers. Only portable JSON
 assets enter the exact name/source/escaped-comment matcher, which accepts one
 currently used candidate from the same asset and reuses Mojito's existing
-status-preserving translation copy. The opt-in path refreshes that asset's
+status-preserving translation copy. If the corrected identity already exists,
+each locale is replaceable only when its current variant still has leveraging
+provenance for the legacy text unit. That check and the copy share a locked
+transaction; manually created or edited corrected translations are preserved
+regardless of status, and an explicitly deleted corrected translation remains
+deleted. The opt-in path refreshes that asset's
 translation-memory cache before testing current usage so a stale cache cannot
 silently skip eligible approved translations. Ordinary portable pushes, Okapi
 pushes, all non-JSON formats, and other leveraging modes retain their existing

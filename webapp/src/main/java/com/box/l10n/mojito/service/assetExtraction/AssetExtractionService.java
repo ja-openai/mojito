@@ -17,7 +17,6 @@ import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.PushRun;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
-import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.fileformat.LocalizationCatalog;
 import com.box.l10n.mojito.fileformat.LocalizationConverterSelection;
@@ -37,12 +36,14 @@ import com.box.l10n.mojito.okapi.extractor.AssetExtractor;
 import com.box.l10n.mojito.okapi.extractor.AssetExtractorTextUnit;
 import com.box.l10n.mojito.quartz.QuartzJobInfo;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
+import com.box.l10n.mojito.retry.DataIntegrityViolationExceptionRetryTemplate;
 import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.asset.FilterOptionsMd5Builder;
 import com.box.l10n.mojito.service.assetTextUnit.AssetTextUnitRepository;
 import com.box.l10n.mojito.service.assetcontent.AssetContentService;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.branch.BranchRepository;
+import com.box.l10n.mojito.service.leveraging.LegacyJsonCommentMigrationService;
 import com.box.l10n.mojito.service.leveraging.LeveragerByTmTextUnit;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.pluralform.PluralFormService;
@@ -60,7 +61,6 @@ import com.box.l10n.mojito.service.tm.TextUnitIdMd5DTO;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
-import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
 import com.box.l10n.mojito.service.tm.textunitdtocache.UpdateType;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -138,6 +138,9 @@ public class AssetExtractionService {
 
   @Autowired RetryTemplate retryTemplate;
 
+  @Autowired
+  DataIntegrityViolationExceptionRetryTemplate dataIntegrityViolationExceptionRetryTemplate;
+
   @Autowired FilterOptionsMd5Builder filterOptionsMd5Builder;
 
   @Autowired AssetExtractor assetExtractor;
@@ -179,6 +182,8 @@ public class AssetExtractionService {
   @Autowired EntityManager entityManager;
 
   @Autowired LocalBranchToEntityBranchConverter localBranchToEntityBranchConverter;
+
+  @Autowired LegacyJsonCommentMigrationService legacyJsonCommentMigrationService;
 
   private RepositoryStatisticsJobScheduler repositoryStatisticsJobScheduler;
 
@@ -899,6 +904,15 @@ public class AssetExtractionService {
     leveragingMatches.stream()
         .forEach(
             match -> {
+              if (match.legacyJsonCommentMigration()) {
+                dataIntegrityViolationExceptionRetryTemplate.execute(
+                    context -> {
+                      legacyJsonCommentMigrationService.migrate(
+                          match.source().getTmTextUnitId(), match.match().getTmTextUnitId());
+                      return null;
+                    });
+                return;
+              }
               LeveragerByTmTextUnit leveragerByTmTextUnit =
                   new LeveragerByTmTextUnit(
                       match.match().getTmTextUnitId(), match.translationNeededIfUniqueMatch());
@@ -1132,21 +1146,6 @@ public class AssetExtractionService {
     return candidatesByContentMd5Builder.build();
   }
 
-  ImmutableList<TextUnitDTO> getTranslatedTextUnitDTOsForTmTextUnitIds(
-      ImmutableSet<Long> tmTextUnitIds) {
-    // TODO(ja) that can be crazy too big!!!! taking all locales WOW!
-    return Lists.partition(new ArrayList<>(tmTextUnitIds), BATCH_SIZE).stream()
-        .flatMap(
-            tmTextUnitIdsBatch -> {
-              TextUnitSearcherParameters searchParameters = new TextUnitSearcherParameters();
-              searchParameters.setTmTextUnitIds(tmTextUnitIdsBatch);
-              searchParameters.setStatusFilter(StatusFilter.TRANSLATED);
-              searchParameters.setRootLocaleExcluded(true);
-              return textUnitSearcher.search(searchParameters).stream();
-            })
-        .collect(ImmutableList.toImmutableList());
-  }
-
   ImmutableList<TextUnitDTOMatch> getLeveragingMatchesForTextUnitsBySourceAndComment(
       ImmutableList<BranchStateTextUnit> textUnits, ImmutableList<TextUnitDTO> textUnitDTOs) {
 
@@ -1248,40 +1247,18 @@ public class AssetExtractionService {
                       .collect(ImmutableList.toImmutableList());
 
               return exactLegacyMatches.size() == 1
-                  ? new TextUnitDTOMatch(textUnit, exactLegacyMatches.getFirst(), true, false)
+                  ? new TextUnitDTOMatch(textUnit, exactLegacyMatches.getFirst(), true, false, true)
                   : null;
             })
         .filter(Objects::nonNull)
         .collect(ImmutableList.toImmutableList());
   }
 
-  /**
-   * Allow the explicit migration to replace ordinary source-leveraged TRANSLATION_NEEDED copies,
-   * but never overwrite a corrected identity that has been reviewed, approved, or rejected.
-   */
+  /** Ignore migration candidates that were not saved before leveraging starts. */
   ImmutableList<TextUnitDTOMatch> getLegacyJsonCommentMigrationMatchesEligibleForUpgrade(
       ImmutableList<TextUnitDTOMatch> candidates) {
-    if (candidates.isEmpty()) {
-      return candidates;
-    }
-
-    ImmutableSet<Long> correctedIds =
-        candidates.stream()
-            .map(match -> match.source().getTmTextUnitId())
-            .filter(Objects::nonNull)
-            .collect(ImmutableSet.toImmutableSet());
-    ImmutableSet<Long> protectedTranslationIds =
-        getTranslatedTextUnitDTOsForTmTextUnitIds(correctedIds).stream()
-            .filter(
-                textUnit ->
-                    !TMTextUnitVariant.Status.TRANSLATION_NEEDED.equals(textUnit.getStatus())
-                        || !textUnit.isIncludedInLocalizedFile())
-            .map(TextUnitDTO::getTmTextUnitId)
-            .collect(ImmutableSet.toImmutableSet());
-
     return candidates.stream()
         .filter(match -> match.source().getTmTextUnitId() != null)
-        .filter(match -> !protectedTranslationIds.contains(match.source().getTmTextUnitId()))
         .collect(ImmutableList.toImmutableList());
   }
 

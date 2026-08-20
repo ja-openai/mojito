@@ -6,4 +6,7 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
 @RepositoryRestResource(exported = false)
 public interface TMTextUnitVariantLeveragingRepository
-    extends JpaRepository<TMTextUnitVariantLeveraging, Long> {}
+    extends JpaRepository<TMTextUnitVariantLeveraging, Long> {
+
+  TMTextUnitVariantLeveraging findByTmTextUnitVariant_Id(Long tmTextUnitVariantId);
+}

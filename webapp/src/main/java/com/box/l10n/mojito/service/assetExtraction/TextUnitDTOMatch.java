@@ -8,7 +8,16 @@ public record TextUnitDTOMatch(
     BranchStateTextUnit source,
     TextUnitDTO match,
     boolean uniqueMatch,
-    boolean translationNeededIfUniqueMatch) {
+    boolean translationNeededIfUniqueMatch,
+    boolean legacyJsonCommentMigration) {
+
+  public TextUnitDTOMatch(
+      BranchStateTextUnit source,
+      TextUnitDTO match,
+      boolean uniqueMatch,
+      boolean translationNeededIfUniqueMatch) {
+    this(source, match, uniqueMatch, translationNeededIfUniqueMatch, false);
+  }
 
   public TextUnitDTOMatch {
     Objects.requireNonNull(source);

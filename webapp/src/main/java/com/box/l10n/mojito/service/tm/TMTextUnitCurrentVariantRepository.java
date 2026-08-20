@@ -1,12 +1,14 @@
 package com.box.l10n.mojito.service.tm;
 
 import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
+import jakarta.persistence.LockModeType;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.EntityGraph.EntityGraphType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
@@ -20,6 +22,15 @@ public interface TMTextUnitCurrentVariantRepository
 
   @EntityGraph(value = "TMTextUnitCurrentVariant.legacy", type = EntityGraphType.FETCH)
   TMTextUnitCurrentVariant findByLocale_IdAndTmTextUnit_Id(Long localeId, Long tmTextUnitId);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query(
+      """
+      select currentVariant
+      from TMTextUnitCurrentVariant currentVariant
+      where currentVariant.locale.id = ?1 and currentVariant.tmTextUnit.id = ?2
+      """)
+  TMTextUnitCurrentVariant findForUpdateByLocaleIdAndTmTextUnitId(Long localeId, Long tmTextUnitId);
 
   List<TMTextUnitCurrentVariant> findByTmTextUnit_Id(Long tmTextUnitId);
 

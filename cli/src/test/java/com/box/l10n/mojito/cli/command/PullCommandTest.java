@@ -3,6 +3,7 @@ package com.box.l10n.mojito.cli.command;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -986,11 +987,15 @@ public class PullCommandTest extends CLITestBase {
         english
             .replace("The harbor is open", "Le port est ouvert")
             .replace("Harbor details", "Détails du port");
+    String frenchCanadian =
+        english
+            .replace("The harbor is open", "Le havre est ouvert")
+            .replace("Harbor details", "Détails du havre");
     String japanese =
         english.replace("The harbor is open", "港は開いています").replace("Harbor details", "港の詳細");
     Files.writeString(source.resolve("en.json"), english);
     Files.writeString(translations.resolve("fr-FR.json"), french);
-    Files.writeString(translations.resolve("fr-CA.json"), french);
+    Files.writeString(translations.resolve("fr-CA.json"), frenchCanadian);
     Files.writeString(translations.resolve("ja-JP.json"), japanese);
 
     runConfiguredJsonMigrationCommand("push", repository.getName(), source, null, "okapi");
@@ -1012,8 +1017,10 @@ public class PullCommandTest extends CLITestBase {
       runConfiguredJsonMigrationCommand(
           "push", repository.getName(), source, null, "portable", false);
     }
-    runConfiguredJsonMigrationCommand(
-        "push", repository.getName(), source, null, "portable", migrateLegacyComments);
+    if (!retryAfterCorrectedTranslation) {
+      runConfiguredJsonMigrationCommand(
+          "push", repository.getName(), source, null, "portable", migrateLegacyComments);
+    }
 
     TMTextUnit correctedQuoted =
         tmTextUnitRepository.findByTm_id(repository.getTm().getId()).stream()
@@ -1022,6 +1029,53 @@ public class PullCommandTest extends CLITestBase {
             .findFirst()
             .orElseThrow();
     assertFalse(oldQuoted.getId().equals(correctedQuoted.getId()));
+
+    if (retryAfterCorrectedTranslation) {
+      var frenchLocale = localeService.findByBcp47Tag("fr-FR");
+      var frenchCanadianLocale = localeService.findByBcp47Tag("fr-CA");
+      var japaneseLocale = localeService.findByBcp47Tag("ja-JP");
+      assertEquals(
+          TMTextUnitVariant.Status.TRANSLATION_NEEDED,
+          tmTextUnitCurrentVariantRepository
+              .findByLocale_IdAndTmTextUnit_Id(japaneseLocale.getId(), correctedQuoted.getId())
+              .getTmTextUnitVariant()
+              .getStatus());
+      tmService.addCurrentTMTextUnitVariant(
+          correctedQuoted.getId(),
+          frenchLocale.getId(),
+          "Traduction corrigée",
+          TMTextUnitVariant.Status.TRANSLATION_NEEDED,
+          true);
+      var deletedFrenchCanadian =
+          tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
+              frenchCanadianLocale.getId(), correctedQuoted.getId());
+      assertTrue(
+          tmTextUnitCurrentVariantService.removeCurrentVariant(deletedFrenchCanadian.getId()));
+      Files.writeString(source.resolve("en.json"), english + "\n");
+
+      runConfiguredJsonMigrationCommand(
+          "push", repository.getName(), source, null, "portable", true);
+
+      var current =
+          tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
+              frenchLocale.getId(), correctedQuoted.getId());
+      assertEquals("Traduction corrigée", current.getTmTextUnitVariant().getContent());
+      assertEquals(
+          TMTextUnitVariant.Status.TRANSLATION_NEEDED, current.getTmTextUnitVariant().getStatus());
+      var japaneseCurrent =
+          tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
+              japaneseLocale.getId(), correctedQuoted.getId());
+      assertEquals("港は開いています", japaneseCurrent.getTmTextUnitVariant().getContent());
+      assertEquals(
+          TMTextUnitVariant.Status.APPROVED, japaneseCurrent.getTmTextUnitVariant().getStatus());
+      assertNull(
+          tmTextUnitCurrentVariantRepository
+              .findByLocale_IdAndTmTextUnit_Id(
+                  frenchCanadianLocale.getId(), correctedQuoted.getId())
+              .getTmTextUnitVariant());
+      return;
+    }
+
     for (String locale : List.of("fr-FR", "ja-JP")) {
       var current =
           tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
@@ -1033,26 +1087,6 @@ public class PullCommandTest extends CLITestBase {
               ? TMTextUnitVariant.Status.APPROVED
               : TMTextUnitVariant.Status.TRANSLATION_NEEDED,
           current.getTmTextUnitVariant().getStatus());
-    }
-
-    if (retryAfterCorrectedTranslation) {
-      var frenchLocale = localeService.findByBcp47Tag("fr-FR");
-      tmService.addCurrentTMTextUnitVariant(
-          correctedQuoted.getId(),
-          frenchLocale.getId(),
-          "Traduction corrigée",
-          TMTextUnitVariant.Status.APPROVED,
-          true);
-      Files.writeString(source.resolve("en.json"), english + "\n");
-
-      runConfiguredJsonMigrationCommand(
-          "push", repository.getName(), source, null, "portable", true);
-
-      var current =
-          tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
-              frenchLocale.getId(), correctedQuoted.getId());
-      assertEquals("Traduction corrigée", current.getTmTextUnitVariant().getContent());
-      return;
     }
 
     runConfiguredJsonMigrationCommand("pull", repository.getName(), source, output, "portable");
