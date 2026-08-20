@@ -19,6 +19,7 @@ import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariantComment;
 import com.box.l10n.mojito.entity.TMXliff;
 import com.box.l10n.mojito.fileformat.LocalizationConverterSelection;
+import com.box.l10n.mojito.okapi.AndroidFilterConfigurationProperties;
 import com.box.l10n.mojito.okapi.FilterConfigIdOverride;
 import com.box.l10n.mojito.okapi.ImportTranslationsFromLocalizedAssetStep.StatusForEqualTarget;
 import com.box.l10n.mojito.okapi.InheritanceMode;
@@ -77,6 +78,8 @@ public class TMServiceTest extends ServiceTestBase {
   static Logger logger = LoggerFactory.getLogger(TMServiceTest.class);
 
   @Autowired TMService tmService;
+
+  @Autowired AndroidFilterConfigurationProperties androidFilterConfigurationProperties;
 
   @Autowired TMRepository tmRepository;
 
@@ -1430,8 +1433,7 @@ public class TMServiceTest extends ServiceTestBase {
    * @throws Exception
    */
   @Test
-  public void testLocalizeAndroidAnchorsWithAutoDetection() throws Exception {
-    List<String> filterOptions = List.of("unescapeAnchorTags=auto");
+  public void testLocalizeAndroidAnchorsWithServerAutoDetection() throws Exception {
     Repository repo = repositoryService.createRepository(testIdWatcher.getEntityName("repository"));
     RepositoryLocale repoLocale = repositoryService.addRepositoryLocale(repo, "fr-FR");
     String assetContent =
@@ -1454,7 +1456,7 @@ public class TMServiceTest extends ServiceTestBase {
             null,
             null,
             null,
-            filterOptions);
+            null);
     pollableTaskService.waitForPollableTask(assetResult.getPollableTask().getId());
     androidAsset = assetResult.get();
 
@@ -1471,17 +1473,23 @@ public class TMServiceTest extends ServiceTestBase {
           textUnit.getTmTextUnitId(), targetLocale.getId(), translation);
     }
 
-    String localizedAsset =
-        tmService.generateLocalized(
-            androidAsset,
-            assetContent,
-            repoLocale,
-            "fr-FR",
-            null,
-            filterOptions,
-            Status.ALL,
-            InheritanceMode.USE_PARENT,
-            null);
+    String localizedAsset;
+    androidFilterConfigurationProperties.setAutoDetectAnchorTags(true);
+    try {
+      localizedAsset =
+          tmService.generateLocalized(
+              androidAsset,
+              assetContent,
+              repoLocale,
+              "fr-FR",
+              null,
+              null,
+              Status.ALL,
+              InheritanceMode.USE_PARENT,
+              null);
+    } finally {
+      androidFilterConfigurationProperties.setAutoDetectAnchorTags(false);
+    }
 
     assertEquals(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"

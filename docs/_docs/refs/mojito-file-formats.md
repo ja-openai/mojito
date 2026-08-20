@@ -56,6 +56,10 @@ translation that does not preserve the source anchor tag exactly also remains es
 must be enabled by the caller, for example with
 `--filter-options unescapeAnchorTags=auto` on `pull`.
 
+To enable auto mode server-wide without changing callers, set
+`l10n.android-filter.auto-detect-anchor-tags=true`. The property defaults to `false`. An explicit
+caller filter option (`unescapeAnchorTags=false`, `auto`, or `true`) overrides the server default.
+
 ### iOS/Mac Strings
 Source Resource File (English): `en.lproj/Localizable.strings`
 

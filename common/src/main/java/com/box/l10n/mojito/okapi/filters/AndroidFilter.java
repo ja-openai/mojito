@@ -56,7 +56,7 @@ public class AndroidFilter extends XMLFilter {
 
   private static final String OPTION_OLD_ESCAPING = "oldEscaping";
 
-  private static final String OPTION_UNESCAPE_ANCHOR_TAGS = "unescapeAnchorTags";
+  public static final String OPTION_UNESCAPE_ANCHOR_TAGS = "unescapeAnchorTags";
 
   private static final String REMOVE_DESCRIPTION = "removeDescription";
 

@@ -27,6 +27,7 @@ import com.box.l10n.mojito.fileformat.LocalizationMessage;
 import com.box.l10n.mojito.fileformat.LocalizationShadowComparator;
 import com.box.l10n.mojito.fileformat.LocalizationSourceSkeleton;
 import com.box.l10n.mojito.okapi.AbstractImportTranslationsStep;
+import com.box.l10n.mojito.okapi.AndroidFilterConfigurationProperties;
 import com.box.l10n.mojito.okapi.FilterConfigIdOverride;
 import com.box.l10n.mojito.okapi.ImportTranslationsByIdStep;
 import com.box.l10n.mojito.okapi.ImportTranslationsByMd5Step;
@@ -44,6 +45,7 @@ import com.box.l10n.mojito.okapi.XLIFFWriter;
 import com.box.l10n.mojito.okapi.asset.AssetPathToFilterConfigMapper;
 import com.box.l10n.mojito.okapi.asset.UnsupportedAssetFilterTypeException;
 import com.box.l10n.mojito.okapi.extractor.AssetExtractor;
+import com.box.l10n.mojito.okapi.filters.AndroidFilter;
 import com.box.l10n.mojito.okapi.filters.CopyFormsOnImport;
 import com.box.l10n.mojito.okapi.filters.FilterOptions;
 import com.box.l10n.mojito.okapi.qualitycheck.Parameters;
@@ -166,6 +168,8 @@ public class TMService {
   @Autowired RepositoryLocaleRepository repositoryLocaleRepository;
 
   @Autowired TextUnitUtils textUnitUtils;
+
+  @Autowired AndroidFilterConfigurationProperties androidFilterConfigurationProperties;
 
   @Autowired IFilterConfigurationMapper filterConfigurationMapper;
 
@@ -1542,8 +1546,12 @@ public class TMService {
       rawDocument.setFilterConfigId(filterConfigId);
       logger.debug("Set filter config {} for asset {}", filterConfigId, asset.getPath());
 
-      logger.debug("Filter options: {}", filterOptions);
-      rawDocument.setAnnotation(new FilterOptions(filterOptions));
+      List<String> effectiveFilterOptions =
+          AndroidFilter.FILTER_CONFIG_ID.equals(filterConfigId)
+              ? androidFilterConfigurationProperties.applyServerDefaults(filterOptions)
+              : filterOptions;
+      logger.debug("Filter options: {}", effectiveFilterOptions);
+      rawDocument.setAnnotation(new FilterOptions(effectiveFilterOptions));
 
       driver.addBatchItem(rawDocument);
 
