@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import os
 import shutil
 import subprocess
@@ -65,6 +66,26 @@ def main() -> int:
             )
         else:
             print("SKIP JDK java.util.Properties parser: java/javac unavailable", flush=True)
+        if importlib.util.find_spec("yaml") is not None:
+            steps.append(
+                (
+                    "PyYAML localized scalar parser",
+                    [sys.executable, str(CONFORMANCE / "yaml_runtime_oracle.py")],
+                    ROOT,
+                )
+            )
+        else:
+            print("SKIP PyYAML localized scalar parser: PyYAML unavailable", flush=True)
+        if shutil.which("node"):
+            steps.append(
+                (
+                    "Node JavaScript source runtime",
+                    ["node", str(CONFORMANCE / "javascript_runtime_oracle.mjs")],
+                    ROOT,
+                )
+            )
+        else:
+            print("SKIP Node JavaScript source runtime: node unavailable", flush=True)
         modules = formatjs_node_modules()
         if shutil.which("node") and modules is not None:
             steps.append(

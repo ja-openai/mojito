@@ -86,8 +86,7 @@ pub(crate) fn render(
         output.extend_from_slice(&original[copied..slot.start]);
         if let Some(translation) = translations.get(&slot.id) {
             output.extend(
-                encoding
-                    .encode_without_bom(&escape(translation, entries[slot.id.as_str()].template)),
+                encoding.encode_without_bom(&escape(translation, &entries[slot.id.as_str()])),
             );
         } else {
             output.extend_from_slice(&original[slot.start..slot.end]);
@@ -212,21 +211,36 @@ fn next_line(source: &str, end: usize) -> usize {
 
 fn closing(source: &str, start: usize, limit: usize, delimiter: u8) -> Option<usize> {
     (start..limit).find(|index| {
-        source.as_bytes()[*index] == delimiter && source.as_bytes()[index - 1] != b'\\'
+        source.as_bytes()[*index] == delimiter && !escaped_at(source.as_bytes(), *index)
     })
 }
 
 fn unescape(value: &str, template: bool) -> String {
-    let result = value
-        .replace("\\r", "\r")
-        .replace("\\n", "\n")
-        .replace("\\\"", "\"")
-        .replace("\\'", "'");
-    if template {
-        result.replace("\\`", "`")
-    } else {
-        result
+    let mut result = String::with_capacity(value.len());
+    let mut characters = value.chars();
+    while let Some(character) = characters.next() {
+        if character != '\\' {
+            result.push(character);
+            continue;
+        }
+        let Some(escaped) = characters.next() else {
+            result.push('\\');
+            break;
+        };
+        match escaped {
+            '\\' => result.push('\\'),
+            'r' => result.push('\r'),
+            'n' => result.push('\n'),
+            '"' => result.push('"'),
+            '\'' => result.push('\''),
+            '`' if template => result.push('`'),
+            _ => {
+                result.push('\\');
+                result.push(escaped);
+            }
+        }
     }
+    result
 }
 
 fn message(entry: &Entry<'_>) -> Message {
@@ -243,19 +257,134 @@ fn message(entry: &Entry<'_>) -> Message {
     )
 }
 
-fn escape(value: &str, template: bool) -> String {
+fn escape(value: &str, source: &Entry<'_>) -> String {
     let mut result = String::with_capacity(value.len());
-    for character in value.chars() {
+    let mut expressions = template_expressions(source.value);
+    let mut index = 0;
+    while index < value.len() {
+        let character = value[index..]
+            .chars()
+            .next()
+            .expect("translation character");
+        if source.template && value[index..].starts_with("${") {
+            if let Some(expression) = matching_expression(value, index, &expressions) {
+                let originals = expressions
+                    .get_mut(expression)
+                    .expect("matched source expression");
+                result.push_str(&originals.pop().expect("available source expression"));
+                index += expression.len();
+                continue;
+            }
+            result.push_str("\\${");
+            index += 2;
+            continue;
+        }
         match character {
-            '\n' if template => result.push('\n'),
+            '\\' => result.push_str("\\\\"),
+            '\n' if source.template => result.push('\n'),
             '\n' => result.push_str("\\n"),
             '\r' => result.push_str("\\r"),
+            '\t' => result.push_str("\\t"),
+            '\u{0008}' => result.push_str("\\b"),
+            '\u{000c}' => result.push_str("\\f"),
+            '\0' => result.push_str("\\x00"),
+            '\u{000b}' => result.push_str("\\v"),
+            '\u{2028}' => result.push_str("\\u2028"),
+            '\u{2029}' => result.push_str("\\u2029"),
             '"' => result.push_str("\\\""),
-            '`' if template => result.push_str("\\`"),
+            '`' if source.template => result.push_str("\\`"),
+            character if character <= '\u{001f}' || character == '\u{007f}' => {
+                result.push_str(&format!("\\u{:04x}", character as u32));
+            }
             _ => result.push(character),
         }
+        index += character.len_utf8();
     }
     result
+}
+
+fn escaped_at(value: &[u8], index: usize) -> bool {
+    let mut backslashes = 0;
+    while index > backslashes && value[index - backslashes - 1] == b'\\' {
+        backslashes += 1;
+    }
+    backslashes % 2 != 0
+}
+
+fn template_expressions(source: &str) -> BTreeMap<String, Vec<String>> {
+    let mut result: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut index = 0;
+    while index + 1 < source.len() {
+        if source[index..].starts_with("${") && !escaped_at(source.as_bytes(), index) {
+            if let Some(end) = template_expression_end(source, index + 2) {
+                let original = source[index..=end].to_owned();
+                if !safe_template_expression(&original) {
+                    index = end + 1;
+                    continue;
+                }
+                let canonical = unescape(&original, true);
+                result.entry(canonical).or_default().push(original);
+                index = end + 1;
+                continue;
+            }
+        }
+        index += source[index..]
+            .chars()
+            .next()
+            .expect("template character")
+            .len_utf8();
+    }
+    result
+}
+
+fn safe_template_expression(expression: &str) -> bool {
+    static PATTERN: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    PATTERN
+        .get_or_init(|| {
+            regex::Regex::new(
+                r#"^\$\{[A-Za-z_$][A-Za-z0-9_$]*(?:(?:\.[A-Za-z_$][A-Za-z0-9_$]*)|(?:\[(?:[0-9]+|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')\]))*\}$"#,
+            )
+            .expect("valid JavaScript template-expression pattern")
+        })
+        .is_match(expression)
+}
+
+fn template_expression_end(source: &str, start: usize) -> Option<usize> {
+    let mut braces = 1;
+    let mut quote = None;
+    let mut index = start;
+    while index < source.len() {
+        let character = source[index..].chars().next()?;
+        if let Some(delimiter) = quote {
+            if character == delimiter && !escaped_at(source.as_bytes(), index) {
+                quote = None;
+            }
+        } else if matches!(character, '\'' | '"' | '`') {
+            quote = Some(character);
+        } else if character == '{' {
+            braces += 1;
+        } else if character == '}' {
+            braces -= 1;
+            if braces == 0 {
+                return Some(index);
+            }
+        }
+        index += character.len_utf8();
+    }
+    None
+}
+
+fn matching_expression<'a>(
+    translation: &'a str,
+    start: usize,
+    expressions: &BTreeMap<String, Vec<String>>,
+) -> Option<&'a str> {
+    let end = template_expression_end(translation, start + 2)?;
+    let candidate = &translation[start..=end];
+    expressions
+        .get(candidate)
+        .is_some_and(|originals| !originals.is_empty())
+        .then_some(candidate)
 }
 
 fn invalid(message: &str) -> ParseError {

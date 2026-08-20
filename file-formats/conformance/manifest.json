@@ -148,6 +148,59 @@
       "localized": "fixtures/javascript/harbor.remove-untranslated.localized.ts"
     },
     {
+      "id": "javascript-mojito-escapes-runtime-literals-and-blocks-new-template-code",
+      "format": "javascript",
+      "input": "fixtures/javascript/runtime-safety.js",
+      "filterOptions": [],
+      "translations": {
+        "windows.path": "C:\\temp\\new",
+        "trailing.backslash": "ends\\",
+        "template.literal": "${globalThis.__portableLocalizationExecuted = true}",
+        "template.escaped-injection": "\\${globalThis.__portableLocalizationExecuted = true}",
+        "template.placeholder": "Bonjour ${globalThis.__portableLocalizationName}",
+        "template.escaped-placeholder": "Port français ${globalThis.__portableLookup[\"C:\\harbor\"]}"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/javascript/runtime-safety.localized.js",
+      "javascriptRuntime": {
+        "export": "runtimeSafety",
+        "globals": {
+          "__portableLocalizationName": "Ada",
+          "__portableLocalizationExecuted": false,
+          "__portableLookup": {
+            "C:\\harbor": "Quay"
+          }
+        },
+        "expected": {
+          "windows.path": "C:\\temp\\new",
+          "trailing.backslash": "ends\\",
+          "template.literal": "${globalThis.__portableLocalizationExecuted = true}",
+          "template.escaped-injection": "\\${globalThis.__portableLocalizationExecuted = true}",
+          "template.placeholder": "Bonjour Ada",
+          "template.escaped-placeholder": "Port français Quay"
+        },
+        "globalsAfter": {
+          "__portableLocalizationExecuted": false
+        }
+      }
+    },
+    {
+      "id": "typescript-mojito-escapes-runtime-literals-and-blocks-new-template-code",
+      "format": "typescript",
+      "input": "fixtures/javascript/runtime-safety.js",
+      "filterOptions": [],
+      "translations": {
+        "windows.path": "C:\\temp\\new",
+        "trailing.backslash": "ends\\",
+        "template.literal": "${globalThis.__portableLocalizationExecuted = true}",
+        "template.escaped-injection": "\\${globalThis.__portableLocalizationExecuted = true}",
+        "template.placeholder": "Bonjour ${globalThis.__portableLocalizationName}",
+        "template.escaped-placeholder": "Port français ${globalThis.__portableLookup[\"C:\\harbor\"]}"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/javascript/runtime-safety.localized.js"
+    },
+    {
       "id": "apple-mojito-output-preserves-intentional-french-legacy-plural-policy",
       "format": "apple_stringsdict",
       "input": "fixtures/workflow/apple-french-legacy-plurals.stringsdict",
@@ -1289,6 +1342,76 @@
       },
       "removeUntranslated": true,
       "localized": "fixtures/yaml/remove-untranslated.localized.yaml"
+    },
+    {
+      "id": "yaml-mojito-quotes-plain-scalars-that-would-change-type-or-syntax",
+      "format": "yaml",
+      "input": "fixtures/yaml/plain-scalar-safety.yaml",
+      "filterOptions": [],
+      "translations": {
+        "boolean": "true",
+        "nullValue": "null",
+        "integer": "123",
+        "float": "1.25",
+        "sequence": "[]",
+        "mapping": "{}",
+        "comment": "# translator note",
+        "documentStart": "---",
+        "documentEnd": "...",
+        "alias": "*shared",
+        "tag": "!custom",
+        "directive": "@owner",
+        "leading": " leading",
+        "trailing": "trailing ",
+        "colon": "key: value",
+        "flow": "north, south",
+        "date": "2026-08-20",
+        "multiline": "first\nsecond",
+        "empty": "",
+        "safe": "harbor signal"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/yaml/plain-scalar-safety.localized.yaml",
+      "yamlRuntime": true
+    },
+    {
+      "id": "yaml-mojito-localizes-configured-leaf-identities",
+      "format": "yaml",
+      "input": "fixtures/yaml/leaf-identities.yaml",
+      "expected": "fixtures/yaml/leaf-identities.expected.json",
+      "legacyAssetPath": "leaf-identities.yaml",
+      "filterOptions": [
+        "useFullKeyPath=false"
+      ],
+      "translations": {
+        "prompt": "Bienvenue à bord",
+        "primary": "Commencer",
+        "description": "Détails du port"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/yaml/leaf-identities.localized.yaml"
+    },
+    {
+      "id": "yaml-mojito-removes-untranslated-configured-leaf-identities",
+      "format": "yaml",
+      "input": "fixtures/yaml/leaf-identities.yaml",
+      "filterOptions": [
+        "useFullKeyPath=false"
+      ],
+      "translations": {
+        "prompt": "Bienvenue à bord"
+      },
+      "removeUntranslated": true,
+      "localized": "fixtures/yaml/leaf-identities.remove-untranslated.localized.yaml"
+    },
+    {
+      "id": "yaml-mojito-rejects-ambiguous-configured-leaf-identities",
+      "format": "yaml",
+      "input": "fixtures/yaml/duplicate-leaf-identities.yaml",
+      "filterOptions": [
+        "useFullKeyPath=false"
+      ],
+      "error": "DUPLICATE_MESSAGE_ID"
     },
     {
       "id": "yaml-mojito-honors-configured-scalar-selection",

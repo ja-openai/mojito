@@ -17,12 +17,17 @@ import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.error.YAMLException;
 import org.yaml.snakeyaml.nodes.MappingNode;
 import org.yaml.snakeyaml.nodes.Node;
+import org.yaml.snakeyaml.nodes.NodeId;
 import org.yaml.snakeyaml.nodes.NodeTuple;
 import org.yaml.snakeyaml.nodes.ScalarNode;
 import org.yaml.snakeyaml.nodes.SequenceNode;
+import org.yaml.snakeyaml.nodes.Tag;
+import org.yaml.snakeyaml.resolver.Resolver;
 
 /** YAML mapping scalars with exact source-owned quotes, block layout, and legacy key paths. */
 final class YamlSourceFormat {
+
+  private static final Resolver YAML_RESOLVER = new Resolver();
 
   private YamlSourceFormat() {}
 
@@ -43,10 +48,20 @@ final class YamlSourceFormat {
   }
 
   static LocalizationSourceSkeleton extract(byte[] bytes) {
+    return extract(bytes, LocalizationFilterOptions.parse(LocalizationFileFormat.YAML, List.of()));
+  }
+
+  static LocalizationSourceSkeleton extract(byte[] bytes, LocalizationFilterOptions options) {
     SourceSkeletonEncoding encoding = SourceSkeletonEncoding.detect(bytes);
     String source = LocalizationFileConverters.decode(bytes, encoding.charset());
     List<LocalizationSourceSlot> slots = new ArrayList<>();
-    collectSlots(compose(source), "", source, encoding, slots);
+    collectSlots(compose(source), "", "", source, encoding, options, slots);
+    Set<String> ids = new HashSet<>();
+    for (LocalizationSourceSlot slot : slots) {
+      if (!ids.add(slot.id())) {
+        throw invalid("DUPLICATE_MESSAGE_ID", "Duplicate YAML message ID: " + slot.id());
+      }
+    }
     return new LocalizationSourceSkeleton(
         1, LocalizationFileFormat.YAML.id(), encoding.name(), source, slots);
   }
@@ -85,16 +100,17 @@ final class YamlSourceFormat {
     return result.toByteArray();
   }
 
-  static byte[] removeEntries(LocalizationSourceSkeleton skeleton, Set<String> removed) {
+  static byte[] removeEntries(
+      LocalizationSourceSkeleton skeleton, Set<String> removed, LocalizationFilterOptions options) {
     if (skeleton.schemaVersion() != 1
         || !LocalizationFileFormat.YAML.id().equals(skeleton.sourceFormat())) {
       throw invalid("INVALID_SKELETON", "Unsupported YAML source skeleton");
     }
     List<RemovalCandidate> candidates = new ArrayList<>();
-    collectRemovalCandidates(compose(skeleton.source()), "", candidates);
+    collectRemovalCandidates(compose(skeleton.source()), "", "", candidates);
     List<Range> ranges = new ArrayList<>();
     for (RemovalCandidate candidate : candidates) {
-      if (removed.contains(candidate.id())) {
+      if (removed.contains(portableIdentity(candidate.path(), candidate.legacyPath(), options))) {
         ranges.add(removalRange(skeleton.source(), candidate));
       }
     }
@@ -114,19 +130,25 @@ final class YamlSourceFormat {
   }
 
   private static void collectRemovalCandidates(
-      Node node, String parent, List<RemovalCandidate> candidates) {
+      Node node, String parent, String legacyParent, List<RemovalCandidate> candidates) {
     if (node instanceof MappingNode mapping) {
       for (NodeTuple entry : mapping.getValue()) {
         if (!(entry.getKeyNode() instanceof ScalarNode key)) {
           throw invalid("INVALID_YAML", "YAML mapping keys must be scalars");
         }
         String path = parent.isEmpty() ? key.getValue() : parent + "/" + key.getValue();
+        String legacyPath =
+            legacyParent.isEmpty() ? key.getValue() : legacyParent + "/" + key.getValue();
         if (entry.getValueNode() instanceof ScalarNode value) {
           candidates.add(
               new RemovalCandidate(
-                  path, key.getStartMark().getIndex(), value.getEndMark().getIndex(), false));
+                  path,
+                  legacyPath,
+                  key.getStartMark().getIndex(),
+                  value.getEndMark().getIndex(),
+                  false));
         } else {
-          collectRemovalCandidates(entry.getValueNode(), path, candidates);
+          collectRemovalCandidates(entry.getValueNode(), path, legacyPath, candidates);
         }
       }
     } else if (node instanceof SequenceNode sequence) {
@@ -136,9 +158,13 @@ final class YamlSourceFormat {
         if (value instanceof ScalarNode scalar) {
           candidates.add(
               new RemovalCandidate(
-                  path, scalar.getStartMark().getIndex(), scalar.getEndMark().getIndex(), true));
+                  path,
+                  legacyParent,
+                  scalar.getStartMark().getIndex(),
+                  scalar.getEndMark().getIndex(),
+                  true));
         } else {
-          collectRemovalCandidates(value, path, candidates);
+          collectRemovalCandidates(value, path, legacyParent, candidates);
         }
       }
     }
@@ -240,17 +266,13 @@ final class YamlSourceFormat {
 
   private static String formatTranslation(String original, String translated) {
     if (original.startsWith("'")) {
+      if (requiresDoubleQuotes(translated)) {
+        return doubleQuoted(translated);
+      }
       return "'" + translated.replace("'", "''") + "'";
     }
     if (original.startsWith("\"")) {
-      return "\""
-          + translated
-              .replace("\\", "\\\\")
-              .replace("\"", "\\\"")
-              .replace("\n", "\\n")
-              .replace("\r", "\\r")
-              .replace("\t", "\\t")
-          + "\"";
+      return doubleQuoted(translated);
     }
     if (original.startsWith("|") || original.startsWith(">")) {
       int newline = original.indexOf('\n');
@@ -280,10 +302,88 @@ final class YamlSourceFormat {
       }
       return result.toString();
     }
-    if (translated.indexOf('\n') >= 0 || translated.contains(": ") || translated.contains(" #")) {
-      return "'" + translated.replace("'", "''") + "'";
+    return plainScalarIsString(translated) ? translated : doubleQuoted(translated);
+  }
+
+  private static boolean plainScalarIsString(String value) {
+    if (value.isEmpty()
+        || !value.equals(value.strip())
+        || requiresDoubleQuotes(value)
+        || "~".equals(value)
+        || "null".equalsIgnoreCase(value)
+        || "<<".equals(value)
+        || "=".equals(value)
+        || "---".equals(value)
+        || "...".equals(value)
+        || !Tag.STR.equals(YAML_RESOLVER.resolve(NodeId.scalar, value, true))) {
+      return false;
     }
-    return translated;
+    char first = value.charAt(0);
+    if ("-?:,[]{}#&*!|>'\"%@`".indexOf(first) >= 0) {
+      return false;
+    }
+    for (int index = 0; index < value.length(); index++) {
+      char current = value.charAt(index);
+      if (",[]{}".indexOf(current) >= 0) {
+        return false;
+      }
+      if (current == ':'
+          && (index + 1 == value.length() || Character.isWhitespace(value.charAt(index + 1)))) {
+        return false;
+      }
+      if (current == '#' && (index == 0 || Character.isWhitespace(value.charAt(index - 1)))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static boolean requiresDoubleQuotes(String value) {
+    for (int index = 0; index < value.length(); index++) {
+      char current = value.charAt(index);
+      if (current == '\n'
+          || current == '\r'
+          || current == '\t'
+          || current < 0x20
+          || current == 0x7f
+          || current == 0x85
+          || current == 0x2028
+          || current == 0x2029) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static String doubleQuoted(String value) {
+    StringBuilder result = new StringBuilder(value.length() + 2).append('"');
+    for (int index = 0; index < value.length(); index++) {
+      char current = value.charAt(index);
+      switch (current) {
+        case '\0' -> result.append("\\0");
+        case '\u0007' -> result.append("\\a");
+        case '\b' -> result.append("\\b");
+        case '\t' -> result.append("\\t");
+        case '\n' -> result.append("\\n");
+        case '\u000b' -> result.append("\\v");
+        case '\f' -> result.append("\\f");
+        case '\r' -> result.append("\\r");
+        case '\u001b' -> result.append("\\e");
+        case '"' -> result.append("\\\"");
+        case '\\' -> result.append("\\\\");
+        case '\u0085' -> result.append("\\N");
+        case '\u2028' -> result.append("\\L");
+        case '\u2029' -> result.append("\\P");
+        default -> {
+          if (current < 0x20 || current == 0x7f) {
+            result.append(String.format("\\u%04x", (int) current));
+          } else {
+            result.append(current);
+          }
+        }
+      }
+    }
+    return result.append('"').toString();
   }
 
   private static void collect(
@@ -312,21 +412,12 @@ final class YamlSourceFormat {
             catalog);
       }
     } else if (node instanceof ScalarNode value && !parent.isEmpty()) {
-      String key = legacyParent.substring(legacyParent.lastIndexOf('/') + 1);
-      Pattern exceptions = options.pattern("exceptions");
-      boolean exception = exceptions != null && exceptions.matcher(legacyParent).find();
-      boolean all = !options.contains("extractAllPairs") || options.enabled("extractAllPairs");
-      if (all != exception) {
-        String id =
-            options.contains("useFullKeyPath") && !options.enabled("useFullKeyPath") ? key : parent;
-        if (!parent.equals(legacyParent)
-            && options.contains("useFullKeyPath")
-            && !options.enabled("useFullKeyPath")) {
-          id += parent.substring(parent.lastIndexOf('['));
-        }
+      String legacyId = legacyIdentity(legacyParent, options);
+      if (shouldExtract(legacyId, options)) {
+        String id = portableIdentity(parent, legacyParent, options);
         Map<String, Object> metadata = new LinkedHashMap<>();
-        if (!id.equals(legacyParent)) {
-          metadata.put("yamlLegacyId", legacyParent);
+        if (!id.equals(legacyId)) {
+          metadata.put("yamlLegacyId", legacyId);
         }
         catalog.add(id, LocalizationMessage.of(value.getValue(), null, null, null, metadata));
       }
@@ -336,8 +427,10 @@ final class YamlSourceFormat {
   private static void collectSlots(
       Node node,
       String parent,
+      String legacyParent,
       String source,
       SourceSkeletonEncoding encoding,
+      LocalizationFilterOptions options,
       List<LocalizationSourceSlot> slots) {
     if (node instanceof MappingNode mapping) {
       for (NodeTuple entry : mapping.getValue()) {
@@ -345,12 +438,20 @@ final class YamlSourceFormat {
           throw invalid("INVALID_YAML", "YAML mapping keys must be scalars");
         }
         String path = parent.isEmpty() ? key.getValue() : parent + "/" + key.getValue();
-        collectSlots(entry.getValueNode(), path, source, encoding, slots);
+        String legacyPath =
+            legacyParent.isEmpty() ? key.getValue() : legacyParent + "/" + key.getValue();
+        collectSlots(entry.getValueNode(), path, legacyPath, source, encoding, options, slots);
       }
     } else if (node instanceof SequenceNode sequence) {
       for (int index = 0; index < sequence.getValue().size(); index++) {
         collectSlots(
-            sequence.getValue().get(index), parent + "[" + index + "]", source, encoding, slots);
+            sequence.getValue().get(index),
+            parent + "[" + index + "]",
+            legacyParent,
+            source,
+            encoding,
+            options,
+            slots);
       }
     } else if (node instanceof ScalarNode value && !parent.isEmpty()) {
       int start = value.getStartMark().getIndex();
@@ -361,10 +462,40 @@ final class YamlSourceFormat {
           end--;
         }
       }
-      slots.add(
-          new LocalizationSourceSlot(
-              parent, null, encoding.offset(source, start), encoding.offset(source, end)));
+      String legacyId = legacyIdentity(legacyParent, options);
+      if (shouldExtract(legacyId, options)) {
+        slots.add(
+            new LocalizationSourceSlot(
+                portableIdentity(parent, legacyParent, options),
+                null,
+                encoding.offset(source, start),
+                encoding.offset(source, end)));
+      }
     }
+  }
+
+  private static String portableIdentity(
+      String path, String legacyPath, LocalizationFilterOptions options) {
+    return usesFullKeyPath(options) ? path : leaf(legacyPath);
+  }
+
+  private static String legacyIdentity(String legacyPath, LocalizationFilterOptions options) {
+    return usesFullKeyPath(options) ? legacyPath : leaf(legacyPath);
+  }
+
+  private static boolean usesFullKeyPath(LocalizationFilterOptions options) {
+    return !options.contains("useFullKeyPath") || options.enabled("useFullKeyPath");
+  }
+
+  private static boolean shouldExtract(String legacyId, LocalizationFilterOptions options) {
+    Pattern exceptions = options.pattern("exceptions");
+    boolean exception = exceptions != null && exceptions.matcher(legacyId).find();
+    boolean all = !options.contains("extractAllPairs") || options.enabled("extractAllPairs");
+    return all != exception;
+  }
+
+  private static String leaf(String path) {
+    return path.substring(path.lastIndexOf('/') + 1);
   }
 
   private static Node compose(String source) {
@@ -387,7 +518,8 @@ final class YamlSourceFormat {
     return new LocalizationParseException(code, message);
   }
 
-  private record RemovalCandidate(String id, int start, int end, boolean sequenceItem) {}
+  private record RemovalCandidate(
+      String path, String legacyPath, int start, int end, boolean sequenceItem) {}
 
   private record Range(int start, int end) {}
 }

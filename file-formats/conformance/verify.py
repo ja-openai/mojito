@@ -650,6 +650,29 @@ def main() -> None:
             assert (ROOT / workflow["localized"]).is_file(), (
                 f"{workflow_id}: missing localized workflow snapshot"
             )
+        if "yamlRuntime" in workflow:
+            assert workflow["yamlRuntime"] is True and workflow["format"] == "yaml", (
+                f"{workflow_id}: YAML runtime proof requires an explicit YAML case"
+            )
+            assert "translations" in workflow and workflow.get("localized"), (
+                f"{workflow_id}: YAML runtime proof requires translations and localized output"
+            )
+        if "javascriptRuntime" in workflow:
+            runtime = workflow["javascriptRuntime"]
+            assert isinstance(runtime, dict) and workflow["format"] in {
+                "javascript",
+                "typescript",
+            }, f"{workflow_id}: JavaScript runtime proof requires a JS/TS case"
+            assert "translations" in workflow and workflow.get("localized"), (
+                f"{workflow_id}: JavaScript runtime proof requires translations and localized output"
+            )
+            assert isinstance(runtime.get("export"), str) and runtime["export"], (
+                f"{workflow_id}: JavaScript runtime proof requires an exported value"
+            )
+            for field in ("globals", "expected", "globalsAfter"):
+                assert isinstance(runtime.get(field), dict), (
+                    f"{workflow_id}: JavaScript runtime proof requires {field} values"
+                )
         if "localizedEndsWithNewline" in workflow:
             assert workflow["format"] == "formatjs_json", (
                 f"{workflow_id}: source-owned final newline currently applies to JSON output"
@@ -717,6 +740,7 @@ def main() -> None:
                 "INVALID_IMPORT_PLURAL",
                 "UNSUPPORTED_IMPORT_POLICY",
                 "UNKNOWN_SKELETON_SLOT",
+                "DUPLICATE_MESSAGE_ID",
             }, (
                 f"{workflow_id}: unstable workflow error"
             )

@@ -3259,6 +3259,15 @@ than durably persisted. Apple `.stringsdict` output removes source categories
 the target locale does not own and completes missing locale-owned categories
 by copying translated `other` values, preserving both Russian `few`/`many`
 and Japanese `other` without rewriting the surrounding source template.
+Configured YAML leaf-key extraction now assigns the same identities to source
+template slots; repeated leaf names fail explicitly instead of translating the
+wrong nested value, including sequences for which Okapi invents `tuN` names.
+Plain YAML translations remain unquoted only when they remain strings under
+the native grammar. JavaScript and TypeScript output
+escapes literal backslashes and translator-introduced template expressions,
+while exact source-authored identifier/member references remain executable
+placeholders; more complex code becomes literal text. Real PyYAML and Node
+runtime checks verify those output contracts independently.
 Ordinary `.po` and `.xcstrings` still require CLI file
 discovery enrollment; bilingual XLIFF remains unsupported in portable mode.
 

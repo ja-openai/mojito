@@ -756,8 +756,11 @@ pub(crate) fn localize(
         } else {
             None
         };
-    let mut skeleton =
-        crate::extract_skeleton(format, expanded_source.as_deref().unwrap_or(source))?;
+    let mut skeleton = if format == FileFormat::Yaml {
+        crate::yaml::extract_configured(expanded_source.as_deref().unwrap_or(source), &options)?
+    } else {
+        crate::extract_skeleton(format, expanded_source.as_deref().unwrap_or(source))?
+    };
     let mut selected = BTreeMap::new();
     let mut untranslated_keys = BTreeSet::new();
     let mut untranslated_marker = UNTRANSLATED.to_owned();
@@ -842,12 +845,12 @@ pub(crate) fn localize(
         skeleton = crate::extract_skeleton(format, &retained)?;
         selected.retain(|key, _| !untranslated_keys.contains(key));
     } else if remove_untranslated && format == FileFormat::Yaml {
-        let retained = crate::yaml::remove_entries(&skeleton, &untranslated_keys)?;
+        let retained = crate::yaml::remove_entries(&skeleton, &untranslated_keys, &options)?;
         selected.retain(|key, _| !untranslated_keys.contains(key));
         if selected.is_empty() {
             return Ok(retained);
         }
-        skeleton = crate::extract_skeleton(format, &retained)?;
+        skeleton = crate::yaml::extract_configured(&retained, &options)?;
     } else if remove_untranslated
         && matches!(format, FileFormat::JavaScript | FileFormat::TypeScript)
     {

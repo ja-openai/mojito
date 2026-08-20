@@ -6,9 +6,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /** Mojito's quoted-key JavaScript/TypeScript resource syntax and original value ownership. */
 final class JavaScriptSourceFormat {
+
+  private static final Pattern SAFE_TEMPLATE_EXPRESSION =
+      Pattern.compile(
+          "\\$\\{[A-Za-z_$][A-Za-z0-9_$]*(?:(?:\\.[A-Za-z_$][A-Za-z0-9_$]*)|(?:\\[(?:[0-9]+|\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*')\\]))*}");
 
   private JavaScriptSourceFormat() {}
 
@@ -70,8 +75,7 @@ final class JavaScriptSourceFormat {
       if (translation == null) {
         output.write(original, slot.start(), slot.end() - slot.start());
       } else {
-        byte[] escaped =
-            escape(translation, entries.get(slot.id()).template()).getBytes(encoding.charset());
+        byte[] escaped = escape(translation, entries.get(slot.id())).getBytes(encoding.charset());
         output.write(escaped, 0, escaped.length);
       }
       copied = slot.end();
@@ -195,7 +199,7 @@ final class JavaScriptSourceFormat {
 
   private static int closing(String source, int start, int limit, char delimiter) {
     for (int index = start; index < limit; index++) {
-      if (source.charAt(index) == delimiter && source.charAt(index - 1) != '\\') {
+      if (source.charAt(index) == delimiter && !escapedAt(source, index)) {
         return index;
       }
     }
@@ -203,9 +207,35 @@ final class JavaScriptSourceFormat {
   }
 
   private static String unescape(String value, boolean template) {
-    String result = value.replace("\\r", "\r").replace("\\n", "\n");
-    result = result.replace("\\\"", "\"").replace("\\'", "'");
-    return template ? result.replace("\\`", "`") : result;
+    StringBuilder result = new StringBuilder(value.length());
+    for (int index = 0; index < value.length(); index++) {
+      char current = value.charAt(index);
+      if (current != '\\' || index + 1 == value.length()) {
+        result.append(current);
+        continue;
+      }
+      char escaped = value.charAt(index + 1);
+      switch (escaped) {
+        case '\\' -> result.append('\\');
+        case 'r' -> result.append('\r');
+        case 'n' -> result.append('\n');
+        case '"' -> result.append('"');
+        case '\'' -> result.append('\'');
+        case '`' -> {
+          if (template) {
+            result.append('`');
+          } else {
+            result.append("\\`");
+          }
+        }
+        default -> {
+          result.append('\\');
+          continue;
+        }
+      }
+      index++;
+    }
+    return result.toString();
   }
 
   private static LocalizationMessage message(Entry entry) {
@@ -217,19 +247,114 @@ final class JavaScriptSourceFormat {
         entry.template() ? Map.of("javascriptTemplate", true) : null);
   }
 
-  private static String escape(String value, boolean template) {
+  private static String escape(String value, Entry source) {
     StringBuilder result = new StringBuilder(value.length());
+    Map<String, List<String>> sourceExpressions = templateExpressions(source.value());
     for (int index = 0; index < value.length(); index++) {
       char current = value.charAt(index);
+      if (source.template()
+          && current == '$'
+          && index + 1 < value.length()
+          && value.charAt(index + 1) == '{') {
+        String expression = matchingExpression(value, index, sourceExpressions);
+        if (expression != null) {
+          List<String> originals = sourceExpressions.get(expression);
+          result.append(originals.remove(originals.size() - 1));
+          index += expression.length() - 1;
+          continue;
+        }
+        result.append("\\${");
+        index++;
+        continue;
+      }
       switch (current) {
-        case '\n' -> result.append(template ? "\n" : "\\n");
+        case '\\' -> result.append("\\\\");
+        case '\n' -> result.append(source.template() ? "\n" : "\\n");
         case '\r' -> result.append("\\r");
+        case '\t' -> result.append("\\t");
+        case '\b' -> result.append("\\b");
+        case '\f' -> result.append("\\f");
+        case '\0' -> result.append("\\x00");
+        case '\u000b' -> result.append("\\v");
+        case '\u2028' -> result.append("\\u2028");
+        case '\u2029' -> result.append("\\u2029");
         case '"' -> result.append("\\\"");
-        case '`' -> result.append(template ? "\\`" : "`");
-        default -> result.append(current);
+        case '`' -> result.append(source.template() ? "\\`" : "`");
+        default -> {
+          if (current < 0x20 || current == 0x7f) {
+            result.append(String.format("\\u%04x", (int) current));
+          } else {
+            result.append(current);
+          }
+        }
       }
     }
     return result.toString();
+  }
+
+  private static boolean escapedAt(String value, int index) {
+    int backslashes = 0;
+    while (index > backslashes && value.charAt(index - backslashes - 1) == '\\') {
+      backslashes++;
+    }
+    return backslashes % 2 != 0;
+  }
+
+  private static Map<String, List<String>> templateExpressions(String source) {
+    Map<String, List<String>> result = new LinkedHashMap<>();
+    for (int index = 0; index + 1 < source.length(); index++) {
+      if (source.charAt(index) != '$'
+          || source.charAt(index + 1) != '{'
+          || escapedAt(source, index)) {
+        continue;
+      }
+      int end = templateExpressionEnd(source, index + 2);
+      if (end < 0) {
+        continue;
+      }
+      String original = source.substring(index, end + 1);
+      if (!SAFE_TEMPLATE_EXPRESSION.matcher(original).matches()) {
+        index = end;
+        continue;
+      }
+      String canonical = unescape(original, true);
+      result.computeIfAbsent(canonical, ignored -> new ArrayList<>()).add(original);
+      index = end;
+    }
+    return result;
+  }
+
+  private static int templateExpressionEnd(String source, int start) {
+    int braces = 1;
+    char quote = 0;
+    for (int index = start; index < source.length(); index++) {
+      char current = source.charAt(index);
+      if (quote != 0) {
+        if (current == quote && !escapedAt(source, index)) {
+          quote = 0;
+        }
+        continue;
+      }
+      if (current == '\'' || current == '"' || current == '`') {
+        quote = current;
+      } else if (current == '{') {
+        braces++;
+      } else if (current == '}' && --braces == 0) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
+  private static String matchingExpression(
+      String translation, int start, Map<String, List<String>> sourceExpressions) {
+    int end = templateExpressionEnd(translation, start + 2);
+    if (end < 0) {
+      return null;
+    }
+    String candidate = translation.substring(start, end + 1);
+    List<String> originals = sourceExpressions.get(candidate);
+    return originals == null || originals.isEmpty() ? null : candidate;
   }
 
   private static LocalizationParseException invalid(String message) {

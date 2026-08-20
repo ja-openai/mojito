@@ -486,7 +486,9 @@ final class MojitoLocalizationWorkflow {
             ? AndroidSourceSkeleton.retainPluralCategories(source, targetCategories)
             : source;
     LocalizationSourceSkeleton skeleton =
-        LocalizationFileConverters.extractSkeleton(format, skeletonSource);
+        format == LocalizationFileFormat.YAML
+            ? YamlSourceFormat.extract(skeletonSource, options)
+            : LocalizationFileConverters.extractSkeleton(format, skeletonSource);
     Map<String, String> selected = new LinkedHashMap<>();
     Set<String> untranslatedKeys = new LinkedHashSet<>();
     String untranslatedMarker = UNTRANSLATED;
@@ -561,12 +563,12 @@ final class MojitoLocalizationWorkflow {
       skeleton = LocalizationFileConverters.extractSkeleton(format, retained);
       selected.keySet().removeAll(untranslatedKeys);
     } else if (removeUntranslated && format == LocalizationFileFormat.YAML) {
-      byte[] retained = YamlSourceFormat.removeEntries(skeleton, untranslatedKeys);
+      byte[] retained = YamlSourceFormat.removeEntries(skeleton, untranslatedKeys, options);
       selected.keySet().removeAll(untranslatedKeys);
       if (selected.isEmpty()) {
         return retained;
       }
-      skeleton = LocalizationFileConverters.extractSkeleton(format, retained);
+      skeleton = YamlSourceFormat.extract(retained, options);
     } else if (removeUntranslated
         && (format == LocalizationFileFormat.JAVASCRIPT
             || format == LocalizationFileFormat.TYPESCRIPT)) {

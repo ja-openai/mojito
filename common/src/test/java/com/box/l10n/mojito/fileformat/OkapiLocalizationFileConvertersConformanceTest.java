@@ -153,6 +153,46 @@ public class OkapiLocalizationFileConvertersConformanceTest {
   }
 
   @Test
+  public void configuredYamlLeafNamesMatchOkapiAndRejectAmbiguousDuplicates() throws Exception {
+    Path root = findFixtureRoot();
+    String source = Files.readString(root.resolve("fixtures/yaml/duplicate-leaf-identities.yaml"));
+    List<AssetExtractorTextUnit> legacy =
+        extractor.getAssetExtractorTextUnitsForAsset(
+            "duplicate-leaf-identities.yaml", source, null, List.of("useFullKeyPath=false"));
+
+    assertEquals(
+        List.of("prompt", "prompt"), legacy.stream().map(AssetExtractorTextUnit::getName).toList());
+
+    List<AssetExtractorTextUnit> legacySequence =
+        extractor.getAssetExtractorTextUnitsForAsset(
+            "leaf-sequence.yaml",
+            "items:\n  - Alpha\n  - Beta\n",
+            null,
+            List.of("useFullKeyPath=false"));
+    assertEquals(
+        List.of("items", "tu2"),
+        legacySequence.stream().map(AssetExtractorTextUnit::getName).toList());
+    try {
+      LocalizationFileConverters.parseForMojito(
+          LocalizationFileFormat.YAML,
+          "items:\n  - Alpha\n  - Beta\n".getBytes(StandardCharsets.UTF_8),
+          List.of("useFullKeyPath=false"));
+      fail("Portable YAML must reject legacy's generated sequence identities");
+    } catch (LocalizationParseException invalid) {
+      assertEquals("DUPLICATE_MESSAGE_ID", invalid.code());
+    }
+    try {
+      LocalizationFileConverters.parseForMojito(
+          LocalizationFileFormat.YAML,
+          source.getBytes(StandardCharsets.UTF_8),
+          List.of("useFullKeyPath=false"));
+      fail("Portable YAML must reject ambiguous duplicate leaf identities");
+    } catch (LocalizationParseException invalid) {
+      assertEquals("DUPLICATE_MESSAGE_ID", invalid.code());
+    }
+  }
+
+  @Test
   public void csvCatalogsMatchBothActualCustomizedFilterConfigurations() throws Exception {
     Path root = findFixtureRoot();
     assertCsvMatchesCustomizedFilter(

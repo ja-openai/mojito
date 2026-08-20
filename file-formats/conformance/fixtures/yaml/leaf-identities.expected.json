@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "sourceFormat": "yaml",
+  "messages": {
+    "prompt": { "defaultMessage": "Welcome aboard" },
+    "primary": { "defaultMessage": "Start" },
+    "description": { "defaultMessage": "Harbor details" }
+  }
+}

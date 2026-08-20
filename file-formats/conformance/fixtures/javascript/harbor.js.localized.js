@@ -7,5 +7,5 @@ export const harborLabels = {
 par le chenal nord`,
   // DO NOT TRANSLATE: fixed harbor code
   "harbor.protected": "PORT-17",
-  "harbor.literal": "Gardez `barre` et \u263A",
+  "harbor.literal": "Gardez `barre` et \\u263A",
 };

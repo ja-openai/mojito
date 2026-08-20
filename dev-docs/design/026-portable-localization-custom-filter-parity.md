@@ -45,7 +45,7 @@ differential.
 | JSON | `removeKeySuffix` | Remove a suffix such as `/defaultMessage` from extracted identities. | Implemented. |
 | JSON | `convertToHtmlCodes` | Convert configured protected inline codes into reversible markup. | Implemented as exact legacy `<br id='pN'/>` extraction plus lossless reverse replacement; unknown, repeated, and missing codes fail closed. |
 | Apple `.strings` | `removeComment` | Remove comments from localized output. | Implemented for block and single-line comments without treating comment-like quoted translation content as a real comment. |
-| YAML | `useFullKeyPath` | Select full YAML key-path identities. | Implemented independently in Java and Rust and verified against the existing configured CLI dataset. |
+| YAML | `useFullKeyPath` | Select full YAML key-path identities. | Implemented independently in Java and Rust for extraction and source-template rendering. Leaf mode fails closed on duplicate nested or sequence identities instead of using Okapi's order-dependent `tuN` fallback names. |
 | YAML | `extractAllPairs` | Select every scalar or only configured exceptions. | Implemented for nested YAML mappings and safe scalar extraction. |
 | YAML | `exceptions` | Select configured YAML key/path patterns. | Implemented with the same validated portable regular-expression policy as JSON. |
 | HTML | `processImageUrls` | Expose image URLs as protected adaptation units. | Implemented with the customized filter's exact image URL/ALT ordering and stable contextual identities. |

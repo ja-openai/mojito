@@ -1,8 +1,10 @@
 use crate::model::{Catalog, FileFormat, Message, ParseError};
 use crate::source_skeleton::{SourceSkeleton, SourceSlot};
 use crate::workflow::FilterOptions;
+use regex::Regex;
 use serde_json::Map;
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::OnceLock;
 use yaml_rust2::parser::{Event, Parser};
 use yaml_rust2::scanner::TScalarStyle;
 
@@ -54,24 +56,12 @@ pub(crate) fn parse_configured(
 ) -> Result<Catalog, ParseError> {
     let mut result = Catalog::new(FileFormat::Yaml);
     for scalar in scalars(source)? {
-        let exception = options
-            .pattern("exceptions")
-            .is_some_and(|pattern| pattern.is_match(&scalar.legacy_path));
-        let all = !options.contains("extractAllPairs") || options.enabled("extractAllPairs");
-        if all != exception {
-            let id = if options.contains("useFullKeyPath") && !options.enabled("useFullKeyPath") {
-                let key = scalar.legacy_path.rsplit('/').next().unwrap();
-                if scalar.path == scalar.legacy_path {
-                    key.to_owned()
-                } else {
-                    format!("{key}{}", &scalar.path[scalar.path.rfind('[').unwrap()..])
-                }
-            } else {
-                scalar.path.clone()
-            };
+        let legacy_id = legacy_identity(&scalar.legacy_path, options);
+        if should_extract(legacy_id, options) {
+            let id = portable_identity(&scalar.path, &scalar.legacy_path, options).to_owned();
             let mut metadata = Map::new();
-            if id != scalar.legacy_path {
-                metadata.insert("yamlLegacyId".into(), scalar.legacy_path.into());
+            if id != legacy_id {
+                metadata.insert("yamlLegacyId".into(), legacy_id.into());
             }
             result.insert(id, Message::new(scalar.value, None, None, vec![], metadata))?;
         }
@@ -80,6 +70,14 @@ pub(crate) fn parse_configured(
 }
 
 pub(crate) fn extract(bytes: &[u8]) -> Result<SourceSkeleton, ParseError> {
+    let options = FilterOptions::parse(FileFormat::Yaml, &[])?;
+    extract_configured(bytes, &options)
+}
+
+pub(crate) fn extract_configured(
+    bytes: &[u8],
+    options: &FilterOptions,
+) -> Result<SourceSkeleton, ParseError> {
     let (bom, source) = if bytes.starts_with(&[0xef, 0xbb, 0xbf]) {
         (3, std::str::from_utf8(&bytes[3..]))
     } else {
@@ -87,9 +85,21 @@ pub(crate) fn extract(bytes: &[u8]) -> Result<SourceSkeleton, ParseError> {
     };
     let source = source.map_err(|_| error("INVALID_ENCODING", "Invalid UTF-8 YAML source"))?;
     let mut slots = Vec::new();
+    let mut ids = BTreeSet::new();
     for scalar in scalars(source)? {
+        let legacy_id = legacy_identity(&scalar.legacy_path, options);
+        if !should_extract(legacy_id, options) {
+            continue;
+        }
+        let id = portable_identity(&scalar.path, &scalar.legacy_path, options).to_owned();
+        if !ids.insert(id.clone()) {
+            return Err(ParseError::new(
+                "DUPLICATE_MESSAGE_ID",
+                format!("Duplicate YAML message ID: {id}"),
+            ));
+        }
         slots.push(SourceSlot {
-            id: scalar.path,
+            id,
             selector: None,
             variant: None,
             start: scalar.start + bom,
@@ -156,6 +166,7 @@ pub(crate) fn render(
 pub(crate) fn remove_entries(
     skeleton: &SourceSkeleton,
     removed: &BTreeSet<String>,
+    options: &FilterOptions,
 ) -> Result<Vec<u8>, ParseError> {
     if skeleton.schema_version != 1 || skeleton.source_format != FileFormat::Yaml.id() {
         return Err(error(
@@ -165,7 +176,13 @@ pub(crate) fn remove_entries(
     }
     let mut ranges = scalars(&skeleton.source)?
         .into_iter()
-        .filter(|scalar| removed.contains(&scalar.path))
+        .filter(|scalar| {
+            removed.contains(portable_identity(
+                &scalar.path,
+                &scalar.legacy_path,
+                options,
+            ))
+        })
         .map(|scalar| removal_range(&skeleton.source, &scalar))
         .collect::<Vec<_>>();
     ranges.sort_unstable_by_key(|range| range.start);
@@ -315,17 +332,13 @@ fn next_line(source: &str, end: usize) -> usize {
 
 fn encode_scalar(source: &str, translated: &str) -> String {
     if source.starts_with('\'') {
-        format!("'{}'", translated.replace('\'', "''"))
+        if requires_double_quotes(translated) {
+            double_quoted(translated)
+        } else {
+            format!("'{}'", translated.replace('\'', "''"))
+        }
     } else if source.starts_with('"') {
-        format!(
-            "\"{}\"",
-            translated
-                .replace('\\', "\\\\")
-                .replace('"', "\\\"")
-                .replace('\n', "\\n")
-                .replace('\r', "\\r")
-                .replace('\t', "\\t")
-        )
+        double_quoted(translated)
     } else if source.starts_with('|') || source.starts_with('>') {
         let newline = source.find('\n').unwrap_or(source.len());
         let body = &source[newline.saturating_add(1)..];
@@ -357,11 +370,137 @@ fn encode_scalar(source: &str, translated: &str) -> String {
             result.push_str(line);
         }
         result
-    } else if translated.contains('\n') || translated.contains(": ") || translated.contains(" #") {
-        format!("'{}'", translated.replace('\'', "''"))
-    } else {
+    } else if plain_scalar_is_string(translated) {
         translated.to_owned()
+    } else {
+        double_quoted(translated)
     }
+}
+
+fn portable_identity<'a>(path: &'a str, legacy_path: &'a str, options: &FilterOptions) -> &'a str {
+    if uses_full_key_path(options) {
+        path
+    } else {
+        leaf(legacy_path)
+    }
+}
+
+fn legacy_identity<'a>(legacy_path: &'a str, options: &FilterOptions) -> &'a str {
+    if uses_full_key_path(options) {
+        legacy_path
+    } else {
+        leaf(legacy_path)
+    }
+}
+
+fn uses_full_key_path(options: &FilterOptions) -> bool {
+    !options.contains("useFullKeyPath") || options.enabled("useFullKeyPath")
+}
+
+fn should_extract(legacy_id: &str, options: &FilterOptions) -> bool {
+    let exception = options
+        .pattern("exceptions")
+        .is_some_and(|pattern| pattern.is_match(legacy_id));
+    let all = !options.contains("extractAllPairs") || options.enabled("extractAllPairs");
+    all != exception
+}
+
+fn leaf(path: &str) -> &str {
+    path.rsplit('/').next().unwrap_or(path)
+}
+
+fn plain_scalar_is_string(value: &str) -> bool {
+    if value.is_empty()
+        || value.trim() != value
+        || requires_double_quotes(value)
+        || matches!(value, "~" | "<<" | "=" | "---" | "...")
+        || implicitly_typed(value)
+    {
+        return false;
+    }
+    let first = value.chars().next().expect("nonempty scalar");
+    if "-?:,[]{}#&*!|>'\"%@`".contains(first) {
+        return false;
+    }
+    let mut characters = value.chars().peekable();
+    let mut previous = None;
+    while let Some(character) = characters.next() {
+        if ",[]{}".contains(character) {
+            return false;
+        }
+        if character == ':' && characters.peek().is_none_or(|next| next.is_whitespace()) {
+            return false;
+        }
+        if character == '#' && previous.is_none_or(char::is_whitespace) {
+            return false;
+        }
+        previous = Some(character);
+    }
+    true
+}
+
+fn requires_double_quotes(value: &str) -> bool {
+    value.chars().any(|character| {
+        matches!(
+            character,
+            '\n' | '\r' | '\t' | '\u{0085}' | '\u{2028}' | '\u{2029}'
+        ) || character <= '\u{001f}'
+            || character == '\u{007f}'
+    })
+}
+
+fn implicitly_typed(value: &str) -> bool {
+    static PATTERN: OnceLock<Regex> = OnceLock::new();
+    PATTERN
+        .get_or_init(|| {
+            Regex::new(concat!(
+                r"^(?:yes|Yes|YES|no|No|NO|true|True|TRUE|false|False|FALSE|",
+                r"on|On|ON|off|Off|OFF|~|null|Null|NULL|<<|=|",
+                r"[-+]?(?:0b_*[0-1][0-1_]*|0_*[0-7][0-7_]*|",
+                r"(?:0|[1-9][0-9_]*)|0x_*[0-9a-fA-F][0-9a-fA-F_]*|",
+                r"[1-9][0-9_]*(?::[0-5]?[0-9])+)|",
+                r"[-+]?(?:[0-9][0-9_]*)\.[0-9_]*(?:[eE][-+]?[0-9]+)?|",
+                r"[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)|",
+                r"[-+]?\.[0-9_]+(?:[eE][-+]?[0-9]+)?|",
+                r"[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\.[0-9_]*|",
+                r"[-+]?\.(?:inf|Inf|INF)|\.(?:nan|NaN|NAN)|",
+                r"[0-9]{4}-[0-9]{2}-[0-9]{2}|",
+                r"[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}(?:[Tt]|[ \t]+)",
+                r"[0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]*)?",
+                r"(?:[ \t]*(?:Z|[-+][0-9]{1,2}(?::[0-9]{2})?))?)$"
+            ))
+            .expect("valid YAML implicit-type pattern")
+        })
+        .is_match(value)
+}
+
+fn double_quoted(value: &str) -> String {
+    let mut result = String::with_capacity(value.len() + 2);
+    result.push('"');
+    for character in value.chars() {
+        match character {
+            '\0' => result.push_str("\\0"),
+            '\u{0007}' => result.push_str("\\a"),
+            '\u{0008}' => result.push_str("\\b"),
+            '\t' => result.push_str("\\t"),
+            '\n' => result.push_str("\\n"),
+            '\u{000b}' => result.push_str("\\v"),
+            '\u{000c}' => result.push_str("\\f"),
+            '\r' => result.push_str("\\r"),
+            '\u{001b}' => result.push_str("\\e"),
+            '"' => result.push_str("\\\""),
+            '\\' => result.push_str("\\\\"),
+            '\u{0085}' => result.push_str("\\N"),
+            '\u{2028}' => result.push_str("\\L"),
+            '\u{2029}' => result.push_str("\\P"),
+            character if character <= '\u{001f}' || character == '\u{007f}' => {
+                result.push_str(&format!("\\u{:04x}", character as u32));
+            }
+            _ => result.push(character),
+        }
+    }
+    result.push('"');
+    result
 }
 
 fn scalars(source: &str) -> Result<Vec<Scalar>, ParseError> {

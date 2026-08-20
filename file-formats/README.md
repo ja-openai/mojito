@@ -100,6 +100,20 @@ Apple's compiler rejects substitution references inside top-level or
 device-nested plural categories in every locale; original neutral fixtures
 assert the actual native diagnostic and both implementations fail closed.
 
+YAML source templates retain safe plain scalar spelling, but quote translated
+values whenever YAML would reinterpret them as booleans, nulls, numbers,
+timestamps, collections, comments, directives, aliases, or tags. The
+`useFullKeyPath=false` workflow uses the customized Okapi leaf identity for
+both extraction and rendering; duplicate leaf names fail explicitly because a
+single catalog key cannot identify both values. This also rejects repeated
+sequence leaves for which Okapi invents order-dependent `tuN` names.
+JavaScript and TypeScript templates encode literal backslashes and allow only
+exact source-authored identifier/member-reference `${...}` expressions to
+remain executable in translated backtick strings. More complex code is
+rendered as literal text.
+PyYAML and Node runtime checks verify the resulting values independently of
+Java and Rust.
+
 Supported initial formats are Android XML, Apple `.strings`, Apple
 `.stringsdict`, modern Apple `.xcstrings`, gettext PO/POT, Java properties,
 and existing FormatJS JSON.
