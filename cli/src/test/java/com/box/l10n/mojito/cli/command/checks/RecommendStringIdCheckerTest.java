@@ -144,7 +144,6 @@ public class RecommendStringIdCheckerTest {
 
   @Test
   public void testAbsolutePathAsUsage() {
-    String cwd = Paths.get(".").toAbsolutePath().toString();
     List<AssetExtractorTextUnit> addedTUs = new ArrayList<>();
     AssetExtractorTextUnit assetExtractorTextUnit = new AssetExtractorTextUnit();
     assetExtractorTextUnit.setName(
@@ -152,8 +151,11 @@ public class RecommendStringIdCheckerTest {
     assetExtractorTextUnit.setSource("A source string with no errors.");
     assetExtractorTextUnit.setUsages(
         Sets.newHashSet(
-            cwd.replace(".", "")
-                + "someDir/someSubDir/anotherLevel/evenDeeper/someSourceFile.java:1497"));
+            Paths.get("")
+                    .toAbsolutePath()
+                    .resolve("someDir/someSubDir/anotherLevel/evenDeeper/someSourceFile.java")
+                    .normalize()
+                + ":1497"));
     addedTUs.add(assetExtractorTextUnit);
     List<AssetExtractionDiff> assetExtractionDiffs = new ArrayList<>();
     AssetExtractionDiff assetExtractionDiff = new AssetExtractionDiff();
@@ -167,15 +169,17 @@ public class RecommendStringIdCheckerTest {
 
   @Test
   public void testAbsolutePathAsUsageWithNoContext() {
-    String cwd = Paths.get(".").toAbsolutePath().toString();
     List<AssetExtractorTextUnit> addedTUs = new ArrayList<>();
     AssetExtractorTextUnit assetExtractorTextUnit = new AssetExtractorTextUnit();
     assetExtractorTextUnit.setName("A source string with no errors. ");
     assetExtractorTextUnit.setSource("A source string with no errors.");
     assetExtractorTextUnit.setUsages(
         Sets.newHashSet(
-            cwd.replace(".", "")
-                + "someDir/someSubDir/anotherLevel/evenDeeper/someSourceFile.java:1497"));
+            Paths.get("")
+                    .toAbsolutePath()
+                    .resolve("someDir/someSubDir/anotherLevel/evenDeeper/someSourceFile.java")
+                    .normalize()
+                + ":1497"));
     addedTUs.add(assetExtractorTextUnit);
     List<AssetExtractionDiff> assetExtractionDiffs = new ArrayList<>();
     AssetExtractionDiff assetExtractionDiff = new AssetExtractionDiff();

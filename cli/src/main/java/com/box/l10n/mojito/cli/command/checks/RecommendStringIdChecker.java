@@ -4,7 +4,6 @@ import static com.box.l10n.mojito.cli.command.extractioncheck.ExtractionCheckNot
 
 import com.box.l10n.mojito.cli.command.extraction.AssetExtractionDiff;
 import com.box.l10n.mojito.okapi.extractor.AssetExtractorTextUnit;
-import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayDeque;
@@ -96,17 +95,12 @@ public class RecommendStringIdChecker extends AbstractCliChecker {
             textUnit.getName().contains(ID_SEPARATOR)
                 ? textUnit.getName().split(ID_SEPARATOR)[1]
                 : "");
-    String cwd = Paths.get(".").toAbsolutePath().toString();
+    Path cwd = Paths.get("").toAbsolutePath().normalize();
     for (String filePath : textUnit.getUsages()) {
-      if (Paths.get(filePath).isAbsolute()) {
-        filePath =
-            filePath.replace(
-                cwd.replace(
-                    FileSystems.getDefault().getSeparator() + ".",
-                    FileSystems.getDefault().getSeparator()),
-                "");
+      Path file = Paths.get(removeLineNumberFromUsage(filePath)).normalize();
+      if (file.isAbsolute() && file.startsWith(cwd)) {
+        file = cwd.relativize(file);
       }
-      Path file = Paths.get(removeLineNumberFromUsage(filePath));
       String fileName = file.getFileName().toString();
       Deque<String> dirNames = getDirectoryNames(file);
       String idPrefix = "";
