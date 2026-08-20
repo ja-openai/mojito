@@ -35,6 +35,12 @@ What this scaffold includes
   - add `task.inspect` so MCP clients can inspect arbitrary Mojito task ids
   - include repository context when input/output payloads expose `repositoryId`, `repositoryName`, or `repository`
   - surface the parsed Mojito error payload and the backend exception headline from the stored stack trace
+- An admin-only Review Project decision-integrity investigation tool:
+  - `review_project.audit_decision_integrity`
+  - require explicit UTC bounds no longer than 48 hours
+  - run one Mojito-owned, read-only bounded query and perform carryover/structural analysis in memory
+  - return uncapped totals with capped, redacted evidence; never mutate translations or create incidents
+  - see `dev-docs/design/027-review-project-decision-integrity-audit.md`
 - A remote MCP transport at `/api/mcp` that supports:
   - `initialize`
   - `tools/list`
@@ -62,6 +68,7 @@ Current limitations
 - No resumable event or subscription state.
 - Slack stays in draft mode for the incident workflow; send remains a follow-up integration.
 - Task inspection is lookup-by-id only. It does not yet provide search/listing for recent failed tasks.
+- Review Project decision integrity is operator-invoked only; no cron or persisted audit history is included.
 
 Task inspection example
 
