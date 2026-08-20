@@ -35,6 +35,34 @@ public class AndroidXMLEncoderTest {
   }
 
   @Test
+  public void testEscapeCommonAnchorByDefault() {
+    String actual =
+        androidXMLEncoder.escapeCommon(
+            "&lt;a href=\\\"https://example.com/terms\\\"&gt;Terms&lt;/a&gt; apply.");
+    assertEquals("&lt;a href=\\\"https://example.com/terms\\\"&gt;Terms&lt;/a&gt; apply.", actual);
+  }
+
+  @Test
+  public void testEscapeCommonAnchorAsElementWhenEnabled() {
+    androidXMLEncoder.unescapeAnchorTags = true;
+
+    String actual =
+        androidXMLEncoder.escapeCommon(
+            "&lt;a href=\\\"https://example.com/terms\\\"&gt;Terms&lt;/a&gt; apply.");
+
+    assertEquals("<a href=\"https://example.com/terms\">Terms</a> apply.", actual);
+  }
+
+  @Test
+  public void testEscapeCommonAnchorOptionDoesNotUnescapeOtherTags() {
+    androidXMLEncoder.unescapeAnchorTags = true;
+
+    String actual = androidXMLEncoder.escapeCommon("&lt;abbr&gt;Android&lt;/abbr&gt;");
+
+    assertEquals("&lt;abbr&gt;Android&lt;/abbr&gt;", actual);
+  }
+
+  @Test
   public void testEscapeDoubleQuotes() {
     assertEquals("a\\\"b", androidXMLEncoder.escapeDoubleQuotes("a\"b"));
   }

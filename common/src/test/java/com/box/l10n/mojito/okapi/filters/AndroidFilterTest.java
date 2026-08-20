@@ -2,8 +2,11 @@ package com.box.l10n.mojito.okapi.filters;
 
 import static org.junit.Assert.assertEquals;
 
+import com.box.l10n.mojito.okapi.RawDocument;
+import java.util.List;
 import net.sf.okapi.common.Event;
 import net.sf.okapi.common.EventType;
+import net.sf.okapi.common.LocaleId;
 import net.sf.okapi.common.resource.TextUnit;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -15,6 +18,21 @@ import org.slf4j.LoggerFactory;
 public class AndroidFilterTest {
 
   static Logger logger = LoggerFactory.getLogger(AndroidFilterTest.class);
+
+  @Test
+  public void testUnescapeAnchorTagsOptionUpdatesExistingEncoder() {
+    AndroidFilter filter = new AndroidFilter();
+    AndroidXMLEncoder encoder = filter.getXMLEncoder();
+    encoder.unescapeUtils = new UnescapeUtils();
+    RawDocument rawDocument = new RawDocument("", LocaleId.ENGLISH);
+    rawDocument.setAnnotation(new FilterOptions(List.of("unescapeAnchorTags=true")));
+
+    filter.applyFilterOptions(rawDocument);
+
+    assertEquals(
+        "<a href=\"https://example.com\">Link</a>",
+        encoder.escapeCommon("&lt;a href=\\\"https://example.com\\\"&gt;Link&lt;/a&gt;"));
+  }
 
   @Test
   public void testGetNoteFromXMLCommentsInSkeletonNoComment() {

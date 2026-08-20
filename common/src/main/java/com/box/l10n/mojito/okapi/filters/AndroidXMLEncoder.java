@@ -34,16 +34,25 @@ public class AndroidXMLEncoder extends net.sf.okapi.common.encoder.XMLEncoder {
           "(&lt;[biu]&gt;)((.*?)%(([-0+ #]?)[-0+ #]?)((\\d\\$)?)(([\\d\\*]*)(\\.[\\d\\*]*)?)[dioxXucsfeEgGpn](.*?))+(&lt;/[biu]&gt;)");
   private static final Pattern ANDROID_HTML =
       Pattern.compile("(&lt;)(/?)(b|i|u|annotation.*?)(&gt;)");
+  private static final Pattern ANDROID_ANCHOR = Pattern.compile("(&lt;)(/?)(a(?:\\s+.*?)?)(&gt;)");
   private static final Pattern LINE_FEED = Pattern.compile("\n");
   private static final Pattern CARIAGE_RETURN = Pattern.compile("\r");
 
   /** To enable old escaping */
   boolean oldEscaping = false;
 
+  /** To emit anchor tags as Android XML elements instead of escaped markup text. */
+  boolean unescapeAnchorTags = false;
+
   @Autowired UnescapeUtils unescapeUtils;
 
   public AndroidXMLEncoder(boolean oldEscaping) {
+    this(oldEscaping, false);
+  }
+
+  public AndroidXMLEncoder(boolean oldEscaping, boolean unescapeAnchorTags) {
     this.oldEscaping = oldEscaping;
+    this.unescapeAnchorTags = unescapeAnchorTags;
   }
 
   @Override
@@ -106,6 +115,22 @@ public class AndroidXMLEncoder extends net.sf.okapi.common.encoder.XMLEncoder {
     }
     matcher.appendTail(sb);
     text = sb.toString();
+
+    if (unescapeAnchorTags) {
+      matcher = ANDROID_ANCHOR.matcher(text);
+      sb = new StringBuffer();
+      while (matcher.find()) {
+        matcher.appendReplacement(
+            sb,
+            Matcher.quoteReplacement(
+                "<"
+                    + matcher.group(2)
+                    + unescapeUtils.replaceEscapedQuotes(matcher.group(3))
+                    + ">"));
+      }
+      matcher.appendTail(sb);
+      text = sb.toString();
+    }
 
     text = escapeLineFeed(text);
     text = escapeCariageReturn(text);

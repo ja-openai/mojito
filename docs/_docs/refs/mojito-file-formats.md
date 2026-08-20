@@ -46,6 +46,12 @@ Localized Resource File (Spanish): `res/values-es/strings.xml`
 </resources>
 ```
 
+By default, Mojito keeps translated `<a>` markup escaped so applications can read it as text and
+pass it to an HTML parser. For applications that read the resource with `Resources.getText()` and
+need Android to compile anchors into URL spans, generate the localized file with the Android filter
+option `unescapeAnchorTags=true`. This option changes only anchor output and must be enabled by the
+caller, for example with `--filter-options unescapeAnchorTags=true` on `pull`.
+
 ### iOS/Mac Strings
 Source Resource File (English): `en.lproj/Localizable.strings`
 
