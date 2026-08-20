@@ -31,8 +31,18 @@ public final class LocalizationShadowComparator {
 
   /** Keep canonical source-slot identity beside each legacy-compatible translation-memory unit. */
   public static List<ProjectedTextUnit> projectTextUnitsWithIds(LocalizationCatalog catalog) {
+    return projectTextUnitsWithIds(catalog, true);
+  }
+
+  /** Project only plural categories present in a localized import. */
+  public static List<ProjectedTextUnit> projectImportTextUnitsWithIds(LocalizationCatalog catalog) {
+    return projectTextUnitsWithIds(catalog, false);
+  }
+
+  private static List<ProjectedTextUnit> projectTextUnitsWithIds(
+      LocalizationCatalog catalog, boolean completePluralCategories) {
     List<ProjectedTextUnit> extracted = new ArrayList<>();
-    for (Unit projected : project(catalog, true)) {
+    for (Unit projected : project(catalog, true, completePluralCategories)) {
       AssetExtractorTextUnit unit = new AssetExtractorTextUnit();
       unit.setName(projected.name());
       unit.setSource(projected.source());
@@ -42,16 +52,19 @@ public final class LocalizationShadowComparator {
       if (!projected.usages().isEmpty()) {
         unit.setUsages(Set.copyOf(projected.usages()));
       }
-      extracted.add(new ProjectedTextUnit(projected.canonicalId(), unit));
+      extracted.add(
+          new ProjectedTextUnit(
+              projected.messageId(), projected.canonicalId(), projected.selector(), unit));
     }
     return extracted;
   }
 
-  public record ProjectedTextUnit(String canonicalId, AssetExtractorTextUnit textUnit) {}
+  public record ProjectedTextUnit(
+      String messageId, String canonicalId, String selector, AssetExtractorTextUnit textUnit) {}
 
   public static LocalizationShadowReport compare(
       LocalizationCatalog catalog, List<AssetExtractorTextUnit> extracted) {
-    List<Unit> canonical = project(catalog, false);
+    List<Unit> canonical = project(catalog, false, true);
     Map<String, List<Unit>> expected = group(canonical);
     List<Unit> legacy =
         extracted.stream()
@@ -66,6 +79,8 @@ public final class LocalizationShadowComparator {
                         unit.getUsages() == null
                             ? List.of()
                             : unit.getUsages().stream().sorted().toList(),
+                        null,
+                        null,
                         null))
             .toList();
     Map<String, List<Unit>> observed = group(legacy);
@@ -128,7 +143,8 @@ public final class LocalizationShadowComparator {
     return grouped;
   }
 
-  private static List<Unit> project(LocalizationCatalog catalog, boolean includeWorkflowUnits) {
+  private static List<Unit> project(
+      LocalizationCatalog catalog, boolean includeWorkflowUnits, boolean completePluralCategories) {
     List<Unit> projected = new ArrayList<>();
     String format = catalog.sourceFormat();
     for (Map.Entry<String, LocalizationMessage> entry : catalog.messages().entrySet()) {
@@ -151,7 +167,24 @@ public final class LocalizationShadowComparator {
                 null,
                 null,
                 usages,
+                entry.getKey(),
+                null,
                 entry.getKey() + "#@format"));
+      }
+      if (LocalizationFileFormat.APPLE_STRINGSDICT.id().equals(format)
+          && metadata.get("pluralVariables") instanceof List<?> variables
+          && metadata.get("applePluralRules") instanceof Map<?, ?> rules) {
+        projectApplePluralVariables(
+            projected,
+            entry.getKey(),
+            id,
+            message,
+            metadata,
+            usages,
+            variables,
+            rules,
+            completePluralCategories);
+        continue;
       }
       if (message.variants() == null) {
         if (LocalizationFileFormat.ANDROID.id().equals(format)) {
@@ -170,7 +203,16 @@ public final class LocalizationShadowComparator {
           id = legacyId;
         }
         projected.add(
-            new Unit(id, source, message.description(), null, null, usages, entry.getKey()));
+            new Unit(
+                id,
+                source,
+                message.description(),
+                null,
+                null,
+                usages,
+                entry.getKey(),
+                null,
+                entry.getKey()));
         continue;
       }
 
@@ -186,7 +228,12 @@ public final class LocalizationShadowComparator {
         base = (suffix < 0 ? id : id.substring(0, suffix)) + "_";
       }
       String fallback = message.variants().get("other");
-      for (String category : CATEGORIES) {
+      String selector =
+          LocalizationFileFormat.APPLE_STRINGSDICT.id().equals(format)
+                  && metadata.get("pluralVariable") instanceof String variable
+              ? variable
+              : null;
+      for (String category : pluralCategories(message.variants(), completePluralCategories)) {
         String source;
         if (LocalizationFileFormat.GETTEXT_PO.id().equals(format)) {
           source =
@@ -206,10 +253,67 @@ public final class LocalizationShadowComparator {
                 category,
                 base + "other",
                 usages,
+                entry.getKey(),
+                selector,
                 entry.getKey() + "#" + category));
       }
     }
     return projected;
+  }
+
+  private static void projectApplePluralVariables(
+      List<Unit> projected,
+      String messageId,
+      String legacyId,
+      LocalizationMessage message,
+      Map<String, Object> metadata,
+      List<String> usages,
+      List<?> variables,
+      Map<?, ?> rules,
+      boolean completePluralCategories) {
+    for (Object item : variables) {
+      if (!(item instanceof String selector)
+          || !(rules.get(selector) instanceof Map<?, ?> rule)
+          || !(rule.get("variants") instanceof Map<?, ?> rawVariants)) {
+        continue;
+      }
+      Map<String, String> variants = new LinkedHashMap<>();
+      for (Map.Entry<?, ?> variant : rawVariants.entrySet()) {
+        if (variant.getKey() instanceof String category
+            && variant.getValue() instanceof String value) {
+          variants.put(category, value);
+        }
+      }
+      String fallback = variants.get("other");
+      if (fallback == null) {
+        continue;
+      }
+      String base = legacyId + "_" + selector + "_";
+      for (String category : pluralCategories(variants, completePluralCategories)) {
+        projected.add(
+            new Unit(
+                base + category,
+                restore(
+                    variants.getOrDefault(category, fallback),
+                    message,
+                    LocalizationFileFormat.APPLE_STRINGSDICT.id(),
+                    metadata),
+                message.description(),
+                category,
+                base + "other",
+                usages,
+                messageId,
+                selector,
+                messageId + "#" + selector + "#" + category));
+      }
+    }
+  }
+
+  private static List<String> pluralCategories(
+      Map<String, String> variants, boolean completePluralCategories) {
+    return CATEGORIES.stream()
+        .filter(category -> completePluralCategories || variants.containsKey(category))
+        .toList();
   }
 
   private static String gettextId(String source, Map<String, Object> metadata) {
@@ -272,5 +376,7 @@ public final class LocalizationShadowComparator {
       String pluralForm,
       String pluralFormOther,
       List<String> usages,
+      String messageId,
+      String selector,
       String canonicalId) {}
 }

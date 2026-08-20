@@ -46,6 +46,7 @@ import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
@@ -614,6 +615,81 @@ public class PullCommandTest extends CLITestBase {
   public void portableConverterReusesExistingAppleStringsdictDataset() throws Exception {
     assertPortableMatchesExistingDataset(
         "pullMacStringsdict", "en.lproj/Localizable.stringsdict", new String[0], new String[0]);
+  }
+
+  @Test
+  public void portableConverterUsesDistinctRussianApplePluralSelectorTranslations()
+      throws Exception {
+    Repository repository = createTestRepoUsingRepoService();
+    repositoryService.addRepositoryLocale(repository, "ru-RU", null, true);
+    Path source = getTargetTestDir("source").toPath();
+    Path sourceAsset = source.resolve("en.lproj/Localizable.stringsdict");
+    Files.createDirectories(sourceAsset.getParent());
+    Files.writeString(
+        sourceAsset,
+        Files.readString(findConformanceFixture("fixtures/apple/multiple.stringsdict")));
+    getL10nJCommander()
+        .run(
+            "push", "-r", repository.getName(), "-s", source.toString(), "--converter", "portable");
+    Locale russian = localeService.findByBcp47Tag("ru-RU");
+    for (TMTextUnit unit : tmTextUnitRepository.findByTm_id(repository.getTm().getId())) {
+      int categorySeparator = unit.getName().lastIndexOf('_');
+      String category =
+          categorySeparator < 0 ? "" : unit.getName().substring(categorySeparator + 1);
+      if (!Set.of("zero", "one", "two", "few", "many", "other").contains(category)) {
+        continue;
+      }
+      String selector = unit.getName().contains("_files_") ? "files" : "folders";
+      tmService.addCurrentTMTextUnitVariant(
+          unit.getId(), russian.getId(), "%d " + selector + "-" + category + "-ru");
+    }
+
+    getL10nJCommander()
+        .run(
+            "pull",
+            "-r",
+            repository.getName(),
+            "-s",
+            source.toString(),
+            "-t",
+            getTargetTestDir("target").getAbsolutePath(),
+            "--record-pull-run",
+            "--converter",
+            "portable",
+            "-lm",
+            "ru-RU:ru-RU",
+            "-lmt",
+            "MAP_ONLY");
+
+    LocalizationCatalog localized =
+        LocalizationFileConverters.parse(
+            LocalizationFileFormat.APPLE_STRINGSDICT,
+            Files.readAllBytes(
+                getTargetTestDir("target")
+                    .toPath()
+                    .resolve("ru-RU.lproj/Localizable.stringsdict")));
+    Map<?, ?> rules =
+        (Map<?, ?>) localized.messages().get("summary").metadata().get("applePluralRules");
+    for (String selector : List.of("files", "folders")) {
+      Map<?, ?> variants = (Map<?, ?>) ((Map<?, ?>) rules.get(selector)).get("variants");
+      assertEquals(Set.of("one", "few", "many", "other"), variants.keySet());
+      for (String category : List.of("one", "few", "many", "other")) {
+        assertEquals("%d " + selector + "-" + category + "-ru", variants.get(category));
+      }
+    }
+    assertEquals(8, pullRunTextUnitVariantRepository.count());
+  }
+
+  private static Path findConformanceFixture(String relativePath) {
+    Path current = Path.of("").toAbsolutePath();
+    while (current != null) {
+      Path fixture = current.resolve("file-formats/conformance").resolve(relativePath);
+      if (Files.isRegularFile(fixture)) {
+        return fixture;
+      }
+      current = current.getParent();
+    }
+    throw new IllegalStateException("Could not locate conformance fixture: " + relativePath);
   }
 
   @Test

@@ -140,6 +140,31 @@ public class TMServicePortableSelectionTest {
     verify(noSourceJsonAugmenter).augment(asset, source, null, filterOptions, branches);
   }
 
+  @Test
+  public void explicitPortableXcodeCatalogFailsInsteadOfOverwritingTheSourceLocale()
+      throws Exception {
+    Asset asset = new Asset();
+    asset.setPath("Localizable.xcstrings");
+
+    try {
+      new TMService()
+          .generateLocalized(
+              asset,
+              "{\"sourceLanguage\":\"en\",\"strings\":{},\"version\":\"1.0\"}",
+              repositoryLocale(),
+              null,
+              null,
+              List.of(LocalizationConverterSelection.PORTABLE_OPTION),
+              Status.ALL,
+              InheritanceMode.USE_PARENT,
+              null);
+    } catch (LocalizationParseException unsupported) {
+      assertEquals("UNSUPPORTED_PORTABLE_FORMAT", unsupported.code());
+      return;
+    }
+    fail("Expected backend Xcode catalog conversion to remain gated");
+  }
+
   private static RepositoryLocale repositoryLocale() {
     Locale locale = new Locale();
     locale.setBcp47Tag("fr-FR");

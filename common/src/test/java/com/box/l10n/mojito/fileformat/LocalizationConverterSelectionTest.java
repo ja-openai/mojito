@@ -102,6 +102,7 @@ public class LocalizationConverterSelectionTest {
     assertFalse(LocalizationConverterSelection.isPortable(null, true, null));
     assertTrue(LocalizationConverterSelection.isPortable(null, true, "Messages.JSON"));
     assertTrue(LocalizationConverterSelection.isPortable(null, true, "res/values/strings.xml"));
+    assertFalse(LocalizationConverterSelection.isPortable(null, true, "Localizable.xcstrings"));
     assertFalse(LocalizationConverterSelection.isPortable(null, true, "messages.xliff"));
     assertTrue(
         LocalizationConverterSelection.isPortable(
@@ -180,6 +181,18 @@ public class LocalizationConverterSelectionTest {
       return;
     }
     throw new AssertionError("Expected unsupported portable format");
+  }
+
+  @Test
+  public void xcodeCatalogsStayStandaloneUntilBackendTargetInsertionIsMapped() {
+    try {
+      LocalizationConverterSelection.format("Localizable.xcstrings", null);
+    } catch (LocalizationParseException unsupported) {
+      assertEquals("UNSUPPORTED_PORTABLE_FORMAT", unsupported.code());
+      assertTrue(unsupported.getMessage().contains("Localizable.xcstrings"));
+      return;
+    }
+    throw new AssertionError("Expected backend Xcode catalog conversion to remain gated");
   }
 
   @Test

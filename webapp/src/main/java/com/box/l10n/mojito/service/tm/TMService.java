@@ -1237,8 +1237,9 @@ public class TMService {
             : null;
     Map<String, String> translations = new LinkedHashMap<>();
     Map<String, Map<Integer, String>> gettextAdditionalForms = new LinkedHashMap<>();
-    Set<String> androidTargetCategories =
+    Set<String> targetPluralCategories =
         format == LocalizationFileFormat.ANDROID
+                || format == LocalizationFileFormat.APPLE_STRINGSDICT
             ? PluralRuleService.getKeywordsForLanguageTag(
                 repositoryLocale.getLocale().getBcp47Tag())
             : Set.of();
@@ -1251,7 +1252,10 @@ public class TMService {
     } else {
       sourceSkeleton = LocalizationFileConverters.extractSkeleton(format, source);
       for (LocalizationSourceSkeleton.LocalizationSourceSlot slot : sourceSkeleton.slots()) {
-        String canonicalId = slot.variant() == null ? slot.id() : slot.id() + "#" + slot.variant();
+        String canonicalId =
+            format == LocalizationFileFormat.APPLE_STRINGSDICT
+                ? slot.translationKey()
+                : slot.variant() == null ? slot.id() : slot.id() + "#" + slot.variant();
         sourceSlots.put(canonicalId, slot.translationKey());
       }
     }
@@ -1262,6 +1266,11 @@ public class TMService {
     }
     List<Long> usedVariants = new ArrayList<>();
     for (var projected : projectedById.values()) {
+      if (format == LocalizationFileFormat.APPLE_STRINGSDICT
+          && projected.textUnit().getPluralForm() != null
+          && !targetPluralCategories.contains(projected.textUnit().getPluralForm())) {
+        continue;
+      }
       String sourceSlot = sourceSlots.get(projected.canonicalId());
       Integer gettextIndex = null;
       if (gettextRule != null && projected.textUnit().getPluralForm() != null) {
@@ -1273,17 +1282,22 @@ public class TMService {
       boolean androidAdditionalForm =
           format == LocalizationFileFormat.ANDROID
               && sourceSlot == null
-              && androidTargetCategories.contains(projected.textUnit().getPluralForm());
-      if (sourceSlot == null && gettextIndex == null && !androidAdditionalForm) {
+              && targetPluralCategories.contains(projected.textUnit().getPluralForm());
+      boolean appleAdditionalForm =
+          format == LocalizationFileFormat.APPLE_STRINGSDICT
+              && sourceSlot == null
+              && targetPluralCategories.contains(projected.textUnit().getPluralForm());
+      if (sourceSlot == null
+          && gettextIndex == null
+          && !androidAdditionalForm
+          && !appleAdditionalForm) {
         continue;
       }
       var lookup = projected;
       if (sourceSlot != null
           && format == LocalizationFileFormat.GETTEXT_PO
           && projected.textUnit().getPluralForm() != null) {
-        String canonicalId = projected.canonicalId();
-        LocalizationMessage message =
-            catalog.messages().get(canonicalId.substring(0, canonicalId.lastIndexOf('#')));
+        LocalizationMessage message = catalog.messages().get(projected.messageId());
         Map<?, ?> indexes = (Map<?, ?>) message.metadata().get("gettextPluralIndexes");
         String nativeIndex =
             indexes.entrySet().stream()
@@ -1292,11 +1306,7 @@ public class TMService {
                 .findFirst()
                 .orElse(null);
         String category = nativeIndex == null ? null : gettextRule.poFormToCldrForm(nativeIndex);
-        var localized =
-            projectedById.get(
-                projected.canonicalId().substring(0, projected.canonicalId().lastIndexOf('#'))
-                    + "#"
-                    + category);
+        var localized = projectedById.get(projected.messageId() + "#" + category);
         if (localized != null) {
           lookup = localized;
         }
@@ -1307,18 +1317,16 @@ public class TMService {
       TextUnitDTO translation = translator.getTextUnitDTO(md5);
       String target = translator.getTranslationFromTextUnitDTO(translation, unit.getSource());
       if (target != null) {
-        if (format == LocalizationFileFormat.ANDROID && translation == null) {
+        if ((androidAdditionalForm || appleAdditionalForm) && translation == null) {
           continue;
         }
         String canonicalId = projected.canonicalId();
-        String messageId =
-            projected.textUnit().getPluralForm() == null
-                ? canonicalId
-                : canonicalId.substring(0, canonicalId.lastIndexOf('#'));
+        String messageId = projected.messageId();
         target =
             LocalizationFileConverters.normalizeMojitoTranslation(
                 format,
                 catalog.messages().get(messageId),
+                projected.selector(),
                 projected.textUnit().getPluralForm(),
                 target);
         if (sourceSlot != null) {
@@ -1337,6 +1345,7 @@ public class TMService {
                   LocalizationFileConverters.normalizeMojitoTranslation(
                       format,
                       catalog.messages().get(messageId),
+                      projected.selector(),
                       additional.getPluralForm(),
                       additionalTarget);
               gettextAdditionalForms
@@ -1350,7 +1359,7 @@ public class TMService {
               }
             }
           }
-        } else if (androidAdditionalForm) {
+        } else if (androidAdditionalForm || appleAdditionalForm) {
           translations.put(canonicalId, target);
         } else {
           gettextAdditionalForms
@@ -1775,7 +1784,7 @@ public class TMService {
     User createdBy = auditorAwareImpl.getCurrentAuditor().orElse(null);
     Long localeId = repositoryLocale.getLocale().getId();
 
-    for (var projected : LocalizationShadowComparator.projectTextUnitsWithIds(imported)) {
+    for (var projected : LocalizationShadowComparator.projectImportTextUnitsWithIds(imported)) {
       ArrayDeque<TMTextUnit> matching = usedTextUnits.get(projected.textUnit().getName());
       if (matching == null || matching.isEmpty()) {
         continue;
@@ -1785,14 +1794,13 @@ public class TMService {
       if (format == LocalizationFileFormat.GETTEXT_PO) {
         String id = projected.canonicalId();
         int plural = id.lastIndexOf('#');
-        LocalizationMessage message =
-            imported.messages().get(plural < 0 ? id : id.substring(0, plural));
+        LocalizationMessage message = imported.messages().get(projected.messageId());
         translation =
             plural < 0
                 ? message.defaultMessage()
                 : message.variants().get(id.substring(plural + 1));
       }
-      if (translation == null || translation.isEmpty()) {
+      if (translation == null) {
         continue;
       }
 
@@ -1829,14 +1837,7 @@ public class TMService {
       if (!errors.isEmpty()) {
         status = TMTextUnitVariant.Status.TRANSLATION_NEEDED;
       }
-      LocalizationMessage descriptor = imported.messages().get(projected.canonicalId());
-      if (descriptor == null) {
-        descriptor =
-            imported
-                .messages()
-                .get(
-                    projected.canonicalId().substring(0, projected.canonicalId().lastIndexOf('#')));
-      }
+      LocalizationMessage descriptor = imported.messages().get(projected.messageId());
       String comment =
           descriptor.metadata() != null
                   && descriptor.metadata().get("mojitoTargetComment") instanceof String note

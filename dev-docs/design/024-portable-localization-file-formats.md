@@ -3257,8 +3257,10 @@ resource names, so its portable integration test repairs only those identifiers
 in a temporary copy. Existing source skeletons remain request-scoped rather
 than durably persisted. Apple `.stringsdict` output removes source categories
 the target locale does not own and completes missing locale-owned categories
-by copying translated `other` values, preserving both Russian `few`/`many`
-and Japanese `other` without rewriting the surrounding source template.
+from selector-specific TM translations, copying translated `other` only when a
+distinct target form is unavailable. Multi-selector Russian `few`/`many` and
+Japanese `other` are covered by shared Java/Rust fixtures plus actual CLI
+push/import/pull tests.
 Configured YAML leaf-key extraction now assigns the same identities to source
 template slots; repeated leaf names fail explicitly instead of translating the
 wrong nested value, including sequences for which Okapi invents `tuN` names.
@@ -3268,8 +3270,10 @@ escapes literal backslashes and translator-introduced template expressions,
 while exact source-authored identifier/member references remain executable
 placeholders; more complex code becomes literal text. Real PyYAML and Node
 runtime checks verify those output contracts independently.
-Ordinary `.po` and `.xcstrings` still require CLI file
-discovery enrollment; bilingual XLIFF remains unsupported in portable mode.
+Ordinary `.po` still requires CLI file discovery.
+`.xcstrings` remains standalone-library-only and is rejected by backend portable
+selection until the service can atomically map complete target substitutions;
+bilingual XLIFF remains unsupported in portable mode.
 
 XLIFF is deferred intentionally. It requires separate contracts for bilingual
 segments, inline code equivalence, notes, target states, skeletons, and XLIFF

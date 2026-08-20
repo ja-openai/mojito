@@ -110,9 +110,6 @@ public final class LocalizationConverterSelection {
     if (path.endsWith(".strings")) {
       return LocalizationFileFormat.APPLE_STRINGS;
     }
-    if (path.endsWith(".xcstrings")) {
-      return LocalizationFileFormat.APPLE_XCSTRINGS;
-    }
     if (path.endsWith(".pot") || path.endsWith(".po")) {
       return LocalizationFileFormat.GETTEXT_PO;
     }

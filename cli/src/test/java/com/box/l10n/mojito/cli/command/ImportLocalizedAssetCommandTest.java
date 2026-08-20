@@ -2,16 +2,22 @@ package com.box.l10n.mojito.cli.command;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.box.l10n.mojito.cli.CLITestBase;
+import com.box.l10n.mojito.entity.AssetIntegrityChecker;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.Repository;
+import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.fileformat.LocalizationCatalog;
 import com.box.l10n.mojito.fileformat.LocalizationFileConverters;
 import com.box.l10n.mojito.fileformat.LocalizationFileFormat;
 import com.box.l10n.mojito.fileformat.LocalizationPlaceholder;
+import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckerType;
 import com.box.l10n.mojito.service.locale.LocaleService;
+import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
+import com.box.l10n.mojito.service.tm.TMTextUnitVariantRepository;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -30,6 +36,10 @@ public class ImportLocalizedAssetCommandTest extends CLITestBase {
   static Logger logger = LoggerFactory.getLogger(DropXliffImportCommandTest.class);
 
   @Autowired LocaleService localeService;
+
+  @Autowired TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository;
+
+  @Autowired TMTextUnitVariantRepository tmTextUnitVariantRepository;
 
   @Test
   public void portableConverterReusesExistingCsvImportDataset() throws Exception {
@@ -207,6 +217,136 @@ public class ImportLocalizedAssetCommandTest extends CLITestBase {
   public void portableConverterReusesExistingGettextPluralImportDataset() throws Exception {
     assertPortableImportMatchesExistingDataset(
         "importPoPlural", List.of("-lm", "fr:fr-FR,fr-CA:fr-CA,ja:ja-JP,ru-RU:ru-RU,hr-HR:hr-HR"));
+  }
+
+  @Test
+  public void portableImportAndPullPreserveDistinctRussianApplePluralSelectors() throws Exception {
+    Repository repository = createTestRepoUsingRepoService();
+    repositoryService.addRepositoryLocale(repository, "ru-RU", null, true);
+    Path directory = getTargetTestDir().toPath();
+    Path source = directory.resolve("source");
+    Path translations = directory.resolve("translations");
+    Path output = directory.resolve("output");
+    Path sourceAsset = source.resolve("en.lproj/Localizable.stringsdict");
+    Path translatedAsset = translations.resolve("ru-RU.lproj/Localizable.stringsdict");
+    Files.createDirectories(sourceAsset.getParent());
+    Files.createDirectories(translatedAsset.getParent());
+    Files.createDirectories(output);
+    Files.writeString(
+        sourceAsset,
+        Files.readString(findConformanceFixture("fixtures/apple/multiple.stringsdict")));
+    Files.writeString(
+        translatedAsset,
+        Files.readString(
+            findConformanceFixture(
+                "fixtures/workflow/apple-russian-multiple-plurals.localized.stringsdict")));
+
+    runPortableCommand("push", repository.getName(), source, null, List.of());
+    List<String> russianOnly = List.of("-lm", "ru-RU:ru-RU", "-lmt", "MAP_ONLY");
+    runPortableCommand("import", repository.getName(), source, translations, russianOnly);
+    runPortableCommand("pull", repository.getName(), source, output, russianOnly);
+
+    assertArrayEquals(
+        Files.readAllBytes(translatedAsset),
+        Files.readAllBytes(output.resolve("ru-RU.lproj/Localizable.stringsdict")));
+    Locale russian = localeService.findByBcp47Tag("ru-RU");
+    assertEquals(
+        "eight selector-owned categories plus NSStringLocalizedFormatKey",
+        9,
+        tmTextUnitCurrentVariantRepository
+            .findByTmTextUnit_Tm_IdAndLocale_Id(repository.getTm().getId(), russian.getId())
+            .size());
+  }
+
+  @Test
+  public void portableJapanesePluralImportCreatesOnlyTheLocaleOwnedAndroidForm() throws Exception {
+    Repository repository = createTestRepoUsingRepoService();
+    Path directory = getTargetTestDir().toPath();
+    Path source = directory.resolve("source");
+    Path translations = directory.resolve("translations");
+    Path output = directory.resolve("output");
+    Path sourceAsset = source.resolve("res/values/strings.xml");
+    Path translatedAsset = translations.resolve("res/values-ja-rJP/strings.xml");
+    Files.createDirectories(sourceAsset.getParent());
+    Files.createDirectories(translatedAsset.getParent());
+    Files.createDirectories(output);
+    Files.writeString(
+        sourceAsset,
+        """
+        <resources><plurals name="boats">
+          <item quantity="one">%d boat</item>
+          <item quantity="other">%d boats</item>
+        </plurals></resources>
+        """);
+    Files.writeString(
+        translatedAsset,
+        """
+        <resources><plurals name="boats">
+          <item quantity="other">%d 艇</item>
+        </plurals></resources>
+        """);
+
+    runPortableCommand("push", repository.getName(), source, null, List.of());
+    List<String> japaneseOnly = List.of("-lm", "ja-JP:ja-JP", "-lmt", "MAP_ONLY");
+    runPortableCommand("import", repository.getName(), source, translations, japaneseOnly);
+    runPortableCommand("pull", repository.getName(), source, output, japaneseOnly);
+
+    Locale japanese = localeService.findByBcp47Tag("ja-JP");
+    var imported =
+        tmTextUnitCurrentVariantRepository.findByTmTextUnit_Tm_IdAndLocale_Id(
+            repository.getTm().getId(), japanese.getId());
+    assertEquals(1, imported.size());
+    LocalizationCatalog localized =
+        LocalizationFileConverters.parse(
+            LocalizationFileFormat.ANDROID,
+            Files.readAllBytes(output.resolve("res/values-ja-rJP/strings.xml")));
+    assertEquals(java.util.Set.of("other"), localized.messages().get("boats").variants().keySet());
+    assertEquals("{arg0} 艇", localized.messages().get("boats").variants().get("other"));
+  }
+
+  @Test
+  public void portableImportRunsEmptyTargetsThroughIntegrityAndStatusHandling() throws Exception {
+    Repository repository = createTestRepoUsingRepoService();
+    AssetIntegrityChecker checker = new AssetIntegrityChecker();
+    checker.setAssetExtension("properties");
+    checker.setIntegrityCheckerType(IntegrityCheckerType.EMPTY_TARGET_NOT_EMPTY_SOURCE);
+    repositoryService.updateAssetIntegrityCheckers(repository, java.util.Set.of(checker));
+    Path directory = getTargetTestDir().toPath();
+    Path source = directory.resolve("source");
+    Path translations = directory.resolve("translations");
+    Files.createDirectories(source);
+    Files.createDirectories(translations);
+    Files.writeString(source.resolve("demo.properties"), "greeting=Hello\n");
+    Files.writeString(translations.resolve("demo_fr-FR.properties"), "greeting=\n");
+
+    runPortableCommand("push", repository.getName(), source, null, List.of());
+    runPortableCommand(
+        "import",
+        repository.getName(),
+        source,
+        translations,
+        List.of("-lm", "fr-FR:fr-FR", "-lmt", "MAP_ONLY"));
+
+    Locale french = localeService.findByBcp47Tag("fr-FR");
+    List<TMTextUnitVariant> variants =
+        tmTextUnitVariantRepository.findAllByLocale_IdAndTmTextUnit_Tm_id(
+            french.getId(), repository.getTm().getId());
+    assertEquals(1, variants.size());
+    assertEquals("", variants.getFirst().getContent());
+    assertEquals(TMTextUnitVariant.Status.TRANSLATION_NEEDED, variants.getFirst().getStatus());
+    assertFalse(variants.getFirst().isIncludedInLocalizedFile());
+  }
+
+  private static Path findConformanceFixture(String relativePath) {
+    Path current = Path.of("").toAbsolutePath();
+    while (current != null) {
+      Path fixture = current.resolve("file-formats/conformance").resolve(relativePath);
+      if (Files.isRegularFile(fixture)) {
+        return fixture;
+      }
+      current = current.getParent();
+    }
+    throw new IllegalStateException("Could not locate conformance fixture: " + relativePath);
   }
 
   private void assertPortableImportMatchesExistingDataset(

@@ -740,22 +740,30 @@ pub(crate) fn localize(
         source,
         &options,
     )?;
-    let target_categories = if format == FileFormat::Android {
+    let target_categories = if matches!(format, FileFormat::Android | FileFormat::AppleStringsdict)
+    {
         target_locale
             .map(mojito_plural_categories)
             .unwrap_or_default()
     } else {
         std::collections::HashSet::new()
     };
-    let expanded_source =
-        if has_additional_android_plural_translations(&catalog, translations, &target_categories) {
-            Some(crate::source_skeleton::retain_android_plural_categories(
-                source,
-                &target_categories,
-            )?)
-        } else {
-            None
-        };
+    let expanded_source = if format == FileFormat::Android
+        && has_additional_android_plural_translations(&catalog, translations, &target_categories)
+    {
+        Some(crate::source_skeleton::retain_android_plural_categories(
+            source,
+            &target_categories,
+        )?)
+    } else if format == FileFormat::AppleStringsdict && !target_categories.is_empty() {
+        // Rendering must see target-only slots so distinct translations do not fall back to `other`.
+        Some(retain_apple_plural_categories(
+            source,
+            target_locale.expect("plural categories require a target locale"),
+        )?)
+    } else {
+        None
+    };
     let mut skeleton = if format == FileFormat::Yaml {
         crate::yaml::extract_configured(expanded_source.as_deref().unwrap_or(source), &options)?
     } else {
@@ -794,6 +802,12 @@ pub(crate) fn localize(
             && translations.contains_key(&format!("{}#other", slot.id))
         {
             selected.insert(key, translations[&format!("{}#other", slot.id)].clone());
+        } else if format == FileFormat::AppleStringsdict
+            && slot.variant.is_some()
+            && !has_apple_plural_category(&catalog.messages[&slot.id], slot)
+            && translations.contains_key(&apple_other_key(slot))
+        {
+            selected.insert(key, translations[&apple_other_key(slot)].clone());
         } else if remove_untranslated {
             if matches!(
                 format,
@@ -877,11 +891,6 @@ pub(crate) fn localize(
             )?;
         }
     }
-    if format == FileFormat::AppleStringsdict {
-        if let Some(locale) = target_locale {
-            localized = retain_apple_plural_categories(&localized, locale)?;
-        }
-    }
     if format == FileFormat::Android && (remove_untranslated || options.changes_android_output()) {
         return android_output(
             &localized,
@@ -945,6 +954,38 @@ fn has_additional_android_plural_translations(
                     .is_some_and(|variants| !variants.contains_key(category))
         })
     })
+}
+
+fn has_apple_plural_category(
+    message: &crate::model::Message,
+    slot: &crate::source_skeleton::SourceSlot,
+) -> bool {
+    let Some(category) = slot.variant.as_deref() else {
+        return false;
+    };
+    let Some(selector) = slot.selector.as_deref() else {
+        return message
+            .variants
+            .as_ref()
+            .is_some_and(|variants| variants.contains_key(category));
+    };
+    message
+        .metadata
+        .as_ref()
+        .and_then(|metadata| metadata.get("applePluralRules"))
+        .and_then(serde_json::Value::as_object)
+        .and_then(|rules| rules.get(selector))
+        .and_then(serde_json::Value::as_object)
+        .and_then(|rule| rule.get("variants"))
+        .and_then(serde_json::Value::as_object)
+        .is_some_and(|variants| variants.contains_key(category))
+}
+
+fn apple_other_key(slot: &crate::source_skeleton::SourceSlot) -> String {
+    slot.selector.as_ref().map_or_else(
+        || format!("{}#other", slot.id),
+        |selector| format!("{}#{selector}#other", slot.id),
+    )
 }
 
 fn retain_apple_plural_categories(source: &[u8], locale: &str) -> Result<Vec<u8>, ParseError> {

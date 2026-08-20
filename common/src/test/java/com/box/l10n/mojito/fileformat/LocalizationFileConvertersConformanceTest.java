@@ -90,6 +90,55 @@ public class LocalizationFileConvertersConformanceTest {
   }
 
   @Test
+  public void appleStringsdictProjectionPreservesEveryPluralSelectorIdentity() throws Exception {
+    Path root = findFixtureRoot();
+    byte[] source = Files.readAllBytes(root.resolve("fixtures/apple/multiple.stringsdict"));
+    LocalizationCatalog catalog =
+        LocalizationFileConverters.parseForMojito(
+            LocalizationFileFormat.APPLE_STRINGSDICT, source, List.of());
+
+    var projected = LocalizationShadowComparator.projectTextUnitsWithIds(catalog);
+
+    assertEquals(13, projected.size());
+    for (String selector : List.of("files", "folders")) {
+      for (String category : List.of("zero", "one", "two", "few", "many", "other")) {
+        var unit =
+            projected.stream()
+                .filter(
+                    value -> ("summary#" + selector + "#" + category).equals(value.canonicalId()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("summary", unit.messageId());
+        assertEquals(selector, unit.selector());
+        assertEquals("summary_" + selector + "_" + category, unit.textUnit().getName());
+        assertEquals(category, unit.textUnit().getPluralForm());
+      }
+    }
+  }
+
+  @Test
+  public void appleStringsdictImportProjectionKeepsOnlyTargetLocaleCategories() throws Exception {
+    Path root = findFixtureRoot();
+    LocalizationCatalog imported =
+        LocalizationFileConverters.parseForMojitoImport(
+            LocalizationFileFormat.APPLE_STRINGSDICT,
+            Files.readAllBytes(root.resolve("fixtures/apple/multiple.stringsdict")),
+            List.of(),
+            "ru-RU",
+            true);
+
+    var projected = LocalizationShadowComparator.projectImportTextUnitsWithIds(imported);
+
+    assertEquals(9, projected.size());
+    assertEquals(
+        Set.of("one", "few", "many", "other"),
+        projected.stream()
+            .filter(unit -> unit.selector() != null)
+            .map(unit -> unit.textUnit().getPluralForm())
+            .collect(java.util.stream.Collectors.toSet()));
+  }
+
+  @Test
   public void allSharedMojitoWorkflowFixtures() throws Exception {
     Path root = findFixtureRoot();
     JsonNode manifest = JSON.readTree(root.resolve("manifest.json").toFile());

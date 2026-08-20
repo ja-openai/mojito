@@ -109,6 +109,17 @@ public final class LocalizationFileConverters {
     return MojitoLocalizationWorkflow.normalizeTranslation(format, message, variant, translation);
   }
 
+  /** Normalize one selector-owned plural translation before rendering a compound native message. */
+  public static String normalizeMojitoTranslation(
+      LocalizationFileFormat format,
+      LocalizationMessage message,
+      String selector,
+      String variant,
+      String translation) {
+    return MojitoLocalizationWorkflow.normalizeTranslation(
+        format, message, selector, variant, translation);
+  }
+
   /** Restore and quote one canonical GNU gettext translation for a native plural slot. */
   public static String quoteGettextTranslation(
       LocalizationMessage message, String translation, int pluralIndex) {

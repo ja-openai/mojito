@@ -175,6 +175,43 @@ fn project(catalog: &Catalog) -> Vec<Unit> {
                 usages
             })
             .unwrap_or_default();
+        if catalog.source_format == FileFormat::AppleStringsdict.id() {
+            if let (Some(variables), Some(rules)) = (
+                metadata.get("pluralVariables").and_then(Value::as_array),
+                metadata.get("applePluralRules").and_then(Value::as_object),
+            ) {
+                for selector in variables.iter().filter_map(Value::as_str) {
+                    let Some(variants) = rules
+                        .get(selector)
+                        .and_then(Value::as_object)
+                        .and_then(|rule| rule.get("variants"))
+                        .and_then(Value::as_object)
+                    else {
+                        continue;
+                    };
+                    let Some(fallback) = variants.get("other").and_then(Value::as_str) else {
+                        continue;
+                    };
+                    let base = format!("{id}_{selector}_");
+                    for category in CATEGORIES {
+                        let source = variants
+                            .get(category)
+                            .and_then(Value::as_str)
+                            .unwrap_or(fallback);
+                        projected.push(Unit {
+                            name: format!("{base}{category}"),
+                            source: restore(source, message, catalog.source_format, metadata),
+                            comments: message.description.clone(),
+                            plural_form: Some(category.to_owned()),
+                            plural_form_other: Some(format!("{base}other")),
+                            usages: usages.clone(),
+                            canonical_id: Some(format!("{id}#{selector}#{category}")),
+                        });
+                    }
+                }
+                continue;
+            }
+        }
         if let Some(variants) = &message.variants {
             let base = if catalog.source_format == FileFormat::GettextPo.id() {
                 format!(

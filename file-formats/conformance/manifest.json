@@ -241,6 +241,26 @@
       "localized": "fixtures/workflow/apple-japanese-plurals.localized.stringsdict"
     },
     {
+      "id": "apple-mojito-output-preserves-distinct-russian-multi-selector-plurals",
+      "format": "apple_stringsdict",
+      "input": "fixtures/apple/multiple.stringsdict",
+      "expected": "fixtures/apple/multiple.expected.json",
+      "filterOptions": [],
+      "targetLocale": "ru-RU",
+      "translations": {
+        "summary#files#one": "{files} файл",
+        "summary#files#few": "{files} файла",
+        "summary#files#many": "{files} файлов",
+        "summary#files#other": "{files} файла (другое)",
+        "summary#folders#one": "{folders} папка",
+        "summary#folders#few": "{folders} папки",
+        "summary#folders#many": "{folders} папок",
+        "summary#folders#other": "{folders} папки (другое)"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/workflow/apple-russian-multiple-plurals.localized.stringsdict"
+    },
+    {
       "id": "properties-mojito-localizes-every-identical-duplicate-declaration",
       "format": "java_properties",
       "input": "fixtures/workflow/properties-identical-duplicates.properties",
@@ -291,6 +311,19 @@
       },
       "removeUntranslated": true,
       "localized": "fixtures/workflow/apple-stringsdict-remove-untranslated.localized.stringsdict"
+    },
+    {
+      "id": "apple-mojito-removes-untranslated-messages-after-target-category-expansion",
+      "format": "apple_stringsdict",
+      "input": "fixtures/workflow/apple-stringsdict-remove-untranslated.stringsdict",
+      "filterOptions": [],
+      "targetLocale": "ru-RU",
+      "translations": {
+        "retained#one": "{signals} сигнал у причала",
+        "retained#other": "{signals} сигналов у причала"
+      },
+      "removeUntranslated": true,
+      "localized": "fixtures/workflow/apple-stringsdict-remove-untranslated-russian.localized.stringsdict"
     },
     {
       "id": "apple-mojito-removes-missing-plural-pairs-from-partially-translated-stringsdict",

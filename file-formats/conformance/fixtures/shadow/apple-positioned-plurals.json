@@ -1,77 +1,67 @@
 {
   "sourceFormat": "apple_stringsdict",
-  "canonicalUnits": 38,
+  "canonicalUnits": 60,
   "legacyUnits": 48,
   "outcome": "mismatch",
   "differences": [
     {
       "category": "missing_legacy",
-      "id": "positioned.board",
+      "id": "positioned.board_signals_few",
       "count": 1
     },
     {
       "category": "missing_legacy",
-      "id": "reordered.board",
+      "id": "positioned.board_signals_many",
       "count": 1
     },
     {
-      "category": "unexpected_legacy",
-      "id": "positioned.board_routes_few",
+      "category": "missing_legacy",
+      "id": "positioned.board_signals_one",
       "count": 1
     },
     {
-      "category": "unexpected_legacy",
-      "id": "positioned.board_routes_many",
+      "category": "missing_legacy",
+      "id": "positioned.board_signals_other",
       "count": 1
     },
     {
-      "category": "unexpected_legacy",
-      "id": "positioned.board_routes_one",
+      "category": "missing_legacy",
+      "id": "positioned.board_signals_two",
       "count": 1
     },
     {
-      "category": "unexpected_legacy",
-      "id": "positioned.board_routes_other",
+      "category": "missing_legacy",
+      "id": "positioned.board_signals_zero",
       "count": 1
     },
     {
-      "category": "unexpected_legacy",
-      "id": "positioned.board_routes_two",
+      "category": "missing_legacy",
+      "id": "reordered.board_routes_few",
       "count": 1
     },
     {
-      "category": "unexpected_legacy",
-      "id": "positioned.board_routes_zero",
+      "category": "missing_legacy",
+      "id": "reordered.board_routes_many",
       "count": 1
     },
     {
-      "category": "unexpected_legacy",
-      "id": "reordered.board_signals_few",
+      "category": "missing_legacy",
+      "id": "reordered.board_routes_one",
       "count": 1
     },
     {
-      "category": "unexpected_legacy",
-      "id": "reordered.board_signals_many",
+      "category": "missing_legacy",
+      "id": "reordered.board_routes_other",
       "count": 1
     },
     {
-      "category": "unexpected_legacy",
-      "id": "reordered.board_signals_one",
+      "category": "missing_legacy",
+      "id": "reordered.board_routes_two",
       "count": 1
     },
     {
-      "category": "unexpected_legacy",
-      "id": "reordered.board_signals_other",
-      "count": 1
-    },
-    {
-      "category": "unexpected_legacy",
-      "id": "reordered.board_signals_two",
-      "count": 1
-    },
-    {
-      "category": "unexpected_legacy",
-      "id": "reordered.board_signals_zero",
+      "category": "missing_legacy",
+      "id": "reordered.board_routes_zero",
       "count": 1
     }
   ]

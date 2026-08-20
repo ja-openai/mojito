@@ -381,6 +381,13 @@ and 1,000-unit workloads improving from 175.0 ms to 7.2 ms and from 32.8 ms to
   equivalent policy in Rust. Removal follows verified source-owned plural slots,
   preserves every unrelated XML byte, and handles independent plural selectors;
   native canonical parsing remains locale-neutral.
+- Portable TM projection and pull preserve `id#selector#category` for every
+  independent `.stringsdict` selector. Locale-only categories such as Russian
+  `few` and `many` use their own TM variants when present; `other` is copied only
+  when no distinct translation exists. Localized import projects only categories
+  owned by the target locale, so Japanese `other` no longer creates six approved
+  variants. Empty imported targets also reach the configured integrity checks and
+  status handling instead of disappearing before validation.
 - Manifest-owned import round trips independently write and reparse completed
   single-selector, repeated-selector, multi-selector, hidden-conversion, and
   device-owned `.stringsdict` catalogs in Java and Rust; every synthesized
@@ -476,8 +483,8 @@ options. Shared selector tests pin immutable snapshots for both marker
 insertion and platform-option stripping so routing metadata cannot leak through
 later list mutation. Stored extracted-content payloads bypass both portable and
 Okapi reparsing even when portable routing is enabled. Unsupported or missing
-asset paths, including deferred XLIFF, remain on Okapi when only the backend
-default is enabled, with extraction explicitly covered by an Okapi-extractor
+asset paths, including deferred XLIFF and backend `.xcstrings`, remain on Okapi
+when only the backend default is enabled, with extraction explicitly covered by an Okapi-extractor
 delegation test. Explicit portable requests remain explicit even when the path
 is missing, and fail through the unsupported-format diagnostic before the
 extraction or
@@ -509,6 +516,13 @@ behavior. The migration option without `--converter portable` fails immediately.
 An explicit `--converter okapi` overrides the backend-wide portable property
 for push, pull, import, and client-side extraction; omitting the option still
 allows that property to select portable conversion globally.
+
+Standalone Java/Rust `.xcstrings` target-insertion APIs remain supported and
+native-verified. Backend selection is deliberately gated because Mojito stores
+plural categories as separate TM units while a missing Xcode target substitution
+requires one atomic, complete ICU translation. Routing the generic backend
+skeleton would overwrite the source locale; partial enrollment would lose target
+review state or substitution ownership.
 
 The full clean, default-Okapi Maven reactor passes 2,465 tests, and 20 focused
 cutover tests pass with the backend-wide portable property enabled, including

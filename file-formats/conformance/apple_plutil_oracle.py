@@ -282,7 +282,6 @@ def verify_workflow_outputs(
         for case in manifest.get("workflowCases", [])
         if case["format"] in {"apple_strings", "apple_stringsdict"}
         and case.get("localized")
-        and (case["format"] == "apple_strings" or case.get("removeUntranslated"))
     ]
     for case in cases:
         for kind in ("input", "localized"):

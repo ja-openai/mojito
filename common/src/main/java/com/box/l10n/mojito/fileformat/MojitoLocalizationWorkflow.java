@@ -478,13 +478,20 @@ final class MojitoLocalizationWorkflow {
             source,
             options);
     Set<String> targetCategories =
-        format == LocalizationFileFormat.ANDROID && targetLocale != null
+        (format == LocalizationFileFormat.ANDROID
+                    || format == LocalizationFileFormat.APPLE_STRINGSDICT)
+                && targetLocale != null
             ? mojitoPluralCategories(targetLocale)
             : Set.of();
-    byte[] skeletonSource =
-        hasAdditionalAndroidPluralTranslations(catalog, translations, targetCategories)
-            ? AndroidSourceSkeleton.retainPluralCategories(source, targetCategories)
-            : source;
+    byte[] skeletonSource = source;
+    if (format == LocalizationFileFormat.ANDROID
+        && hasAdditionalAndroidPluralTranslations(catalog, translations, targetCategories)) {
+      skeletonSource = AndroidSourceSkeleton.retainPluralCategories(source, targetCategories);
+    } else if (format == LocalizationFileFormat.APPLE_STRINGSDICT && !targetCategories.isEmpty()) {
+      // Rendering must see target-only slots so distinct translations do not fall back to `other`.
+      skeletonSource =
+          AppleStringsdictSourceSkeleton.retainPluralCategories(source, targetCategories);
+    }
     LocalizationSourceSkeleton skeleton =
         format == LocalizationFileFormat.YAML
             ? YamlSourceFormat.extract(skeletonSource, options)
@@ -516,6 +523,11 @@ final class MojitoLocalizationWorkflow {
           && !catalog.messages().get(slot.id()).variants().containsKey(slot.variant())
           && translations.containsKey(slot.id() + "#other")) {
         selected.put(key, translations.get(slot.id() + "#other"));
+      } else if (format == LocalizationFileFormat.APPLE_STRINGSDICT
+          && slot.variant() != null
+          && !hasApplePluralCategory(catalog.messages().get(slot.id()), slot)
+          && translations.containsKey(appleOtherKey(slot))) {
+        selected.put(key, translations.get(appleOtherKey(slot)));
       } else if (removeUntranslated) {
         if (format == LocalizationFileFormat.ANDROID
             || format == LocalizationFileFormat.APPLE_STRINGS
@@ -590,11 +602,6 @@ final class MojitoLocalizationWorkflow {
           AndroidSourceSkeleton.retainPluralCategories(
               localized, mojitoPluralCategories(targetLocale));
     }
-    if (format == LocalizationFileFormat.APPLE_STRINGSDICT && targetLocale != null) {
-      localized =
-          AppleStringsdictSourceSkeleton.retainPluralCategories(
-              localized, mojitoPluralCategories(targetLocale));
-    }
     if (format == LocalizationFileFormat.ANDROID
         && (removeUntranslated || options.changesAndroidOutput())) {
       return AndroidLocalizedOutput.process(
@@ -640,9 +647,36 @@ final class MojitoLocalizationWorkflow {
     return false;
   }
 
+  private static boolean hasApplePluralCategory(
+      LocalizationMessage message, LocalizationSourceSkeleton.LocalizationSourceSlot slot) {
+    if (slot.selector() == null) {
+      return message.variants() != null && message.variants().containsKey(slot.variant());
+    }
+    return message.metadata() != null
+        && message.metadata().get("applePluralRules") instanceof Map<?, ?> rules
+        && rules.get(slot.selector()) instanceof Map<?, ?> rule
+        && rule.get("variants") instanceof Map<?, ?> variants
+        && variants.containsKey(slot.variant());
+  }
+
+  private static String appleOtherKey(LocalizationSourceSkeleton.LocalizationSourceSlot slot) {
+    return slot.selector() == null
+        ? slot.id() + "#other"
+        : slot.id() + "#" + slot.selector() + "#other";
+  }
+
   static String normalizeTranslation(
       LocalizationFileFormat format,
       LocalizationMessage message,
+      String variant,
+      String translation) {
+    return normalizeTranslation(format, message, null, variant, translation);
+  }
+
+  static String normalizeTranslation(
+      LocalizationFileFormat format,
+      LocalizationMessage message,
+      String selector,
       String variant,
       String translation) {
     if (format == LocalizationFileFormat.ANDROID || format == LocalizationFileFormat.GETTEXT_PO) {
@@ -655,12 +689,14 @@ final class MojitoLocalizationWorkflow {
     if (format != LocalizationFileFormat.APPLE_STRINGSDICT) {
       return translation;
     }
-    String selector =
-        message.metadata() != null
-                && message.metadata().get("pluralVariable") instanceof String name
-            ? name
-            : null;
-    if (selector == null || variant == null) {
+    String resolvedSelector =
+        selector != null
+            ? selector
+            : message.metadata() != null
+                    && message.metadata().get("pluralVariable") instanceof String name
+                ? name
+                : null;
+    if (resolvedSelector == null || variant == null) {
       return PlaceholderNormalizer.normalizeFoundation(
           translation, PlaceholderNormalizer.placeholders());
     }
@@ -668,13 +704,13 @@ final class MojitoLocalizationWorkflow {
         message.placeholders() == null
             ? null
             : message.placeholders().stream()
-                .filter(placeholder -> selector.equals(placeholder.name()))
+                .filter(placeholder -> resolvedSelector.equals(placeholder.name()))
                 .map(LocalizationPlaceholder::position)
                 .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(null);
     return PlaceholderNormalizer.normalizeFoundationPlural(
-        translation, PlaceholderNormalizer.placeholders(), selector, position);
+        translation, PlaceholderNormalizer.placeholders(), resolvedSelector, position);
   }
 
   private static LocalizationCatalog applyExtractionPolicy(
