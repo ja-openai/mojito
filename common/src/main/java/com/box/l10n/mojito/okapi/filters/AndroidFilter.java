@@ -56,6 +56,8 @@ public class AndroidFilter extends XMLFilter {
 
   private static final String OPTION_OLD_ESCAPING = "oldEscaping";
 
+  private static final String OPTION_UNESCAPE_ANCHOR_TAGS = "unescapeAnchorTags";
+
   private static final String REMOVE_DESCRIPTION = "removeDescription";
 
   private static final String POST_PROCESS_INDENT = "postProcessIndent";
@@ -113,6 +115,9 @@ public class AndroidFilter extends XMLFilter {
   /** Option to enable old escaping for the Android filter. */
   boolean oldEscaping = false;
 
+  /** Option to emit anchor tags as Android XML elements instead of escaped markup text. */
+  boolean unescapeAnchorTags = false;
+
   List<Event> eventQueue = new ArrayList<>();
 
   boolean removeDescription = false;
@@ -162,6 +167,16 @@ public class AndroidFilter extends XMLFilter {
             }
           });
       logger.debug("filter option, old escaping: {}", oldEscaping);
+
+      filterOptions.getBoolean(
+          OPTION_UNESCAPE_ANCHOR_TAGS,
+          b -> {
+            unescapeAnchorTags = b;
+            if (androidXMLEncoder != null) {
+              androidXMLEncoder.unescapeAnchorTags = unescapeAnchorTags;
+            }
+          });
+      logger.debug("filter option, unescape anchor tags: {}", unescapeAnchorTags);
 
       filterOptions.getBoolean(
           REMOVE_DESCRIPTION,
@@ -327,7 +342,7 @@ public class AndroidFilter extends XMLFilter {
 
   @Override
   public AndroidXMLEncoder getXMLEncoder() {
-    androidXMLEncoder = new AndroidXMLEncoder(oldEscaping);
+    androidXMLEncoder = new AndroidXMLEncoder(oldEscaping, unescapeAnchorTags);
     return androidXMLEncoder;
   }
 
