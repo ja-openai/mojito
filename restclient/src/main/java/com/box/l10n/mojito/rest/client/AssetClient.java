@@ -79,6 +79,32 @@ public class AssetClient extends BaseClient {
       LocalizedAssetBody.Status status,
       LocalizedAssetBody.InheritanceMode inheritanceMode,
       String pullRunName) {
+    return getLocalizedAssetForContent(
+        assetId,
+        localeId,
+        content,
+        outputBcp47tag,
+        filterConfigIdOverride,
+        filterOptions,
+        status,
+        inheritanceMode,
+        pullRunName,
+        false,
+        List.of());
+  }
+
+  public LocalizedAssetBody getLocalizedAssetForContent(
+      Long assetId,
+      Long localeId,
+      String content,
+      String outputBcp47tag,
+      FilterConfigIdOverride filterConfigIdOverride,
+      List<String> filterOptions,
+      LocalizedAssetBody.Status status,
+      LocalizedAssetBody.InheritanceMode inheritanceMode,
+      String pullRunName,
+      boolean pullWithNoSource,
+      List<String> pullWithNoSourceBranches) {
     logger.debug(
         "Getting localized asset with asset id = {}, locale id = {}, outputBcp47tag: {}",
         assetId,
@@ -98,6 +124,8 @@ public class AssetClient extends BaseClient {
     localizedAssetBody.setInheritanceMode(inheritanceMode);
     localizedAssetBody.setStatus(status);
     localizedAssetBody.setPullRunName(pullRunName);
+    localizedAssetBody.setPullWithNoSource(pullWithNoSource);
+    localizedAssetBody.setPullWithNoSourceBranches(pullWithNoSourceBranches);
 
     return authenticatedRestTemplate.postForObject(
         uriBuilder.toUriString(), localizedAssetBody, LocalizedAssetBody.class);
@@ -113,6 +141,32 @@ public class AssetClient extends BaseClient {
       LocalizedAssetBody.Status status,
       LocalizedAssetBody.InheritanceMode inheritanceMode,
       String pullRunName) {
+    return getLocalizedAssetForContentParallel(
+        assetId,
+        content,
+        locales,
+        localeIdToOutputTagsMap,
+        filterConfigIdOverride,
+        filterOptions,
+        status,
+        inheritanceMode,
+        pullRunName,
+        false,
+        List.of());
+  }
+
+  public PollableTask getLocalizedAssetForContentParallel(
+      Long assetId,
+      String content,
+      List<RepositoryLocale> locales,
+      Map<RepositoryLocale, List<String>> localeIdToOutputTagsMap,
+      FilterConfigIdOverride filterConfigIdOverride,
+      List<String> filterOptions,
+      LocalizedAssetBody.Status status,
+      LocalizedAssetBody.InheritanceMode inheritanceMode,
+      String pullRunName,
+      boolean pullWithNoSource,
+      List<String> pullWithNoSourceBranches) {
     logger.debug("Getting localized assets with asset id = {}", assetId);
 
     UriComponentsBuilder uriBuilder =
@@ -134,6 +188,8 @@ public class AssetClient extends BaseClient {
     multiLocalizedAssetBody.setInheritanceMode(inheritanceMode);
     multiLocalizedAssetBody.setStatus(status);
     multiLocalizedAssetBody.setPullRunName(pullRunName);
+    multiLocalizedAssetBody.setPullWithNoSource(pullWithNoSource);
+    multiLocalizedAssetBody.setPullWithNoSourceBranches(pullWithNoSourceBranches);
 
     PollableTask pollableTask =
         authenticatedRestTemplate.postForObject(
@@ -171,6 +227,32 @@ public class AssetClient extends BaseClient {
       LocalizedAssetBody.Status status,
       LocalizedAssetBody.InheritanceMode inheritanceMode,
       String pullRunName) {
+    return getLocalizedAssetForContentAsync(
+        assetId,
+        localeId,
+        content,
+        outputBcp47tag,
+        filterConfigIdOverride,
+        filterOptions,
+        status,
+        inheritanceMode,
+        pullRunName,
+        false,
+        List.of());
+  }
+
+  public PollableTask getLocalizedAssetForContentAsync(
+      Long assetId,
+      Long localeId,
+      String content,
+      String outputBcp47tag,
+      FilterConfigIdOverride filterConfigIdOverride,
+      List<String> filterOptions,
+      LocalizedAssetBody.Status status,
+      LocalizedAssetBody.InheritanceMode inheritanceMode,
+      String pullRunName,
+      boolean pullWithNoSource,
+      List<String> pullWithNoSourceBranches) {
     logger.debug(
         "Getting localized asset with asset id = {}, locale id = {}, outputBcp47tag: {}",
         assetId,
@@ -190,6 +272,8 @@ public class AssetClient extends BaseClient {
     localizedAssetBody.setInheritanceMode(inheritanceMode);
     localizedAssetBody.setStatus(status);
     localizedAssetBody.setPullRunName(pullRunName);
+    localizedAssetBody.setPullWithNoSource(pullWithNoSource);
+    localizedAssetBody.setPullWithNoSourceBranches(pullWithNoSourceBranches);
 
     PollableTask pollableTask =
         authenticatedRestTemplate.postForObject(

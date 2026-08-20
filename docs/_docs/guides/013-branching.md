@@ -213,9 +213,12 @@ mojito pull -r MyRepo
 hello = Bonjour
 ```
 
-It is not possbible to create a branch that has a differente translation `Bonjour!` (adding the missing exclamation mark).
-Branches may have different source strings (the `push` command as the branch parameter) but not translations (`pull`
-command doesn't have any branch parameter).
+It is not possible to create a branch that has a different translation `Bonjour!` (adding the
+missing exclamation mark). Branches may have different source strings (the `push` command has a
+branch parameter), but translations are still shared. The optional
+`--pull-with-no-source-branches` argument does not select branch-specific translations; it only
+selects which branch-only source entries can be added when they are missing from a local JSON
+source file.
 
 If this is not acceptable, an alternative is to clone the repository instead but the TMs would diverge from that point 
 and no tool are provided to merge branches easily.
@@ -254,4 +257,3 @@ mojito push -r MyRepo -b feature1
 After the `push`, the repository now contains 3 strings: `hello`, `bye + Goodbye!` and `bye + Goodbye, {username}!`. So 
 there are no risks of breaking the application by adding/removing placeholders and sharing the translations across 
 branches.
-  

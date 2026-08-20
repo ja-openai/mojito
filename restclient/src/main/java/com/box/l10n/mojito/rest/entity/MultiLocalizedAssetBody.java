@@ -2,6 +2,8 @@ package com.box.l10n.mojito.rest.entity;
 
 import com.box.l10n.mojito.okapi.FilterConfigIdOverride;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -50,6 +52,10 @@ public class MultiLocalizedAssetBody {
   LocalizedAssetBody.InheritanceMode inheritanceMode;
 
   LocalizedAssetBody.Status status = LocalizedAssetBody.Status.ALL;
+
+  boolean pullWithNoSource = false;
+
+  List<String> pullWithNoSourceBranches = List.of();
 
   /** LocalizedAssetBody job ids */
   Map<String, Long> generateLocalizedAssetJobIds;
@@ -124,5 +130,24 @@ public class MultiLocalizedAssetBody {
 
   public void setLocaleInfos(List<LocaleInfo> localeInfos) {
     this.localeInfos = localeInfos;
+  }
+
+  public boolean isPullWithNoSource() {
+    return pullWithNoSource;
+  }
+
+  public void setPullWithNoSource(boolean pullWithNoSource) {
+    this.pullWithNoSource = pullWithNoSource;
+  }
+
+  public List<String> getPullWithNoSourceBranches() {
+    return pullWithNoSourceBranches;
+  }
+
+  public void setPullWithNoSourceBranches(List<String> pullWithNoSourceBranches) {
+    this.pullWithNoSourceBranches =
+        pullWithNoSourceBranches == null
+            ? List.of()
+            : Collections.unmodifiableList(new ArrayList<>(pullWithNoSourceBranches));
   }
 }

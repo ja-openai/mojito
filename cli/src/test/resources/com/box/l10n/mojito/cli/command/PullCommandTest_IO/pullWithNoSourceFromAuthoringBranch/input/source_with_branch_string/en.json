@@ -1,0 +1,9 @@
+{
+  "checkout.title": {
+    "defaultMessage": "Checkout"
+  },
+  "checkout.pay": {
+    "defaultMessage": "Pay",
+    "description": "Checkout primary action"
+  }
+}

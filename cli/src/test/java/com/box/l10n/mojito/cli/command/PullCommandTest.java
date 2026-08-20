@@ -19,6 +19,7 @@ import com.box.l10n.mojito.fileformat.LocalizationFileConverters;
 import com.box.l10n.mojito.fileformat.LocalizationFileFormat;
 import com.box.l10n.mojito.fileformat.LocalizationMessage;
 import com.box.l10n.mojito.fileformat.LocalizationParseException;
+import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.rest.client.AssetClient;
 import com.box.l10n.mojito.rest.client.RepositoryClient;
 import com.box.l10n.mojito.rest.entity.Asset;
@@ -2516,6 +2517,89 @@ public class PullCommandTest extends CLITestBase {
             "FORMATJS_JSON_NOBASENAME");
 
     checkExpectedGeneratedResources();
+  }
+
+  @Test
+  public void pullWithNoSourceFromAuthoringBranch() throws Exception {
+    Repository repository = createTestRepoUsingRepoService();
+
+    getL10nJCommander()
+        .run(
+            "push",
+            "-r",
+            repository.getName(),
+            "-s",
+            getInputResourcesTestDir("source").getAbsolutePath(),
+            "-ft",
+            "FORMATJS_JSON_NOBASENAME");
+
+    getL10nJCommander()
+        .run(
+            "push",
+            "-r",
+            repository.getName(),
+            "-s",
+            getInputResourcesTestDir("source_with_branch_string").getAbsolutePath(),
+            "-ft",
+            "FORMATJS_JSON_NOBASENAME",
+            "--branch",
+            "authoring/checkout");
+
+    Asset asset = assetClient.getAssetByPathAndRepositoryId("en.json", repository.getId());
+    TMTextUnit authoredTextUnit =
+        tmTextUnitRepository.findFirstByAssetIdAndName(asset.getId(), "checkout.pay");
+    tmService.addCurrentTMTextUnitVariant(
+        authoredTextUnit.getId(), localeService.findByBcp47Tag("fr-FR").getId(), "Payer");
+
+    getL10nJCommander()
+        .run(
+            "pull",
+            "-r",
+            repository.getName(),
+            "-s",
+            getInputResourcesTestDir("source").getAbsolutePath(),
+            "-t",
+            getTargetTestDir("target_without_flag").getAbsolutePath(),
+            "-ft",
+            "FORMATJS_JSON_NOBASENAME");
+
+    String outputWithoutFlag =
+        java.nio.file.Files.readString(
+            getTargetTestDir("target_without_flag").toPath().resolve("fr-FR.json"));
+    Assertions.assertThat(outputWithoutFlag).doesNotContain("checkout.pay");
+
+    getL10nJCommander()
+        .run(
+            "pull",
+            "-r",
+            repository.getName(),
+            "-s",
+            getInputResourcesTestDir("source").getAbsolutePath(),
+            "-t",
+            getTargetTestDir("target_with_flag").getAbsolutePath(),
+            "-ft",
+            "FORMATJS_JSON_NOBASENAME",
+            "--pull-with-no-source-branches",
+            "authoring/checkout");
+
+    String outputWithFlag =
+        java.nio.file.Files.readString(
+            getTargetTestDir("target_with_flag").toPath().resolve("fr-FR.json"));
+    var checkoutPay = new ObjectMapper().readTree(outputWithFlag).get("checkout.pay");
+    Assertions.assertThat(checkoutPay).isNotNull();
+    Assertions.assertThat(checkoutPay.get("defaultMessage").asText()).isEqualTo("Payer");
+    Assertions.assertThat(checkoutPay.get("description").asText())
+        .isEqualTo("Checkout primary action");
+
+    String unrelatedAssetOutput =
+        java.nio.file.Files.readString(
+            getTargetTestDir("target_with_flag")
+                .toPath()
+                .resolve("settings")
+                .resolve("fr-FR.json"));
+    Assertions.assertThat(unrelatedAssetOutput)
+        .contains("settings.title")
+        .doesNotContain("checkout.pay");
   }
 
   @Test

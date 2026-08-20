@@ -187,6 +187,8 @@ public class TMService {
 
   @Autowired TMTextUnitVariantCommentService tmTextUnitVariantCommentService;
 
+  @Autowired NoSourceJsonAugmenter noSourceJsonAugmenter;
+
   @Autowired
   DataIntegrityViolationExceptionRetryTemplate dataIntegrityViolationExceptionRetryTemplate;
 
@@ -1113,11 +1115,47 @@ public class TMService {
       String pullRunName)
       throws UnsupportedAssetFilterTypeException {
 
+    return generateLocalized(
+        asset,
+        content,
+        repositoryLocale,
+        outputBcp47tag,
+        filterConfigIdOverride,
+        filterOptions,
+        status,
+        inheritanceMode,
+        pullRunName,
+        false,
+        List.of());
+  }
+
+  public String generateLocalized(
+      Asset asset,
+      String content,
+      RepositoryLocale repositoryLocale,
+      String outputBcp47tag,
+      FilterConfigIdOverride filterConfigIdOverride,
+      List<String> filterOptions,
+      Status status,
+      InheritanceMode inheritanceMode,
+      String pullRunName,
+      boolean pullWithNoSource,
+      List<String> pullWithNoSourceBranches)
+      throws UnsupportedAssetFilterTypeException {
+
+    String contentToLocalize = content;
+    if (pullWithNoSource
+        || (pullWithNoSourceBranches != null && !pullWithNoSourceBranches.isEmpty())) {
+      contentToLocalize =
+          noSourceJsonAugmenter.augment(
+              asset, content, filterConfigIdOverride, filterOptions, pullWithNoSourceBranches);
+    }
+
     if (LocalizationConverterSelection.isPortable(
         filterOptions, portableConverter, asset.getPath())) {
       return generateLocalizedPortable(
           asset,
-          content,
+          contentToLocalize,
           repositoryLocale,
           outputBcp47tag,
           filterConfigIdOverride,
@@ -1146,7 +1184,12 @@ public class TMService {
             asset, repositoryLocale, inheritanceMode, status, replaceUsedTmTextUnitVariantIds);
     String generateLocalizedBase =
         generateLocalizedBase(
-            asset, content, filterConfigIdOverride, filterOptions, translateStep, bcp47Tag);
+            asset,
+            contentToLocalize,
+            filterConfigIdOverride,
+            filterOptions,
+            translateStep,
+            bcp47Tag);
 
     if (replaceUsedTmTextUnitVariantIds) {
       dataIntegrityViolationExceptionRetryTemplate.execute(

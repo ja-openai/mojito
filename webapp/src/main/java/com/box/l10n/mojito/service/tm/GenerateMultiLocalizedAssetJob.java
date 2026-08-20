@@ -105,6 +105,9 @@ public class GenerateMultiLocalizedAssetJob
     localizedAssetBody.setInheritanceMode(multiLocalizedAssetBody.getInheritanceMode());
     localizedAssetBody.setPullRunName(multiLocalizedAssetBody.getPullRunName());
     localizedAssetBody.setStatus(multiLocalizedAssetBody.getStatus());
+    localizedAssetBody.setPullWithNoSource(multiLocalizedAssetBody.isPullWithNoSource());
+    localizedAssetBody.setPullWithNoSourceBranches(
+        multiLocalizedAssetBody.getPullWithNoSourceBranches());
     return localizedAssetBody;
   }
 }

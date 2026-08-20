@@ -19,6 +19,7 @@ import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariantComment;
 import com.box.l10n.mojito.entity.TMXliff;
 import com.box.l10n.mojito.fileformat.LocalizationConverterSelection;
+import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.okapi.AndroidFilterConfigurationProperties;
 import com.box.l10n.mojito.okapi.FilterConfigIdOverride;
 import com.box.l10n.mojito.okapi.ImportTranslationsFromLocalizedAssetStep.StatusForEqualTarget;
@@ -46,6 +47,7 @@ import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.box.l10n.mojito.test.TestIdWatcher;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Function;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Lists;
@@ -4203,6 +4205,90 @@ public class TMServiceTest extends ServiceTestBase {
             null);
     logger.debug("localized=\n{}", localizedAsset);
     assertEquals(expectedContent, localizedAsset);
+  }
+
+  @Test
+  public void testGenerateLocalizedWithNoSourceFromFormatJsAuthoringBranch() throws Exception {
+    Repository repo = repositoryService.createRepository(testIdWatcher.getEntityName("repository"));
+    RepositoryLocale repoLocale = repositoryService.addRepositoryLocale(repo, "fr-FR");
+    List<String> jsonFilterOptions =
+        List.of(
+            "noteKeyPattern=description",
+            "extractAllPairs=false",
+            "exceptions=defaultMessage",
+            "removeKeySuffix=/defaultMessage");
+    String baseContent =
+        "{\n"
+            + "  \"checkout.title\": {\n"
+            + "    \"defaultMessage\": \"Checkout\"\n"
+            + "  }\n"
+            + "}";
+    String authoringContent =
+        "{\n"
+            + "  \"checkout.title\": {\n"
+            + "    \"defaultMessage\": \"Checkout\"\n"
+            + "  },\n"
+            + "  \"checkout.pay\": {\n"
+            + "    \"defaultMessage\": \"Pay\",\n"
+            + "    \"description\": \"Checkout primary action\"\n"
+            + "  }\n"
+            + "}";
+
+    PollableFuture<Asset> baseResult =
+        assetService.addOrUpdateAssetAndProcessIfNeeded(
+            repo.getId(),
+            "en.json",
+            baseContent,
+            false,
+            null,
+            null,
+            null,
+            null,
+            null,
+            jsonFilterOptions);
+    pollableTaskService.waitForPollableTask(baseResult.getPollableTask().getId());
+    baseResult.get();
+
+    PollableFuture<Asset> authoringResult =
+        assetService.addOrUpdateAssetAndProcessIfNeeded(
+            repo.getId(),
+            "en.json",
+            authoringContent,
+            false,
+            "authoring/checkout",
+            null,
+            null,
+            null,
+            null,
+            jsonFilterOptions);
+    pollableTaskService.waitForPollableTask(authoringResult.getPollableTask().getId());
+    authoringResult.get();
+
+    Asset currentAsset = assetRepository.findByPathAndRepositoryId("en.json", repo.getId());
+    TMTextUnit authoredTextUnit =
+        tmTextUnitRepository.findFirstByAssetIdAndName(currentAsset.getId(), "checkout.pay");
+    assertNotNull(authoredTextUnit);
+    tmService.addCurrentTMTextUnitVariant(
+        authoredTextUnit.getId(), repoLocale.getLocale().getId(), "Payer");
+
+    String localizedAsset =
+        tmService.generateLocalized(
+            currentAsset,
+            baseContent,
+            repoLocale,
+            "fr-FR",
+            null,
+            jsonFilterOptions,
+            Status.ALL,
+            InheritanceMode.USE_PARENT,
+            null,
+            true,
+            List.of("authoring/checkout"));
+
+    JsonNode localizedRoot = new ObjectMapper().readTree(localizedAsset);
+    assertEquals("Payer", localizedRoot.path("checkout.pay").path("defaultMessage").asText());
+    assertEquals(
+        "Checkout primary action", localizedRoot.path("checkout.pay").path("description").asText());
   }
 
   @Test

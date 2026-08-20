@@ -49,6 +49,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * @author aloison
@@ -203,17 +204,27 @@ public class AssetWS {
 
     String normalizedContent = NormalizationUtils.normalize(localizedAssetBody.getContent());
 
-    String generateLocalized =
-        tmService.generateLocalized(
-            asset,
-            normalizedContent,
-            repositoryLocale,
-            localizedAssetBody.getOutputBcp47tag(),
-            localizedAssetBody.getFilterConfigIdOverride(),
-            localizedAssetBody.getFilterOptions(),
-            localizedAssetBody.getStatus(),
-            localizedAssetBody.getInheritanceMode(),
-            localizedAssetBody.getPullRunName());
+    String generateLocalized;
+    try {
+      generateLocalized =
+          tmService.generateLocalized(
+              asset,
+              normalizedContent,
+              repositoryLocale,
+              localizedAssetBody.getOutputBcp47tag(),
+              localizedAssetBody.getFilterConfigIdOverride(),
+              localizedAssetBody.getFilterOptions(),
+              localizedAssetBody.getStatus(),
+              localizedAssetBody.getInheritanceMode(),
+              localizedAssetBody.getPullRunName(),
+              localizedAssetBody.isPullWithNoSource(),
+              localizedAssetBody.getPullWithNoSourceBranches());
+    } catch (IllegalArgumentException | UnsupportedAssetFilterTypeException e) {
+      if (isPullWithNoSourceRequested(localizedAssetBody)) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+      }
+      throw e;
+    }
 
     localizedAssetBody.setContent(generateLocalized);
 
@@ -224,6 +235,12 @@ public class AssetWS {
     }
 
     return localizedAssetBody;
+  }
+
+  private boolean isPullWithNoSourceRequested(LocalizedAssetBody localizedAssetBody) {
+    return localizedAssetBody.isPullWithNoSource()
+        || (localizedAssetBody.getPullWithNoSourceBranches() != null
+            && !localizedAssetBody.getPullWithNoSourceBranches().isEmpty());
   }
 
   @RequestMapping(value = "/api/assets/{assetId}/localized", method = RequestMethod.POST)

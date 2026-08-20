@@ -71,7 +71,9 @@ public class GenerateLocalizedAssetJob
                 localizedAssetBody.getFilterOptions(),
                 localizedAssetBody.getStatus(),
                 localizedAssetBody.getInheritanceMode(),
-                localizedAssetBody.getPullRunName());
+                localizedAssetBody.getPullRunName(),
+                localizedAssetBody.isPullWithNoSource(),
+                localizedAssetBody.getPullWithNoSourceBranches());
       } catch (UnsupportedAssetFilterTypeException e) {
         throw new OkapiException(e);
       }

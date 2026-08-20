@@ -23,6 +23,7 @@ import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
@@ -97,6 +98,9 @@ public class GenerateMultiLocalizedAssetJobTest {
     multiLocalizedAssetBody.setSourceContent("sourceContent");
     multiLocalizedAssetBody.setAssetId(1L);
     multiLocalizedAssetBody.setSchedulerName("schedulerName");
+    multiLocalizedAssetBody.setPullWithNoSource(true);
+    multiLocalizedAssetBody.setPullWithNoSourceBranches(
+        Arrays.asList(null, "authoring/checkout", "authoring/settings"));
   }
 
   @Test
@@ -111,6 +115,10 @@ public class GenerateMultiLocalizedAssetJobTest {
     assertThat(allValues.stream().map(QuartzJobInfo::getInput))
         .extracting("localeId")
         .containsExactlyInAnyOrder(1L, 2L);
+    assertThat(allValues.stream().map(QuartzJobInfo::getInput))
+        .allMatch(LocalizedAssetBody::isPullWithNoSource)
+        .extracting(LocalizedAssetBody::getPullWithNoSourceBranches)
+        .containsOnly(Arrays.asList(null, "authoring/checkout", "authoring/settings"));
     assertThat(output.getGenerateLocalizedAssetJobIds().size()).isEqualTo(2);
     assertThat(output.getGenerateLocalizedAssetJobIds().get("fr-FR")).isEqualTo(1L);
     assertThat(output.getGenerateLocalizedAssetJobIds().get("ga-IE")).isEqualTo(2L);

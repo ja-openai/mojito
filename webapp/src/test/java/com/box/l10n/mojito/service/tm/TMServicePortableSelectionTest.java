@@ -3,6 +3,9 @@ package com.box.l10n.mojito.service.tm;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.Locale;
@@ -82,6 +85,37 @@ public class TMServicePortableSelectionTest {
       return;
     }
     fail("Expected unsupported portable format");
+  }
+
+  @Test
+  public void sourceLessAugmentationRunsBeforePortableGeneration() throws Exception {
+    Asset asset = new Asset();
+    asset.setPath("path/to/messages.json");
+    String source = "{\"local\":\"Source\"}";
+    List<String> filterOptions = List.of(LocalizationConverterSelection.PORTABLE_OPTION);
+    List<String> branches = List.of("authoring/checkout");
+    NoSourceJsonAugmenter noSourceJsonAugmenter = mock(NoSourceJsonAugmenter.class);
+    when(noSourceJsonAugmenter.augment(asset, source, null, filterOptions, branches))
+        .thenReturn("{}");
+    TMService tmService = new TMService();
+    tmService.noSourceJsonAugmenter = noSourceJsonAugmenter;
+
+    String localized =
+        tmService.generateLocalized(
+            asset,
+            source,
+            repositoryLocale(),
+            null,
+            null,
+            filterOptions,
+            Status.ALL,
+            InheritanceMode.USE_PARENT,
+            null,
+            true,
+            branches);
+
+    assertEquals("{}", localized);
+    verify(noSourceJsonAugmenter).augment(asset, source, null, filterOptions, branches);
   }
 
   private static RepositoryLocale repositoryLocale() {

@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 
 /**
  * @author jaurambault
@@ -120,6 +123,32 @@ public class PullCommand extends Command {
       description =
           "Skip writing localized files when the generated content is empty (also requests the Android filter to blank empty resources)")
   boolean skipEmptyOutput = false;
+
+  @Parameter(
+      names = {"--pull-with-no-source"},
+      required = false,
+      description =
+          "Include text units that are active in Mojito but missing from the local source. "
+              + "Initially supported for JSON root-map catalogs only.")
+  boolean pullWithNoSource = false;
+
+  @Parameter(
+      names = {"--pull-with-no-source-branches"},
+      variableArity = true,
+      required = false,
+      description =
+          "Limit source-less text units to these branch names. Providing this option implies "
+              + "--pull-with-no-source.")
+  List<String> pullWithNoSourceBranches;
+
+  @Parameter(
+      names = {"--pull-with-no-source-null-branch"},
+      arity = 0,
+      required = false,
+      description =
+          "Limit source-less text units to Mojito's null/default branch. Can be combined with "
+              + "--pull-with-no-source-branches and implies --pull-with-no-source.")
+  boolean pullWithNoSourceNullBranch = false;
 
   @Parameter(
       names = {Param.SOURCE_LOCALE_LONG, Param.SOURCE_LOCALE_SHORT},
@@ -239,6 +268,7 @@ public class PullCommand extends Command {
         .println(2);
 
     repository = commandHelper.findRepositoryByName(repositoryParam);
+    normalizePullWithNoSourceBranches();
 
     if (onlyIfFullyTranslated) {
       initLocaleFullyTranslatedMap(repository);
@@ -562,6 +592,7 @@ public class PullCommand extends Command {
     // default
     int count = 0;
     int maxCount = 5;
+    Exception lastException = null;
     while (localizedAsset == null && count < maxCount) {
       try {
         localizedAsset =
@@ -574,8 +605,15 @@ public class PullCommand extends Command {
                 filterOptions,
                 status,
                 inheritanceMode,
-                pullRunName);
+                pullRunName,
+                shouldPullWithNoSource(),
+                pullWithNoSourceBranches);
       } catch (Exception e) {
+        if (e instanceof HttpClientErrorException clientError
+            && !isRetryableClientError(clientError)) {
+          throw localizedAssetClientError(clientError);
+        }
+        lastException = e;
         count++;
         consoleWriter
             .fg(Color.RED)
@@ -592,10 +630,24 @@ public class PullCommand extends Command {
 
     if (count == maxCount) {
       throw new CommandException(
-          "getLocalizedAssetBodySync failed even after retries. retry count: " + count);
+          "getLocalizedAssetBodySync failed even after retries. retry count: " + count,
+          lastException);
     }
 
     return localizedAsset;
+  }
+
+  private boolean isRetryableClientError(HttpClientErrorException exception) {
+    int statusCode = exception.getStatusCode().value();
+    return statusCode == 408 || statusCode == 429;
+  }
+
+  private CommandException localizedAssetClientError(HttpClientErrorException exception) {
+    String responseBody = exception.getResponseBodyAsString();
+    String details = responseBody.isBlank() ? exception.getMessage() : responseBody;
+    return new CommandException(
+        "Localized asset request failed with " + exception.getStatusCode() + ": " + details,
+        exception);
   }
 
   PollableTask getLocalizedAssetBodyParallel(
@@ -616,7 +668,9 @@ public class PullCommand extends Command {
         filterOptions,
         status,
         inheritanceMode,
-        pullRunName);
+        pullRunName,
+        shouldPullWithNoSource(),
+        pullWithNoSourceBranches);
   }
 
   LocalizedAssetBody getLocalizedAssetBodyAsync(
@@ -638,13 +692,43 @@ public class PullCommand extends Command {
             filterOptions,
             status,
             inheritanceMode,
-            pullRunName);
+            pullRunName,
+            shouldPullWithNoSource(),
+            pullWithNoSourceBranches);
     commandHelper.waitForPollableTask(localizedAssetForContentAsync.getId());
     String jsonOutput =
         commandHelper.pollableTaskClient.getPollableTaskOutput(
             localizedAssetForContentAsync.getId());
     localizedAsset = objectMapper.readValueUnchecked(jsonOutput, LocalizedAssetBody.class);
     return localizedAsset;
+  }
+
+  boolean shouldPullWithNoSource() {
+    return pullWithNoSource
+        || pullWithNoSourceNullBranch
+        || (pullWithNoSourceBranches != null && !pullWithNoSourceBranches.isEmpty());
+  }
+
+  void normalizePullWithNoSourceBranches() throws CommandException {
+    LinkedHashSet<String> normalizedBranches = new LinkedHashSet<>();
+    if (pullWithNoSourceBranches != null) {
+      for (String branch : pullWithNoSourceBranches) {
+        if (branch == null) {
+          normalizedBranches.add(null);
+          continue;
+        }
+        String normalizedBranch = branch.trim();
+        if (normalizedBranch.isEmpty()) {
+          throw new CommandException(
+              "--pull-with-no-source-branches cannot contain a blank branch name");
+        }
+        normalizedBranches.add(normalizedBranch);
+      }
+    }
+    if (pullWithNoSourceNullBranch) {
+      normalizedBranches.add(null);
+    }
+    pullWithNoSourceBranches = new ArrayList<>(normalizedBranches);
   }
 
   private void initLocaleFullyTranslatedMap(Repository repository) {

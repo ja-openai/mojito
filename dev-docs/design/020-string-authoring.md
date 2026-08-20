@@ -38,6 +38,9 @@ search, AI translation, and review paths before the real code sync reaches `mast
   concrete identifiers.
 - Let admins copy a developer link that deep-links back to the same repository, authoring branch,
   and asset path via `/string-authoring?repositoryId=...&branchName=...&assetPath=...`.
+- Let developers pull translated authored entries before they exist in a local JSON source catalog
+  with `--pull-with-no-source-branches authoring/<name>`. See
+  `dev-docs/design/023-pull-with-no-source.md` for the output-format boundary.
 - Show authoring branches newest-created first and let admins manually delete existing
   `authoring/` branches from the String Authoring page. Deletion uses the existing async branch
   deletion job and is restricted to authoring branches.

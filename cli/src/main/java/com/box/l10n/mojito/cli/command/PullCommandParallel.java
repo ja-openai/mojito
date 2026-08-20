@@ -52,6 +52,9 @@ public class PullCommandParallel extends PullCommand {
     this.recordPullRun = pullCommand.recordPullRun;
     this.isParallel = pullCommand.isParallel;
     this.skipEmptyOutput = pullCommand.skipEmptyOutput;
+    this.pullWithNoSource = pullCommand.pullWithNoSource;
+    this.pullWithNoSourceBranches = pullCommand.pullWithNoSourceBranches;
+    this.pullWithNoSourceNullBranch = pullCommand.pullWithNoSourceNullBranch;
   }
 
   public void pull() throws CommandException {
