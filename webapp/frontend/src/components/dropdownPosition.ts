@@ -6,6 +6,7 @@ type AnchoredDropdownPanelStyleOptions = {
   rect: DOMRect;
   align: Align;
   maxWidth: number;
+  panelHeight?: number;
   viewportPadding?: number;
   gap?: number;
 };
@@ -14,12 +15,20 @@ export function getAnchoredDropdownPanelStyle({
   rect,
   align,
   maxWidth,
+  panelHeight = 0,
   viewportPadding = 16,
   gap = 8,
 }: AnchoredDropdownPanelStyleOptions): CSSProperties {
+  const spaceBelow = window.innerHeight - viewportPadding - rect.bottom - gap;
+  const spaceAbove = rect.top - viewportPadding - gap;
+  const shouldOpenAbove = panelHeight > spaceBelow && spaceAbove > spaceBelow;
+  const availableHeight = shouldOpenAbove ? spaceAbove : spaceBelow;
+
   return {
     position: 'fixed',
-    top: Math.min(rect.bottom + gap, window.innerHeight - viewportPadding),
+    top: shouldOpenAbove
+      ? Math.max(viewportPadding, rect.top - panelHeight - gap)
+      : Math.min(rect.bottom + gap, window.innerHeight - viewportPadding),
     left:
       align === 'right'
         ? 'auto'
@@ -30,6 +39,7 @@ export function getAnchoredDropdownPanelStyle({
     right: align === 'right' ? Math.max(viewportPadding, window.innerWidth - rect.right) : 'auto',
     minWidth: rect.width,
     maxWidth,
+    maxHeight: panelHeight > 0 ? Math.max(0, availableHeight) : undefined,
     zIndex: 1200,
   };
 }

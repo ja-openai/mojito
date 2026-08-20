@@ -948,6 +948,93 @@ export function AdminTeamPoolsPage() {
       />
 
       <div className="team-pools-page__content">
+        <section className="settings-card team-pools-page__pm-section" aria-label="PM pool">
+          <div className="settings-card__header">
+            <h2>PM Pool</h2>
+          </div>
+          <div className="settings-card__content">
+            {!selectedTeamName ? (
+              <p className="team-pools-page__hint">Select a team to edit PM pool.</p>
+            ) : teamPmPoolQuery.isLoading ? (
+              <p className="team-pools-page__hint">Loading PM pool…</p>
+            ) : teamPmPoolQuery.isError ? (
+              <p className="team-pools-page__hint is-error">Could not load PM pool.</p>
+            ) : (
+              <div className="settings-field">
+                <MultiSelectChip
+                  label="PMs"
+                  options={pmUsersForSelection}
+                  selectedValues={selectedPmIds}
+                  onChange={(next) => {
+                    setSelectedPmIds(next);
+                    setPmStatusNotice(null);
+                  }}
+                  placeholder="Select PMs"
+                  emptyOptionsLabel={
+                    teamPmPoolQuery.isLoading
+                      ? 'Loading PMs…'
+                      : selectedTeamId == null
+                        ? 'Select a team first'
+                        : showAllUsersForPmPool
+                          ? 'No users in team roster'
+                          : 'No PMs in team roster'
+                  }
+                  className="team-pools-page__pm-select"
+                  buttonAriaLabel="Select PMs for this team"
+                  customActions={[
+                    {
+                      label: showAllUsersForPmPool ? 'Role only' : 'All users',
+                      onClick: () => {
+                        setShowAllUsersForPmPool((current) => !current);
+                        setPmStatusNotice(null);
+                      },
+                      ariaLabel: showAllUsersForPmPool
+                        ? 'Show role filtered users only'
+                        : 'Show all users',
+                    },
+                  ]}
+                />
+                {selectedPmIds.length > 0 ? (
+                  <p className="settings-hint">
+                    {selectedPmIds.map((id) => pmNameById.get(id) ?? `User #${id}`).join(', ')}
+                  </p>
+                ) : null}
+              </div>
+            )}
+          </div>
+          <div className="settings-card__footer">
+            <div className="settings-actions">
+              <button
+                type="button"
+                className="settings-button settings-button--ghost"
+                onClick={handlePrefillPmPoolFromRoster}
+                disabled={!selectedTeamName || teamPmPoolQuery.isLoading}
+              >
+                Prefill from PM roster
+              </button>
+              <button
+                type="button"
+                className="settings-button settings-button--primary"
+                onClick={() => {
+                  void handleSavePmPool();
+                }}
+                disabled={!canWritePmPool || !selectedTeamName}
+              >
+                Save
+              </button>
+            </div>
+            {pmStatusNotice ? (
+              <p
+                className={`settings-hint team-pools-page__notice${
+                  pmStatusNotice.kind === 'error' ? ' is-error' : ''
+                }`}
+              >
+                {pmStatusNotice.message}
+              </p>
+            ) : null}
+          </div>
+        </section>
+
         <section className="settings-card" aria-label="Team pools editor">
           <div className="settings-card__header team-pools-page__card-header">
             <h2>Translator Pool</h2>
@@ -1343,93 +1430,6 @@ export function AdminTeamPoolsPage() {
             </button>
           </div>
         </Modal>
-
-        <section className="settings-card team-pools-page__pm-section" aria-label="PM pool">
-          <div className="settings-card__header">
-            <h2>PM Pool</h2>
-          </div>
-          <div className="settings-card__content">
-            {!selectedTeamName ? (
-              <p className="team-pools-page__hint">Select a team to edit PM pool.</p>
-            ) : teamPmPoolQuery.isLoading ? (
-              <p className="team-pools-page__hint">Loading PM pool…</p>
-            ) : teamPmPoolQuery.isError ? (
-              <p className="team-pools-page__hint is-error">Could not load PM pool.</p>
-            ) : (
-              <div className="settings-field">
-                <MultiSelectChip
-                  label="PMs"
-                  options={pmUsersForSelection}
-                  selectedValues={selectedPmIds}
-                  onChange={(next) => {
-                    setSelectedPmIds(next);
-                    setPmStatusNotice(null);
-                  }}
-                  placeholder="Select PMs"
-                  emptyOptionsLabel={
-                    teamPmPoolQuery.isLoading
-                      ? 'Loading PMs…'
-                      : selectedTeamId == null
-                        ? 'Select a team first'
-                        : showAllUsersForPmPool
-                          ? 'No users in team roster'
-                          : 'No PMs in team roster'
-                  }
-                  className="team-pools-page__pm-select"
-                  buttonAriaLabel="Select PMs for this team"
-                  customActions={[
-                    {
-                      label: showAllUsersForPmPool ? 'Role only' : 'All users',
-                      onClick: () => {
-                        setShowAllUsersForPmPool((current) => !current);
-                        setPmStatusNotice(null);
-                      },
-                      ariaLabel: showAllUsersForPmPool
-                        ? 'Show role filtered users only'
-                        : 'Show all users',
-                    },
-                  ]}
-                />
-                {selectedPmIds.length > 0 ? (
-                  <p className="settings-hint">
-                    {selectedPmIds.map((id) => pmNameById.get(id) ?? `User #${id}`).join(', ')}
-                  </p>
-                ) : null}
-              </div>
-            )}
-          </div>
-          <div className="settings-card__footer">
-            <div className="settings-actions">
-              <button
-                type="button"
-                className="settings-button settings-button--ghost"
-                onClick={handlePrefillPmPoolFromRoster}
-                disabled={!selectedTeamName || teamPmPoolQuery.isLoading}
-              >
-                Prefill from PM roster
-              </button>
-              <button
-                type="button"
-                className="settings-button settings-button--primary"
-                onClick={() => {
-                  void handleSavePmPool();
-                }}
-                disabled={!canWritePmPool || !selectedTeamName}
-              >
-                Save
-              </button>
-            </div>
-            {pmStatusNotice ? (
-              <p
-                className={`settings-hint team-pools-page__notice${
-                  pmStatusNotice.kind === 'error' ? ' is-error' : ''
-                }`}
-              >
-                {pmStatusNotice.message}
-              </p>
-            ) : null}
-          </div>
-        </section>
       </div>
     </div>
   );

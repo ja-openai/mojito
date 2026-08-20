@@ -99,6 +99,7 @@ export function MultiSelectChip<T extends string | number>({
         viewportPadding,
         gap,
         maxWidth,
+        panelHeight: panelRef.current?.getBoundingClientRect().height,
       }),
     );
   }, [align]);
@@ -108,6 +109,17 @@ export function MultiSelectChip<T extends string | number>({
       return;
     }
     updatePanelPosition();
+
+    if (!panelRef.current || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      updatePanelPosition();
+    });
+    observer.observe(panelRef.current);
+
+    return () => observer.disconnect();
   }, [isOpen, updatePanelPosition]);
 
   useEffect(() => {
