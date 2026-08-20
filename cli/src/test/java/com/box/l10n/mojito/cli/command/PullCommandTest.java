@@ -1010,6 +1010,8 @@ public class PullCommandTest extends CLITestBase {
             .findFirst()
             .orElseThrow();
     assertEquals("Label for \\\"Northern Harbor\\\"", oldQuoted.getComment());
+    List<String> importedLocales = List.of("fr-FR", "fr-CA", "ja-JP");
+    waitForCurrentVariants(oldQuoted, importedLocales);
     assertNotNull(
         "Legacy import must populate the existing identity before migration",
         tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
@@ -1031,6 +1033,9 @@ public class PullCommandTest extends CLITestBase {
             .findFirst()
             .orElseThrow();
     assertFalse(oldQuoted.getId().equals(correctedQuoted.getId()));
+    waitForCurrentVariants(
+        correctedQuoted,
+        retryAfterCorrectedTranslation ? importedLocales : List.of("fr-FR", "ja-JP"));
 
     if (retryAfterCorrectedTranslation) {
       var frenchLocale = localeService.findByBcp47Tag("fr-FR");
@@ -1057,6 +1062,32 @@ public class PullCommandTest extends CLITestBase {
 
       runConfiguredJsonMigrationCommand(
           "push", repository.getName(), source, null, "portable", true);
+
+      waitForCondition(
+          "JSON migration retry must preserve corrected, migrated, and deleted locale states",
+          () -> {
+            var frenchCurrent =
+                tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
+                    frenchLocale.getId(), correctedQuoted.getId());
+            var japaneseCurrent =
+                tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
+                    japaneseLocale.getId(), correctedQuoted.getId());
+            var frenchCanadianCurrent =
+                tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
+                    frenchCanadianLocale.getId(), correctedQuoted.getId());
+            return frenchCurrent != null
+                && frenchCurrent.getTmTextUnitVariant() != null
+                && "Traduction corrigée".equals(frenchCurrent.getTmTextUnitVariant().getContent())
+                && TMTextUnitVariant.Status.TRANSLATION_NEEDED.equals(
+                    frenchCurrent.getTmTextUnitVariant().getStatus())
+                && japaneseCurrent != null
+                && japaneseCurrent.getTmTextUnitVariant() != null
+                && "港は開いています".equals(japaneseCurrent.getTmTextUnitVariant().getContent())
+                && TMTextUnitVariant.Status.APPROVED.equals(
+                    japaneseCurrent.getTmTextUnitVariant().getStatus())
+                && frenchCanadianCurrent != null
+                && frenchCanadianCurrent.getTmTextUnitVariant() == null;
+          });
 
       var current =
           tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
@@ -1094,6 +1125,21 @@ public class PullCommandTest extends CLITestBase {
     runConfiguredJsonMigrationCommand("pull", repository.getName(), source, output, "portable");
     assertEquals(french, Files.readString(output.resolve("fr-FR.json")));
     assertEquals(japanese, Files.readString(output.resolve("ja-JP.json")));
+  }
+
+  private void waitForCurrentVariants(TMTextUnit textUnit, List<String> localeTags)
+      throws InterruptedException {
+    waitForCondition(
+        "Expected current variants for " + localeTags,
+        () ->
+            localeTags.stream()
+                .allMatch(
+                    localeTag -> {
+                      var current =
+                          tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
+                              localeService.findByBcp47Tag(localeTag).getId(), textUnit.getId());
+                      return current != null && current.getTmTextUnitVariant() != null;
+                    }));
   }
 
   private void runConfiguredJsonMigrationCommand(
