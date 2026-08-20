@@ -175,7 +175,12 @@ final class YamlSourceFormat {
     String prefix = source.substring(lineStart, candidate.start());
     boolean wholeLine = prefix.isBlank() || candidate.sequenceItem() && "-".equals(prefix.trim());
     if (wholeLine) {
-      return new Range(lineStart, nextLine(source, lineEnd(source, candidate.end())));
+      int end = candidate.end();
+      while (end > candidate.start()
+          && (source.charAt(end - 1) == '\r' || source.charAt(end - 1) == '\n')) {
+        end--;
+      }
+      return new Range(lineStart, nextLine(source, lineEnd(source, end)));
     }
     return new Range(candidate.start(), candidate.end());
   }
@@ -275,6 +280,9 @@ final class YamlSourceFormat {
       return doubleQuoted(translated);
     }
     if (original.startsWith("|") || original.startsWith(">")) {
+      if (requiresQuotedBlock(translated)) {
+        return doubleQuoted(translated);
+      }
       int newline = original.indexOf('\n');
       if (newline < 0) {
         throw invalid("INVALID_SKELETON", "Invalid YAML block scalar");
@@ -286,7 +294,7 @@ final class YamlSourceFormat {
       String indent = original.substring(newline + 1, content);
       String lineSeparator = original.contains("\r\n") ? "\r\n" : "\n";
       String[] sourceLines = original.substring(newline + 1).split("\\R", -1);
-      String[] translatedLines = translated.split("\\n", -1);
+      String[] translatedLines = translated.split("\\R", -1);
       StringBuilder result = new StringBuilder(original.substring(0, newline + 1));
       for (int index = 0; index < translatedLines.length; index++) {
         if (index > 0) {
@@ -345,10 +353,30 @@ final class YamlSourceFormat {
           || current == '\r'
           || current == '\t'
           || current < 0x20
-          || current == 0x7f
+          || current >= 0x7f && current <= 0x9f
           || current == 0x85
           || current == 0x2028
           || current == 0x2029) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean requiresQuotedBlock(String value) {
+    for (int index = 0; index < value.length(); index++) {
+      char current = value.charAt(index);
+      if (current == '\t'
+          || current == '\n'
+          || current == '\r'
+          || current == '\u000b'
+          || current == '\f'
+          || current == '\u0085'
+          || current == '\u2028'
+          || current == '\u2029') {
+        continue;
+      }
+      if (current < 0x20 || current >= 0x7f && current <= 0x9f) {
         return true;
       }
     }
@@ -375,7 +403,7 @@ final class YamlSourceFormat {
         case '\u2028' -> result.append("\\L");
         case '\u2029' -> result.append("\\P");
         default -> {
-          if (current < 0x20 || current == 0x7f) {
+          if (current < 0x20 || current >= 0x7f && current <= 0x9f) {
             result.append(String.format("\\u%04x", (int) current));
           } else {
             result.append(current);

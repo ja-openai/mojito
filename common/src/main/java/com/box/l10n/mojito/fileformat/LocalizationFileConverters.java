@@ -367,6 +367,16 @@ public final class LocalizationFileConverters {
     return extractSkeleton(format, source, StandardCharsets.UTF_8);
   }
 
+  /** Extract source slots using the same configured identities as Mojito catalog extraction. */
+  public static LocalizationSourceSkeleton extractSkeletonForMojito(
+      LocalizationFileFormat format, byte[] source, List<String> filterOptions) {
+    if (format == LocalizationFileFormat.YAML) {
+      return YamlSourceFormat.extract(
+          source, LocalizationFilterOptions.parse(format, filterOptions));
+    }
+    return extractSkeleton(format, source);
+  }
+
   /** Independently expose every standalone Foundation device and presentation-width branch. */
   public static LocalizationSourceSkeleton extractSkeletonWithAppleVariations(byte[] source) {
     if (AppleBinaryPlistParser.matches(source)) {

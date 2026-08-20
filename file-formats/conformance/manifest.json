@@ -80,6 +80,37 @@
       "localized": "fixtures/html/remove-untranslated.localized.html"
     },
     {
+      "id": "html-alpha-mojito-keeps-translated-quotes-inside-attribute-values",
+      "format": "html",
+      "input": "fixtures/html/attribute-quote-safety.html",
+      "filterOptions": [],
+      "translations": {
+        "1e172bf401eef22325af28f262f37af8-d41d8cd98f00b204e9800998ecf8427e-1": "L'été \"sûr\" onmouseover='alert(1)'",
+        "5bfdd3e0ab652117117fac16d1e80ad2-1e172bf401eef22325af28f262f37af8-1": "L'été \"sûr\" onmouseover='alert(1)'",
+        "085fea7abdc5d904fe69a3081efd7398-5bfdd3e0ab652117117fac16d1e80ad2-1": "Signal localisé"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/html/attribute-quote-safety.localized.html",
+      "htmlRuntime": [
+        {
+          "tag": "meta",
+          "occurrence": 0,
+          "attributes": {
+            "content": "L'été \"sûr\" onmouseover='alert(1)'"
+          },
+          "absentAttributes": ["onmouseover"]
+        },
+        {
+          "tag": "span",
+          "occurrence": 0,
+          "attributes": {
+            "title": "L'été \"sûr\" onmouseover='alert(1)'"
+          },
+          "absentAttributes": ["onmouseover"]
+        }
+      ]
+    },
+    {
       "id": "html-alpha-workflow-option-retains-nonbreaking-space-units",
       "format": "html",
       "input": "fixtures/html/harbor.html",
@@ -158,7 +189,7 @@
         "template.literal": "${globalThis.__portableLocalizationExecuted = true}",
         "template.escaped-injection": "\\${globalThis.__portableLocalizationExecuted = true}",
         "template.placeholder": "Bonjour ${globalThis.__portableLocalizationName}",
-        "template.escaped-placeholder": "Port français ${globalThis.__portableLookup[\"C:\\harbor\"]}"
+        "template.escaped-placeholder": "Port français ${globalThis.__portableLookup[\"C:\\\\harbor\"]}"
       },
       "removeUntranslated": false,
       "localized": "fixtures/javascript/runtime-safety.localized.js",
@@ -195,10 +226,40 @@
         "template.literal": "${globalThis.__portableLocalizationExecuted = true}",
         "template.escaped-injection": "\\${globalThis.__portableLocalizationExecuted = true}",
         "template.placeholder": "Bonjour ${globalThis.__portableLocalizationName}",
-        "template.escaped-placeholder": "Port français ${globalThis.__portableLookup[\"C:\\harbor\"]}"
+        "template.escaped-placeholder": "Port français ${globalThis.__portableLookup[\"C:\\\\harbor\"]}"
       },
       "removeUntranslated": false,
       "localized": "fixtures/javascript/runtime-safety.localized.js"
+    },
+    {
+      "id": "javascript-mojito-preserves-escaped-quoted-template-members",
+      "format": "javascript",
+      "input": "fixtures/javascript/escaped-quoted-member.js",
+      "filterOptions": [],
+      "translations": {
+        "quoted.member": "Hello ${user[\"a\\\"b\"]}"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/javascript/escaped-quoted-member.localized.js"
+    },
+    {
+      "id": "javascript-mojito-preserves-distinct-template-expressions-after-reordering",
+      "format": "javascript",
+      "input": "fixtures/javascript/duplicate-canonical-expressions.js",
+      "filterOptions": [],
+      "translations": {
+        "duplicate.expressions": "B ${duplicateExpressionKeys[\"a\\b\"]} A ${duplicateExpressionKeys[\"a\\\\b\"]}"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/javascript/duplicate-canonical-expressions.localized.js",
+      "javascriptRuntime": {
+        "export": "duplicateCanonicalExpressions",
+        "globals": {},
+        "expected": {
+          "duplicate.expressions": "B backspace A literal-backslash"
+        },
+        "globalsAfter": {}
+      }
     },
     {
       "id": "apple-mojito-output-preserves-intentional-french-legacy-plural-policy",
@@ -1377,6 +1438,18 @@
       "localized": "fixtures/yaml/remove-untranslated.localized.yaml"
     },
     {
+      "id": "yaml-mojito-removes-block-scalars-without-renumbering-retained-sequences",
+      "format": "yaml",
+      "input": "fixtures/yaml/removal-stability.yaml",
+      "filterOptions": [],
+      "translations": {
+        "routes[1]": "Sud",
+        "keep": "Garder"
+      },
+      "removeUntranslated": true,
+      "localized": "fixtures/yaml/removal-stability.localized.yaml"
+    },
+    {
       "id": "yaml-mojito-quotes-plain-scalars-that-would-change-type-or-syntax",
       "format": "yaml",
       "input": "fixtures/yaml/plain-scalar-safety.yaml",
@@ -1406,6 +1479,23 @@
       "removeUntranslated": false,
       "localized": "fixtures/yaml/plain-scalar-safety.localized.yaml",
       "yamlRuntime": true
+    },
+    {
+      "id": "yaml-mojito-indents-every-translated-block-line-break",
+      "format": "yaml",
+      "input": "fixtures/yaml/block-line-break-safety.yaml",
+      "filterOptions": [],
+      "translations": {
+        "message": "first\rcaptured: true\r\nlast\u2028tail",
+        "controlled": "before\u0000after\u001b\u0080tail"
+      },
+      "removeUntranslated": false,
+      "localized": "fixtures/yaml/block-line-break-safety.localized.yaml",
+      "yamlRuntime": true,
+      "yamlRuntimeExpected": {
+        "message": "first\ncaptured: true\nlast\ntail",
+        "controlled": "before\u0000after\u001b\u0080tail"
+      }
     },
     {
       "id": "yaml-mojito-localizes-configured-leaf-identities",
@@ -26268,6 +26358,12 @@
       "format": "yaml",
       "input": "fixtures/yaml/repeated-sequences.yaml",
       "expected": "fixtures/yaml/repeated-sequences.expected.json"
+    },
+    {
+      "id": "yaml-mojito-rejects-excessive-nesting",
+      "format": "yaml",
+      "input": "fixtures/yaml/excessive-nesting.yaml",
+      "error": "INVALID_YAML"
     },
     {
       "id": "resx-customized-mojito-rules-preserve-notes-space-and-protected-content",

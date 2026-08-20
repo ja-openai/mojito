@@ -533,7 +533,7 @@ final class HtmlSourceFormat {
   }
 
   private static String escapeAttribute(String source) {
-    return escapeText(source).replace("\"", "&quot;");
+    return escapeText(source).replace("\"", "&quot;").replace("'", "&#39;");
   }
 
   private static LocalizationParseException invalid(String message) {

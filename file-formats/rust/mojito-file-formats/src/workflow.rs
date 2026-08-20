@@ -859,12 +859,9 @@ pub(crate) fn localize(
         skeleton = crate::extract_skeleton(format, &retained)?;
         selected.retain(|key, _| !untranslated_keys.contains(key));
     } else if remove_untranslated && format == FileFormat::Yaml {
-        let retained = crate::yaml::remove_entries(&skeleton, &untranslated_keys, &options)?;
-        selected.retain(|key, _| !untranslated_keys.contains(key));
-        if selected.is_empty() {
-            return Ok(retained);
-        }
-        skeleton = crate::yaml::extract_configured(&retained, &options)?;
+        let localized = crate::yaml::render(&skeleton, &selected)?;
+        let localized_skeleton = crate::yaml::extract_configured(&localized, &options)?;
+        return crate::yaml::remove_entries(&localized_skeleton, &untranslated_keys, &options);
     } else if remove_untranslated
         && matches!(format, FileFormat::JavaScript | FileFormat::TypeScript)
     {

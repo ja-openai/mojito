@@ -1250,7 +1250,7 @@ public class TMService {
         sourceSlots.put(id, id);
       }
     } else {
-      sourceSkeleton = LocalizationFileConverters.extractSkeleton(format, source);
+      sourceSkeleton = LocalizationFileConverters.extractSkeletonForMojito(format, source, options);
       for (LocalizationSourceSkeleton.LocalizationSourceSlot slot : sourceSkeleton.slots()) {
         String canonicalId =
             format == LocalizationFileFormat.APPLE_STRINGSDICT

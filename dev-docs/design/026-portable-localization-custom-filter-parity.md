@@ -87,7 +87,10 @@ counting repeated definitions or silently dropping protected placeholders.
   rendering while the valid source-owned bundle root remains intact.
 - JavaScript and TypeScript preserve the actual customized filter's quoted-key
   declarations, multiline backtick values, preceding translator comments,
-  protected entries, escaping, and stable translation-memory identities.
+  protected entries, escaping, and stable translation-memory identities. Safe
+  executable placeholders retain their exact source escape spelling, so
+  semantically distinct bracket-member expressions remain distinct after
+  translator reordering.
 - HTML preserves actual customized `HTML_ALPHA` document-part placeholders,
   decoded-entity MD5 identities, context-dependent neighboring identities,
   image URL/ALT adaptation, nonbreaking-space suppression, and original markup.
@@ -95,7 +98,8 @@ counting repeated definitions or silently dropping protected placeholders.
   source-owned array positions, configured key-path selection, block scalars,
   comments, quoting, and original source-template bytes. Canonical indexed
   array identities project back to the customized filter's unindexed stable
-  names, and block-scalar blank lines retain their original indentation.
+  names, block-scalar blank lines retain their original indentation, and
+  forbidden control characters fall back to escaped double-quoted scalars.
 - Gettext localized import supplies the actual target locale when a PO header
   leaves `Language` empty or omits it entirely, preserves every CLDR category
   represented by one native plural index, and renders all locale-owned output
@@ -207,12 +211,16 @@ and 1,000-unit workloads improving from 175.0 ms to 7.2 ms and from 32.8 ms to
   required.
 - Source-owned YAML and JavaScript/TypeScript cleanup removes complete missing
   scalar/property declarations rather than serializing Mojito's private marker.
-  It retains surrounding comments, line endings, protected JavaScript values,
-  and the original encoding. HTML cleanup empties missing text and attributes
-  while retaining protected markup, image elements, comments, scripts, styles,
-  and untranslated image URLs. Standard CSV cleanup keeps rows suppressed by an
-  exact `DO NOT TRANSLATE` note even though those rows have no translation-map
-  entry, and rejects an explicit translation for a protected row.
+  YAML renders translations before structural removal so deleting an earlier
+  sequence entry cannot renumber a retained translation; block-scalar source
+  ranges stop before the following key. It retains surrounding comments, line
+  endings, protected JavaScript values, and the original encoding. HTML cleanup
+  empties missing text and attributes while retaining protected markup, image
+  elements, comments, scripts, styles, and untranslated image URLs. HTML
+  attribute rendering escapes both quote delimiters. Standard CSV cleanup keeps
+  rows suppressed by an exact `DO NOT TRANSLATE` note even though those rows
+  have no translation-map entry, and rejects an explicit translation for a
+  protected row.
 - Xcode String Catalog cleanup removes fully missing message members and
   source-owned missing plural branches without normalizing the surrounding
   JSON. A missing required scalar or `other` branch removes its incomplete

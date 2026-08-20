@@ -575,12 +575,9 @@ final class MojitoLocalizationWorkflow {
       skeleton = LocalizationFileConverters.extractSkeleton(format, retained);
       selected.keySet().removeAll(untranslatedKeys);
     } else if (removeUntranslated && format == LocalizationFileFormat.YAML) {
-      byte[] retained = YamlSourceFormat.removeEntries(skeleton, untranslatedKeys, options);
-      selected.keySet().removeAll(untranslatedKeys);
-      if (selected.isEmpty()) {
-        return retained;
-      }
-      skeleton = YamlSourceFormat.extract(retained, options);
+      byte[] localized = YamlSourceFormat.render(skeleton, selected);
+      LocalizationSourceSkeleton localizedSkeleton = YamlSourceFormat.extract(localized, options);
+      return YamlSourceFormat.removeEntries(localizedSkeleton, untranslatedKeys, options);
     } else if (removeUntranslated
         && (format == LocalizationFileFormat.JAVASCRIPT
             || format == LocalizationFileFormat.TYPESCRIPT)) {

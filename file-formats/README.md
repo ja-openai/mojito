@@ -106,13 +106,20 @@ timestamps, collections, comments, directives, aliases, or tags. The
 `useFullKeyPath=false` workflow uses the customized Okapi leaf identity for
 both extraction and rendering; duplicate leaf names fail explicitly because a
 single catalog key cannot identify both values. This also rejects repeated
-sequence leaves for which Okapi invents order-dependent `tuN` names.
+sequence leaves for which Okapi invents order-dependent `tuN` names. Block
+translations normalize every YAML line-break form before indentation and fall
+back to escaped double-quoted scalars for forbidden control characters. Both
+runtimes reject nesting beyond 64 containers, and structural cleanup preserves
+indexed translations when earlier sequence entries are removed.
 JavaScript and TypeScript templates encode literal backslashes and allow only
 exact source-authored identifier/member-reference `${...}` expressions to
-remain executable in translated backtick strings. More complex code is
-rendered as literal text.
-PyYAML and Node runtime checks verify the resulting values independently of
-Java and Rust.
+remain executable in translated backtick strings. Their exact source escape
+spellings stay distinct in the catalog, so translations can safely reorder
+otherwise similar bracket-member expressions. More complex code is rendered as
+literal text.
+HTML attribute translations escape both source quote delimiters. PyYAML, an
+HTML parser, and Node runtime checks verify the resulting values independently
+of Java and Rust.
 
 Supported initial formats are Android XML, Apple `.strings`, Apple
 `.stringsdict`, modern Apple `.xcstrings`, gettext PO/POT, Java properties,

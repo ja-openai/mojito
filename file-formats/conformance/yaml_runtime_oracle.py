@@ -19,7 +19,8 @@ def main() -> int:
         if not case.get("yamlRuntime"):
             continue
         localized = yaml.safe_load((ROOT / case["localized"]).read_text(encoding="utf-8"))
-        for path, expected in case["translations"].items():
+        expected_values = case.get("yamlRuntimeExpected", case["translations"])
+        for path, expected in expected_values.items():
             actual = yaml_path(localized, path)
             if type(actual) is not str or actual != expected:
                 raise AssertionError(

@@ -12,6 +12,16 @@ struct Entry<'a> {
     end: usize,
 }
 
+struct TemplateExpression {
+    source: String,
+    used: bool,
+}
+
+struct ExpressionMatch {
+    index: usize,
+    length: usize,
+}
+
 pub(crate) fn parse(format: FileFormat, source: &str) -> Result<Catalog, ParseError> {
     let mut catalog = Catalog::new(format);
     for entry in entries(source)? {
@@ -249,7 +259,11 @@ fn message(entry: &Entry<'_>) -> Message {
         metadata.insert("javascriptTemplate".to_owned(), Value::Bool(true));
     }
     Message::new(
-        unescape(entry.value, entry.template),
+        if entry.template {
+            unescape_template_value(entry.value)
+        } else {
+            unescape(entry.value, false)
+        },
         entry.description.clone(),
         None,
         vec![],
@@ -267,12 +281,11 @@ fn escape(value: &str, source: &Entry<'_>) -> String {
             .next()
             .expect("translation character");
         if source.template && value[index..].starts_with("${") {
-            if let Some(expression) = matching_expression(value, index, &expressions) {
-                let originals = expressions
-                    .get_mut(expression)
-                    .expect("matched source expression");
-                result.push_str(&originals.pop().expect("available source expression"));
-                index += expression.len();
+            if let Some(matched) = matching_expression(value, index, &expressions) {
+                let expression = &mut expressions[matched.index];
+                expression.used = true;
+                result.push_str(&expression.source);
+                index += matched.length;
                 continue;
             }
             result.push_str("\\${");
@@ -311,8 +324,37 @@ fn escaped_at(value: &[u8], index: usize) -> bool {
     backslashes % 2 != 0
 }
 
-fn template_expressions(source: &str) -> BTreeMap<String, Vec<String>> {
-    let mut result: BTreeMap<String, Vec<String>> = BTreeMap::new();
+fn unescape_template_value(value: &str) -> String {
+    let mut result = String::with_capacity(value.len());
+    let mut copied = 0;
+    let mut index = 0;
+    while index + 1 < value.len() {
+        if value[index..].starts_with("${") && !escaped_at(value.as_bytes(), index) {
+            if let Some(end) = template_expression_end(value, index + 2) {
+                let expression = &value[index..=end];
+                if safe_template_expression(expression) {
+                    result.push_str(&unescape(&value[copied..index], true));
+                    result.push_str(expression);
+                    copied = end + 1;
+                    index = end + 1;
+                    continue;
+                }
+                index = end + 1;
+                continue;
+            }
+        }
+        index += value[index..]
+            .chars()
+            .next()
+            .expect("template character")
+            .len_utf8();
+    }
+    result.push_str(&unescape(&value[copied..], true));
+    result
+}
+
+fn template_expressions(source: &str) -> Vec<TemplateExpression> {
+    let mut result = Vec::new();
     let mut index = 0;
     while index + 1 < source.len() {
         if source[index..].starts_with("${") && !escaped_at(source.as_bytes(), index) {
@@ -322,8 +364,10 @@ fn template_expressions(source: &str) -> BTreeMap<String, Vec<String>> {
                     index = end + 1;
                     continue;
                 }
-                let canonical = unescape(&original, true);
-                result.entry(canonical).or_default().push(original);
+                result.push(TemplateExpression {
+                    source: original,
+                    used: false,
+                });
                 index = end + 1;
                 continue;
             }
@@ -374,17 +418,29 @@ fn template_expression_end(source: &str, start: usize) -> Option<usize> {
     None
 }
 
-fn matching_expression<'a>(
-    translation: &'a str,
+fn matching_expression(
+    translation: &str,
     start: usize,
-    expressions: &BTreeMap<String, Vec<String>>,
-) -> Option<&'a str> {
-    let end = template_expression_end(translation, start + 2)?;
-    let candidate = &translation[start..=end];
-    expressions
-        .get(candidate)
-        .is_some_and(|originals| !originals.is_empty())
-        .then_some(candidate)
+    expressions: &[TemplateExpression],
+) -> Option<ExpressionMatch> {
+    let mut matched = None;
+    for (index, expression) in expressions.iter().enumerate() {
+        if expression.used {
+            continue;
+        }
+        let candidate = &expression.source;
+        if translation[start..].starts_with(candidate)
+            && matched
+                .as_ref()
+                .is_none_or(|current: &ExpressionMatch| candidate.len() > current.length)
+        {
+            matched = Some(ExpressionMatch {
+                index,
+                length: candidate.len(),
+            });
+        }
+    }
+    matched
 }
 
 fn invalid(message: &str) -> ParseError {

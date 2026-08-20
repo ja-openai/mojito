@@ -76,6 +76,13 @@ def main() -> int:
             )
         else:
             print("SKIP PyYAML localized scalar parser: PyYAML unavailable", flush=True)
+        steps.append(
+            (
+                "Python HTML attribute parser",
+                [sys.executable, str(CONFORMANCE / "html_runtime_oracle.py")],
+                ROOT,
+            )
+        )
         if shutil.which("node"):
             steps.append(
                 (

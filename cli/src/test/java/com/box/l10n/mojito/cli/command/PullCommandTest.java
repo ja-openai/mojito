@@ -1128,7 +1128,10 @@ public class PullCommandTest extends CLITestBase {
   @Test
   public void portableConverterReusesExistingConfiguredYamlDataset() throws Exception {
     String[] options = {
-      "-fo", "extractAllPairs=false", "exceptions=1_day_duration|1_year_duration"
+      "-fo",
+      "useFullKeyPath=false",
+      "extractAllPairs=false",
+      "exceptions=1_day_duration|1_year_duration|title"
     };
     assertPortableMatchesExistingDataset(
         "pullYamlWithFilterOptions",
@@ -1140,8 +1143,9 @@ public class PullCommandTest extends CLITestBase {
           "-lmt",
           "MAP_ONLY",
           "-fo",
+          "useFullKeyPath=false",
           "extractAllPairs=false",
-          "exceptions=1_day_duration|1_year_duration"
+          "exceptions=1_day_duration|1_year_duration|title"
         });
   }
 
@@ -3717,8 +3721,9 @@ public class PullCommandTest extends CLITestBase {
             "-s",
             getInputResourcesTestDir("source").getAbsolutePath(),
             "-fo",
+            "useFullKeyPath=false",
             "extractAllPairs=false",
-            "exceptions=1_day_duration|1_year_duration");
+            "exceptions=1_day_duration|1_year_duration|title");
 
     Asset asset = assetClient.getAssetByPathAndRepositoryId("demo.yaml", repository.getId());
 
@@ -3739,8 +3744,9 @@ public class PullCommandTest extends CLITestBase {
             "-lmt",
             "MAP_ONLY",
             "-fo",
+            "useFullKeyPath=false",
             "extractAllPairs=false",
-            "exceptions=1_day_duration|1_year_duration");
+            "exceptions=1_day_duration|1_year_duration|title");
 
     getL10nJCommander()
         .run(
@@ -3756,8 +3762,9 @@ public class PullCommandTest extends CLITestBase {
             "-lmt",
             "MAP_ONLY",
             "-fo",
+            "useFullKeyPath=false",
             "extractAllPairs=false",
-            "exceptions=1_day_duration|1_year_duration");
+            "exceptions=1_day_duration|1_year_duration|title");
 
     checkExpectedGeneratedResources();
   }

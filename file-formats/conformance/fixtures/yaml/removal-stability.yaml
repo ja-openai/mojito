@@ -1,0 +1,6 @@
+drop: |-
+  Remove me
+routes:
+  - North
+  - South
+keep: Keep me

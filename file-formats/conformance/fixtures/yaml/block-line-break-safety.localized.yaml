@@ -1,0 +1,6 @@
+message: |-
+  first
+  captured: true
+  last
+  tail
+controlled: "before\0after\e\u0080tail"

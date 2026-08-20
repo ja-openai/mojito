@@ -8,6 +8,8 @@ use std::sync::OnceLock;
 use yaml_rust2::parser::{Event, Parser};
 use yaml_rust2::scanner::TScalarStyle;
 
+const MAX_NESTING_DEPTH: usize = 64;
+
 #[derive(Debug)]
 struct Scalar {
     path: String,
@@ -340,6 +342,9 @@ fn encode_scalar(source: &str, translated: &str) -> String {
     } else if source.starts_with('"') {
         double_quoted(translated)
     } else if source.starts_with('|') || source.starts_with('>') {
+        if requires_quoted_block(translated) {
+            return double_quoted(translated);
+        }
         let newline = source.find('\n').unwrap_or(source.len());
         let body = &source[newline.saturating_add(1)..];
         let indentation = body.len() - body.trim_start_matches(' ').len();
@@ -354,6 +359,7 @@ fn encode_scalar(source: &str, translated: &str) -> String {
             .map(|line| line.strip_suffix('\r').unwrap_or(line))
             .collect::<Vec<_>>();
         let mut result = source[..newline.saturating_add(1)].to_owned();
+        let translated = normalize_line_breaks(translated);
         for (index, line) in translated.split('\n').enumerate() {
             if index > 0 {
                 result.push_str(separator);
@@ -375,6 +381,26 @@ fn encode_scalar(source: &str, translated: &str) -> String {
     } else {
         double_quoted(translated)
     }
+}
+
+fn normalize_line_breaks(value: &str) -> String {
+    let mut result = String::with_capacity(value.len());
+    let mut characters = value.chars().peekable();
+    while let Some(character) = characters.next() {
+        match character {
+            '\r' => {
+                if characters.peek() == Some(&'\n') {
+                    characters.next();
+                }
+                result.push('\n');
+            }
+            '\n' | '\u{000b}' | '\u{000c}' | '\u{0085}' | '\u{2028}' | '\u{2029}' => {
+                result.push('\n');
+            }
+            _ => result.push(character),
+        }
+    }
+    result
 }
 
 fn portable_identity<'a>(path: &'a str, legacy_path: &'a str, options: &FilterOptions) -> &'a str {
@@ -445,7 +471,16 @@ fn requires_double_quotes(value: &str) -> bool {
             character,
             '\n' | '\r' | '\t' | '\u{0085}' | '\u{2028}' | '\u{2029}'
         ) || character <= '\u{001f}'
-            || character == '\u{007f}'
+            || ('\u{007f}'..='\u{009f}').contains(&character)
+    })
+}
+
+fn requires_quoted_block(value: &str) -> bool {
+    value.chars().any(|character| {
+        !matches!(
+            character,
+            '\t' | '\n' | '\r' | '\u{000b}' | '\u{000c}' | '\u{0085}' | '\u{2028}' | '\u{2029}'
+        ) && (character <= '\u{001f}' || ('\u{007f}'..='\u{009f}').contains(&character))
     })
 }
 
@@ -493,7 +528,9 @@ fn double_quoted(value: &str) -> String {
             '\u{0085}' => result.push_str("\\N"),
             '\u{2028}' => result.push_str("\\L"),
             '\u{2029}' => result.push_str("\\P"),
-            character if character <= '\u{001f}' || character == '\u{007f}' => {
+            character
+                if character <= '\u{001f}' || ('\u{007f}'..='\u{009f}').contains(&character) =>
+            {
                 result.push_str(&format!("\\u{:04x}", character as u32));
             }
             _ => result.push(character),
@@ -514,6 +551,12 @@ fn scalars(source: &str) -> Result<Vec<Scalar>, ParseError> {
         match event {
             Event::StreamEnd => break,
             Event::MappingStart(_, _) => {
+                if stack.len() >= MAX_NESTING_DEPTH {
+                    return Err(error(
+                        "INVALID_YAML",
+                        "YAML nesting exceeds supported depth",
+                    ));
+                }
                 let (path, legacy_path) = next_path(&mut stack)?;
                 stack.push(Frame {
                     path,
@@ -528,6 +571,12 @@ fn scalars(source: &str) -> Result<Vec<Scalar>, ParseError> {
                 stack.pop();
             }
             Event::SequenceStart(_, _) => {
+                if stack.len() >= MAX_NESTING_DEPTH {
+                    return Err(error(
+                        "INVALID_YAML",
+                        "YAML nesting exceeds supported depth",
+                    ));
+                }
                 let (path, legacy_path) = next_path(&mut stack)?;
                 stack.push(Frame {
                     path,

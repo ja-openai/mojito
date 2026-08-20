@@ -6,3 +6,5 @@
 1_month_duration: 1 month
 1_year_duration: |-
   1 year
+nested:
+  title: Welcome

@@ -175,7 +175,7 @@ fn render_value(
     remove_untranslated: bool,
 ) -> Result<String, ParseError> {
     if entry.attribute {
-        return Ok(escape_text(translation).replace('"', "&quot;"));
+        return Ok(escape_attribute(translation));
     }
     let mut output = String::new();
     let mut copied = 0;
@@ -249,13 +249,12 @@ fn apply_nested_attributes(
     for entry in attributes {
         localized.replace_range(
             entry.start - start..entry.end - start,
-            &escape_text(
+            &escape_attribute(
                 translations
                     .get(&entry.id)
                     .map(String::as_str)
                     .unwrap_or_default(),
-            )
-            .replace('"', "&quot;"),
+            ),
         );
     }
     localized
@@ -663,6 +662,12 @@ fn escape_text(value: &str) -> String {
         .replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
+}
+
+fn escape_attribute(value: &str) -> String {
+    escape_text(value)
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
 }
 
 struct Generator {

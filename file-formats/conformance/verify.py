@@ -657,6 +657,51 @@ def main() -> None:
             assert "translations" in workflow and workflow.get("localized"), (
                 f"{workflow_id}: YAML runtime proof requires translations and localized output"
             )
+            expected_values = workflow.get("yamlRuntimeExpected")
+            if expected_values is not None:
+                assert isinstance(expected_values, dict) and expected_values, (
+                    f"{workflow_id}: YAML runtime expectations require translated values"
+                )
+                assert set(expected_values) == set(workflow["translations"]), (
+                    f"{workflow_id}: YAML runtime expectations must cover every translation"
+                )
+                assert all(isinstance(value, str) for value in expected_values.values()), (
+                    f"{workflow_id}: YAML runtime expectations require string values"
+                )
+        if "htmlRuntime" in workflow:
+            assertions = workflow["htmlRuntime"]
+            assert workflow["format"] == "html" and workflow.get("localized"), (
+                f"{workflow_id}: HTML runtime proof requires localized HTML"
+            )
+            assert isinstance(assertions, list) and assertions, (
+                f"{workflow_id}: HTML runtime proof requires attribute assertions"
+            )
+            for assertion in assertions:
+                assert set(assertion) == {
+                    "tag",
+                    "occurrence",
+                    "attributes",
+                    "absentAttributes",
+                }, f"{workflow_id}: unstable HTML runtime assertion"
+                assert isinstance(assertion["tag"], str) and assertion["tag"], (
+                    f"{workflow_id}: HTML runtime tags must be named"
+                )
+                assert isinstance(assertion["occurrence"], int) and assertion["occurrence"] >= 0, (
+                    f"{workflow_id}: HTML runtime occurrence must be nonnegative"
+                )
+                assert isinstance(assertion["attributes"], dict) and assertion["attributes"], (
+                    f"{workflow_id}: HTML runtime attributes must be explicit"
+                )
+                assert all(
+                    isinstance(name, str)
+                    and name
+                    and (value is None or isinstance(value, str))
+                    for name, value in assertion["attributes"].items()
+                ), f"{workflow_id}: invalid HTML runtime attribute"
+                assert isinstance(assertion["absentAttributes"], list) and all(
+                    isinstance(name, str) and name
+                    for name in assertion["absentAttributes"]
+                ), f"{workflow_id}: invalid absent HTML runtime attribute"
         if "javascriptRuntime" in workflow:
             runtime = workflow["javascriptRuntime"]
             assert isinstance(runtime, dict) and workflow["format"] in {

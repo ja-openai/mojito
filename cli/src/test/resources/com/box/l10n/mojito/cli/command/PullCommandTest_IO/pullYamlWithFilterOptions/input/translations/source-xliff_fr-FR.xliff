@@ -26,6 +26,10 @@
                 <source>1 year</source>
                 <target>1 an</target>
             </trans-unit>
+            <trans-unit id="" resname="title" datatype="x-javascript+php">
+                <source>Welcome</source>
+                <target>Bienvenue</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>

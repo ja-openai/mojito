@@ -240,7 +240,7 @@ final class JavaScriptSourceFormat {
 
   private static LocalizationMessage message(Entry entry) {
     return LocalizationMessage.of(
-        unescape(entry.value(), entry.template()),
+        entry.template() ? unescapeTemplateValue(entry.value()) : unescape(entry.value(), false),
         entry.description(),
         null,
         null,
@@ -249,18 +249,18 @@ final class JavaScriptSourceFormat {
 
   private static String escape(String value, Entry source) {
     StringBuilder result = new StringBuilder(value.length());
-    Map<String, List<String>> sourceExpressions = templateExpressions(source.value());
+    List<TemplateExpression> sourceExpressions = templateExpressions(source.value());
     for (int index = 0; index < value.length(); index++) {
       char current = value.charAt(index);
       if (source.template()
           && current == '$'
           && index + 1 < value.length()
           && value.charAt(index + 1) == '{') {
-        String expression = matchingExpression(value, index, sourceExpressions);
-        if (expression != null) {
-          List<String> originals = sourceExpressions.get(expression);
-          result.append(originals.remove(originals.size() - 1));
-          index += expression.length() - 1;
+        ExpressionMatch match = matchingExpression(value, index, sourceExpressions);
+        if (match != null) {
+          match.expression().used = true;
+          result.append(match.expression().source);
+          index += match.length() - 1;
           continue;
         }
         result.append("\\${");
@@ -300,8 +300,32 @@ final class JavaScriptSourceFormat {
     return backslashes % 2 != 0;
   }
 
-  private static Map<String, List<String>> templateExpressions(String source) {
-    Map<String, List<String>> result = new LinkedHashMap<>();
+  private static String unescapeTemplateValue(String value) {
+    StringBuilder result = new StringBuilder(value.length());
+    int copied = 0;
+    for (int index = 0; index + 1 < value.length(); index++) {
+      if (value.charAt(index) != '$' || value.charAt(index + 1) != '{' || escapedAt(value, index)) {
+        continue;
+      }
+      int end = templateExpressionEnd(value, index + 2);
+      if (end < 0) {
+        continue;
+      }
+      String expression = value.substring(index, end + 1);
+      if (!SAFE_TEMPLATE_EXPRESSION.matcher(expression).matches()) {
+        index = end;
+        continue;
+      }
+      result.append(unescape(value.substring(copied, index), true));
+      result.append(expression);
+      copied = end + 1;
+      index = end;
+    }
+    return result.append(unescape(value.substring(copied), true)).toString();
+  }
+
+  private static List<TemplateExpression> templateExpressions(String source) {
+    List<TemplateExpression> result = new ArrayList<>();
     for (int index = 0; index + 1 < source.length(); index++) {
       if (source.charAt(index) != '$'
           || source.charAt(index + 1) != '{'
@@ -317,8 +341,7 @@ final class JavaScriptSourceFormat {
         index = end;
         continue;
       }
-      String canonical = unescape(original, true);
-      result.computeIfAbsent(canonical, ignored -> new ArrayList<>()).add(original);
+      result.add(new TemplateExpression(original));
       index = end;
     }
     return result;
@@ -346,15 +369,20 @@ final class JavaScriptSourceFormat {
     return -1;
   }
 
-  private static String matchingExpression(
-      String translation, int start, Map<String, List<String>> sourceExpressions) {
-    int end = templateExpressionEnd(translation, start + 2);
-    if (end < 0) {
-      return null;
+  private static ExpressionMatch matchingExpression(
+      String translation, int start, List<TemplateExpression> sourceExpressions) {
+    ExpressionMatch matched = null;
+    for (TemplateExpression sourceExpression : sourceExpressions) {
+      if (sourceExpression.used) {
+        continue;
+      }
+      String candidate = sourceExpression.source;
+      if (translation.startsWith(candidate, start)
+          && (matched == null || candidate.length() > matched.length())) {
+        matched = new ExpressionMatch(sourceExpression, candidate.length());
+      }
     }
-    String candidate = translation.substring(start, end + 1);
-    List<String> originals = sourceExpressions.get(candidate);
-    return originals == null || originals.isEmpty() ? null : candidate;
+    return matched;
   }
 
   private static LocalizationParseException invalid(String message) {
@@ -367,6 +395,17 @@ final class JavaScriptSourceFormat {
 
   private record Entry(
       String id, String value, String description, boolean template, int start, int end) {}
+
+  private static final class TemplateExpression {
+    private final String source;
+    private boolean used;
+
+    private TemplateExpression(String source) {
+      this.source = source;
+    }
+  }
+
+  private record ExpressionMatch(TemplateExpression expression, int length) {}
 
   private record Range(int start, int end) {}
 }
