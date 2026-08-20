@@ -105,6 +105,28 @@ public class AssetExtractionServicePortableSelectionTest {
   }
 
   @Test
+  public void legacyJsonCommentMigrationCanRetryAfterLegacyIdentityBecomesUnused() {
+    AssetExtractionService assetExtractionService = new AssetExtractionService();
+    assetExtractionService.objectMapper = new ObjectMapper();
+    BranchStateTextUnit corrected =
+        BranchStateTextUnit.builder()
+            .tmTextUnitId(20L)
+            .name("harbor.label")
+            .source("Open harbor")
+            .comments("A \"quoted\" note")
+            .build();
+    TextUnitDTO legacy =
+        textUnit(10L, "harbor.label", "Open harbor", "A \\\"quoted\\\" note", false);
+
+    ImmutableList<TextUnitDTOMatch> matches =
+        assetExtractionService.getLegacyJsonCommentMigrationMatches(
+            ImmutableList.of(corrected), ImmutableList.of(legacy));
+
+    assertEquals(1, matches.size());
+    assertEquals(Long.valueOf(10L), matches.getFirst().match().getTmTextUnitId());
+  }
+
+  @Test
   public void legacyJsonCommentMigrationRejectsChangedSourceAmbiguousAndOrdinaryComments() {
     AssetExtractionService assetExtractionService = new AssetExtractionService();
     assetExtractionService.objectMapper = new ObjectMapper();
@@ -222,12 +244,17 @@ public class AssetExtractionServicePortableSelectionTest {
   }
 
   private static TextUnitDTO usedTextUnit(Long id, String name, String source, String comment) {
+    return textUnit(id, name, source, comment, true);
+  }
+
+  private static TextUnitDTO textUnit(
+      Long id, String name, String source, String comment, boolean used) {
     TextUnitDTO textUnit = new TextUnitDTO();
     textUnit.setTmTextUnitId(id);
     textUnit.setName(name);
     textUnit.setSource(source);
     textUnit.setComment(comment);
-    textUnit.setAssetExtractionId(1L);
+    textUnit.setAssetExtractionId(used ? 1L : 2L);
     textUnit.setLastSuccessfulAssetExtractionId(1L);
     return textUnit;
   }

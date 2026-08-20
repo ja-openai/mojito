@@ -764,10 +764,21 @@ public class PullCommandTest extends CLITestBase {
   @Test
   public void portableJsonMigrationPreservesApprovedTranslationsWhenExplicitlyRequested()
       throws Exception {
-    assertPortableJsonMigration(true);
+    assertPortableJsonMigration(true, false);
+  }
+
+  @Test
+  public void portableJsonMigrationRetriesAfterCorrectedIdentityAlreadyExists() throws Exception {
+    assertPortableJsonMigration(true, true);
   }
 
   private void assertPortableJsonMigration(boolean migrateLegacyComments) throws Exception {
+    assertPortableJsonMigration(migrateLegacyComments, false);
+  }
+
+  private void assertPortableJsonMigration(
+      boolean migrateLegacyComments, boolean createCorrectedIdentityBeforeMigration)
+      throws Exception {
     Repository repository = createTestRepoUsingRepoService();
     Path source = getTargetTestDir("legacy-json-source").toPath();
     Path translations = getTargetTestDir("legacy-json-translations").toPath();
@@ -814,6 +825,10 @@ public class PullCommandTest extends CLITestBase {
         tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
             localeService.findByBcp47Tag("fr-FR").getId(), oldQuoted.getId()));
 
+    if (createCorrectedIdentityBeforeMigration) {
+      runConfiguredJsonMigrationCommand(
+          "push", repository.getName(), source, null, "portable", false);
+    }
     runConfiguredJsonMigrationCommand(
         "push", repository.getName(), source, null, "portable", migrateLegacyComments);
 

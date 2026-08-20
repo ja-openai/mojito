@@ -539,7 +539,7 @@ public class AssetExtractionService {
     ImmutableList<TextUnitDTOMatch> migrationMatches =
         migrateLegacyJsonComments
             ? getLegacyJsonCommentMigrationMatches(
-                createTmTextUnitResult.createdTextUnits(),
+                createTmTextUnitResult.updatedState().getBranchStateTextUnits(),
                 createTmTextUnitResult.assetScopedTextUnitDTOs())
             : ImmutableList.of();
     if (migrateLegacyJsonComments) {
@@ -1220,9 +1220,8 @@ public class AssetExtractionService {
       return ImmutableList.of();
     }
 
-    ImmutableListMultimap<String, TextUnitDTO> usedCandidatesByName =
+    ImmutableListMultimap<String, TextUnitDTO> candidatesByName =
         candidates.stream()
-            .filter(TextUnitDTO::isUsed)
             .filter(candidate -> candidate.getComment() != null)
             .collect(
                 ImmutableListMultimap.toImmutableListMultimap(TextUnitDTO::getName, identity()));
@@ -1240,7 +1239,7 @@ public class AssetExtractionService {
               }
 
               ImmutableList<TextUnitDTO> exactLegacyMatches =
-                  usedCandidatesByName.get(textUnit.getName()).stream()
+                  candidatesByName.get(textUnit.getName()).stream()
                       .filter(
                           candidate -> Objects.equals(candidate.getSource(), textUnit.getSource()))
                       .filter(candidate -> legacyEscapedComment.equals(candidate.getComment()))
