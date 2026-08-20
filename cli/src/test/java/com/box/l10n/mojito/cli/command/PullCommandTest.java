@@ -645,6 +645,7 @@ public class PullCommandTest extends CLITestBase {
           unit.getId(), russian.getId(), "%d " + selector + "-" + category + "-ru");
     }
 
+    long pullRunVariantCountBefore = pullRunTextUnitVariantRepository.count();
     getL10nJCommander()
         .run(
             "pull",
@@ -678,7 +679,7 @@ public class PullCommandTest extends CLITestBase {
         assertEquals("%d " + selector + "-" + category + "-ru", variants.get(category));
       }
     }
-    assertEquals(8, pullRunTextUnitVariantRepository.count());
+    assertEquals(8L, pullRunTextUnitVariantRepository.count() - pullRunVariantCountBefore);
   }
 
   private static Path findConformanceFixture(String relativePath) {
@@ -798,6 +799,7 @@ public class PullCommandTest extends CLITestBase {
           unit.getId(), russian.getId(), category + "-" + unit.getContent());
     }
 
+    long pullRunVariantCountBefore = pullRunTextUnitVariantRepository.count();
     getL10nJCommander()
         .run(
             "pull",
@@ -823,7 +825,7 @@ public class PullCommandTest extends CLITestBase {
     assertTrue(localized.contains("msgstr[0] \"one-There is {number} boat\""));
     assertTrue(localized.contains("msgstr[1] \"few-There are {number} boats\""));
     assertTrue(localized.contains("msgstr[2] \"many-There are {number} boats\""));
-    assertEquals(6, pullRunTextUnitVariantRepository.count());
+    assertEquals(6L, pullRunTextUnitVariantRepository.count() - pullRunVariantCountBefore);
   }
 
   @Test
