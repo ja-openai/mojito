@@ -40,6 +40,7 @@ public class PullCommandParallel extends PullCommand {
     this.filterOptionsParam = pullCommand.filterOptionsParam;
     this.converter = pullCommand.converter;
     this.originalArgs = pullCommand.originalArgs;
+    this.setConverterExplicitlySelected(pullCommand.hasExplicitConverter());
     this.sourceLocale = pullCommand.sourceLocale;
     this.fileTypes = pullCommand.fileTypes;
     this.localeMappingParam = pullCommand.localeMappingParam;

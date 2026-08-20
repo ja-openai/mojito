@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.cli.command;
 
 import com.beust.jcommander.JCommander;
+import com.box.l10n.mojito.cli.command.param.Param;
 import com.box.l10n.mojito.cli.console.ConsoleWriter;
 import com.box.l10n.mojito.rest.resttemplate.AuthenticatedRestTemplate;
 import com.google.common.base.Strings;
@@ -126,6 +127,8 @@ public class L10nJCommander {
       logger.debug("Execute commands for parsed command: {}", parsedCommand);
       Command command = getCommand(parsedCommand);
       command.setOriginalArgs(Arrays.asList(args));
+      command.setConverterExplicitlySelected(
+          isParameterAssigned(jCommander, parsedCommand, Param.CONVERTER_LONG));
 
       try {
         command.run();
@@ -165,6 +168,16 @@ public class L10nJCommander {
         exitWithError();
       }
     }
+  }
+
+  static boolean isParameterAssigned(
+      JCommander rootCommander, String commandName, String parameterName) {
+    JCommander command = rootCommander.getCommands().get(commandName);
+    return command != null
+        && command.getParameters().stream()
+            .filter(parameter -> parameter.isAssigned())
+            .flatMap(parameter -> Arrays.stream(parameter.getParameter().names()))
+            .anyMatch(parameterName::equals);
   }
 
   /** Display the usage in the appLogger (instead of System.out). */

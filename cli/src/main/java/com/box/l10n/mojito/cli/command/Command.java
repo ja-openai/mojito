@@ -18,6 +18,7 @@ public abstract class Command {
   static final String HELP_SHORT = "-h";
   static final String HELP_DESCRIPTION = "Show help";
   public List<String> originalArgs;
+  private boolean converterExplicitlySelected;
 
   @Parameter(
       names = {HELP_LONG, HELP_SHORT},
@@ -114,9 +115,15 @@ public abstract class Command {
 
   public void setOriginalArgs(List<String> originalArgs) {
     this.originalArgs = originalArgs;
+    this.converterExplicitlySelected =
+        originalArgs != null && originalArgs.contains(Param.CONVERTER_LONG);
+  }
+
+  void setConverterExplicitlySelected(boolean converterExplicitlySelected) {
+    this.converterExplicitlySelected = converterExplicitlySelected;
   }
 
   boolean hasExplicitConverter() {
-    return originalArgs != null && originalArgs.contains(Param.CONVERTER_LONG);
+    return converterExplicitlySelected;
   }
 }

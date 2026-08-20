@@ -1,12 +1,18 @@
 package com.box.l10n.mojito.cli.command;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import com.beust.jcommander.IStringConverter;
+import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
+import com.box.l10n.mojito.cli.command.param.Param;
 import com.box.l10n.mojito.fileformat.LocalizationConverterSelection.Mode;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import org.junit.Test;
 
@@ -71,6 +77,33 @@ public class LocalizationConverterModeConverterTest {
     PullCommandParallel parallel = new PullCommandParallel(pullCommand);
     assertEquals(Mode.PORTABLE, parallel.converter);
     assertEquals(pullCommand.originalArgs, parallel.originalArgs);
+    assertTrue(parallel.hasExplicitConverter());
+  }
+
+  @Test
+  public void detectsExplicitConverterInsideArgumentFile() throws Exception {
+    Path argumentFile = Files.createTempFile("mojito-converter", ".args");
+    try {
+      Files.writeString(argumentFile, "--repository\ntest-repository\n--converter\nokapi\n");
+      JCommander commander = new JCommander();
+      commander.addCommand(new PullCommand());
+
+      commander.parse("pull", "@" + argumentFile);
+
+      assertTrue(L10nJCommander.isParameterAssigned(commander, "pull", Param.CONVERTER_LONG));
+    } finally {
+      Files.deleteIfExists(argumentFile);
+    }
+  }
+
+  @Test
+  public void defaultConverterIsNotMarkedExplicit() {
+    JCommander commander = new JCommander();
+    commander.addCommand(new PullCommand());
+
+    commander.parse("pull", "--repository", "test-repository");
+
+    assertFalse(L10nJCommander.isParameterAssigned(commander, "pull", Param.CONVERTER_LONG));
   }
 
   private static Class<? extends IStringConverter<?>> converterFor(Class<?> command)
