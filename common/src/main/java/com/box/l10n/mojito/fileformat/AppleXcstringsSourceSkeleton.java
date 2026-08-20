@@ -16,6 +16,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -304,6 +305,173 @@ final class AppleXcstringsSourceSkeleton {
     }
     result.write(original, previous, original.length - previous);
     return result.toByteArray();
+  }
+
+  static byte[] removeEntries(LocalizationSourceSkeleton skeleton, Set<String> removed) {
+    if (skeleton.schemaVersion() != 1
+        || !LocalizationFileFormat.APPLE_XCSTRINGS.id().equals(skeleton.sourceFormat())) {
+      throw invalid("INVALID_SKELETON", "Unsupported Xcode string catalog skeleton");
+    }
+    SourceSkeletonEncoding encoding = SourceSkeletonEncoding.named(skeleton.encoding());
+    try {
+      JsonNode root = JSON.readTree(skeleton.source());
+      LocalizationCatalog catalog =
+          LocalizationFileConverters.parse(
+              LocalizationFileFormat.APPLE_XCSTRINGS, encoding.encode(skeleton.source()));
+      Map<List<String>, SlotIdentity> expected = expectedPaths(root, catalog, false, false, null);
+      Set<String> fullyMissing = fullyMissingMessages(skeleton, removed);
+      Set<List<String>> targets = new LinkedHashSet<>();
+      for (Map.Entry<List<String>, SlotIdentity> entry : expected.entrySet()) {
+        SlotIdentity identity = entry.getValue();
+        if (removed.contains(translationKey(identity))) {
+          targets.add(
+              xcstringsRemovalOwner(
+                  entry.getKey(), identity, fullyMissing.contains(identity.id())));
+        }
+      }
+      List<List<String>> reduced = new ArrayList<>(targets);
+      reduced.sort(Comparator.comparingInt(List::size));
+      for (int index = 0; index < reduced.size(); index++) {
+        List<String> ancestor = reduced.get(index);
+        reduced.removeIf(
+            candidate ->
+                candidate.size() > ancestor.size()
+                    && candidate.subList(0, ancestor.size()).equals(ancestor));
+      }
+      JsonMemberScanner scanner = new JsonMemberScanner(skeleton.source());
+      scanner.scan();
+      return encoding.encode(removeJsonMembers(skeleton.source(), scanner.members, reduced));
+    } catch (IOException exception) {
+      throw new LocalizationParseException(
+          "INVALID_SKELETON", "Cannot remove Xcode string catalog entries", exception);
+    }
+  }
+
+  private static Set<String> fullyMissingMessages(
+      LocalizationSourceSkeleton skeleton, Set<String> removed) {
+    Map<String, Integer> total = new HashMap<>();
+    Map<String, Integer> missing = new HashMap<>();
+    for (LocalizationSourceSlot slot : skeleton.slots()) {
+      total.merge(slot.id(), 1, Integer::sum);
+      if (removed.contains(slot.translationKey())) {
+        missing.merge(slot.id(), 1, Integer::sum);
+      }
+    }
+    Set<String> result = new HashSet<>();
+    total.forEach(
+        (id, count) -> {
+          if (missing.getOrDefault(id, 0).equals(count)) {
+            result.add(id);
+          }
+        });
+    return result;
+  }
+
+  private static String translationKey(SlotIdentity identity) {
+    if (identity.selector() != null && identity.variant() != null) {
+      return identity.id() + "#" + identity.selector() + "#" + identity.variant();
+    }
+    return identity.variant() == null ? identity.id() : identity.id() + "#" + identity.variant();
+  }
+
+  private static List<String> xcstringsRemovalOwner(
+      List<String> valuePath, SlotIdentity identity, boolean fullyMissing) {
+    List<String> message = List.of("strings", identity.id());
+    if (fullyMissing
+        || identity.selector() == null && identity.variant() == null
+        || "other".equals(identity.variant())
+            && (identity.selector() == null || !identity.selector().startsWith("@device="))) {
+      return message;
+    }
+    int device = pathPair(valuePath, "variations", "device");
+    if (device >= 0
+        && ("@device".equals(identity.selector())
+            || identity.selector() != null && identity.selector().startsWith("@device="))) {
+      return List.copyOf(valuePath.subList(0, device + 3));
+    }
+    int plural = pathPair(valuePath, "variations", "plural");
+    if (plural >= 0) {
+      return List.copyOf(valuePath.subList(0, plural + 3));
+    }
+    if (valuePath.size() >= 2
+        && "stringUnit".equals(valuePath.get(valuePath.size() - 2))
+        && "value".equals(valuePath.get(valuePath.size() - 1))) {
+      return List.copyOf(valuePath.subList(0, valuePath.size() - 1));
+    }
+    return message;
+  }
+
+  private static int pathPair(List<String> path, String first, String second) {
+    for (int index = 0; index + 1 < path.size(); index++) {
+      if (first.equals(path.get(index)) && second.equals(path.get(index + 1))) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
+  private static String removeJsonMembers(
+      String source, List<JsonMember> members, List<List<String>> targets) {
+    Map<List<String>, List<JsonMember>> objects = new LinkedHashMap<>();
+    for (JsonMember member : members) {
+      objects.computeIfAbsent(member.parent(), ignored -> new ArrayList<>()).add(member);
+    }
+    Set<List<String>> targetSet = new HashSet<>(targets);
+    Set<List<String>> found = new HashSet<>();
+    List<RemovalRange> removals = new ArrayList<>();
+    for (List<JsonMember> object : objects.values()) {
+      for (int index = 0; index < object.size(); ) {
+        if (!targetSet.contains(object.get(index).path())) {
+          index++;
+          continue;
+        }
+        int first = index;
+        while (index < object.size() && targetSet.contains(object.get(index).path())) {
+          found.add(object.get(index).path());
+          index++;
+        }
+        int last = index - 1;
+        int start = object.get(first).start();
+        int end = object.get(last).end();
+        if (index < object.size()) {
+          end = object.get(last).commaAfter() + 1;
+        } else if (first > 0) {
+          start = object.get(first).commaBefore();
+        }
+        if (start == object.get(first).start()) {
+          start = includeLineIndentation(source, start);
+        }
+        removals.add(new RemovalRange(start, end));
+      }
+    }
+    if (found.size() != targetSet.size()) {
+      throw invalid("INVALID_SKELETON", "Xcode removal target has no source-owned JSON member");
+    }
+    removals.sort(Comparator.comparingInt(RemovalRange::start));
+    StringBuilder result = new StringBuilder(source.length());
+    int previous = 0;
+    for (RemovalRange removal : removals) {
+      if (removal.start() < previous) {
+        previous = Math.max(previous, removal.end());
+        continue;
+      }
+      result.append(source, previous, removal.start());
+      previous = removal.end();
+    }
+    return result.append(source, previous, source.length()).toString();
+  }
+
+  private static int includeLineIndentation(String source, int start) {
+    int candidate = start;
+    while (candidate > 0
+        && (source.charAt(candidate - 1) == ' ' || source.charAt(candidate - 1) == '\t')) {
+      candidate--;
+    }
+    return candidate == 0
+            || source.charAt(candidate - 1) == '\n'
+            || source.charAt(candidate - 1) == '\r'
+        ? candidate
+        : start;
   }
 
   private static Map<List<String>, SlotIdentity> expectedPaths(
@@ -1707,6 +1875,152 @@ final class AppleXcstringsSourceSkeleton {
         LocalizationMessage.of(normalized, null, null, placeholders, metadata);
     return AppleXcstringsWriter.restore(restored.toString(), scoped);
   }
+
+  private static final class JsonMemberScanner {
+
+    private final String source;
+    private final List<JsonMember> members = new ArrayList<>();
+    private int index;
+
+    private JsonMemberScanner(String source) {
+      this.source = source;
+    }
+
+    private void scan() throws IOException {
+      value(new ArrayList<>());
+      whitespace();
+      if (index != source.length()) {
+        throw invalid("INVALID_SKELETON", "Unexpected trailing Xcode JSON content");
+      }
+    }
+
+    private void value(List<String> path) throws IOException {
+      whitespace();
+      if (index >= source.length()) {
+        throw invalid("INVALID_SKELETON", "Unexpected end of Xcode JSON");
+      }
+      switch (source.charAt(index)) {
+        case '{' -> object(path);
+        case '[' -> array(path);
+        case '"' -> string();
+        default -> primitive();
+      }
+    }
+
+    private void object(List<String> path) throws IOException {
+      index++;
+      whitespace();
+      if (consume('}')) {
+        return;
+      }
+      int commaBefore = -1;
+      while (true) {
+        whitespace();
+        int start = index;
+        String key = string();
+        whitespace();
+        if (!consume(':')) {
+          throw invalid("INVALID_SKELETON", "Missing Xcode JSON field separator");
+        }
+        path.add(key);
+        value(path);
+        path.remove(path.size() - 1);
+        int end = index;
+        whitespace();
+        int commaAfter = -1;
+        boolean last = consume('}');
+        if (!last) {
+          commaAfter = index;
+          if (!consume(',')) {
+            throw invalid("INVALID_SKELETON", "Missing Xcode JSON field boundary");
+          }
+        }
+        List<String> memberPath = new ArrayList<>(path);
+        memberPath.add(key);
+        members.add(
+            new JsonMember(
+                List.copyOf(memberPath), List.copyOf(path), start, end, commaBefore, commaAfter));
+        if (last) {
+          return;
+        }
+        commaBefore = commaAfter;
+      }
+    }
+
+    private void array(List<String> path) throws IOException {
+      index++;
+      whitespace();
+      if (consume(']')) {
+        return;
+      }
+      int position = 0;
+      while (true) {
+        path.add(Integer.toString(position++));
+        value(path);
+        path.remove(path.size() - 1);
+        whitespace();
+        if (consume(']')) {
+          return;
+        }
+        if (!consume(',')) {
+          throw invalid("INVALID_SKELETON", "Missing Xcode JSON array boundary");
+        }
+      }
+    }
+
+    private String string() throws IOException {
+      if (!consume('"')) {
+        throw invalid("INVALID_SKELETON", "Missing Xcode JSON string");
+      }
+      int start = index - 1;
+      boolean escaped = false;
+      while (index < source.length()) {
+        char current = source.charAt(index++);
+        if (escaped) {
+          escaped = false;
+        } else if (current == '\\') {
+          escaped = true;
+        } else if (current == '"') {
+          return JSON.readValue(source.substring(start, index), String.class);
+        }
+      }
+      throw invalid("INVALID_SKELETON", "Unterminated Xcode JSON string");
+    }
+
+    private void primitive() {
+      int start = index;
+      while (index < source.length() && ",}] \t\r\n".indexOf(source.charAt(index)) < 0) {
+        index++;
+      }
+      if (start == index) {
+        throw invalid("INVALID_SKELETON", "Missing Xcode JSON value");
+      }
+    }
+
+    private void whitespace() {
+      while (index < source.length() && " \t\r\n".indexOf(source.charAt(index)) >= 0) {
+        index++;
+      }
+    }
+
+    private boolean consume(char expected) {
+      if (index < source.length() && source.charAt(index) == expected) {
+        index++;
+        return true;
+      }
+      return false;
+    }
+  }
+
+  private record JsonMember(
+      List<String> path,
+      List<String> parent,
+      int start,
+      int end,
+      int commaBefore,
+      int commaAfter) {}
+
+  private record RemovalRange(int start, int end) {}
 
   private record SlotIdentity(String id, String selector, String variant) {}
 

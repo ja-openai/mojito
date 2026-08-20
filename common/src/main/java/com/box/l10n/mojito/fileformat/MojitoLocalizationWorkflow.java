@@ -466,7 +466,9 @@ final class MojitoLocalizationWorkflow {
           !options.contains("emptyAndNbspNotTranslatable")
               || options.enabled("emptyAndNbspNotTranslatable");
       return HtmlSourceFormat.render(
-          HtmlSourceFormat.extract(source, includeImages, suppressEmpty), translations);
+          HtmlSourceFormat.extract(source, includeImages, suppressEmpty),
+          translations,
+          removeUntranslated);
     }
     LocalizationCatalog catalog =
         applyExtractionPolicy(
@@ -513,7 +515,11 @@ final class MojitoLocalizationWorkflow {
           && translations.containsKey(slot.id() + "#other")) {
         selected.put(key, translations.get(slot.id() + "#other"));
       } else if (removeUntranslated) {
-        selected.put(key, untranslatedMarker);
+        if (format == LocalizationFileFormat.ANDROID
+            || format == LocalizationFileFormat.APPLE_STRINGS
+            || format == LocalizationFileFormat.GETTEXT_PO) {
+          selected.put(key, untranslatedMarker);
+        }
         untranslatedKeys.add(key);
       }
     }
@@ -525,11 +531,15 @@ final class MojitoLocalizationWorkflow {
     }
     if (format == LocalizationFileFormat.APPLE_STRINGSDICT && removeUntranslated) {
       Set<String> missingMessages = new LinkedHashSet<>(catalog.messages().keySet());
+      Set<String> missingRequiredOther = new LinkedHashSet<>();
       for (LocalizationSourceSkeleton.LocalizationSourceSlot slot : skeleton.slots()) {
         if (translations.containsKey(slot.translationKey())) {
           missingMessages.remove(slot.id());
+        } else if ("other".equals(slot.variant())) {
+          missingRequiredOther.add(slot.id());
         }
       }
+      missingMessages.addAll(missingRequiredOther);
       if (!missingMessages.isEmpty()) {
         Set<String> removedSlots = new LinkedHashSet<>();
         for (LocalizationSourceSkeleton.LocalizationSourceSlot slot : skeleton.slots()) {
@@ -541,12 +551,36 @@ final class MojitoLocalizationWorkflow {
         skeleton = LocalizationFileConverters.extractSkeleton(format, retained);
         selected.keySet().removeAll(removedSlots);
       }
+      byte[] retained = AppleStringsdictSourceSkeleton.removeEntries(skeleton, untranslatedKeys);
+      skeleton = LocalizationFileConverters.extractSkeleton(format, retained);
+      selected.keySet().removeAll(untranslatedKeys);
     }
     if (removeUntranslated
         && (format == LocalizationFileFormat.RESX || format == LocalizationFileFormat.XTB)) {
       byte[] retained = XmlResourceSourceSkeleton.removeEntries(skeleton, untranslatedKeys);
       skeleton = LocalizationFileConverters.extractSkeleton(format, retained);
       selected.keySet().removeAll(untranslatedKeys);
+    } else if (removeUntranslated && format == LocalizationFileFormat.YAML) {
+      byte[] retained = YamlSourceFormat.removeEntries(skeleton, untranslatedKeys);
+      selected.keySet().removeAll(untranslatedKeys);
+      if (selected.isEmpty()) {
+        return retained;
+      }
+      skeleton = LocalizationFileConverters.extractSkeleton(format, retained);
+    } else if (removeUntranslated
+        && (format == LocalizationFileFormat.JAVASCRIPT
+            || format == LocalizationFileFormat.TYPESCRIPT)) {
+      byte[] retained = JavaScriptSourceFormat.removeEntries(skeleton, untranslatedKeys);
+      skeleton = LocalizationFileConverters.extractSkeleton(format, retained);
+      selected.keySet().removeAll(untranslatedKeys);
+    } else if (removeUntranslated && format == LocalizationFileFormat.APPLE_XCSTRINGS) {
+      byte[] retained = AppleXcstringsSourceSkeleton.removeEntries(skeleton, untranslatedKeys);
+      skeleton = LocalizationFileConverters.extractSkeleton(format, retained);
+      Set<String> retainedKeys = new LinkedHashSet<>();
+      for (LocalizationSourceSkeleton.LocalizationSourceSlot slot : skeleton.slots()) {
+        retainedKeys.add(slot.translationKey());
+      }
+      selected.keySet().retainAll(retainedKeys);
     }
     byte[] localized = LocalizationFileConverters.renderSkeleton(skeleton, selected);
     if (format == LocalizationFileFormat.ANDROID && targetLocale != null) {

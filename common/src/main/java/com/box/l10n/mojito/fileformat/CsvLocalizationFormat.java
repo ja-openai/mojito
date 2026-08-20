@@ -12,6 +12,8 @@ import java.util.Set;
 /** Mojito's fixed-column CSV resources, including Adobe Magento's source-as-ID variant. */
 final class CsvLocalizationFormat {
 
+  private static final String DO_NOT_TRANSLATE = "DO NOT TRANSLATE";
+
   private CsvLocalizationFormat() {}
 
   static LocalizationCatalog parse(LocalizationFileFormat format, String source) {
@@ -160,8 +162,10 @@ final class CsvLocalizationFormat {
     for (LocalizationSourceSlot slot : skeleton.slots()) {
       known.add(slot.id());
     }
-    if (!known.containsAll(translations.keySet())) {
-      throw invalid("UNKNOWN_SKELETON_SLOT", "Translation has no original CSV source slot");
+    Set<String> protectedIds = protectedIds(format, skeleton.source());
+    if (!known.containsAll(translations.keySet())
+        || translations.keySet().stream().anyMatch(protectedIds::contains)) {
+      throw invalid("UNKNOWN_SKELETON_SLOT", "Translation has no translatable CSV source slot");
     }
     if (!removeUntranslated) {
       return render(skeleton, translations);
@@ -172,6 +176,7 @@ final class CsvLocalizationFormat {
     int previous = 0;
     for (Row row : rows(sourceText)) {
       if (row.fields().size() <= sourceColumn(format)
+          || protectedRow(format, sourceText, row)
           || translations.containsKey(raw(sourceText, row.fields().get(0)))) {
         retained.append(sourceText, previous, row.terminatorEnd());
       } else {
@@ -186,6 +191,22 @@ final class CsvLocalizationFormat {
       selected.put(slot.id(), translations.get(slot.id()));
     }
     return render(extract(format, filtered), selected);
+  }
+
+  private static boolean protectedRow(LocalizationFileFormat format, String source, Row row) {
+    return format == LocalizationFileFormat.CSV
+        && row.fields().size() > 3
+        && raw(source, row.fields().get(3)).contains(DO_NOT_TRANSLATE);
+  }
+
+  private static Set<String> protectedIds(LocalizationFileFormat format, String source) {
+    Set<String> result = new HashSet<>();
+    for (Row row : rows(source)) {
+      if (!row.fields().isEmpty() && protectedRow(format, source, row)) {
+        result.add(raw(source, row.fields().get(0)));
+      }
+    }
+    return result;
   }
 
   private static int sourceColumn(LocalizationFileFormat format) {

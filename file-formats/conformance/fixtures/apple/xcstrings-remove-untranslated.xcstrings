@@ -1,0 +1,45 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "projectMetadata": { "preserve": "exactly" },
+  "strings": {
+    "scalar.keep": {
+      "comment": "Keep translated metadata",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Harbor signal" } }
+      }
+    },
+    "scalar.remove": {
+      "comment": "Remove the complete untranslated message",
+      "localizations": {
+        "en": { "stringUnit": { "state": "needs_review", "value": "Remove source scalar" } }
+      }
+    },
+    "plural.keep": {
+      "localizations": {
+        "en": {
+          "variations": { "plural": {
+            "one": { "stringUnit": { "state": "translated", "value": "%lld beacon" } },
+            "other": { "stringUnit": { "state": "translated", "value": "%lld beacons" } }
+          } }
+        }
+      }
+    },
+    "plural.remove.incomplete": {
+      "localizations": {
+        "en": {
+          "variations": { "plural": {
+            "one": { "stringUnit": { "state": "translated", "value": "%lld route" } },
+            "other": { "stringUnit": { "state": "translated", "value": "%lld routes" } }
+          } }
+        }
+      }
+    },
+    "protected": {
+      "shouldTranslate": false,
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Protected source value" } }
+      }
+    }
+  }
+}

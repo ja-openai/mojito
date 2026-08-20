@@ -1,0 +1,31 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "projectMetadata": { "preserve": "exactly" },
+  "strings": {
+    "scalar.keep": {
+      "comment": "Keep translated metadata",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Signal du port" } }
+      }
+    },
+
+    "plural.keep": {
+      "localizations": {
+        "en": {
+          "variations": { "plural": {
+
+            "other": { "stringUnit": { "state": "translated", "value": "%lld balises" } }
+          } }
+        }
+      }
+    },
+
+    "protected": {
+      "shouldTranslate": false,
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Protected source value" } }
+      }
+    }
+  }
+}

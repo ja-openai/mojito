@@ -71,6 +71,15 @@
       "localized": "fixtures/html/harbor.images.localized.html"
     },
     {
+      "id": "html-alpha-mojito-omits-untranslated-text-and-attributes-but-preserves-protected-content",
+      "format": "html",
+      "input": "fixtures/html/remove-untranslated.html",
+      "filterOptions": [],
+      "translations": {},
+      "removeUntranslated": true,
+      "localized": "fixtures/html/remove-untranslated.localized.html"
+    },
+    {
       "id": "html-alpha-workflow-option-retains-nonbreaking-space-units",
       "format": "html",
       "input": "fixtures/html/harbor.html",
@@ -114,6 +123,29 @@
       },
       "removeUntranslated": false,
       "localized": "fixtures/javascript/harbor.ts.localized.ts"
+    },
+    {
+      "id": "javascript-mojito-removes-untranslated-properties-without-markers-or-protected-loss",
+      "format": "javascript",
+      "input": "fixtures/javascript/harbor.js",
+      "filterOptions": [],
+      "translations": {
+        "harbor.arrival": "Le \"Boréal\" arrive\nbientôt",
+        "harbor.literal": "Gardez `barre` et \\u263A"
+      },
+      "removeUntranslated": true,
+      "localized": "fixtures/javascript/harbor.remove-untranslated.localized.js"
+    },
+    {
+      "id": "typescript-mojito-removes-an-untranslated-multiline-property-without-a-marker",
+      "format": "typescript",
+      "input": "fixtures/javascript/harbor.ts",
+      "filterOptions": [],
+      "translations": {
+        "harbor.welcome": "Bienvenue ${captain}"
+      },
+      "removeUntranslated": true,
+      "localized": "fixtures/javascript/harbor.remove-untranslated.localized.ts"
     },
     {
       "id": "apple-mojito-output-preserves-intentional-french-legacy-plural-policy",
@@ -208,6 +240,17 @@
       "localized": "fixtures/workflow/apple-stringsdict-remove-untranslated.localized.stringsdict"
     },
     {
+      "id": "apple-mojito-removes-missing-plural-pairs-from-partially-translated-stringsdict",
+      "format": "apple_stringsdict",
+      "input": "fixtures/workflow/apple-stringsdict-remove-untranslated.stringsdict",
+      "filterOptions": [],
+      "translations": {
+        "retained#other": "{signals} signaux au quai"
+      },
+      "removeUntranslated": true,
+      "localized": "fixtures/workflow/apple-stringsdict-remove-partial-untranslated.localized.stringsdict"
+    },
+    {
       "id": "apple-mojito-preserves-valid-empty-plist-when-every-plural-is-untranslated",
       "format": "apple_stringsdict",
       "input": "fixtures/workflow/apple-stringsdict-remove-untranslated.stringsdict",
@@ -215,6 +258,19 @@
       "translations": {},
       "removeUntranslated": true,
       "localized": "fixtures/workflow/apple-stringsdict-remove-all-untranslated.localized.stringsdict"
+    },
+    {
+      "id": "xcstrings-mojito-removes-missing-messages-and-plural-branches-without-private-markers",
+      "format": "apple_xcstrings",
+      "input": "fixtures/apple/xcstrings-remove-untranslated.xcstrings",
+      "filterOptions": [],
+      "translations": {
+        "scalar.keep": "Signal du port",
+        "plural.keep#other": "{count} balises",
+        "plural.remove.incomplete#one": "{count} route"
+      },
+      "removeUntranslated": true,
+      "localized": "fixtures/apple/xcstrings-remove-untranslated.localized.xcstrings"
     },
     {
       "id": "android-mojito-import-copies-arabic-plural-categories-and-target-comments",
@@ -1222,6 +1278,19 @@
       "localized": "fixtures/yaml/repeated-sequences.localized.yaml"
     },
     {
+      "id": "yaml-mojito-removes-untranslated-block-flow-and-sequence-scalars-without-markers",
+      "format": "yaml",
+      "input": "fixtures/yaml/remove-untranslated.yaml",
+      "filterOptions": [],
+      "translations": {
+        "translated": "Signal du port",
+        "flow/keep": "Chenal",
+        "routes[0]": "Nord"
+      },
+      "removeUntranslated": true,
+      "localized": "fixtures/yaml/remove-untranslated.localized.yaml"
+    },
+    {
       "id": "yaml-mojito-honors-configured-scalar-selection",
       "format": "yaml",
       "input": "fixtures/yaml/native-styles.yaml",
@@ -1298,6 +1367,28 @@
       },
       "removeUntranslated": true,
       "localized": "fixtures/csv/standard.remove-untranslated.csv"
+    },
+    {
+      "id": "csv-mojito-preserves-do-not-translate-records-during-untranslated-removal",
+      "format": "csv",
+      "input": "fixtures/csv/protected-remove.csv",
+      "filterOptions": [],
+      "translations": {
+        "translated": "Signal du port"
+      },
+      "removeUntranslated": true,
+      "localized": "fixtures/csv/protected-remove.localized.csv"
+    },
+    {
+      "id": "csv-mojito-rejects-a-translation-for-a-protected-record",
+      "format": "csv",
+      "input": "fixtures/csv/protected-remove.csv",
+      "filterOptions": [],
+      "translations": {
+        "protected": "PORT-18"
+      },
+      "removeUntranslated": true,
+      "error": "UNKNOWN_SKELETON_SLOT"
     },
     {
       "id": "csv-adobe-magento-uses-source-as-stable-identity",

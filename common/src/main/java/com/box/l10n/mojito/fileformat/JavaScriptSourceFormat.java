@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** Mojito's quoted-key JavaScript/TypeScript resource syntax and original value ownership. */
 final class JavaScriptSourceFormat {
@@ -77,6 +78,45 @@ final class JavaScriptSourceFormat {
     }
     output.write(original, copied, original.length - copied);
     return output.toByteArray();
+  }
+
+  static byte[] removeEntries(LocalizationSourceSkeleton skeleton, Set<String> removed) {
+    LocalizationFileFormat format = LocalizationFileFormat.fromId(skeleton.sourceFormat());
+    if (format != LocalizationFileFormat.JAVASCRIPT
+        && format != LocalizationFileFormat.TYPESCRIPT) {
+      throw invalidSkeleton("Unsupported JavaScript source skeleton format");
+    }
+    SourceSkeletonEncoding encoding = SourceSkeletonEncoding.named(skeleton.encoding());
+    byte[] original = encoding.encode(skeleton.source());
+    if (!extract(format, original).slots().equals(skeleton.slots())) {
+      throw invalidSkeleton("JavaScript source slots do not own their original values");
+    }
+    List<Range> ranges = new ArrayList<>();
+    for (Entry entry : entries(skeleton.source())) {
+      if (!removed.contains(entry.id())) {
+        continue;
+      }
+      int start = lineStart(skeleton.source(), entry.start());
+      int end = nextLine(skeleton.source(), lineEnd(skeleton.source(), entry.end()));
+      ranges.add(new Range(start, end));
+    }
+    return encoding.encode(removeRanges(skeleton.source(), ranges));
+  }
+
+  private static int lineStart(String source, int position) {
+    int newline =
+        Math.max(source.lastIndexOf('\n', position - 1), source.lastIndexOf('\r', position - 1));
+    return newline + 1;
+  }
+
+  private static String removeRanges(String source, List<Range> ranges) {
+    StringBuilder result = new StringBuilder(source.length());
+    int previous = 0;
+    for (Range range : ranges) {
+      result.append(source, previous, range.start());
+      previous = range.end();
+    }
+    return result.append(source, previous, source.length()).toString();
   }
 
   private static List<Entry> entries(String source) {
@@ -202,4 +242,6 @@ final class JavaScriptSourceFormat {
 
   private record Entry(
       String id, String value, String description, boolean template, int start, int end) {}
+
+  private record Range(int start, int end) {}
 }

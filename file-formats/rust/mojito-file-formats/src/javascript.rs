@@ -1,7 +1,7 @@
 use crate::model::{Catalog, FileFormat, Message, ParseError};
 use crate::source_skeleton::{Encoding, SourceSkeleton, SourceSlot};
 use serde_json::{Map, Value};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 struct Entry<'a> {
     id: &'a str,
@@ -98,6 +98,39 @@ pub(crate) fn render(
     Ok(output)
 }
 
+pub(crate) fn remove_entries(
+    skeleton: &SourceSkeleton,
+    removed: &BTreeSet<String>,
+) -> Result<Vec<u8>, ParseError> {
+    let format = FileFormat::from_id(skeleton.source_format)
+        .filter(|format| matches!(format, FileFormat::JavaScript | FileFormat::TypeScript))
+        .ok_or_else(|| invalid_skeleton("Unsupported JavaScript source skeleton format"))?;
+    let encoding = Encoding::named(&skeleton.encoding)?;
+    let original = encoding.encode(&skeleton.source);
+    if extract(format, &original)?.slots != skeleton.slots {
+        return Err(invalid_skeleton(
+            "JavaScript source slots do not own their original values",
+        ));
+    }
+    let mut ranges = Vec::new();
+    for entry in entries(&skeleton.source)? {
+        if !removed.contains(entry.id) {
+            continue;
+        }
+        let start = line_start(&skeleton.source, entry.start);
+        let end = next_line(&skeleton.source, line_end(&skeleton.source, entry.end));
+        ranges.push((start, end));
+    }
+    let mut result = String::with_capacity(skeleton.source.len());
+    let mut previous = 0;
+    for (start, end) in ranges {
+        result.push_str(&skeleton.source[previous..start]);
+        previous = end;
+    }
+    result.push_str(&skeleton.source[previous..]);
+    Ok(encoding.encode(&result))
+}
+
 fn entries(source: &str) -> Result<Vec<Entry<'_>>, ParseError> {
     let mut result = Vec::new();
     let mut description = None;
@@ -159,6 +192,12 @@ fn line_end(source: &str, start: usize) -> usize {
         .bytes()
         .position(|character| matches!(character, b'\r' | b'\n'))
         .map_or(source.len(), |offset| start + offset)
+}
+
+fn line_start(source: &str, position: usize) -> usize {
+    source[..position]
+        .rfind(['\r', '\n'])
+        .map_or(0, |index| index + 1)
 }
 
 fn next_line(source: &str, end: usize) -> usize {

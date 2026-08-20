@@ -182,6 +182,78 @@ final class AppleStringsdictSourceSkeleton {
     return encoding.encode(result.append(source, previous, source.length()).toString());
   }
 
+  static byte[] removeEntries(LocalizationSourceSkeleton skeleton, Set<String> removed) {
+    if ("BINARY_PLIST".equals(skeleton.encoding())) {
+      throw invalid(
+          "UNSUPPORTED_SKELETON_SOURCE",
+          "Cannot safely remove values from a binary Foundation strings dictionary");
+    }
+    SourceSkeletonEncoding encoding = SourceSkeletonEncoding.named(skeleton.encoding());
+    byte[] original = encoding.encode(skeleton.source());
+    List<Removal> entries = new ArrayList<>();
+    for (LocalizationSourceSlot slot : skeleton.slots()) {
+      if (!removed.contains(slot.translationKey())) {
+        continue;
+      }
+      int valueStart = encoding.decode(original, encoding.bom().length, slot.start()).length();
+      int valueEnd = encoding.decode(original, encoding.bom().length, slot.end()).length();
+      entries.add(entryRemoval(skeleton.source(), valueStart, valueEnd));
+    }
+    entries.sort(java.util.Comparator.comparingInt(Removal::start));
+    String source = skeleton.source();
+    StringBuilder result = new StringBuilder(source.length());
+    int previous = 0;
+    for (Removal removal : entries) {
+      int start = removal.start();
+      while (start > previous
+          && (source.charAt(start - 1) == ' ' || source.charAt(start - 1) == '\t')) {
+        start--;
+      }
+      if (start > previous
+          && source.charAt(start - 1) != '\n'
+          && source.charAt(start - 1) != '\r') {
+        start = removal.start();
+      }
+      result.append(source, previous, start);
+      previous = removal.end();
+      while (previous < source.length()
+          && (source.charAt(previous) == ' ' || source.charAt(previous) == '\t')) {
+        previous++;
+      }
+      if (previous < source.length() && source.charAt(previous) == '\r') {
+        previous++;
+      }
+      if (previous < source.length() && source.charAt(previous) == '\n') {
+        previous++;
+      }
+    }
+    return encoding.encode(result.append(source, previous, source.length()).toString());
+  }
+
+  private static Removal entryRemoval(String source, int valueStart, int valueEnd) {
+    int valueOpening = source.lastIndexOf('<', valueStart - 1);
+    int keyClosing = source.lastIndexOf("</key>", valueOpening);
+    int keyOpening = source.lastIndexOf("<key", keyClosing);
+    if (valueOpening < 0
+        || keyClosing < 0
+        || keyOpening < 0
+        || !source.substring(keyClosing + "</key>".length(), valueOpening).isBlank()) {
+      throw invalid(
+          "INVALID_SKELETON", "Foundation stringsdict value has no directly owned source key");
+    }
+    int end;
+    if (source.startsWith("</string>", valueEnd)) {
+      end = valueEnd + "</string>".length();
+    } else if (valueStart < valueEnd
+        && source.charAt(valueStart) == '/'
+        && source.charAt(valueEnd - 1) == '>') {
+      end = valueEnd;
+    } else {
+      throw invalid("INVALID_SKELETON", "Foundation stringsdict value has no closing string tag");
+    }
+    return new Removal(keyOpening, end);
+  }
+
   static byte[] retainPluralCategories(byte[] original, Set<String> categories) {
     if (categories.isEmpty() || AppleBinaryPlistParser.matches(original)) {
       return original;

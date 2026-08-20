@@ -1492,6 +1492,104 @@ pub(crate) fn remove_stringsdict_messages(
     Ok(encoding.encode(&result))
 }
 
+pub(crate) fn remove_stringsdict_entries(
+    skeleton: &SourceSkeleton,
+    removed: &BTreeSet<String>,
+) -> Result<Vec<u8>, ParseError> {
+    if skeleton.encoding == "BINARY_PLIST" {
+        return Err(error(
+            "UNSUPPORTED_SKELETON_SOURCE",
+            "Cannot safely remove values from a binary Foundation strings dictionary",
+        ));
+    }
+    let encoding = Encoding::named(&skeleton.encoding)?;
+    let original = encoding.encode(&skeleton.source);
+    let mut removals = Vec::new();
+    for slot in &skeleton.slots {
+        if !removed.contains(&slot.key()) {
+            continue;
+        }
+        let value_start = encoding
+            .decode(&original[encoding.bom_length()..slot.start])?
+            .len();
+        let value_end = encoding
+            .decode(&original[encoding.bom_length()..slot.end])?
+            .len();
+        removals.push(stringsdict_entry_removal(
+            &skeleton.source,
+            value_start,
+            value_end,
+        )?);
+    }
+    removals.sort_unstable_by_key(|removal| removal.0);
+    let mut result = String::with_capacity(skeleton.source.len());
+    let mut previous = 0;
+    for (opening, end) in removals {
+        let mut start = opening;
+        while start > previous && matches!(skeleton.source.as_bytes()[start - 1], b' ' | b'\t') {
+            start -= 1;
+        }
+        if start > previous && !matches!(skeleton.source.as_bytes()[start - 1], b'\n' | b'\r') {
+            start = opening;
+        }
+        result.push_str(&skeleton.source[previous..start]);
+        previous = end;
+        while matches!(skeleton.source.as_bytes().get(previous), Some(b' ' | b'\t')) {
+            previous += 1;
+        }
+        if skeleton.source.as_bytes().get(previous) == Some(&b'\r') {
+            previous += 1;
+        }
+        if skeleton.source.as_bytes().get(previous) == Some(&b'\n') {
+            previous += 1;
+        }
+    }
+    result.push_str(&skeleton.source[previous..]);
+    Ok(encoding.encode(&result))
+}
+
+fn stringsdict_entry_removal(
+    source: &str,
+    value_start: usize,
+    value_end: usize,
+) -> Result<(usize, usize), ParseError> {
+    let value_opening = source[..value_start].rfind('<').ok_or_else(|| {
+        error(
+            "INVALID_SKELETON",
+            "Missing Foundation stringsdict value tag",
+        )
+    })?;
+    let key_closing = source[..value_opening]
+        .rfind("</key>")
+        .ok_or_else(|| error("INVALID_SKELETON", "Missing Foundation stringsdict key"))?;
+    let key_opening = source[..key_closing]
+        .rfind("<key")
+        .ok_or_else(|| error("INVALID_SKELETON", "Missing Foundation stringsdict key tag"))?;
+    if !source[key_closing + "</key>".len()..value_opening]
+        .trim()
+        .is_empty()
+    {
+        return Err(error(
+            "INVALID_SKELETON",
+            "Foundation stringsdict value has no directly owned source key",
+        ));
+    }
+    let end = if source[value_end..].starts_with("</string>") {
+        value_end + "</string>".len()
+    } else if value_start < value_end
+        && source.as_bytes()[value_start] == b'/'
+        && source.as_bytes()[value_end - 1] == b'>'
+    {
+        value_end
+    } else {
+        return Err(error(
+            "INVALID_SKELETON",
+            "Foundation stringsdict value has no closing string tag",
+        ));
+    };
+    Ok((key_opening, end))
+}
+
 impl StringsdictScanner<'_> {
     fn scan(&mut self) -> Result<(), ParseError> {
         let mut stack: Vec<StringsdictXmlElement<'_>> = Vec::new();
@@ -1632,6 +1730,199 @@ fn extract_xcstrings(bytes: &[u8]) -> Result<SourceSkeleton, ParseError> {
     extract_xcstrings_with_options(bytes, false, false, None)
 }
 
+pub(crate) fn remove_xcstrings_entries(
+    skeleton: &SourceSkeleton,
+    removed: &BTreeSet<String>,
+) -> Result<Vec<u8>, ParseError> {
+    if skeleton.schema_version != 1 || skeleton.source_format != FileFormat::AppleXcstrings.id() {
+        return Err(error(
+            "INVALID_SKELETON",
+            "Unsupported Xcode string catalog skeleton",
+        ));
+    }
+    let encoding = Encoding::named(&skeleton.encoding)?;
+    let original = encoding.encode(&skeleton.source);
+    let catalog = crate::parse(FileFormat::AppleXcstrings, &original)?;
+    let root: serde_json::Value = serde_json::from_str(&skeleton.source)
+        .map_err(|_| error("INVALID_SKELETON", "Invalid Xcode JSON source"))?;
+    let expected = xcstrings_expected_paths(&root, &catalog, false, false, None)?;
+    let fully_missing = fully_missing_xcstrings_messages(skeleton, removed);
+    let mut targets = expected
+        .iter()
+        .filter(|(_, identity)| removed.contains(&identity.key()))
+        .map(|(path, identity)| {
+            xcstrings_removal_owner(path, identity, fully_missing.contains(&identity.id))
+        })
+        .collect::<Vec<_>>();
+    targets.sort_by_key(Vec::len);
+    let mut reduced: Vec<Vec<String>> = Vec::new();
+    for target in targets {
+        if !reduced
+            .iter()
+            .any(|ancestor| target.starts_with(ancestor.as_slice()))
+        {
+            reduced.push(target);
+        }
+    }
+    let mut scanner = XcodeScanner {
+        source: &skeleton.source,
+        encoding,
+        expected: &expected,
+        slots: Vec::new(),
+        members: Some(Vec::new()),
+        index: 0,
+    };
+    scanner.value(&mut Vec::new())?;
+    let filtered = remove_xcstrings_members(
+        &skeleton.source,
+        scanner
+            .members
+            .as_deref()
+            .expect("removal scanner records JSON members"),
+        &reduced,
+    )?;
+    Ok(encoding.encode(&filtered))
+}
+
+fn fully_missing_xcstrings_messages(
+    skeleton: &SourceSkeleton,
+    removed: &BTreeSet<String>,
+) -> HashSet<String> {
+    let mut totals = HashMap::<String, usize>::new();
+    let mut missing = HashMap::<String, usize>::new();
+    for slot in &skeleton.slots {
+        *totals.entry(slot.id.clone()).or_default() += 1;
+        if removed.contains(&slot.key()) {
+            *missing.entry(slot.id.clone()).or_default() += 1;
+        }
+    }
+    totals
+        .into_iter()
+        .filter_map(|(id, count)| {
+            (missing.get(&id).copied().unwrap_or_default() == count).then_some(id)
+        })
+        .collect()
+}
+
+fn xcstrings_removal_owner(
+    value_path: &[String],
+    identity: &XcodeIdentity,
+    fully_missing: bool,
+) -> Vec<String> {
+    let message = vec!["strings".to_owned(), identity.id.clone()];
+    if fully_missing
+        || identity.selector.is_none() && identity.variant.is_none()
+        || identity.variant.as_deref() == Some("other")
+            && identity
+                .selector
+                .as_deref()
+                .is_none_or(|selector| !selector.starts_with("@device="))
+    {
+        return message;
+    }
+    if let Some(device) = path_pair(value_path, "variations", "device") {
+        if identity.selector.as_deref() == Some("@device")
+            || identity
+                .selector
+                .as_deref()
+                .is_some_and(|selector| selector.starts_with("@device="))
+        {
+            return value_path[..device + 3].to_vec();
+        }
+    }
+    if let Some(plural) = path_pair(value_path, "variations", "plural") {
+        return value_path[..plural + 3].to_vec();
+    }
+    if value_path.ends_with(&["stringUnit".to_owned(), "value".to_owned()]) {
+        return value_path[..value_path.len() - 1].to_vec();
+    }
+    message
+}
+
+fn path_pair(path: &[String], first: &str, second: &str) -> Option<usize> {
+    path.windows(2)
+        .position(|pair| pair[0] == first && pair[1] == second)
+}
+
+fn remove_xcstrings_members(
+    source: &str,
+    members: &[JsonMember],
+    targets: &[Vec<String>],
+) -> Result<String, ParseError> {
+    let targets = targets.iter().cloned().collect::<HashSet<_>>();
+    let mut objects = HashMap::<Vec<String>, Vec<&JsonMember>>::new();
+    for member in members {
+        objects
+            .entry(member.parent.clone())
+            .or_default()
+            .push(member);
+    }
+    let mut found = HashSet::new();
+    let mut removals = Vec::new();
+    for object in objects.values() {
+        let mut index = 0;
+        while index < object.len() {
+            if !targets.contains(&object[index].path) {
+                index += 1;
+                continue;
+            }
+            let first = index;
+            while index < object.len() && targets.contains(&object[index].path) {
+                found.insert(object[index].path.clone());
+                index += 1;
+            }
+            let last = index - 1;
+            let mut start = object[first].start;
+            let mut end = object[last].end;
+            if index < object.len() {
+                end = object[last]
+                    .comma_after
+                    .expect("nonfinal JSON member owns a following comma")
+                    + 1;
+            } else if first > 0 {
+                start = object[first]
+                    .comma_before
+                    .expect("noninitial JSON member owns a preceding comma");
+            }
+            if start == object[first].start {
+                start = include_json_member_indentation(source, start);
+            }
+            removals.push((start, end));
+        }
+    }
+    if found.len() != targets.len() {
+        return Err(error(
+            "INVALID_SKELETON",
+            "Xcode removal target has no source-owned JSON member",
+        ));
+    }
+    removals.sort_unstable_by_key(|range| range.0);
+    let mut result = String::with_capacity(source.len());
+    let mut previous = 0;
+    for (start, end) in removals {
+        if start < previous {
+            previous = previous.max(end);
+            continue;
+        }
+        result.push_str(&source[previous..start]);
+        previous = end;
+    }
+    result.push_str(&source[previous..]);
+    Ok(result)
+}
+
+fn include_json_member_indentation(source: &str, start: usize) -> usize {
+    let mut candidate = start;
+    while candidate > 0 && matches!(source.as_bytes()[candidate - 1], b' ' | b'\t') {
+        candidate -= 1;
+    }
+    if candidate == 0 || matches!(source.as_bytes()[candidate - 1], b'\r' | b'\n') {
+        candidate
+    } else {
+        start
+    }
+}
+
 pub(crate) fn extract_xcstrings_devices(bytes: &[u8]) -> Result<SourceSkeleton, ParseError> {
     extract_xcstrings_with_options(bytes, true, false, None)
 }
@@ -1675,6 +1966,7 @@ fn extract_xcstrings_with_options(
         encoding,
         expected: &expected,
         slots: Vec::new(),
+        members: None,
         index: 0,
     };
     scanner.value(&mut Vec::new())?;
@@ -2753,6 +3045,18 @@ struct XcodeIdentity {
     id: String,
     selector: Option<String>,
     variant: Option<String>,
+}
+
+impl XcodeIdentity {
+    fn key(&self) -> String {
+        if let (Some(selector), Some(variant)) = (&self.selector, &self.variant) {
+            return format!("{}#{selector}#{variant}", self.id);
+        }
+        self.variant.as_ref().map_or_else(
+            || self.id.clone(),
+            |variant| format!("{}#{variant}", self.id),
+        )
+    }
 }
 
 fn xcstrings_substitutions(
@@ -4109,7 +4413,17 @@ struct XcodeScanner<'a> {
     encoding: Encoding,
     expected: &'a HashMap<Vec<String>, XcodeIdentity>,
     slots: Vec<SourceSlot>,
+    members: Option<Vec<JsonMember>>,
     index: usize,
+}
+
+struct JsonMember {
+    path: Vec<String>,
+    parent: Vec<String>,
+    start: usize,
+    end: usize,
+    comma_before: Option<usize>,
+    comma_after: Option<usize>,
 }
 
 impl XcodeScanner<'_> {
@@ -4122,6 +4436,7 @@ impl XcodeScanner<'_> {
                 if self.consume(b'}') {
                     return Ok(());
                 }
+                let mut comma_before = None;
                 loop {
                     self.whitespace();
                     let (start, end) = self.string()?;
@@ -4134,12 +4449,38 @@ impl XcodeScanner<'_> {
                             "Missing Xcode JSON field separator",
                         ));
                     }
-                    path.push(key);
+                    path.push(key.clone());
                     self.value(path)?;
                     path.pop();
+                    let value_end = self.index;
                     let insertion = self.index;
                     self.whitespace();
-                    if self.consume(b'}') {
+                    let last = self.consume(b'}');
+                    let comma_after = if last {
+                        None
+                    } else {
+                        let comma = self.index;
+                        if !self.consume(b',') {
+                            return Err(error(
+                                "INVALID_SKELETON",
+                                "Missing Xcode JSON field boundary",
+                            ));
+                        }
+                        Some(comma)
+                    };
+                    if let Some(members) = &mut self.members {
+                        let mut member_path = path.clone();
+                        member_path.push(key);
+                        members.push(JsonMember {
+                            path: member_path,
+                            parent: path.clone(),
+                            start,
+                            end: value_end,
+                            comma_before,
+                            comma_after,
+                        });
+                    }
+                    if last {
                         if let Some(identity) = self.expected.get(path) {
                             let offset = self.encoding.offset(self.source, insertion);
                             self.slots.push(SourceSlot {
@@ -4153,12 +4494,7 @@ impl XcodeScanner<'_> {
                         }
                         break;
                     }
-                    if !self.consume(b',') {
-                        return Err(error(
-                            "INVALID_SKELETON",
-                            "Missing Xcode JSON field boundary",
-                        ));
-                    }
+                    comma_before = comma_after;
                 }
             }
             Some(b'[') => {

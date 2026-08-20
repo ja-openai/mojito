@@ -1,0 +1,8 @@
+# Keep this source-owned header.
+translated: Harbor signal
+missing_block: Remove this source
+flow: {keep: Channel, remove_first: First source, remove_last: Last source}
+routes:
+  - North source
+  - South source
+# Keep this source-owned footer.

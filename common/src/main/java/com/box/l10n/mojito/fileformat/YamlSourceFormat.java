@@ -4,6 +4,7 @@ import com.box.l10n.mojito.fileformat.LocalizationSourceSkeleton.LocalizationSou
 import java.io.ByteArrayOutputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -82,6 +83,159 @@ final class YamlSourceFormat {
     }
     result.write(original, previous, original.length - previous);
     return result.toByteArray();
+  }
+
+  static byte[] removeEntries(LocalizationSourceSkeleton skeleton, Set<String> removed) {
+    if (skeleton.schemaVersion() != 1
+        || !LocalizationFileFormat.YAML.id().equals(skeleton.sourceFormat())) {
+      throw invalid("INVALID_SKELETON", "Unsupported YAML source skeleton");
+    }
+    List<RemovalCandidate> candidates = new ArrayList<>();
+    collectRemovalCandidates(compose(skeleton.source()), "", candidates);
+    List<Range> ranges = new ArrayList<>();
+    for (RemovalCandidate candidate : candidates) {
+      if (removed.contains(candidate.id())) {
+        ranges.add(removalRange(skeleton.source(), candidate));
+      }
+    }
+    String filtered = removeRanges(skeleton.source(), ranges);
+    if (filtered
+        .lines()
+        .noneMatch(line -> !line.isBlank() && !line.stripLeading().startsWith("#"))) {
+      if (!filtered.isEmpty() && !filtered.endsWith("\n") && !filtered.endsWith("\r")) {
+        filtered += skeleton.source().contains("\r\n") ? "\r\n" : "\n";
+      }
+      filtered += "{}";
+      if (skeleton.source().endsWith("\n")) {
+        filtered += skeleton.source().endsWith("\r\n") ? "\r\n" : "\n";
+      }
+    }
+    return SourceSkeletonEncoding.named(skeleton.encoding()).encode(filtered);
+  }
+
+  private static void collectRemovalCandidates(
+      Node node, String parent, List<RemovalCandidate> candidates) {
+    if (node instanceof MappingNode mapping) {
+      for (NodeTuple entry : mapping.getValue()) {
+        if (!(entry.getKeyNode() instanceof ScalarNode key)) {
+          throw invalid("INVALID_YAML", "YAML mapping keys must be scalars");
+        }
+        String path = parent.isEmpty() ? key.getValue() : parent + "/" + key.getValue();
+        if (entry.getValueNode() instanceof ScalarNode value) {
+          candidates.add(
+              new RemovalCandidate(
+                  path, key.getStartMark().getIndex(), value.getEndMark().getIndex(), false));
+        } else {
+          collectRemovalCandidates(entry.getValueNode(), path, candidates);
+        }
+      }
+    } else if (node instanceof SequenceNode sequence) {
+      for (int index = 0; index < sequence.getValue().size(); index++) {
+        Node value = sequence.getValue().get(index);
+        String path = parent + "[" + index + "]";
+        if (value instanceof ScalarNode scalar) {
+          candidates.add(
+              new RemovalCandidate(
+                  path, scalar.getStartMark().getIndex(), scalar.getEndMark().getIndex(), true));
+        } else {
+          collectRemovalCandidates(value, path, candidates);
+        }
+      }
+    }
+  }
+
+  private static Range removalRange(String source, RemovalCandidate candidate) {
+    int lineStart = lineStart(source, candidate.start());
+    String prefix = source.substring(lineStart, candidate.start());
+    boolean wholeLine = prefix.isBlank() || candidate.sequenceItem() && "-".equals(prefix.trim());
+    if (wholeLine) {
+      return new Range(lineStart, nextLine(source, lineEnd(source, candidate.end())));
+    }
+    return new Range(candidate.start(), candidate.end());
+  }
+
+  private static String removeRanges(String source, List<Range> raw) {
+    raw.sort(Comparator.comparingInt(Range::start));
+    List<Range> normalized = new ArrayList<>();
+    for (int index = 0; index < raw.size(); ) {
+      Range first = raw.get(index);
+      if (lineStart(source, first.start()) == first.start()) {
+        normalized.add(first);
+        index++;
+        continue;
+      }
+      Range last = first;
+      int next = index + 1;
+      while (next < raw.size() && commaSeparated(source, last.end(), raw.get(next).start())) {
+        last = raw.get(next++);
+      }
+      int start = first.start();
+      int end = last.end();
+      int after = skipYamlWhitespace(source, end, 1);
+      if (after < source.length() && source.charAt(after) == ',') {
+        end = after + 1;
+      } else {
+        int before = skipYamlWhitespace(source, start, -1) - 1;
+        if (before >= 0 && source.charAt(before) == ',') {
+          start = before;
+        }
+      }
+      normalized.add(new Range(start, end));
+      index = next;
+    }
+    normalized.sort(Comparator.comparingInt(Range::start));
+    StringBuilder result = new StringBuilder(source.length());
+    int previous = 0;
+    for (Range range : normalized) {
+      if (range.start() < previous) {
+        previous = Math.max(previous, range.end());
+        continue;
+      }
+      result.append(source, previous, range.start());
+      previous = range.end();
+    }
+    return result.append(source, previous, source.length()).toString();
+  }
+
+  private static boolean commaSeparated(String source, int left, int right) {
+    String separator = source.substring(left, right).trim();
+    return ",".equals(separator);
+  }
+
+  private static int skipYamlWhitespace(String source, int position, int direction) {
+    if (direction > 0) {
+      while (position < source.length() && " \t\r\n".indexOf(source.charAt(position)) >= 0) {
+        position++;
+      }
+      return position;
+    }
+    while (position > 0 && " \t\r\n".indexOf(source.charAt(position - 1)) >= 0) {
+      position--;
+    }
+    return position;
+  }
+
+  private static int lineStart(String source, int position) {
+    return Math.max(source.lastIndexOf('\n', position - 1), source.lastIndexOf('\r', position - 1))
+        + 1;
+  }
+
+  private static int lineEnd(String source, int position) {
+    while (position < source.length()
+        && source.charAt(position) != '\n'
+        && source.charAt(position) != '\r') {
+      position++;
+    }
+    return position;
+  }
+
+  private static int nextLine(String source, int end) {
+    if (end >= source.length()) {
+      return end;
+    }
+    return source.charAt(end) == '\r' && end + 1 < source.length() && source.charAt(end + 1) == '\n'
+        ? end + 2
+        : end + 1;
   }
 
   private static String formatTranslation(String original, String translated) {
@@ -232,4 +386,8 @@ final class YamlSourceFormat {
   private static LocalizationParseException invalid(String code, String message) {
     return new LocalizationParseException(code, message);
   }
+
+  private record RemovalCandidate(String id, int start, int end, boolean sequenceItem) {}
+
+  private record Range(int start, int end) {}
 }

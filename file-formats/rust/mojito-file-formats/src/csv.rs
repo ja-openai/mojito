@@ -3,6 +3,8 @@ use crate::source_skeleton::{Encoding, SourceSkeleton, SourceSlot};
 use serde_json::Map;
 use std::collections::{BTreeMap, HashSet};
 
+const DO_NOT_TRANSLATE: &str = "DO NOT TRANSLATE";
+
 pub(crate) fn parse(format: FileFormat, source: &str) -> Result<Catalog, ParseError> {
     let mut catalog = Catalog::new(format);
     for row in rows(source)? {
@@ -177,10 +179,14 @@ pub(crate) fn localize(
         .iter()
         .map(|slot| slot.id.as_str())
         .collect::<HashSet<_>>();
-    if translations.keys().any(|id| !known.contains(id.as_str())) {
+    let protected = protected_ids(format, &skeleton.source)?;
+    if translations
+        .keys()
+        .any(|id| !known.contains(id.as_str()) || protected.contains(id.as_str()))
+    {
         return Err(error(
             "UNKNOWN_SKELETON_SLOT",
-            "Translation has no original CSV source slot",
+            "Translation has no translatable CSV source slot",
         ));
     }
     if !remove_untranslated {
@@ -190,6 +196,7 @@ pub(crate) fn localize(
     let mut previous = 0;
     for row in rows(&skeleton.source)? {
         let keep = row.fields.len() <= source_column(format)
+            || protected_row(format, &skeleton.source, &row)
             || translations.contains_key(raw(&skeleton.source, &row.fields[0]));
         if keep {
             retained.push_str(&skeleton.source[previous..row.terminator_end]);
@@ -203,6 +210,22 @@ pub(crate) fn localize(
     let filtered = encoding.encode(&retained);
     let filtered_skeleton = extract(format, &filtered)?;
     render(&filtered_skeleton, translations)
+}
+
+fn protected_row(format: FileFormat, source: &str, row: &Row) -> bool {
+    format == FileFormat::Csv
+        && row
+            .fields
+            .get(3)
+            .is_some_and(|comment| raw(source, comment).contains(DO_NOT_TRANSLATE))
+}
+
+fn protected_ids(format: FileFormat, source: &str) -> Result<HashSet<&str>, ParseError> {
+    Ok(rows(source)?
+        .into_iter()
+        .filter(|row| !row.fields.is_empty() && protected_row(format, source, row))
+        .map(|row| raw(source, &row.fields[0]))
+        .collect())
 }
 
 fn source_column(format: FileFormat) -> usize {

@@ -729,7 +729,7 @@ pub(crate) fn localize(
             !options.contains("emptyAndNbspNotTranslatable")
                 || options.enabled("emptyAndNbspNotTranslatable"),
         )?;
-        return crate::html::render(&skeleton, translations);
+        return crate::html::render_for_mojito(&skeleton, translations, remove_untranslated);
     }
     let catalog = apply_extraction(
         if format == FileFormat::Yaml {
@@ -792,7 +792,12 @@ pub(crate) fn localize(
         {
             selected.insert(key, translations[&format!("{}#other", slot.id)].clone());
         } else if remove_untranslated {
-            selected.insert(key.clone(), untranslated_marker.clone());
+            if matches!(
+                format,
+                FileFormat::Android | FileFormat::AppleStrings | FileFormat::GettextPo
+            ) {
+                selected.insert(key.clone(), untranslated_marker.clone());
+            }
             untranslated_keys.insert(key);
         }
     }
@@ -806,11 +811,15 @@ pub(crate) fn localize(
     }
     if format == FileFormat::AppleStringsdict && remove_untranslated {
         let mut missing_messages = catalog.messages.keys().cloned().collect::<BTreeSet<_>>();
+        let mut missing_required_other = BTreeSet::new();
         for slot in &skeleton.slots {
             if translations.contains_key(&slot.key()) {
                 missing_messages.remove(&slot.id);
+            } else if slot.variant.as_deref() == Some("other") {
+                missing_required_other.insert(slot.id.clone());
             }
         }
+        missing_messages.extend(missing_required_other);
         if !missing_messages.is_empty() {
             let removed_slots = skeleton
                 .slots
@@ -823,11 +832,38 @@ pub(crate) fn localize(
             skeleton = crate::extract_skeleton(format, &retained)?;
             selected.retain(|key, _| !removed_slots.contains(key));
         }
+        let retained =
+            crate::source_skeleton::remove_stringsdict_entries(&skeleton, &untranslated_keys)?;
+        skeleton = crate::extract_skeleton(format, &retained)?;
+        selected.retain(|key, _| !untranslated_keys.contains(key));
     }
     if remove_untranslated && matches!(format, FileFormat::Resx | FileFormat::Xtb) {
         let retained = crate::xml_resources::remove_entries(&skeleton, &untranslated_keys)?;
         skeleton = crate::extract_skeleton(format, &retained)?;
         selected.retain(|key, _| !untranslated_keys.contains(key));
+    } else if remove_untranslated && format == FileFormat::Yaml {
+        let retained = crate::yaml::remove_entries(&skeleton, &untranslated_keys)?;
+        selected.retain(|key, _| !untranslated_keys.contains(key));
+        if selected.is_empty() {
+            return Ok(retained);
+        }
+        skeleton = crate::extract_skeleton(format, &retained)?;
+    } else if remove_untranslated
+        && matches!(format, FileFormat::JavaScript | FileFormat::TypeScript)
+    {
+        let retained = crate::javascript::remove_entries(&skeleton, &untranslated_keys)?;
+        skeleton = crate::extract_skeleton(format, &retained)?;
+        selected.retain(|key, _| !untranslated_keys.contains(key));
+    } else if remove_untranslated && format == FileFormat::AppleXcstrings {
+        let retained =
+            crate::source_skeleton::remove_xcstrings_entries(&skeleton, &untranslated_keys)?;
+        skeleton = crate::extract_skeleton(format, &retained)?;
+        let retained_keys = skeleton
+            .slots
+            .iter()
+            .map(crate::source_skeleton::SourceSlot::key)
+            .collect::<BTreeSet<_>>();
+        selected.retain(|key, _| retained_keys.contains(key));
     }
     let mut localized = crate::render_skeleton(&skeleton, &selected)?;
     if format == FileFormat::Android {

@@ -2,7 +2,7 @@ use crate::model::{Catalog, FileFormat, Message, ParseError};
 use crate::source_skeleton::{SourceSkeleton, SourceSlot};
 use crate::workflow::FilterOptions;
 use serde_json::Map;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use yaml_rust2::parser::{Event, Parser};
 use yaml_rust2::scanner::TScalarStyle;
 
@@ -13,13 +13,21 @@ struct Scalar {
     value: String,
     start: usize,
     end: usize,
+    entry_start: usize,
+    sequence_item: bool,
+}
+
+#[derive(Debug)]
+struct Key {
+    value: String,
+    start: usize,
 }
 
 #[derive(Debug)]
 struct Frame {
     path: String,
     legacy_path: String,
-    key: Option<String>,
+    key: Option<Key>,
     sequence: bool,
     flow: bool,
     count: usize,
@@ -145,6 +153,166 @@ pub(crate) fn render(
     Ok(result)
 }
 
+pub(crate) fn remove_entries(
+    skeleton: &SourceSkeleton,
+    removed: &BTreeSet<String>,
+) -> Result<Vec<u8>, ParseError> {
+    if skeleton.schema_version != 1 || skeleton.source_format != FileFormat::Yaml.id() {
+        return Err(error(
+            "INVALID_SKELETON",
+            "Unsupported YAML source skeleton",
+        ));
+    }
+    let mut ranges = scalars(&skeleton.source)?
+        .into_iter()
+        .filter(|scalar| removed.contains(&scalar.path))
+        .map(|scalar| removal_range(&skeleton.source, &scalar))
+        .collect::<Vec<_>>();
+    ranges.sort_unstable_by_key(|range| range.start);
+    let ranges = normalize_ranges(&skeleton.source, &ranges);
+    let mut result = String::with_capacity(skeleton.source.len());
+    let mut previous = 0;
+    for range in ranges {
+        if range.start < previous {
+            previous = previous.max(range.end);
+            continue;
+        }
+        result.push_str(&skeleton.source[previous..range.start]);
+        previous = range.end;
+    }
+    result.push_str(&skeleton.source[previous..]);
+    if result
+        .lines()
+        .all(|line| line.trim().is_empty() || line.trim_start().starts_with('#'))
+    {
+        if !result.is_empty() && !result.ends_with('\r') && !result.ends_with('\n') {
+            result.push_str(if skeleton.source.contains("\r\n") {
+                "\r\n"
+            } else {
+                "\n"
+            });
+        }
+        result.push_str("{}");
+        if skeleton.source.ends_with('\n') {
+            result.push_str(if skeleton.source.ends_with("\r\n") {
+                "\r\n"
+            } else {
+                "\n"
+            });
+        }
+    }
+    let encoding = crate::source_skeleton::Encoding::named(&skeleton.encoding)?;
+    Ok(encoding.encode(&result))
+}
+
+#[derive(Clone, Copy)]
+struct RemovalRange {
+    start: usize,
+    end: usize,
+    whole_line: bool,
+}
+
+fn removal_range(source: &str, scalar: &Scalar) -> RemovalRange {
+    let start_of_line = line_start(source, scalar.entry_start);
+    let prefix = &source[start_of_line..scalar.entry_start];
+    let whole_line = prefix.trim().is_empty() || scalar.sequence_item && prefix.trim() == "-";
+    if whole_line {
+        RemovalRange {
+            start: start_of_line,
+            end: next_line(source, line_end(source, scalar.end)),
+            whole_line: true,
+        }
+    } else {
+        RemovalRange {
+            start: scalar.entry_start,
+            end: scalar.end,
+            whole_line: false,
+        }
+    }
+}
+
+fn normalize_ranges(source: &str, raw: &[RemovalRange]) -> Vec<RemovalRange> {
+    let mut result = Vec::new();
+    let mut index = 0;
+    while index < raw.len() {
+        let first = raw[index];
+        if first.whole_line {
+            result.push(first);
+            index += 1;
+            continue;
+        }
+        let mut last = first;
+        let mut next = index + 1;
+        while next < raw.len() && source[last.end..raw[next].start].trim() == "," {
+            last = raw[next];
+            next += 1;
+        }
+        let mut start = first.start;
+        let mut end = last.end;
+        let after = skip_whitespace_forward(source, end);
+        if source.as_bytes().get(after) == Some(&b',') {
+            end = after + 1;
+        } else {
+            let before = skip_whitespace_backward(source, start);
+            if before > 0 && source.as_bytes()[before - 1] == b',' {
+                start = before - 1;
+            }
+        }
+        result.push(RemovalRange {
+            start,
+            end,
+            whole_line: false,
+        });
+        index = next;
+    }
+    result
+}
+
+fn skip_whitespace_forward(source: &str, mut position: usize) -> usize {
+    while source
+        .as_bytes()
+        .get(position)
+        .is_some_and(|byte| matches!(byte, b' ' | b'\t' | b'\r' | b'\n'))
+    {
+        position += 1;
+    }
+    position
+}
+
+fn skip_whitespace_backward(source: &str, mut position: usize) -> usize {
+    while position > 0
+        && matches!(
+            source.as_bytes()[position - 1],
+            b' ' | b'\t' | b'\r' | b'\n'
+        )
+    {
+        position -= 1;
+    }
+    position
+}
+
+fn line_start(source: &str, position: usize) -> usize {
+    source[..position]
+        .rfind(['\r', '\n'])
+        .map_or(0, |index| index + 1)
+}
+
+fn line_end(source: &str, start: usize) -> usize {
+    source[start..]
+        .find(['\r', '\n'])
+        .map_or(source.len(), |offset| start + offset)
+}
+
+fn next_line(source: &str, end: usize) -> usize {
+    if end == source.len() {
+        end
+    } else if source[end..].starts_with("\r\n") {
+        end + 2
+    } else {
+        end + 1
+    }
+}
+
 fn encode_scalar(source: &str, translated: &str) -> String {
     if source.starts_with('\'') {
         format!("'{}'", translated.replace('\'', "''"))
@@ -232,38 +400,45 @@ fn scalars(source: &str) -> Result<Vec<Scalar>, ParseError> {
                 });
             }
             Event::Scalar(value, style, _, _) => {
+                let marked = source
+                    .char_indices()
+                    .nth(marker.index())
+                    .map_or(source.len(), |(index, _)| index);
                 let current = stack
                     .last_mut()
                     .ok_or_else(|| error("INVALID_YAML", "YAML source must contain a mapping"))?;
                 if !current.sequence && current.key.is_none() {
-                    current.key = Some(value);
+                    current.key = Some(Key {
+                        value,
+                        start: marked,
+                    });
                     continue;
                 }
-                let (path, legacy_path) = if current.sequence {
+                let (path, legacy_path, entry_start, sequence_item) = if current.sequence {
                     current.count += 1;
                     (
                         format!("{}[{}]", current.path, current.count - 1),
                         current.legacy_path.clone(),
+                        marked,
+                        true,
                     )
                 } else {
                     let key = current.key.take().unwrap();
                     (
                         if current.path.is_empty() {
-                            key.clone()
+                            key.value.clone()
                         } else {
-                            format!("{}/{}", current.path, key)
+                            format!("{}/{}", current.path, key.value)
                         },
                         if current.legacy_path.is_empty() {
-                            key
+                            key.value
                         } else {
-                            format!("{}/{}", current.legacy_path, key)
+                            format!("{}/{}", current.legacy_path, key.value)
                         },
+                        key.start,
+                        false,
                     )
                 };
-                let marked = source
-                    .char_indices()
-                    .nth(marker.index())
-                    .map_or(source.len(), |(index, _)| index);
                 let start = if matches!(style, TScalarStyle::Literal | TScalarStyle::Folded) {
                     source[..marked]
                         .rfind(['|', '>'])
@@ -279,6 +454,8 @@ fn scalars(source: &str) -> Result<Vec<Scalar>, ParseError> {
                     value,
                     start,
                     end,
+                    entry_start,
+                    sequence_item,
                 });
             }
             Event::Alias(_) => {
@@ -312,14 +489,14 @@ fn next_path(stack: &mut [Frame]) -> Result<(String, String), ParseError> {
     } else if let Some(key) = parent.key.take() {
         Ok((
             if parent.path.is_empty() {
-                key.clone()
+                key.value.clone()
             } else {
-                format!("{}/{}", parent.path, key)
+                format!("{}/{}", parent.path, key.value)
             },
             if parent.legacy_path.is_empty() {
-                key
+                key.value
             } else {
-                format!("{}/{}", parent.legacy_path, key)
+                format!("{}/{}", parent.legacy_path, key.value)
             },
         ))
     } else {

@@ -59,6 +59,13 @@ final class HtmlSourceFormat {
   }
 
   static byte[] render(LocalizationSourceSkeleton skeleton, Map<String, String> translations) {
+    return render(skeleton, translations, false);
+  }
+
+  static byte[] render(
+      LocalizationSourceSkeleton skeleton,
+      Map<String, String> translations,
+      boolean removeUntranslated) {
     if (skeleton.schemaVersion() != 1
         || !LocalizationFileFormat.HTML.id().equals(skeleton.sourceFormat())) {
       throw invalidSkeleton("Unsupported HTML source skeleton");
@@ -87,14 +94,20 @@ final class HtmlSourceFormat {
       }
       output.write(original, copied, slot.start() - copied);
       String translation = translations.get(slot.id());
-      String localized =
-          translation == null
-              ? applyNestedAttributes(
-                  skeleton.source().substring(entry.start(), entry.end()),
-                  entry.start(),
-                  entries,
-                  translations)
-              : renderValue(entry, translation, entries, translations);
+      String localized;
+      if (translation != null) {
+        localized = renderValue(entry, translation, entries, translations, removeUntranslated);
+      } else if (removeUntranslated) {
+        localized = omitValue(entry, entries, translations);
+      } else {
+        localized =
+            applyNestedAttributes(
+                skeleton.source().substring(entry.start(), entry.end()),
+                entry.start(),
+                entries,
+                translations,
+                false);
+      }
       byte[] bytes = localized.getBytes(encoding.charset());
       output.write(bytes, 0, bytes.length);
       copied = slot.end();
@@ -127,7 +140,11 @@ final class HtmlSourceFormat {
   }
 
   private static String renderValue(
-      Entry entry, String translation, List<Entry> entries, Map<String, String> translations) {
+      Entry entry,
+      String translation,
+      List<Entry> entries,
+      Map<String, String> translations,
+      boolean removeUntranslated) {
     if (entry.attribute()) {
       return escapeAttribute(translation);
     }
@@ -146,7 +163,8 @@ final class HtmlSourceFormat {
       }
       String image = entry.tags().get(number - 1);
       int imageStart = entry.imageStarts().get(number - 1);
-      parts.add(applyNestedAttributes(image, imageStart, entries, translations));
+      parts.add(
+          applyNestedAttributes(image, imageStart, entries, translations, removeUntranslated));
       cursor = placeholder.end();
     }
     parts.add(escapeText(translation.substring(cursor)));
@@ -159,8 +177,30 @@ final class HtmlSourceFormat {
     return String.join("", parts);
   }
 
+  private static String omitValue(
+      Entry entry, List<Entry> entries, Map<String, String> translations) {
+    if (entry.attribute()) {
+      return "";
+    }
+    StringBuilder retainedMarkup = new StringBuilder();
+    for (int index = 0; index < entry.tags().size(); index++) {
+      retainedMarkup.append(
+          applyNestedAttributes(
+              entry.tags().get(index),
+              entry.imageStarts().get(index),
+              entries,
+              translations,
+              true));
+    }
+    return retainedMarkup.toString();
+  }
+
   private static String applyNestedAttributes(
-      String source, int start, List<Entry> entries, Map<String, String> translations) {
+      String source,
+      int start,
+      List<Entry> entries,
+      Map<String, String> translations,
+      boolean removeUntranslated) {
     String result = source;
     List<Entry> attributes =
         entries.stream()
@@ -169,13 +209,13 @@ final class HtmlSourceFormat {
                     entry.attribute()
                         && entry.start() >= start
                         && entry.end() <= start + source.length()
-                        && translations.containsKey(entry.id()))
+                        && (translations.containsKey(entry.id()) || removeUntranslated))
             .sorted(java.util.Comparator.comparingInt(Entry::start).reversed())
             .toList();
     for (Entry entry : attributes) {
       result =
           result.substring(0, entry.start() - start)
-              + escapeAttribute(translations.get(entry.id()))
+              + escapeAttribute(translations.getOrDefault(entry.id(), ""))
               + result.substring(entry.end() - start);
     }
     return result;

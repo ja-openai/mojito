@@ -170,8 +170,9 @@ and 1,000-unit workloads improving from 175.0 ms to 7.2 ms and from 32.8 ms to
   converters insert that translated category instead of copying `other`.
   Untranslated cleanup also retains XML comments and processing instructions
   that precede the resource root, including when all strings are removed.
-- Android, JSON, Apple `.strings`, Java properties, Microsoft RESX/RESW,
-  Google XTB, and GNU PO remove
+- Android, JSON, Apple `.strings`/`.stringsdict`/`.xcstrings`, Java properties,
+  CSV, Microsoft RESX/RESW, Google XTB, JavaScript/TypeScript, YAML, HTML, and
+  GNU PO remove
   untranslated entries when inheritance mode is `REMOVE_UNTRANSLATED`; Android
   also removes plural groups lacking a translated `other` branch. Java
   properties remove the entire original logical declaration, including physical
@@ -196,13 +197,30 @@ and 1,000-unit workloads improving from 175.0 ms to 7.2 ms and from 32.8 ms to
   empty root, including XTB's original harmless declaration.
 - The actual customized Apple `.stringsdict` writer also emits malformed XML
   when `REMOVE_UNTRANSLATED` removes plural text units. Java and Rust instead
-  remove only fully untranslated top-level dictionary messages, preserving all
-  translated category metadata, UTF-16 source encoding, comments, and a valid
-  empty root when no translations remain. Existing CLI datasets demonstrate
-  every malformed legacy locale, while real Foundation validates both original
-  and portable localized native dictionaries. Partially translated plural
-  categories retain their existing behavior until a separate policy is defined;
-  binary dictionaries fail safely when complete-message removal is required.
+  remove fully untranslated top-level dictionary messages and missing optional
+  plural pairs. A message missing its required `other` pair is removed as one
+  incomplete unit. This preserves translated category metadata, UTF-16 source
+  encoding, comments, and a valid empty root when no translations remain.
+  Existing CLI datasets demonstrate every malformed legacy locale, while real
+  Foundation validates both original and portable localized native
+  dictionaries. Binary dictionaries fail safely when structural removal is
+  required.
+- Source-owned YAML and JavaScript/TypeScript cleanup removes complete missing
+  scalar/property declarations rather than serializing Mojito's private marker.
+  It retains surrounding comments, line endings, protected JavaScript values,
+  and the original encoding. HTML cleanup empties missing text and attributes
+  while retaining protected markup, image elements, comments, scripts, styles,
+  and untranslated image URLs. Standard CSV cleanup keeps rows suppressed by an
+  exact `DO NOT TRANSLATE` note even though those rows have no translation-map
+  entry, and rejects an explicit translation for a protected row.
+- Xcode String Catalog cleanup removes fully missing message members and
+  source-owned missing plural branches without normalizing the surrounding
+  JSON. A missing required scalar or `other` branch removes its incomplete
+  message or device owner, while `shouldTranslate=false` entries and unrelated
+  project metadata remain byte-for-byte source-owned. Explicit translations in
+  a structurally removed incomplete group are discarded with that group; this
+  matches the existing Android rule that a plural without `other` is not valid
+  translated output.
 - Apple `.stringsdict` translated output independently completes each
   locale-required plural rule by copying the source-owned translated `other`
   entry. Russian output therefore contains `one`, `few`, `many`, and `other`

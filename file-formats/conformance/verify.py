@@ -716,6 +716,7 @@ def main() -> None:
                 "INVALID_IMPORT_LOCALE",
                 "INVALID_IMPORT_PLURAL",
                 "UNSUPPORTED_IMPORT_POLICY",
+                "UNKNOWN_SKELETON_SLOT",
             }, (
                 f"{workflow_id}: unstable workflow error"
             )

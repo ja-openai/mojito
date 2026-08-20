@@ -88,6 +88,14 @@ pub(crate) fn render(
     skeleton: &SourceSkeleton,
     translations: &BTreeMap<String, String>,
 ) -> Result<Vec<u8>, ParseError> {
+    render_for_mojito(skeleton, translations, false)
+}
+
+pub(crate) fn render_for_mojito(
+    skeleton: &SourceSkeleton,
+    translations: &BTreeMap<String, String>,
+    remove_untranslated: bool,
+) -> Result<Vec<u8>, ParseError> {
     if skeleton.schema_version != 1 || skeleton.source_format != FileFormat::Html.id() {
         return Err(invalid_skeleton("Unsupported HTML source skeleton"));
     }
@@ -116,12 +124,20 @@ pub(crate) fn render(
         output.extend_from_slice(&original[copied..slot.start]);
         let entry = &entries[owner];
         let value = match translations.get(&slot.id) {
-            Some(translation) => render_value(entry, translation, &entries, translations)?,
+            Some(translation) => render_value(
+                entry,
+                translation,
+                &entries,
+                translations,
+                remove_untranslated,
+            )?,
+            None if remove_untranslated => omit_value(entry, &entries, translations),
             None => apply_nested_attributes(
                 &skeleton.source[entry.start..entry.end],
                 entry.start,
                 &entries,
                 translations,
+                false,
             ),
         };
         output.extend(encoding.encode_without_bom(&value));
@@ -156,6 +172,7 @@ fn render_value(
     translation: &str,
     entries: &[Entry],
     translations: &BTreeMap<String, String>,
+    remove_untranslated: bool,
 ) -> Result<String, ParseError> {
     if entry.attribute {
         return Ok(escape_text(translation).replace('"', "&quot;"));
@@ -184,6 +201,7 @@ fn render_value(
             entry.image_starts[number - 1],
             entries,
             translations,
+            remove_untranslated,
         ));
         copied = end;
     }
@@ -198,11 +216,24 @@ fn render_value(
     Ok(output)
 }
 
+fn omit_value(entry: &Entry, entries: &[Entry], translations: &BTreeMap<String, String>) -> String {
+    if entry.attribute {
+        return String::new();
+    }
+    entry
+        .tags
+        .iter()
+        .zip(&entry.image_starts)
+        .map(|(image, start)| apply_nested_attributes(image, *start, entries, translations, true))
+        .collect()
+}
+
 fn apply_nested_attributes(
     source: &str,
     start: usize,
     entries: &[Entry],
     translations: &BTreeMap<String, String>,
+    remove_untranslated: bool,
 ) -> String {
     let mut localized = source.to_owned();
     let mut attributes: Vec<&Entry> = entries
@@ -211,14 +242,20 @@ fn apply_nested_attributes(
             entry.attribute
                 && entry.start >= start
                 && entry.end <= start + source.len()
-                && translations.contains_key(&entry.id)
+                && (translations.contains_key(&entry.id) || remove_untranslated)
         })
         .collect();
     attributes.sort_unstable_by_key(|entry| std::cmp::Reverse(entry.start));
     for entry in attributes {
         localized.replace_range(
             entry.start - start..entry.end - start,
-            &escape_text(&translations[&entry.id]).replace('"', "&quot;"),
+            &escape_text(
+                translations
+                    .get(&entry.id)
+                    .map(String::as_str)
+                    .unwrap_or_default(),
+            )
+            .replace('"', "&quot;"),
         );
     }
     localized
