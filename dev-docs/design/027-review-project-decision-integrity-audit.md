@@ -141,6 +141,8 @@ Before using the tool as the daily operator path:
 4. Run the 26-hour investigation through MCP and compare summary counts with one controlled
    application-side verification.
 
-Keep scheduling deferred until the interactive operator flow is stable. If scheduling becomes
-useful later, invoke the same audit service and publish bounded summaries; do not add a second query
-or persist automatic remediation.
+The optional daily Quartz canary invokes this same audit service and publishes bounded, tag-free
+Micrometer summaries; it does not add a second query or persist remediation. Keep
+`l10n.review-project.decision-integrity-canary.enabled=false` until the V103 query plan and latency
+have been validated. When enabled, the default schedule is 05:15 UTC and the default lookback is
+26 hours.

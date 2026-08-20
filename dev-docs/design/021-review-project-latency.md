@@ -115,18 +115,30 @@ path is the likely source of perceived delay.
 
 ## Decision-integrity canary
 
-Run a read-only daily canary after deploying changes to the rapid-review path.
-Use one bounded window query over the previous 26 hours and `LAG` decisions
-partitioned by review-project ID and reviewer ID, ordered by decision timestamp
-and ID. Flag only adjacent decided rows where the exact target repeats, the
-source differs, and the decisions are no more than 30 seconds apart. Do not
-apply a minimum target length: short labels are common enough to require human
-review, but excluding them hides real carryover such as one model name, color,
-or action being saved onto the next row.
+The optional daily canary delegates to the read-only decision-integrity audit
+described in `dev-docs/design/027-review-project-decision-integrity-audit.md`.
+The audit performs one bounded query, including 30 seconds of predecessor
+context before the requested window, and detects exact-target carryover in Java.
+It groups adjacent candidates into runs, retains one-character targets, and uses
+redacted, code-point-bounded previews for operator evidence.
 
-The canary is deliberately a candidate detector, not an automatic rejection or
-translation rewrite. It should publish the candidate count and decision/text-unit
-links for operator review. Grouping by target alone is too noisy, and issuing one
-follow-up lookup per decision turns the audit into an avoidable N+1 query. Keep
-the canary enabled through at least 14 consecutive clean days after deployment;
-then decide whether to retain it as a permanent low-frequency integrity check.
+The canary uses ordinary static Quartz job and trigger beans at 05:15 UTC. It is
+non-concurrent and does not use the dynamic review-automation trigger path
+covered by REVIEW-03. Keep it disabled until the V103 MySQL query plan and
+latency have been validated, then enable or reschedule it with
+`l10n.review-project.decision-integrity-canary.enabled` and `.cron`. The default
+lookback is 26 hours and is hard-capped at 48 hours.
+
+Each successful run publishes tag-free gauges for carryover candidate pairs,
+carryover runs, deterministic integrity findings, review-needed findings, and
+the last completion timestamp. Counters record successful and failed executions,
+and a timer records every attempt. These meters are process-local; aggregate
+execution counters across instances and use the maximum completion timestamp in
+clustered deployments. Disabled instances do not register canary meters.
+
+Summary logs include the bounded window and uncapped counts; detailed carryover
+logs use the audit's redacted evidence and are capped at 50 runs. Alert on a
+candidate count above zero, a failed-execution counter increase, or an overdue
+completion timestamp. Source-equals-target review-needed findings alone remain
+informational. The canary never rejects a decision, changes a variant, or writes
+translation state; investigation and remediation remain manual.
