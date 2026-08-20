@@ -13,7 +13,6 @@ import net.sf.okapi.common.pipeline.BasePipelineStep;
 import net.sf.okapi.common.pipeline.annotations.StepParameterMapping;
 import net.sf.okapi.common.pipeline.annotations.StepParameterType;
 import net.sf.okapi.common.resource.ITextUnit;
-import net.sf.okapi.common.resource.TextContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,7 +81,8 @@ public class PseudoLocalizeStep extends BasePipelineStep {
       String source = textUnitUtils.getSourceAsString(textUnit);
       String pseudoTranslation =
           pseudoLocalization.convertStringToPseudoLoc(source, textUnitIntegrityCheckers);
-      textUnit.setTarget(targetLocale, new TextContainer(pseudoTranslation));
+      textUnit.setTarget(
+          targetLocale, textUnitUtils.createTargetTextContainer(textUnit, pseudoTranslation));
     }
 
     return event;

@@ -118,6 +118,9 @@ public class AndroidFilter extends XMLFilter {
   /** Option to emit anchor tags as Android XML elements instead of escaped markup text. */
   boolean unescapeAnchorTags = false;
 
+  /** Option to infer anchor output per string from real elements in the source XML. */
+  boolean autoDetectAnchorTags = false;
+
   List<Event> eventQueue = new ArrayList<>();
 
   boolean removeDescription = false;
@@ -168,15 +171,19 @@ public class AndroidFilter extends XMLFilter {
           });
       logger.debug("filter option, old escaping: {}", oldEscaping);
 
-      filterOptions.getBoolean(
+      filterOptions.getString(
           OPTION_UNESCAPE_ANCHOR_TAGS,
-          b -> {
-            unescapeAnchorTags = b;
+          value -> {
+            autoDetectAnchorTags = "auto".equalsIgnoreCase(value);
+            unescapeAnchorTags = !autoDetectAnchorTags && Boolean.parseBoolean(value);
             if (androidXMLEncoder != null) {
               androidXMLEncoder.unescapeAnchorTags = unescapeAnchorTags;
             }
           });
-      logger.debug("filter option, unescape anchor tags: {}", unescapeAnchorTags);
+      logger.debug(
+          "filter option, unescape anchor tags: {}, auto detect: {}",
+          unescapeAnchorTags,
+          autoDetectAnchorTags);
 
       filterOptions.getBoolean(
           REMOVE_DESCRIPTION,
@@ -226,10 +233,17 @@ public class AndroidFilter extends XMLFilter {
     return event;
   }
 
-  private void processTextUnit(Event event) {
+  void processTextUnit(Event event) {
     if (event != null && event.isTextUnit()) {
 
       TextUnit textUnit = (TextUnit) event.getTextUnit();
+      if (autoDetectAnchorTags) {
+        AndroidAutoDetectAnchorTagsAnnotation annotation =
+            AndroidAutoDetectAnchorTagsAnnotation.from(textUnit.getSource().getFirstContent());
+        if (annotation != null) {
+          textUnit.setAnnotation(annotation);
+        }
+      }
       String sourceString = textUnitUtils.getSourceAsString(textUnit);
 
       String unescapedSourceString;

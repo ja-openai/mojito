@@ -1,13 +1,21 @@
 package com.box.l10n.mojito.okapi.filters;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import com.box.l10n.mojito.okapi.RawDocument;
+import com.box.l10n.mojito.okapi.TextUnitUtils;
 import java.util.List;
 import net.sf.okapi.common.Event;
 import net.sf.okapi.common.EventType;
 import net.sf.okapi.common.LocaleId;
+import net.sf.okapi.common.resource.Code;
+import net.sf.okapi.common.resource.TextFragment;
 import net.sf.okapi.common.resource.TextUnit;
+import net.sf.okapi.common.skeleton.GenericSkeleton;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +40,45 @@ public class AndroidFilterTest {
     assertEquals(
         "<a href=\"https://example.com\">Link</a>",
         encoder.escapeCommon("&lt;a href=\\\"https://example.com\\\"&gt;Link&lt;/a&gt;"));
+  }
+
+  @Test
+  public void testAutoDetectAnchorTagsOptionDoesNotEnableGlobalUnescaping() {
+    AndroidFilter filter = new AndroidFilter();
+    AndroidXMLEncoder encoder = filter.getXMLEncoder();
+    RawDocument rawDocument = new RawDocument("", LocaleId.ENGLISH);
+    rawDocument.setAnnotation(new FilterOptions(List.of("unescapeAnchorTags=auto")));
+
+    filter.applyFilterOptions(rawDocument);
+
+    assertTrue(filter.autoDetectAnchorTags);
+    assertFalse(encoder.unescapeAnchorTags);
+  }
+
+  @Test
+  public void testAutoDetectAnchorTagsUsesSourceInlineCodes() {
+    AndroidFilter filter = new AndroidFilter();
+    filter.autoDetectAnchorTags = true;
+    filter.textUnitUtils = new TextUnitUtils();
+    filter.unescapeUtils = new UnescapeUtils();
+
+    TextUnit realAnchor = new TextUnit();
+    TextFragment realAnchorContent = new TextFragment();
+    realAnchorContent
+        .append(new Code(TextFragment.TagType.OPENING, "a", "<a href=\"https://example.com\">"))
+        .append("Link")
+        .append(new Code(TextFragment.TagType.CLOSING, "a", "</a>"));
+    realAnchor.setSourceContent(realAnchorContent);
+    realAnchor.setSkeleton(new GenericSkeleton());
+    filter.processTextUnit(new Event(EventType.TEXT_UNIT, realAnchor));
+
+    TextUnit escapedAnchor = new TextUnit();
+    escapedAnchor.setSourceContent(new TextFragment("<a href=\"https://example.com\">Link</a>"));
+    escapedAnchor.setSkeleton(new GenericSkeleton());
+    filter.processTextUnit(new Event(EventType.TEXT_UNIT, escapedAnchor));
+
+    assertNotNull(realAnchor.getAnnotation(AndroidAutoDetectAnchorTagsAnnotation.class));
+    assertNull(escapedAnchor.getAnnotation(AndroidAutoDetectAnchorTagsAnnotation.class));
   }
 
   @Test
