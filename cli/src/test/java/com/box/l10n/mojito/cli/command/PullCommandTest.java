@@ -862,7 +862,12 @@ public class PullCommandTest extends CLITestBase {
 
   @Test
   public void portableJsonMigrationRetriesAfterCorrectedIdentityAlreadyExists() throws Exception {
-    assertPortableJsonMigration(true, true);
+    assertPortableJsonMigration(true, true, false);
+  }
+
+  @Test
+  public void portableJsonMigrationDoesNotOverwriteCorrectedTranslationsOnRetry() throws Exception {
+    assertPortableJsonMigration(true, true, true);
   }
 
   private void assertPortableJsonMigration(boolean migrateLegacyComments) throws Exception {
@@ -871,6 +876,15 @@ public class PullCommandTest extends CLITestBase {
 
   private void assertPortableJsonMigration(
       boolean migrateLegacyComments, boolean createCorrectedIdentityBeforeMigration)
+      throws Exception {
+    assertPortableJsonMigration(
+        migrateLegacyComments, createCorrectedIdentityBeforeMigration, false);
+  }
+
+  private void assertPortableJsonMigration(
+      boolean migrateLegacyComments,
+      boolean createCorrectedIdentityBeforeMigration,
+      boolean retryAfterCorrectedTranslation)
       throws Exception {
     Repository repository = createTestRepoUsingRepoService();
     Path source = getTargetTestDir("legacy-json-source").toPath();
@@ -943,6 +957,26 @@ public class PullCommandTest extends CLITestBase {
               ? TMTextUnitVariant.Status.APPROVED
               : TMTextUnitVariant.Status.TRANSLATION_NEEDED,
           current.getTmTextUnitVariant().getStatus());
+    }
+
+    if (retryAfterCorrectedTranslation) {
+      var frenchLocale = localeService.findByBcp47Tag("fr-FR");
+      tmService.addCurrentTMTextUnitVariant(
+          correctedQuoted.getId(),
+          frenchLocale.getId(),
+          "Traduction corrigée",
+          TMTextUnitVariant.Status.APPROVED,
+          true);
+      Files.writeString(source.resolve("en.json"), english + "\n");
+
+      runConfiguredJsonMigrationCommand(
+          "push", repository.getName(), source, null, "portable", true);
+
+      var current =
+          tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
+              frenchLocale.getId(), correctedQuoted.getId());
+      assertEquals("Traduction corrigée", current.getTmTextUnitVariant().getContent());
+      return;
     }
 
     runConfiguredJsonMigrationCommand("pull", repository.getName(), source, output, "portable");

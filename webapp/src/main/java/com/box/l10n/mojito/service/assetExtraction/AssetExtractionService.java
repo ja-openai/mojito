@@ -17,6 +17,7 @@ import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.PushRun;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
+import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.fileformat.LocalizationCatalog;
 import com.box.l10n.mojito.fileformat.LocalizationConverterSelection;
@@ -535,12 +536,14 @@ public class AssetExtractionService {
                   textUnitDTOsForAssetAndLocaleByMD5.values().asList());
             });
 
-    ImmutableList<TextUnitDTOMatch> migrationMatches =
+    ImmutableList<TextUnitDTOMatch> migrationCandidates =
         migrateLegacyJsonComments
             ? getLegacyJsonCommentMigrationMatches(
                 createTmTextUnitResult.updatedState().getBranchStateTextUnits(),
                 createTmTextUnitResult.assetScopedTextUnitDTOs())
             : ImmutableList.of();
+    ImmutableList<TextUnitDTOMatch> migrationMatches =
+        getLegacyJsonCommentMigrationMatchesEligibleForUpgrade(migrationCandidates);
     if (migrateLegacyJsonComments) {
       logger.info("Migrating {} legacy JSON comment identities", migrationMatches.size());
     }
@@ -1249,6 +1252,36 @@ public class AssetExtractionService {
                   : null;
             })
         .filter(Objects::nonNull)
+        .collect(ImmutableList.toImmutableList());
+  }
+
+  /**
+   * Allow the explicit migration to replace ordinary source-leveraged TRANSLATION_NEEDED copies,
+   * but never overwrite a corrected identity that has been reviewed, approved, or rejected.
+   */
+  ImmutableList<TextUnitDTOMatch> getLegacyJsonCommentMigrationMatchesEligibleForUpgrade(
+      ImmutableList<TextUnitDTOMatch> candidates) {
+    if (candidates.isEmpty()) {
+      return candidates;
+    }
+
+    ImmutableSet<Long> correctedIds =
+        candidates.stream()
+            .map(match -> match.source().getTmTextUnitId())
+            .filter(Objects::nonNull)
+            .collect(ImmutableSet.toImmutableSet());
+    ImmutableSet<Long> protectedTranslationIds =
+        getTranslatedTextUnitDTOsForTmTextUnitIds(correctedIds).stream()
+            .filter(
+                textUnit ->
+                    !TMTextUnitVariant.Status.TRANSLATION_NEEDED.equals(textUnit.getStatus())
+                        || !textUnit.isIncludedInLocalizedFile())
+            .map(TextUnitDTO::getTmTextUnitId)
+            .collect(ImmutableSet.toImmutableSet());
+
+    return candidates.stream()
+        .filter(match -> match.source().getTmTextUnitId() != null)
+        .filter(match -> !protectedTranslationIds.contains(match.source().getTmTextUnitId()))
         .collect(ImmutableList.toImmutableList());
   }
 
