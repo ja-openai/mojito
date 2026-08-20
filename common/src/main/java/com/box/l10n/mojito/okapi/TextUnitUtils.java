@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.okapi;
 
+import com.box.l10n.mojito.okapi.filters.AndroidAutoDetectAnchorTagsAnnotation;
 import java.util.Objects;
 import net.sf.okapi.common.annotation.NoteAnnotation;
 import net.sf.okapi.common.resource.ITextUnit;
@@ -78,6 +79,14 @@ public class TextUnitUtils {
   public void replaceSourceString(TextUnit textUnit, String newSource) {
     TextContainer source = new TextContainer(newSource);
     textUnit.setSource(source);
+  }
+
+  public TextContainer createTargetTextContainer(ITextUnit textUnit, String target) {
+    AndroidAutoDetectAnchorTagsAnnotation annotation =
+        textUnit.getAnnotation(AndroidAutoDetectAnchorTagsAnnotation.class);
+    return annotation == null
+        ? new TextContainer(target)
+        : new TextContainer(annotation.restoreAnchorCodes(target));
   }
 
   /**

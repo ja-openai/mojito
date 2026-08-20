@@ -56,6 +56,8 @@ public class AndroidFilter extends XMLFilter {
 
   private static final String OPTION_OLD_ESCAPING = "oldEscaping";
 
+  public static final String OPTION_UNESCAPE_ANCHOR_TAGS = "unescapeAnchorTags";
+
   private static final String REMOVE_DESCRIPTION = "removeDescription";
 
   private static final String POST_PROCESS_INDENT = "postProcessIndent";
@@ -113,6 +115,12 @@ public class AndroidFilter extends XMLFilter {
   /** Option to enable old escaping for the Android filter. */
   boolean oldEscaping = false;
 
+  /** Option to emit anchor tags as Android XML elements instead of escaped markup text. */
+  boolean unescapeAnchorTags = false;
+
+  /** Option to infer anchor output per string from real elements in the source XML. */
+  boolean autoDetectAnchorTags = false;
+
   List<Event> eventQueue = new ArrayList<>();
 
   boolean removeDescription = false;
@@ -163,6 +171,20 @@ public class AndroidFilter extends XMLFilter {
           });
       logger.debug("filter option, old escaping: {}", oldEscaping);
 
+      filterOptions.getString(
+          OPTION_UNESCAPE_ANCHOR_TAGS,
+          value -> {
+            autoDetectAnchorTags = "auto".equalsIgnoreCase(value);
+            unescapeAnchorTags = !autoDetectAnchorTags && Boolean.parseBoolean(value);
+            if (androidXMLEncoder != null) {
+              androidXMLEncoder.unescapeAnchorTags = unescapeAnchorTags;
+            }
+          });
+      logger.debug(
+          "filter option, unescape anchor tags: {}, auto detect: {}",
+          unescapeAnchorTags,
+          autoDetectAnchorTags);
+
       filterOptions.getBoolean(
           REMOVE_DESCRIPTION,
           b -> {
@@ -211,10 +233,17 @@ public class AndroidFilter extends XMLFilter {
     return event;
   }
 
-  private void processTextUnit(Event event) {
+  void processTextUnit(Event event) {
     if (event != null && event.isTextUnit()) {
 
       TextUnit textUnit = (TextUnit) event.getTextUnit();
+      if (autoDetectAnchorTags) {
+        AndroidAutoDetectAnchorTagsAnnotation annotation =
+            AndroidAutoDetectAnchorTagsAnnotation.from(textUnit.getSource().getFirstContent());
+        if (annotation != null) {
+          textUnit.setAnnotation(annotation);
+        }
+      }
       String sourceString = textUnitUtils.getSourceAsString(textUnit);
 
       String unescapedSourceString;
@@ -327,7 +356,7 @@ public class AndroidFilter extends XMLFilter {
 
   @Override
   public AndroidXMLEncoder getXMLEncoder() {
-    androidXMLEncoder = new AndroidXMLEncoder(oldEscaping);
+    androidXMLEncoder = new AndroidXMLEncoder(oldEscaping, unescapeAnchorTags);
     return androidXMLEncoder;
   }
 

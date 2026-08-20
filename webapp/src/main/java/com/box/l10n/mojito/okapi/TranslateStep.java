@@ -159,7 +159,8 @@ public class TranslateStep extends AbstractMd5ComputationStep {
           // string format (eg. [#$dp1]).
           logger.debug(
               "Set translation for text unit with name: {}, translation: {}", name, translation);
-          textUnit.setTarget(targetLocale, new TextContainer(translation));
+          textUnit.setTarget(
+              targetLocale, textUnitUtils.createTargetTextContainer(textUnit, translation));
         } else {
           // Newest behavior: the codes are transformed into HTML markup and are passed to
           // downstream

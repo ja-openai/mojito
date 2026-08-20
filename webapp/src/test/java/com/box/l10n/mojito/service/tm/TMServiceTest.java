@@ -18,6 +18,7 @@ import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariantComment;
 import com.box.l10n.mojito.entity.TMXliff;
+import com.box.l10n.mojito.okapi.AndroidFilterConfigurationProperties;
 import com.box.l10n.mojito.okapi.FilterConfigIdOverride;
 import com.box.l10n.mojito.okapi.ImportTranslationsFromLocalizedAssetStep.StatusForEqualTarget;
 import com.box.l10n.mojito.okapi.InheritanceMode;
@@ -76,6 +77,8 @@ public class TMServiceTest extends ServiceTestBase {
   static Logger logger = LoggerFactory.getLogger(TMServiceTest.class);
 
   @Autowired TMService tmService;
+
+  @Autowired AndroidFilterConfigurationProperties androidFilterConfigurationProperties;
 
   @Autowired TMRepository tmRepository;
 
@@ -1428,6 +1431,74 @@ public class TMServiceTest extends ServiceTestBase {
    *
    * @throws Exception
    */
+  @Test
+  public void testLocalizeAndroidAnchorsWithServerAutoDetection() throws Exception {
+    Repository repo = repositoryService.createRepository(testIdWatcher.getEntityName("repository"));
+    RepositoryLocale repoLocale = repositoryService.addRepositoryLocale(repo, "fr-FR");
+    String assetContent =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+            + "<resources>\n"
+            + "    <string name=\"real_anchor\">Read <a href=\"https://example.com\">terms</a>.</string>\n"
+            + "    <string name=\"escaped_anchor\">Read &lt;a href=\"https://example.com\"&gt;terms&lt;/a&gt;.</string>\n"
+            + "</resources>";
+    Asset androidAsset =
+        assetService.createAssetWithContent(repo.getId(), "res/values/strings.xml", assetContent);
+
+    PollableFuture<Asset> assetResult =
+        assetService.addOrUpdateAssetAndProcessIfNeeded(
+            repo.getId(),
+            androidAsset.getPath(),
+            assetContent,
+            false,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    pollableTaskService.waitForPollableTask(assetResult.getPollableTask().getId());
+    androidAsset = assetResult.get();
+
+    TextUnitSearcherParameters searchParameters = new TextUnitSearcherParameters();
+    searchParameters.setRepositoryIds(repo.getId());
+    searchParameters.setStatusFilter(StatusFilter.FOR_TRANSLATION);
+    Locale targetLocale = localeService.findByBcp47Tag("fr-FR");
+    for (TextUnitDTO textUnit : textUnitSearcher.search(searchParameters)) {
+      String translation =
+          textUnit.getName().equals("real_anchor")
+              ? "Lire <a href=\"https://example.com\">les conditions</a>."
+              : "Lire <a href=\"https://example.com\">les détails</a>.";
+      tmService.addCurrentTMTextUnitVariant(
+          textUnit.getTmTextUnitId(), targetLocale.getId(), translation);
+    }
+
+    String localizedAsset;
+    androidFilterConfigurationProperties.setAutoDetectAnchorTags(true);
+    try {
+      localizedAsset =
+          tmService.generateLocalized(
+              androidAsset,
+              assetContent,
+              repoLocale,
+              "fr-FR",
+              null,
+              null,
+              Status.ALL,
+              InheritanceMode.USE_PARENT,
+              null);
+    } finally {
+      androidFilterConfigurationProperties.setAutoDetectAnchorTags(false);
+    }
+
+    assertEquals(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+            + "<resources>\n"
+            + "    <string name=\"real_anchor\">Lire <a href=\"https://example.com\">les conditions</a>.</string>\n"
+            + "    <string name=\"escaped_anchor\">Lire &lt;a href=\\\"https://example.com\\\"&gt;les détails&lt;/a&gt;.</string>\n"
+            + "</resources>",
+        localizedAsset);
+  }
+
   @Test
   public void testLocalizeAndroidStringsWithSpecialCharactersOldEscaping() throws Exception {
 
