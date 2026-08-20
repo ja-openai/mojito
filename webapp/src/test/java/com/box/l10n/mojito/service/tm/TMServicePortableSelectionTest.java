@@ -63,6 +63,28 @@ public class TMServicePortableSelectionTest {
   }
 
   @Test
+  public void portableGenerationAcceptsUtf16XmlAfterStringTransport() throws Exception {
+    Asset asset = new Asset();
+    asset.setPath("path/to/fake/res/strings.xml");
+
+    String localized =
+        new TMService()
+            .generateLocalized(
+                asset,
+                "<?xml version=\"1.0\" encoding=\"UTF-16\"?>\n<resources/>\n",
+                repositoryLocale(),
+                null,
+                null,
+                List.of(LocalizationConverterSelection.PORTABLE_OPTION),
+                Status.ALL,
+                InheritanceMode.USE_PARENT,
+                null);
+
+    assertTrue(localized.contains("encoding=\"UTF-16\""));
+    assertTrue(localized.contains("<resources"));
+  }
+
+  @Test
   public void explicitPortableUnsupportedFormatFailsBeforeGeneratingLocalizedContent()
       throws Exception {
     Asset asset = new Asset();

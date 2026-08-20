@@ -14,7 +14,6 @@ import com.box.l10n.mojito.okapi.FilterConfigIdOverride;
 import com.box.l10n.mojito.okapi.asset.UnsupportedAssetFilterTypeException;
 import com.box.l10n.mojito.okapi.extractor.AssetExtractor;
 import com.box.l10n.mojito.okapi.extractor.AssetExtractorTextUnit;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import org.slf4j.Logger;
@@ -97,7 +96,7 @@ public class ExtractionService {
       LocalizationCatalog catalog =
           LocalizationFileConverters.parseForMojito(
               format,
-              assetContent.getBytes(StandardCharsets.UTF_8),
+              LocalizationFileConverters.encodeStringTransport(format, assetContent),
               LocalizationConverterSelection.platformOptions(filterOptions));
       return LocalizationShadowComparator.projectTextUnits(catalog);
     }

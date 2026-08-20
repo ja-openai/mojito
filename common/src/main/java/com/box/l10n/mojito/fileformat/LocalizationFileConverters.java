@@ -3,6 +3,7 @@ package com.box.l10n.mojito.fileformat;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CodingErrorAction;
@@ -33,6 +34,31 @@ public final class LocalizationFileConverters {
 
   public static LocalizationCatalog parse(LocalizationFileFormat format, byte[] source) {
     return parse(format, source, StandardCharsets.UTF_8);
+  }
+
+  /**
+   * Reconstruct bytes for resource content transported through Mojito's legacy {@link String} APIs.
+   * A UTF-16 XML declaration must be paired with UTF-16 bytes even though the original BOM was
+   * consumed by the CLI before upload.
+   */
+  public static byte[] encodeStringTransport(LocalizationFileFormat format, String source) {
+    if (!supportsXmlEncoding(format)) {
+      return source.getBytes(StandardCharsets.UTF_8);
+    }
+    Matcher declaration = XML_DECLARED_ENCODING.matcher(source);
+    if (!declaration.find()) {
+      return source.getBytes(StandardCharsets.UTF_8);
+    }
+    return switch (declaration.group(2).toUpperCase(Locale.ROOT)) {
+      case "UTF-16", "UTF-16BE" -> withUtf16Bom(source, ByteOrder.BIG_ENDIAN);
+      case "UTF-16LE" -> withUtf16Bom(source, ByteOrder.LITTLE_ENDIAN);
+      default -> source.getBytes(StandardCharsets.UTF_8);
+    };
+  }
+
+  /** Decode portable output back into the Java String transport used by Mojito REST and storage. */
+  public static String decodeStringTransport(LocalizationFileFormat format, byte[] source) {
+    return decode(source, xmlCharset(format, source));
   }
 
   /** Apply explicit Mojito filter options and intentional translator-workflow extraction policy. */
@@ -474,11 +500,7 @@ public final class LocalizationFileConverters {
   }
 
   static Charset xmlCharset(LocalizationFileFormat format, byte[] source) {
-    if (format != LocalizationFileFormat.ANDROID
-        && format != LocalizationFileFormat.APPLE_STRINGS
-        && format != LocalizationFileFormat.APPLE_STRINGSDICT
-        && format != LocalizationFileFormat.RESX
-        && format != LocalizationFileFormat.XTB) {
+    if (!supportsXmlEncoding(format)) {
       return null;
     }
 
@@ -572,6 +594,27 @@ public final class LocalizationFileConverters {
       throw invalidXmlEncoding(declared);
     }
     return charset;
+  }
+
+  private static boolean supportsXmlEncoding(LocalizationFileFormat format) {
+    return format == LocalizationFileFormat.ANDROID
+        || format == LocalizationFileFormat.APPLE_STRINGS
+        || format == LocalizationFileFormat.APPLE_STRINGSDICT
+        || format == LocalizationFileFormat.RESX
+        || format == LocalizationFileFormat.XTB;
+  }
+
+  private static byte[] withUtf16Bom(String source, ByteOrder byteOrder) {
+    Charset charset =
+        byteOrder == ByteOrder.LITTLE_ENDIAN
+            ? StandardCharsets.UTF_16LE
+            : StandardCharsets.UTF_16BE;
+    byte[] content = source.getBytes(charset);
+    byte[] encoded = new byte[content.length + 2];
+    encoded[0] = byteOrder == ByteOrder.LITTLE_ENDIAN ? (byte) 0xff : (byte) 0xfe;
+    encoded[1] = byteOrder == ByteOrder.LITTLE_ENDIAN ? (byte) 0xfe : (byte) 0xff;
+    System.arraycopy(content, 0, encoded, 2, content.length);
+    return encoded;
   }
 
   private static boolean bomlessUtf16(byte[] source, boolean littleEndian) {

@@ -46,6 +46,21 @@ public class AssetExtractionServicePortableSelectionTest {
   }
 
   @Test
+  public void portableExtractionAcceptsUtf16XmlAfterStringTransport() throws Exception {
+    AssetExtractionService assetExtractionService = new AssetExtractionService();
+    String utf16Declaration = ANDROID_STRINGS.replace("UTF-8", "UTF-16");
+
+    List<AssetExtractorTextUnit> textUnits =
+        assetExtractionService.getExtractorTextUnitsForAssetContent(
+            assetContent("path/to/fake/res/strings.xml", utf16Declaration),
+            List.of(LocalizationConverterSelection.PORTABLE_OPTION),
+            null);
+
+    assertEquals(1, textUnits.size());
+    assertEquals("You must test your changes", textUnits.getFirst().getSource());
+  }
+
+  @Test
   public void backendDefaultSelectsPortableWithoutChangingFilterOptions() throws Exception {
     AssetExtractionService assetExtractionService = new AssetExtractionService();
     assetExtractionService.portableConverter = true;

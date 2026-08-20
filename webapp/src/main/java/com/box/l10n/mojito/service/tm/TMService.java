@@ -1220,7 +1220,7 @@ public class TMService {
     LocalizationFileFormat format =
         LocalizationConverterSelection.format(asset.getPath(), filterConfigIdOverride);
     List<String> options = LocalizationConverterSelection.platformOptions(filterOptions);
-    byte[] source = content.getBytes(StandardCharsets.UTF_8);
+    byte[] source = LocalizationFileConverters.encodeStringTransport(format, content);
     LocalizationCatalog catalog =
         LocalizationFileConverters.parseForMojito(format, source, options);
     StatusFilter statusFilter =
@@ -1366,7 +1366,8 @@ public class TMService {
       }
     }
     String localized =
-        new String(
+        LocalizationFileConverters.decodeStringTransport(
+            format,
             LocalizationFileConverters.localizeForMojito(
                 format,
                 source,
@@ -1375,8 +1376,7 @@ public class TMService {
                 InheritanceMode.REMOVE_UNTRANSLATED.equals(inheritanceMode),
                 outputBcp47tag == null
                     ? repositoryLocale.getLocale().getBcp47Tag()
-                    : outputBcp47tag),
-            StandardCharsets.UTF_8);
+                    : outputBcp47tag));
     if (format == LocalizationFileFormat.GETTEXT_PO) {
       localized = localizeGettextPluralForms(localized, repositoryLocale);
       localized = addGettextPluralForms(localized, catalog, sourceSkeleton, gettextAdditionalForms);
@@ -1736,7 +1736,7 @@ public class TMService {
     LocalizationCatalog imported =
         LocalizationFileConverters.parseForMojitoImport(
             format,
-            content.getBytes(StandardCharsets.UTF_8),
+            LocalizationFileConverters.encodeStringTransport(format, content),
             LocalizationConverterSelection.platformOptions(filterOptions),
             repositoryLocale.getLocale().getBcp47Tag(),
             copyPluralForms);

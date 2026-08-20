@@ -78,7 +78,6 @@ import com.google.common.collect.Sets;
 import com.ibm.icu.text.MessageFormat;
 import io.micrometer.core.annotation.Timed;
 import jakarta.persistence.EntityManager;
-import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1463,7 +1462,7 @@ public class AssetExtractionService {
         LocalizationCatalog catalog =
             LocalizationFileConverters.parseForMojito(
                 format,
-                assetContent.getContent().getBytes(StandardCharsets.UTF_8),
+                LocalizationFileConverters.encodeStringTransport(format, assetContent.getContent()),
                 LocalizationConverterSelection.platformOptions(filterOptions));
         assetExtractorTextUnits = LocalizationShadowComparator.projectTextUnits(catalog);
       } else {

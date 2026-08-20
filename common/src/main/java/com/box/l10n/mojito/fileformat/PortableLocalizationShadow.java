@@ -73,7 +73,7 @@ public final class PortableLocalizationShadow {
       skip(name, "filter_options");
       return;
     }
-    byte[] input = source.getBytes(StandardCharsets.UTF_8);
+    byte[] input = LocalizationFileConverters.encodeStringTransport(format, source);
     if (input.length > maxBytes) {
       skip(name, "size_limit");
       return;

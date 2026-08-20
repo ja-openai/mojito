@@ -40,6 +40,7 @@ import com.box.l10n.mojito.service.tm.TMTextUnitVariantRepository;
 import com.google.common.collect.ImmutableList;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.ZonedDateTime;
@@ -754,6 +755,98 @@ public class PullCommandTest extends CLITestBase {
       "-ft", "JSON", "-fo", "noteKeyPattern=note", "extractAllPairs=false", "exceptions=string"
     };
     assertPortableMatchesExistingDataset("pullJsonWithNote", "demo.json", options, options);
+  }
+
+  @Test
+  public void portableConverterRoundTripsUtf16AndroidThroughStringTransport() throws Exception {
+    Repository repository = createTestRepoUsingRepoService();
+    Path source = getTargetTestDir("utf16-android-source").toPath();
+    Path output = getTargetTestDir("utf16-android-output").toPath();
+    Path sourceFile = source.resolve("res/values/strings.xml");
+    Files.createDirectories(sourceFile.getParent());
+    String content =
+        "<?xml version=\"1.0\" encoding=\"UTF-16\"?>\n"
+            + "<resources><string name=\"welcome\">Welcome</string></resources>\n";
+    writeUtf16LeWithBom(sourceFile, content);
+
+    getL10nJCommander()
+        .run(
+            "push", "-r", repository.getName(), "-s", source.toString(), "--converter", "portable");
+    getL10nJCommander()
+        .run(
+            "pull",
+            "-r",
+            repository.getName(),
+            "-s",
+            source.toString(),
+            "-t",
+            output.toString(),
+            "--converter",
+            "portable");
+
+    byte[] localized = Files.readAllBytes(output.resolve("res/values-fr-rFR/strings.xml"));
+    assertEquals((byte) 0xff, localized[0]);
+    assertEquals((byte) 0xfe, localized[1]);
+    String decoded = new String(localized, 2, localized.length - 2, StandardCharsets.UTF_16LE);
+    assertTrue(decoded.contains("encoding=\"UTF-16\""));
+    assertTrue(decoded.contains("Welcome"));
+  }
+
+  @Test
+  public void portableConverterRoundTripsUtf16ApplePluralThroughStringTransport() throws Exception {
+    Repository repository = createTestRepoUsingRepoService();
+    Path source = getTargetTestDir("utf16-apple-source").toPath();
+    Path output = getTargetTestDir("utf16-apple-output").toPath();
+    Path sourceFile = source.resolve("en.lproj/Localizable.stringsdict");
+    Files.createDirectories(sourceFile.getParent());
+    String content =
+        """
+        <?xml version="1.0" encoding="UTF-16"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0"><dict>
+          <key>files</key><dict>
+            <key>NSStringLocalizedFormatKey</key><string>%#@count@</string>
+            <key>count</key><dict>
+              <key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>
+              <key>NSStringFormatValueTypeKey</key><string>d</string>
+              <key>one</key><string>%d file</string>
+              <key>other</key><string>%d files</string>
+            </dict>
+          </dict>
+        </dict></plist>
+        """;
+    writeUtf16LeWithBom(sourceFile, content);
+
+    getL10nJCommander()
+        .run(
+            "push", "-r", repository.getName(), "-s", source.toString(), "--converter", "portable");
+    getL10nJCommander()
+        .run(
+            "pull",
+            "-r",
+            repository.getName(),
+            "-s",
+            source.toString(),
+            "-t",
+            output.toString(),
+            "--converter",
+            "portable");
+
+    byte[] localized = Files.readAllBytes(output.resolve("fr-FR.lproj/Localizable.stringsdict"));
+    assertEquals((byte) 0xff, localized[0]);
+    assertEquals((byte) 0xfe, localized[1]);
+    String decoded = new String(localized, 2, localized.length - 2, StandardCharsets.UTF_16LE);
+    assertTrue(decoded.contains("encoding=\"UTF-16\""));
+    assertTrue(decoded.contains("%d files"));
+  }
+
+  private static void writeUtf16LeWithBom(Path path, String content) throws IOException {
+    byte[] utf16 = content.getBytes(StandardCharsets.UTF_16LE);
+    byte[] withBom = new byte[utf16.length + 2];
+    withBom[0] = (byte) 0xff;
+    withBom[1] = (byte) 0xfe;
+    System.arraycopy(utf16, 0, withBom, 2, utf16.length);
+    Files.write(path, withBom);
   }
 
   @Test
