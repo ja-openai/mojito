@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { type ComponentProps } from 'react';
+import { flushSync } from 'react-dom';
 import type * as ReactRouterDom from 'react-router-dom';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -356,6 +357,69 @@ describe('ReviewProjectPageView', () => {
     const nextEditor = await screen.findByRole('textbox', { name: 'Translation' });
     expect(nextEditor).not.toBe(originalEditor);
     expect(nextEditor).toHaveTextContent('Cancel payment');
+  });
+
+  it('saves the newly selected text unit with its own translation snapshot', async () => {
+    const onRequestSaveDecision = vi.fn();
+    const nextTextUnit: ApiReviewProjectTextUnit = {
+      ...buildNextTextUnit(),
+      currentTmTextUnitVariant: {
+        id: 32,
+        content: 'Cancelar pagamento',
+        status: 'REVIEW_NEEDED',
+        includedInLocalizedFile: true,
+        comment: 'Current target comment',
+      },
+      reviewProjectTextUnitDecision: {
+        decisionState: 'PENDING',
+        notes: 'Next row decision notes',
+        decisionTmTextUnitVariant: null,
+      },
+    };
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+    const baseProps: ReviewProjectPageViewProps = {
+      projectId: project.id,
+      project: {
+        ...project,
+        reviewProjectTextUnits: [textUnit, nextTextUnit],
+      },
+      mutations: buildMutations({ onRequestSaveDecision }),
+      selectedTextUnitQueryId: textUnit.tmTextUnit!.id,
+      onSelectedTextUnitIdChange: noop,
+      openRequestDetailsQuery: false,
+      requestDetailsSource: null,
+      onRequestDetailsQueryHandled: noop,
+      onRequestDetailsFlowFinished: noop,
+    };
+
+    render(renderReviewProjectPageViewNode(baseProps, queryClient));
+    await screen.findByRole('textbox', { name: 'Translation' });
+
+    act(() => {
+      flushSync(() => {
+        fireEvent.keyDown(window, { key: 'ArrowDown' });
+      });
+      fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true });
+    });
+
+    expect(onRequestSaveDecision).toHaveBeenCalledWith(
+      expect.objectContaining({
+        textUnitId: nextTextUnit.id,
+        tmTextUnitId: nextTextUnit.tmTextUnit!.id,
+        reportUrl: `${window.location.origin}/text-units/4?locale=pt-PT`,
+        reviewProjectTextUnitUrl: `${window.location.origin}/review-projects/7?tu=4`,
+        target: nextTextUnit.currentTmTextUnitVariant!.content,
+        comment: nextTextUnit.currentTmTextUnitVariant!.comment,
+        status: 'APPROVED',
+        includedInLocalizedFile: true,
+        decisionNotes: nextTextUnit.reviewProjectTextUnitDecision!.notes,
+        expectedCurrentTmTextUnitVariantId: nextTextUnit.currentTmTextUnitVariant!.id,
+      }),
+    );
   });
 
   it('keeps arrow-key row navigation available after accepting and advancing', async () => {

@@ -15,6 +15,10 @@ start duplicate requests before React updates its pending state. If a stale
 variant conflict returns the same user's already-saved decision with matching
 translation, status, comment, and notes, the client reconciles that response into
 the detail cache; changes saved by another user remain visible as conflicts.
+The translation decision draft is owned by the selected review-project text-unit
+ID. During a row change, render and save use the new row's snapshot immediately;
+they do not wait for the draft-reset effect. This keeps the target, status,
+comment, notes, and expected current-variant ID from being combined across rows.
 Glossary query invalidation is limited to terminology actions that can change
 glossary metadata or resolution state.
 
@@ -108,3 +112,21 @@ focus on the post-save detail fetch. If `currentVariantWrite` dominates, focus
 on TM current-variant writes and related flushes. If standalone integrity checks
 are slow but backend translator saves are acceptable, the PM/admin preflight
 path is the likely source of perceived delay.
+
+## Decision-integrity canary
+
+Run a read-only daily canary after deploying changes to the rapid-review path.
+Use one bounded window query over the previous 26 hours and `LAG` decisions
+partitioned by review-project ID and reviewer ID, ordered by decision timestamp
+and ID. Flag only adjacent decided rows where the exact target repeats, the
+source differs, and the decisions are no more than 30 seconds apart. Do not
+apply a minimum target length: short labels are common enough to require human
+review, but excluding them hides real carryover such as one model name, color,
+or action being saved onto the next row.
+
+The canary is deliberately a candidate detector, not an automatic rejection or
+translation rewrite. It should publish the candidate count and decision/text-unit
+links for operator review. Grouping by target alone is too noisy, and issuing one
+follow-up lookup per decision turns the audit into an avoidable N+1 query. Keep
+the canary enabled through at least 14 consecutive clean days after deployment;
+then decide whether to retain it as a permanent low-frequency integrity check.

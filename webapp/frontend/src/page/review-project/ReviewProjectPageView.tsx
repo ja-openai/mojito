@@ -535,6 +535,27 @@ type DecisionSnapshot = {
   suggestionSourceLabel: string | null;
 };
 
+type TranslationDecisionDraft = {
+  textUnitId: number;
+  target: string;
+  statusChoice: StatusChoice;
+  comment: string;
+  decisionNotes: string;
+};
+
+function buildTranslationDecisionDraft(
+  textUnitId: number,
+  snapshot: DecisionSnapshot,
+): TranslationDecisionDraft {
+  return {
+    textUnitId,
+    target: snapshot.target,
+    statusChoice: snapshot.statusChoice,
+    comment: snapshot.comment ?? '',
+    decisionNotes: snapshot.decisionNotes ?? '',
+  };
+}
+
 type TerminologyFeedbackSnapshot = {
   recommendation: ApiTerminologyFeedbackRecommendation | null;
   confidence: TerminologyConfidenceChoice;
@@ -1858,10 +1879,73 @@ function DetailPane({
     };
   }, []);
 
-  const [draftTarget, setDraftTarget] = useState(snapshot.target);
-  const [draftStatusChoice, setDraftStatusChoice] = useState<StatusChoice>(snapshot.statusChoice);
-  const [draftComment, setDraftComment] = useState(snapshot.comment ?? '');
-  const [draftDecisionNotes, setDraftDecisionNotes] = useState(snapshot.decisionNotes ?? '');
+  const [storedTranslationDraft, setStoredTranslationDraft] = useState(() =>
+    buildTranslationDecisionDraft(textUnit.id, snapshot),
+  );
+  const translationDraft =
+    storedTranslationDraft.textUnitId === textUnit.id
+      ? storedTranslationDraft
+      : buildTranslationDecisionDraft(textUnit.id, snapshot);
+  const {
+    target: draftTarget,
+    statusChoice: draftStatusChoice,
+    comment: draftComment,
+    decisionNotes: draftDecisionNotes,
+  } = translationDraft;
+  const updateTranslationDraft = useCallback(
+    (update: (draft: TranslationDecisionDraft) => TranslationDecisionDraft) => {
+      setStoredTranslationDraft((storedDraft) =>
+        update(
+          storedDraft.textUnitId === textUnit.id
+            ? storedDraft
+            : buildTranslationDecisionDraft(textUnit.id, snapshot),
+        ),
+      );
+    },
+    [snapshot, textUnit.id],
+  );
+  const setDraftTarget = useCallback(
+    (nextTarget: React.SetStateAction<string>) => {
+      updateTranslationDraft((draft) => ({
+        ...draft,
+        target: typeof nextTarget === 'function' ? nextTarget(draft.target) : nextTarget,
+      }));
+    },
+    [updateTranslationDraft],
+  );
+  const setDraftStatusChoice = useCallback(
+    (nextStatusChoice: React.SetStateAction<StatusChoice>) => {
+      updateTranslationDraft((draft) => ({
+        ...draft,
+        statusChoice:
+          typeof nextStatusChoice === 'function'
+            ? nextStatusChoice(draft.statusChoice)
+            : nextStatusChoice,
+      }));
+    },
+    [updateTranslationDraft],
+  );
+  const setDraftComment = useCallback(
+    (nextComment: React.SetStateAction<string>) => {
+      updateTranslationDraft((draft) => ({
+        ...draft,
+        comment: typeof nextComment === 'function' ? nextComment(draft.comment) : nextComment,
+      }));
+    },
+    [updateTranslationDraft],
+  );
+  const setDraftDecisionNotes = useCallback(
+    (nextDecisionNotes: React.SetStateAction<string>) => {
+      updateTranslationDraft((draft) => ({
+        ...draft,
+        decisionNotes:
+          typeof nextDecisionNotes === 'function'
+            ? nextDecisionNotes(draft.decisionNotes)
+            : nextDecisionNotes,
+      }));
+    },
+    [updateTranslationDraft],
+  );
   const hasIcuMessage = useMemo(
     () => hasIcuParameters(source) || hasIcuParameters(draftTarget),
     [draftTarget, source],
@@ -2186,11 +2270,8 @@ function DetailPane({
   ]);
 
   useEffect(() => {
-    setDraftTarget(snapshot.target);
-    setDraftStatusChoice(snapshot.statusChoice);
-    setDraftComment(snapshot.comment ?? '');
-    setDraftDecisionNotes(snapshot.decisionNotes ?? '');
-  }, [snapshot, snapshotKey]);
+    setStoredTranslationDraft(buildTranslationDecisionDraft(textUnit.id, snapshot));
+  }, [snapshot, snapshotKey, textUnit.id]);
 
   useEffect(() => {
     setDraftTerminologyRecommendation(terminologySnapshot.recommendation);
@@ -2595,11 +2676,8 @@ function DetailPane({
   );
 
   const handleReset = useCallback(() => {
-    setDraftTarget(snapshot.target);
-    setDraftStatusChoice(snapshot.statusChoice);
-    setDraftComment(snapshot.comment ?? '');
-    setDraftDecisionNotes(snapshot.decisionNotes ?? '');
-  }, [snapshot]);
+    setStoredTranslationDraft(buildTranslationDecisionDraft(textUnit.id, snapshot));
+  }, [snapshot, textUnit.id]);
 
   const focusDetailEditor = useCallback((field: DetailEditorField) => {
     if (field === 'translation') {
@@ -2712,6 +2790,7 @@ function DetailPane({
     [
       isStatusDropdownDisabled,
       requestSaveDecision,
+      setDraftStatusChoice,
       snapshot.comment,
       snapshot.decisionNotes,
       snapshot.statusChoice,
@@ -2908,9 +2987,12 @@ function DetailPane({
     workbenchTextUnitId,
   ]);
 
-  const handleUseAiSuggestion = useCallback((suggestion: AiReviewSuggestion) => {
-    setDraftTarget(suggestion.content);
-  }, []);
+  const handleUseAiSuggestion = useCallback(
+    (suggestion: AiReviewSuggestion) => {
+      setDraftTarget(suggestion.content);
+    },
+    [setDraftTarget],
+  );
 
   const getFocusedDetailEditor = useCallback(() => {
     const active = document.activeElement;
