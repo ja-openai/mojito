@@ -8,8 +8,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -471,11 +473,30 @@ public class SearchIndexService {
 
   private HttpResponse<String> send(String method, String path, String jsonBody)
       throws IOException, InterruptedException {
+    URI requestUri = URI.create(properties.getBaseUrl() + path);
     HttpRequest.Builder requestBuilder =
         HttpRequest.newBuilder()
-            .uri(URI.create(properties.getBaseUrl() + path))
+            .uri(requestUri)
             .timeout(Duration.ofSeconds(properties.getRequestTimeoutSeconds()))
             .header("Accept", "application/json");
+
+    String username = properties.getUsername();
+    String password = properties.getPassword();
+    boolean hasUsername = username != null && !username.isBlank();
+    boolean hasPassword = password != null && !password.isBlank();
+    if (hasUsername != hasPassword) {
+      throw new IOException(
+          "Search index username and password must either both be configured or both be omitted");
+    }
+    if (hasUsername) {
+      if (!"https".equalsIgnoreCase(requestUri.getScheme())) {
+        throw new IOException("Search index credentials require an HTTPS base URL");
+      }
+      String credentials =
+          Base64.getEncoder()
+              .encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
+      requestBuilder.header("Authorization", "Basic " + credentials);
+    }
 
     if (jsonBody == null) {
       requestBuilder.method(method, HttpRequest.BodyPublishers.noBody());

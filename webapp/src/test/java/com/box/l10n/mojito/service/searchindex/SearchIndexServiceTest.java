@@ -122,6 +122,53 @@ public class SearchIndexServiceTest {
   }
 
   @Test
+  public void authenticatesEveryRequestWithConfiguredBasicCredentials() throws Exception {
+    properties.setBaseUrl("https://localhost:9200");
+    properties.setUsername("mojito");
+    properties.setPassword("search-password");
+    mockServer(
+        request ->
+            switch (request.uri().getPath()) {
+              case "/_cluster/health" -> response(200, "{\"status\":\"green\"}");
+              case "/tm-text-unit-variants-v1" -> response(200, null);
+              case "/tm-text-unit-variants-v1/_count" -> response(200, "{\"count\":7}");
+              default -> throw new AssertionError(request.uri());
+            });
+
+    service.getStatus();
+
+    assertThat(requests).hasSize(3);
+    assertThat(requests)
+        .allSatisfy(
+            request ->
+                assertThat(request.headers().firstValue("Authorization"))
+                    .contains("Basic bW9qaXRvOnNlYXJjaC1wYXNzd29yZA=="));
+  }
+
+  @Test
+  public void reportsIncompleteAuthenticationConfigurationWithoutConnecting() {
+    properties.setUsername("mojito");
+
+    SearchIndexStatus status = service.getStatus();
+
+    assertThat(status.reachable()).isFalse();
+    assertThat(status.detail()).contains("username and password must either both be configured");
+    verifyNoInteractions(httpClient, tmTextUnitVariantRepository);
+  }
+
+  @Test
+  public void refusesToSendCredentialsOverPlainHttp() {
+    properties.setUsername("mojito");
+    properties.setPassword("search-password");
+
+    SearchIndexStatus status = service.getStatus();
+
+    assertThat(status.reachable()).isFalse();
+    assertThat(status.detail()).isEqualTo("Search index credentials require an HTTPS base URL");
+    verifyNoInteractions(httpClient, tmTextUnitVariantRepository);
+  }
+
+  @Test
   public void bootstrapsVectorReadyTranslationMemoryMapping() throws Exception {
     AtomicBoolean indexExists = new AtomicBoolean();
     mockServer(

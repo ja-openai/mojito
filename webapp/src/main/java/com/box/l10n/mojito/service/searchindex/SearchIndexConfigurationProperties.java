@@ -9,6 +9,8 @@ public class SearchIndexConfigurationProperties {
   boolean enabled = false;
   String baseUrl = "http://localhost:9200";
   String indexName = "tm-text-unit-variants-v1";
+  String username;
+  String password;
   int connectTimeoutSeconds = 2;
   int requestTimeoutSeconds = 10;
   int embeddingDimensions = 1536;
@@ -37,6 +39,22 @@ public class SearchIndexConfigurationProperties {
 
   public void setIndexName(String indexName) {
     this.indexName = indexName;
+  }
+
+  public String getUsername() {
+    return username;
+  }
+
+  public void setUsername(String username) {
+    this.username = username;
+  }
+
+  public String getPassword() {
+    return password;
+  }
+
+  public void setPassword(String password) {
+    this.password = password;
   }
 
   public int getConnectTimeoutSeconds() {
