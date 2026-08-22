@@ -250,9 +250,9 @@ def _date_from(raw_value: Any, rendered: str) -> date:
         ) from error
 
 
-def _time_from(raw_value: Any, rendered: str) -> time:
+def _time_from(raw_value: Any, rendered: str) -> time | datetime:
     if isinstance(raw_value, datetime):
-        return raw_value.time()
+        return raw_value
     if isinstance(raw_value, time):
         return raw_value
     try:
@@ -260,7 +260,7 @@ def _time_from(raw_value: Any, rendered: str) -> time:
     except ValueError as error:
         parsed_datetime = _parse_datetime_or_none(rendered)
         if parsed_datetime is not None:
-            return parsed_datetime.time()
+            return parsed_datetime
         raise MF2Error(
             "bad-operand", "Time function requires a time operand."
         ) from error

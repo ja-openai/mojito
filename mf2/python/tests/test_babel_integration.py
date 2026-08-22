@@ -56,7 +56,7 @@ class BabelIntegrationTest(unittest.TestCase):
                 f"percent={format_percent(0.1234, format='#,##0.#%', locale=locale)}; "
                 f"currency={format_currency(9876, 'EUR', locale=locale)}; "
                 f"date={format_date(instant.date(), format='full', locale=locale)}; "
-                f"time={format_time(instant.time(), format='medium', locale=locale, tzinfo=get_timezone('UTC'))}; "
+                f"time={format_time(instant, format='medium', locale=locale, tzinfo=get_timezone('UTC'))}; "
                 f"datetime={format_datetime(instant, format='medium', locale=locale, tzinfo=get_timezone('UTC'))}; "
                 f"relative={format_timedelta(timedelta(days=-3), granularity='day', add_direction=True, format='long', locale=locale)}"
             )
@@ -71,6 +71,37 @@ class BabelIntegrationTest(unittest.TestCase):
             functions=functions,
         )
         self.assertEqual(["bad-option"], [error.code for error in mixed_result.errors])
+
+    @unittest.skipIf(not BABEL_AVAILABLE, "Babel is not installed")
+    def test_babel_registry_converts_aware_datetime_for_time(self) -> None:
+        from babel.dates import format_time, get_timezone
+
+        functions = importlib.import_module(
+            "mojito_mf2.babel"
+        ).babel_function_registry()
+        parsed = parse_to_model(
+            "{$instant :time timeStyle=medium timeZone=America/Los_Angeles}"
+        )
+        self.assertFalse(parsed.has_diagnostics, parsed.diagnostics)
+        instant = datetime.fromisoformat("2026-05-21T14:30:15+00:00")
+
+        actual = format_message(
+            parsed.model,
+            {"instant": instant},
+            locale="en",
+            functions=functions,
+        )
+
+        self.assertEqual(
+            format_time(
+                instant,
+                format="medium",
+                locale="en",
+                tzinfo=get_timezone("America/Los_Angeles"),
+            ),
+            actual.value,
+        )
+        self.assertEqual([], actual.errors)
 
     @unittest.skipIf(not BABEL_AVAILABLE, "Babel is not installed")
     def test_babel_registry_keeps_currency_out_of_portable_registry(self) -> None:
