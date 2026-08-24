@@ -144,6 +144,19 @@ public class PrintfLikeIntegrityCheckerTest {
   }
 
   @Test
+  public void testPlaceholderMultiplicityMustMatch() {
+    PrintfLikeIntegrityChecker checker = new PrintfLikeIntegrityChecker();
+
+    try {
+      checker.check("Hello %1$s", "Bonjour %1$s %1$s");
+      fail("PrintfLikeIntegrityCheckerException must be thrown");
+    } catch (PrintfLikeIntegrityCheckerException expected) {
+      assertEquals(
+          "PrintfLike placeholders are different in source and target", expected.getMessage());
+    }
+  }
+
+  @Test
   public void testMacPlaceholderCheckFailsIfSamePlaceholdersCountButSpecifierModified()
       throws PrintfLikeIntegrityCheckerException {
 

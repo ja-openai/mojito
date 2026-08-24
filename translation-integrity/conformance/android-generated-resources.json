@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    "android-resource-syntax",
+    "markdown-link-contract",
+    "printf-placeholder-contract"
+  ],
+  "cases": [
+    {
+      "id": "valid-translated-labels-and-reordered-placeholders",
+      "locale": "x-valid",
+      "source": "<resources><string name=\"summary\">Hello %1$s, you have %2$d items. [Help](https://docs.example.invalid/help)</string></resources>",
+      "target": "<resources><string name=\"summary\">%2$d ITEMS FOR %1$s. [GUIDE](https://docs.example.invalid/help)</string></resources>",
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "unescaped-ascii-apostrophe",
+      "locale": "x-apostrophe",
+      "source": "<resources><string name=\"offer_terms\">L\\'offre est soumise à conditions.</string></resources>",
+      "target": "<resources><string name=\"offer_terms\">L'offre est soumise à conditions.</string></resources>",
+      "expectedDiagnostics": [
+        {"resource": "offer_terms", "rule": "android-resource-syntax"}
+      ]
+    },
+    {
+      "id": "printf-placeholder-type-changed",
+      "locale": "x-placeholder",
+      "source": "<resources><string name=\"account_name\">Account: %1$s</string></resources>",
+      "target": "<resources><string name=\"account_name\">ACCOUNT: %1$@</string></resources>",
+      "expectedDiagnostics": [
+        {"resource": "account_name", "rule": "printf-placeholder-contract"}
+      ]
+    },
+    {
+      "id": "printf-placeholder-multiplicity-changed",
+      "locale": "x-placeholder-count",
+      "source": "<resources><string name=\"comparison\">%1$s compared with %1$s</string></resources>",
+      "target": "<resources><string name=\"comparison\">COMPARE WITH %1$s</string></resources>",
+      "expectedDiagnostics": [
+        {"resource": "comparison", "rule": "printf-placeholder-contract"}
+      ]
+    },
+    {
+      "id": "plural-branch-placeholder-removed",
+      "locale": "x-plural",
+      "source": "<resources><plurals name=\"item_count\"><item quantity=\"one\">%1$d item</item><item quantity=\"other\">%1$d items</item></plurals></resources>",
+      "target": "<resources><plurals name=\"item_count\"><item quantity=\"one\">%1$d ITEM</item><item quantity=\"other\">ITEMS</item></plurals></resources>",
+      "expectedDiagnostics": [
+        {"resource": "item_count#zero", "rule": "printf-placeholder-contract"},
+        {"resource": "item_count#two", "rule": "printf-placeholder-contract"},
+        {"resource": "item_count#few", "rule": "printf-placeholder-contract"},
+        {"resource": "item_count#many", "rule": "printf-placeholder-contract"},
+        {"resource": "item_count#other", "rule": "printf-placeholder-contract"}
+      ]
+    },
+    {
+      "id": "custom-scheme-link-removed",
+      "locale": "x-deep-link",
+      "source": "<resources><string name=\"privacy_help\">[Manage settings](sample-app://settings/privacy)</string></resources>",
+      "target": "<resources><string name=\"privacy_help\">MANAGE SETTINGS</string></resources>",
+      "expectedDiagnostics": [
+        {"resource": "privacy_help", "rule": "markdown-link-contract"}
+      ]
+    },
+    {
+      "id": "markdown-link-structure-malformed",
+      "locale": "x-markdown",
+      "source": "<resources><string name=\"learn_more\">[Learn more](https://docs.example.invalid/topic)</string></resources>",
+      "target": "<resources><string name=\"learn_more\">[LEARN MORE].(https://docs.example.invalid/topic)</string></resources>",
+      "expectedDiagnostics": [
+        {"resource": "learn_more", "rule": "markdown-link-contract"}
+      ]
+    },
+    {
+      "id": "markdown-link-multiplicity-changed",
+      "locale": "x-link-count",
+      "source": "<resources><string name=\"help_links\">[First](https://docs.example.invalid/help) and [second](https://docs.example.invalid/help)</string></resources>",
+      "target": "<resources><string name=\"help_links\">[HELP](https://docs.example.invalid/help)</string></resources>",
+      "expectedDiagnostics": [
+        {"resource": "help_links", "rule": "markdown-link-contract"}
+      ]
+    }
+  ]
+}

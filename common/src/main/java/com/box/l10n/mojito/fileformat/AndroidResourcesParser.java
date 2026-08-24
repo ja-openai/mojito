@@ -720,7 +720,7 @@ final class AndroidResourcesParser {
             "INVALID_ANDROID_VALUE", "Android generic resource does not match its format");
       }
     }
-    String text = unescape(raw);
+    String text = unescape(raw, id);
     List<Map<String, Object>> runtimeAnnotations = AndroidAnnotationSemantics.spans(text);
     List<Map<String, Object>> runtimeStyles = AndroidAnnotationSemantics.styles(text);
     List<Map<String, Object>> runtimeParagraphs = AndroidAnnotationSemantics.paragraphs(text);
@@ -831,7 +831,7 @@ final class AndroidResourcesParser {
         references.put(quantity, raw.trim());
         continue;
       }
-      String sourceText = unescape(raw);
+      String sourceText = unescape(raw, resourceId(plural) + "#" + quantity);
       List<Map<String, Object>> annotations = AndroidAnnotationSemantics.spans(sourceText);
       if (!annotations.isEmpty()) {
         runtimeAnnotations.put(quantity, annotations);
@@ -1571,6 +1571,15 @@ final class AndroidResourcesParser {
       }
     }
     return result.toString();
+  }
+
+  private static String unescape(String input, String resourceId) {
+    try {
+      return unescape(input);
+    } catch (LocalizationParseException exception) {
+      throw new LocalizationParseException(
+          exception.code(), exception.getMessage() + " [resource=" + resourceId + "]", exception);
+    }
   }
 
   private static boolean isAndroidWhitespace(char value) {

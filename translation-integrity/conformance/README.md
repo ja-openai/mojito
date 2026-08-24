@@ -12,6 +12,11 @@ contains only synthetic text, private-use locale tags, and reserved `.invalid`
 domains. It contains no company, repository, product, customer, or production
 translation data.
 
+[`android-generated-resources.json`](android-generated-resources.json) adds the
+file-level Android contract consumed by Mojito's generated-asset validator. It
+covers Android resource syntax, printf placeholders across scalar and plural
+values, and Markdown destinations including custom schemes.
+
 The manifest-level `diagnosticRules` map gives every stable diagnostic code one
 owning rule. A case may emit a diagnostic only when that rule is declared, so
 adapters do not need a language-specific ownership table.
@@ -311,6 +316,11 @@ but they must not silently redefine its normalized outcomes.
 The core corpus does not determine whether prose is fluent, culturally
 appropriate, legally approved, or terminologically preferred. Those questions
 require language-specific evaluation datasets and qualified reviewers.
+
+The external-review cases include capability-presence, state-meaning,
+accessibility-action, and option-label regressions. They deliberately require
+review evidence instead of presenting a structurally valid but incorrect
+translation as something a placeholder or markup parser can infer.
 
 Product-trigger exclusions, extraction directives, catalog inventory,
 generated-file digests, storage mutations, release fallback, and bundle

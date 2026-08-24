@@ -190,6 +190,10 @@ public class TMService {
   @Autowired NoSourceJsonAugmenter noSourceJsonAugmenter;
 
   @Autowired
+  AndroidLocalizedAssetIntegrityValidator androidLocalizedAssetIntegrityValidator =
+      new AndroidLocalizedAssetIntegrityValidator();
+
+  @Autowired
   DataIntegrityViolationExceptionRetryTemplate dataIntegrityViolationExceptionRetryTemplate;
 
   @Value("${l10n.tmService.quartz.schedulerName:" + DEFAULT_SCHEDULER_NAME + "}")
@@ -1191,6 +1195,11 @@ public class TMService {
             translateStep,
             bcp47Tag);
 
+    if (isAndroidFilter(asset, filterConfigIdOverride)) {
+      androidLocalizedAssetIntegrityValidator.validate(
+          bcp47Tag, contentToLocalize, generateLocalizedBase);
+    }
+
     if (replaceUsedTmTextUnitVariantIds) {
       dataIntegrityViolationExceptionRetryTemplate.execute(
           context -> {
@@ -1400,6 +1409,12 @@ public class TMService {
         localized = escapeJavaPropertiesUnicode(localized);
       }
     }
+    if (format == LocalizationFileFormat.ANDROID) {
+      androidLocalizedAssetIntegrityValidator.validate(
+          outputBcp47tag == null ? repositoryLocale.getLocale().getBcp47Tag() : outputBcp47tag,
+          content,
+          localized);
+    }
     if (pullRunName != null) {
       dataIntegrityViolationExceptionRetryTemplate.execute(
           context -> {
@@ -1409,6 +1424,15 @@ public class TMService {
           });
     }
     return localized;
+  }
+
+  private boolean isAndroidFilter(Asset asset, FilterConfigIdOverride filterConfigIdOverride)
+      throws UnsupportedAssetFilterTypeException {
+    String filterConfigId =
+        filterConfigIdOverride == null
+            ? assetPathToFilterConfigMapper.getFilterConfigIdFromPath(asset.getPath())
+            : filterConfigIdOverride.getOkapiFilterId();
+    return AndroidFilter.FILTER_CONFIG_ID.equals(filterConfigId);
   }
 
   private String escapeJavaPropertiesUnicode(String source) {

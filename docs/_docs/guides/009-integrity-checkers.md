@@ -140,7 +140,25 @@ The translation gets rejected if any traingling whitespace in the source string 
 
 
 
+### Generated Android resource validation
+
+Mojito validates the complete generated Android XML before returning a localized
+asset. This final-document check runs independently of repository-configured
+text-unit checkers and rejects:
+
+- Android resource syntax that Mojito's Android resource parser rejects,
+  including unescaped apostrophes;
+- changed printf placeholder spellings such as `%1$s` becoming `%1$@`; and
+- removed, changed, or malformed Markdown links, including custom-scheme deep
+  links.
+
+Failures identify the target locale, canonical string or plural-branch ID, and
+one of `android-resource-syntax`, `printf-placeholder-contract`, or
+`markdown-link-contract`. Semantic translation and accessibility findings still
+require qualified review and are not inferred from syntax.
+
 ### Handling Rejected Translations
+
 
 While importing offline translations, the integrity checker catches errors and reject translations with errors.  The number of rejected translations show up in the Repository page.
 

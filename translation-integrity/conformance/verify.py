@@ -13,6 +13,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent
 MANIFEST_PATH = ROOT / "manifest.json"
 SCHEMA_PATH = ROOT / "corpus.schema.json"
+ANDROID_GENERATED_RESOURCES_PATH = ROOT / "android-generated-resources.json"
 
 CASE_ID = re.compile(r"^[a-z0-9]+(?:[.-][a-z0-9]+)*$")
 SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
@@ -870,6 +871,47 @@ def validate_policy(
 def main() -> None:
     schema = load_json(SCHEMA_PATH)
     manifest = load_json(MANIFEST_PATH)
+    android_corpus = load_json(ANDROID_GENERATED_RESOURCES_PATH)
+
+    assert_exact_fields(
+        android_corpus, required={"schemaVersion", "rules", "cases"}, label="android"
+    )
+    assert android_corpus["schemaVersion"] == 1
+    android_rules = {
+        "android-resource-syntax",
+        "markdown-link-contract",
+        "printf-placeholder-contract",
+    }
+    assert set(android_corpus["rules"]) == android_rules
+    android_cases = android_corpus["cases"]
+    assert isinstance(android_cases, list) and android_cases
+    android_case_ids: list[str] = []
+    for index, case in enumerate(android_cases):
+        label = f"android.cases[{index}]"
+        assert_exact_fields(
+            case,
+            required={"id", "locale", "source", "target", "expectedDiagnostics"},
+            label=label,
+        )
+        android_case_ids.append(case["id"])
+        assert isinstance(case["id"], str) and case["id"]
+        assert PRIVATE_USE_LOCALE.fullmatch(case["locale"])
+        assert isinstance(case["source"], str) and "<resources>" in case["source"]
+        assert isinstance(case["target"], str) and "<resources>" in case["target"]
+        for diagnostic in case["expectedDiagnostics"]:
+            assert_exact_fields(
+                diagnostic, required={"resource", "rule"}, label=label
+            )
+            assert isinstance(diagnostic["resource"], str) and diagnostic["resource"]
+            assert diagnostic["rule"] in android_rules
+    assert len(android_case_ids) == len(set(android_case_ids))
+    serialized_android_corpus = json.dumps(
+        android_corpus, ensure_ascii=False
+    ).casefold()
+    for term in BANNED_MANIFEST_TERMS:
+        assert term not in serialized_android_corpus, (
+            f"android: proprietary term {term!r} is not allowed in the neutral corpus"
+        )
 
     assert schema.get("$schema") == "https://json-schema.org/draft/2020-12/schema"
     rule_names = set(schema["$defs"]["rule"]["enum"])
@@ -1343,7 +1385,7 @@ def main() -> None:
 
     print(
         f"translation-integrity conformance: {len(case_ids)} cases and "
-        f"{len(batch_ids)} batch scenarios verified"
+        f"{len(batch_ids)} batch scenarios plus {len(android_case_ids)} Android cases verified"
     )
     print(
         "tiers: "

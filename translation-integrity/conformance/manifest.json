@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "corpusVersion": "0.1.0",
+  "corpusVersion": "0.2.0",
   "name": "translation-integrity",
   "offsetEncoding": "unicode-code-point",
   "policyEvaluationDate": "2030-01-01",
@@ -3277,6 +3277,182 @@
           }
         ],
         "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "policy.external-accessibility-action-review.route",
+      "description": "An external accessibility review finding preserves a missing action in an assistive label without pretending syntax can infer the intended action.",
+      "tier": "extended",
+      "profile": "plain",
+      "rules": [
+        "external-review"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Open preview in full screen"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "PREVIEW"
+      },
+      "policy": {
+        "externalFindings": [
+          {
+            "code": "semantic-review-required",
+            "severity": "warning",
+            "subject": "target",
+            "details": {
+              "finding": "accessibility-action-missing"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "diagnostics": [],
+        "policyDiagnostics": [
+          {
+            "code": "semantic-review-required",
+            "severity": "warning",
+            "subject": "target",
+            "details": {
+              "finding": "accessibility-action-missing"
+            }
+          }
+        ],
+        "disposition": "PASS",
+        "reviewDisposition": "REVIEW_REQUIRED"
+      }
+    },
+    {
+      "id": "policy.external-error-state-review.route",
+      "description": "An external state review finding preserves a loading-versus-failure meaning error without treating syntax as semantic evidence.",
+      "tier": "extended",
+      "profile": "plain",
+      "rules": [
+        "external-review"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Preview failed to load"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "PREVIEW IS LOADING"
+      },
+      "policy": {
+        "externalFindings": [
+          {
+            "code": "semantic-review-required",
+            "severity": "warning",
+            "subject": "target",
+            "details": {
+              "finding": "state-meaning-changed"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "diagnostics": [],
+        "policyDiagnostics": [
+          {
+            "code": "semantic-review-required",
+            "severity": "warning",
+            "subject": "target",
+            "details": {
+              "finding": "state-meaning-changed"
+            }
+          }
+        ],
+        "disposition": "PASS",
+        "reviewDisposition": "REVIEW_REQUIRED"
+      }
+    },
+    {
+      "id": "policy.external-feature-presence-review.route",
+      "description": "An external product review finding preserves an omitted or incorrectly added capability reference across paired messages.",
+      "tier": "extended",
+      "profile": "plain",
+      "rules": [
+        "external-review"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "This mode may use saved context"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "THIS MODE MAY USE FILES"
+      },
+      "policy": {
+        "externalFindings": [
+          {
+            "code": "semantic-review-required",
+            "severity": "warning",
+            "subject": "target",
+            "details": {
+              "finding": "capability-presence-changed"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "diagnostics": [],
+        "policyDiagnostics": [
+          {
+            "code": "semantic-review-required",
+            "severity": "warning",
+            "subject": "target",
+            "details": {
+              "finding": "capability-presence-changed"
+            }
+          }
+        ],
+        "disposition": "PASS",
+        "reviewDisposition": "REVIEW_REQUIRED"
+      }
+    },
+    {
+      "id": "policy.external-option-label-review.route",
+      "description": "External review preserves opposite or substituted option labels that remain structurally valid strings.",
+      "tier": "extended",
+      "profile": "plain",
+      "rules": [
+        "external-review"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Use light appearance; select orange"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "USE DARK APPEARANCE; SELECT PINK"
+      },
+      "policy": {
+        "externalFindings": [
+          {
+            "code": "semantic-review-required",
+            "severity": "warning",
+            "subject": "target",
+            "details": {
+              "finding": "option-meaning-changed"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "diagnostics": [],
+        "policyDiagnostics": [
+          {
+            "code": "semantic-review-required",
+            "severity": "warning",
+            "subject": "target",
+            "details": {
+              "finding": "option-meaning-changed"
+            }
+          }
+        ],
+        "disposition": "PASS",
+        "reviewDisposition": "REVIEW_REQUIRED"
       }
     },
     {

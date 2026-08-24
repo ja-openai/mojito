@@ -24,6 +24,7 @@ import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pushrun.PushRunRepository;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
+import com.box.l10n.mojito.service.tm.AndroidLocalizedAssetIntegrityException;
 import com.box.l10n.mojito.service.tm.GenerateLocalizedAssetJob;
 import com.box.l10n.mojito.service.tm.GenerateMultiLocalizedAssetJob;
 import com.box.l10n.mojito.service.tm.TMService;
@@ -219,6 +220,8 @@ public class AssetWS {
               localizedAssetBody.getPullRunName(),
               localizedAssetBody.isPullWithNoSource(),
               localizedAssetBody.getPullWithNoSourceBranches());
+    } catch (AndroidLocalizedAssetIntegrityException e) {
+      throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, e.getMessage(), e);
     } catch (IllegalArgumentException | UnsupportedAssetFilterTypeException e) {
       if (isPullWithNoSourceRequested(localizedAssetBody)) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);

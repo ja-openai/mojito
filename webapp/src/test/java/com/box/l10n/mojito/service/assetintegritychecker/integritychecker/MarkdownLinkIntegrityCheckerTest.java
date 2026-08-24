@@ -43,6 +43,14 @@ public class MarkdownLinkIntegrityCheckerTest {
   }
 
   @Test
+  public void testDuplicateLinkIsRejected() {
+    String source = "This is [a link](sample-app://details)";
+    String target = "Links [one](sample-app://details) and [two](sample-app://details)";
+    assertThrowsExactly(
+        MarkdownLinkIntegrityCheckerException.class, () -> checker.check(source, target));
+  }
+
+  @Test
   public void getPlaceholder() {
     String source =
         "This is [a link](http://localhost/1) and another link [2nd link](http://localhost/2)";
