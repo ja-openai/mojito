@@ -3,6 +3,7 @@ package com.box.l10n.mojito;
 import com.box.l10n.mojito.entity.BaseEntity;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.xml.XmlParsingConfiguration;
+import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.hibernate6.Hibernate6Module;
@@ -93,7 +94,8 @@ public class Application {
    * @return
    */
   @Bean
-  public MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter() {
+  public MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter(
+      JacksonConfigurationProperties jacksonConfigurationProperties) {
     MappingJackson2HttpMessageConverter mjhmc = new MappingJackson2HttpMessageConverter();
 
     Jackson2ObjectMapperFactoryBean jomfb = new Jackson2ObjectMapperFactoryBean();
@@ -109,7 +111,14 @@ public class Application {
 
     jomfb.setModulesToInstall(Hibernate6Module.class);
     jomfb.afterPropertiesSet();
-    mjhmc.setObjectMapper(jomfb.getObject());
+    com.fasterxml.jackson.databind.ObjectMapper objectMapper = jomfb.getObject();
+    objectMapper
+        .getFactory()
+        .setStreamReadConstraints(
+            StreamReadConstraints.builder()
+                .maxStringLength(jacksonConfigurationProperties.getMaxStringLength())
+                .build());
+    mjhmc.setObjectMapper(objectMapper);
 
     return mjhmc;
   }
