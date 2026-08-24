@@ -1,0 +1,846 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:translation-integrity:conformance-corpus:schema:1",
+  "title": "Translation-integrity conformance corpus",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "corpusVersion",
+    "name",
+    "offsetEncoding",
+    "policyEvaluationDate",
+    "diagnosticRules",
+    "cases",
+    "batchScenarios"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "corpusVersion": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "name": {"const": "translation-integrity"},
+    "offsetEncoding": {"const": "unicode-code-point"},
+    "policyEvaluationDate": {"type": "string", "format": "date"},
+    "diagnosticRules": {
+      "type": "object",
+      "minProperties": 27,
+      "maxProperties": 27,
+      "propertyNames": {"$ref": "#/$defs/diagnosticCode"},
+      "additionalProperties": {"$ref": "#/$defs/rule"}
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/case"}
+    },
+    "batchScenarios": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/batchScenario"}
+    }
+  },
+  "$defs": {
+    "rule": {
+      "enum": [
+        "argument-contract",
+        "boundary-whitespace",
+        "email-literal-contract",
+        "external-review",
+        "formatjs-apostrophe-before-tag",
+        "message-syntax",
+        "nonempty-target",
+        "rich-text-tag-contract",
+        "select-contract",
+        "url-literal-contract",
+        "waiver-policy"
+      ]
+    },
+    "waivableRule": {
+      "enum": ["boundary-whitespace"]
+    },
+    "feature": {
+      "enum": ["formatjs-apostrophe-escaping", "rich-text-tags"]
+    },
+    "diagnosticCode": {
+      "enum": [
+        "argument-type-changed",
+        "boundary-whitespace-mismatch",
+        "check-waived",
+        "empty-target",
+        "exact-selector-extra",
+        "exact-selector-missing",
+        "immutable-email-extra",
+        "immutable-email-missing",
+        "immutable-url-extra",
+        "immutable-url-missing",
+        "rich-tag-extra",
+        "rich-tag-misnested",
+        "rich-tag-missing",
+        "rich-tag-unbalanced",
+        "select-argument-changed",
+        "select-occurrence-extra",
+        "select-occurrence-missing",
+        "select-option-extra",
+        "select-option-missing",
+        "semantic-review-required",
+        "source-format-invalid",
+        "target-format-invalid",
+        "unrenderable-tag-apostrophe",
+        "variable-extra",
+        "variable-missing",
+        "waiver-expired",
+        "waiver-scope-mismatch"
+      ]
+    },
+    "message": {
+      "type": "object",
+      "required": ["locale", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "locale": {"type": "string", "pattern": "^x-[a-z0-9-]+$"},
+        "text": {"type": "string"}
+      }
+    },
+    "stringSet": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "namesDetails": {
+      "type": "object",
+      "required": ["names"],
+      "additionalProperties": false,
+      "properties": {"names": {"$ref": "#/$defs/stringSet"}}
+    },
+    "argumentTypeDetails": {
+      "type": "object",
+      "required": ["argument", "expectedType", "actualType"],
+      "additionalProperties": false,
+      "properties": {
+        "argument": {"type": "string", "minLength": 1},
+        "expectedType": {"type": "string", "minLength": 1},
+        "actualType": {"type": "string", "minLength": 1}
+      }
+    },
+    "boundaryWhitespaceDetails": {
+      "type": "object",
+      "required": [
+        "expectedLeading",
+        "expectedTrailing",
+        "actualLeading",
+        "actualTrailing"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "expectedLeading": {"type": "string"},
+        "expectedTrailing": {"type": "string"},
+        "actualLeading": {"type": "string"},
+        "actualTrailing": {"type": "string"}
+      }
+    },
+    "sourceNonemptyDetails": {
+      "type": "object",
+      "required": ["sourceNonempty"],
+      "additionalProperties": false,
+      "properties": {"sourceNonempty": {"const": true}}
+    },
+    "selectorSetDetails": {
+      "type": "object",
+      "required": ["argument", "selectors"],
+      "additionalProperties": false,
+      "properties": {
+        "argument": {"type": "string", "minLength": 1},
+        "selectors": {"$ref": "#/$defs/stringSet"}
+      }
+    },
+    "valueDeltaDetails": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["values"],
+          "additionalProperties": false,
+          "properties": {"values": {"$ref": "#/$defs/stringSet"}}
+        },
+        {
+          "type": "object",
+          "required": ["value", "expectedCount", "actualCount"],
+          "additionalProperties": false,
+          "properties": {
+            "value": {"type": "string", "minLength": 1},
+            "expectedCount": {"type": "integer", "minimum": 0},
+            "actualCount": {"type": "integer", "minimum": 0}
+          }
+        }
+      ]
+    },
+    "tagDeltaDetails": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["tags"],
+          "additionalProperties": false,
+          "properties": {"tags": {"$ref": "#/$defs/stringSet"}}
+        },
+        {
+          "type": "object",
+          "required": ["tag", "expectedCount", "actualCount"],
+          "additionalProperties": false,
+          "properties": {
+            "tag": {"type": "string", "minLength": 1},
+            "expectedCount": {"type": "integer", "minimum": 0},
+            "actualCount": {"type": "integer", "minimum": 0}
+          }
+        }
+      ]
+    },
+    "tagTreeDetails": {
+      "type": "object",
+      "required": ["expectedTree", "actualTree"],
+      "additionalProperties": false,
+      "properties": {
+        "expectedTree": {"type": "string", "minLength": 1},
+        "actualTree": {"type": "string", "minLength": 1}
+      }
+    },
+    "tagBalanceDetails": {
+      "type": "object",
+      "required": [
+        "tag",
+        "expectedOpenCount",
+        "actualOpenCount",
+        "expectedCloseCount",
+        "actualCloseCount"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tag": {"type": "string", "minLength": 1},
+        "expectedOpenCount": {"type": "integer", "minimum": 0},
+        "actualOpenCount": {"type": "integer", "minimum": 0},
+        "expectedCloseCount": {"type": "integer", "minimum": 0},
+        "actualCloseCount": {"type": "integer", "minimum": 0}
+      }
+    },
+    "selectOccurrenceDetails": {
+      "type": "object",
+      "required": ["argument", "selectors", "expectedCount", "actualCount"],
+      "additionalProperties": false,
+      "properties": {
+        "argument": {"type": "string", "minLength": 1},
+        "selectors": {"$ref": "#/$defs/stringSet"},
+        "expectedCount": {"type": "integer", "minimum": 0},
+        "actualCount": {"type": "integer", "minimum": 0}
+      }
+    },
+    "selectOptionsDetails": {
+      "type": "object",
+      "required": ["argument", "options"],
+      "additionalProperties": false,
+      "properties": {
+        "argument": {"type": "string", "minLength": 1},
+        "options": {"$ref": "#/$defs/stringSet"}
+      }
+    },
+    "syntaxReason": {
+      "enum": [
+        "duplicate-selector",
+        "invalid-argument-name",
+        "invalid-argument-style",
+        "invalid-argument-type",
+        "invalid-placeholder",
+        "invalid-plural-offset",
+        "invalid-selector",
+        "maximum-nesting-depth",
+        "missing-argument-delimiter",
+        "missing-argument-or-selector",
+        "missing-other-branch",
+        "missing-type-delimiter",
+        "unbraced-selector-branch",
+        "unclosed-argument",
+        "unclosed-placeholder",
+        "unclosed-selector",
+        "unclosed-selector-branch",
+        "unclosed-style-quote",
+        "unclosed-typed-argument"
+      ]
+    },
+    "syntaxDetails": {
+      "type": "object",
+      "required": ["reason"],
+      "additionalProperties": false,
+      "properties": {"reason": {"$ref": "#/$defs/syntaxReason"}}
+    },
+    "apostropheDetails": {
+      "type": "object",
+      "required": ["tag", "occurrence"],
+      "additionalProperties": false,
+      "properties": {
+        "tag": {"type": "string", "minLength": 1},
+        "occurrence": {"type": "integer", "minimum": 1}
+      }
+    },
+    "findingDetails": {
+      "type": "object",
+      "required": ["finding"],
+      "additionalProperties": false,
+      "properties": {"finding": {"type": "string", "minLength": 1}}
+    },
+    "checkWaivedDetails": {
+      "type": "object",
+      "required": ["rule", "waiverCount"],
+      "additionalProperties": false,
+      "properties": {
+        "rule": {"$ref": "#/$defs/waivableRule"},
+        "waiverCount": {"type": "integer", "minimum": 1}
+      }
+    },
+    "waiverExpiredDetails": {
+      "type": "object",
+      "required": ["rule", "expiresOn"],
+      "additionalProperties": false,
+      "properties": {
+        "rule": {"$ref": "#/$defs/waivableRule"},
+        "expiresOn": {"type": "string", "format": "date"}
+      }
+    },
+    "waiverScopeDetails": {
+      "type": "object",
+      "required": ["rule", "mismatches"],
+      "additionalProperties": false,
+      "properties": {
+        "rule": {"$ref": "#/$defs/waivableRule"},
+        "mismatches": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "messageId",
+              "profile",
+              "rule",
+              "sourceSha256",
+              "targetLocale",
+              "targetSha256"
+            ]
+          }
+        }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "required": ["code", "severity", "subject", "details"],
+      "additionalProperties": false,
+      "properties": {
+        "code": {"$ref": "#/$defs/diagnosticCode"},
+        "severity": {"enum": ["error", "warning", "info"]},
+        "subject": {"enum": ["source", "target", "policy"]},
+        "details": {
+          "type": "object",
+          "minProperties": 1
+        },
+        "range": {
+          "type": "object",
+          "description": "A zero-based, half-open [start, end) span in Unicode code points within the diagnostic subject text.",
+          "required": ["start", "end"],
+          "additionalProperties": false,
+          "properties": {
+            "start": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Inclusive Unicode code-point offset."
+            },
+            "end": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Exclusive Unicode code-point offset."
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "code": {"enum": ["variable-extra", "variable-missing"]},
+                "severity": {"const": "error"},
+                "subject": {"const": "target"},
+                "details": {"$ref": "#/$defs/namesDetails"}
+              }
+            },
+            {
+              "properties": {
+                "code": {
+                  "enum": ["argument-type-changed", "select-argument-changed"]
+                },
+                "severity": {"const": "error"},
+                "subject": {"const": "target"},
+                "details": {"$ref": "#/$defs/argumentTypeDetails"}
+              }
+            },
+            {
+              "properties": {
+                "code": {"const": "boundary-whitespace-mismatch"},
+                "severity": {"const": "error"},
+                "subject": {"const": "target"},
+                "details": {"$ref": "#/$defs/boundaryWhitespaceDetails"}
+              }
+            },
+            {
+              "properties": {
+                "code": {"const": "empty-target"},
+                "severity": {"const": "error"},
+                "subject": {"const": "target"},
+                "details": {"$ref": "#/$defs/sourceNonemptyDetails"}
+              }
+            },
+            {
+              "properties": {
+                "code": {"enum": ["exact-selector-extra", "exact-selector-missing"]},
+                "severity": {"const": "error"},
+                "subject": {"const": "target"},
+                "details": {"$ref": "#/$defs/selectorSetDetails"}
+              }
+            },
+            {
+              "properties": {
+                "code": {
+                  "enum": [
+                    "immutable-email-extra",
+                    "immutable-email-missing",
+                    "immutable-url-extra",
+                    "immutable-url-missing"
+                  ]
+                },
+                "severity": {"const": "error"},
+                "subject": {"const": "target"},
+                "details": {"$ref": "#/$defs/valueDeltaDetails"}
+              }
+            },
+            {
+              "properties": {
+                "code": {"enum": ["rich-tag-extra", "rich-tag-missing"]},
+                "severity": {"const": "error"},
+                "subject": {"const": "target"},
+                "details": {"$ref": "#/$defs/tagDeltaDetails"}
+              }
+            },
+            {
+              "properties": {
+                "code": {"const": "rich-tag-misnested"},
+                "severity": {"const": "error"},
+                "subject": {"const": "target"},
+                "details": {"$ref": "#/$defs/tagTreeDetails"}
+              }
+            },
+            {
+              "properties": {
+                "code": {"const": "rich-tag-unbalanced"},
+                "severity": {"const": "error"},
+                "subject": {"const": "target"},
+                "details": {"$ref": "#/$defs/tagBalanceDetails"}
+              }
+            },
+            {
+              "properties": {
+                "code": {
+                  "enum": ["select-occurrence-extra", "select-occurrence-missing"]
+                },
+                "severity": {"const": "error"},
+                "subject": {"const": "target"},
+                "details": {"$ref": "#/$defs/selectOccurrenceDetails"}
+              }
+            },
+            {
+              "properties": {
+                "code": {"enum": ["select-option-extra", "select-option-missing"]},
+                "severity": {"const": "error"},
+                "subject": {"const": "target"},
+                "details": {"$ref": "#/$defs/selectOptionsDetails"}
+              }
+            },
+            {
+              "properties": {
+                "code": {"const": "source-format-invalid"},
+                "severity": {"const": "error"},
+                "subject": {"const": "source"},
+                "details": {"$ref": "#/$defs/syntaxDetails"}
+              }
+            },
+            {
+              "properties": {
+                "code": {"const": "target-format-invalid"},
+                "severity": {"const": "error"},
+                "subject": {"const": "target"},
+                "details": {"$ref": "#/$defs/syntaxDetails"}
+              }
+            },
+            {
+              "properties": {
+                "code": {"const": "unrenderable-tag-apostrophe"},
+                "severity": {"const": "error"},
+                "subject": {"const": "target"},
+                "details": {"$ref": "#/$defs/apostropheDetails"}
+              }
+            },
+            {
+              "properties": {
+                "code": {"const": "semantic-review-required"},
+                "severity": {"const": "warning"},
+                "subject": {"const": "target"},
+                "details": {"$ref": "#/$defs/findingDetails"}
+              }
+            },
+            {
+              "properties": {
+                "code": {"const": "check-waived"},
+                "severity": {"const": "info"},
+                "subject": {"const": "policy"},
+                "details": {"$ref": "#/$defs/checkWaivedDetails"}
+              }
+            },
+            {
+              "properties": {
+                "code": {"const": "waiver-expired"},
+                "severity": {"const": "warning"},
+                "subject": {"const": "policy"},
+                "details": {"$ref": "#/$defs/waiverExpiredDetails"}
+              }
+            },
+            {
+              "properties": {
+                "code": {"const": "waiver-scope-mismatch"},
+                "severity": {"const": "warning"},
+                "subject": {"const": "policy"},
+                "details": {"$ref": "#/$defs/waiverScopeDetails"}
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "detectorDiagnostic": {
+      "allOf": [
+        {"$ref": "#/$defs/diagnostic"},
+        {
+          "properties": {
+            "code": {
+              "enum": [
+                "argument-type-changed",
+                "boundary-whitespace-mismatch",
+                "empty-target",
+                "exact-selector-extra",
+                "exact-selector-missing",
+                "immutable-email-extra",
+                "immutable-email-missing",
+                "immutable-url-extra",
+                "immutable-url-missing",
+                "rich-tag-extra",
+                "rich-tag-misnested",
+                "rich-tag-missing",
+                "rich-tag-unbalanced",
+                "select-argument-changed",
+                "select-occurrence-extra",
+                "select-occurrence-missing",
+                "select-option-extra",
+                "select-option-missing",
+                "source-format-invalid",
+                "target-format-invalid",
+                "unrenderable-tag-apostrophe",
+                "variable-extra",
+                "variable-missing"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "policyDiagnostic": {
+      "allOf": [
+        {"$ref": "#/$defs/diagnostic"},
+        {
+          "not": {"required": ["range"]},
+          "properties": {
+            "code": {
+              "enum": [
+                "check-waived",
+                "semantic-review-required",
+                "waiver-expired",
+                "waiver-scope-mismatch"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "externalFinding": {
+      "allOf": [
+        {"$ref": "#/$defs/policyDiagnostic"},
+        {"properties": {"code": {"const": "semantic-review-required"}}}
+      ]
+    },
+    "waiver": {
+      "type": "object",
+      "required": [
+        "rule",
+        "messageId",
+        "profile",
+        "targetLocale",
+        "sourceSha256",
+        "targetSha256",
+        "reason",
+        "owner",
+        "expiresOn"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "rule": {"$ref": "#/$defs/waivableRule"},
+        "messageId": {"type": "string", "minLength": 1},
+        "profile": {
+          "enum": ["plain", "formatjs", "dollar-template", "double-brace"]
+        },
+        "targetLocale": {"type": "string", "pattern": "^x-[a-z0-9-]+$"},
+        "sourceSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Lowercase SHA-256 of the decoded source text encoded as UTF-8, with no normalization or added bytes."
+        },
+        "targetSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Lowercase SHA-256 of the decoded target text encoded as UTF-8, with no normalization or added bytes."
+        },
+        "reason": {"type": "string", "minLength": 1},
+        "owner": {"type": "string", "minLength": 1},
+        "expiresOn": {
+          "type": "string",
+          "format": "date",
+          "description": "The waiver is valid only when policyEvaluationDate is strictly earlier than this date; equality is expired."
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "waivers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/waiver"}
+        },
+        "externalFindings": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/externalFinding"}
+        },
+        "argumentTypes": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "enum": ["string", "number", "date", "time"]
+          }
+        },
+        "targetPluralCategories": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["zero", "one", "two", "few", "many", "other"]}
+        },
+        "boundaryWhitespaceInvariant": {"const": true},
+        "apostropheRepairStrategy": {
+          "enum": ["compatibility-u2019", "icu-double"]
+        },
+        "maxNestingDepth": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "safeRepair": {
+      "type": "object",
+      "required": ["operations", "expectedTarget", "expectedDiagnostics"],
+      "additionalProperties": false,
+      "properties": {
+        "operations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "COPY_SOURCE_BOUNDARY_WHITESPACE",
+              "DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG",
+              "REPLACE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG_WITH_U2019"
+            ]
+          },
+          "not": {
+            "allOf": [
+              {
+                "contains": {
+                  "const": "DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG"
+                }
+              },
+              {
+                "contains": {
+                  "const": "REPLACE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG_WITH_U2019"
+                }
+              }
+            ]
+          }
+        },
+        "expectedTarget": {"type": "string"},
+        "expectedDiagnostics": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/detectorDiagnostic"}
+        },
+        "expectedPolicyDiagnostics": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/policyDiagnostic"}
+        }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "required": ["diagnostics", "disposition"],
+      "additionalProperties": false,
+      "properties": {
+        "diagnostics": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/detectorDiagnostic"}
+        },
+        "policyDiagnostics": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/policyDiagnostic"}
+        },
+        "reviewDisposition": {
+          "const": "REVIEW_REQUIRED"
+        },
+        "disposition": {
+          "enum": [
+            "PASS",
+            "AUTO_REPAIR_TARGET",
+            "REJECT_TARGET",
+            "REJECT_SOURCE",
+            "EXEMPT"
+          ]
+        },
+        "safeRepair": {"$ref": "#/$defs/safeRepair"}
+      }
+    },
+    "case": {
+      "type": "object",
+      "required": [
+        "id",
+        "description",
+        "tier",
+        "profile",
+        "rules",
+        "source",
+        "target",
+        "expected"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+        },
+        "description": {"type": "string", "minLength": 1},
+        "tier": {"enum": ["cutover", "extended"]},
+        "profile": {
+          "enum": ["plain", "formatjs", "dollar-template", "double-brace"]
+        },
+        "features": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/feature"}
+        },
+        "rules": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/rule"}
+        },
+        "source": {"$ref": "#/$defs/message"},
+        "target": {"$ref": "#/$defs/message"},
+        "policy": {"$ref": "#/$defs/policy"},
+        "expected": {"$ref": "#/$defs/expected"}
+      },
+      "allOf": [
+        {
+          "not": {
+            "allOf": [
+              {
+                "properties": {
+                  "expected": {"required": ["safeRepair"]}
+                }
+              },
+              {
+                "required": ["policy"],
+                "properties": {
+                  "policy": {"required": ["waivers"]}
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "batchScenario": {
+      "type": "object",
+      "required": [
+        "id",
+        "caseIds",
+        "expectedVisitedCaseIds",
+        "expectedRepairedCaseIds",
+        "expectedRejectedTargetCaseIds",
+        "expectedRejectedSourceCaseIds",
+        "expectedReviewCaseIds",
+        "expectedStatus"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+        },
+        "caseIds": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {"type": "string"}
+        },
+        "expectedVisitedCaseIds": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {"type": "string"}
+        },
+        "expectedRepairedCaseIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string"}
+        },
+        "expectedRejectedTargetCaseIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string"}
+        },
+        "expectedRejectedSourceCaseIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string"}
+        },
+        "expectedReviewCaseIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string"}
+        },
+        "expectedStatus": {
+          "enum": ["COMPLETED", "COMPLETED_WITH_REJECTIONS"]
+        }
+      }
+    }
+  }
+}

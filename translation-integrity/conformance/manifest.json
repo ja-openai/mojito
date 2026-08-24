@@ -1,0 +1,4379 @@
+{
+  "schemaVersion": 1,
+  "corpusVersion": "0.1.0",
+  "name": "translation-integrity",
+  "offsetEncoding": "unicode-code-point",
+  "policyEvaluationDate": "2030-01-01",
+  "diagnosticRules": {
+    "argument-type-changed": "argument-contract",
+    "boundary-whitespace-mismatch": "boundary-whitespace",
+    "check-waived": "waiver-policy",
+    "empty-target": "nonempty-target",
+    "exact-selector-extra": "select-contract",
+    "exact-selector-missing": "select-contract",
+    "immutable-email-extra": "email-literal-contract",
+    "immutable-email-missing": "email-literal-contract",
+    "immutable-url-extra": "url-literal-contract",
+    "immutable-url-missing": "url-literal-contract",
+    "rich-tag-extra": "rich-text-tag-contract",
+    "rich-tag-misnested": "rich-text-tag-contract",
+    "rich-tag-missing": "rich-text-tag-contract",
+    "rich-tag-unbalanced": "rich-text-tag-contract",
+    "select-argument-changed": "select-contract",
+    "select-occurrence-extra": "select-contract",
+    "select-occurrence-missing": "select-contract",
+    "select-option-extra": "select-contract",
+    "select-option-missing": "select-contract",
+    "semantic-review-required": "external-review",
+    "source-format-invalid": "message-syntax",
+    "target-format-invalid": "message-syntax",
+    "unrenderable-tag-apostrophe": "formatjs-apostrophe-before-tag",
+    "variable-extra": "argument-contract",
+    "variable-missing": "argument-contract",
+    "waiver-expired": "waiver-policy",
+    "waiver-scope-mismatch": "waiver-policy"
+  },
+  "cases": [
+    {
+      "id": "dollar-template.apostrophe-before-tag.autorepair",
+      "description": "Dollar-template placeholders can be combined with a renderer that requires FormatJS apostrophe escaping.",
+      "tier": "cutover",
+      "profile": "dollar-template",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "argument-contract",
+        "formatjs-apostrophe-before-tag",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Hello $name <link>details</link>"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SALUTATION ${name} L'<link>DETAIL</link>"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "unrenderable-tag-apostrophe",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tag": "<link>",
+              "occurrence": 1
+            }
+          }
+        ],
+        "disposition": "AUTO_REPAIR_TARGET",
+        "safeRepair": {
+          "operations": [
+            "REPLACE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG_WITH_U2019"
+          ],
+          "expectedTarget": "SALUTATION ${name} L’<link>DETAIL</link>",
+          "expectedDiagnostics": []
+        }
+      },
+      "policy": {
+        "apostropheRepairStrategy": "compatibility-u2019"
+      }
+    },
+    {
+      "id": "dollar-template.braced-equivalence.pass",
+      "description": "Braced and unbraced spellings of the same dollar-template variable are equivalent.",
+      "tier": "cutover",
+      "profile": "dollar-template",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Hello $name"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SALUTATION ${name}"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "dollar-template.changed-variable.reject",
+      "description": "Changing a dollar-template variable changes the runtime contract.",
+      "tier": "cutover",
+      "profile": "dollar-template",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Hello $name"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SALUTATION $other"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "variable-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "names": [
+                "other"
+              ]
+            }
+          },
+          {
+            "code": "variable-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "names": [
+                "name"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "dollar-template.invalid-target.reject",
+      "description": "An invalid dollar-template placeholder is a target syntax error.",
+      "tier": "extended",
+      "profile": "dollar-template",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Price: $$5 for $name"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "PRICE: $- FOR ${name}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "invalid-placeholder"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "dollar-template.literal-dollar.pass",
+      "description": "A doubled dollar sign remains a literal while variables retain their identity.",
+      "tier": "cutover",
+      "profile": "dollar-template",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Pay $$5, $name"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "PAY $$5, ${name}"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "dollar-template.rich-tag-apostrophe-allowed.pass",
+      "description": "The same placeholder grammar may use rich tags without the FormatJS apostrophe capability.",
+      "tier": "cutover",
+      "profile": "dollar-template",
+      "features": [
+        "rich-text-tags"
+      ],
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Hello $name <link>details</link>"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SALUTATION ${name} L'<link>DETAIL</link>"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "dollar-template.tag-missing.reject",
+      "description": "Rich-tag preservation applies independently of dollar-template placeholder syntax.",
+      "tier": "cutover",
+      "profile": "dollar-template",
+      "features": [
+        "rich-text-tags"
+      ],
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Hello $name <link>details</link>"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SALUTATION ${name} DETAIL"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "rich-tag-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tags": [
+                "</link>",
+                "<link>"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "double-brace.changed-variable.reject",
+      "description": "Changing a double-brace placeholder changes the runtime contract.",
+      "tier": "cutover",
+      "profile": "double-brace",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Hello {{ name }}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SALUTATION {{ other }}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "variable-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "names": [
+                "other"
+              ]
+            }
+          },
+          {
+            "code": "variable-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "names": [
+                "name"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "double-brace.exact.pass",
+      "description": "A preserved double-brace placeholder passes.",
+      "tier": "cutover",
+      "profile": "double-brace",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Hello {{ name }}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SALUTATION {{ name }}"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "double-brace.invalid-target.reject",
+      "description": "An unclosed double-brace placeholder is a target syntax error.",
+      "tier": "extended",
+      "profile": "double-brace",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Hello {{ name }}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SALUTATION {{ name }"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "unclosed-placeholder"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "double-brace.rich-tag-apostrophe-allowed.pass",
+      "description": "Double-brace placeholders may use rich tags without enabling the FormatJS apostrophe rule.",
+      "tier": "cutover",
+      "profile": "double-brace",
+      "features": [
+        "rich-text-tags"
+      ],
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Hello {{ name }} <link>details</link>"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "L'<link>{{ name }} TARGET</link>"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "double-brace.spacing-equivalent.pass",
+      "description": "Whitespace inside a double-brace placeholder does not change its identity.",
+      "tier": "extended",
+      "profile": "double-brace",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Hello {{ name }}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SALUTATION {{name}}"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "double-brace.tag-missing.reject",
+      "description": "Rich-tag preservation applies independently of double-brace placeholder syntax.",
+      "tier": "cutover",
+      "profile": "double-brace",
+      "features": [
+        "rich-text-tags"
+      ],
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Hello {{ name }} <link>details</link>"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SALUTATION {{ name }} DETAIL"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "rich-tag-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tags": [
+                "</link>",
+                "<link>"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "email.changed.reject",
+      "description": "Changing a protected email literal rejects the target.",
+      "tier": "cutover",
+      "profile": "plain",
+      "rules": [
+        "email-literal-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Contact help@example.invalid"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "CONTACT support@example.invalid"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "immutable-email-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "support@example.invalid"
+              ]
+            }
+          },
+          {
+            "code": "immutable-email-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "help@example.invalid"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "email.duplicate.reject",
+      "description": "Email literal multiplicity is part of the protected contract.",
+      "tier": "cutover",
+      "profile": "plain",
+      "rules": [
+        "email-literal-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Contact help@example.invalid"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "CONTACT help@example.invalid OR help@example.invalid"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "immutable-email-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "value": "help@example.invalid",
+              "expectedCount": 1,
+              "actualCount": 2
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "email.idn-changed.reject",
+      "description": "Internationalized email domains are protected as complete literals.",
+      "tier": "extended",
+      "profile": "plain",
+      "rules": [
+        "email-literal-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Contact help@exämple.invalid"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "CONTACT help@example.invalid"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "immutable-email-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "help@example.invalid"
+              ]
+            }
+          },
+          {
+            "code": "immutable-email-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "help@exämple.invalid"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "email.reordered.pass",
+      "description": "Protected email literals may move while retaining values and multiplicity.",
+      "tier": "cutover",
+      "profile": "plain",
+      "rules": [
+        "email-literal-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Use first@example.invalid, then second@example.invalid"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "USE second@example.invalid THEN first@example.invalid"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.apostrophe-before-closing-tag.double-autorepair",
+      "description": "An unescaped ASCII apostrophe before a closing rich-text tag hides that token and receives the native ICU doubled escape.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "formatjs-apostrophe-before-tag",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Read <link>details</link>."
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "READ <link>DETAIL'</link>."
+      },
+      "policy": {
+        "apostropheRepairStrategy": "icu-double"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "unrenderable-tag-apostrophe",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tag": "</link>",
+              "occurrence": 1
+            }
+          }
+        ],
+        "disposition": "AUTO_REPAIR_TARGET",
+        "safeRepair": {
+          "operations": [
+            "DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG"
+          ],
+          "expectedTarget": "READ <link>DETAIL''</link>.",
+          "expectedDiagnostics": []
+        }
+      }
+    },
+    {
+      "id": "formatjs.apostrophe-before-tag.autorepair",
+      "description": "A single ASCII apostrophe before an opening rich-text tag receives the runtime-defined escape.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "formatjs-apostrophe-before-tag",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Read <link>details</link>."
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "L'<link>DETAIL</link>."
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "unrenderable-tag-apostrophe",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tag": "<link>",
+              "occurrence": 1
+            }
+          }
+        ],
+        "disposition": "AUTO_REPAIR_TARGET",
+        "safeRepair": {
+          "operations": [
+            "REPLACE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG_WITH_U2019"
+          ],
+          "expectedTarget": "L’<link>DETAIL</link>.",
+          "expectedDiagnostics": []
+        }
+      },
+      "policy": {
+        "apostropheRepairStrategy": "compatibility-u2019"
+      },
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ]
+    },
+    {
+      "id": "formatjs.apostrophe-before-tag.double-autorepair",
+      "description": "A policy may preserve the rendered ASCII apostrophe by applying the native ICU doubled escape.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "formatjs-apostrophe-before-tag",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Read <link>details</link>."
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "L'<link>DETAIL</link>."
+      },
+      "policy": {
+        "apostropheRepairStrategy": "icu-double"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "unrenderable-tag-apostrophe",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tag": "<link>",
+              "occurrence": 1
+            }
+          }
+        ],
+        "disposition": "AUTO_REPAIR_TARGET",
+        "safeRepair": {
+          "operations": [
+            "DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG"
+          ],
+          "expectedTarget": "L''<link>DETAIL</link>.",
+          "expectedDiagnostics": []
+        }
+      }
+    },
+    {
+      "id": "formatjs.apostrophe-closing-plural-pound-before-tag.pass",
+      "description": "An apostrophe that closes an ICU-quoted plural pound sign immediately before a tag is not treated as a new quote opener.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "argument-contract",
+        "formatjs-apostrophe-before-tag",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{count, plural, other {'#'<link>details</link>}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{count, plural, other {'#'<link>DETAIL</link>}}"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.apostrophe-closing-quote-before-closing-tag.pass",
+      "description": "An apostrophe that closes an ICU quoted literal immediately before a closing tag is not mistaken for a new quote opener.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "formatjs-apostrophe-before-tag",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Read <link>details</link>."
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "READ <link>'{name}'</link>."
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.apostrophe-closing-quote-before-tag.pass",
+      "description": "An apostrophe that closes an ICU quoted literal immediately before a rich-text tag is not mistaken for a new quote opener.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "formatjs-apostrophe-before-tag",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Literal <link>details</link>."
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "'{name}'<link>DETAIL</link>."
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.apostrophe-closing-tag-multiple-ambiguous.reject",
+      "description": "A later apostrophe can close the quote opened before a closing tag, so repairing the first would expose a new unsafe opener before another tag.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "formatjs-apostrophe-before-tag",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Read <link>A</link> and <strong>B</strong>."
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "READ <link>A'</link> X'<strong>B</strong>."
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "unrenderable-tag-apostrophe",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tag": "</link>",
+              "occurrence": 1
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.apostrophe-context-aware.double-autorepair",
+      "description": "Quote-state analysis ignores a valid closing apostrophe and repairs only the later unclosed quote opener before a tag.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "formatjs-apostrophe-before-tag",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Read <strong>B</strong> and <link>A</link>."
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "'{name}'<strong>B</strong> ET L'<link>A</link>."
+      },
+      "policy": {
+        "apostropheRepairStrategy": "icu-double"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "unrenderable-tag-apostrophe",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tag": "<link>",
+              "occurrence": 1
+            }
+          }
+        ],
+        "disposition": "AUTO_REPAIR_TARGET",
+        "safeRepair": {
+          "operations": [
+            "DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG"
+          ],
+          "expectedTarget": "'{name}'<strong>B</strong> ET L''<link>A</link>.",
+          "expectedDiagnostics": []
+        }
+      }
+    },
+    {
+      "id": "formatjs.apostrophe-curly.pass",
+      "description": "A typographic apostrophe before a rich-text tag does not enter ICU quoting mode.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "formatjs-apostrophe-before-tag",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Read <link>details</link>."
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "L’<link>DETAIL</link>."
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      },
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ]
+    },
+    {
+      "id": "formatjs.apostrophe-doubled.pass",
+      "description": "A doubled ASCII apostrophe is a valid FormatJS escape even though a legacy fixer may not recognize it.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "formatjs-apostrophe-before-tag",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Read <link>details</link>."
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "L''<link>DETAIL</link>."
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.apostrophe-multiple-ambiguous.reject",
+      "description": "A later apostrophe can close the quote opened before an earlier tag, so a one-pass replacement would expose a new error and is not a safe repair.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "formatjs-apostrophe-before-tag",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Read <link>A</link> and <strong>B</strong>."
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "L'<link>A</link> ET D'<strong>B</strong>."
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "unrenderable-tag-apostrophe",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tag": "<link>",
+              "occurrence": 1
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.apostrophe-nested-select-resets-plural.reject",
+      "description": "A nested select branch resets its containing plural's pound-sign quote context, exposing a later ambiguous quote opener before a tag.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "argument-contract",
+        "formatjs-apostrophe-before-tag",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{n, plural, other {{m, select, other {# <link>details</link>}}}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{n, plural, other {{m, select, other {'#'<link>DETAIL</link>'}}}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "unrenderable-tag-apostrophe",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tag": "<link>",
+              "occurrence": 1
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.apostrophe-opaque-tag-attribute.double-autorepair",
+      "description": "Apostrophes inside a complete tag token are opaque to ICU quote state, so a later unsafe opener is still detected and repaired.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "formatjs-apostrophe-before-tag",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "<link title='x'>A</link> and <strong>B</strong>."
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "<link title='x'>A</link> ET L'<strong>B</strong>."
+      },
+      "policy": {
+        "apostropheRepairStrategy": "icu-double"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "unrenderable-tag-apostrophe",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tag": "<strong>",
+              "occurrence": 1
+            }
+          }
+        ],
+        "disposition": "AUTO_REPAIR_TARGET",
+        "safeRepair": {
+          "operations": [
+            "DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG"
+          ],
+          "expectedTarget": "<link title='x'>A</link> ET L''<strong>B</strong>.",
+          "expectedDiagnostics": []
+        }
+      }
+    },
+    {
+      "id": "formatjs.apostrophe-pound-outside-plural.double-autorepair",
+      "description": "A pound sign outside a plural branch is ordinary text, so the following apostrophe before a tag remains a quote opener.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "formatjs-apostrophe-before-tag",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Value # <link>details</link>."
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "VALUE '#'<link>DETAIL</link>."
+      },
+      "policy": {
+        "apostropheRepairStrategy": "icu-double"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "unrenderable-tag-apostrophe",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tag": "<link>",
+              "occurrence": 1
+            }
+          }
+        ],
+        "disposition": "AUTO_REPAIR_TARGET",
+        "safeRepair": {
+          "operations": [
+            "DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG"
+          ],
+          "expectedTarget": "VALUE '#''<link>DETAIL</link>.",
+          "expectedDiagnostics": []
+        }
+      }
+    },
+    {
+      "id": "formatjs.argument-extra.reject",
+      "description": "A target cannot introduce a runtime argument absent from source.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Hello {name}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SALUTATION {name} {other}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "variable-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "names": [
+                "other"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.argument-missing.reject",
+      "description": "A target cannot drop a runtime argument.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Hello {name}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SALUTATION"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "variable-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "names": [
+                "name"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.argument-reordered.pass",
+      "description": "Runtime arguments may be reordered in a target.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{first} met {second}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{second} MET {first}"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.argument-type-changed.reject",
+      "description": "Changing a typed argument from number to date changes its runtime contract.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Value: {value, number}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "VALUE: {value, date}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "argument-type-changed",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "argument": "value",
+              "expectedType": "number",
+              "actualType": "date"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.bidi-select.pass",
+      "description": "Bidirectional marks used as ICU whitespace do not change argument or select identities.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{‎mode‏, select, ‎on {ON} ‏other {OFF}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{‎mode‏, select, ‎on {TARGET ON} ‏other {TARGET OFF}}"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.literal-closing-brace.pass",
+      "description": "A literal closing brace outside an argument remains ordinary text.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Literal } before {name}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "LITERAL } BEFORE {name}"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.malformed-source.reject-source",
+      "description": "Malformed source is a source defect and must not delete an otherwise valid target.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {ON}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select, on {TARGET ON} other {TARGET OFF}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "source-format-invalid",
+            "severity": "error",
+            "subject": "source",
+            "details": {
+              "reason": "unclosed-selector"
+            }
+          }
+        ],
+        "disposition": "REJECT_SOURCE"
+      }
+    },
+    {
+      "id": "formatjs.malformed-target-duplicate-selector.reject",
+      "description": "Duplicate select keys make a target message invalid.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {ON} other {OFF}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select, on {A} on {B} other {C}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "duplicate-selector"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.malformed-target-invalid-offset.reject",
+      "description": "A nonnumeric plural offset makes a target message invalid.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{count, plural, one {ONE} other {OTHER}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{count, plural, offset:x other {TARGET}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "invalid-plural-offset"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.malformed-target-missing-other.reject",
+      "description": "A selector without an other branch makes a target message invalid.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {ON} other {OFF}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select, on {TARGET ON}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "missing-other-branch"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.malformed-target-unclosed.reject",
+      "description": "An unclosed argument makes a target message invalid.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "🧭 Hello {name}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "🧭 TARGET {name"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "unclosed-argument"
+            },
+            "range": {
+              "start": 9,
+              "end": 14
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.nested-plural-argument-missing.reject",
+      "description": "Dropping an argument nested inside plural branches changes the runtime contract.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{count, plural, one {# {name} ITEM} other {# {name} ITEMS}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{count, plural, one {# TARGET ITEM} other {# TARGET ITEMS}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "variable-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "names": [
+                "name"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.nested-plural-arguments.pass",
+      "description": "Arguments nested in plural branches may be reordered within translated branch text.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{count, plural, one {# {name} ITEM} other {# {name} ITEMS}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{count, plural, one {{name}: # TARGET ITEM} other {{name}: # TARGET ITEMS}}"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.plain-to-plural-string-type.reject",
+      "description": "A target cannot introduce numeric plural selection when the runtime contract explicitly declares a string.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Total: {count}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{count, plural, one {ONE} other {OTHER}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "argument-type-changed",
+            "severity": "error",
+            "subject": "target",
+          "details": {
+            "argument": "count",
+            "expectedType": "string",
+            "actualType": "plural-number"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      },
+      "policy": {
+        "argumentTypes": {
+          "count": "string"
+        }
+      }
+    },
+    {
+      "id": "formatjs.plain-to-plural.pass",
+      "description": "An untyped plain argument may become a plural selector for compatibility with the existing checker contract.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Total: {count}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{count, plural, one {ONE} other {OTHER}}"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.plural-categories-localized.pass",
+      "description": "Target plural categories may differ from source categories for the target locale.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{count, plural, one {ONE ITEM} other {OTHER ITEMS}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{count, plural, one {TARGET ONE} few {TARGET FEW} many {TARGET MANY} other {TARGET OTHER}}"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      },
+      "policy": {
+        "targetPluralCategories": [
+          "few",
+          "many",
+          "one",
+          "other"
+        ]
+      }
+    },
+    {
+      "id": "formatjs.plural-explicit-selectors-changed.reject",
+      "description": "Exact numeric selectors encode authored behavior and must be preserved.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{count, plural, =0 {ZERO} one {ONE} other {OTHER}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{count, plural, =2 {TARGET TWO} other {TARGET OTHER}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "exact-selector-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "argument": "count",
+              "selectors": [
+                "=2"
+              ]
+            }
+          },
+          {
+            "code": "exact-selector-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "argument": "count",
+              "selectors": [
+                "=0"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.plural-offset-signed.pass",
+      "description": "Signed plural offsets and explicit numeric selectors remain valid syntax.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{count, plural, offset: -1 =-1 {EARLY} =+1 {ONE} other {OTHER}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{count, plural, offset: -1 =-1 {TARGET EARLY} =+1 {TARGET ONE} other {TARGET OTHER}}"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.plural-to-plain.pass",
+      "description": "A locale may express a plural selector as a plain argument.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{count, plural, one {ONE} other {OTHER}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "TOTAL: {count}"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.quoted-pound.pass",
+      "description": "A quoted pound sign inside a plural branch remains literal.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{count, plural, other {'# literal' {name}}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{count, plural, other {'# TARGET' {name}}}"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.select-branch-text.pass",
+      "description": "Application-controlled select keys remain stable while branch prose is translated and reordered.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {ENABLED} other {DISABLED}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select, other {TARGET OFF} on {TARGET ON}}"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.select-extra-option.reject",
+      "description": "A target cannot add an application-controlled select key.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {ON} other {OFF}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select, on {A} maybe {B} other {C}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "select-option-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "argument": "mode",
+              "options": [
+                "maybe"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.select-missing-option.reject",
+      "description": "A target cannot drop an application-controlled select key.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {ON} off {OFF} other {UNKNOWN}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select, on {A} other {C}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "select-option-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "argument": "mode",
+              "options": [
+                "off"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.select-occurrence-extra.reject",
+      "description": "Adding a repeated application-controlled select occurrence changes the runtime contract.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {A} other {B}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select, on {TARGET A} other {TARGET B}} / {mode, select, on {TARGET C} other {TARGET D}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "select-occurrence-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "argument": "mode",
+              "selectors": [
+                "on",
+                "other"
+              ],
+              "expectedCount": 1,
+              "actualCount": 2
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.select-occurrence-missing.reject",
+      "description": "Dropping one repeated select occurrence changes the runtime contract.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {A} other {B}} / {mode, select, on {C} other {D}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select, on {TARGET A} other {TARGET B}} / {mode}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "select-occurrence-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "argument": "mode",
+              "selectors": [
+                "on",
+                "other"
+              ],
+              "expectedCount": 2,
+              "actualCount": 1
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.select-to-plain.reject",
+      "description": "An application-controlled select cannot become a plain argument.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {ON} other {OFF}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "MODE: {mode}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "select-argument-changed",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "argument": "mode",
+              "expectedType": "select",
+              "actualType": "plain"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.select-to-plural.reject",
+      "description": "An application-controlled select cannot become a locale-controlled plural selector.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {ON} other {OFF}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, plural, one {ONE} other {OTHER}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "select-argument-changed",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "argument": "mode",
+              "expectedType": "select",
+              "actualType": "plural"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.selectordinal-to-plain.pass",
+      "description": "A locale may express an ordinal selector as a plain argument.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{day, selectordinal, one {#st} other {#th}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "DAY {day}"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.syntax.empty-skeleton-style.reject",
+      "description": "A skeleton marker without a skeleton body is an invalid argument style.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Value: {value, number}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "VALUE: {value, number, :: }"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "invalid-argument-style"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.empty-style.reject",
+      "description": "A typed argument cannot declare an empty style.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Value: {value, number}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "VALUE: {value, number, }"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "invalid-argument-style"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.explicit-selector-on-select.reject",
+      "description": "A select argument cannot use a numeric explicit selector.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {ON} other {OFF}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select, =1 {TARGET} other {OTHER}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "invalid-selector"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.immediate-selector-close.reject",
+      "description": "A selector closed before any branches is missing its required other branch.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {ON} other {OFF}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "missing-other-branch"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.invalid-argument-name.reject",
+      "description": "An ICU argument name must be a valid identifier.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Value: {name}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "VALUE: {bad-name}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "invalid-argument-name"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.invalid-argument-type.reject",
+      "description": "An unsupported ICU argument type makes the target invalid.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Value: {value, number}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "VALUE: {value, currency}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "invalid-argument-type"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.invalid-explicit-selector.reject",
+      "description": "A numeric explicit selector must contain a signed or unsigned integer.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{count, plural, other {ITEMS}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{count, plural, =x {TARGET} other {OTHER}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "invalid-selector"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.invalid-named-selector.reject",
+      "description": "A named selector must be a valid identifier.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{count, plural, few {FEW} other {ITEMS}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{count, plural, few-items {TARGET} other {OTHER}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "invalid-selector"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.missing-argument-delimiter.reject",
+      "description": "An ICU argument name must be followed by a comma or closing brace.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Hello {name}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "HELLO {name text}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "missing-argument-delimiter"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.missing-argument-name.reject",
+      "description": "An empty ICU argument is invalid.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Value: {name}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "missing-argument-or-selector"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.missing-argument-type.reject",
+      "description": "A typed ICU argument must name its argument type.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Value: {value, number}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{value, }"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "missing-argument-or-selector"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.missing-offset-value.reject",
+      "description": "A plural offset declaration must include its numeric value.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{count, plural, other {ITEMS}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{count, plural, offset:}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "missing-argument-or-selector"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.missing-selector.reject",
+      "description": "A select argument cannot contain a branch with no selector.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {ON} other {OFF}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select, {ON} other {OFF}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "missing-argument-or-selector"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.missing-type-delimiter.reject",
+      "description": "An ICU argument type must be followed by a comma or closing brace.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Value: {value, number}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "VALUE: {value, number short}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "missing-type-delimiter"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.offset-after-selector.reject",
+      "description": "A plural offset cannot appear after a selector branch.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{count, plural, one {ONE} other {ITEMS}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{count, plural, one {TARGET} offset:1 other {TARGETS}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "invalid-plural-offset"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.offset-on-select.reject",
+      "description": "A nonplural select argument cannot declare a plural offset.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {ON} other {OFF}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select, offset:1 other {TARGET}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "invalid-plural-offset"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.repeated-offset.reject",
+      "description": "A plural argument cannot declare more than one offset.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{count, plural, other {ITEMS}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{count, plural, offset:1 offset:2 other {TARGET}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "invalid-plural-offset"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.selector-depth.reject",
+      "description": "Selector nesting beyond the declared parser safety limit is invalid.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Value: {a}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{{a,select,other{x}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "maximum-nesting-depth"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      },
+      "policy": {
+        "maxNestingDepth": 100
+      }
+    },
+    {
+      "id": "formatjs.syntax.source-short-circuits-combined.reject-source",
+      "description": "Invalid source syntax suppresses every target-side detector and repair.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "argument-contract",
+        "boundary-whitespace",
+        "email-literal-contract",
+        "formatjs-apostrophe-before-tag",
+        "message-syntax",
+        "rich-text-tag-contract",
+        "url-literal-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": " Contact {name at help@example.invalid or https://docs.example.invalid <link>DETAIL</link> "
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "CONTACT {other} AT support@example.invalid OR https://help.example.invalid L'<strong>TARGET</strong>"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "source-format-invalid",
+            "severity": "error",
+            "subject": "source",
+            "details": {
+              "reason": "missing-argument-delimiter"
+            }
+          }
+        ],
+        "disposition": "REJECT_SOURCE"
+      }
+    },
+    {
+      "id": "formatjs.syntax.style-depth.reject",
+      "description": "Style nesting beyond the declared parser safety limit is invalid.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Value: {v, number}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{v,number,{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{x}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "maximum-nesting-depth"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      },
+      "policy": {
+        "maxNestingDepth": 100
+      }
+    },
+    {
+      "id": "formatjs.syntax.target-short-circuits-combined.reject",
+      "description": "Invalid target syntax suppresses every later detector and safe repair.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "argument-contract",
+        "boundary-whitespace",
+        "email-literal-contract",
+        "formatjs-apostrophe-before-tag",
+        "message-syntax",
+        "rich-text-tag-contract",
+        "url-literal-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": " Contact {name} at help@example.invalid or https://docs.example.invalid <link>DETAIL</link> "
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "CONTACT {name at support@example.invalid OR https://help.example.invalid L'<strong>TARGET</strong>"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "missing-argument-delimiter"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.unbraced-selector-branch.reject",
+      "description": "Every ICU selector branch must have a braced message body.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {ON} other {OFF}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select, on TARGET other {OTHER}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "unbraced-selector-branch"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.unclosed-branch.reject",
+      "description": "An ICU selector branch must close its message body.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, other {ON}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select, other {ON"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "unclosed-selector-branch"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.unclosed-style-quote.reject",
+      "description": "A quoted ICU argument style must close its apostrophe quote.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Date: {value, date, short}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "DATE: {value, date, 'short}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "unclosed-style-quote"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.unclosed-style.reject",
+      "description": "A styled ICU argument must close its argument brace.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Date: {value, date, short}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "DATE: {value, date, short"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "unclosed-typed-argument"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.unclosed-typed-before-style.reject",
+      "description": "A typed ICU argument must close after its type when no style is present.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Value: {value, number}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "VALUE: {value, number"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "unclosed-typed-argument"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "literal.source-equals-target.pass",
+      "description": "Source-equals-target is not by itself a structural integrity failure.",
+      "tier": "cutover",
+      "profile": "plain",
+      "rules": [
+        "nonempty-target"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Harbor"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "Harbor"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "markup.attribute-changed.reject",
+      "description": "Changing a rich-text opening-tag attribute changes the runtime tag contract.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "features": [
+        "rich-text-tags"
+      ],
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "<link title=\"SOURCE\">{name}</link>"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "<link title=\"TARGET\">{name}</link>"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "rich-tag-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tags": [
+                "<link title=\"TARGET\">"
+              ]
+            }
+          },
+          {
+            "code": "rich-tag-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tags": [
+                "<link title=\"SOURCE\">"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "markup.balanced-reordered.pass",
+      "description": "Balanced sibling rich-text spans may be reordered while each subtree remains intact.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "<strong>ONE</strong> <link>TWO</link>"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "<link>TARGET TWO</link> <strong>TARGET ONE</strong>"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      },
+      "features": [
+        "rich-text-tags"
+      ]
+    },
+    {
+      "id": "markup.extra-tag.reject",
+      "description": "A target cannot introduce an unbound rich-text tag.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "DETAIL"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "<strong>TARGET</strong>"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "rich-tag-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tags": [
+                "</strong>",
+                "<strong>"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      },
+      "features": [
+        "rich-text-tags"
+      ]
+    },
+    {
+      "id": "markup.misnested.reject",
+      "description": "Rich-text tags must remain well nested in the target.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "rules": [
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "<strong><link>SOURCE</link></strong>"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "<strong><link>TARGET</strong></link>"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "rich-tag-misnested",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "expectedTree": "<strong><link></link></strong>",
+              "actualTree": "<strong><link></strong></link>"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      },
+      "features": [
+        "rich-text-tags"
+      ]
+    },
+    {
+      "id": "markup.missing-tag.reject",
+      "description": "A target cannot drop a source rich-text tag.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "<link>DETAIL</link>"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "TARGET"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "rich-tag-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tags": [
+                "</link>",
+                "<link>"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      },
+      "features": [
+        "rich-text-tags"
+      ]
+    },
+    {
+      "id": "markup.multiplicity.reject",
+      "description": "Rich-text tag multiplicity is part of the runtime contract.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "rules": [
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "<strong>ONE</strong> <strong>TWO</strong>"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "<strong>TARGET</strong>"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "rich-tag-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tag": "strong",
+              "expectedCount": 2,
+              "actualCount": 1
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      },
+      "features": [
+        "rich-text-tags"
+      ]
+    },
+    {
+      "id": "markup.unbalanced.reject",
+      "description": "A rich-text tag with no matching close tag is structurally invalid.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "features": [
+        "rich-text-tags"
+      ],
+      "rules": [
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "<link>DETAIL</link>"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "<link>TARGET"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "rich-tag-unbalanced",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tag": "link",
+              "expectedOpenCount": 1,
+              "actualOpenCount": 1,
+              "expectedCloseCount": 1,
+              "actualCloseCount": 0
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "pipeline.composed-safe-repairs.autorepair",
+      "description": "Independent deterministic repairs compose and remain idempotent.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "boundary-whitespace",
+        "formatjs-apostrophe-before-tag",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": " Read <link>A</link> "
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "L'<link>TARGET</link>"
+      },
+      "policy": {
+        "apostropheRepairStrategy": "compatibility-u2019",
+        "boundaryWhitespaceInvariant": true
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "boundary-whitespace-mismatch",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "expectedLeading": " ",
+              "expectedTrailing": " ",
+              "actualLeading": "",
+              "actualTrailing": ""
+            }
+          },
+          {
+            "code": "unrenderable-tag-apostrophe",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tag": "<link>",
+              "occurrence": 1
+            }
+          }
+        ],
+        "disposition": "AUTO_REPAIR_TARGET",
+        "safeRepair": {
+          "operations": [
+            "COPY_SOURCE_BOUNDARY_WHITESPACE",
+            "REPLACE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG_WITH_U2019"
+          ],
+          "expectedTarget": " L’<link>TARGET</link> ",
+          "expectedDiagnostics": []
+        }
+      }
+    },
+    {
+      "id": "pipeline.multiple-diagnostics.reject",
+      "description": "Independent rules report their complete finding set instead of stopping at the first target error.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "boundary-whitespace",
+        "email-literal-contract",
+        "formatjs-apostrophe-before-tag",
+        "message-syntax",
+        "rich-text-tag-contract",
+        "url-literal-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": " Contact {name} at help@example.invalid or https://docs.example.invalid <link>DETAIL</link> "
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "CONTACT {other} AT support@example.invalid OR https://help.example.invalid L'<link>TARGET</link>"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "boundary-whitespace-mismatch",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "expectedLeading": " ",
+              "expectedTrailing": " ",
+              "actualLeading": "",
+              "actualTrailing": ""
+            }
+          },
+          {
+            "code": "immutable-email-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "support@example.invalid"
+              ]
+            }
+          },
+          {
+            "code": "immutable-email-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "help@example.invalid"
+              ]
+            }
+          },
+          {
+            "code": "immutable-url-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "https://help.example.invalid"
+              ]
+            }
+          },
+          {
+            "code": "immutable-url-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "https://docs.example.invalid"
+              ]
+            }
+          },
+          {
+            "code": "unrenderable-tag-apostrophe",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tag": "<link>",
+              "occurrence": 1
+            }
+          },
+          {
+            "code": "variable-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "names": [
+                "other"
+              ]
+            }
+          },
+          {
+            "code": "variable-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "names": [
+                "name"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      },
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "policy": {
+        "boundaryWhitespaceInvariant": true
+      }
+    },
+    {
+      "id": "plain.empty-target.reject",
+      "description": "An empty target for nonempty source is rejected explicitly.",
+      "tier": "extended",
+      "profile": "plain",
+      "rules": [
+        "nonempty-target"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "SOURCE"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": ""
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "empty-target",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "sourceNonempty": true
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "policy.external-review-with-rejection.reject",
+      "description": "A structural rejection and an independent semantic review finding remain visible together.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "external-review",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Hello {name}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SALUTATION"
+      },
+      "policy": {
+        "externalFindings": [
+          {
+            "code": "semantic-review-required",
+            "severity": "warning",
+            "subject": "target",
+            "details": {
+              "finding": "meaning-review"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "variable-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "names": [
+                "name"
+              ]
+            }
+          }
+        ],
+        "policyDiagnostics": [
+          {
+            "code": "semantic-review-required",
+            "severity": "warning",
+            "subject": "target",
+            "details": {
+              "finding": "meaning-review"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET",
+        "reviewDisposition": "REVIEW_REQUIRED"
+      }
+    },
+    {
+      "id": "policy.external-review-with-repair.autorepair",
+      "description": "A deterministic structural repair does not erase an independent semantic review finding.",
+      "tier": "extended",
+      "profile": "plain",
+      "rules": [
+        "boundary-whitespace",
+        "external-review"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": " SOURCE "
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "TARGET"
+      },
+      "policy": {
+        "boundaryWhitespaceInvariant": true,
+        "externalFindings": [
+          {
+            "code": "semantic-review-required",
+            "severity": "warning",
+            "subject": "target",
+            "details": {
+              "finding": "meaning-review"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "boundary-whitespace-mismatch",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "expectedLeading": " ",
+              "expectedTrailing": " ",
+              "actualLeading": "",
+              "actualTrailing": ""
+            }
+          }
+        ],
+        "policyDiagnostics": [
+          {
+            "code": "semantic-review-required",
+            "severity": "warning",
+            "subject": "target",
+            "details": {
+              "finding": "meaning-review"
+            }
+          }
+        ],
+        "disposition": "AUTO_REPAIR_TARGET",
+        "reviewDisposition": "REVIEW_REQUIRED",
+        "safeRepair": {
+          "operations": [
+            "COPY_SOURCE_BOUNDARY_WHITESPACE"
+          ],
+          "expectedTarget": " TARGET ",
+          "expectedDiagnostics": [],
+          "expectedPolicyDiagnostics": [
+            {
+              "code": "semantic-review-required",
+              "severity": "warning",
+              "subject": "target",
+              "details": {
+                "finding": "meaning-review"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "policy.external-review-with-waiver.exempt",
+      "description": "A structural waiver and an independent semantic review finding remain separate outcomes.",
+      "tier": "extended",
+      "profile": "plain",
+      "rules": [
+        "boundary-whitespace",
+        "external-review",
+        "waiver-policy"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": " SOURCE "
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "TARGET"
+      },
+      "policy": {
+        "boundaryWhitespaceInvariant": true,
+        "externalFindings": [
+          {
+            "code": "semantic-review-required",
+            "severity": "warning",
+            "subject": "target",
+            "details": {
+              "finding": "meaning-review"
+            }
+          }
+        ],
+        "waivers": [
+          {
+            "rule": "boundary-whitespace",
+            "messageId": "policy.external-review-with-waiver.exempt",
+            "profile": "plain",
+            "targetLocale": "x-target",
+            "sourceSha256": "2541dcecb909d138e85e259aeee59bd907243764005725e3b4bf8a4fff708812",
+            "targetSha256": "3dc0db889344edf0b87069519efcdfc547733444a32a489366523a80a89f852c",
+            "reason": "intentional-boundary-whitespace-override",
+            "owner": "fixture-owner",
+            "expiresOn": "2099-01-01"
+          }
+        ]
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "boundary-whitespace-mismatch",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "expectedLeading": " ",
+              "expectedTrailing": " ",
+              "actualLeading": "",
+              "actualTrailing": ""
+            }
+          }
+        ],
+        "policyDiagnostics": [
+          {
+            "code": "check-waived",
+            "severity": "info",
+            "subject": "policy",
+            "details": {
+              "rule": "boundary-whitespace",
+              "waiverCount": 1
+            }
+          },
+          {
+            "code": "semantic-review-required",
+            "severity": "warning",
+            "subject": "target",
+            "details": {
+              "finding": "meaning-review"
+            }
+          }
+        ],
+        "disposition": "EXEMPT",
+        "reviewDisposition": "REVIEW_REQUIRED"
+      }
+    },
+    {
+      "id": "policy.external-semantic-review.route",
+      "description": "An external semantic finding is preserved for review without pretending structural validation can repair it.",
+      "tier": "extended",
+      "profile": "plain",
+      "rules": [
+        "external-review"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "MODE=disable"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "MODE=enable"
+      },
+      "policy": {
+        "externalFindings": [
+          {
+            "code": "semantic-review-required",
+            "severity": "warning",
+            "subject": "target",
+            "details": {
+              "finding": "opposite-action"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "diagnostics": [],
+        "policyDiagnostics": [
+          {
+            "code": "semantic-review-required",
+            "severity": "warning",
+            "subject": "target",
+            "details": {
+              "finding": "opposite-action"
+            }
+          }
+        ],
+        "disposition": "PASS",
+        "reviewDisposition": "REVIEW_REQUIRED"
+      }
+    },
+    {
+      "id": "policy.waiver-does-not-short-circuit.reject",
+      "description": "Waiving one boundary-whitespace finding never suppresses independent runtime-contract findings.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "argument-contract",
+        "boundary-whitespace",
+        "email-literal-contract",
+        "formatjs-apostrophe-before-tag",
+        "message-syntax",
+        "rich-text-tag-contract",
+        "url-literal-contract",
+        "waiver-policy"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": " Contact {name} at help@example.invalid or https://docs.example.invalid <link>DETAIL</link> "
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "CONTACT {other} AT support@example.invalid OR https://help.example.invalid L'<link>TARGET</link>"
+      },
+      "policy": {
+        "boundaryWhitespaceInvariant": true,
+        "waivers": [
+          {
+            "rule": "boundary-whitespace",
+            "messageId": "policy.waiver-does-not-short-circuit.reject",
+            "profile": "formatjs",
+            "targetLocale": "x-target",
+            "sourceSha256": "a0f6b6f2266949bb7686694b6a2d5672794144db2093ac81ed4be3319cdd5b70",
+            "targetSha256": "52339c44e8b0ae4808900528ad047789302580d6f1263564a890a8f730f3ec00",
+            "reason": "intentional-boundary-whitespace-override",
+            "owner": "fixture-owner",
+            "expiresOn": "2099-01-01"
+          }
+        ]
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "boundary-whitespace-mismatch",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "expectedLeading": " ",
+              "expectedTrailing": " ",
+              "actualLeading": "",
+              "actualTrailing": ""
+            }
+          },
+          {
+            "code": "immutable-email-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "support@example.invalid"
+              ]
+            }
+          },
+          {
+            "code": "immutable-email-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "help@example.invalid"
+              ]
+            }
+          },
+          {
+            "code": "immutable-url-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "https://help.example.invalid"
+              ]
+            }
+          },
+          {
+            "code": "immutable-url-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "https://docs.example.invalid"
+              ]
+            }
+          },
+          {
+            "code": "unrenderable-tag-apostrophe",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tag": "<link>",
+              "occurrence": 1
+            }
+          },
+          {
+            "code": "variable-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "names": [
+                "other"
+              ]
+            }
+          },
+          {
+            "code": "variable-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "names": [
+                "name"
+              ]
+            }
+          }
+        ],
+        "policyDiagnostics": [
+          {
+            "code": "check-waived",
+            "severity": "info",
+            "subject": "policy",
+            "details": {
+              "rule": "boundary-whitespace",
+              "waiverCount": 1
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "policy.waiver-exact.exempt",
+      "description": "A current waiver may exempt one exact, explicitly waivable boundary-whitespace finding without hiding detection.",
+      "tier": "extended",
+      "profile": "plain",
+      "rules": [
+        "boundary-whitespace",
+        "waiver-policy"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": " SOURCE "
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "TARGET"
+      },
+      "policy": {
+        "boundaryWhitespaceInvariant": true,
+        "waivers": [
+          {
+            "rule": "boundary-whitespace",
+            "messageId": "policy.waiver-exact.exempt",
+            "profile": "plain",
+            "targetLocale": "x-target",
+            "sourceSha256": "2541dcecb909d138e85e259aeee59bd907243764005725e3b4bf8a4fff708812",
+            "targetSha256": "3dc0db889344edf0b87069519efcdfc547733444a32a489366523a80a89f852c",
+            "reason": "intentional-boundary-whitespace-override",
+            "owner": "fixture-owner",
+            "expiresOn": "2099-01-01"
+          }
+        ]
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "boundary-whitespace-mismatch",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "expectedLeading": " ",
+              "expectedTrailing": " ",
+              "actualLeading": "",
+              "actualTrailing": ""
+            }
+          }
+        ],
+        "disposition": "EXEMPT",
+        "policyDiagnostics": [
+          {
+            "code": "check-waived",
+            "severity": "info",
+            "subject": "policy",
+            "details": {
+              "rule": "boundary-whitespace",
+              "waiverCount": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "policy.waiver-expired.reject",
+      "description": "An expired waiver leaves the detector finding active and reports the policy failure separately.",
+      "tier": "extended",
+      "profile": "plain",
+      "rules": [
+        "boundary-whitespace",
+        "waiver-policy"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": " SOURCE "
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "TARGET"
+      },
+      "policy": {
+        "boundaryWhitespaceInvariant": true,
+        "waivers": [
+          {
+            "rule": "boundary-whitespace",
+            "messageId": "policy.waiver-expired.reject",
+            "profile": "plain",
+            "targetLocale": "x-target",
+            "sourceSha256": "2541dcecb909d138e85e259aeee59bd907243764005725e3b4bf8a4fff708812",
+            "targetSha256": "3dc0db889344edf0b87069519efcdfc547733444a32a489366523a80a89f852c",
+            "reason": "intentional-boundary-whitespace-override",
+            "owner": "fixture-owner",
+            "expiresOn": "2020-01-01"
+          }
+        ]
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "boundary-whitespace-mismatch",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "expectedLeading": " ",
+              "expectedTrailing": " ",
+              "actualLeading": "",
+              "actualTrailing": ""
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET",
+        "policyDiagnostics": [
+          {
+            "code": "waiver-expired",
+            "severity": "warning",
+            "subject": "policy",
+            "details": {
+              "rule": "boundary-whitespace",
+              "expiresOn": "2020-01-01"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "policy.waiver-expiry-boundary.reject",
+      "description": "A waiver expires on its stated date, so equality with the policy evaluation date leaves the detector finding active.",
+      "tier": "extended",
+      "profile": "plain",
+      "rules": [
+        "boundary-whitespace",
+        "waiver-policy"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": " SOURCE "
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "TARGET"
+      },
+      "policy": {
+        "boundaryWhitespaceInvariant": true,
+        "waivers": [
+          {
+            "rule": "boundary-whitespace",
+            "messageId": "policy.waiver-expiry-boundary.reject",
+            "profile": "plain",
+            "targetLocale": "x-target",
+            "sourceSha256": "2541dcecb909d138e85e259aeee59bd907243764005725e3b4bf8a4fff708812",
+            "targetSha256": "3dc0db889344edf0b87069519efcdfc547733444a32a489366523a80a89f852c",
+            "reason": "intentional-boundary-whitespace-override",
+            "owner": "fixture-owner",
+            "expiresOn": "2030-01-01"
+          }
+        ]
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "boundary-whitespace-mismatch",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "expectedLeading": " ",
+              "expectedTrailing": " ",
+              "actualLeading": "",
+              "actualTrailing": ""
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET",
+        "policyDiagnostics": [
+          {
+            "code": "waiver-expired",
+            "severity": "warning",
+            "subject": "policy",
+            "details": {
+              "rule": "boundary-whitespace",
+              "expiresOn": "2030-01-01"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "policy.waiver-non-ascii-hash.exempt",
+      "description": "Waiver fingerprints hash normalization-sensitive decoded Unicode text as UTF-8 without normalization or added bytes.",
+      "tier": "extended",
+      "profile": "plain",
+      "rules": [
+        "boundary-whitespace",
+        "waiver-policy"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": " CAFE\u0301 ☕ "
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "CAFE\u0301 ☕"
+      },
+      "policy": {
+        "boundaryWhitespaceInvariant": true,
+        "waivers": [
+          {
+            "rule": "boundary-whitespace",
+            "messageId": "policy.waiver-non-ascii-hash.exempt",
+            "profile": "plain",
+            "targetLocale": "x-target",
+            "sourceSha256": "90722115c73aca077494a8d444f86dc38830bb9649d547a1bbcc48bd76bfeb32",
+            "targetSha256": "7332ef4b726791f7b0b4371ac2c2a390a1e8ba842014da10489ca1a477b05321",
+            "reason": "intentional-boundary-whitespace-override",
+            "owner": "fixture-owner",
+            "expiresOn": "2099-01-01"
+          }
+        ]
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "boundary-whitespace-mismatch",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "expectedLeading": " ",
+              "expectedTrailing": " ",
+              "actualLeading": "",
+              "actualTrailing": ""
+            }
+          }
+        ],
+        "disposition": "EXEMPT",
+        "policyDiagnostics": [
+          {
+            "code": "check-waived",
+            "severity": "info",
+            "subject": "policy",
+            "details": {
+              "rule": "boundary-whitespace",
+              "waiverCount": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "policy.waiver-scope-mismatch.reject",
+      "description": "Changing the target invalidates a text-fingerprinted waiver without hiding the detector finding.",
+      "tier": "extended",
+      "profile": "plain",
+      "rules": [
+        "boundary-whitespace",
+        "waiver-policy"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": " SOURCE "
+      },
+      "target": {
+        "locale": "x-target",
+        "text": " TARGET"
+      },
+      "policy": {
+        "boundaryWhitespaceInvariant": true,
+        "waivers": [
+          {
+            "rule": "boundary-whitespace",
+            "messageId": "policy.waiver-scope-mismatch.reject",
+            "profile": "plain",
+            "targetLocale": "x-target",
+            "sourceSha256": "2541dcecb909d138e85e259aeee59bd907243764005725e3b4bf8a4fff708812",
+            "targetSha256": "3dc0db889344edf0b87069519efcdfc547733444a32a489366523a80a89f852c",
+            "reason": "intentional-boundary-whitespace-override",
+            "owner": "fixture-owner",
+            "expiresOn": "2099-01-01"
+          }
+        ]
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "boundary-whitespace-mismatch",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "expectedLeading": " ",
+              "expectedTrailing": " ",
+              "actualLeading": " ",
+              "actualTrailing": ""
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET",
+        "policyDiagnostics": [
+          {
+            "code": "waiver-scope-mismatch",
+            "severity": "warning",
+            "subject": "policy",
+            "details": {
+              "rule": "boundary-whitespace",
+              "mismatches": [
+                "targetSha256"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "url.changed.reject",
+      "description": "Changing a protected URL literal rejects the target.",
+      "tier": "cutover",
+      "profile": "plain",
+      "rules": [
+        "url-literal-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "See https://docs.example.invalid/start"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SEE https://help.example.invalid/start"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "immutable-url-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "https://help.example.invalid/start"
+              ]
+            }
+          },
+          {
+            "code": "immutable-url-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "https://docs.example.invalid/start"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "url.duplicate.reject",
+      "description": "URL literal multiplicity is part of the protected contract.",
+      "tier": "cutover",
+      "profile": "plain",
+      "rules": [
+        "url-literal-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "See https://docs.example.invalid/start"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SEE https://docs.example.invalid/start AND https://docs.example.invalid/start"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "immutable-url-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "value": "https://docs.example.invalid/start",
+              "expectedCount": 1,
+              "actualCount": 2
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "url.query-changed.reject",
+      "description": "URL queries, ports, and fragments are part of the complete protected literal.",
+      "tier": "extended",
+      "profile": "plain",
+      "rules": [
+        "url-literal-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "See https://example.invalid:8443/search?q=one#result"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SEE https://example.invalid:8443/search?q=two#result"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "immutable-url-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "https://example.invalid:8443/search?q=two#result"
+              ]
+            }
+          },
+          {
+            "code": "immutable-url-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "https://example.invalid:8443/search?q=one#result"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "url.reordered.pass",
+      "description": "Protected URL literals may move while retaining values and multiplicity.",
+      "tier": "cutover",
+      "profile": "plain",
+      "rules": [
+        "url-literal-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Use https://a.example.invalid then https://b.example.invalid"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "USE https://b.example.invalid THEN https://a.example.invalid"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "whitespace.boundary-autorepair",
+      "description": "Boundary whitespace is restored exactly without changing target interior text.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "boundary-whitespace",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "\tSOURCE {name}\n"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": " TARGET {name} "
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "boundary-whitespace-mismatch",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "expectedLeading": "\t",
+              "expectedTrailing": "\n",
+              "actualLeading": " ",
+              "actualTrailing": " "
+            }
+          }
+        ],
+        "disposition": "AUTO_REPAIR_TARGET",
+        "safeRepair": {
+          "operations": [
+            "COPY_SOURCE_BOUNDARY_WHITESPACE"
+          ],
+          "expectedTarget": "\tTARGET {name}\n",
+          "expectedDiagnostics": []
+        }
+      },
+      "policy": {
+        "boundaryWhitespaceInvariant": true
+      }
+    },
+    {
+      "id": "whitespace.combined-with-placeholder.reject",
+      "description": "A deterministic whitespace issue does not hide a dominating missing-variable failure.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "boundary-whitespace",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": " SOURCE {name} "
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "TARGET"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "boundary-whitespace-mismatch",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "expectedLeading": " ",
+              "expectedTrailing": " ",
+              "actualLeading": "",
+              "actualTrailing": ""
+            }
+          },
+          {
+            "code": "variable-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "names": [
+                "name"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      },
+      "policy": {
+        "boundaryWhitespaceInvariant": true
+      }
+    },
+    {
+      "id": "whitespace.internal.pass",
+      "description": "Internal whitespace is translation content and is not normalized by a boundary rule.",
+      "tier": "cutover",
+      "profile": "plain",
+      "rules": [
+        "boundary-whitespace"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "SOURCE TEXT"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "TARGET  TEXT"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "whitespace.unicode-boundary-autorepair",
+      "description": "Unicode nonbreaking boundary spaces are preserved exactly.",
+      "tier": "cutover",
+      "profile": "plain",
+      "rules": [
+        "boundary-whitespace"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": " SOURCE "
+      },
+      "target": {
+        "locale": "x-target",
+        "text": " TARGET "
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "boundary-whitespace-mismatch",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "expectedLeading": " ",
+              "expectedTrailing": " ",
+              "actualLeading": " ",
+              "actualTrailing": " "
+            }
+          }
+        ],
+        "disposition": "AUTO_REPAIR_TARGET",
+        "safeRepair": {
+          "operations": [
+            "COPY_SOURCE_BOUNDARY_WHITESPACE"
+          ],
+          "expectedTarget": " TARGET ",
+          "expectedDiagnostics": []
+        }
+      },
+      "policy": {
+        "boundaryWhitespaceInvariant": true
+      }
+    }
+  ],
+  "batchScenarios": [
+    {
+      "id": "batch.continues-after-source-error",
+      "caseIds": [
+        "formatjs.malformed-source.reject-source",
+        "formatjs.argument-reordered.pass"
+      ],
+      "expectedVisitedCaseIds": [
+        "formatjs.malformed-source.reject-source",
+        "formatjs.argument-reordered.pass"
+      ],
+      "expectedRepairedCaseIds": [],
+      "expectedRejectedTargetCaseIds": [],
+      "expectedRejectedSourceCaseIds": [
+        "formatjs.malformed-source.reject-source"
+      ],
+      "expectedReviewCaseIds": [],
+      "expectedStatus": "COMPLETED_WITH_REJECTIONS"
+    },
+    {
+      "id": "batch.continues-after-target-error",
+      "caseIds": [
+        "formatjs.malformed-target-unclosed.reject",
+        "formatjs.argument-reordered.pass"
+      ],
+      "expectedVisitedCaseIds": [
+        "formatjs.malformed-target-unclosed.reject",
+        "formatjs.argument-reordered.pass"
+      ],
+      "expectedRepairedCaseIds": [],
+      "expectedRejectedTargetCaseIds": [
+        "formatjs.malformed-target-unclosed.reject"
+      ],
+      "expectedRejectedSourceCaseIds": [],
+      "expectedReviewCaseIds": [],
+      "expectedStatus": "COMPLETED_WITH_REJECTIONS"
+    },
+    {
+      "id": "batch.repair-and-rejection-isolated",
+      "caseIds": [
+        "whitespace.boundary-autorepair",
+        "formatjs.malformed-target-unclosed.reject",
+        "literal.source-equals-target.pass"
+      ],
+      "expectedVisitedCaseIds": [
+        "whitespace.boundary-autorepair",
+        "formatjs.malformed-target-unclosed.reject",
+        "literal.source-equals-target.pass"
+      ],
+      "expectedRepairedCaseIds": [
+        "whitespace.boundary-autorepair"
+      ],
+      "expectedRejectedTargetCaseIds": [
+        "formatjs.malformed-target-unclosed.reject"
+      ],
+      "expectedRejectedSourceCaseIds": [],
+      "expectedReviewCaseIds": [],
+      "expectedStatus": "COMPLETED_WITH_REJECTIONS"
+    },
+    {
+      "id": "batch.repair-does-not-touch-neighbor",
+      "caseIds": [
+        "whitespace.boundary-autorepair",
+        "literal.source-equals-target.pass"
+      ],
+      "expectedVisitedCaseIds": [
+        "whitespace.boundary-autorepair",
+        "literal.source-equals-target.pass"
+      ],
+      "expectedRepairedCaseIds": [
+        "whitespace.boundary-autorepair"
+      ],
+      "expectedRejectedTargetCaseIds": [],
+      "expectedRejectedSourceCaseIds": [],
+      "expectedReviewCaseIds": [],
+      "expectedStatus": "COMPLETED"
+    },
+    {
+      "id": "batch.review-and-repair-routing-preserved",
+      "caseIds": [
+        "policy.external-review-with-repair.autorepair",
+        "literal.source-equals-target.pass"
+      ],
+      "expectedVisitedCaseIds": [
+        "policy.external-review-with-repair.autorepair",
+        "literal.source-equals-target.pass"
+      ],
+      "expectedRepairedCaseIds": [
+        "policy.external-review-with-repair.autorepair"
+      ],
+      "expectedRejectedTargetCaseIds": [],
+      "expectedRejectedSourceCaseIds": [],
+      "expectedReviewCaseIds": [
+        "policy.external-review-with-repair.autorepair"
+      ],
+      "expectedStatus": "COMPLETED"
+    }
+  ]
+}
