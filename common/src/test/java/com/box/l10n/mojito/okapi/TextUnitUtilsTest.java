@@ -46,6 +46,21 @@ public class TextUnitUtilsTest {
   }
 
   @Test
+  public void createTargetTextContainerEscapesApostrophesAroundRestoredAnchorCodes() {
+    TextUnitUtils textUnitUtils = new TextUnitUtils();
+    TextUnit textUnit = textUnitWithAnchorCodes();
+    textUnit.setAnnotation(
+        AndroidAutoDetectAnchorTagsAnnotation.from(textUnit.getSource().getFirstContent()));
+
+    TextContainer target =
+        textUnitUtils.createTargetTextContainer(
+            textUnit, "S'apliquen els <a href=\"https://example.com\">termes</a>.");
+
+    Assertions.assertThat(target.toString())
+        .isEqualTo("S\\'apliquen els <a href=\"https://example.com\">termes</a>.");
+  }
+
+  @Test
   public void createTargetTextContainerFailsClosedWhenAnchorChanges() {
     TextUnitUtils textUnitUtils = new TextUnitUtils();
     TextUnit textUnit = textUnitWithAnchorCodes();

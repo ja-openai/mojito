@@ -485,6 +485,8 @@ public class AndroidFilter extends XMLFilter {
 
   static class AndroidFilePostProcessor extends OutputDocumentPostProcessorBase {
     static final String DESCRIPTION_ATTRIBUTE = "description";
+    static final String MIXED_CONTENT_MARKER_ATTRIBUTE = "data-mojito-mixed-content";
+    static final String XML_SPACE_ATTRIBUTE = "xml:space";
     boolean removeDescription;
     boolean removeTranslatableFalse;
     int indent;
@@ -584,6 +586,7 @@ public class AndroidFilter extends XMLFilter {
           removeTranslatableFalseElements(document);
         }
         removeWhitespaceNodes(document);
+        preserveMixedContent(document);
 
         if (emptyResourcesToEmptyFile && isResourcesEmpty(document)) {
           return "";
@@ -615,6 +618,8 @@ public class AndroidFilter extends XMLFilter {
           processedXmlContent = processedXmlContent.replace(" standalone=\"no\"", "");
         }
 
+        processedXmlContent = removeMixedContentMarkers(processedXmlContent);
+
         return processedXmlContent;
 
       } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
@@ -625,14 +630,69 @@ public class AndroidFilter extends XMLFilter {
 
     void removeWhitespaceNodes(Node node) {
       NodeList childNodes = node.getChildNodes();
+      boolean preserveTextWhitespace = hasMixedContent(node);
       for (int i = childNodes.getLength() - 1; i >= 0; i--) {
         Node childNode = childNodes.item(i);
-        if (childNode instanceof Text && childNode.getNodeValue().isBlank()) {
+        if (childNode instanceof Text
+            && childNode.getNodeValue().isBlank()
+            && !preserveTextWhitespace) {
           node.removeChild(childNode);
         } else if (childNode instanceof Element) {
           removeWhitespaceNodes(childNode);
         }
       }
+    }
+
+    void preserveMixedContent(Node node) {
+      if (hasMixedContent(node)) {
+        Element element = (Element) node;
+        if (!element.hasAttribute(XML_SPACE_ATTRIBUTE)) {
+          element.setAttribute(MIXED_CONTENT_MARKER_ATTRIBUTE, "true");
+          element.setAttribute(XML_SPACE_ATTRIBUTE, "preserve");
+        }
+      }
+
+      NodeList childNodes = node.getChildNodes();
+      for (int i = 0; i < childNodes.getLength(); i++) {
+        Node childNode = childNodes.item(i);
+        if (childNode instanceof Element) {
+          preserveMixedContent(childNode);
+        }
+      }
+    }
+
+    boolean hasMixedContent(Node node) {
+      if (!(node instanceof Element element)
+          || !("string".equals(element.getTagName()) || "item".equals(element.getTagName()))) {
+        return false;
+      }
+
+      NodeList childNodes = node.getChildNodes();
+      for (int i = 0; i < childNodes.getLength(); i++) {
+        if (childNodes.item(i) instanceof Element) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    String removeMixedContentMarkers(String xmlContent) {
+      String marker = " " + MIXED_CONTENT_MARKER_ATTRIBUTE + "=\"true\"";
+      String xmlSpace = " " + XML_SPACE_ATTRIBUTE + "=\"preserve\"";
+      StringBuilder result = new StringBuilder(xmlContent.length());
+      for (String line : xmlContent.split("(?<=\\n)", -1)) {
+        if (line.contains(marker)) {
+          line = line.replace(marker, "");
+          int xmlSpaceIndex = line.indexOf(xmlSpace);
+          if (xmlSpaceIndex >= 0) {
+            line =
+                line.substring(0, xmlSpaceIndex)
+                    + line.substring(xmlSpaceIndex + xmlSpace.length());
+          }
+        }
+        result.append(line);
+      }
+      return result.toString();
     }
 
     void removeTranslatableFalseElements(Node node) {

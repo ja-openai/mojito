@@ -264,6 +264,28 @@ public class AndroidFilterTest {
   }
 
   @Test
+  public void testPostProcessingKeepsAndroidMixedContentInline() {
+    AndroidFilter.AndroidFilePostProcessor androidFilePostProcessor =
+        new AndroidFilter.AndroidFilePostProcessor(true, true, 4, false, false, false);
+    String input =
+        """
+            <resources>
+                <string name="referral_invite_terms" description="Terms">S\\'apliquen els <a href="https://help.openai.com/en-us/articles/20001479">termes i condicions</a>.</string>
+            </resources>
+            """;
+
+    String output = androidFilePostProcessor.execute(input);
+
+    String expected =
+        """
+            <resources>
+                <string name="referral_invite_terms">S\\'apliquen els <a href="https://help.openai.com/en-us/articles/20001479">termes i condicions</a>.</string>
+            </resources>
+            """;
+    assertEquals(expected, output);
+  }
+
+  @Test
   public void testPostProcessingEmptyFile() {
     AndroidFilter.AndroidFilePostProcessor androidFilePostProcessor =
         new AndroidFilter.AndroidFilePostProcessor(true, true, 2, false, false, false);

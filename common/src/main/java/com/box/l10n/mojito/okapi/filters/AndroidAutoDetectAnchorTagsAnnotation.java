@@ -13,6 +13,8 @@ import net.sf.okapi.common.resource.TextFragment;
 /** Preserves real source anchor elements so auto mode can distinguish them from escaped text. */
 public class AndroidAutoDetectAnchorTagsAnnotation implements IAnnotation {
 
+  private static final AndroidXMLEncoder ANDROID_XML_ENCODER = new AndroidXMLEncoder(false);
+
   private final List<Code> anchorCodes;
 
   private AndroidAutoDetectAnchorTagsAnnotation(List<Code> anchorCodes) {
@@ -61,7 +63,7 @@ public class AndroidAutoDetectAnchorTagsAnnotation implements IAnnotation {
       boolean useClosing =
           closingIndex >= 0 && (nextOpening == null || closingIndex < nextOpening.index());
       int matchIndex = useClosing ? closingIndex : nextOpening.index();
-      restored.append(translation.substring(cursor, matchIndex));
+      appendText(restored, translation.substring(cursor, matchIndex));
 
       if (useClosing) {
         restored.append(expectedClosing.clone());
@@ -74,7 +76,7 @@ public class AndroidAutoDetectAnchorTagsAnnotation implements IAnnotation {
         cursor = matchIndex + nextOpening.data().length();
       }
     }
-    restored.append(translation.substring(cursor));
+    appendText(restored, translation.substring(cursor));
 
     boolean hasUnusedOpeningCodes =
         openingCodesByData.values().stream().anyMatch(codes -> !codes.isEmpty());
@@ -82,6 +84,11 @@ public class AndroidAutoDetectAnchorTagsAnnotation implements IAnnotation {
       return new TextFragment(translation);
     }
     return restored;
+  }
+
+  private void appendText(TextFragment restored, String text) {
+    // Text introduced while restoring codes bypasses the Android encoder's normal text path.
+    restored.append(ANDROID_XML_ENCODER.escapeSingleQuotes(text));
   }
 
   private Match findNextOpening(
