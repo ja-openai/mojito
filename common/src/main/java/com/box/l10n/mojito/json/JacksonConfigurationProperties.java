@@ -1,5 +1,7 @@
-package com.box.l10n.mojito;
+package com.box.l10n.mojito.json;
 
+import com.fasterxml.jackson.core.StreamReadConstraints;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -15,5 +17,12 @@ public class JacksonConfigurationProperties {
 
   public void setMaxStringLength(int maxStringLength) {
     this.maxStringLength = maxStringLength;
+  }
+
+  public void configure(ObjectMapper objectMapper) {
+    objectMapper
+        .getFactory()
+        .setStreamReadConstraints(
+            StreamReadConstraints.builder().maxStringLength(maxStringLength).build());
   }
 }

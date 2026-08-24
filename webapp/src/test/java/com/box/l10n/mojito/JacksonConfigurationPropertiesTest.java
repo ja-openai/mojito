@@ -2,6 +2,7 @@ package com.box.l10n.mojito;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.box.l10n.mojito.json.JacksonConfigurationProperties;
 import org.junit.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;

@@ -1,9 +1,9 @@
 package com.box.l10n.mojito;
 
 import com.box.l10n.mojito.entity.BaseEntity;
+import com.box.l10n.mojito.json.JacksonConfigurationProperties;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.xml.XmlParsingConfiguration;
-import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.hibernate6.Hibernate6Module;
@@ -70,21 +70,27 @@ public class Application {
    */
   @Bean
   @Primary
-  public ObjectMapper getObjectMapper() {
+  public ObjectMapper getObjectMapper(
+      JacksonConfigurationProperties jacksonConfigurationProperties) {
     final ObjectMapper objectMapper = new ObjectMapper();
+    jacksonConfigurationProperties.configure(objectMapper);
     objectMapper.registerHibernateModule();
     return objectMapper;
   }
 
   @Bean(name = "fail_on_unknown_properties_false")
-  public ObjectMapper getObjectMapperFailOnUnknownPropertiesFalse() {
+  public ObjectMapper getObjectMapperFailOnUnknownPropertiesFalse(
+      JacksonConfigurationProperties jacksonConfigurationProperties) {
     ObjectMapper objectMapper = ObjectMapper.withNoFailOnUnknownProperties();
+    jacksonConfigurationProperties.configure(objectMapper);
     return objectMapper;
   }
 
   @Bean(name = "smile_format_object_mapper")
-  public ObjectMapper getSmileFormatObjectMapper() {
+  public ObjectMapper getSmileFormatObjectMapper(
+      JacksonConfigurationProperties jacksonConfigurationProperties) {
     ObjectMapper objectMapper = ObjectMapper.withSmileEnabled();
+    jacksonConfigurationProperties.configure(objectMapper);
     return objectMapper;
   }
 
@@ -112,12 +118,7 @@ public class Application {
     jomfb.setModulesToInstall(Hibernate6Module.class);
     jomfb.afterPropertiesSet();
     com.fasterxml.jackson.databind.ObjectMapper objectMapper = jomfb.getObject();
-    objectMapper
-        .getFactory()
-        .setStreamReadConstraints(
-            StreamReadConstraints.builder()
-                .maxStringLength(jacksonConfigurationProperties.getMaxStringLength())
-                .build());
+    jacksonConfigurationProperties.configure(objectMapper);
     mjhmc.setObjectMapper(objectMapper);
 
     return mjhmc;

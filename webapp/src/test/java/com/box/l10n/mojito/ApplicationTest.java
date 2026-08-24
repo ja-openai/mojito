@@ -3,6 +3,7 @@ package com.box.l10n.mojito;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.box.l10n.mojito.json.JacksonConfigurationProperties;
 import com.box.l10n.mojito.rest.asset.SourceAsset;
 import org.junit.Test;
 import org.springframework.http.MediaType;
@@ -27,5 +28,34 @@ public class ApplicationTest {
     assertThat(
             converter.getObjectMapper().getFactory().streamReadConstraints().getMaxStringLength())
         .isEqualTo(30_000_000);
+  }
+
+  @Test
+  public void applicationObjectMappersUseConfiguredMaximumStringLength() {
+    JacksonConfigurationProperties properties = new JacksonConfigurationProperties();
+    properties.setMaxStringLength(40_000_000);
+    Application application = new Application();
+
+    assertThat(
+            application
+                .getObjectMapper(properties)
+                .getFactory()
+                .streamReadConstraints()
+                .getMaxStringLength())
+        .isEqualTo(40_000_000);
+    assertThat(
+            application
+                .getObjectMapperFailOnUnknownPropertiesFalse(properties)
+                .getFactory()
+                .streamReadConstraints()
+                .getMaxStringLength())
+        .isEqualTo(40_000_000);
+    assertThat(
+            application
+                .getSmileFormatObjectMapper(properties)
+                .getFactory()
+                .streamReadConstraints()
+                .getMaxStringLength())
+        .isEqualTo(40_000_000);
   }
 }

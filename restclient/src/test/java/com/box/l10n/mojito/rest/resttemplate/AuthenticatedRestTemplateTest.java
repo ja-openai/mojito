@@ -1,5 +1,6 @@
 package com.box.l10n.mojito.rest.resttemplate;
 
+import com.box.l10n.mojito.json.JacksonConfigurationProperties;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import java.util.HashMap;
@@ -16,6 +17,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.RestClientException;
@@ -25,6 +27,7 @@ import org.springframework.web.client.RestClientException;
 @ComponentScan(basePackageClasses = {AuthenticatedRestTemplate.class})
 @SpringBootTest(classes = {AuthenticatedRestTemplateTest.class})
 @EnableConfigurationProperties
+@Import(JacksonConfigurationProperties.class)
 public class AuthenticatedRestTemplateTest {
 
   /** logger */

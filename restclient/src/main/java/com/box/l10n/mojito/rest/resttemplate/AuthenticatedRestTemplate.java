@@ -61,6 +61,8 @@ public class AuthenticatedRestTemplate {
 
   @Autowired RestTemplateUtil restTemplateUtil;
 
+  @Autowired com.box.l10n.mojito.json.JacksonConfigurationProperties jacksonConfigurationProperties;
+
   @Autowired(required = false)
   BearerTokenInterceptor bearerTokenInterceptor;
 
@@ -157,6 +159,7 @@ public class AuthenticatedRestTemplate {
 
         ObjectMapper objectMapper = jackson2ObjectMapperFactoryBean.getObject();
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        jacksonConfigurationProperties.configure(objectMapper);
         // To keep backward compatibility with the Joda output, disable write/reading nano seconds
         // with
         // Java time and ZonedDateTime

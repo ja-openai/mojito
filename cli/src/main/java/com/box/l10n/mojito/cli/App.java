@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.cli;
 
 import com.box.l10n.mojito.cli.command.L10nJCommander;
+import com.box.l10n.mojito.json.JacksonConfigurationProperties;
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.xml.XmlParsingConfiguration;
 import org.slf4j.Logger;
@@ -51,7 +52,10 @@ public class App implements CommandLineRunner {
   }
 
   @Bean(name = "outputIndented")
-  public ObjectMapper getOutputIndented() {
-    return ObjectMapper.withIndentedOutput();
+  public ObjectMapper getOutputIndented(
+      JacksonConfigurationProperties jacksonConfigurationProperties) {
+    ObjectMapper objectMapper = ObjectMapper.withIndentedOutput();
+    jacksonConfigurationProperties.configure(objectMapper);
+    return objectMapper;
   }
 }
