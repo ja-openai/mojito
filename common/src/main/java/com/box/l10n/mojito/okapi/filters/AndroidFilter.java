@@ -630,7 +630,7 @@ public class AndroidFilter extends XMLFilter {
 
     void removeWhitespaceNodes(Node node) {
       NodeList childNodes = node.getChildNodes();
-      boolean preserveTextWhitespace = hasMixedContent(node);
+      boolean preserveTextWhitespace = hasAnchorMixedContent(node);
       for (int i = childNodes.getLength() - 1; i >= 0; i--) {
         Node childNode = childNodes.item(i);
         if (childNode instanceof Text
@@ -644,7 +644,7 @@ public class AndroidFilter extends XMLFilter {
     }
 
     void preserveMixedContent(Node node) {
-      if (hasMixedContent(node)) {
+      if (hasAnchorMixedContent(node)) {
         Element element = (Element) node;
         if (!element.hasAttribute(XML_SPACE_ATTRIBUTE)) {
           element.setAttribute(MIXED_CONTENT_MARKER_ATTRIBUTE, "true");
@@ -661,7 +661,7 @@ public class AndroidFilter extends XMLFilter {
       }
     }
 
-    boolean hasMixedContent(Node node) {
+    boolean hasAnchorMixedContent(Node node) {
       if (!(node instanceof Element element)
           || !("string".equals(element.getTagName()) || "item".equals(element.getTagName()))) {
         return false;
@@ -669,7 +669,8 @@ public class AndroidFilter extends XMLFilter {
 
       NodeList childNodes = node.getChildNodes();
       for (int i = 0; i < childNodes.getLength(); i++) {
-        if (childNodes.item(i) instanceof Element) {
+        if (childNodes.item(i) instanceof Element childElement
+            && "a".equals(childElement.getTagName())) {
           return true;
         }
       }

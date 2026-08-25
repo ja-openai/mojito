@@ -264,7 +264,7 @@ public class AndroidFilterTest {
   }
 
   @Test
-  public void testPostProcessingKeepsAndroidMixedContentInline() {
+  public void testPostProcessingKeepsAndroidAnchorContentInline() {
     AndroidFilter.AndroidFilePostProcessor androidFilePostProcessor =
         new AndroidFilter.AndroidFilePostProcessor(true, true, 4, false, false, false);
     String input =
@@ -282,6 +282,35 @@ public class AndroidFilterTest {
                 <string name="referral_invite_terms">S\\'apliquen els <a href="https://help.openai.com/en-us/articles/20001479">termes i condicions</a>.</string>
             </resources>
             """;
+    assertEquals(expected, output);
+  }
+
+  @Test
+  public void testPostProcessingKeepsOtherAndroidMixedContentMultiline() {
+    AndroidFilter.AndroidFilePostProcessor androidFilePostProcessor =
+        new AndroidFilter.AndroidFilePostProcessor(true, true, 4, false, false, false);
+    String input =
+        """
+            <resources>
+                <string name="separator_date_and_time"><annotation font-weight="medium">%1$s</annotation> %2$s</string>
+                <string name="formatted_title">Prefix <b>bold</b> suffix</string>
+            </resources>
+            """;
+
+    String output = androidFilePostProcessor.execute(input);
+
+    String expected =
+        "<resources>\n"
+            + "    <string name=\"separator_date_and_time\">\n"
+            + "        <annotation font-weight=\"medium\">%1$s</annotation>\n"
+            + "         %2$s\n"
+            + "    </string>\n"
+            + "    <string name=\"formatted_title\">\n"
+            + "        Prefix \n"
+            + "        <b>bold</b>\n"
+            + "         suffix\n"
+            + "    </string>\n"
+            + "</resources>\n";
     assertEquals(expected, output);
   }
 
