@@ -1195,7 +1195,8 @@ public class TMService {
             translateStep,
             bcp47Tag);
 
-    if (isAndroidFilter(asset, filterConfigIdOverride)) {
+    if (androidFilterConfigurationProperties.isValidateGeneratedResources()
+        && isAndroidFilter(asset, filterConfigIdOverride)) {
       androidLocalizedAssetIntegrityValidator.validate(
           bcp47Tag, contentToLocalize, generateLocalizedBase);
     }
@@ -1409,7 +1410,8 @@ public class TMService {
         localized = escapeJavaPropertiesUnicode(localized);
       }
     }
-    if (format == LocalizationFileFormat.ANDROID) {
+    if (androidFilterConfigurationProperties.isValidateGeneratedResources()
+        && format == LocalizationFileFormat.ANDROID) {
       androidLocalizedAssetIntegrityValidator.validate(
           outputBcp47tag == null ? repositoryLocale.getLocale().getBcp47Tag() : outputBcp47tag,
           content,

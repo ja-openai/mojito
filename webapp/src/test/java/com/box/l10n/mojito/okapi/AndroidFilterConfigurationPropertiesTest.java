@@ -12,8 +12,18 @@ public class AndroidFilterConfigurationPropertiesTest {
     AndroidFilterConfigurationProperties properties = new AndroidFilterConfigurationProperties();
     List<String> requested = List.of("oldEscaping=true");
 
+    assertThat(properties.isValidateGeneratedResources()).isFalse();
     assertThat(properties.applyServerDefaults(requested)).isSameAs(requested);
     assertThat(properties.applyServerDefaults(null)).isNull();
+  }
+
+  @Test
+  public void generatedResourceValidationCanBeEnabledForCanaryRollout() {
+    AndroidFilterConfigurationProperties properties = new AndroidFilterConfigurationProperties();
+
+    properties.setValidateGeneratedResources(true);
+
+    assertThat(properties.isValidateGeneratedResources()).isTrue();
   }
 
   @Test

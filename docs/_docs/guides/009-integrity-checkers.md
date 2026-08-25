@@ -142,8 +142,11 @@ The translation gets rejected if any traingling whitespace in the source string 
 
 ### Generated Android resource validation
 
-Mojito validates the complete generated Android XML before returning a localized
-asset. This final-document check runs independently of repository-configured
+Mojito can validate the complete generated Android XML before returning a localized
+asset. Enable the check with
+`l10n.android-filter.validate-generated-resources=true`. It defaults to `false` so
+existing repositories are not rejected until they have passed a canary pull. When
+enabled, this final-document check runs independently of repository-configured
 text-unit checkers and rejects:
 
 - Android resource syntax that Mojito's Android resource parser rejects,

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 public class AndroidFilterConfigurationProperties {
 
   private boolean autoDetectAnchorTags;
+  private boolean validateGeneratedResources;
 
   public boolean isAutoDetectAnchorTags() {
     return autoDetectAnchorTags;
@@ -19,6 +20,14 @@ public class AndroidFilterConfigurationProperties {
 
   public void setAutoDetectAnchorTags(boolean autoDetectAnchorTags) {
     this.autoDetectAnchorTags = autoDetectAnchorTags;
+  }
+
+  public boolean isValidateGeneratedResources() {
+    return validateGeneratedResources;
+  }
+
+  public void setValidateGeneratedResources(boolean validateGeneratedResources) {
+    this.validateGeneratedResources = validateGeneratedResources;
   }
 
   public List<String> applyServerDefaults(List<String> requestedFilterOptions) {
