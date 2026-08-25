@@ -169,7 +169,9 @@ public class TMService {
 
   @Autowired TextUnitUtils textUnitUtils;
 
-  @Autowired AndroidFilterConfigurationProperties androidFilterConfigurationProperties;
+  @Autowired
+  AndroidFilterConfigurationProperties androidFilterConfigurationProperties =
+      new AndroidFilterConfigurationProperties();
 
   @Autowired IFilterConfigurationMapper filterConfigurationMapper;
 
