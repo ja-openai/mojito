@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "parser": {
+    "package": "@formatjs/icu-messageformat-parser",
+    "version": "3.5.10",
+    "dependencies": {
+      "@formatjs/icu-skeleton-parser": "2.1.9"
+    }
+  },
+  "options": {
+    "captureLocation": true,
+    "ignoreTag": true,
+    "requiresOtherClause": true,
+    "shouldParseSkeletons": true
+  },
+  "errorKindByCaseSide": {
+    "formatjs.malformed-source.reject-source/source": "MISSING_OTHER_CLAUSE",
+    "formatjs.malformed-target-duplicate-selector.reject/target": "DUPLICATE_SELECT_ARGUMENT_SELECTOR",
+    "formatjs.malformed-target-invalid-offset.reject/target": "EXPECT_PLURAL_ARGUMENT_OFFSET_VALUE",
+    "formatjs.malformed-target-missing-other.reject/target": "MISSING_OTHER_CLAUSE",
+    "formatjs.malformed-target-unclosed.reject/target": "EXPECT_ARGUMENT_CLOSING_BRACE",
+    "formatjs.syntax.empty-skeleton-style.reject/target": "INVALID_NUMBER_SKELETON",
+    "formatjs.syntax.empty-style.reject/target": "EXPECT_ARGUMENT_STYLE",
+    "formatjs.syntax.explicit-selector-on-select.reject/target": "EXPECT_SELECT_ARGUMENT_SELECTOR",
+    "formatjs.syntax.immediate-selector-close.reject/target": "EXPECT_SELECT_ARGUMENT_OPTIONS",
+    "formatjs.syntax.invalid-argument-name.reject/target": "MALFORMED_ARGUMENT",
+    "formatjs.syntax.invalid-argument-type.reject/target": "INVALID_ARGUMENT_TYPE",
+    "formatjs.syntax.invalid-explicit-selector.reject/target": "EXPECT_PLURAL_ARGUMENT_SELECTOR",
+    "formatjs.syntax.invalid-named-selector.reject/target": "EXPECT_PLURAL_ARGUMENT_SELECTOR_FRAGMENT",
+    "formatjs.syntax.missing-argument-delimiter.reject/target": "MALFORMED_ARGUMENT",
+    "formatjs.syntax.missing-argument-name.reject/target": "EMPTY_ARGUMENT",
+    "formatjs.syntax.missing-argument-type.reject/target": "EXPECT_ARGUMENT_TYPE",
+    "formatjs.syntax.missing-offset-value.reject/target": "EXPECT_PLURAL_ARGUMENT_OFFSET_VALUE",
+    "formatjs.syntax.missing-selector.reject/target": "EXPECT_SELECT_ARGUMENT_SELECTOR",
+    "formatjs.syntax.missing-type-delimiter.reject/target": "EXPECT_ARGUMENT_CLOSING_BRACE",
+    "formatjs.syntax.offset-after-selector.reject/target": "EXPECT_PLURAL_ARGUMENT_SELECTOR_FRAGMENT",
+    "formatjs.syntax.offset-on-select.reject/target": "EXPECT_SELECT_ARGUMENT_SELECTOR_FRAGMENT",
+    "formatjs.syntax.repeated-offset.reject/target": "EXPECT_PLURAL_ARGUMENT_SELECTOR_FRAGMENT",
+    "formatjs.syntax.source-short-circuits-combined.reject-source/source": "MALFORMED_ARGUMENT",
+    "formatjs.syntax.target-short-circuits-combined.reject/target": "MALFORMED_ARGUMENT",
+    "formatjs.syntax.unbraced-selector-branch.reject/target": "EXPECT_SELECT_ARGUMENT_SELECTOR_FRAGMENT",
+    "formatjs.syntax.unclosed-branch.reject/target": "EXPECT_ARGUMENT_CLOSING_BRACE",
+    "formatjs.syntax.unclosed-style-quote.reject/target": "UNCLOSED_QUOTE_IN_ARGUMENT_STYLE",
+    "formatjs.syntax.unclosed-style.reject/target": "EXPECT_ARGUMENT_CLOSING_BRACE",
+    "formatjs.syntax.unclosed-typed-before-style.reject/target": "EXPECT_ARGUMENT_CLOSING_BRACE"
+  },
+  "policyDifferenceByCaseSide": {
+    "formatjs.syntax.selector-depth.reject/target": {
+      "maxNestingDepth": 100,
+      "fixtureNestingDepth": 101,
+      "measurement": "select-elements"
+    },
+    "formatjs.syntax.style-depth.reject/target": {
+      "maxNestingDepth": 100,
+      "fixtureNestingDepth": 101,
+      "measurement": "simple-style-braces"
+    }
+  }
+}

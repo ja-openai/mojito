@@ -1,0 +1,48 @@
+package com.box.l10n.mojito.translationintegrity.formatjs;
+
+/**
+ * Stable parser error kinds.
+ *
+ * <p>Values 1 through 27 retain the public numeric values from {@code
+ * @formatjs/icu-messageformat-parser} 3.5.10. Value 24 is intentionally unused upstream. {@link
+ * #MAX_NESTING_DEPTH_EXCEEDED} is Mojito's sole grammar-independent safety extension.
+ */
+public enum FormatJsParseErrorKind {
+  EXPECT_ARGUMENT_CLOSING_BRACE(1),
+  EMPTY_ARGUMENT(2),
+  MALFORMED_ARGUMENT(3),
+  EXPECT_ARGUMENT_TYPE(4),
+  INVALID_ARGUMENT_TYPE(5),
+  EXPECT_ARGUMENT_STYLE(6),
+  INVALID_NUMBER_SKELETON(7),
+  INVALID_DATE_TIME_SKELETON(8),
+  EXPECT_NUMBER_SKELETON(9),
+  EXPECT_DATE_TIME_SKELETON(10),
+  UNCLOSED_QUOTE_IN_ARGUMENT_STYLE(11),
+  EXPECT_SELECT_ARGUMENT_OPTIONS(12),
+  EXPECT_PLURAL_ARGUMENT_OFFSET_VALUE(13),
+  INVALID_PLURAL_ARGUMENT_OFFSET_VALUE(14),
+  EXPECT_SELECT_ARGUMENT_SELECTOR(15),
+  EXPECT_PLURAL_ARGUMENT_SELECTOR(16),
+  EXPECT_SELECT_ARGUMENT_SELECTOR_FRAGMENT(17),
+  EXPECT_PLURAL_ARGUMENT_SELECTOR_FRAGMENT(18),
+  INVALID_PLURAL_ARGUMENT_SELECTOR(19),
+  DUPLICATE_PLURAL_ARGUMENT_SELECTOR(20),
+  DUPLICATE_SELECT_ARGUMENT_SELECTOR(21),
+  MISSING_OTHER_CLAUSE(22),
+  INVALID_TAG(23),
+  INVALID_TAG_NAME(25),
+  UNMATCHED_CLOSING_TAG(26),
+  UNCLOSED_TAG(27),
+  MAX_NESTING_DEPTH_EXCEEDED(28);
+
+  private final int code;
+
+  FormatJsParseErrorKind(int code) {
+    this.code = code;
+  }
+
+  public int code() {
+    return code;
+  }
+}
