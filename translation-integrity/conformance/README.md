@@ -34,6 +34,34 @@ Run the dependency-free contract verifier with:
 python3 translation-integrity/conformance/verify.py
 ```
 
+## FormatJS reference oracle
+
+[`formatjs_parser_expectations.json`](formatjs_parser_expectations.json) pins
+the runtime-specific raw error kinds and the two intentional maximum-depth
+policy differences for `@formatjs/icu-messageformat-parser` 3.5.10. It refers
+to case IDs in `manifest.json`; it does not copy the portable messages or their
+normalized diagnostics.
+
+Run the real JavaScript parser oracle with the repository's already-installed
+frontend dependencies:
+
+```sh
+node translation-integrity/conformance/formatjs_parser_oracle.mjs
+```
+
+The oracle verifies the package-lock and installed package versions before it
+parses every FormatJS source and target. It checks declared acceptance, raw
+FormatJS error kinds, Unicode code-point diagnostic ranges, source dominance,
+and the measured depth of the two inputs that upstream accepts but Mojito caps
+at 100. It uses `ignoreTag: true` because the corpus assigns rich-tag structure
+to a separate rule.
+
+The Java validation parser and its tests consume the same manifest and
+expectation file. The Java port is intentionally locale-neutral and does not
+include a renderer or JavaScript `Intl.Locale`-dependent `j` skeleton
+resolution. Adding the parser does not by itself replace a production
+integrity checker; that requires adapter parity plus shadow or canary evidence.
+
 ## What the contract separates
 
 Each case keeps four concerns distinct:

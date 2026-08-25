@@ -1,0 +1,15 @@
+The Mojito FormatJS validation parser is a Java port of the parser state
+machine from @formatjs/icu-messageformat-parser 3.5.10 and the validation-
+relevant grammar from @formatjs/icu-skeleton-parser 2.1.9.
+
+Upstream project: https://github.com/formatjs/formatjs
+Upstream packages and versions:
+- packages/icu-messageformat-parser 3.5.10
+- packages/icu-skeleton-parser 2.1.9
+
+The Java port changes the implementation language and adds a configurable
+maximum nesting depth for bounded validation. It does not include the FormatJS
+renderer or locale-formatting implementation. Locale-dependent `j` date/time
+skeleton resolution is intentionally outside this locale-neutral validation
+parser. The port is deterministic and does not reproduce upstream JavaScript
+regular-expression state leakage after a failed skeleton parse.
