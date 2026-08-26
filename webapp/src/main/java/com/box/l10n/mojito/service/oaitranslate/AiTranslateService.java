@@ -81,6 +81,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -1015,6 +1016,11 @@ public class AiTranslateService {
     }
 
     String requestGroupId = UUID.randomUUID().toString();
+    String requestPromptFingerprint = promptFingerprint(responsesRequest.instructions());
+    String requestReasoningEffort =
+        responsesRequest.reasoning() == null ? null : responsesRequest.reasoning().effort();
+    String requestTextVerbosity =
+        responsesRequest.text() == null ? null : responsesRequest.text().verbosity();
     try {
       String requestPayloadBlobName =
           aiTranslateTextUnitAttemptService.putPayloadBlob(
@@ -1033,6 +1039,9 @@ public class AiTranslateService {
                           requestGroupId,
                           translateType,
                           model,
+                          requestPromptFingerprint,
+                          requestReasoningEffort,
+                          requestTextVerbosity,
                           requestPayloadBlobName))
               .toList());
       return requestGroupId;
@@ -1648,6 +1657,10 @@ public class AiTranslateService {
 
   static String getPrompt(String prompt, String promptSuffix) {
     return promptSuffix == null ? prompt : "%s %s".formatted(prompt, promptSuffix);
+  }
+
+  static String promptFingerprint(String prompt) {
+    return prompt == null ? null : DigestUtils.sha256Hex(prompt);
   }
 
   static String getTargetComment(TextUnitDTO textUnitDTO) {

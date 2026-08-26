@@ -7,9 +7,10 @@ import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useUser } from '../../hooks/useUser';
 import { AdminAiLocalePromptSuffixPage } from './AdminAiLocalePromptSuffixPage';
 import { AdminAiSourcePromptRulesPage } from './AdminAiSourcePromptRulesPage';
+import { AdminAiTranslateEvaluationsPage } from './AdminAiTranslateEvaluationsPage';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
-type PromptTab = 'locales' | 'source-rules';
+type PromptTab = 'locales' | 'source-rules' | 'learning';
 
 const PROMPT_TABS: Array<{ id: PromptTab; label: string }> = [
   {
@@ -20,10 +21,17 @@ const PROMPT_TABS: Array<{ id: PromptTab; label: string }> = [
     id: 'source-rules',
     label: 'Source rules',
   },
+  {
+    id: 'learning',
+    label: 'Learning',
+  },
 ];
 
 function parsePromptTab(value: string | null): PromptTab {
-  return value === 'source-rules' ? 'source-rules' : 'locales';
+  if (value === 'source-rules' || value === 'learning') {
+    return value;
+  }
+  return 'locales';
 }
 
 export function AdminAiTranslatePromptsPage() {
@@ -45,11 +53,9 @@ export function AdminAiTranslatePromptsPage() {
         title="AI translation prompts"
         centerContent={<AiTranslatePromptsSubnav active={activeTab} />}
       />
-      {activeTab === 'locales' ? (
-        <AdminAiLocalePromptSuffixPage embedded />
-      ) : (
-        <AdminAiSourcePromptRulesPage embedded />
-      )}
+      {activeTab === 'locales' ? <AdminAiLocalePromptSuffixPage embedded /> : null}
+      {activeTab === 'source-rules' ? <AdminAiSourcePromptRulesPage embedded /> : null}
+      {activeTab === 'learning' ? <AdminAiTranslateEvaluationsPage /> : null}
     </div>
   );
 }
@@ -64,7 +70,7 @@ function AiTranslatePromptsSubnav({ active }: { active: PromptTab }) {
           to={
             tab.id === 'locales'
               ? '/settings/system/ai-translate/prompts'
-              : '/settings/system/ai-translate/prompts?tab=source-rules'
+              : `/settings/system/ai-translate/prompts?tab=${tab.id}`
           }
         >
           {tab.label}

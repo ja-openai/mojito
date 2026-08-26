@@ -70,6 +70,9 @@ public class AiTranslateTextUnitAttemptService {
       String requestGroupId,
       String translateType,
       String model,
+      String promptFingerprint,
+      String reasoningEffort,
+      String textVerbosity,
       String requestPayloadBlobName) {}
 
   public record NoBatchImportedVariant(
@@ -279,6 +282,9 @@ public class AiTranslateTextUnitAttemptService {
     attempt.setRequestGroupId(request.requestGroupId());
     attempt.setTranslateType(request.translateType());
     attempt.setModel(request.model());
+    attempt.setPromptFingerprint(request.promptFingerprint());
+    attempt.setReasoningEffort(request.reasoningEffort());
+    attempt.setTextVerbosity(request.textVerbosity());
     attempt.setStatus(STATUS_REQUESTED);
     attempt.setRequestPayloadBlobName(request.requestPayloadBlobName());
     return attempt;

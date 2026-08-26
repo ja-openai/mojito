@@ -1,0 +1,193 @@
+.ai-evaluations-page {
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.ai-evaluations-page__intro h2,
+.ai-evaluations-page__section-header h2 {
+  margin-top: 0;
+}
+
+.ai-evaluations-page__intro p {
+  max-width: 78rem;
+}
+
+.ai-evaluations-page__summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.ai-evaluations-page__summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ai-evaluations-page__summary-card strong {
+  font-size: var(--font-size-2xl);
+}
+
+.ai-evaluations-page__summary-label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.ai-evaluations-page__section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.ai-evaluations-page__cohorts {
+  overflow-x: auto;
+}
+
+.ai-evaluations-page__cohort-row {
+  display: grid;
+  grid-template-columns: 8rem minmax(18rem, 2fr) 8rem 7rem 10rem;
+  gap: var(--space-3);
+  align-items: center;
+  min-width: 55rem;
+  padding: var(--space-2) 0;
+  border-bottom: var(--border-width) solid var(--color-border);
+  font-size: var(--font-size-sm);
+}
+
+.ai-evaluations-page__cohort-row--header {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.ai-evaluations-page__toolbar {
+  display: grid;
+  grid-template-columns: minmax(20rem, 1fr) 14rem;
+  gap: var(--space-3);
+  align-items: end;
+  margin-bottom: var(--space-2);
+}
+
+.ai-evaluations-page__outcome-filter {
+  gap: var(--space-1);
+}
+
+.ai-evaluations-page__example-count {
+  margin-bottom: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.ai-evaluations-page__examples {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ai-evaluations-page__example {
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  background: var(--color-surface);
+}
+
+.ai-evaluations-page__example > summary {
+  display: grid;
+  grid-template-columns: 9rem 5rem 10rem minmax(14rem, 1fr) 12rem;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+.ai-evaluations-page__source-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-evaluations-page__outcome {
+  font-weight: var(--font-weight-semibold);
+}
+
+.ai-evaluations-page__outcome.is-edited {
+  color: var(--color-warning);
+}
+
+.ai-evaluations-page__outcome.is-exact {
+  color: var(--color-success, #1a7f37);
+}
+
+.ai-evaluations-page__example-body {
+  display: grid;
+  gap: var(--space-3);
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.ai-evaluations-page__example-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.ai-evaluations-page__target-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.ai-evaluations-page__field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.ai-evaluations-page__field > span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ai-evaluations-page__field > div {
+  padding: var(--space-2);
+  border-radius: var(--border-radius-sm);
+  background: var(--color-surface-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-sm);
+}
+
+.ai-evaluations-page__empty {
+  margin: var(--space-4) 0;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 62rem) {
+  .ai-evaluations-page__summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ai-evaluations-page__example > summary {
+    grid-template-columns: 9rem 5rem minmax(10rem, 1fr);
+  }
+
+  .ai-evaluations-page__example > summary > :nth-child(3),
+  .ai-evaluations-page__example > summary > :nth-child(5) {
+    display: none;
+  }
+}
+
+@media (max-width: 42rem) {
+  .ai-evaluations-page__summary,
+  .ai-evaluations-page__target-grid,
+  .ai-evaluations-page__toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-evaluations-page__section-header {
+    flex-direction: column;
+  }
+}

@@ -7,6 +7,13 @@ used for dashboard panels.
 
 ## AI Translate
 
+Human review quality evidence is available in the AI translation prompt settings **Learning** tab.
+It joins imported attempt variants to Review Project `reviewed_variant_id` / accepted `variant_id`
+and groups future requests by prompt fingerprint, model, reasoning effort, verbosity, and locale.
+See `dev-docs/design/029-ai-translation-feedback-evaluation.md` for metric interpretation and the
+prompt-tuning loop. This is a quality feedback view; request and locale timers below remain the
+operational latency/error contract.
+
 Use `AiTranslateService_requestDuration_seconds_*` for provider-call latency and
 `AiTranslateService_localeDuration_seconds_*` for whole-locale runtime. `localeDuration` includes
 search/import work; `requestDuration` is the closer proxy for model latency.

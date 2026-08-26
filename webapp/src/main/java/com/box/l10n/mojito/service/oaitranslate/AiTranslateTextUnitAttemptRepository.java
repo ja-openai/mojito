@@ -132,4 +132,50 @@ public interface AiTranslateTextUnitAttemptRepository
       """)
   List<AiTranslateTextUnitAttemptLineageRow> findRecentLineageRowsByPollableTaskIds(
       @Param("pollableTaskIds") List<Long> pollableTaskIds, Pageable pageable);
+
+  @Query(
+      """
+      select new com.box.l10n.mojito.service.oaitranslate.AiTranslateEvaluationRow(
+        attempt.id,
+        decision.id,
+        decision.lastModifiedDate,
+        project.id,
+        repository.id,
+        repository.name,
+        tmTextUnit.id,
+        tmTextUnit.name,
+        tmTextUnit.content,
+        tmTextUnit.comment,
+        locale.bcp47Tag,
+        attempt.model,
+        attempt.promptFingerprint,
+        attempt.reasoningEffort,
+        attempt.textVerbosity,
+        aiVariant.content,
+        acceptedVariant.content,
+        decision.notes
+      )
+      from AiTranslateTextUnitAttempt attempt
+      join attempt.tmTextUnitVariant aiVariant
+      join attempt.tmTextUnit tmTextUnit
+      join tmTextUnit.asset asset
+      join asset.repository repository
+      join attempt.locale locale
+      join ReviewProjectTextUnitDecision decision on decision.reviewedVariant = aiVariant
+      join decision.reviewProjectTextUnit reviewProjectTextUnit
+      join reviewProjectTextUnit.reviewProject project
+      join decision.decisionVariant acceptedVariant
+      where decision.decisionState = com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState.DECIDED
+        and reviewProjectTextUnit.tmTextUnit = tmTextUnit
+        and project.locale = locale
+        and (:repositoryId is null or repository.id = :repositoryId)
+        and (:localeTag is null or locale.bcp47Tag = :localeTag)
+        and (:model is null or attempt.model = :model)
+      order by decision.lastModifiedDate desc, decision.id desc, attempt.createdDate desc
+      """)
+  List<AiTranslateEvaluationRow> findEvaluationRows(
+      @Param("repositoryId") Long repositoryId,
+      @Param("localeTag") String localeTag,
+      @Param("model") String model,
+      Pageable pageable);
 }

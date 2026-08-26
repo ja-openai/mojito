@@ -67,6 +67,15 @@ public class AiTranslateTextUnitAttempt extends AuditableEntity {
   @Column(name = "model", length = 255)
   private String model;
 
+  @Column(name = "prompt_fingerprint", length = 64)
+  private String promptFingerprint;
+
+  @Column(name = "reasoning_effort", length = 32)
+  private String reasoningEffort;
+
+  @Column(name = "text_verbosity", length = 32)
+  private String textVerbosity;
+
   @Column(name = "status", nullable = false, length = 32)
   private String status;
 
@@ -144,6 +153,30 @@ public class AiTranslateTextUnitAttempt extends AuditableEntity {
 
   public void setModel(String model) {
     this.model = model;
+  }
+
+  public String getPromptFingerprint() {
+    return promptFingerprint;
+  }
+
+  public void setPromptFingerprint(String promptFingerprint) {
+    this.promptFingerprint = promptFingerprint;
+  }
+
+  public String getReasoningEffort() {
+    return reasoningEffort;
+  }
+
+  public void setReasoningEffort(String reasoningEffort) {
+    this.reasoningEffort = reasoningEffort;
+  }
+
+  public String getTextVerbosity() {
+    return textVerbosity;
+  }
+
+  public void setTextVerbosity(String textVerbosity) {
+    this.textVerbosity = textVerbosity;
   }
 
   public String getStatus() {
