@@ -89,7 +89,8 @@ public class MachineTranslationWS {
         repositoryMachineTranslationService.translateRepository(
             repositoryMachineTranslationBody.getRepositoryName(),
             repositoryMachineTranslationBody.getTargetBcp47tags(),
-            repositoryMachineTranslationBody.getSourceTextMaxCountPerLocale());
+            repositoryMachineTranslationBody.getSourceTextMaxCountPerLocale(),
+            PollableTask.INJECT_CURRENT_TASK);
     repositoryMachineTranslationBody.setPollableTask(pollableFuture.getPollableTask());
     return repositoryMachineTranslationBody;
   }

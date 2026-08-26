@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.service.tm.search;
 
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import java.time.ZonedDateTime;
 
 /**
@@ -36,6 +37,12 @@ public class TextUnitDTO {
   private ZonedDateTime tmTextUnitCreatedDate;
   private boolean doNotTranslate;
   private Long branchId;
+
+  @JsonAlias({"translatedBy", "author", "authorIdentity", "upstreamAuthorIdentity"})
+  private String translatorIdentity;
+
+  @JsonAlias({"reviewedBy", "approvedBy", "approverIdentity", "upstreamReviewerIdentity"})
+  private String reviewerIdentity;
 
   public Long getTmTextUnitId() {
     return tmTextUnitId;
@@ -259,5 +266,21 @@ public class TextUnitDTO {
 
   public void setBranchId(Long branchId) {
     this.branchId = branchId;
+  }
+
+  public String getTranslatorIdentity() {
+    return translatorIdentity;
+  }
+
+  public void setTranslatorIdentity(String translatorIdentity) {
+    this.translatorIdentity = translatorIdentity;
+  }
+
+  public String getReviewerIdentity() {
+    return reviewerIdentity;
+  }
+
+  public void setReviewerIdentity(String reviewerIdentity) {
+    this.reviewerIdentity = reviewerIdentity;
   }
 }

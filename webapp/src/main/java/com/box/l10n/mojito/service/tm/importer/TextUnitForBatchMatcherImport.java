@@ -26,6 +26,8 @@ public class TextUnitForBatchMatcherImport implements TextUnitForBatchMatcher {
   TextUnitDTO currentTextUnit;
   boolean includedInLocalizedFile;
   TMTextUnitVariant.Status status;
+  String translatorIdentity;
+  String reviewerIdentity;
 
   List<TMTextUnitVariantComment> tmTextUnitVariantComments = new ArrayList<>();
 
@@ -118,6 +120,22 @@ public class TextUnitForBatchMatcherImport implements TextUnitForBatchMatcher {
 
   public void setStatus(TMTextUnitVariant.Status status) {
     this.status = status;
+  }
+
+  public String getTranslatorIdentity() {
+    return translatorIdentity;
+  }
+
+  public void setTranslatorIdentity(String translatorIdentity) {
+    this.translatorIdentity = translatorIdentity;
+  }
+
+  public String getReviewerIdentity() {
+    return reviewerIdentity;
+  }
+
+  public void setReviewerIdentity(String reviewerIdentity) {
+    this.reviewerIdentity = reviewerIdentity;
   }
 
   public List<TMTextUnitVariantComment> getTmTextUnitVariantComments() {

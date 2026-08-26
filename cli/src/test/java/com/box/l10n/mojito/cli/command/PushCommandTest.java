@@ -36,7 +36,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @author wyau
@@ -484,14 +483,15 @@ public class PushCommandTest extends CLITestBase {
     assertEquals(5, textUnitsFromCommit.size());
   }
 
-  @Transactional
   private List<TMTextUnit> getTextUnits(Long commitId) {
-    PushRun pushRun =
+    Long pushRunId =
         commitRepository
             .findById(commitId)
             .orElseThrow(RuntimeException::new)
             .getCommitToPushRun()
-            .getPushRun();
+            .getPushRun()
+            .getId();
+    PushRun pushRun = pushRunRepository.findById(pushRunId).orElseThrow(RuntimeException::new);
 
     return pushRun.getPushRunAssets().stream()
         .map(PushRunAsset::getPushRunAssetTmTextUnits)

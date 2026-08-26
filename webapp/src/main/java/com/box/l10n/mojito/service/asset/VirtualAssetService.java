@@ -33,6 +33,7 @@ import com.box.l10n.mojito.service.repository.RepositoryService;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.TranslatorWithInheritance;
+import com.box.l10n.mojito.service.tm.importer.BulkImportLineageService;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService;
 import com.box.l10n.mojito.service.tm.search.SearchType;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
@@ -344,7 +345,7 @@ public class VirtualAssetService {
     }
 
     return textUnitBatchImporterService.asyncImportTextUnits(
-        textUnitDTOs, fromLegacy(false, false));
+        textUnitDTOs, fromLegacy(false, false), BulkImportLineageService.SOURCE_VIRTUAL_ASSET);
   }
 
   @Transactional

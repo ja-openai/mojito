@@ -561,6 +561,18 @@ function normalizeImportRecords(records: CsvRecord[]): {
     if (targetComment !== undefined) {
       textUnit.targetComment = targetComment;
     }
+    const translatorIdentity = toNonEmptyString(
+      record.translatorIdentity ?? record.translatedBy ?? record.authorIdentity ?? record.author,
+    );
+    if (translatorIdentity) {
+      textUnit.translatorIdentity = translatorIdentity;
+    }
+    const reviewerIdentity = toNonEmptyString(
+      record.reviewerIdentity ?? record.reviewedBy ?? record.approvedBy ?? record.approverIdentity,
+    );
+    if (reviewerIdentity) {
+      textUnit.reviewerIdentity = reviewerIdentity;
+    }
     const status = toOptionalString(record.status);
     if (status !== undefined) {
       textUnit.status = status.toUpperCase();

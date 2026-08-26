@@ -82,6 +82,29 @@ describe('parseImportFileContent', () => {
       },
     ]);
   });
+
+  it('preserves separate translator and reviewer attribution from import rows', () => {
+    const parsed = parseImportFileContent(
+      'translations.csv',
+      [
+        'repositoryName,assetPath,targetLocale,name,target,translatedBy,approvedBy',
+        'repo-a,messages.json,it-IT,greeting,Ciao,translator@example.com,reviewer@example.com',
+      ].join('\n'),
+    );
+
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.textUnits).toEqual([
+      {
+        repositoryName: 'repo-a',
+        assetPath: 'messages.json',
+        targetLocale: 'it-IT',
+        name: 'greeting',
+        target: 'Ciao',
+        translatorIdentity: 'translator@example.com',
+        reviewerIdentity: 'reviewer@example.com',
+      },
+    ]);
+  });
 });
 
 describe('getOrderedExportFields', () => {

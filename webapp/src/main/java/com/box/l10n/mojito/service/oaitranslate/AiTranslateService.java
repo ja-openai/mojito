@@ -49,6 +49,7 @@ import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import com.box.l10n.mojito.service.repository.RepositoryService;
 import com.box.l10n.mojito.service.screenshot.ScreenshotService;
 import com.box.l10n.mojito.service.tm.TMTextUnitVariantRepository;
+import com.box.l10n.mojito.service.tm.importer.BulkImportLineageService;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService.ImportResult;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService.TextUnitDTOWithVariantComment;
@@ -781,7 +782,9 @@ public class AiTranslateService {
                             .toList(),
                         TextUnitBatchImporterService.IntegrityChecksType
                             .KEEP_STATUS_IF_SAME_TARGET_AND_NOT_INCLUDED,
-                        ALWAYS_IMPORT)
+                        ALWAYS_IMPORT,
+                        textUnitBatchImporterService.contextForPollableTask(
+                            currentTask, BulkImportLineageService.SOURCE_AI_TRANSLATE))
                     .stream()
                     .collect(
                         toMap(
@@ -1296,7 +1299,8 @@ public class AiTranslateService {
   List<String> importBatch(
       RetrieveBatchResponse retrieveBatchResponse,
       AiTranslateType aiTranslateType,
-      Status importStatus) {
+      Status importStatus,
+      PollableTask currentTask) {
 
     logger.info("Importing batch: {}", retrieveBatchResponse.id());
 
@@ -1391,7 +1395,9 @@ public class AiTranslateService {
             .toList(),
         TextUnitBatchImporterService.IntegrityChecksType
             .KEEP_STATUS_IF_SAME_TARGET_AND_NOT_INCLUDED,
-        ALWAYS_IMPORT);
+        ALWAYS_IMPORT,
+        textUnitBatchImporterService.contextForPollableTask(
+            currentTask, BulkImportLineageService.SOURCE_AI_TRANSLATE));
 
     return forImport.stream()
         .filter(t -> t.error() != null)

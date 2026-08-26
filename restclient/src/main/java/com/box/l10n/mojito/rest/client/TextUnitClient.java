@@ -90,9 +90,16 @@ public class TextUnitClient extends BaseClient {
       @JsonProperty("tmTextUnitCreatedDate") Long tmTextUnitCreatedDate,
       @JsonProperty("doNotTranslate") Boolean doNotTranslate,
       @JsonProperty("translated") Boolean translated,
-      @JsonProperty("used") Boolean used) {
+      @JsonProperty("used") Boolean used,
+      @JsonProperty("translatorIdentity") String translatorIdentity,
+      @JsonProperty("reviewerIdentity") String reviewerIdentity) {
 
     public TextUnit withTarget(String target, Status status) {
+      return withTarget(target, status, translatorIdentity, reviewerIdentity);
+    }
+
+    public TextUnit withTarget(
+        String target, Status status, String translatorIdentity, String reviewerIdentity) {
       return new TextUnit(
           tmTextUnitId,
           tmTextUnitVariantId,
@@ -119,7 +126,9 @@ public class TextUnitClient extends BaseClient {
           tmTextUnitCreatedDate,
           doNotTranslate,
           translated,
-          used);
+          used,
+          translatorIdentity,
+          reviewerIdentity);
     }
   }
 

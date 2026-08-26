@@ -3,6 +3,7 @@ package com.box.l10n.mojito.service.blobstorage;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.AI_TRANSALATE_NO_BATCH_OUTPUT;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.AI_TRANSLATE_LINEAGE;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.AI_TRANSLATE_NO_BATCH_OUTPUT;
+import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.BULK_IMPORT_LINEAGE;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.IMAGE;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.MULTI_BRANCH_STATE;
 import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Prefix.POLLABLE_TASK;
@@ -60,6 +61,13 @@ public class StructuredBlobStorageTest {
   @Test
   public void getImage() {
     assertEquals("image/test1.jpg", structuredBlobStorage.getFullName(IMAGE, "test1.jpg"));
+  }
+
+  @Test
+  public void getBulkImportLineage() {
+    assertEquals(
+        "bulk_import_lineage/run-id/input.json",
+        structuredBlobStorage.getFullName(BULK_IMPORT_LINEAGE, "run-id/input.json"));
   }
 
   @Test

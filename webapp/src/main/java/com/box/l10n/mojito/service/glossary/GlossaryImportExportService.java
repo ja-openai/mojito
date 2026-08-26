@@ -10,6 +10,7 @@ import com.box.l10n.mojito.service.asset.VirtualAssetRequiredException;
 import com.box.l10n.mojito.service.asset.VirtualAssetTextUnit;
 import com.box.l10n.mojito.service.asset.VirtualTextUnitBatchUpdaterService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
+import com.box.l10n.mojito.service.tm.importer.BulkImportLineageService;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
@@ -385,7 +386,8 @@ public class GlossaryImportExportService {
       textUnitBatchImporterService.importTextUnitsWithVariantComment(
           imports,
           TextUnitBatchImporterService.IntegrityChecksType.SKIP,
-          TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT);
+          TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT,
+          BulkImportLineageService.SOURCE_GLOSSARY_IMPORT);
     }
 
     return new TranslationDelta(createdTranslationCount, updatedTranslationCount);

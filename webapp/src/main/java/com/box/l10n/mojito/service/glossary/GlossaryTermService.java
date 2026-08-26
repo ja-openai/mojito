@@ -26,6 +26,7 @@ import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
 import com.box.l10n.mojito.service.pollableTask.PollableTaskBlobStorage;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
+import com.box.l10n.mojito.service.tm.importer.BulkImportLineageService;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
@@ -1209,7 +1210,8 @@ public class GlossaryTermService {
       textUnitBatchImporterService.importTextUnitsWithVariantComment(
           imports,
           TextUnitBatchImporterService.IntegrityChecksType.ALWAYS_USE_INTEGRITY_CHECKER_STATUS,
-          TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT);
+          TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT,
+          BulkImportLineageService.SOURCE_GLOSSARY_TERM);
     }
   }
 

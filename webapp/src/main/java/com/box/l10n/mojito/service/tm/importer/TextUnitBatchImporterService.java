@@ -8,7 +8,9 @@ import static java.util.stream.Collectors.toList;
 import com.box.l10n.mojito.JSR310Migration;
 import com.box.l10n.mojito.aspect.StopWatch;
 import com.box.l10n.mojito.entity.Asset;
+import com.box.l10n.mojito.entity.BulkImportRun;
 import com.box.l10n.mojito.entity.Locale;
+import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant.Status;
@@ -16,7 +18,6 @@ import com.box.l10n.mojito.entity.TMTextUnitVariantComment;
 import com.box.l10n.mojito.entity.TMTextUnitVariantComment.Severity;
 import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.quartz.QuartzPollableTaskScheduler;
-import com.box.l10n.mojito.security.AuditorAwareImpl;
 import com.box.l10n.mojito.service.NormalizationUtils;
 import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.asset.ImportTextUnitJob;
@@ -34,6 +35,7 @@ import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitVariantCommentService;
 import com.box.l10n.mojito.service.tm.TextUnitBatchMatcher;
 import com.box.l10n.mojito.service.tm.TextUnitForBatchMatcher;
+import com.box.l10n.mojito.service.tm.importer.BulkImportLineageService.ImportContext;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
 import com.box.l10n.mojito.service.tm.textunitdtocache.TextUnitDTOsCacheService;
@@ -89,8 +91,6 @@ public class TextUnitBatchImporterService {
 
   @Autowired TextUnitBatchMatcher textUnitBatchMatcher;
 
-  @Autowired AuditorAwareImpl auditorAwareImpl;
-
   @Autowired TextUnitDTOsCacheService textUnitDTOsCacheService;
 
   @Autowired TMTextUnitVariantCommentService tmMTextUnitVariantCommentService;
@@ -98,6 +98,8 @@ public class TextUnitBatchImporterService {
   @Autowired MeterRegistry meterRegistry;
 
   @Autowired PluralIntegrityCheckerRelaxer pluralIntegrityCheckerRelaxer;
+
+  @Autowired BulkImportLineageService bulkImportLineageService;
 
   @Value("${l10n.textUnitBatchImporterService.quartz.schedulerName:" + DEFAULT_SCHEDULER_NAME + "}")
   String schedulerName;
@@ -170,10 +172,22 @@ public class TextUnitBatchImporterService {
    */
   public PollableFuture<Void> asyncImportTextUnits(
       List<TextUnitDTO> textUnitDTOs, IntegrityChecksType integrityChecksType) {
+    return asyncImportTextUnits(
+        textUnitDTOs, integrityChecksType, BulkImportLineageService.SOURCE_BATCH_IMPORTER);
+  }
+
+  public PollableFuture<Void> asyncImportTextUnits(
+      List<TextUnitDTO> textUnitDTOs, IntegrityChecksType integrityChecksType, String source) {
+    ImportContext importContext = bulkImportLineageService.captureCurrentContext(source);
 
     ImportTextUnitJobInput importTextUnitJobInput = new ImportTextUnitJobInput();
     importTextUnitJobInput.setTextUnitDTOs(textUnitDTOs);
     importTextUnitJobInput.setIntegrityChecksType(integrityChecksType);
+    importTextUnitJobInput.setInitiatingUserId(
+        importContext.initiatingUser() == null ? null : importContext.initiatingUser().getId());
+    importTextUnitJobInput.setActorType(importContext.actorType());
+    importTextUnitJobInput.setActorIdentity(importContext.actorIdentity());
+    importTextUnitJobInput.setSource(importContext.source());
 
     return quartzPollableTaskScheduler.scheduleJob(
         ImportTextUnitJob.class, importTextUnitJobInput, schedulerName);
@@ -187,6 +201,31 @@ public class TextUnitBatchImporterService {
       List<TextUnitDTOWithVariantComment> textUnitDTOWithVariantComments,
       IntegrityChecksType integrityChecksType,
       ImportMode importMode) {
+    return importTextUnitsWithVariantComment(
+        textUnitDTOWithVariantComments,
+        integrityChecksType,
+        importMode,
+        bulkImportLineageService.captureCurrentContext(
+            BulkImportLineageService.SOURCE_BATCH_IMPORTER));
+  }
+
+  public List<ImportResult> importTextUnitsWithVariantComment(
+      List<TextUnitDTOWithVariantComment> textUnitDTOWithVariantComments,
+      IntegrityChecksType integrityChecksType,
+      ImportMode importMode,
+      String source) {
+    return importTextUnitsWithVariantComment(
+        textUnitDTOWithVariantComments,
+        integrityChecksType,
+        importMode,
+        bulkImportLineageService.captureCurrentContext(source));
+  }
+
+  public List<ImportResult> importTextUnitsWithVariantComment(
+      List<TextUnitDTOWithVariantComment> textUnitDTOWithVariantComments,
+      IntegrityChecksType integrityChecksType,
+      ImportMode importMode,
+      ImportContext importContext) {
 
     return meterRegistry
         .timer("TextUnitBatchImporterService.importTextUnits")
@@ -224,23 +263,44 @@ public class TextUnitBatchImporterService {
 
                                     mapTextUnitsToImportWithExistingTextUnits(
                                         locale, asset, textUnitsForBatchImport);
-                                    if (!IntegrityChecksType.SKIP.equals(integrityChecksType)) {
-                                      try (var timer2 =
-                                          Timer.resource(
-                                                  meterRegistry,
-                                                  "TextUnitBatchImporterService.importTextUnits.integrityChecks")
-                                              .tag("repository", asset.getRepository().getName())
-                                              .tag("asset", asset.getPath())) {
+                                    BulkImportRun importRun =
+                                        bulkImportLineageService.startRun(
+                                            asset,
+                                            locale,
+                                            integrityChecksType,
+                                            importMode,
+                                            importContext,
+                                            textUnitsForBatchImport);
+                                    try {
+                                      if (!IntegrityChecksType.SKIP.equals(integrityChecksType)) {
+                                        try (var timer2 =
+                                            Timer.resource(
+                                                    meterRegistry,
+                                                    "TextUnitBatchImporterService.importTextUnits.integrityChecks")
+                                                .tag("repository", asset.getRepository().getName())
+                                                .tag("asset", asset.getPath())) {
 
-                                        applyIntegrityChecks(
-                                            asset, textUnitsForBatchImport, integrityChecksType);
+                                          applyIntegrityChecks(
+                                              asset, textUnitsForBatchImport, integrityChecksType);
+                                        }
                                       }
-                                    }
-                                    List<ImportResult> addTMTextUnitCurrentVariantResults =
-                                        importTextUnitsOfLocaleAndAsset(
-                                            locale, asset, textUnitsForBatchImport, importMode);
+                                      List<ImportResult> addTMTextUnitCurrentVariantResults =
+                                          importTextUnitsOfLocaleAndAsset(
+                                              locale,
+                                              asset,
+                                              textUnitsForBatchImport,
+                                              importMode,
+                                              importContext.initiatingUser());
+                                      bulkImportLineageService.completeRun(
+                                          importRun,
+                                          textUnitsForBatchImport,
+                                          addTMTextUnitCurrentVariantResults);
 
-                                    return addTMTextUnitCurrentVariantResults.stream();
+                                      return addTMTextUnitCurrentVariantResults.stream();
+                                    } catch (RuntimeException | Error failure) {
+                                      bulkImportLineageService.failRun(importRun, failure);
+                                      throw failure;
+                                    }
                                   }
                                 });
                       })
@@ -260,12 +320,32 @@ public class TextUnitBatchImporterService {
       IntegrityChecksType integrityChecksType,
       ImportMode importMode,
       String importComment) {
+    return importTextUnits(
+        textUnitDTOs,
+        integrityChecksType,
+        importMode,
+        importComment,
+        bulkImportLineageService.captureCurrentContext(
+            BulkImportLineageService.SOURCE_BATCH_IMPORTER));
+  }
+
+  public List<ImportResult> importTextUnits(
+      List<TextUnitDTO> textUnitDTOs,
+      IntegrityChecksType integrityChecksType,
+      ImportMode importMode,
+      String importComment,
+      ImportContext importContext) {
     return importTextUnitsWithVariantComment(
         textUnitDTOs.stream()
             .map(t -> new TextUnitDTOWithVariantComment(t, createImportComment(importComment)))
             .toList(),
         integrityChecksType,
-        importMode);
+        importMode,
+        importContext);
+  }
+
+  public ImportContext contextForPollableTask(PollableTask pollableTask, String source) {
+    return bulkImportLineageService.contextForPollableTask(pollableTask, null, null, null, source);
   }
 
   /**
@@ -295,7 +375,8 @@ public class TextUnitBatchImporterService {
       Locale locale,
       Asset asset,
       List<TextUnitForBatchMatcherImport> textUnitsToImport,
-      ImportMode importMode) {
+      ImportMode importMode,
+      User importedBy) {
     ZonedDateTime importTime = JSR310Migration.newDateTimeEmptyCtor();
     logger.info(
         "Start import text units for asset: {}, locale: {}, count: {}",
@@ -358,8 +439,12 @@ public class TextUnitBatchImporterService {
 
                   AddTMTextUnitCurrentVariantResult addTMTextUnitCurrentVariantResult;
                   List<TMTextUnitVariantComment> tmTextUnitVariantComments = null;
+                  Long previousTmTextUnitVariantId =
+                      tmTextUnitCurrentVariant == null
+                              || tmTextUnitCurrentVariant.getTmTextUnitVariant() == null
+                          ? null
+                          : tmTextUnitCurrentVariant.getTmTextUnitVariant().getId();
 
-                  User importedBy = auditorAwareImpl.getCurrentAuditor().orElse(null);
                   addTMTextUnitCurrentVariantResult =
                       tmService.addTMTextUnitCurrentVariantWithResult(
                           tmTextUnitCurrentVariant,
@@ -395,7 +480,9 @@ public class TextUnitBatchImporterService {
                   }
 
                   return new ImportResult(
-                      addTMTextUnitCurrentVariantResult, tmTextUnitVariantComments);
+                      addTMTextUnitCurrentVariantResult,
+                      tmTextUnitVariantComments,
+                      previousTmTextUnitVariantId);
                 })
             .collect(toList());
 
@@ -404,7 +491,8 @@ public class TextUnitBatchImporterService {
 
   public record ImportResult(
       AddTMTextUnitCurrentVariantResult addTMTextUnitCurrentVariantResult,
-      List<TMTextUnitVariantComment> tmTextUnitVariantComments) {}
+      List<TMTextUnitVariantComment> tmTextUnitVariantComments,
+      Long previousTmTextUnitVariantId) {}
   ;
 
   boolean isUpdateNeeded(
@@ -608,6 +696,8 @@ public class TextUnitBatchImporterService {
               textUnitForBatchImport.setContent(NormalizationUtils.normalize(t.getTarget()));
               textUnitForBatchImport.setComment(t.getComment());
               textUnitForBatchImport.setTargetComment(t.getTargetComment());
+              textUnitForBatchImport.setTranslatorIdentity(t.getTranslatorIdentity());
+              textUnitForBatchImport.setReviewerIdentity(t.getReviewerIdentity());
               textUnitForBatchImport.setIncludedInLocalizedFile(t.isIncludedInLocalizedFile());
               textUnitForBatchImport.setStatus(t.getStatus() == null ? APPROVED : t.getStatus());
               if (tc.tmTextUnitVariantComment() != null) {

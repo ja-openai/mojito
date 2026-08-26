@@ -142,12 +142,22 @@ public class RepositoryTmTranslateCommand extends Command {
 
           if (translation.source().equals(translation.target())) {
             if (importSourceEqualsTargetParam) {
-              textUnitsToSave.add(textUnit.withTarget(translation.target(), translation.status()));
+              textUnitsToSave.add(
+                  textUnit.withTarget(
+                      translation.target(),
+                      translation.status(),
+                      translation.translatorIdentity(),
+                      translation.reviewerIdentity()));
             } else {
               consoleWriter.a("Skip import, source = target").println();
             }
           } else {
-            textUnitsToSave.add(textUnit.withTarget(translation.target(), translation.status()));
+            textUnitsToSave.add(
+                textUnit.withTarget(
+                    translation.target(),
+                    translation.status(),
+                    translation.translatorIdentity(),
+                    translation.reviewerIdentity()));
           }
         } else {
           consoleWriter.a("No match found").println();

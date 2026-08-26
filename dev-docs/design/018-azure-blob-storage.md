@@ -50,6 +50,7 @@ Per-prefix routing:
 l10n.blob-storage.default-type=azure
 l10n.blob-storage.routing.prefixes.pollable-task=database
 l10n.blob-storage.routing.prefixes.image=azure
+l10n.blob-storage.routing.prefixes.bulk-import-lineage=azure
 ```
 
 `StructuredBlobStorage` uses semantic prefixes, not repository shape, to choose a backend. This lets control-plane data such as `pollable-task` remain DB-backed while large artifact-like prefixes use Azure or S3.
@@ -97,6 +98,37 @@ logical cache reuse independently from migration progress.
 `l10n.blob-storage.default-type` selects the backend for prefixes without an explicit route.
 The old `l10n.blob-storage.type` setting remains supported temporarily for existing deployments,
 but logs a deprecation warning. When both settings are present, `default-type` takes precedence.
+
+### Durable bulk-import lineage
+
+Bulk translation imports use the dedicated `bulk-import-lineage` prefix with permanent retention.
+The relational tables retain searchable run and item metadata: the authenticated initiator,
+source workflow, repository/asset/locale, text-unit reference, per-string translator and reviewer
+identities, status, and both the previous and resulting variant IDs. Normalized input and correlated
+output payloads are stored separately under `<run-id>/input.json` and `<run-id>/output.json`.
+
+The initiating actor and upstream attribution are deliberately separate. The authenticated user is
+captured before Quartz scheduling and used for the variant's `createdByUser`; `translatedBy` and
+`approvedBy` aliases populate translator and reviewer identity when supplied. Missing upstream
+attribution is stored as `UNKNOWN`, never inferred from the initiator.
+
+The prefix uses the configured default blob backend unless it has an explicit route. Deployments
+can route the payloads to object storage when they want to keep these larger bodies out of MySQL:
+
+```properties
+l10n.azure.blob-storage.enabled=true
+l10n.azure.blob-storage.endpoint=https://<account>.blob.core.windows.net
+l10n.azure.blob-storage.container=mojito
+l10n.blob-storage.routing.prefixes.bulk-import-lineage=azure
+```
+
+Database, S3, and Azure storage all preserve the `Retention.PERMANENT` contract. Provider lifecycle
+rules for temporary `retention=MIN_1_DAY` objects must not match this permanent prefix. Admin-only
+`/api/monitoring/import-lineage` endpoints expose run metadata and the stored payloads.
+
+The before/resulting variant pair is the safe basis for a future guarded rollback operation. The
+current change records and exposes the evidence but does not automatically change the current
+variant pointer; rollback still needs conflict checks so it cannot overwrite a later edit.
 
 ## Image migration
 

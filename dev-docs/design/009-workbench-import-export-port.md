@@ -140,6 +140,12 @@ Minimal backend additions that may still be worthwhile:
 - add explicit role gating for `/api/textunitsBatch` if we decide import is admin-only in the frontend and want backend enforcement, not just hidden UI
 - document the accepted import fields and semantics more clearly in code or API comments
 
+The shared batch importer now records durable lineage for Workbench and other callers. It captures
+the authenticated initiator before Quartz scheduling, stores normalized input and correlated output
+payloads with permanent retention, records translator/reviewer attribution when present, and keeps
+the previous/resulting variant IDs for every changed row. Admin monitoring endpoints support lookup
+by run or affected text unit. This is durable rollback evidence, not an automatic rollback action.
+
 Typed frontend API additions:
 
 - `exportSearchTextUnits(...)` helper built on top of `searchTextUnits(...)`
@@ -158,6 +164,8 @@ Future Follow-on Work
 - Add server-side export jobs for very large result sets.
 - Offer an import dry-run mode with server-side validation only.
 - Provide richer import result summaries: updated count, rejected count, integrity-check failures.
+- Add a guarded rollback action that uses the recorded previous/resulting variant pair and refuses
+  to replace a translation changed after the selected import.
 - Consider allowing import/export against saved collections directly as a separate flow.
 - Revisit whether import access should widen from admin-only to PMs or locale-scoped translators.
 

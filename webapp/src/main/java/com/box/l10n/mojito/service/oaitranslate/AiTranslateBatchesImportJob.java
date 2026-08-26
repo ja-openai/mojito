@@ -91,7 +91,8 @@ public class AiTranslateBatchesImportJob
                   aiTranslateService.importBatch(
                       retrieveBatchResponse,
                       AiTranslateType.fromString(aiTranslateBatchesImportInput.translateType()),
-                      Status.valueOf(aiTranslateBatchesImportInput.importStatus()));
+                      Status.valueOf(aiTranslateBatchesImportInput.importStatus()),
+                      getCurrentPollableTask());
 
               if (!errors.isEmpty()) {
                 failedImport.put(createBatchResponse.id(), String.join("\n", errors));

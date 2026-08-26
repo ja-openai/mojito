@@ -31,6 +31,7 @@ import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantService;
 import com.box.l10n.mojito.service.tm.TMTextUnitHistoryService;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
 import com.box.l10n.mojito.service.tm.TMTextUnitStatisticService;
+import com.box.l10n.mojito.service.tm.importer.BulkImportLineageService;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService;
 import com.box.l10n.mojito.service.tm.search.SearchType;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
@@ -515,7 +516,8 @@ public class TextUnitWS {
             importTextUnitsBatch.getTextUnits(),
             fromLegacy(
                 importTextUnitsBatch.isIntegrityCheckSkipped(),
-                importTextUnitsBatch.isIntegrityCheckKeepStatusIfFailedAndSameTarget()));
+                importTextUnitsBatch.isIntegrityCheckKeepStatusIfFailedAndSameTarget()),
+            BulkImportLineageService.SOURCE_BATCH_API);
     return pollableFuture.getPollableTask();
   }
 

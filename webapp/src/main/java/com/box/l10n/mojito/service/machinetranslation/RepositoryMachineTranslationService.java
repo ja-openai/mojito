@@ -2,11 +2,14 @@ package com.box.l10n.mojito.service.machinetranslation;
 
 import static com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService.IntegrityChecksType.fromLegacy;
 
+import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
+import com.box.l10n.mojito.service.pollableTask.InjectCurrentTask;
 import com.box.l10n.mojito.service.pollableTask.Pollable;
 import com.box.l10n.mojito.service.pollableTask.PollableFuture;
 import com.box.l10n.mojito.service.pollableTask.PollableFutureTaskResult;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
+import com.box.l10n.mojito.service.tm.importer.BulkImportLineageService;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService;
 import com.box.l10n.mojito.service.tm.search.StatusFilter;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
@@ -50,7 +53,10 @@ public class RepositoryMachineTranslationService {
    */
   @Pollable(async = true, message = "Start machine translating repository")
   public PollableFuture<Void> translateRepository(
-      String repositoryName, List<String> targetBcp47Tags, int sourceTextMaxCountPerLocale) {
+      String repositoryName,
+      List<String> targetBcp47Tags,
+      int sourceTextMaxCountPerLocale,
+      @InjectCurrentTask PollableTask currentTask) {
 
     logger.info(
         "Start Machine Translating repository: {} and target locales: {}",
@@ -131,7 +137,10 @@ public class RepositoryMachineTranslationService {
                 textUnitBatchImporterService.importTextUnits(
                     machineTranslatedTextUnitDTOs,
                     fromLegacy(false, true),
-                    TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT);
+                    TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT,
+                    null,
+                    textUnitBatchImporterService.contextForPollableTask(
+                        currentTask, BulkImportLineageService.SOURCE_MACHINE_TRANSLATION));
               });
     }
 

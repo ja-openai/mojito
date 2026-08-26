@@ -114,6 +114,8 @@ export type ImportTextUnitBatchRow = {
   assetId?: number | null;
   createdDate?: string | null;
   tmTextUnitCreatedDate?: string | null;
+  translatorIdentity?: string | null;
+  reviewerIdentity?: string | null;
 };
 
 export type ImportTextUnitsBatchRequest = {
