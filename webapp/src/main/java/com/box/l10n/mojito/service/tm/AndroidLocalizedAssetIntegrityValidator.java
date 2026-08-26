@@ -3,11 +3,13 @@ package com.box.l10n.mojito.service.tm;
 import com.box.l10n.mojito.fileformat.LocalizationCatalog;
 import com.box.l10n.mojito.fileformat.LocalizationFileConverters;
 import com.box.l10n.mojito.fileformat.LocalizationFileFormat;
+import com.box.l10n.mojito.fileformat.LocalizationMessage;
 import com.box.l10n.mojito.fileformat.LocalizationParseException;
 import com.box.l10n.mojito.fileformat.LocalizationShadowComparator;
 import com.box.l10n.mojito.okapi.extractor.AssetExtractorTextUnit;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.MarkdownLinkIntegrityChecker;
+import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.PluralIntegrityCheckerRelaxer;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.PrintfLikeIntegrityChecker;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -26,10 +28,20 @@ public class AndroidLocalizedAssetIntegrityValidator {
   private final MarkdownLinkIntegrityChecker markdownLinkChecker =
       new MarkdownLinkIntegrityChecker();
   private final PrintfLikeIntegrityChecker printfLikeChecker = new PrintfLikeIntegrityChecker();
+  private final PluralIntegrityCheckerRelaxer pluralIntegrityCheckerRelaxer =
+      new PluralIntegrityCheckerRelaxer();
 
   public void validate(String locale, String source, String localized) {
-    LocalizationCatalog sourceCatalog = parse(locale, source, "source");
-    LocalizationCatalog localizedCatalog = parse(locale, localized, "target");
+    validate(locale, null, source, localized);
+  }
+
+  public void validate(String locale, String assetPath, String source, String localized) {
+    if (localized == null || localized.isBlank()) {
+      return;
+    }
+
+    LocalizationCatalog sourceCatalog = parse(locale, assetPath, source, "source");
+    LocalizationCatalog localizedCatalog = parse(locale, assetPath, localized, "target");
 
     Map<String, AssetExtractorTextUnit> sourceById = projectById(sourceCatalog);
     List<Diagnostic> diagnostics = new ArrayList<>();
@@ -39,15 +51,20 @@ public class AndroidLocalizedAssetIntegrityValidator {
         continue;
       }
       String target = projected.textUnit().getSource();
+      LocalizationMessage sourceMessage = sourceCatalog.messages().get(projected.messageId());
+      if (isFormatted(sourceMessage)) {
+        check(
+            diagnostics,
+            locale,
+            assetPath,
+            projected.canonicalId(),
+            PRINTF_PLACEHOLDER_CONTRACT,
+            () -> checkPrintf(sourceUnit, projected.textUnit(), target));
+      }
       check(
           diagnostics,
           locale,
-          projected.canonicalId(),
-          PRINTF_PLACEHOLDER_CONTRACT,
-          () -> printfLikeChecker.check(sourceUnit.getSource(), target));
-      check(
-          diagnostics,
-          locale,
+          assetPath,
           projected.canonicalId(),
           MARKDOWN_LINK_CONTRACT,
           () -> markdownLinkChecker.check(sourceUnit.getSource(), target));
@@ -57,7 +74,26 @@ public class AndroidLocalizedAssetIntegrityValidator {
     }
   }
 
-  private static LocalizationCatalog parse(String locale, String content, String subject) {
+  private void checkPrintf(
+      AssetExtractorTextUnit sourceUnit, AssetExtractorTextUnit targetUnit, String target) {
+    try {
+      printfLikeChecker.check(sourceUnit.getSource(), target);
+    } catch (IntegrityCheckException exception) {
+      if (!pluralIntegrityCheckerRelaxer.shouldRelaxIntegrityCheck(
+          sourceUnit.getSource(), target, targetUnit.getPluralForm(), printfLikeChecker)) {
+        throw exception;
+      }
+    }
+  }
+
+  private static boolean isFormatted(LocalizationMessage sourceMessage) {
+    return sourceMessage == null
+        || sourceMessage.metadata() == null
+        || !Boolean.FALSE.equals(sourceMessage.metadata().get("formatted"));
+  }
+
+  private static LocalizationCatalog parse(
+      String locale, String assetPath, String content, String subject) {
     try {
       return LocalizationFileConverters.parse(
           LocalizationFileFormat.ANDROID,
@@ -70,7 +106,8 @@ public class AndroidLocalizedAssetIntegrityValidator {
               locale,
               stringId,
               ANDROID_RESOURCE_SYNTAX,
-              subject + ": " + exception.code() + ": " + exception.getMessage());
+              subject + ": " + exception.code() + ": " + exception.getMessage(),
+              assetPath);
       throw new AndroidLocalizedAssetIntegrityException(List.of(diagnostic), exception);
     }
   }
@@ -84,11 +121,16 @@ public class AndroidLocalizedAssetIntegrityValidator {
   }
 
   private static void check(
-      List<Diagnostic> diagnostics, String locale, String stringId, String rule, Runnable check) {
+      List<Diagnostic> diagnostics,
+      String locale,
+      String assetPath,
+      String stringId,
+      String rule,
+      Runnable check) {
     try {
       check.run();
     } catch (IntegrityCheckException exception) {
-      diagnostics.add(new Diagnostic(locale, stringId, rule, exception.getMessage()));
+      diagnostics.add(new Diagnostic(locale, stringId, rule, exception.getMessage(), assetPath));
     }
   }
 
@@ -101,11 +143,18 @@ public class AndroidLocalizedAssetIntegrityValidator {
     return message.substring(start + marker.length(), message.length() - 1);
   }
 
-  public record Diagnostic(String locale, String stringId, String rule, String message) {
+  public record Diagnostic(
+      String locale, String stringId, String rule, String message, String assetPath) {
+
+    public Diagnostic(String locale, String stringId, String rule, String message) {
+      this(locale, stringId, rule, message, null);
+    }
+
     @Override
     public String toString() {
       return "locale="
           + locale
+          + (assetPath == null ? "" : ", assetPath=" + assetPath)
           + ", stringId="
           + stringId
           + ", rule="

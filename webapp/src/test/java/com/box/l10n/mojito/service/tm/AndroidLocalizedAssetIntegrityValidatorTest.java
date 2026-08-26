@@ -65,6 +65,26 @@ public class AndroidLocalizedAssetIntegrityValidatorTest {
   }
 
   @Test
+  public void acceptsIntentionalBlankLocalizedOutput() {
+    validator.validate("x-empty", resources("<string name=\"missing\">Missing</string>"), "\n  ");
+  }
+
+  @Test
+  public void reportsAssetPathForInvalidGeneratedContent() {
+    String source = resources("<string name=\"account\">Account: %1$s.</string>");
+    String target = resources("<string name=\"account\">ACCOUNT: %1$@.</string>");
+
+    assertThatThrownBy(() -> validator.validate("x-path", "res/values/strings.xml", source, target))
+        .isInstanceOfSatisfying(
+            AndroidLocalizedAssetIntegrityException.class,
+            exception ->
+                assertThat(exception.getDiagnostics())
+                    .singleElement()
+                    .extracting(AndroidLocalizedAssetIntegrityValidator.Diagnostic::assetPath)
+                    .isEqualTo("res/values/strings.xml"));
+  }
+
+  @Test
   public void reportsAllIndependentStringContractFailures() {
     String source =
         resources(

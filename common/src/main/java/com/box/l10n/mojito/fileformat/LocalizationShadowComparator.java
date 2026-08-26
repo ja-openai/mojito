@@ -243,7 +243,11 @@ public final class LocalizationShadowComparator {
         } else {
           source =
               restore(
-                  message.variants().getOrDefault(category, fallback), message, format, metadata);
+                  message.variants().getOrDefault(category, fallback),
+                  message,
+                  format,
+                  metadata,
+                  category);
         }
         projected.add(
             new Unit(
@@ -333,6 +337,15 @@ public final class LocalizationShadowComparator {
 
   private static String restore(
       String canonical, LocalizationMessage message, String format, Map<String, Object> metadata) {
+    return restore(canonical, message, format, metadata, null);
+  }
+
+  private static String restore(
+      String canonical,
+      LocalizationMessage message,
+      String format,
+      Map<String, Object> metadata,
+      String pluralCategory) {
     String source =
         ("icu-quoted-angle".equals(metadata.get("androidMarkupEscaping"))
                 || "icu-quoted-angle".equals(metadata.get("appleMarkupEscaping")))
@@ -352,6 +365,8 @@ public final class LocalizationShadowComparator {
           .add(placeholder);
     }
     Map<String, Integer> positions = new LinkedHashMap<>();
+    Map<String, List<String>> categoryPlaceholderSources =
+        androidPluralPlaceholderSources(metadata, pluralCategory);
     Matcher matcher = ARGUMENT.matcher(source);
     StringBuilder result = new StringBuilder();
     int previous = 0;
@@ -363,10 +378,36 @@ public final class LocalizationShadowComparator {
       int occurrence = positions.getOrDefault(matcher.group(1), 0);
       positions.put(matcher.group(1), occurrence + 1);
       LocalizationPlaceholder placeholder = options.get(Math.min(occurrence, options.size() - 1));
-      result.append(source, previous, matcher.start()).append(placeholder.source());
+      List<String> categorySources = categoryPlaceholderSources.get(matcher.group(1));
+      String placeholderSource =
+          categorySources == null || categorySources.isEmpty()
+              ? placeholder.source()
+              : categorySources.get(Math.min(occurrence, categorySources.size() - 1));
+      result.append(source, previous, matcher.start()).append(placeholderSource);
       previous = matcher.end();
     }
     return result.append(source, previous, source.length()).toString();
+  }
+
+  private static Map<String, List<String>> androidPluralPlaceholderSources(
+      Map<String, Object> metadata, String pluralCategory) {
+    if (pluralCategory == null
+        || !(metadata.get("androidPluralPlaceholderSources") instanceof Map<?, ?> byCategory)
+        || !(byCategory.get(pluralCategory) instanceof Map<?, ?> rawSources)) {
+      return Map.of();
+    }
+    Map<String, List<String>> sources = new LinkedHashMap<>();
+    for (Map.Entry<?, ?> entry : rawSources.entrySet()) {
+      if (!(entry.getKey() instanceof String name) || !(entry.getValue() instanceof List<?> raw)) {
+        continue;
+      }
+      List<String> values =
+          raw.stream().filter(String.class::isInstance).map(String.class::cast).toList();
+      if (!values.isEmpty()) {
+        sources.put(name, values);
+      }
+    }
+    return sources;
   }
 
   private record Unit(

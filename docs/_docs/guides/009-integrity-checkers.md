@@ -155,10 +155,18 @@ text-unit checkers and rejects:
 - removed, changed, or malformed Markdown links, including custom-scheme deep
   links.
 
-Failures identify the target locale, canonical string or plural-branch ID, and
-one of `android-resource-syntax`, `printf-placeholder-contract`, or
-`markdown-link-contract`. Semantic translation and accessibility findings still
-require qualified review and are not inferred from syntax.
+Intentional empty output is not parsed as an Android document. Strings marked
+`formatted="false"` are excluded from printf checks, and a non-`other` plural
+branch may omit exactly one existing placeholder occurrence for languages whose
+plural wording expresses the count without printing it. Placeholder additions,
+type substitutions, multiple omissions, and omissions from the `other` branch
+still fail.
+
+Failures identify the target locale, asset path when available, canonical string
+or plural-branch ID, and one of `android-resource-syntax`,
+`printf-placeholder-contract`, or `markdown-link-contract`. Semantic translation
+and accessibility findings still require qualified review and are not inferred
+from syntax.
 
 ### Handling Rejected Translations
 

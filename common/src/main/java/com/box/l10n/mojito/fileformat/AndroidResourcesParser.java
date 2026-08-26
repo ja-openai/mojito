@@ -808,8 +808,10 @@ final class AndroidResourcesParser {
     Map<String, List<Map<String, Object>>> runtimeStyles = new LinkedHashMap<>();
     Map<String, List<Map<String, Object>>> runtimeParagraphs = new LinkedHashMap<>();
     Map<String, Map<String, List<String>>> pluralPlaceholderExamples = new LinkedHashMap<>();
+    Map<String, Map<String, List<String>>> pluralPlaceholderSources = new LinkedHashMap<>();
     Map<String, Map<String, List<Object>>> pluralProtectedOccurrences = new LinkedHashMap<>();
     Map<String, Set<String>> distinctPlaceholderExamples = new LinkedHashMap<>();
+    Map<String, Set<String>> distinctPlaceholderSources = new LinkedHashMap<>();
     Set<String> quantities = new java.util.HashSet<>();
     boolean quotedMarkup = false;
     int newlineCount = 0;
@@ -856,6 +858,20 @@ final class AndroidResourcesParser {
         printfLineSeparators.put(quantity, lineSeparators);
       }
       String normalized = PlaceholderNormalizer.normalize(protectedText, placeholders);
+      List<LocalizationPlaceholder> categoryPlaceholders = PlaceholderNormalizer.placeholders();
+      PlaceholderNormalizer.normalize(protectedText, categoryPlaceholders);
+      Map<String, List<String>> categorySources = new LinkedHashMap<>();
+      for (LocalizationPlaceholder placeholder : categoryPlaceholders) {
+        categorySources
+            .computeIfAbsent(placeholder.name(), unused -> new ArrayList<>())
+            .add(placeholder.source());
+        distinctPlaceholderSources
+            .computeIfAbsent(placeholder.name(), unused -> new HashSet<>())
+            .add(placeholder.source());
+      }
+      if (!categorySources.isEmpty()) {
+        pluralPlaceholderSources.put(quantity, categorySources);
+      }
       Map<String, List<Object>> protectedOccurrences =
           protectedPlaceholderOccurrences(raw, normalized, protectedSections, true);
       if (!protectedOccurrences.isEmpty()) {
@@ -930,6 +946,9 @@ final class AndroidResourcesParser {
     }
     if (distinctPlaceholderExamples.values().stream().anyMatch(examples -> examples.size() > 1)) {
       metadata.put("androidPluralPlaceholderExamples", pluralPlaceholderExamples);
+    }
+    if (distinctPlaceholderSources.values().stream().anyMatch(sources -> sources.size() > 1)) {
+      metadata.put("androidPluralPlaceholderSources", pluralPlaceholderSources);
     }
     if (!pluralProtectedOccurrences.isEmpty()) {
       metadata.put("androidPluralProtectedPlaceholderOccurrences", pluralProtectedOccurrences);

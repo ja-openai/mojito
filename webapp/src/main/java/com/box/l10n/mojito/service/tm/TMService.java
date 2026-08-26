@@ -1200,7 +1200,7 @@ public class TMService {
     if (androidFilterConfigurationProperties.isValidateGeneratedResources()
         && isAndroidFilter(asset, filterConfigIdOverride)) {
       androidLocalizedAssetIntegrityValidator.validate(
-          bcp47Tag, contentToLocalize, generateLocalizedBase);
+          bcp47Tag, asset.getPath(), contentToLocalize, generateLocalizedBase);
     }
 
     if (replaceUsedTmTextUnitVariantIds) {
@@ -1416,6 +1416,7 @@ public class TMService {
         && format == LocalizationFileFormat.ANDROID) {
       androidLocalizedAssetIntegrityValidator.validate(
           outputBcp47tag == null ? repositoryLocale.getLocale().getBcp47Tag() : outputBcp47tag,
+          asset.getPath(),
           content,
           localized);
     }

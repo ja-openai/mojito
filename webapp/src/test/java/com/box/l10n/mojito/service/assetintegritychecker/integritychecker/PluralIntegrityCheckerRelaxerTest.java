@@ -33,11 +33,10 @@ public class PluralIntegrityCheckerRelaxerTest {
     PluralIntegrityCheckerRelaxer relaxer = new PluralIntegrityCheckerRelaxer();
     boolean result =
         relaxer.shouldRelaxIntegrityCheck(
-            "source %d %d", "target", "one", new PrintfLikeIntegrityChecker());
+            "source %d %d", "target %d", "one", new PrintfLikeIntegrityChecker());
 
     assertTrue(
-        result,
-        "Integrity check should be relaxed when placeholders differ by one for 'one' form (as placeholders are stored in a set, ignoring duplicates)");
+        result, "Integrity check should be relaxed when one placeholder occurrence is omitted");
   }
 
   @Test
@@ -50,6 +49,28 @@ public class PluralIntegrityCheckerRelaxerTest {
     assertFalse(
         result,
         "Integrity check should not be relaxed when placeholders differ by two for 'one' form");
+  }
+
+  @Test
+  public void testShouldNotRelaxIntegrityCheck_whenPlaceholderTypeChanges() {
+    PluralIntegrityCheckerRelaxer relaxer = new PluralIntegrityCheckerRelaxer();
+
+    boolean result =
+        relaxer.shouldRelaxIntegrityCheck(
+            "source %1$d", "target %1$s", "one", new PrintfLikeIntegrityChecker());
+
+    assertFalse(result, "Integrity check should not be relaxed for a placeholder type change");
+  }
+
+  @Test
+  public void testShouldNotRelaxIntegrityCheck_whenPlaceholderIsAdded() {
+    PluralIntegrityCheckerRelaxer relaxer = new PluralIntegrityCheckerRelaxer();
+
+    boolean result =
+        relaxer.shouldRelaxIntegrityCheck(
+            "source %1$d", "target %1$d %2$s", "one", new PrintfLikeIntegrityChecker());
+
+    assertFalse(result, "Integrity check should not be relaxed for an added placeholder");
   }
 
   @Test
