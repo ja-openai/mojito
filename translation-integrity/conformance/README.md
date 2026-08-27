@@ -38,7 +38,7 @@ python3 translation-integrity/conformance/verify.py
 
 [`formatjs_parser_expectations.json`](formatjs_parser_expectations.json) pins
 the runtime-specific raw error kinds, the two intentional maximum-depth policy
-differences, and the two raw-parser differences caused by the portable opaque
+differences, and declared raw-parser differences caused by the portable opaque
 tag adapter for `@formatjs/icu-messageformat-parser` 3.5.10. It refers to case
 IDs in `manifest.json`; it does not copy the portable messages or their
 normalized diagnostics.
@@ -51,12 +51,14 @@ node translation-integrity/conformance/formatjs_parser_oracle.mjs
 ```
 
 The oracle verifies the package-lock and installed package versions before it
-parses every FormatJS source and target without adapter preprocessing. It checks
-declared acceptance, raw FormatJS error kinds, Unicode code-point diagnostic
-ranges, source dominance, the measured depth of the two inputs that upstream
-accepts but Mojito caps at 100, and exact metadata for intentional adapter
-differences. It uses `ignoreTag: true` because the corpus assigns rich-tag
-structure to a separate rule.
+parses every FormatJS source, target, and declared boundary-repair target without
+adapter preprocessing. It checks declared acceptance, repaired-target syntax,
+raw FormatJS error kinds, Unicode code-point diagnostic ranges, source
+dominance, the measured depth of the two inputs that upstream accepts but
+Mojito caps at 100, and exact metadata for intentional adapter differences. It
+uses `ignoreTag: true` because the corpus assigns rich-tag structure to a
+separate rule. The portable verifier independently reruns the boundary
+fixed-point check on every repaired target.
 
 The Java validation parser and its tests consume the same manifest and
 expectation file. The Java port is intentionally locale-neutral and does not
@@ -64,14 +66,15 @@ include a renderer or JavaScript `Intl.Locale`-dependent `j` skeleton
 resolution. Adding the parser does not by itself replace a production
 integrity checker; that requires adapter parity plus shadow or canary evidence.
 
-The neutral Java evaluators currently cover six reusable structural slices.
+The neutral Java evaluators currently cover seven reusable structural slices.
 The rich-text-tag evaluator is placeholder-grammar neutral and is exercised in
 isolation across 17 non-syntax-dominated `cutover` cases spanning FormatJS,
 dollar-template, and double-brace profiles. The FormatJS evaluator composes
 message syntax, argument membership, application-controlled select structure,
-the explicitly enabled rich-text-tag feature, boundary whitespace, and
-legacy-compatible email and URL literals across all 65 `cutover` cases whose
-rule sets it owns. The dollar-template evaluator similarly composes its
+the explicitly enabled rich-text-tag feature, boundary whitespace, the
+web-only FormatJS apostrophe-before-tag rule, and legacy-compatible email and
+URL literals across all 70 `cutover` cases whose rule sets it owns. The
+dollar-template evaluator similarly composes its
 placeholder contract with the explicit tag, boundary, and literal rules across
 nine `cutover` cases.
 
@@ -82,10 +85,34 @@ U+00A0, U+1680, U+2000–200A, U+2028–2029, U+202F, U+205F, and U+3000. A safe
 repair copies the source boundaries around the exact target core only when both
 stripped cores are nonempty. The evaluator then reruns the complete selected
 structural contract with repair disabled and requires a fixed-point pass.
-Independent policy diagnostics and review routing are preserved; any
-nonrepairable structural finding suppresses partial repair. Combined boundary
-and apostrophe repair remains an `extended` contract and is not implemented by
-these composites.
+Independent policy diagnostics and review routing remain part of the portable
+corpus envelope; any nonrepairable structural finding suppresses boundary
+repair. Production repository adapters treat this repairable result as a
+rejection and never modify translations.
+
+The web-only apostrophe evaluator consumes quote spans recorded by the same
+Java FormatJS parser state machine used for structural validation. It therefore
+preserves doubled apostrophes, ignores apostrophes that close a genuine ICU
+quote, inherits the correct plural/selectordinal `#` context, and keeps complete
+opaque tag attributes outside message quote state. A separate token check
+requires the recognized quote opener to be immediately followed by one complete
+ASCII FormatJS opening or closing tag token; an angle-bracket lookalike is not a
+finding. Opening tokens permit only whitespace-separated attributes
+with valid names and quoted, unquoted, or boolean values, plus an optional
+self-close; closing tokens permit only whitespace after the tag name. Malformed
+tails such as `<link,not-a-tag>` and `<link{bad}>` are not findings.
+
+The Python-compatible structural parser also records every broad tag span it
+consumes atomically. A span that is one complete exact token remains opaque. A
+non-exact span receives a bounded span-local scan only for otherwise-hidden legacy
+apostrophe findings, with nested complete tokens kept atomic; those conservative
+span-local findings reject. Quote
+state everywhere outside recorded spans still comes from the real parser, so
+valid argument types, simple styles, selector branches, plural offsets, and `#`
+semantics are not reimplemented by a recovery parser. All apostrophe findings
+derive `REJECT_TARGET`; neither the neutral evaluator nor the production adapter
+proposes or applies replacement text. The dollar-template evaluator does not
+enable this renderer-specific rule.
 
 The profile-neutral email and URL evaluators are each exercised directly
 across nine non-syntax-dominated `cutover` cases. They intentionally preserve
@@ -115,10 +142,12 @@ diagnostics remain `extended`; applying source-first syntax dominance to this
 profile is deferred until shadow evidence shows that enforcing it will not
 reject valid catalog data.
 
-With corpus version 0.7.0, the implemented repository-profile arithmetic is
-80 of 86 web cutover cases (65 FormatJS-profile plus 15 shared plain cases) and
+With corpus version 0.8.0, the implemented repository-profile arithmetic is
+85 of 86 web cutover cases (70 FormatJS-profile plus 15 shared plain cases) and
 24 of 24 common cutover cases (nine dollar-template plus 15 shared plain
-cases). This is executable contract coverage, not retirement evidence:
+cases). The remaining web case also declares `waiver-policy`; producing its
+apostrophe finding does not make this structural evaluator a repository-policy
+adapter. This is executable contract coverage, not retirement evidence:
 production wiring, every mutation path, parity observation, and rollback
 ownership remain required.
 
@@ -156,8 +185,7 @@ The corpus has two tiers:
 - `cutover`: the minimum behavior that an adapter must implement before a
   corresponding downstream checker can be considered for retirement.
 - `extended`: stricter behavior for known gaps, including complete literal
-  parsing, typed arguments, malformed non-ICU templates, richer tag checks, and
-  repair composition that corrects a legacy last-write-wins bug.
+  parsing, typed arguments, malformed non-ICU templates, and richer tag checks.
 
 Passing the tier alone is not retirement evidence. A consumer must also map
 each legacy check to case IDs, prove adapter parity, and observe the new path in
@@ -299,18 +327,15 @@ structural exemption to coexist with a human-review requirement.
 
 ## Safe repairs
 
-Version 1 permits only named transformations whose output can be derived from
-the input:
+Version 1 permits one named transformation whose output can be derived from the
+input:
 
 - `COPY_SOURCE_BOUNDARY_WHITESPACE`
-- `DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG`
-- `REPLACE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG_WITH_U2019`
 
 Every repair case contains the exact `expectedTarget` and exact
 `expectedDiagnostics` after repair. The verifier derives the output itself,
-checks the expectation, and checks idempotence. Boundary-whitespace repair may
-compose with either apostrophe strategy, but the two apostrophe strategies are
-mutually exclusive.
+checks the expectation, and checks idempotence. Production repository adapters
+reject even this repairable disposition and never apply the transformation.
 
 `expectedPolicyDiagnostics` is empty by default. A repair-plus-review case
 lists it explicitly to prove that repairing the target does not clear an
@@ -322,20 +347,8 @@ would be stale while re-evaluating it could activate a previously waived error.
 That workflow requires an explicit future contract for waiver migration.
 
 Missing arguments, changed literals, malformed messages, changed selectors,
-and linguistic findings are never machine-repaired by this corpus.
-
-The two apostrophe operations are explicit policy choices. `icu-double`
-preserves the rendered ASCII apostrophe with the native ICU escape.
-`compatibility-u2019` matches a legacy downstream normalization while that
-checker remains in the path. Both repaired forms pass structural validation;
-changing the rollout strategy is a policy change, not an implicit adapter
-choice.
-
-An apostrophe repair is allowed only when each detected quote opener remains
-unclosed through the end of the message. If a later apostrophe closes that
-quote, replacing the first one could make the later apostrophe a new opener.
-That ambiguous form is rejected for manual correction instead of being
-reported as safely repairable.
+apostrophe-before-tag findings, and linguistic findings are never
+machine-repaired by this corpus.
 
 ## Waivers and external findings
 

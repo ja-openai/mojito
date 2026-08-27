@@ -280,7 +280,11 @@
       "required": ["tag", "occurrence"],
       "additionalProperties": false,
       "properties": {
-        "tag": {"type": "string", "minLength": 1},
+        "tag": {
+          "type": "string",
+          "minLength": 3,
+          "description": "The complete FormatJS tag token immediately following the recognized ICU quote opener: an ASCII tag name; valid separated attributes or an optional self-close only on opening tags; and only optional whitespace after a closing-tag name."
+        },
         "occurrence": {"type": "integer", "minimum": 1}
       }
     },
@@ -652,9 +656,6 @@
           "items": {"enum": ["zero", "one", "two", "few", "many", "other"]}
         },
         "boundaryWhitespaceInvariant": {"const": true},
-        "apostropheRepairStrategy": {
-          "enum": ["compatibility-u2019", "icu-double"]
-        },
         "maxNestingDepth": {
           "type": "integer",
           "minimum": 1
@@ -671,25 +672,7 @@
           "minItems": 1,
           "uniqueItems": true,
           "items": {
-            "enum": [
-              "COPY_SOURCE_BOUNDARY_WHITESPACE",
-              "DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG",
-              "REPLACE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG_WITH_U2019"
-            ]
-          },
-          "not": {
-            "allOf": [
-              {
-                "contains": {
-                  "const": "DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG"
-                }
-              },
-              {
-                "contains": {
-                  "const": "REPLACE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG_WITH_U2019"
-                }
-              }
-            ]
+            "const": "COPY_SOURCE_BOUNDARY_WHITESPACE"
           }
         },
         "expectedTarget": {"type": "string"},

@@ -35,7 +35,8 @@ class FormatJsTranslationIntegrityEvaluatorConformanceTest {
           "rich-text-tag-contract",
           "boundary-whitespace",
           "email-literal-contract",
-          "url-literal-contract");
+          "url-literal-contract",
+          "formatjs-apostrophe-before-tag");
 
   @Test
   void matchesEveryApplicableCutoverCase() throws IOException {
@@ -50,14 +51,7 @@ class FormatJsTranslationIntegrityEvaluatorConformanceTest {
       }
       evaluated++;
       String id = testCase.path("id").asText();
-      TranslationIntegrityEvaluation actual =
-          evaluator.evaluate(
-              testCase.path("source").path("text").asText(),
-              testCase.path("target").path("text").asText(),
-              containsText(testCase.path("features"), "rich-text-tags"),
-              containsText(testCase.path("rules"), "boundary-whitespace"),
-              containsText(testCase.path("rules"), "email-literal-contract"),
-              containsText(testCase.path("rules"), "url-literal-contract"));
+      TranslationIntegrityEvaluation actual = evaluate(testCase, evaluator);
       TranslationIntegrityEvaluation expected = expectedEvaluation(testCase.path("expected"));
       String mismatch = mismatch(expected, actual);
       if (mismatch != null) {
@@ -65,8 +59,45 @@ class FormatJsTranslationIntegrityEvaluatorConformanceTest {
       }
     }
 
-    assertThat(evaluated).isEqualTo(65);
+    assertThat(evaluated).isEqualTo(70);
     assertThat(mismatches).isEmpty();
+  }
+
+  @Test
+  void matchesOwnedExtendedApostropheSafetyCases() throws IOException {
+    JsonNode manifest = JSON.readTree(findConformanceRoot().resolve("manifest.json").toFile());
+    FormatJsTranslationIntegrityEvaluator evaluator = new FormatJsTranslationIntegrityEvaluator();
+    List<String> mismatches = new ArrayList<>();
+    int evaluated = 0;
+
+    for (JsonNode testCase : manifest.path("cases")) {
+      if (!isOwnedExtendedApostropheCase(testCase)) {
+        continue;
+      }
+      evaluated++;
+      TranslationIntegrityEvaluation actual = evaluate(testCase, evaluator);
+      TranslationIntegrityEvaluation expected = expectedEvaluation(testCase.path("expected"));
+      String mismatch = mismatch(expected, actual);
+      if (mismatch != null) {
+        mismatches.add(testCase.path("id").asText() + ": " + mismatch);
+      }
+    }
+
+    assertThat(evaluated).isEqualTo(18);
+    assertThat(mismatches).isEmpty();
+  }
+
+  @Test
+  void matchesTheDetectorLaneOfTheRemainingPolicyCompositionCase() throws IOException {
+    JsonNode manifest = JSON.readTree(findConformanceRoot().resolve("manifest.json").toFile());
+    JsonNode testCase = findCase(manifest, "policy.waiver-does-not-short-circuit.reject");
+    TranslationIntegrityEvaluation expected = expectedEvaluation(testCase.path("expected"));
+    TranslationIntegrityEvaluation actual =
+        evaluate(testCase, new FormatJsTranslationIntegrityEvaluator());
+
+    assertThat(actual.diagnostics()).containsExactlyElementsOf(expected.diagnostics());
+    assertThat(actual.disposition()).isEqualTo(TranslationIntegrityDisposition.REJECT_TARGET);
+    assertThat(actual.policyDiagnostics()).isEmpty();
   }
 
   @Test
@@ -126,6 +157,18 @@ class FormatJsTranslationIntegrityEvaluatorConformanceTest {
             "immutable-email-missing",
             "immutable-url-extra",
             "immutable-url-missing");
+  }
+
+  @Test
+  void enablesApostropheContractOnlyWhenExplicitlySelected() {
+    String source = "Read <link>details</link>.";
+    String target = "L'<link>DETAIL</link>.";
+    FormatJsTranslationIntegrityEvaluator evaluator = new FormatJsTranslationIntegrityEvaluator();
+
+    assertThat(evaluator.evaluate(source, target, true))
+        .isEqualTo(TranslationIntegrityEvaluation.pass());
+    assertThat(evaluator.evaluate(source, target, true, false, false, false, true).disposition())
+        .isEqualTo(TranslationIntegrityDisposition.REJECT_TARGET);
   }
 
   @Test
@@ -264,6 +307,38 @@ class FormatJsTranslationIntegrityEvaluatorConformanceTest {
     Set<String> rules = new HashSet<>();
     testCase.path("rules").forEach(rule -> rules.add(rule.asText()));
     return SUPPORTED_RULES.containsAll(rules);
+  }
+
+  private static boolean isOwnedExtendedApostropheCase(JsonNode testCase) {
+    if (!testCase.path("tier").asText().equals("extended")
+        || !testCase.path("profile").asText().equals("formatjs")
+        || !containsText(testCase.path("rules"), "formatjs-apostrophe-before-tag")) {
+      return false;
+    }
+    Set<String> rules = new HashSet<>();
+    testCase.path("rules").forEach(rule -> rules.add(rule.asText()));
+    return SUPPORTED_RULES.containsAll(rules);
+  }
+
+  private static TranslationIntegrityEvaluation evaluate(
+      JsonNode testCase, FormatJsTranslationIntegrityEvaluator evaluator) {
+    return evaluator.evaluate(
+        testCase.path("source").path("text").asText(),
+        testCase.path("target").path("text").asText(),
+        containsText(testCase.path("features"), "rich-text-tags"),
+        containsText(testCase.path("rules"), "boundary-whitespace"),
+        containsText(testCase.path("rules"), "email-literal-contract"),
+        containsText(testCase.path("rules"), "url-literal-contract"),
+        containsText(testCase.path("rules"), "formatjs-apostrophe-before-tag"));
+  }
+
+  private static JsonNode findCase(JsonNode manifest, String id) {
+    for (JsonNode testCase : manifest.path("cases")) {
+      if (testCase.path("id").asText().equals(id)) {
+        return testCase;
+      }
+    }
+    throw new IllegalArgumentException("unknown case: " + id);
   }
 
   private static boolean containsText(JsonNode array, String expected) {

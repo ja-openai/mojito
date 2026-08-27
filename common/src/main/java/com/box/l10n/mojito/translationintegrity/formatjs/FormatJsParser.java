@@ -50,6 +50,8 @@ public final class FormatJsParser {
   private int line = 1;
   private int column = 1;
   private boolean used;
+  private final List<ApostropheQuote> apostropheQuotes = new ArrayList<>();
+  private final List<OpaqueTagSpan> pythonOpaqueTagSpans = new ArrayList<>();
 
   /** Creates the equivalent of FormatJS's low-level {@code new Parser(message)}. */
   public FormatJsParser(String message) {
@@ -90,6 +92,22 @@ public final class FormatJsParser {
 
   public static FormatJsParseResult parseResult(String message, FormatJsParserOptions options) {
     return new FormatJsParser(message, options).parseResult();
+  }
+
+  /** Recognized ICU apostrophe quotes from this parser's completed state-machine walk. */
+  List<ApostropheQuote> apostropheQuotes() {
+    if (!used) {
+      throw new IllegalStateException("message must be parsed before quote observations are read");
+    }
+    return List.copyOf(apostropheQuotes);
+  }
+
+  /** Python-compatible tag spans consumed atomically from message contexts. */
+  List<OpaqueTagSpan> pythonOpaqueTagSpans() {
+    if (!used) {
+      throw new IllegalStateException("message must be parsed before tag observations are read");
+    }
+    return List.copyOf(pythonOpaqueTagSpans);
   }
 
   private List<FormatJsElement> parseMessage(
@@ -213,6 +231,7 @@ public final class FormatJsParser {
 
     FormatJsSourcePosition start = position();
     int startOffset = offset;
+    pythonOpaqueTagSpans.add(new OpaqueTagSpan(startOffset, endOffset));
     while (offset < endOffset) {
       bump();
     }
@@ -265,6 +284,8 @@ public final class FormatJsParser {
       return null;
     }
 
+    int openingOffset = offset;
+    Integer closingOffset = null;
     bump();
     StringBuilder value = new StringBuilder();
     value.appendCodePoint(currentCodePoint());
@@ -276,6 +297,7 @@ public final class FormatJsParser {
           value.append('\'');
           bump();
         } else {
+          closingOffset = offset;
           bump();
           break;
         }
@@ -284,7 +306,29 @@ public final class FormatJsParser {
       }
       bump();
     }
+    apostropheQuotes.add(new ApostropheQuote(openingOffset, closingOffset));
     return value.toString();
+  }
+
+  record ApostropheQuote(int openingOffset, Integer closingOffset) {
+
+    ApostropheQuote {
+      if (openingOffset < 0) {
+        throw new IllegalArgumentException("openingOffset must not be negative");
+      }
+      if (closingOffset != null && closingOffset <= openingOffset) {
+        throw new IllegalArgumentException("closingOffset must follow openingOffset");
+      }
+    }
+  }
+
+  record OpaqueTagSpan(int startOffset, int endOffset) {
+
+    OpaqueTagSpan {
+      if (startOffset < 0 || endOffset <= startOffset) {
+        throw new IllegalArgumentException("opaque tag span must be nonempty");
+      }
+    }
   }
 
   private String tryParseUnquoted(int nestingLevel, ParentArgumentType parentArgumentType) {
