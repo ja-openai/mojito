@@ -62,6 +62,19 @@ include a renderer or JavaScript `Intl.Locale`-dependent `j` skeleton
 resolution. Adding the parser does not by itself replace a production
 integrity checker; that requires adapter parity plus shadow or canary evidence.
 
+The neutral Java evaluator currently composes FormatJS message syntax,
+argument membership, and application-controlled select structure. Its
+manifest-driven test covers all 54 `cutover` cases whose rule sets are fully
+owned by those three rules. The evaluator is not registered on a Mojito
+repository or wired to enforcement; the remaining rule adapters and shadow
+evidence are still required before downstream checker retirement.
+
+The shared Java result model represents the complete manifest envelope,
+including policy diagnostics, review routing, exemptions, and deterministic
+safe repairs. The current FormatJS evaluator uses only its structural
+two-argument constructor; later composite adapters own policy and repair
+composition.
+
 ## What the contract separates
 
 Each case keeps four concerns distinct:

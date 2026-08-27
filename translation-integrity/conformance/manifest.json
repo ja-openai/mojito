@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "corpusVersion": "0.2.0",
+  "corpusVersion": "0.3.0",
   "name": "translation-integrity",
   "offsetEncoding": "unicode-code-point",
   "policyEvaluationDate": "2030-01-01",
@@ -1557,6 +1557,40 @@
       }
     },
     {
+      "id": "formatjs.plain-to-select.reject",
+      "description": "A plain argument cannot become an application-controlled select argument.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Mode: {mode}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select, on {TARGET ON} other {TARGET OFF}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "select-argument-changed",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "argument": "mode",
+              "expectedType": "plain",
+              "actualType": "select"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
       "id": "formatjs.plural-categories-localized.pass",
       "description": "Target plural categories may differ from source categories for the target locale.",
       "tier": "cutover",
@@ -1865,6 +1899,86 @@
               ],
               "expectedCount": 2,
               "actualCount": 1
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.select-occurrence-signature-redistributed.reject",
+      "description": "Select occurrences cannot redistribute selector signatures while preserving only their total count and option union.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {A} other {B}} / {mode, select, off {C} other {D}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select, on {A} off {C} other {B}} / {mode, select, other {D}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "select-occurrence-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "argument": "mode",
+              "selectors": [
+                "off",
+                "on",
+                "other"
+              ],
+              "expectedCount": 0,
+              "actualCount": 1
+            }
+          },
+          {
+            "code": "select-occurrence-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "argument": "mode",
+              "selectors": [
+                "other"
+              ],
+              "expectedCount": 0,
+              "actualCount": 1
+            }
+          },
+          {
+            "code": "select-occurrence-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "argument": "mode",
+              "selectors": [
+                "off",
+                "other"
+              ],
+              "expectedCount": 1,
+              "actualCount": 0
+            }
+          },
+          {
+            "code": "select-occurrence-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "argument": "mode",
+              "selectors": [
+                "on",
+                "other"
+              ],
+              "expectedCount": 1,
+              "actualCount": 0
             }
           }
         ],
@@ -2215,6 +2329,38 @@
       }
     },
     {
+      "id": "formatjs.syntax.invalid-select-selector.reject",
+      "description": "A select selector cannot begin with punctuation that is illegal in an identifier.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {ON} other {OFF}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select, -bad {TARGET} other {OTHER}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "invalid-selector"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
       "id": "formatjs.syntax.missing-argument-delimiter.reject",
       "description": "An ICU argument name must be followed by a comma or closing brace.",
       "tier": "cutover",
@@ -2324,6 +2470,38 @@
       "target": {
         "locale": "x-target",
         "text": "{count, plural, offset:}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "missing-argument-or-selector"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.missing-plural-selector.reject",
+      "description": "A plural argument cannot contain a branch with no selector.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{count, plural, one {ONE} other {OTHER}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{count, plural, {TARGET} other {OTHER}}"
       },
       "expected": {
         "diagnostics": [
@@ -2664,6 +2842,38 @@
       "target": {
         "locale": "x-target",
         "text": "{mode, select, on TARGET other {OTHER}}"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "target-format-invalid",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "reason": "unbraced-selector-branch"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.syntax.unbraced-selector-close.reject",
+      "description": "A valid selector followed by the argument close still requires a braced branch body.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "select-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{mode, select, on {ON} other {OFF}}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{mode, select, on }"
       },
       "expected": {
         "diagnostics": [
