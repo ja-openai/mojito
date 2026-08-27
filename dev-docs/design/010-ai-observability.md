@@ -33,6 +33,11 @@ scoped attempt summary plus redacted request/response payloads when a payload ex
 from review-project detail. The system AI Translate settings page also exposes lineage as a
 drill-down on recent runs so operators can check whether normalized rows were written even when a
 text-unit history row only has the legacy translation comment.
+For readability, the shared JSON viewer expands object or array JSON encoded in OpenAI
+`input_text.text` and `output_text.text` fields. Other JSON-looking strings remain strings, and the
+raw-payload link always serves the original stored content. Request payloads with a top-level
+`instructions` string also offer a safe Markdown-rendered Instructions view while keeping JSON as
+the default view.
 
 P95 request latency by locale:
 

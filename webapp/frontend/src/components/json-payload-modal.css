@@ -86,6 +86,41 @@
   font-weight: var(--font-weight-semibold);
 }
 
+.json-payload-modal__view-tabs {
+  display: inline-flex;
+  align-self: flex-start;
+  flex: 0 0 auto;
+  margin-bottom: var(--space-3);
+  padding: 0.15rem;
+  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--color-surface) 90%, var(--color-border));
+}
+
+.json-payload-modal__view-tab {
+  padding: 0.3rem var(--space-2);
+  border: 0;
+  border-radius: var(--radius-1);
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.json-payload-modal__view-tab--active {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+
+.json-payload-modal__instructions {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
 .json-payload-modal__actions {
   align-items: center;
   flex: 0 0 auto;

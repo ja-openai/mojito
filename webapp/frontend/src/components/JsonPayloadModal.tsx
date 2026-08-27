@@ -3,6 +3,8 @@ import './json-payload-modal.css';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 
+import { formatJsonPayload, getJsonPayloadInstructions } from '../utils/jsonPayloadFormatting';
+import { MarkdownPreview } from './markdown/MarkdownPreview';
 import { Modal } from './Modal';
 
 export type JsonPayloadModalItem = {
@@ -20,6 +22,8 @@ type JsonPayloadModalProps = {
   onClose: () => void;
 };
 
+type PayloadView = 'json' | 'instructions';
+
 export function JsonPayloadModal({
   open,
   items,
@@ -28,6 +32,7 @@ export function JsonPayloadModal({
   onClose,
 }: JsonPayloadModalProps) {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const [payloadView, setPayloadView] = useState<PayloadView>('json');
   const activeItem = useMemo(
     () => items.find((item) => item.key === activeItemKey) ?? items[0] ?? null,
     [activeItemKey, items],
@@ -45,19 +50,33 @@ export function JsonPayloadModal({
     if (!payloadQuery.data) {
       return '';
     }
-    return formatPayload(payloadQuery.data);
+    return formatJsonPayload(payloadQuery.data);
   }, [payloadQuery.data]);
+  const instructions = useMemo(() => {
+    if (!payloadQuery.data) {
+      return null;
+    }
+    return getJsonPayloadInstructions(payloadQuery.data);
+  }, [payloadQuery.data]);
+  const activePayloadView =
+    payloadView === 'instructions' && instructions ? 'instructions' : 'json';
+  const displayedContent =
+    activePayloadView === 'instructions' ? (instructions ?? '') : formattedPayload;
+
+  useEffect(() => {
+    setPayloadView('json');
+  }, [activeUrl, open]);
 
   useEffect(() => {
     setCopyStatus('idle');
-  }, [activeUrl, open]);
+  }, [activePayloadView, activeUrl, open]);
 
   const copyPayload = async () => {
-    if (!formattedPayload) {
+    if (!displayedContent) {
       return;
     }
     try {
-      await navigator.clipboard.writeText(formattedPayload);
+      await navigator.clipboard.writeText(displayedContent);
       setCopyStatus('copied');
     } catch {
       setCopyStatus('failed');
@@ -94,6 +113,32 @@ export function JsonPayloadModal({
           ))}
         </div>
       ) : null}
+      {instructions ? (
+        <div className="json-payload-modal__view-tabs" role="tablist" aria-label="Payload view">
+          <button
+            type="button"
+            className={`json-payload-modal__view-tab${
+              activePayloadView === 'json' ? ' json-payload-modal__view-tab--active' : ''
+            }`}
+            role="tab"
+            aria-selected={activePayloadView === 'json'}
+            onClick={() => setPayloadView('json')}
+          >
+            JSON
+          </button>
+          <button
+            type="button"
+            className={`json-payload-modal__view-tab${
+              activePayloadView === 'instructions' ? ' json-payload-modal__view-tab--active' : ''
+            }`}
+            role="tab"
+            aria-selected={activePayloadView === 'instructions'}
+            onClick={() => setPayloadView('instructions')}
+          >
+            Instructions
+          </button>
+        </div>
+      ) : null}
       <div className="modal__body json-payload-modal__body">
         {!activeItem ? (
           <div className="json-payload-modal__state">No JSON payload available.</div>
@@ -111,8 +156,15 @@ export function JsonPayloadModal({
               : 'Failed to load JSON payload.'}
           </div>
         ) : null}
-        {formattedPayload ? (
+        {formattedPayload && activePayloadView === 'json' ? (
           <pre className="json-payload-modal__pre">{formattedPayload}</pre>
+        ) : null}
+        {instructions && activePayloadView === 'instructions' ? (
+          <MarkdownPreview
+            markdown={instructions}
+            className="json-payload-modal__instructions"
+            emptyLabel="No instructions provided."
+          />
         ) : null}
       </div>
       <div className="modal__actions json-payload-modal__actions">
@@ -139,7 +191,7 @@ export function JsonPayloadModal({
             onClick={() => {
               void copyPayload();
             }}
-            disabled={!formattedPayload}
+            disabled={!displayedContent}
           >
             {copyStatus === 'copied' ? 'Copied' : 'Copy'}
           </button>
@@ -165,12 +217,4 @@ async function fetchPayload(url: string): Promise<string> {
     throw new Error(text || `Request failed with status ${response.status}`);
   }
   return text;
-}
-
-function formatPayload(payload: string) {
-  try {
-    return JSON.stringify(JSON.parse(payload), null, 2);
-  } catch {
-    return payload;
-  }
 }
