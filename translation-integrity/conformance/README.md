@@ -64,15 +64,27 @@ include a renderer or JavaScript `Intl.Locale`-dependent `j` skeleton
 resolution. Adding the parser does not by itself replace a production
 integrity checker; that requires adapter parity plus shadow or canary evidence.
 
-The neutral Java evaluators currently cover three reusable structural slices.
+The neutral Java evaluators currently cover four reusable structural slices.
 The rich-text-tag evaluator is placeholder-grammar neutral and is exercised in
 isolation across 17 non-syntax-dominated `cutover` cases spanning FormatJS,
 dollar-template, and double-brace profiles. The FormatJS evaluator composes
 message syntax, argument membership, application-controlled select structure,
-and the explicitly enabled rich-text-tag feature across all 62 `cutover` cases
-whose rule sets it owns. The dollar-template evaluator similarly composes its
-placeholder contract with the explicit tag feature across seven `cutover`
-cases.
+the explicitly enabled rich-text-tag feature, and boundary whitespace across
+all 64 `cutover` cases whose rule sets it owns. The dollar-template evaluator
+similarly composes its placeholder contract with the explicit tag and boundary
+features across eight `cutover` cases.
+
+The profile-neutral boundary-whitespace evaluator is exercised directly across
+eight applicable cases. It scans by Unicode code point with Python's explicit
+29-code-point `strip` predicate: U+0009–000D, U+001C–001F, U+0020, U+0085,
+U+00A0, U+1680, U+2000–200A, U+2028–2029, U+202F, U+205F, and U+3000. A safe
+repair copies the source boundaries around the exact target core only when both
+stripped cores are nonempty. The evaluator then reruns the complete selected
+structural contract with repair disabled and requires a fixed-point pass.
+Independent policy diagnostics and review routing are preserved; any
+nonrepairable structural finding suppresses partial repair. Combined boundary
+and apostrophe repair remains an `extended` contract and is not implemented by
+these composites.
 
 The rich-text-tag cutover gate intentionally matches the downstream Python
 checker: it compares exact sets of raw tokens found by `<.*?>`, with matching
@@ -96,8 +108,9 @@ required before downstream checker retirement.
 
 The shared Java result model represents the complete manifest envelope,
 including policy diagnostics, review routing, exemptions, and deterministic
-safe repairs. The current evaluators use only the structural result constructor;
-later composite adapters own policy and repair composition.
+safe repairs. The boundary composite preserves independent policy and review
+output and emits the deterministic boundary repair; later policy adapters still
+own waiver evaluation.
 
 ## What the contract separates
 

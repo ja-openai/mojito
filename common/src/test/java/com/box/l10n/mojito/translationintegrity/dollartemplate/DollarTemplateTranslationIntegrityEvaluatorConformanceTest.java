@@ -8,6 +8,9 @@ import com.box.l10n.mojito.translationintegrity.TranslationIntegrityDiagnostic.S
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityDisposition;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityEvaluation;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityRange;
+import com.box.l10n.mojito.translationintegrity.TranslationIntegrityRepairOperation;
+import com.box.l10n.mojito.translationintegrity.TranslationIntegrityReviewDisposition;
+import com.box.l10n.mojito.translationintegrity.TranslationIntegritySafeRepair;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,7 +29,8 @@ class DollarTemplateTranslationIntegrityEvaluatorConformanceTest {
 
   private static final ObjectMapper JSON = new ObjectMapper();
   private static final Set<String> SUPPORTED_RULES =
-      Set.of("message-syntax", "argument-contract", "rich-text-tag-contract");
+      Set.of(
+          "message-syntax", "argument-contract", "rich-text-tag-contract", "boundary-whitespace");
 
   @Test
   void matchesEveryApplicableCutoverCase() throws IOException {
@@ -46,14 +50,15 @@ class DollarTemplateTranslationIntegrityEvaluatorConformanceTest {
           evaluator.evaluate(
               testCase.path("source").path("text").asText(),
               testCase.path("target").path("text").asText(),
-              containsText(testCase.path("features"), "rich-text-tags"));
+              containsText(testCase.path("features"), "rich-text-tags"),
+              containsText(testCase.path("rules"), "boundary-whitespace"));
       TranslationIntegrityEvaluation expected = expectedEvaluation(testCase.path("expected"));
       if (!expected.equals(actual)) {
         mismatches.add(id + ": expected " + expected + ", got " + actual);
       }
     }
 
-    assertThat(evaluated).isEqualTo(7);
+    assertThat(evaluated).isEqualTo(8);
     assertThat(mismatches).isEmpty();
   }
 
@@ -104,8 +109,39 @@ class DollarTemplateTranslationIntegrityEvaluatorConformanceTest {
   }
 
   private static TranslationIntegrityEvaluation expectedEvaluation(JsonNode expected) {
+    List<TranslationIntegrityDiagnostic> diagnostics = diagnostics(expected.path("diagnostics"));
+    List<TranslationIntegrityDiagnostic> policyDiagnostics =
+        diagnostics(expected.path("policyDiagnostics"));
+    TranslationIntegritySafeRepair safeRepair = null;
+    if (expected.has("safeRepair")) {
+      JsonNode repair = expected.path("safeRepair");
+      List<TranslationIntegrityRepairOperation> operations = new ArrayList<>();
+      repair
+          .path("operations")
+          .forEach(
+              operation ->
+                  operations.add(TranslationIntegrityRepairOperation.valueOf(operation.asText())));
+      safeRepair =
+          new TranslationIntegritySafeRepair(
+              operations,
+              repair.path("expectedTarget").asText(),
+              diagnostics(repair.path("expectedDiagnostics")),
+              diagnostics(repair.path("expectedPolicyDiagnostics")));
+    }
+    return new TranslationIntegrityEvaluation(
+        diagnostics,
+        policyDiagnostics,
+        TranslationIntegrityDisposition.valueOf(expected.path("disposition").asText()),
+        expected.has("reviewDisposition")
+            ? TranslationIntegrityReviewDisposition.valueOf(
+                expected.path("reviewDisposition").asText())
+            : null,
+        safeRepair);
+  }
+
+  private static List<TranslationIntegrityDiagnostic> diagnostics(JsonNode values) {
     List<TranslationIntegrityDiagnostic> diagnostics = new ArrayList<>();
-    for (JsonNode diagnostic : expected.path("diagnostics")) {
+    for (JsonNode diagnostic : values) {
       Map<String, Object> details =
           JSON.convertValue(
               diagnostic.path("details"), new TypeReference<Map<String, Object>>() {});
@@ -123,9 +159,7 @@ class DollarTemplateTranslationIntegrityEvaluatorConformanceTest {
               details,
               range));
     }
-    return new TranslationIntegrityEvaluation(
-        diagnostics,
-        TranslationIntegrityDisposition.valueOf(expected.path("disposition").asText()));
+    return diagnostics;
   }
 
   private static Path findConformanceRoot() {

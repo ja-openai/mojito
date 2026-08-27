@@ -4,6 +4,7 @@ import com.box.l10n.mojito.translationintegrity.TranslationIntegrityDiagnostic;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityDisposition;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityEvaluation;
 import com.box.l10n.mojito.translationintegrity.richtag.RichTextTagTranslationIntegrityEvaluator;
+import com.box.l10n.mojito.translationintegrity.whitespace.BoundaryWhitespaceTranslationIntegrityEvaluator;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -28,12 +29,36 @@ public final class DollarTemplateTranslationIntegrityEvaluator {
       DollarTemplateTranslationIntegrityEvaluator::compareByCodePoint;
   private static final RichTextTagTranslationIntegrityEvaluator RICH_TEXT_TAG_EVALUATOR =
       new RichTextTagTranslationIntegrityEvaluator();
+  private static final BoundaryWhitespaceTranslationIntegrityEvaluator
+      BOUNDARY_WHITESPACE_EVALUATOR = new BoundaryWhitespaceTranslationIntegrityEvaluator();
 
   public TranslationIntegrityEvaluation evaluate(String source, String target) {
-    return evaluate(source, target, false);
+    return evaluate(source, target, false, false);
   }
 
   public TranslationIntegrityEvaluation evaluate(
+      String source, String target, boolean evaluateRichTextTags) {
+    return evaluate(source, target, evaluateRichTextTags, false);
+  }
+
+  /** Evaluates explicitly selected, independently composable dollar-template cutover features. */
+  public TranslationIntegrityEvaluation evaluate(
+      String source,
+      String target,
+      boolean evaluateRichTextTags,
+      boolean evaluateBoundaryWhitespace) {
+    TranslationIntegrityEvaluation structuralEvaluation =
+        evaluateStructural(source, target, evaluateRichTextTags);
+    return evaluateBoundaryWhitespace
+        ? BOUNDARY_WHITESPACE_EVALUATOR.compose(
+            source,
+            target,
+            structuralEvaluation,
+            repairedTarget -> evaluateStructural(source, repairedTarget, evaluateRichTextTags))
+        : structuralEvaluation;
+  }
+
+  private TranslationIntegrityEvaluation evaluateStructural(
       String source, String target, boolean evaluateRichTextTags) {
     Objects.requireNonNull(source, "source");
     Objects.requireNonNull(target, "target");
