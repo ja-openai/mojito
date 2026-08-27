@@ -33,7 +33,9 @@ class FormatJsTranslationIntegrityEvaluatorConformanceTest {
           "argument-contract",
           "select-contract",
           "rich-text-tag-contract",
-          "boundary-whitespace");
+          "boundary-whitespace",
+          "email-literal-contract",
+          "url-literal-contract");
 
   @Test
   void matchesEveryApplicableCutoverCase() throws IOException {
@@ -53,7 +55,9 @@ class FormatJsTranslationIntegrityEvaluatorConformanceTest {
               testCase.path("source").path("text").asText(),
               testCase.path("target").path("text").asText(),
               containsText(testCase.path("features"), "rich-text-tags"),
-              containsText(testCase.path("rules"), "boundary-whitespace"));
+              containsText(testCase.path("rules"), "boundary-whitespace"),
+              containsText(testCase.path("rules"), "email-literal-contract"),
+              containsText(testCase.path("rules"), "url-literal-contract"));
       TranslationIntegrityEvaluation expected = expectedEvaluation(testCase.path("expected"));
       String mismatch = mismatch(expected, actual);
       if (mismatch != null) {
@@ -61,7 +65,7 @@ class FormatJsTranslationIntegrityEvaluatorConformanceTest {
       }
     }
 
-    assertThat(evaluated).isEqualTo(64);
+    assertThat(evaluated).isEqualTo(65);
     assertThat(mismatches).isEmpty();
   }
 
@@ -77,17 +81,51 @@ class FormatJsTranslationIntegrityEvaluatorConformanceTest {
   }
 
   @Test
-  void boundaryCompositionPreservesSourceAndTargetSyntaxDominance() {
+  void optionalCompositionPreservesSourceAndTargetSyntaxDominance() {
     FormatJsTranslationIntegrityEvaluator evaluator = new FormatJsTranslationIntegrityEvaluator();
 
-    assertThat(evaluator.evaluate(" {name", "TARGET", false, true).diagnostics())
+    assertThat(
+            evaluator
+                .evaluate(
+                    " {name help@example.invalid",
+                    "TARGET support@example.invalid",
+                    false,
+                    true,
+                    true,
+                    true)
+                .diagnostics())
         .singleElement()
         .extracting(TranslationIntegrityDiagnostic::code)
         .isEqualTo("source-format-invalid");
-    assertThat(evaluator.evaluate(" SOURCE {name} ", "{name", false, true).diagnostics())
+    assertThat(
+            evaluator
+                .evaluate(
+                    " SOURCE {name} help@example.invalid ",
+                    "{name support@example.invalid",
+                    false,
+                    true,
+                    true,
+                    true)
+                .diagnostics())
         .singleElement()
         .extracting(TranslationIntegrityDiagnostic::code)
         .isEqualTo("target-format-invalid");
+  }
+
+  @Test
+  void enablesLiteralContractsOnlyWhenExplicitlySelected() {
+    String source = "help@example.invalid https://docs.example.invalid/start";
+    String target = "support@example.invalid https://help.example.invalid/start";
+    FormatJsTranslationIntegrityEvaluator evaluator = new FormatJsTranslationIntegrityEvaluator();
+
+    assertThat(evaluator.evaluate(source, target)).isEqualTo(TranslationIntegrityEvaluation.pass());
+    assertThat(evaluator.evaluate(source, target, false, false, true, true).diagnostics())
+        .extracting(TranslationIntegrityDiagnostic::code)
+        .containsExactly(
+            "immutable-email-extra",
+            "immutable-email-missing",
+            "immutable-url-extra",
+            "immutable-url-missing");
   }
 
   @Test

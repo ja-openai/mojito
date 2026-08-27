@@ -13,6 +13,8 @@ import com.box.l10n.mojito.translationintegrity.formatjs.FormatJsElement.Pound;
 import com.box.l10n.mojito.translationintegrity.formatjs.FormatJsElement.SelectArgument;
 import com.box.l10n.mojito.translationintegrity.formatjs.FormatJsElement.Tag;
 import com.box.l10n.mojito.translationintegrity.formatjs.FormatJsElement.TimeArgument;
+import com.box.l10n.mojito.translationintegrity.literal.EmailLiteralTranslationIntegrityEvaluator;
+import com.box.l10n.mojito.translationintegrity.literal.UrlLiteralTranslationIntegrityEvaluator;
 import com.box.l10n.mojito.translationintegrity.richtag.RichTextTagTranslationIntegrityEvaluator;
 import com.box.l10n.mojito.translationintegrity.whitespace.BoundaryWhitespaceTranslationIntegrityEvaluator;
 import java.util.ArrayList;
@@ -30,7 +32,7 @@ import java.util.TreeSet;
 
 /**
  * Evaluates FormatJS cutover contracts: message syntax, argument membership, application-controlled
- * select structure, and optionally the independent rich-text-tag feature.
+ * select structure, and explicitly selected independent tag, boundary, email, and URL rules.
  */
 public final class FormatJsTranslationIntegrityEvaluator {
 
@@ -42,14 +44,18 @@ public final class FormatJsTranslationIntegrityEvaluator {
       new RichTextTagTranslationIntegrityEvaluator();
   private static final BoundaryWhitespaceTranslationIntegrityEvaluator
       BOUNDARY_WHITESPACE_EVALUATOR = new BoundaryWhitespaceTranslationIntegrityEvaluator();
+  private static final EmailLiteralTranslationIntegrityEvaluator EMAIL_LITERAL_EVALUATOR =
+      new EmailLiteralTranslationIntegrityEvaluator();
+  private static final UrlLiteralTranslationIntegrityEvaluator URL_LITERAL_EVALUATOR =
+      new UrlLiteralTranslationIntegrityEvaluator();
 
   public TranslationIntegrityEvaluation evaluate(String source, String target) {
-    return evaluate(source, target, false, false);
+    return evaluate(source, target, false, false, false, false);
   }
 
   public TranslationIntegrityEvaluation evaluate(
       String source, String target, boolean evaluateRichTextTags) {
-    return evaluate(source, target, evaluateRichTextTags, false);
+    return evaluate(source, target, evaluateRichTextTags, false, false, false);
   }
 
   /** Evaluates explicitly selected, independently composable FormatJS cutover features. */
@@ -58,19 +64,41 @@ public final class FormatJsTranslationIntegrityEvaluator {
       String target,
       boolean evaluateRichTextTags,
       boolean evaluateBoundaryWhitespace) {
+    return evaluate(source, target, evaluateRichTextTags, evaluateBoundaryWhitespace, false, false);
+  }
+
+  /** Evaluates explicitly selected, independently composable FormatJS cutover features. */
+  public TranslationIntegrityEvaluation evaluate(
+      String source,
+      String target,
+      boolean evaluateRichTextTags,
+      boolean evaluateBoundaryWhitespace,
+      boolean evaluateEmailLiterals,
+      boolean evaluateUrlLiterals) {
     TranslationIntegrityEvaluation structuralEvaluation =
-        evaluateStructural(source, target, evaluateRichTextTags);
+        evaluateStructural(
+            source, target, evaluateRichTextTags, evaluateEmailLiterals, evaluateUrlLiterals);
     return evaluateBoundaryWhitespace
         ? BOUNDARY_WHITESPACE_EVALUATOR.compose(
             source,
             target,
             structuralEvaluation,
-            repairedTarget -> evaluateStructural(source, repairedTarget, evaluateRichTextTags))
+            repairedTarget ->
+                evaluateStructural(
+                    source,
+                    repairedTarget,
+                    evaluateRichTextTags,
+                    evaluateEmailLiterals,
+                    evaluateUrlLiterals))
         : structuralEvaluation;
   }
 
   private TranslationIntegrityEvaluation evaluateStructural(
-      String source, String target, boolean evaluateRichTextTags) {
+      String source,
+      String target,
+      boolean evaluateRichTextTags,
+      boolean evaluateEmailLiterals,
+      boolean evaluateUrlLiterals) {
     Objects.requireNonNull(source, "source");
     Objects.requireNonNull(target, "target");
 
@@ -91,6 +119,12 @@ public final class FormatJsTranslationIntegrityEvaluator {
     evaluateSelects(sourceContract, targetContract, diagnostics);
     if (evaluateRichTextTags) {
       diagnostics.addAll(RICH_TEXT_TAG_EVALUATOR.evaluate(source, target).diagnostics());
+    }
+    if (evaluateEmailLiterals) {
+      diagnostics.addAll(EMAIL_LITERAL_EVALUATOR.evaluate(source, target).diagnostics());
+    }
+    if (evaluateUrlLiterals) {
+      diagnostics.addAll(URL_LITERAL_EVALUATOR.evaluate(source, target).diagnostics());
     }
 
     return diagnostics.isEmpty()

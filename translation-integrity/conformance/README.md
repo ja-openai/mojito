@@ -64,15 +64,16 @@ include a renderer or JavaScript `Intl.Locale`-dependent `j` skeleton
 resolution. Adding the parser does not by itself replace a production
 integrity checker; that requires adapter parity plus shadow or canary evidence.
 
-The neutral Java evaluators currently cover four reusable structural slices.
+The neutral Java evaluators currently cover six reusable structural slices.
 The rich-text-tag evaluator is placeholder-grammar neutral and is exercised in
 isolation across 17 non-syntax-dominated `cutover` cases spanning FormatJS,
 dollar-template, and double-brace profiles. The FormatJS evaluator composes
 message syntax, argument membership, application-controlled select structure,
-the explicitly enabled rich-text-tag feature, and boundary whitespace across
-all 64 `cutover` cases whose rule sets it owns. The dollar-template evaluator
-similarly composes its placeholder contract with the explicit tag and boundary
-features across eight `cutover` cases.
+the explicitly enabled rich-text-tag feature, boundary whitespace, and
+legacy-compatible email and URL literals across all 65 `cutover` cases whose
+rule sets it owns. The dollar-template evaluator similarly composes its
+placeholder contract with the explicit tag, boundary, and literal rules across
+nine `cutover` cases.
 
 The profile-neutral boundary-whitespace evaluator is exercised directly across
 eight applicable cases. It scans by Unicode code point with Python's explicit
@@ -85,6 +86,18 @@ Independent policy diagnostics and review routing are preserved; any
 nonrepairable structural finding suppresses partial repair. Combined boundary
 and apostrophe repair remains an `extended` contract and is not implemented by
 these composites.
+
+The profile-neutral email and URL evaluators are each exercised directly
+across nine non-syntax-dominated `cutover` cases. They intentionally preserve
+the downstream Python regexes, case-sensitive non-overlapping matching,
+natural sorting, and duplicate-preserving list comparison. Simple zero-to-one
+and one-to-zero membership changes use sorted `values`; every delta with an
+expected or actual count above one reports that value's exact counts. Cutover
+also preserves the legacy false negatives: internationalized email domains are
+not matched, and URL ports, query values after `=`, later parameters, and other
+unsupported suffix characters are outside the protected token. Complete IDN
+email and URL parsing remains `extended` and is not claimed by these
+evaluators.
 
 The rich-text-tag cutover gate intentionally matches the downstream Python
 checker: it compares exact sets of raw tokens found by `<.*?>`, with matching
@@ -101,6 +114,13 @@ without introducing a new cutover rejection. Strict invalid-placeholder
 diagnostics remain `extended`; applying source-first syntax dominance to this
 profile is deferred until shadow evidence shows that enforcing it will not
 reject valid catalog data.
+
+With corpus version 0.7.0, the implemented repository-profile arithmetic is
+80 of 86 web cutover cases (65 FormatJS-profile plus 15 shared plain cases) and
+24 of 24 common cutover cases (nine dollar-template plus 15 shared plain
+cases). This is executable contract coverage, not retirement evidence:
+production wiring, every mutation path, parity observation, and rollback
+ownership remain required.
 
 None of these evaluators is registered on a Mojito repository or wired to
 enforcement; the remaining rule adapters and shadow evidence are still
