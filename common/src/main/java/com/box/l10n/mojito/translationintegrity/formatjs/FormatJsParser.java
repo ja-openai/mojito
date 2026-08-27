@@ -29,11 +29,12 @@ import java.util.Set;
  * Validation-only Java port of {@code @formatjs/icu-messageformat-parser} 3.5.10.
  *
  * <p>This class follows the upstream recursive-descent state machine rather than delegating to
- * ICU4J. Mojito adds an optional maximum nesting depth and keeps validation locale-neutral; it does
- * not expose FormatJS's rendering-oriented {@code Intl.Locale} skeleton resolution. Use {@link
- * FormatJsParserOptions#LOW_LEVEL_DEFAULTS} for upstream low-level constructor behavior, {@link
- * FormatJsParserOptions#UPSTREAM_PARSE_DEFAULTS} for the exported FormatJS facade behavior, or
- * {@link FormatJsParserOptions#MOJITO_STRICT} for integrity validation.
+ * ICU4J. Mojito adds an optional maximum nesting depth and a default-off opaque-tag compatibility
+ * mode, and keeps validation locale-neutral; it does not expose FormatJS's rendering-oriented
+ * {@code Intl.Locale} skeleton resolution. Use {@link FormatJsParserOptions#LOW_LEVEL_DEFAULTS} for
+ * upstream low-level constructor behavior, {@link FormatJsParserOptions#UPSTREAM_PARSE_DEFAULTS}
+ * for the exported FormatJS facade behavior, or {@link FormatJsParserOptions#MOJITO_STRICT} for
+ * integrity validation.
  *
  * <p>Instances are deterministically single-use. This intentionally avoids the upstream low-level
  * parser's accidental ability to retry only when a failed parse leaves its offset at zero.
@@ -106,6 +107,13 @@ public final class FormatJsParser {
         FormatJsSourcePosition start = position();
         bump();
         elements.add(new Pound(astLocation(location(start, position()))));
+      } else if (current == '<' && options.pythonOpaqueTagCompatibility()) {
+        Literal opaqueTag = tryParsePythonOpaqueTag();
+        if (opaqueTag != null) {
+          elements.add(opaqueTag);
+        } else {
+          elements.add(parseLiteral(nestingLevel, parentArgumentType));
+        }
       } else if (current == '<' && !options.ignoreTag() && peekCodeUnit() == '/') {
         if (expectingCloseTag) {
           break;
@@ -189,11 +197,52 @@ public final class FormatJsParser {
   private String tryParseLeftAngleBracket() {
     if (!isEof()
         && currentCodePoint() == '<'
+        && (!options.pythonOpaqueTagCompatibility() || pythonOpaqueTagEndOffset() < 0)
         && (options.ignoreTag() || !isAsciiAlphaOrSlash(peekCodeUnit()))) {
       bump();
       return "<";
     }
     return null;
+  }
+
+  private Literal tryParsePythonOpaqueTag() {
+    int endOffset = pythonOpaqueTagEndOffset();
+    if (endOffset < 0) {
+      return null;
+    }
+
+    FormatJsSourcePosition start = position();
+    int startOffset = offset;
+    while (offset < endOffset) {
+      bump();
+    }
+    return new Literal(
+        message.substring(startOffset, endOffset), astLocation(location(start, position())));
+  }
+
+  private int pythonOpaqueTagEndOffset() {
+    int nameOffset = offset + 1;
+    if (nameOffset < message.length() && message.charAt(nameOffset) == '/') {
+      nameOffset++;
+    }
+    if (nameOffset >= message.length() || !Character.isLetter(message.codePointAt(nameOffset))) {
+      return -1;
+    }
+
+    char quote = 0;
+    for (int index = nameOffset; index < message.length(); index++) {
+      char character = message.charAt(index);
+      if (quote != 0) {
+        if (character == quote) {
+          quote = 0;
+        }
+      } else if (character == '\'' || character == '"') {
+        quote = character;
+      } else if (character == '>') {
+        return index + 1;
+      }
+    }
+    return -1;
   }
 
   private String tryParseQuote(ParentArgumentType parentArgumentType) {

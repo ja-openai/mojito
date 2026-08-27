@@ -13,6 +13,7 @@ import com.box.l10n.mojito.translationintegrity.formatjs.FormatJsElement.Pound;
 import com.box.l10n.mojito.translationintegrity.formatjs.FormatJsElement.SelectArgument;
 import com.box.l10n.mojito.translationintegrity.formatjs.FormatJsElement.Tag;
 import com.box.l10n.mojito.translationintegrity.formatjs.FormatJsElement.TimeArgument;
+import com.box.l10n.mojito.translationintegrity.richtag.RichTextTagTranslationIntegrityEvaluator;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -27,8 +28,8 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
- * Evaluates the FormatJS cutover contracts that are represented directly by the parser AST: message
- * syntax, argument membership, and application-controlled select structure.
+ * Evaluates FormatJS cutover contracts: message syntax, argument membership, application-controlled
+ * select structure, and optionally the independent rich-text-tag feature.
  */
 public final class FormatJsTranslationIntegrityEvaluator {
 
@@ -36,17 +37,24 @@ public final class FormatJsTranslationIntegrityEvaluator {
       FormatJsTranslationIntegrityEvaluator::compareByCodePoint;
   private static final Comparator<SelectOccurrence> SELECT_OCCURRENCE_ORDER =
       FormatJsTranslationIntegrityEvaluator::compareSelectOccurrences;
+  private static final RichTextTagTranslationIntegrityEvaluator RICH_TEXT_TAG_EVALUATOR =
+      new RichTextTagTranslationIntegrityEvaluator();
 
   public TranslationIntegrityEvaluation evaluate(String source, String target) {
+    return evaluate(source, target, false);
+  }
+
+  public TranslationIntegrityEvaluation evaluate(
+      String source, String target, boolean evaluateRichTextTags) {
     Objects.requireNonNull(source, "source");
     Objects.requireNonNull(target, "target");
 
-    ParseObservation sourceParse = parse(source);
+    ParseObservation sourceParse = parse(source, evaluateRichTextTags);
     if (!sourceParse.isSuccess()) {
       return invalidSyntax(sourceParse, true);
     }
 
-    ParseObservation targetParse = parse(target);
+    ParseObservation targetParse = parse(target, evaluateRichTextTags);
     if (!targetParse.isSuccess()) {
       return invalidSyntax(targetParse, false);
     }
@@ -56,6 +64,9 @@ public final class FormatJsTranslationIntegrityEvaluator {
     List<TranslationIntegrityDiagnostic> diagnostics = new ArrayList<>();
     evaluateArguments(sourceContract, targetContract, diagnostics);
     evaluateSelects(sourceContract, targetContract, diagnostics);
+    if (evaluateRichTextTags) {
+      diagnostics.addAll(RICH_TEXT_TAG_EVALUATOR.evaluate(source, target).diagnostics());
+    }
 
     return diagnostics.isEmpty()
         ? TranslationIntegrityEvaluation.pass()
@@ -63,10 +74,15 @@ public final class FormatJsTranslationIntegrityEvaluator {
             diagnostics, TranslationIntegrityDisposition.REJECT_TARGET);
   }
 
-  private static ParseObservation parse(String message) {
+  private static ParseObservation parse(String message, boolean useOpaqueTagCompatibility) {
     try {
-      FormatJsParseResult result =
-          FormatJsParser.parseResult(message, FormatJsParserOptions.MOJITO_STRICT);
+      FormatJsParserOptions options =
+          useOpaqueTagCompatibility
+              ? FormatJsParserOptions.MOJITO_STRICT.toBuilder()
+                  .pythonOpaqueTagCompatibility(true)
+                  .build()
+              : FormatJsParserOptions.MOJITO_STRICT;
+      FormatJsParseResult result = FormatJsParser.parseResult(message, options);
       return result.isSuccess()
           ? ParseObservation.success(result.value())
           : ParseObservation.failure(result.error());

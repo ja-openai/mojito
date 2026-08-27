@@ -22,6 +22,9 @@ const PARSER_OPTIONS = Object.freeze(expectations.options);
 const EXPECTED_ERROR_KIND_BY_CASE_SIDE = Object.freeze(
   expectations.errorKindByCaseSide,
 );
+const EXPECTED_ADAPTER_DIFFERENCE_BY_CASE_SIDE = Object.freeze(
+  expectations.adapterDifferenceByCaseSide,
+);
 const EXPECTED_POLICY_DIFFERENCE_BY_CASE_SIDE = Object.freeze(
   expectations.policyDifferenceByCaseSide,
 );
@@ -111,6 +114,16 @@ const expectedErrorKindCaseSides = Object.keys(
 const errorKindCoverageMatches =
   JSON.stringify(corpusErrorKindCaseSides) ===
   JSON.stringify(expectedErrorKindCaseSides);
+const corpusAdapterDifferenceCaseSides = results
+  .filter((result) => result.expected.outcome === "adapter-valid")
+  .map((result) => `${result.caseId}/${result.side}`)
+  .toSorted(compareUnicode);
+const expectedAdapterDifferenceCaseSides = Object.keys(
+  EXPECTED_ADAPTER_DIFFERENCE_BY_CASE_SIDE,
+).toSorted(compareUnicode);
+const adapterDifferenceCoverageMatches =
+  JSON.stringify(corpusAdapterDifferenceCaseSides) ===
+  JSON.stringify(expectedAdapterDifferenceCaseSides);
 const corpusPolicyDifferenceCaseSides = results
   .filter((result) => result.expected.outcome === "policy-invalid")
   .map((result) => `${result.caseId}/${result.side}`)
@@ -138,9 +151,12 @@ const report = {
     results,
     mismatches,
     errorKindCoverageMatches,
+    adapterDifferenceCoverageMatches,
     maxDepthPolicyCoverageMatches,
   ),
   expectedErrorKindByCaseSide: EXPECTED_ERROR_KIND_BY_CASE_SIDE,
+  expectedAdapterDifferenceByCaseSide:
+    EXPECTED_ADAPTER_DIFFERENCE_BY_CASE_SIDE,
   observedErrorKindsByNormalizedReason: observedErrorKinds,
   results,
 };
@@ -149,6 +165,7 @@ process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 if (
   mismatches.length > 0 ||
   !errorKindCoverageMatches ||
+  !adapterDifferenceCoverageMatches ||
   !maxDepthPolicyCoverageMatches
 ) {
   process.exitCode = 1;
@@ -234,6 +251,25 @@ function expectedSyntax(testCase, side, sourceSyntaxDiagnostic) {
   }
 
   const diagnostic = findSyntaxDiagnostic(testCase, side);
+  const adapterDifference =
+    EXPECTED_ADAPTER_DIFFERENCE_BY_CASE_SIDE[caseSide] ?? null;
+  if (adapterDifference !== null) {
+    if (
+      diagnostic !== null ||
+      adapterDifference.kind !== "python-tag-span-opacity" ||
+      !testCase.features?.includes("rich-text-tags") ||
+      !testCase.rules.includes("rich-text-tag-contract")
+    ) {
+      throw new Error(`${caseSide}: invalid opaque-tag adapter difference`);
+    }
+    return {
+      outcome: "adapter-valid",
+      normalizedReason: null,
+      maxNestingDepth: null,
+      range: null,
+      adapterDifference,
+    };
+  }
   if (diagnostic === null) {
     return {
       outcome: "valid",
@@ -392,6 +428,13 @@ function compareResult(caseSide, expected, actual) {
           JSON.stringify(expected.range) === JSON.stringify(actual.range))
         ? "match"
         : "mismatch";
+    case "adapter-valid":
+      return !actual.accepted &&
+        expected.adapterDifference.rawErrorKind === actual.errorKind &&
+        JSON.stringify(expected.adapterDifference.rawRange) ===
+          JSON.stringify(actual.range)
+        ? "intentional-adapter-difference"
+        : "mismatch";
     case "policy-invalid":
       return actual.accepted &&
         EXPECTED_POLICY_DIFFERENCE_BY_CASE_SIDE[caseSide]?.maxNestingDepth ===
@@ -413,6 +456,7 @@ function summarize(
   allResults,
   mismatches,
   errorKindCoverageMatches,
+  adapterDifferenceCoverageMatches,
   maxDepthPolicyCoverageMatches,
 ) {
   const comparisonCounts = countValues(
@@ -427,6 +471,8 @@ function summarize(
     directMatches: comparisonCounts.match ?? 0,
     intentionalMaxDepthPolicyDifferences:
       comparisonCounts["intentional-policy-difference"] ?? 0,
+    intentionalOpaqueTagAdapterDifferences:
+      comparisonCounts["intentional-adapter-difference"] ?? 0,
     notComparedRuleNotDeclared:
       comparisonCounts["not-compared-rule-not-declared"] ?? 0,
     notComparedSourceDominance:
@@ -436,6 +482,7 @@ function summarize(
     notComparedRejected: notCompared.filter((result) => !result.actual.accepted)
       .length,
     errorKindCoverageMatches,
+    adapterDifferenceCoverageMatches,
     maxDepthPolicyCoverageMatches,
     unexpectedMismatches: mismatches.length,
   };

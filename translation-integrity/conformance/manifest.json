@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "corpusVersion": "0.4.0",
+  "corpusVersion": "0.5.0",
   "name": "translation-integrity",
   "offsetEncoding": "unicode-code-point",
   "policyEvaluationDate": "2030-01-01",
@@ -3088,6 +3088,116 @@
           }
         ],
         "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.tag-attribute-apostrophe-opacity.reject",
+      "description": "An apostrophe and angle bracket inside a recognized tag attribute are opaque and cannot hide a following runtime argument.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "features": [
+        "rich-text-tags"
+      ],
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "<tag title=\"'<\">{outside}"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "<tag title=\"'<\">TARGET"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "variable-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "names": [
+                "outside"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.tag-attribute-icu-argument-opacity.reject",
+      "description": "ICU-looking arguments inside a recognized rich-text tag attribute are opaque to the message argument contract while the exact tag token remains protected.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "features": [
+        "rich-text-tags"
+      ],
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "<link title=\"{sourceOnly}\">{name}</link>"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "<link title=\"{targetOnly}\">{name}</link>"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "rich-tag-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tags": [
+                "<link title=\"{targetOnly}\">"
+              ]
+            }
+          },
+          {
+            "code": "rich-tag-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tags": [
+                "<link title=\"{sourceOnly}\">"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.tag-attribute-malformed-icu-opacity.pass",
+      "description": "A malformed ICU opening brace inside a recognized quoted tag attribute is opaque to message syntax.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "features": [
+        "rich-text-tags"
+      ],
+      "rules": [
+        "argument-contract",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "<link title=\"{\">TEXT</link>"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "<link title=\"{\">TEXT</link>"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
       }
     },
     {
