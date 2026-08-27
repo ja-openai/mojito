@@ -3,6 +3,8 @@ package com.box.l10n.mojito.translationintegrity.dollartemplate;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityDiagnostic;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityDisposition;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityEvaluation;
+import com.box.l10n.mojito.translationintegrity.literal.EmailLiteralTranslationIntegrityEvaluator;
+import com.box.l10n.mojito.translationintegrity.literal.UrlLiteralTranslationIntegrityEvaluator;
 import com.box.l10n.mojito.translationintegrity.richtag.RichTextTagTranslationIntegrityEvaluator;
 import com.box.l10n.mojito.translationintegrity.whitespace.BoundaryWhitespaceTranslationIntegrityEvaluator;
 import java.util.ArrayList;
@@ -20,8 +22,8 @@ import java.util.TreeSet;
  *
  * <p>The compatibility scanner recognizes ASCII {@code $name} and {@code ${name}} identifiers and
  * treats {@code $$} as an escaped dollar. Invalid placeholder spellings contribute no identifier;
- * strict syntax rejection remains an extended, post-cutover behavior. The independent rich-text-tag
- * feature can be composed explicitly without changing placeholder parsing.
+ * strict syntax rejection remains an extended, post-cutover behavior. Independent tag, boundary,
+ * email, and URL rules can be composed explicitly without changing placeholder parsing.
  */
 public final class DollarTemplateTranslationIntegrityEvaluator {
 
@@ -31,14 +33,18 @@ public final class DollarTemplateTranslationIntegrityEvaluator {
       new RichTextTagTranslationIntegrityEvaluator();
   private static final BoundaryWhitespaceTranslationIntegrityEvaluator
       BOUNDARY_WHITESPACE_EVALUATOR = new BoundaryWhitespaceTranslationIntegrityEvaluator();
+  private static final EmailLiteralTranslationIntegrityEvaluator EMAIL_LITERAL_EVALUATOR =
+      new EmailLiteralTranslationIntegrityEvaluator();
+  private static final UrlLiteralTranslationIntegrityEvaluator URL_LITERAL_EVALUATOR =
+      new UrlLiteralTranslationIntegrityEvaluator();
 
   public TranslationIntegrityEvaluation evaluate(String source, String target) {
-    return evaluate(source, target, false, false);
+    return evaluate(source, target, false, false, false, false);
   }
 
   public TranslationIntegrityEvaluation evaluate(
       String source, String target, boolean evaluateRichTextTags) {
-    return evaluate(source, target, evaluateRichTextTags, false);
+    return evaluate(source, target, evaluateRichTextTags, false, false, false);
   }
 
   /** Evaluates explicitly selected, independently composable dollar-template cutover features. */
@@ -47,19 +53,41 @@ public final class DollarTemplateTranslationIntegrityEvaluator {
       String target,
       boolean evaluateRichTextTags,
       boolean evaluateBoundaryWhitespace) {
+    return evaluate(source, target, evaluateRichTextTags, evaluateBoundaryWhitespace, false, false);
+  }
+
+  /** Evaluates explicitly selected, independently composable dollar-template cutover features. */
+  public TranslationIntegrityEvaluation evaluate(
+      String source,
+      String target,
+      boolean evaluateRichTextTags,
+      boolean evaluateBoundaryWhitespace,
+      boolean evaluateEmailLiterals,
+      boolean evaluateUrlLiterals) {
     TranslationIntegrityEvaluation structuralEvaluation =
-        evaluateStructural(source, target, evaluateRichTextTags);
+        evaluateStructural(
+            source, target, evaluateRichTextTags, evaluateEmailLiterals, evaluateUrlLiterals);
     return evaluateBoundaryWhitespace
         ? BOUNDARY_WHITESPACE_EVALUATOR.compose(
             source,
             target,
             structuralEvaluation,
-            repairedTarget -> evaluateStructural(source, repairedTarget, evaluateRichTextTags))
+            repairedTarget ->
+                evaluateStructural(
+                    source,
+                    repairedTarget,
+                    evaluateRichTextTags,
+                    evaluateEmailLiterals,
+                    evaluateUrlLiterals))
         : structuralEvaluation;
   }
 
   private TranslationIntegrityEvaluation evaluateStructural(
-      String source, String target, boolean evaluateRichTextTags) {
+      String source,
+      String target,
+      boolean evaluateRichTextTags,
+      boolean evaluateEmailLiterals,
+      boolean evaluateUrlLiterals) {
     Objects.requireNonNull(source, "source");
     Objects.requireNonNull(target, "target");
 
@@ -82,6 +110,12 @@ public final class DollarTemplateTranslationIntegrityEvaluator {
     }
     if (evaluateRichTextTags) {
       diagnostics.addAll(RICH_TEXT_TAG_EVALUATOR.evaluate(source, target).diagnostics());
+    }
+    if (evaluateEmailLiterals) {
+      diagnostics.addAll(EMAIL_LITERAL_EVALUATOR.evaluate(source, target).diagnostics());
+    }
+    if (evaluateUrlLiterals) {
+      diagnostics.addAll(URL_LITERAL_EVALUATOR.evaluate(source, target).diagnostics());
     }
 
     return diagnostics.isEmpty()

@@ -157,14 +157,17 @@
       }
     },
     "valueDeltaDetails": {
+      "description": "A grouped simple membership delta or one exact multiplicity delta. Zero-to-one and one-to-zero values use the grouped form; a delta with either count above one uses the count form.",
       "oneOf": [
         {
+          "description": "Sorted unique values whose count changes only between zero and one.",
           "type": "object",
           "required": ["values"],
           "additionalProperties": false,
           "properties": {"values": {"$ref": "#/$defs/stringSet"}}
         },
         {
+          "description": "One value whose expected or actual multiplicity is greater than one.",
           "type": "object",
           "required": ["value", "expectedCount", "actualCount"],
           "additionalProperties": false,

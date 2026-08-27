@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "corpusVersion": "0.6.0",
+  "corpusVersion": "0.7.0",
   "name": "translation-integrity",
   "offsetEncoding": "unicode-code-point",
   "policyEvaluationDate": "2030-01-01",
@@ -293,6 +293,71 @@
             "subject": "target",
             "details": {
               "reason": "invalid-placeholder"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "dollar-template.literal-contracts-composed.reject",
+      "description": "Dollar-template placeholders compose independently with legacy-compatible email and URL literal contracts.",
+      "tier": "cutover",
+      "profile": "dollar-template",
+      "rules": [
+        "argument-contract",
+        "email-literal-contract",
+        "message-syntax",
+        "url-literal-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "$name: help@example.invalid https://docs.example.invalid/start"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "${name}: support@example.invalid https://help.example.invalid/start"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "immutable-email-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "support@example.invalid"
+              ]
+            }
+          },
+          {
+            "code": "immutable-email-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "help@example.invalid"
+              ]
+            }
+          },
+          {
+            "code": "immutable-url-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "https://help.example.invalid/start"
+              ]
+            }
+          },
+          {
+            "code": "immutable-url-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "https://docs.example.invalid/start"
+              ]
             }
           }
         ],
@@ -684,6 +749,79 @@
       }
     },
     {
+      "id": "email.legacy-idn-ignored.pass",
+      "description": "Cutover preserves the legacy ASCII regex false negative for internationalized email domains.",
+      "tier": "cutover",
+      "profile": "plain",
+      "rules": [
+        "email-literal-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Contact alpha@exämple.invalid"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "CONTACT beta@exämple.invalid"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "email.multiset-deltas.reject",
+      "description": "Independent email membership and multiplicity differences are all reported from the sorted legacy match lists.",
+      "tier": "cutover",
+      "profile": "plain",
+      "rules": [
+        "email-literal-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Send a@example.invalid twice: a@example.invalid; keep b@example.invalid"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SEND a@example.invalid ONCE; ADD c@example.invalid TWICE: c@example.invalid"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "immutable-email-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "value": "c@example.invalid",
+              "expectedCount": 0,
+              "actualCount": 2
+            }
+          },
+          {
+            "code": "immutable-email-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "value": "a@example.invalid",
+              "expectedCount": 2,
+              "actualCount": 1
+            }
+          },
+          {
+            "code": "immutable-email-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "b@example.invalid"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
       "id": "email.reordered.pass",
       "description": "Protected email literals may move while retaining values and multiplicity.",
       "tier": "cutover",
@@ -693,11 +831,11 @@
       ],
       "source": {
         "locale": "x-source",
-        "text": "Use first@example.invalid, then second@example.invalid"
+        "text": "Use first@example.invalid, then second@example.invalid, then first@example.invalid"
       },
       "target": {
         "locale": "x-target",
-        "text": "USE second@example.invalid THEN first@example.invalid"
+        "text": "USE second@example.invalid THEN first@example.invalid AND first@example.invalid"
       },
       "expected": {
         "diagnostics": [],
@@ -1393,6 +1531,71 @@
       "expected": {
         "diagnostics": [],
         "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.literal-contracts-composed.reject",
+      "description": "FormatJS arguments compose independently with legacy-compatible email and URL literal contracts.",
+      "tier": "cutover",
+      "profile": "formatjs",
+      "rules": [
+        "argument-contract",
+        "email-literal-contract",
+        "message-syntax",
+        "url-literal-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "{name}: help@example.invalid https://docs.example.invalid/start"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "{name}: support@example.invalid https://help.example.invalid/start"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "immutable-email-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "support@example.invalid"
+              ]
+            }
+          },
+          {
+            "code": "immutable-email-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "help@example.invalid"
+              ]
+            }
+          },
+          {
+            "code": "immutable-url-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "https://help.example.invalid/start"
+              ]
+            }
+          },
+          {
+            "code": "immutable-url-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "https://docs.example.invalid/start"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
       }
     },
     {
@@ -4675,6 +4878,79 @@
       }
     },
     {
+      "id": "url.legacy-query-suffix-ignored.pass",
+      "description": "Cutover preserves the legacy URL regex truncation before query values and later parameters.",
+      "tier": "cutover",
+      "profile": "plain",
+      "rules": [
+        "url-literal-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "See https://example.invalid/search?q=one&mode=full"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SEE https://example.invalid/search?q=two&mode=brief"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "url.multiset-deltas.reject",
+      "description": "Independent URL membership and multiplicity differences are all reported from the sorted legacy match lists.",
+      "tier": "cutover",
+      "profile": "plain",
+      "rules": [
+        "url-literal-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Use https://a.example.invalid twice: https://a.example.invalid then https://b.example.invalid"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "USE https://a.example.invalid ONCE THEN https://c.example.invalid TWICE: https://c.example.invalid"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "immutable-url-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "value": "https://c.example.invalid",
+              "expectedCount": 0,
+              "actualCount": 2
+            }
+          },
+          {
+            "code": "immutable-url-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "value": "https://a.example.invalid",
+              "expectedCount": 2,
+              "actualCount": 1
+            }
+          },
+          {
+            "code": "immutable-url-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "values": [
+                "https://b.example.invalid"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
       "id": "url.query-changed.reject",
       "description": "URL queries, ports, and fragments are part of the complete protected literal.",
       "tier": "extended",
@@ -4726,11 +5002,11 @@
       ],
       "source": {
         "locale": "x-source",
-        "text": "Use https://a.example.invalid then https://b.example.invalid"
+        "text": "Use https://a.example.invalid then https://b.example.invalid then https://a.example.invalid"
       },
       "target": {
         "locale": "x-target",
-        "text": "USE https://b.example.invalid THEN https://a.example.invalid"
+        "text": "USE https://b.example.invalid THEN https://a.example.invalid AND https://a.example.invalid"
       },
       "expected": {
         "diagnostics": [],

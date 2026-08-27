@@ -21,6 +21,12 @@ PRIVATE_USE_LOCALE = re.compile(r"^x-[a-z0-9-]+$")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 EMAIL = re.compile(r"[A-Za-z0-9._%+\-]+@([^\s,;]+)")
 URL_HOST = re.compile(r"https?://([^/\s]+)")
+LEGACY_EMAIL_LITERAL = re.compile(
+    r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+)
+LEGACY_URL_LITERAL = re.compile(
+    r"https?://[a-zA-Z0-9.]+\.[a-zA-Z]{2,}[a-zA-Z0-9/_\-?#+%]*"
+)
 BANNED_MANIFEST_TERMS = ("openai", "chatgpt")
 
 CASE_FIELDS = {
@@ -521,6 +527,69 @@ def boundary_whitespace_diagnostics(
             },
         }
     ]
+
+
+def extract_legacy_literals(
+    value: str, marker: str, pattern: re.Pattern[str]
+) -> list[str]:
+    return sorted(pattern.findall(value)) if marker in value else []
+
+
+def legacy_literal_diagnostics(
+    source: str,
+    target: str,
+    *,
+    marker: str,
+    pattern: re.Pattern[str],
+    kind: str,
+) -> list[dict[str, Any]]:
+    source_counts = Counter(extract_legacy_literals(source, marker, pattern))
+    target_counts = Counter(extract_legacy_literals(target, marker, pattern))
+    missing_values: list[str] = []
+    extra_values: list[str] = []
+    diagnostics: list[dict[str, Any]] = []
+    for value in sorted(source_counts.keys() | target_counts.keys()):
+        expected_count = source_counts[value]
+        actual_count = target_counts[value]
+        if expected_count == actual_count:
+            continue
+        direction = "missing" if expected_count > actual_count else "extra"
+        if expected_count > 1 or actual_count > 1:
+            diagnostics.append(
+                {
+                    "code": f"immutable-{kind}-{direction}",
+                    "severity": "error",
+                    "subject": "target",
+                    "details": {
+                        "value": value,
+                        "expectedCount": expected_count,
+                        "actualCount": actual_count,
+                    },
+                }
+            )
+        elif actual_count == 0:
+            missing_values.append(value)
+        else:
+            extra_values.append(value)
+    if missing_values:
+        diagnostics.append(
+            {
+                "code": f"immutable-{kind}-missing",
+                "severity": "error",
+                "subject": "target",
+                "details": {"values": missing_values},
+            }
+        )
+    if extra_values:
+        diagnostics.append(
+            {
+                "code": f"immutable-{kind}-extra",
+                "severity": "error",
+                "subject": "target",
+                "details": {"values": extra_values},
+            }
+        )
+    return sorted(diagnostics, key=diagnostic_sort_key)
 
 
 def scan_formatjs_tag_token(value: str, index: int) -> tuple[int, str, bool] | None:
@@ -1147,6 +1216,37 @@ def main() -> None:
             assert expected_boundary_diagnostics == boundary_whitespace_diagnostics(
                 source["text"], target["text"]
             ), f"{label}: boundary diagnostics do not match the Python strip predicate"
+        if case["tier"] == "cutover" and not has_syntax_error:
+            if "email-literal-contract" in rules:
+                expected_email_diagnostics = [
+                    item
+                    for item in diagnostics
+                    if item["code"].startswith("immutable-email-")
+                ]
+                assert expected_email_diagnostics == legacy_literal_diagnostics(
+                    source["text"],
+                    target["text"],
+                    marker="@",
+                    pattern=LEGACY_EMAIL_LITERAL,
+                    kind="email",
+                ), (
+                    f"{label}: email diagnostics do not match the legacy regex multiset"
+                )
+            if "url-literal-contract" in rules:
+                expected_url_diagnostics = [
+                    item
+                    for item in diagnostics
+                    if item["code"].startswith("immutable-url-")
+                ]
+                assert expected_url_diagnostics == legacy_literal_diagnostics(
+                    source["text"],
+                    target["text"],
+                    marker="http",
+                    pattern=LEGACY_URL_LITERAL,
+                    kind="url",
+                ), (
+                    f"{label}: URL diagnostics do not match the legacy regex multiset"
+                )
         if "formatjs-apostrophe-before-tag" in rules and not has_syntax_error:
             occurrences: Counter[str] = Counter()
             normalized_apostrophe_diagnostics: list[dict[str, Any]] = []

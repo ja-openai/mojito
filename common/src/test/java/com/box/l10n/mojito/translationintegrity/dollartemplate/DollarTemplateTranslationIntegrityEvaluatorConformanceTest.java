@@ -30,7 +30,12 @@ class DollarTemplateTranslationIntegrityEvaluatorConformanceTest {
   private static final ObjectMapper JSON = new ObjectMapper();
   private static final Set<String> SUPPORTED_RULES =
       Set.of(
-          "message-syntax", "argument-contract", "rich-text-tag-contract", "boundary-whitespace");
+          "message-syntax",
+          "argument-contract",
+          "rich-text-tag-contract",
+          "boundary-whitespace",
+          "email-literal-contract",
+          "url-literal-contract");
 
   @Test
   void matchesEveryApplicableCutoverCase() throws IOException {
@@ -51,14 +56,16 @@ class DollarTemplateTranslationIntegrityEvaluatorConformanceTest {
               testCase.path("source").path("text").asText(),
               testCase.path("target").path("text").asText(),
               containsText(testCase.path("features"), "rich-text-tags"),
-              containsText(testCase.path("rules"), "boundary-whitespace"));
+              containsText(testCase.path("rules"), "boundary-whitespace"),
+              containsText(testCase.path("rules"), "email-literal-contract"),
+              containsText(testCase.path("rules"), "url-literal-contract"));
       TranslationIntegrityEvaluation expected = expectedEvaluation(testCase.path("expected"));
       if (!expected.equals(actual)) {
         mismatches.add(id + ": expected " + expected + ", got " + actual);
       }
     }
 
-    assertThat(evaluated).isEqualTo(8);
+    assertThat(evaluated).isEqualTo(9);
     assertThat(mismatches).isEmpty();
   }
 
@@ -87,6 +94,23 @@ class DollarTemplateTranslationIntegrityEvaluatorConformanceTest {
             DollarTemplateTranslationIntegrityEvaluator.extractIdentifiers(
                 "${$nested} $é$following"))
         .containsExactlyInAnyOrder("nested", "following");
+  }
+
+  @Test
+  void enablesLiteralContractsOnlyWhenExplicitlySelected() {
+    String source = "help@example.invalid https://docs.example.invalid/start";
+    String target = "support@example.invalid https://help.example.invalid/start";
+    DollarTemplateTranslationIntegrityEvaluator evaluator =
+        new DollarTemplateTranslationIntegrityEvaluator();
+
+    assertThat(evaluator.evaluate(source, target)).isEqualTo(TranslationIntegrityEvaluation.pass());
+    assertThat(evaluator.evaluate(source, target, false, false, true, true).diagnostics())
+        .extracting(TranslationIntegrityDiagnostic::code)
+        .containsExactly(
+            "immutable-email-extra",
+            "immutable-email-missing",
+            "immutable-url-extra",
+            "immutable-url-missing");
   }
 
   private static boolean isApplicable(JsonNode testCase) {
