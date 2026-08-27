@@ -102,18 +102,25 @@ but logs a deprecation warning. When both settings are present, `default-type` t
 ### Durable bulk-import lineage
 
 Bulk translation imports use the dedicated `bulk-import-lineage` prefix with permanent retention.
-The relational tables retain searchable run and item metadata: the authenticated initiator,
-source workflow, repository/asset/locale, text-unit reference, per-string translator and reviewer
-identities, status, and both the previous and resulting variant IDs. Normalized input and correlated
-output payloads are stored separately under `<run-id>/input.json` and `<run-id>/output.json`.
+The relational `bulk_import_run` table retains only searchable run metadata: the authenticated
+initiator, source workflow, repository/asset/locale, status, counts, and payload locations.
+Normalized input and correlated per-string output are stored under `<run-id>/input.json` and
+`<run-id>/output.json`. The output is the durable location for text-unit references, translator and
+reviewer identities, outcome, and both the previous and resulting variant IDs. There is no
+per-string relational lineage table.
+
+When an import path already creates a successful-translation comment, the server appends a stable
+`Bulk import runId=<run-id>` marker. This provides a low-cost breadcrumb from translation history to
+the run payload without adding comments to workflows that did not already create them. Skipped and
+unmatched requests exist only in the stored output.
 
 The initiating actor and upstream attribution are deliberately separate. The authenticated user is
 captured before Quartz scheduling and used for the variant's `createdByUser`; `translatedBy` and
 `approvedBy` aliases populate translator and reviewer identity when supplied. Missing upstream
 attribution is stored as `UNKNOWN`, never inferred from the initiator.
 
-The prefix uses the configured default blob backend unless it has an explicit route. Deployments
-can route the payloads to object storage when they want to keep these larger bodies out of MySQL:
+The prefix uses the configured default blob backend unless it has an explicit route. Production
+must explicitly route this prefix to Azure so the per-string payloads do not fall back to MySQL:
 
 ```properties
 l10n.azure.blob-storage.enabled=true
@@ -124,11 +131,12 @@ l10n.blob-storage.routing.prefixes.bulk-import-lineage=azure
 
 Database, S3, and Azure storage all preserve the `Retention.PERMANENT` contract. Provider lifecycle
 rules for temporary `retention=MIN_1_DAY` objects must not match this permanent prefix. Admin-only
-`/api/monitoring/import-lineage` endpoints expose run metadata and the stored payloads.
+`/monitoring/bulk-imports` lists recent runs and combines the input and output payloads into one
+review view. The underlying `/api/monitoring/import-lineage` endpoints retain direct JSON access.
 
-The before/resulting variant pair is the safe basis for a future guarded rollback operation. The
-current change records and exposes the evidence but does not automatically change the current
-variant pointer; rollback still needs conflict checks so it cannot overwrite a later edit.
+The payload is provenance evidence, not an automatic rollback system. Mojito's existing Envers
+history remains available for rare manual recovery, but bulk-import lineage does not add a separate
+per-item rollback ledger.
 
 ## Image migration
 

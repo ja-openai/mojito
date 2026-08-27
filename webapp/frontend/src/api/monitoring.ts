@@ -47,6 +47,75 @@ export type AzureStorageSnapshot = {
   checks: AzureStorageCheck[];
 };
 
+export type BulkImportRunSummary = {
+  runId: string;
+  createdDate: string;
+  completedDate: string | null;
+  repositoryId: number;
+  repositoryName: string;
+  assetId: number;
+  assetPath: string;
+  locale: string;
+  pollableTaskId: number | null;
+  initiatingUserId: number | null;
+  actorType: string;
+  actorIdentity: string | null;
+  source: string;
+  importMode: string;
+  integrityChecksType: string;
+  status: 'RUNNING' | 'COMPLETED' | 'FAILED';
+  requestedCount: number;
+  importedCount: number;
+  skippedCount: number;
+  inputPayloadBlobName: string | null;
+  outputPayloadBlobName: string | null;
+  errorMessage: string | null;
+};
+
+export type BulkImportInputTextUnit = {
+  tmTextUnitId?: number | null;
+  name?: string | null;
+  source?: string | null;
+  sourceComment?: string | null;
+  target?: string | null;
+  targetComment?: string | null;
+  status?: string | null;
+  includedInLocalizedFile: boolean;
+  translatorIdentity: string;
+  reviewerIdentity: string;
+};
+
+export type BulkImportInputPayload = {
+  runId: string;
+  repository: string;
+  locale: string;
+  assetPath: string;
+  source: string;
+  importMode: string;
+  integrityChecksType: string;
+  textUnits: BulkImportInputTextUnit[];
+};
+
+export type BulkImportOutputTextUnit = {
+  tmTextUnitId?: number | null;
+  name?: string | null;
+  previousTmTextUnitVariantId?: number | null;
+  resultingTmTextUnitVariantId?: number | null;
+  status: 'IMPORTED' | 'SKIPPED' | 'UNMATCHED';
+  translatorIdentity: string;
+  reviewerIdentity: string;
+};
+
+export type BulkImportOutputPayload = {
+  runId: string;
+  status: 'COMPLETED' | 'FAILED';
+  requestedCount: number;
+  importedCount: number;
+  skippedCount: number;
+  textUnits: BulkImportOutputTextUnit[];
+  error?: string | null;
+};
+
 export type SearchIndexStatus = {
   enabled: boolean;
   baseUrl: string;
@@ -199,6 +268,46 @@ export async function runAzureStorageProbe(): Promise<AzureStorageSnapshot> {
   }
 
   return (await response.json()) as AzureStorageSnapshot;
+}
+
+export async function fetchBulkImportRuns(limit = 50): Promise<BulkImportRunSummary[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  const response = await fetch(`/api/monitoring/import-lineage?${params.toString()}`, {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || 'Failed to load bulk import history');
+  }
+
+  return (await response.json()) as BulkImportRunSummary[];
+}
+
+export async function fetchBulkImportInput(runId: string): Promise<BulkImportInputPayload> {
+  return fetchBulkImportPayload<BulkImportInputPayload>(runId, 'input');
+}
+
+export async function fetchBulkImportOutput(runId: string): Promise<BulkImportOutputPayload> {
+  return fetchBulkImportPayload<BulkImportOutputPayload>(runId, 'output');
+}
+
+async function fetchBulkImportPayload<T>(runId: string, kind: 'input' | 'output'): Promise<T> {
+  const response = await fetch(
+    `/api/monitoring/import-lineage/${encodeURIComponent(runId)}/${kind}`,
+    {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    },
+  );
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || `Failed to load bulk import ${kind}`);
+  }
+
+  return (await response.json()) as T;
 }
 
 export async function fetchSearchIndexStatus(): Promise<SearchIndexStatus> {
