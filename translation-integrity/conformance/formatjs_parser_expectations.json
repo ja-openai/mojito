@@ -48,6 +48,38 @@
     "formatjs.syntax.unclosed-typed-before-style.reject/target": "EXPECT_ARGUMENT_CLOSING_BRACE"
   },
   "adapterDifferenceByCaseSide": {
+    "formatjs.apostrophe-after-opaque-malformed-tag.reject/source": {
+      "kind": "python-tag-span-opacity",
+      "rawErrorKind": "MALFORMED_ARGUMENT",
+      "rawRange": {
+        "start": 3,
+        "end": 7
+      }
+    },
+    "formatjs.apostrophe-after-opaque-malformed-tag.reject/target": {
+      "kind": "python-tag-span-opacity",
+      "rawErrorKind": "MALFORMED_ARGUMENT",
+      "rawRange": {
+        "start": 3,
+        "end": 7
+      }
+    },
+    "formatjs.apostrophe-unicode-tag-not-opaque.reject/source": {
+      "kind": "python-tag-span-opacity",
+      "rawErrorKind": "MALFORMED_ARGUMENT",
+      "rawRange": {
+        "start": 3,
+        "end": 8
+      }
+    },
+    "formatjs.apostrophe-unicode-tag-not-opaque.reject/target": {
+      "kind": "python-tag-span-opacity",
+      "rawErrorKind": "MALFORMED_ARGUMENT",
+      "rawRange": {
+        "start": 3,
+        "end": 8
+      }
+    },
     "formatjs.tag-attribute-malformed-icu-opacity.pass/source": {
       "kind": "python-tag-span-opacity",
       "rawErrorKind": "MALFORMED_ARGUMENT",

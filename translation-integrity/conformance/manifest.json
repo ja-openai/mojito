@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "corpusVersion": "0.7.0",
+  "corpusVersion": "0.9.0",
   "name": "translation-integrity",
   "offsetEncoding": "unicode-code-point",
   "policyEvaluationDate": "2030-01-01",
@@ -35,8 +35,8 @@
   },
   "cases": [
     {
-      "id": "dollar-template.apostrophe-before-tag.autorepair",
-      "description": "Dollar-template placeholders can be combined with a renderer that requires FormatJS apostrophe escaping.",
+      "id": "dollar-template.apostrophe-before-tag.reject",
+      "description": "Dollar-template placeholders can be combined with a renderer that rejects an unescaped apostrophe before a rich-text tag.",
       "tier": "cutover",
       "profile": "dollar-template",
       "features": [
@@ -69,17 +69,7 @@
             }
           }
         ],
-        "disposition": "AUTO_REPAIR_TARGET",
-        "safeRepair": {
-          "operations": [
-            "REPLACE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG_WITH_U2019"
-          ],
-          "expectedTarget": "SALUTATION ${name} L’<link>DETAIL</link>",
-          "expectedDiagnostics": []
-        }
-      },
-      "policy": {
-        "apostropheRepairStrategy": "compatibility-u2019"
+        "disposition": "REJECT_TARGET"
       }
     },
     {
@@ -843,8 +833,45 @@
       }
     },
     {
-      "id": "formatjs.apostrophe-before-closing-tag.double-autorepair",
-      "description": "An unescaped ASCII apostrophe before a closing rich-text tag hides that token and receives the native ICU doubled escape.",
+      "id": "formatjs.apostrophe-after-opaque-malformed-tag.reject",
+      "description": "A broader compatibility tag span can hide ICU-looking syntax without suppressing a later apostrophe finding in message context.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "formatjs-apostrophe-before-tag",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "<x {bad> TEXT <link>SOURCE</link>"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "<x {bad> L'<link>TARGET</link>"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "unrenderable-tag-apostrophe",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tag": "<link>",
+              "occurrence": 1
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.apostrophe-before-closing-tag.reject",
+      "description": "An unescaped ASCII apostrophe before a closing rich-text tag hides that token and is rejected.",
       "tier": "extended",
       "profile": "formatjs",
       "features": [
@@ -864,9 +891,6 @@
         "locale": "x-target",
         "text": "READ <link>DETAIL'</link>."
       },
-      "policy": {
-        "apostropheRepairStrategy": "icu-double"
-      },
       "expected": {
         "diagnostics": [
           {
@@ -879,19 +903,12 @@
             }
           }
         ],
-        "disposition": "AUTO_REPAIR_TARGET",
-        "safeRepair": {
-          "operations": [
-            "DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG"
-          ],
-          "expectedTarget": "READ <link>DETAIL''</link>.",
-          "expectedDiagnostics": []
-        }
+        "disposition": "REJECT_TARGET"
       }
     },
     {
-      "id": "formatjs.apostrophe-before-tag.autorepair",
-      "description": "A single ASCII apostrophe before an opening rich-text tag receives the runtime-defined escape.",
+      "id": "formatjs.apostrophe-before-tag.reject",
+      "description": "A single ASCII apostrophe before an opening rich-text tag is rejected.",
       "tier": "cutover",
       "profile": "formatjs",
       "rules": [
@@ -918,17 +935,7 @@
             }
           }
         ],
-        "disposition": "AUTO_REPAIR_TARGET",
-        "safeRepair": {
-          "operations": [
-            "REPLACE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG_WITH_U2019"
-          ],
-          "expectedTarget": "L’<link>DETAIL</link>.",
-          "expectedDiagnostics": []
-        }
-      },
-      "policy": {
-        "apostropheRepairStrategy": "compatibility-u2019"
+        "disposition": "REJECT_TARGET"
       },
       "features": [
         "formatjs-apostrophe-escaping",
@@ -936,8 +943,8 @@
       ]
     },
     {
-      "id": "formatjs.apostrophe-before-tag.double-autorepair",
-      "description": "A policy may preserve the rendered ASCII apostrophe by applying the native ICU doubled escape.",
+      "id": "formatjs.apostrophe-before-tag.single-letter.reject",
+      "description": "A single-letter rich-text tag is recognized and an unescaped apostrophe before it is rejected.",
       "tier": "extended",
       "profile": "formatjs",
       "features": [
@@ -950,14 +957,11 @@
       ],
       "source": {
         "locale": "x-source",
-        "text": "Read <link>details</link>."
+        "text": "Read <b>details</b>."
       },
       "target": {
         "locale": "x-target",
-        "text": "L'<link>DETAIL</link>."
-      },
-      "policy": {
-        "apostropheRepairStrategy": "icu-double"
+        "text": "L'<b>DETAIL</b>."
       },
       "expected": {
         "diagnostics": [
@@ -966,19 +970,12 @@
             "severity": "error",
             "subject": "target",
             "details": {
-              "tag": "<link>",
+              "tag": "<b>",
               "occurrence": 1
             }
           }
         ],
-        "disposition": "AUTO_REPAIR_TARGET",
-        "safeRepair": {
-          "operations": [
-            "DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG"
-          ],
-          "expectedTarget": "L''<link>DETAIL</link>.",
-          "expectedDiagnostics": []
-        }
+        "disposition": "REJECT_TARGET"
       }
     },
     {
@@ -1101,8 +1098,8 @@
       }
     },
     {
-      "id": "formatjs.apostrophe-context-aware.double-autorepair",
-      "description": "Quote-state analysis ignores a valid closing apostrophe and repairs only the later unclosed quote opener before a tag.",
+      "id": "formatjs.apostrophe-context-aware.reject",
+      "description": "Quote-state analysis ignores a valid closing apostrophe and rejects the later unclosed quote opener before a tag.",
       "tier": "extended",
       "profile": "formatjs",
       "features": [
@@ -1122,9 +1119,6 @@
         "locale": "x-target",
         "text": "'{name}'<strong>B</strong> ET L'<link>A</link>."
       },
-      "policy": {
-        "apostropheRepairStrategy": "icu-double"
-      },
       "expected": {
         "diagnostics": [
           {
@@ -1137,14 +1131,7 @@
             }
           }
         ],
-        "disposition": "AUTO_REPAIR_TARGET",
-        "safeRepair": {
-          "operations": [
-            "DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG"
-          ],
-          "expectedTarget": "'{name}'<strong>B</strong> ET L''<link>A</link>.",
-          "expectedDiagnostics": []
-        }
+        "disposition": "REJECT_TARGET"
       }
     },
     {
@@ -1193,6 +1180,58 @@
       "target": {
         "locale": "x-target",
         "text": "L''<link>DETAIL</link>."
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.apostrophe-malformed-tag-brace.pass",
+      "description": "An apostrophe before a tag-like token with an unseparated brace tail is not repaired as a FormatJS tag.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "formatjs-apostrophe-before-tag",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Value <link{bad}> text."
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "VALUE '<link{bad}> TEXT."
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.apostrophe-malformed-tag-comma.pass",
+      "description": "An apostrophe before a tag-like token with an unseparated comma tail is not repaired as a FormatJS tag.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "formatjs-apostrophe-before-tag",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Value <link,not-a-tag> text."
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "VALUE '<link,not-a-tag> TEXT."
       },
       "expected": {
         "diagnostics": [],
@@ -1274,8 +1313,34 @@
       }
     },
     {
-      "id": "formatjs.apostrophe-opaque-tag-attribute.double-autorepair",
-      "description": "Apostrophes inside a complete tag token are opaque to ICU quote state, so a later unsafe opener is still detected and repaired.",
+      "id": "formatjs.apostrophe-non-tag-angle.pass",
+      "description": "An ICU quote opener before an angle-bracket sequence that is not a complete FormatJS tag token is outside the apostrophe-before-tag rule.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "formatjs-apostrophe-before-tag",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Value < 2 > 1."
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "VALUE '< 2 > 1."
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
+      "id": "formatjs.apostrophe-opaque-tag-attribute.reject",
+      "description": "Apostrophes inside a complete tag token are opaque to ICU quote state, so a later unsafe opener is still detected and rejected.",
       "tier": "extended",
       "profile": "formatjs",
       "features": [
@@ -1295,9 +1360,6 @@
         "locale": "x-target",
         "text": "<link title='x'>A</link> ET L'<strong>B</strong>."
       },
-      "policy": {
-        "apostropheRepairStrategy": "icu-double"
-      },
       "expected": {
         "diagnostics": [
           {
@@ -1310,18 +1372,11 @@
             }
           }
         ],
-        "disposition": "AUTO_REPAIR_TARGET",
-        "safeRepair": {
-          "operations": [
-            "DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG"
-          ],
-          "expectedTarget": "<link title='x'>A</link> ET L''<strong>B</strong>.",
-          "expectedDiagnostics": []
-        }
+        "disposition": "REJECT_TARGET"
       }
     },
     {
-      "id": "formatjs.apostrophe-pound-outside-plural.double-autorepair",
+      "id": "formatjs.apostrophe-pound-outside-plural.reject",
       "description": "A pound sign outside a plural branch is ordinary text, so the following apostrophe before a tag remains a quote opener.",
       "tier": "extended",
       "profile": "formatjs",
@@ -1342,8 +1397,42 @@
         "locale": "x-target",
         "text": "VALUE '#'<link>DETAIL</link>."
       },
-      "policy": {
-        "apostropheRepairStrategy": "icu-double"
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "unrenderable-tag-apostrophe",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "tag": "<link>",
+              "occurrence": 1
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "formatjs.apostrophe-unicode-tag-not-opaque.reject",
+      "description": "ICU-looking syntax hidden inside a broader Unicode tag span preserves an ASCII tag-token finding and is conservatively rejected.",
+      "tier": "extended",
+      "profile": "formatjs",
+      "features": [
+        "formatjs-apostrophe-escaping",
+        "rich-text-tags"
+      ],
+      "rules": [
+        "formatjs-apostrophe-before-tag",
+        "message-syntax",
+        "rich-text-tag-contract"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "<β {bad L'<link>'>"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "<β {bad L'<link>'>"
       },
       "expected": {
         "diagnostics": [
@@ -1357,14 +1446,7 @@
             }
           }
         ],
-        "disposition": "AUTO_REPAIR_TARGET",
-        "safeRepair": {
-          "operations": [
-            "DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG"
-          ],
-          "expectedTarget": "VALUE '#''<link>DETAIL</link>.",
-          "expectedDiagnostics": []
-        }
+        "disposition": "REJECT_TARGET"
       }
     },
     {
@@ -3719,8 +3801,8 @@
       }
     },
     {
-      "id": "pipeline.composed-safe-repairs.autorepair",
-      "description": "Independent deterministic repairs compose and remain idempotent.",
+      "id": "pipeline.composed-findings.reject",
+      "description": "Independent findings compose and reject without applying a partial repair.",
       "tier": "extended",
       "profile": "formatjs",
       "features": [
@@ -3741,7 +3823,6 @@
         "text": "L'<link>TARGET</link>"
       },
       "policy": {
-        "apostropheRepairStrategy": "compatibility-u2019",
         "boundaryWhitespaceInvariant": true
       },
       "expected": {
@@ -3767,15 +3848,7 @@
             }
           }
         ],
-        "disposition": "AUTO_REPAIR_TARGET",
-        "safeRepair": {
-          "operations": [
-            "COPY_SOURCE_BOUNDARY_WHITESPACE",
-            "REPLACE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG_WITH_U2019"
-          ],
-          "expectedTarget": " L’<link>TARGET</link> ",
-          "expectedDiagnostics": []
-        }
+        "disposition": "REJECT_TARGET"
       }
     },
     {

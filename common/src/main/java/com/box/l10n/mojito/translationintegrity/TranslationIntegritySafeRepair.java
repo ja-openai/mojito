@@ -26,13 +26,6 @@ public record TranslationIntegritySafeRepair(
     if (uniqueOperations.size() != operations.size()) {
       throw new IllegalArgumentException("operations must be unique");
     }
-    if (uniqueOperations.contains(
-            TranslationIntegrityRepairOperation.DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG)
-        && uniqueOperations.contains(
-            TranslationIntegrityRepairOperation
-                .REPLACE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG_WITH_U2019)) {
-      throw new IllegalArgumentException("apostrophe repair operations are mutually exclusive");
-    }
     List<TranslationIntegrityRepairOperation> sortedOperations = new ArrayList<>(operations);
     sortedOperations.sort(Comparator.comparing(Enum::name));
     operations = List.copyOf(sortedOperations);

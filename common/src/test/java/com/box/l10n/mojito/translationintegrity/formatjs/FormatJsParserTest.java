@@ -184,6 +184,43 @@ class FormatJsParserTest {
   }
 
   @Test
+  void recordsOnlyApostrophesRecognizedAsIcuQuoteOpeners() {
+    FormatJsParserOptions options = strict().toBuilder().pythonOpaqueTagCompatibility(true).build();
+
+    String closingBeforeTag = "'{name}'<link>TEXT</link>";
+    FormatJsParser closingParser = new FormatJsParser(closingBeforeTag, options);
+    assertThat(closingParser.parseResult().isSuccess()).isTrue();
+    assertThat(closingParser.apostropheQuotes())
+        .containsExactly(
+            new FormatJsParser.ApostropheQuote(0, closingBeforeTag.indexOf("'<link>")));
+
+    FormatJsParser doubledParser = new FormatJsParser("L''<link>TEXT</link>", options);
+    assertThat(doubledParser.parseResult().isSuccess()).isTrue();
+    assertThat(doubledParser.apostropheQuotes()).isEmpty();
+
+    FormatJsParser unsafeParser = new FormatJsParser("L'<link>TEXT</link>", options);
+    assertThat(unsafeParser.parseResult().isSuccess()).isTrue();
+    assertThat(unsafeParser.apostropheQuotes())
+        .containsExactly(new FormatJsParser.ApostropheQuote(1, null));
+  }
+
+  @Test
+  void recordsPythonCompatibleOpaqueTagSpansInMessageContexts() {
+    FormatJsParserOptions options = strict().toBuilder().pythonOpaqueTagCompatibility(true).build();
+    String message = "<β {bad L'<link>'> {outside}";
+    FormatJsParser parser = new FormatJsParser(message, options);
+
+    assertThat(parser.parseResult().isSuccess()).isTrue();
+    assertThat(parser.pythonOpaqueTagSpans())
+        .containsExactly(new FormatJsParser.OpaqueTagSpan(0, message.indexOf(" {outside}")));
+    assertThat(parser.apostropheQuotes()).isEmpty();
+
+    FormatJsParser argumentHeader = new FormatJsParser("{value<link>}", options);
+    assertThat(argumentHeader.parseResult().isSuccess()).isFalse();
+    assertThat(argumentHeader.pythonOpaqueTagSpans()).isEmpty();
+  }
+
+  @Test
   void rejectsTagAttributesAndMismatchedTags() {
     assertThat(parseError("<b class=x>x</b>", upstreamWithLocations()).kind())
         .isEqualTo(FormatJsParseErrorKind.INVALID_TAG);

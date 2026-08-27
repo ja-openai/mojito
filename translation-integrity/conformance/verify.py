@@ -62,7 +62,6 @@ POLICY_FIELDS = {
     "argumentTypes",
     "targetPluralCategories",
     "boundaryWhitespaceInvariant",
-    "apostropheRepairStrategy",
     "maxNestingDepth",
 }
 WAIVER_FIELDS = {
@@ -249,7 +248,6 @@ POLICY_DIAGNOSTIC_CODES = {
 }
 REPAIRABLE_CODES = {
     "boundary-whitespace-mismatch",
-    "unrenderable-tag-apostrophe",
 }
 WAIVABLE_RULES = {"boundary-whitespace"}
 
@@ -424,6 +422,11 @@ def validate_diagnostics(
             )
         if code == "unrenderable-tag-apostrophe":
             assert isinstance(details["occurrence"], int) and details["occurrence"] >= 1
+            tag_token = scan_formatjs_tag_token(details["tag"], 0)
+            assert tag_token is not None and tag_token[0] == len(details["tag"]), (
+                f"{item_label}: apostrophe diagnostic tag must be one complete "
+                "FormatJS tag token"
+            )
         if code == "check-waived":
             assert details["rule"] in WAIVABLE_RULES
             assert (
@@ -592,6 +595,36 @@ def legacy_literal_diagnostics(
     return sorted(diagnostics, key=diagnostic_sort_key)
 
 
+FORMATJS_TAG_WHITESPACE = frozenset(
+    chr(code_point)
+    for code_point in (
+        *range(0x09, 0x0E),
+        0x20,
+        0x85,
+        0x200E,
+        0x200F,
+        0x2028,
+        0x2029,
+    )
+)
+
+
+def skip_formatjs_tag_whitespace(value: str, position: int) -> int:
+    while position < len(value) and value[position] in FORMATJS_TAG_WHITESPACE:
+        position += 1
+    return position
+
+
+def is_ascii_attribute_name_start(character: str) -> bool:
+    return character.isascii() and (character.isalpha() or character in "_:")
+
+
+def is_ascii_attribute_name_character(character: str) -> bool:
+    return is_ascii_attribute_name_start(character) or (
+        character.isascii() and (character.isdigit() or character in "-.")
+    )
+
+
 def scan_formatjs_tag_token(value: str, index: int) -> tuple[int, str, bool] | None:
     """Return the end, token, and opening status of one complete tag token."""
 
@@ -616,18 +649,60 @@ def scan_formatjs_tag_token(value: str, index: int) -> tuple[int, str, bool] | N
             continue
         break
 
-    attribute_quote: str | None = None
-    while position < len(value):
-        character = value[position]
-        if attribute_quote is not None:
-            if character == attribute_quote:
-                attribute_quote = None
-        elif character in {"'", '"'}:
-            attribute_quote = character
-        elif character == ">":
+    if not is_opening:
+        position = skip_formatjs_tag_whitespace(value, position)
+        if position < len(value) and value[position] == ">":
             end = position + 1
             return end, value[index:end], is_opening
+        return None
+
+    while position < len(value):
+        boundary = position
+        position = skip_formatjs_tag_whitespace(value, position)
+        if position < len(value) and value[position] == ">":
+            end = position + 1
+            return end, value[index:end], is_opening
+        if value.startswith("/>", position):
+            end = position + 2
+            return end, value[index:end], is_opening
+        if (
+            position == boundary
+            or position >= len(value)
+            or not is_ascii_attribute_name_start(value[position])
+        ):
+            return None
+
         position += 1
+        while position < len(value) and is_ascii_attribute_name_character(
+            value[position]
+        ):
+            position += 1
+        attribute_end = position
+        equals = skip_formatjs_tag_whitespace(value, position)
+        if equals >= len(value) or value[equals] != "=":
+            position = attribute_end
+            continue
+
+        position = skip_formatjs_tag_whitespace(value, equals + 1)
+        if position >= len(value):
+            return None
+        quote = value[position]
+        if quote in {"'", '"'}:
+            close = value.find(quote, position + 1)
+            if close < 0:
+                return None
+            position = close + 1
+            continue
+
+        value_start = position
+        while (
+            position < len(value)
+            and value[position] not in FORMATJS_TAG_WHITESPACE
+            and value[position] not in "\"'=<>`"
+        ):
+            position += 1
+        if position == value_start:
+            return None
     return None
 
 
@@ -644,19 +719,52 @@ def find_formatjs_quote_close(value: str, opening_index: int) -> int | None:
     return None
 
 
+def scan_python_opaque_tag_span(value: str, index: int) -> int | None:
+    """Return the end of the downstream parser's quote-aware opaque tag span."""
+
+    if index >= len(value) or value[index] != "<":
+        return None
+    name_index = index + 1
+    if name_index < len(value) and value[name_index] == "/":
+        name_index += 1
+    if name_index >= len(value) or not value[name_index].isalpha():
+        return None
+
+    quote: str | None = None
+    position = name_index
+    while position < len(value):
+        character = value[position]
+        if quote is not None:
+            if character == quote:
+                quote = None
+        elif character in {"'", '"'}:
+            quote = character
+        elif character == ">":
+            return position + 1
+        position += 1
+    return None
+
+
 class FormatjsTagApostropheAnalyzer:
-    """Walk valid ICU syntax and find quotes that hide rich-text tag tokens."""
+    """Find tag-hiding quotes while preserving Python-compatible tag opacity."""
 
     _SELECTOR_TYPES = frozenset({"select", "plural", "selectordinal"})
     _PLURAL_TYPES = frozenset({"plural", "selectordinal"})
+    _SIMPLE_TYPES = frozenset({"number", "date", "time"})
+    _MAX_NESTING = 100
 
     def __init__(self, value: str) -> None:
         self.value = value
         self.findings: list[dict[str, Any]] = []
 
     def analyze(self) -> list[dict[str, Any]]:
-        self._scan_message(0, stop_at_closing_brace=False, in_plural=False)
-        return self.findings
+        self._scan_message(
+            0,
+            stop_at_closing_brace=False,
+            in_plural=False,
+            nesting_depth=0,
+        )
+        return sorted(self.findings, key=lambda finding: finding["index"])
 
     def _skip_whitespace(self, position: int) -> int:
         while position < len(self.value) and (
@@ -670,7 +778,11 @@ class FormatjsTagApostropheAnalyzer:
         start = position
         while position < len(self.value):
             character = self.value[position]
-            if character.isspace() or character in "\u200e\u200f" or character in "{},":
+            if (
+                character.isspace()
+                or character in "\u200e\u200f"
+                or character in "{},'<"
+            ):
                 break
             position += 1
         return self.value[start:position], position
@@ -693,6 +805,7 @@ class FormatjsTagApostropheAnalyzer:
                     "index": position,
                     "tag": tag,
                     "closingIndex": closing_index,
+                    "repairable": True,
                 }
             )
         return len(self.value) if closing_index is None else closing_index + 1
@@ -703,23 +816,79 @@ class FormatjsTagApostropheAnalyzer:
         *,
         stop_at_closing_brace: bool,
         in_plural: bool,
+        nesting_depth: int,
     ) -> int:
+        if nesting_depth > self._MAX_NESTING:
+            return len(self.value)
         while position < len(self.value):
             character = self.value[position]
             if character == "'":
                 position = self._scan_apostrophe(position, in_plural=in_plural)
             elif character == "<":
-                tag_token = scan_formatjs_tag_token(self.value, position)
-                position = tag_token[0] if tag_token is not None else position + 1
+                span_end = scan_python_opaque_tag_span(self.value, position)
+                if span_end is None:
+                    position += 1
+                else:
+                    self._scan_non_exact_opaque_span(position, span_end)
+                    position = span_end
             elif character == "{":
-                position = self._scan_argument(position, in_plural=in_plural)
+                next_position = self._scan_argument(
+                    position,
+                    nesting_depth=nesting_depth + 1,
+                )
+                position = next_position if next_position > position else position + 1
             elif character == "}" and stop_at_closing_brace:
                 return position + 1
             else:
                 position += 1
         return position
 
-    def _scan_argument(self, position: int, *, in_plural: bool) -> int:
+    def _scan_non_exact_opaque_span(self, start: int, end: int) -> None:
+        exact_span = scan_formatjs_tag_token(self.value, start)
+        if exact_span is not None and exact_span[0] == end:
+            return
+
+        in_quote = False
+        position = start
+        while position < end:
+            character = self.value[position]
+            if character == "'":
+                if position + 1 < end and self.value[position + 1] == "'":
+                    position += 2
+                    continue
+                if in_quote:
+                    in_quote = False
+                    position += 1
+                    continue
+
+                next_character = self.value[position + 1] if position + 1 < end else ""
+                if next_character in "{}<>":
+                    tag_token = (
+                        scan_formatjs_tag_token(self.value, position + 1)
+                        if next_character == "<"
+                        else None
+                    )
+                    if tag_token is not None and tag_token[0] <= end:
+                        self.findings.append(
+                            {
+                                "index": position,
+                                "tag": tag_token[1],
+                                "closingIndex": None,
+                                "repairable": False,
+                            }
+                        )
+                    in_quote = True
+                position += 1
+                continue
+
+            if not in_quote and character == "<":
+                nested_tag = scan_formatjs_tag_token(self.value, position)
+                if nested_tag is not None and nested_tag[0] <= end:
+                    position = nested_tag[0]
+                    continue
+            position += 1
+
+    def _scan_argument(self, position: int, *, nesting_depth: int) -> int:
         _, position = self._read_token(position + 1)
         position = self._skip_whitespace(position)
         if position >= len(self.value):
@@ -727,7 +896,7 @@ class FormatjsTagApostropheAnalyzer:
         if self.value[position] == "}":
             return position + 1
         if self.value[position] != ",":
-            return position + 1
+            return position
 
         argument_type, position = self._read_token(position + 1)
         position = self._skip_whitespace(position)
@@ -736,27 +905,50 @@ class FormatjsTagApostropheAnalyzer:
         if self.value[position] == "}":
             return position + 1
         if self.value[position] != ",":
-            return position + 1
+            return position
         position += 1
 
-        if argument_type not in self._SELECTOR_TYPES:
+        if argument_type in self._SIMPLE_TYPES:
             return self._skip_argument_style(position)
+        if argument_type not in self._SELECTOR_TYPES:
+            return position
 
         branch_in_plural = argument_type in self._PLURAL_TYPES
+        position = self._skip_whitespace(position)
+        if branch_in_plural and self.value.startswith("offset:", position):
+            offset_start = position
+            position = self._skip_whitespace(position + len("offset:"))
+            if position < len(self.value) and self.value[position] in "+-":
+                position += 1
+            digits_start = position
+            while (
+                position < len(self.value)
+                and self.value[position].isascii()
+                and self.value[position].isdigit()
+            ):
+                position += 1
+            if position == digits_start:
+                return offset_start
+            position = self._skip_whitespace(position)
+
         while position < len(self.value):
             position = self._skip_whitespace(position)
             if position >= len(self.value):
                 return position
             if self.value[position] == "}":
                 return position + 1
-            _, position = self._read_token(position)
-            position = self._skip_whitespace(position)
-            if position < len(self.value) and self.value[position] == "{":
-                position = self._scan_message(
-                    position + 1,
-                    stop_at_closing_brace=True,
-                    in_plural=branch_in_plural,
-                )
+            _, selector_end = self._read_token(position)
+            if selector_end == position:
+                return position
+            position = self._skip_whitespace(selector_end)
+            if position >= len(self.value) or self.value[position] != "{":
+                return position
+            position = self._scan_message(
+                position + 1,
+                stop_at_closing_brace=True,
+                in_plural=branch_in_plural,
+                nesting_depth=nesting_depth,
+            )
         return position
 
     def _skip_argument_style(self, position: int) -> int:
@@ -785,17 +977,6 @@ def analyze_formatjs_tag_apostrophes(value: str) -> list[dict[str, Any]]:
     return FormatjsTagApostropheAnalyzer(value).analyze()
 
 
-def replace_at_indices(value: str, indices: list[int], replacement: str) -> str:
-    parts: list[str] = []
-    previous = 0
-    for index in indices:
-        parts.append(value[previous:index])
-        parts.append(replacement)
-        previous = index + 1
-    parts.append(value[previous:])
-    return "".join(parts)
-
-
 def apply_repair_operations(
     operations: list[str],
     *,
@@ -815,24 +996,6 @@ def apply_repair_operations(
                 + target_core
                 + source_trailing
             )
-        elif operation == "DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG":
-            findings = analyze_formatjs_tag_apostrophes(result)
-            if findings:
-                assert all(item["closingIndex"] is None for item in findings), (
-                    "apostrophe auto-repair requires unambiguous quote-openers"
-                )
-                result = replace_at_indices(
-                    result, [item["index"] for item in findings], "''"
-                )
-        elif operation == "REPLACE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG_WITH_U2019":
-            findings = analyze_formatjs_tag_apostrophes(result)
-            if findings:
-                assert all(item["closingIndex"] is None for item in findings), (
-                    "apostrophe auto-repair requires unambiguous quote-openers"
-                )
-                result = replace_at_indices(
-                    result, [item["index"] for item in findings], "’"
-                )
         else:
             raise AssertionError(f"unknown safe-repair operation {operation!r}")
     return result
@@ -878,12 +1041,6 @@ def validate_policy(
 
     if "boundaryWhitespaceInvariant" in value:
         assert value["boundaryWhitespaceInvariant"] is True
-
-    if "apostropheRepairStrategy" in value:
-        assert value["apostropheRepairStrategy"] in {
-            "compatibility-u2019",
-            "icu-double",
-        }
 
     if "maxNestingDepth" in value:
         assert isinstance(value["maxNestingDepth"], int) and not isinstance(
@@ -1394,24 +1551,6 @@ def main() -> None:
                 assert (
                     case.get("policy", {}).get("boundaryWhitespaceInvariant") is True
                 ), f"{label}: whitespace repair requires an explicit invariant"
-            if "REPLACE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG_WITH_U2019" in operations:
-                assert "formatjs-apostrophe-escaping" in features, (
-                    f"{label}: apostrophe repair requires its renderer capability"
-                )
-                assert (
-                    case.get("policy", {}).get("apostropheRepairStrategy")
-                    == "compatibility-u2019"
-                ), f"{label}: U+2019 repair requires its explicit compatibility policy"
-            if "DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG" in operations:
-                assert "formatjs-apostrophe-escaping" in features, (
-                    f"{label}: apostrophe repair requires its renderer capability"
-                )
-                assert (
-                    case.get("policy", {}).get("apostropheRepairStrategy")
-                    == "icu-double"
-                ), (
-                    f"{label}: doubled-apostrophe repair requires its explicit ICU policy"
-                )
             computed = apply_repair_operations(
                 operations,
                 source=source["text"],
@@ -1442,6 +1581,11 @@ def main() -> None:
             if "boundary-whitespace" in rules:
                 assert not boundary_whitespace_diagnostics(source["text"], computed), (
                     f"{label}: repaired target still violates boundary whitespace"
+                )
+            if "formatjs-apostrophe-before-tag" in rules:
+                assert not analyze_formatjs_tag_apostrophes(computed), (
+                    f"{label}: repaired target still violates the FormatJS "
+                    "apostrophe-before-tag contract"
                 )
             post_repair_policy = validate_diagnostics(
                 repair.get("expectedPolicyDiagnostics", []),

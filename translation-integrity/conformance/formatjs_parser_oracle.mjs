@@ -100,6 +100,27 @@ for (const testCase of formatJsCases) {
       comparison: compareResult(caseSide, expected, actual),
     });
   }
+  const safeRepair = testCase.expected.safeRepair;
+  if (safeRepair !== undefined) {
+    const actual = parseMessage(safeRepair.expectedTarget, null);
+    const expected = {
+      outcome: "valid",
+      normalizedReason: null,
+      maxNestingDepth: null,
+      range: null,
+    };
+    results.push({
+      caseId: testCase.id,
+      side: "safe-repair-target",
+      expected,
+      actual,
+      comparison: compareResult(
+        `${testCase.id}/safe-repair-target`,
+        expected,
+        actual,
+      ),
+    });
+  }
 }
 
 const mismatches = results.filter((result) => result.comparison === "mismatch");
@@ -142,6 +163,7 @@ const report = {
     options: PARSER_OPTIONS,
     scope: "parser-compatibility",
     parsesUnassertedMessages: true,
+    validatesSafeRepairTargets: true,
   },
   corpus: {
     schemaVersion: manifest.schemaVersion,
@@ -468,6 +490,9 @@ function summarize(
   return {
     formatJsCases: formatJsCases.length,
     parsedMessages: allResults.length,
+    parsedSafeRepairTargets: allResults.filter(
+      (result) => result.side === "safe-repair-target",
+    ).length,
     directMatches: comparisonCounts.match ?? 0,
     intentionalMaxDepthPolicyDifferences:
       comparisonCounts["intentional-policy-difference"] ?? 0,

@@ -32,7 +32,8 @@ import java.util.TreeSet;
 
 /**
  * Evaluates FormatJS cutover contracts: message syntax, argument membership, application-controlled
- * select structure, and explicitly selected independent tag, boundary, email, and URL rules.
+ * select structure, and explicitly selected independent tag, boundary, apostrophe, email, and URL
+ * rules.
  */
 public final class FormatJsTranslationIntegrityEvaluator {
 
@@ -48,6 +49,9 @@ public final class FormatJsTranslationIntegrityEvaluator {
       new EmailLiteralTranslationIntegrityEvaluator();
   private static final UrlLiteralTranslationIntegrityEvaluator URL_LITERAL_EVALUATOR =
       new UrlLiteralTranslationIntegrityEvaluator();
+  private static final FormatJsApostropheBeforeTagTranslationIntegrityEvaluator
+      APOSTROPHE_BEFORE_TAG_EVALUATOR =
+          new FormatJsApostropheBeforeTagTranslationIntegrityEvaluator();
 
   public TranslationIntegrityEvaluation evaluate(String source, String target) {
     return evaluate(source, target, false, false, false, false);
@@ -75,21 +79,64 @@ public final class FormatJsTranslationIntegrityEvaluator {
       boolean evaluateBoundaryWhitespace,
       boolean evaluateEmailLiterals,
       boolean evaluateUrlLiterals) {
+    return evaluate(
+        source,
+        target,
+        evaluateRichTextTags,
+        evaluateBoundaryWhitespace,
+        evaluateEmailLiterals,
+        evaluateUrlLiterals,
+        false);
+  }
+
+  /** Evaluates explicitly selected, independently composable FormatJS cutover features. */
+  public TranslationIntegrityEvaluation evaluate(
+      String source,
+      String target,
+      boolean evaluateRichTextTags,
+      boolean evaluateBoundaryWhitespace,
+      boolean evaluateEmailLiterals,
+      boolean evaluateUrlLiterals,
+      boolean evaluateApostropheBeforeTag) {
+    if (evaluateApostropheBeforeTag && !evaluateRichTextTags) {
+      throw new IllegalArgumentException(
+          "evaluateApostropheBeforeTag requires evaluateRichTextTags=true");
+    }
     TranslationIntegrityEvaluation structuralEvaluation =
         evaluateStructural(
             source, target, evaluateRichTextTags, evaluateEmailLiterals, evaluateUrlLiterals);
+    TranslationIntegrityEvaluation apostropheEvaluation =
+        evaluateApostropheBeforeTag
+            ? APOSTROPHE_BEFORE_TAG_EVALUATOR.compose(target, structuralEvaluation)
+            : structuralEvaluation;
     return evaluateBoundaryWhitespace
         ? BOUNDARY_WHITESPACE_EVALUATOR.compose(
             source,
             target,
-            structuralEvaluation,
+            apostropheEvaluation,
             repairedTarget ->
-                evaluateStructural(
+                evaluateWithoutBoundaryWhitespace(
                     source,
                     repairedTarget,
                     evaluateRichTextTags,
                     evaluateEmailLiterals,
-                    evaluateUrlLiterals))
+                    evaluateUrlLiterals,
+                    evaluateApostropheBeforeTag))
+        : apostropheEvaluation;
+  }
+
+  private TranslationIntegrityEvaluation evaluateWithoutBoundaryWhitespace(
+      String source,
+      String target,
+      boolean evaluateRichTextTags,
+      boolean evaluateEmailLiterals,
+      boolean evaluateUrlLiterals,
+      boolean evaluateApostropheBeforeTag) {
+    TranslationIntegrityEvaluation structuralEvaluation =
+        evaluateStructural(
+            source, target, evaluateRichTextTags, evaluateEmailLiterals, evaluateUrlLiterals);
+    return evaluateApostropheBeforeTag
+        ? APOSTROPHE_BEFORE_TAG_EVALUATOR.compose(target, structuralEvaluation)
         : structuralEvaluation;
   }
 
