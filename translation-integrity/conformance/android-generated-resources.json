@@ -55,6 +55,36 @@
       "expectedDiagnostics": []
     },
     {
+      "id": "valid-japanese-other-only-plural",
+      "locale": "x-ja-other-only",
+      "source": "<resources><plurals name=\"participant_count\"><item quantity=\"one\">With %1$s</item><item quantity=\"other\">With %1$d participants</item></plurals></resources>",
+      "target": "<resources><plurals name=\"participant_count\"><item quantity=\"other\">参加者 %1$d 人</item></plurals></resources>",
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "valid-chinese-other-only-plural",
+      "locale": "x-zh-other-only",
+      "source": "<resources><plurals name=\"participant_count\"><item quantity=\"one\">With %1$s</item><item quantity=\"other\">With %1$d participants</item></plurals></resources>",
+      "target": "<resources><plurals name=\"participant_count\"><item quantity=\"other\">%1$d 位参与者</item></plurals></resources>",
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "valid-present-target-category-uses-source-other-contract",
+      "locale": "x-hr-present-category",
+      "source": "<resources><plurals name=\"participant_count\"><item quantity=\"one\">With %1$s</item><item quantity=\"other\">With %1$d participants</item></plurals></resources>",
+      "target": "<resources><plurals name=\"participant_count\"><item quantity=\"one\">WITH %1$s</item><item quantity=\"few\">WITH %1$d PARTICIPANTS</item><item quantity=\"other\">WITH %1$d PARTICIPANTS</item></plurals></resources>",
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "present-target-category-placeholder-type-changed",
+      "locale": "x-hr-present-category-type",
+      "source": "<resources><plurals name=\"participant_count\"><item quantity=\"one\">With %1$s</item><item quantity=\"other\">With %1$d participants</item></plurals></resources>",
+      "target": "<resources><plurals name=\"participant_count\"><item quantity=\"one\">WITH %1$s</item><item quantity=\"few\">WITH %1$s PARTICIPANTS</item><item quantity=\"other\">WITH %1$d PARTICIPANTS</item></plurals></resources>",
+      "expectedDiagnostics": [
+        {"resource": "participant_count#few", "rule": "printf-placeholder-contract"}
+      ]
+    },
+    {
       "id": "plural-branch-placeholder-removed",
       "locale": "x-plural",
       "source": "<resources><plurals name=\"item_count\"><item quantity=\"one\">%1$d item</item><item quantity=\"other\">%1$d items</item></plurals></resources>",

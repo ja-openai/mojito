@@ -162,6 +162,11 @@ plural wording expresses the count without printing it. Placeholder additions,
 type substitutions, multiple omissions, and omissions from the `other` branch
 still fail.
 
+Only plural categories present in the generated localized document are checked.
+When a localized category is not present in the source document, its placeholder
+contract is compared with the source `other` category. The localized `other`
+category is required by Android resource syntax and is always checked.
+
 Failures identify the target locale, asset path when available, canonical string
 or plural-branch ID, and one of `android-resource-syntax`,
 `printf-placeholder-contract`, or `markdown-link-contract`. Semantic translation

@@ -43,10 +43,11 @@ public class AndroidLocalizedAssetIntegrityValidator {
     LocalizationCatalog sourceCatalog = parse(locale, assetPath, source, "source");
     LocalizationCatalog localizedCatalog = parse(locale, assetPath, localized, "target");
 
-    Map<String, AssetExtractorTextUnit> sourceById = projectById(sourceCatalog);
+    Map<String, AssetExtractorTextUnit> sourceById = projectPresentById(sourceCatalog);
     List<Diagnostic> diagnostics = new ArrayList<>();
-    for (var projected : LocalizationShadowComparator.projectTextUnitsWithIds(localizedCatalog)) {
-      AssetExtractorTextUnit sourceUnit = sourceById.get(projected.canonicalId());
+    for (var projected :
+        LocalizationShadowComparator.projectImportTextUnitsWithIds(localizedCatalog)) {
+      AssetExtractorTextUnit sourceUnit = sourceUnit(sourceById, projected);
       if (sourceUnit == null) {
         continue;
       }
@@ -112,9 +113,20 @@ public class AndroidLocalizedAssetIntegrityValidator {
     }
   }
 
-  private static Map<String, AssetExtractorTextUnit> projectById(LocalizationCatalog catalog) {
+  private static AssetExtractorTextUnit sourceUnit(
+      Map<String, AssetExtractorTextUnit> sourceById,
+      LocalizationShadowComparator.ProjectedTextUnit target) {
+    AssetExtractorTextUnit exact = sourceById.get(target.canonicalId());
+    if (exact != null || target.textUnit().getPluralForm() == null) {
+      return exact;
+    }
+    return sourceById.get(target.messageId() + "#other");
+  }
+
+  private static Map<String, AssetExtractorTextUnit> projectPresentById(
+      LocalizationCatalog catalog) {
     Map<String, AssetExtractorTextUnit> byId = new LinkedHashMap<>();
-    for (var projected : LocalizationShadowComparator.projectTextUnitsWithIds(catalog)) {
+    for (var projected : LocalizationShadowComparator.projectImportTextUnitsWithIds(catalog)) {
       byId.put(projected.canonicalId(), projected.textUnit());
     }
     return byId;

@@ -15,8 +15,9 @@ translation data.
 [`android-generated-resources.json`](android-generated-resources.json) adds the
 file-level Android contract consumed by Mojito's generated-asset validator. It
 covers Android resource syntax, printf placeholders across scalar and plural
-values, formatted-false literal percentages, intentional plural-count omission,
-and Markdown destinations including custom schemes.
+values, formatted-false literal percentages, locale-specific plural-category
+presence, intentional plural-count omission, and Markdown destinations including
+custom schemes.
 
 The manifest-level `diagnosticRules` map gives every stable diagnostic code one
 owning rule. A case may emit a diagnostic only when that rule is declared, so
