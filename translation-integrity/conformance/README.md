@@ -62,12 +62,25 @@ include a renderer or JavaScript `Intl.Locale`-dependent `j` skeleton
 resolution. Adding the parser does not by itself replace a production
 integrity checker; that requires adapter parity plus shadow or canary evidence.
 
-The neutral Java evaluator currently composes FormatJS message syntax,
-argument membership, and application-controlled select structure. Its
-manifest-driven test covers all 54 `cutover` cases whose rule sets are fully
-owned by those three rules. The evaluator is not registered on a Mojito
-repository or wired to enforcement; the remaining rule adapters and shadow
-evidence are still required before downstream checker retirement.
+The neutral Java evaluators currently cover two structural slices. The
+FormatJS evaluator composes message syntax, argument membership, and
+application-controlled select structure across all 54 `cutover` cases whose
+rule sets are fully owned by those three rules. The dollar-template evaluator
+covers all five `cutover` cases owned only by message syntax and argument
+membership.
+
+The dollar-template cutover scanner intentionally matches Python
+`string.Template.get_identifiers()`: `$name` and `${name}` use the default
+ASCII identifier grammar, `$$` is escaped, and malformed dollar tokens
+contribute no identifier. This preserves existing true-positive behavior
+without introducing a new cutover rejection. Strict invalid-placeholder
+diagnostics remain `extended`; applying source-first syntax dominance to this
+profile is deferred until shadow evidence shows that enforcing it will not
+reject valid catalog data.
+
+Neither evaluator is registered on a Mojito repository or wired to
+enforcement; the remaining rule adapters and shadow evidence are still
+required before downstream checker retirement.
 
 The shared Java result model represents the complete manifest envelope,
 including policy diagnostics, review routing, exemptions, and deterministic

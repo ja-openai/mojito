@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "corpusVersion": "0.3.0",
+  "corpusVersion": "0.4.0",
   "name": "translation-integrity",
   "offsetEncoding": "unicode-code-point",
   "policyEvaluationDate": "2030-01-01",
@@ -133,6 +133,82 @@
               ]
             }
           },
+          {
+            "code": "variable-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "names": [
+                "name"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "dollar-template.invalid-source-token.compatibility.reject",
+      "description": "The cutover scanner ignores malformed dollar tokens while valid source and target identifiers still define the runtime contract.",
+      "tier": "cutover",
+      "profile": "dollar-template",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Broken $- and $name"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "TARGET $- AND $other"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "variable-extra",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "names": [
+                "other"
+              ]
+            }
+          },
+          {
+            "code": "variable-missing",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "names": [
+                "name"
+              ]
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      }
+    },
+    {
+      "id": "dollar-template.invalid-target-token.compatibility.reject",
+      "description": "A malformed target token contributes no identifier and therefore cannot hide a missing required variable during cutover.",
+      "tier": "cutover",
+      "profile": "dollar-template",
+      "rules": [
+        "argument-contract",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "Hello $name"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "SALUTATION $-"
+      },
+      "expected": {
+        "diagnostics": [
           {
             "code": "variable-missing",
             "severity": "error",
