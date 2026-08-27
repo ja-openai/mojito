@@ -261,7 +261,9 @@ public final class FormatJsParser {
     bumpSpace();
     if (isEof()) {
       fail(
-          FormatJsParseErrorKind.EXPECT_ARGUMENT_CLOSING_BRACE, location(openingBrace, position()));
+          FormatJsParseErrorKind.EXPECT_ARGUMENT_CLOSING_BRACE,
+          location(openingBrace, position()),
+          FormatJsParseErrorContext.ARGUMENT);
     }
     if (currentCodePoint() == '}') {
       bump();
@@ -274,7 +276,9 @@ public final class FormatJsParser {
     bumpSpace();
     if (isEof()) {
       fail(
-          FormatJsParseErrorKind.EXPECT_ARGUMENT_CLOSING_BRACE, location(openingBrace, position()));
+          FormatJsParseErrorKind.EXPECT_ARGUMENT_CLOSING_BRACE,
+          location(openingBrace, position()),
+          FormatJsParseErrorContext.ARGUMENT);
     }
     if (currentCodePoint() == '}') {
       bump();
@@ -286,7 +290,8 @@ public final class FormatJsParser {
       if (isEof()) {
         fail(
             FormatJsParseErrorKind.EXPECT_ARGUMENT_CLOSING_BRACE,
-            location(openingBrace, position()));
+            location(openingBrace, position()),
+            FormatJsParseErrorContext.TYPED_ARGUMENT);
       }
       return parseArgumentOptions(nestingLevel, expectingCloseTag, value.value(), openingBrace);
     }
@@ -344,7 +349,7 @@ public final class FormatJsParser {
       }
       style = new StyleAndLocation(parsedStyle, location(styleStart, position()));
     }
-    tryParseArgumentClose(openingBrace);
+    tryParseArgumentClose(openingBrace, FormatJsParseErrorContext.TYPED_ARGUMENT);
     FormatJsSourceLocation argumentLocation = location(openingBrace, position());
     FormatJsStyle parsedStyle = style == null ? null : new NamedStyle(style.style());
     if (style != null && style.style().startsWith("::")) {
@@ -438,7 +443,7 @@ public final class FormatJsParser {
         };
     Map<String, Option> parsedOptions =
         parsePluralOrSelectOptions(nestingLevel, parentType, expectingCloseTag, firstSelector);
-    tryParseArgumentClose(openingBrace);
+    tryParseArgumentClose(openingBrace, FormatJsParseErrorContext.SELECT_ARGUMENT);
     FormatJsSourceLocation captured = astLocation(location(openingBrace, position()));
     if (parentType == ParentArgumentType.SELECT) {
       return new SelectArgument(value, parsedOptions, captured);
@@ -496,7 +501,7 @@ public final class FormatJsParser {
       ensureCanDescend(nestingLevel, openingBrace);
       List<FormatJsElement> fragment =
           parseMessage(nestingLevel + 1, parentType, expectingCloseTag);
-      tryParseArgumentClose(openingBrace);
+      tryParseArgumentClose(openingBrace, FormatJsParseErrorContext.SELECTOR_BRANCH);
       parsedOptions.put(
           selector, new Option(fragment, astLocation(location(openingBrace, position()))));
       bumpSpace();
@@ -517,10 +522,13 @@ public final class FormatJsParser {
     return parsedOptions;
   }
 
-  private void tryParseArgumentClose(FormatJsSourcePosition openingBrace) {
+  private void tryParseArgumentClose(
+      FormatJsSourcePosition openingBrace, FormatJsParseErrorContext context) {
     if (isEof() || currentCodePoint() != '}') {
       fail(
-          FormatJsParseErrorKind.EXPECT_ARGUMENT_CLOSING_BRACE, location(openingBrace, position()));
+          FormatJsParseErrorKind.EXPECT_ARGUMENT_CLOSING_BRACE,
+          location(openingBrace, position()),
+          context);
     }
     bump();
   }
@@ -746,7 +754,14 @@ public final class FormatJsParser {
   }
 
   private void fail(FormatJsParseErrorKind kind, FormatJsSourceLocation location) {
-    throw new ParseFailure(new FormatJsParseError(kind, message, location));
+    fail(kind, location, FormatJsParseErrorContext.GENERAL);
+  }
+
+  private void fail(
+      FormatJsParseErrorKind kind,
+      FormatJsSourceLocation location,
+      FormatJsParseErrorContext context) {
+    throw new ParseFailure(new FormatJsParseError(kind, message, location, context));
   }
 
   private static String trimEcmaScriptStart(String value) {
