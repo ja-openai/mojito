@@ -404,10 +404,6 @@ class _Parser:
                     if not self.is_done():
                         self.index += 1
                     continue
-                if ch == "}":
-                    content = self.source[content_start : self.index]
-                    self.index += 1
-                    return content
                 if ch == "|":
                     in_quote = False
                 self.index += 1

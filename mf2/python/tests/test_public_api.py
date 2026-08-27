@@ -33,6 +33,12 @@ class PublicApiTest(unittest.TestCase):
         self.assertIs(FunctionSource, mojito_mf2.FunctionSource)
         self.assertTrue(FunctionRegistry.portable().has_formatter({"name": "string"}))
 
+    def test_pipe_quoted_literal_can_contain_closing_brace(self) -> None:
+        result = parse_to_model("{|a}b|}")
+
+        self.assertFalse(result.has_diagnostics, result.diagnostics)
+        self.assertEqual("a}b", format_message(result.model).value)
+
     def test_safe_format_result_and_parts_api(self) -> None:
         result = parse_to_model("Welcome, {$name}!")
 
