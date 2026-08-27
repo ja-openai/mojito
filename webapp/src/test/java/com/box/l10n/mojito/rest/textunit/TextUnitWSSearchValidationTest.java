@@ -1,12 +1,17 @@
 package com.box.l10n.mojito.rest.textunit;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
+import com.box.l10n.mojito.service.security.user.UserService;
+import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
+import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.box.l10n.mojito.service.tm.search.TextUnitTextSearch;
 import com.box.l10n.mojito.service.tm.search.TextUnitTextSearchBooleanOperator;
@@ -17,6 +22,8 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import org.junit.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 public class TextUnitWSSearchValidationTest {
 
@@ -115,6 +122,31 @@ public class TextUnitWSSearchValidationTest {
     assertEquals("Missing placeholder", result.getFailureDetail());
     assertEquals(1.0, integrityCheckDurationCount(meterRegistry, "failure"), 0.0);
     verify(integrityCheckService).checkTMTextUnitIntegrity(321L, "Bonjour");
+  }
+
+  @Test
+  public void addTextUnitValidatesBeforeSaving() {
+    TMTextUnitIntegrityCheckService integrityCheckService =
+        mock(TMTextUnitIntegrityCheckService.class);
+    TMService tmService = mock(TMService.class);
+    doThrow(new IntegrityCheckException("Missing placeholder"))
+        .when(integrityCheckService)
+        .checkTMTextUnitIntegrity(321L, "Bonjour");
+    textUnitWS.tmTextUnitIntegrityCheckService = integrityCheckService;
+    textUnitWS.tmService = tmService;
+    textUnitWS.userService = mock(UserService.class);
+    TextUnitDTO textUnit = new TextUnitDTO();
+    textUnit.setTmTextUnitId(321L);
+    textUnit.setLocaleId(12L);
+    textUnit.setTarget("Bonjour");
+
+    ResponseStatusException exception =
+        assertThrows(ResponseStatusException.class, () -> textUnitWS.addTextUnit(textUnit));
+
+    assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, exception.getStatusCode());
+    assertEquals("Missing placeholder", exception.getReason());
+    verify(integrityCheckService).checkTMTextUnitIntegrity(321L, "Bonjour");
+    verifyNoInteractions(tmService);
   }
 
   private double integrityCheckDurationCount(SimpleMeterRegistry meterRegistry, String result) {

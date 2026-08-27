@@ -11,8 +11,6 @@ import com.box.l10n.mojito.entity.RepositoryLocale;
 import com.box.l10n.mojito.okapi.asset.UnsupportedAssetFilterTypeException;
 import com.box.l10n.mojito.service.asset.AssetRepository;
 import com.box.l10n.mojito.service.repository.RepositoryLocaleRepository;
-import com.box.l10n.mojito.service.tm.AndroidLocalizedAssetIntegrityException;
-import com.box.l10n.mojito.service.tm.AndroidLocalizedAssetIntegrityValidator;
 import com.box.l10n.mojito.service.tm.TMService;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
@@ -108,29 +106,6 @@ public class AssetWSLocalizedErrorHandlingTest {
     failGeneration(body, failure);
 
     assertThatThrownBy(() -> assetWS.getLocalizedAssetForContent(11L, 22L, body)).isSameAs(failure);
-  }
-
-  @Test
-  public void androidIntegrityFailureIsUnprocessableWithStructuredReason() throws Exception {
-    LocalizedAssetBody body = body();
-    AndroidLocalizedAssetIntegrityException failure =
-        new AndroidLocalizedAssetIntegrityException(
-            List.of(
-                new AndroidLocalizedAssetIntegrityValidator.Diagnostic(
-                    "ca", "invite", "android-resource-syntax", "unescaped apostrophe")),
-            null);
-    failGeneration(body, failure);
-
-    assertThatThrownBy(() -> assetWS.getLocalizedAssetForContent(11L, 22L, body))
-        .isInstanceOfSatisfying(
-            ResponseStatusException.class,
-            exception -> {
-              assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
-              assertThat(exception.getReason()).contains("locale=ca");
-              assertThat(exception.getReason()).contains("stringId=invite");
-              assertThat(exception.getReason()).contains("rule=android-resource-syntax");
-              assertThat(exception.getCause()).isSameAs(failure);
-            });
   }
 
   private LocalizedAssetBody body() {

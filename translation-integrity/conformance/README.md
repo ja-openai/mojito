@@ -12,12 +12,14 @@ contains only synthetic text, private-use locale tags, and reserved `.invalid`
 domains. It contains no company, repository, product, customer, or production
 translation data.
 
-[`android-generated-resources.json`](android-generated-resources.json) adds the
-file-level Android contract consumed by Mojito's generated-asset validator. It
-covers Android resource syntax, printf placeholders across scalar and plural
-values, formatted-false literal percentages, locale-specific plural-category
-presence, intentional plural-count omission, and Markdown destinations including
-custom schemes.
+[`android-generated-resources.json`](android-generated-resources.json) records
+the combined Android integrity expectations, including resource syntax, printf
+placeholders, locale-specific plural-category presence, intentional plural-count
+omission, and Markdown destinations. Android resource syntax cases belong to the
+format-owned output adapter; printf, plural, and Markdown-link cases belong to
+text-unit adapters at translation mutation boundaries. Consumers may implement
+those layers independently and should not require one generic generated-asset
+validator to own both concerns.
 
 The manifest-level `diagnosticRules` map gives every stable diagnostic code one
 owning rule. A case may emit a diagnostic only when that rule is declared, so

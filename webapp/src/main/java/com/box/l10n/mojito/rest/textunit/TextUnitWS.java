@@ -467,6 +467,13 @@ public class TextUnitWS {
 
     logger.debug("Add TextUnit");
     textUnitDTO.setTarget(NormalizationUtils.normalize(textUnitDTO.getTarget()));
+    try {
+      tmTextUnitIntegrityCheckService.checkTMTextUnitIntegrity(
+          textUnitDTO.getTmTextUnitId(), textUnitDTO.getTarget());
+    } catch (IntegrityCheckException exception) {
+      throw new ResponseStatusException(
+          HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage(), exception);
+    }
     TMTextUnitCurrentVariant addTMTextUnitCurrentVariant =
         tmService.addTMTextUnitCurrentVariant(
             textUnitDTO.getTmTextUnitId(),

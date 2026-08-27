@@ -2,6 +2,7 @@ package com.box.l10n.mojito.okapi;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.box.l10n.mojito.okapi.filters.AndroidFilter;
 import java.util.List;
 import org.junit.Test;
 
@@ -24,6 +25,12 @@ public class AndroidFilterConfigurationPropertiesTest {
     properties.setValidateGeneratedResources(true);
 
     assertThat(properties.isValidateGeneratedResources()).isTrue();
+    assertThat(properties.applyServerDefaults(null))
+        .containsExactly(AndroidFilter.OPTION_VALIDATE_GENERATED_RESOURCES + "=true");
+    assertThat(
+            properties.applyServerDefaults(
+                List.of(AndroidFilter.OPTION_VALIDATE_GENERATED_RESOURCES + "=false")))
+        .containsExactly(AndroidFilter.OPTION_VALIDATE_GENERATED_RESOURCES + "=true");
   }
 
   @Test

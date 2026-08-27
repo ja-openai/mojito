@@ -31,7 +31,9 @@ public class AndroidFilterConfigurationProperties {
   }
 
   public List<String> applyServerDefaults(List<String> requestedFilterOptions) {
-    if (!autoDetectAnchorTags || hasRequestedAnchorTagOption(requestedFilterOptions)) {
+    boolean addAutoDetect =
+        autoDetectAnchorTags && !hasRequestedAnchorTagOption(requestedFilterOptions);
+    if (!addAutoDetect && !validateGeneratedResources) {
       return requestedFilterOptions;
     }
 
@@ -39,7 +41,14 @@ public class AndroidFilterConfigurationProperties {
         requestedFilterOptions == null
             ? new ArrayList<>()
             : new ArrayList<>(requestedFilterOptions);
-    effectiveFilterOptions.add(AndroidFilter.OPTION_UNESCAPE_ANCHOR_TAGS + "=auto");
+    if (addAutoDetect) {
+      effectiveFilterOptions.add(AndroidFilter.OPTION_UNESCAPE_ANCHOR_TAGS + "=auto");
+    }
+    if (validateGeneratedResources) {
+      effectiveFilterOptions.removeIf(
+          option -> option.startsWith(AndroidFilter.OPTION_VALIDATE_GENERATED_RESOURCES + "="));
+      effectiveFilterOptions.add(AndroidFilter.OPTION_VALIDATE_GENERATED_RESOURCES + "=true");
+    }
     return effectiveFilterOptions;
   }
 

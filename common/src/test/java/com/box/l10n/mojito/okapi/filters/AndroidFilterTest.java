@@ -4,8 +4,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import com.box.l10n.mojito.fileformat.LocalizationParseException;
 import com.box.l10n.mojito.okapi.RawDocument;
 import com.box.l10n.mojito.okapi.TextUnitUtils;
 import java.util.List;
@@ -53,6 +55,46 @@ public class AndroidFilterTest {
 
     assertTrue(filter.autoDetectAnchorTags);
     assertFalse(encoder.unescapeAnchorTags);
+  }
+
+  @Test
+  public void testGeneratedResourceValidationOptionUsesDocumentPostProcessor() {
+    AndroidFilter filter = new AndroidFilter();
+    RawDocument rawDocument = new RawDocument("", LocaleId.ENGLISH);
+    rawDocument.setAnnotation(new FilterOptions(List.of("validateGeneratedResources=true")));
+
+    filter.applyFilterOptions(rawDocument);
+
+    assertTrue(filter.validateGeneratedResources);
+  }
+
+  @Test
+  public void testGeneratedResourceValidationAcceptsLocaleSpecificPluralDocument() {
+    AndroidFilter.AndroidFilePostProcessor postProcessor =
+        new AndroidFilter.AndroidFilePostProcessor(false, false, 2, false, false, false, true);
+    String localized =
+        """
+        <resources>
+          <plurals name="subscription_renewal">
+            <item quantity="other">Diperbaharui pada %1$s/bulan untuk %2$d bulan pertama anda.</item>
+          </plurals>
+        </resources>
+        """;
+
+    assertEquals(localized, postProcessor.execute(localized));
+  }
+
+  @Test
+  public void testGeneratedResourceValidationRejectsInvalidFinalDocument() {
+    AndroidFilter.AndroidFilePostProcessor postProcessor =
+        new AndroidFilter.AndroidFilePostProcessor(false, false, 2, false, false, false, true);
+    String localized = "<resources><string name=\"offer\">L'offre</string></resources>";
+
+    LocalizationParseException exception =
+        assertThrows(LocalizationParseException.class, () -> postProcessor.execute(localized));
+
+    assertEquals("UNESCAPED_APOSTROPHE", exception.code());
+    assertTrue(exception.getMessage().startsWith("Generated Android resource validation failed:"));
   }
 
   @Test

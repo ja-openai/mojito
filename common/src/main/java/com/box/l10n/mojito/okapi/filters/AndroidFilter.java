@@ -1,5 +1,8 @@
 package com.box.l10n.mojito.okapi.filters;
 
+import com.box.l10n.mojito.fileformat.LocalizationFileConverters;
+import com.box.l10n.mojito.fileformat.LocalizationFileFormat;
+import com.box.l10n.mojito.fileformat.LocalizationParseException;
 import com.box.l10n.mojito.okapi.TextUnitUtils;
 import com.box.l10n.mojito.okapi.steps.OutputDocumentPostProcessingAnnotation;
 import com.box.l10n.mojito.okapi.steps.OutputDocumentPostProcessingAnnotation.OutputDocumentPostProcessorBase;
@@ -57,6 +60,8 @@ public class AndroidFilter extends XMLFilter {
   private static final String OPTION_OLD_ESCAPING = "oldEscaping";
 
   public static final String OPTION_UNESCAPE_ANCHOR_TAGS = "unescapeAnchorTags";
+
+  public static final String OPTION_VALIDATE_GENERATED_RESOURCES = "validateGeneratedResources";
 
   private static final String REMOVE_DESCRIPTION = "removeDescription";
 
@@ -129,6 +134,8 @@ public class AndroidFilter extends XMLFilter {
 
   boolean emptyResourcesToEmptyFile = false;
 
+  boolean validateGeneratedResources = false;
+
   int postProcessIndent = 2;
 
   /**
@@ -154,7 +161,8 @@ public class AndroidFilter extends XMLFilter {
                 postProcessIndent,
                 removeTranslatableFalse,
                 emptyResourcesToEmptyFile,
-                shouldApplyPostProcessingRemoveUntranslatedExcluded)));
+                shouldApplyPostProcessingRemoveUntranslatedExcluded,
+                validateGeneratedResources)));
   }
 
   void applyFilterOptions(RawDocument input) {
@@ -205,6 +213,9 @@ public class AndroidFilter extends XMLFilter {
             emptyResourcesToEmptyFile = b;
             shouldApplyPostProcessingRemoveUntranslatedExcluded = true;
           });
+
+      filterOptions.getBoolean(
+          OPTION_VALIDATE_GENERATED_RESOURCES, value -> validateGeneratedResources = value);
 
       filterOptions.getInteger(
           POST_PROCESS_INDENT,
@@ -492,6 +503,7 @@ public class AndroidFilter extends XMLFilter {
     int indent;
     boolean emptyResourcesToEmptyFile;
     boolean shouldApplyPostProcessingRemoveUntranslatedExcluded;
+    boolean validateGeneratedResources;
 
     AndroidFilePostProcessor(
         boolean removeUntranslated,
@@ -500,6 +512,24 @@ public class AndroidFilter extends XMLFilter {
         boolean removeTranslatableFalse,
         boolean emptyResourcesToEmptyFile,
         boolean shouldApplyPostProcessingRemoveUntranslatedExcluded) {
+      this(
+          removeUntranslated,
+          removeDescription,
+          indent,
+          removeTranslatableFalse,
+          emptyResourcesToEmptyFile,
+          shouldApplyPostProcessingRemoveUntranslatedExcluded,
+          false);
+    }
+
+    AndroidFilePostProcessor(
+        boolean removeUntranslated,
+        boolean removeDescription,
+        int indent,
+        boolean removeTranslatableFalse,
+        boolean emptyResourcesToEmptyFile,
+        boolean shouldApplyPostProcessingRemoveUntranslatedExcluded,
+        boolean validateGeneratedResources) {
       this.setRemoveUntranslated(removeUntranslated);
       this.removeDescription = removeDescription;
       this.removeTranslatableFalse = removeTranslatableFalse;
@@ -507,13 +537,17 @@ public class AndroidFilter extends XMLFilter {
       this.emptyResourcesToEmptyFile = emptyResourcesToEmptyFile;
       this.shouldApplyPostProcessingRemoveUntranslatedExcluded =
           shouldApplyPostProcessingRemoveUntranslatedExcluded;
+      this.validateGeneratedResources = validateGeneratedResources;
     }
 
     public String execute(String xmlContent) {
 
-      if (xmlContent == null
-          || xmlContent.isBlank()
-          || (!shouldApplyPostProcessingRemoveUntranslatedExcluded && !hasRemoveUntranslated())) {
+      if (xmlContent == null || xmlContent.isBlank()) {
+        return xmlContent;
+      }
+
+      if (!shouldApplyPostProcessingRemoveUntranslatedExcluded && !hasRemoveUntranslated()) {
+        validateGeneratedResources(xmlContent);
         return xmlContent;
       }
 
@@ -620,11 +654,28 @@ public class AndroidFilter extends XMLFilter {
 
         processedXmlContent = removeMixedContentMarkers(processedXmlContent);
 
+        validateGeneratedResources(processedXmlContent);
         return processedXmlContent;
 
       } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
         logger.error("Can't post-process Android XML:\n{}", xmlContent);
         throw new RuntimeException(e);
+      }
+    }
+
+    private void validateGeneratedResources(String content) {
+      if (validateGeneratedResources) {
+        try {
+          LocalizationFileConverters.parse(
+              LocalizationFileFormat.ANDROID,
+              LocalizationFileConverters.encodeStringTransport(
+                  LocalizationFileFormat.ANDROID, content));
+        } catch (LocalizationParseException exception) {
+          throw new LocalizationParseException(
+              exception.code(),
+              "Generated Android resource validation failed: " + exception.getMessage(),
+              exception);
+        }
       }
     }
 

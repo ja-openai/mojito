@@ -142,34 +142,22 @@ The translation gets rejected if any traingling whitespace in the source string 
 
 ### Generated Android resource validation
 
-Mojito can validate the complete generated Android XML before returning a localized
-asset. Enable the check with
+Repository-configured text-unit checkers validate each translation before the
+direct save endpoint writes it. Placeholder, Markdown-link, and plural-branch
+contracts therefore fail at the translation boundary instead of waiting for a
+localized asset pull.
+
+Mojito can separately validate the final Android XML after the Android filter has
+finished its output post-processing. Enable that check with
 `l10n.android-filter.validate-generated-resources=true`. It defaults to `false` so
-existing repositories are not rejected until they have passed a canary pull. When
-enabled, this final-document check runs independently of repository-configured
-text-unit checkers and rejects:
+existing repositories can pass a canary pull before activation. The generated-
+document check is owned by the Android output processor and rejects final resource
+syntax that Mojito's Android parser cannot consume, including unescaped
+apostrophes. Intentional empty output is not parsed.
 
-- Android resource syntax that Mojito's Android resource parser rejects,
-  including unescaped apostrophes;
-- changed printf placeholder spellings such as `%1$s` becoming `%1$@`; and
-- removed, changed, or malformed Markdown links, including custom-scheme deep
-  links.
-
-Intentional empty output is not parsed as an Android document. Strings marked
-`formatted="false"` are excluded from printf checks, and a non-`other` plural
-branch may omit exactly one existing placeholder occurrence for languages whose
-plural wording expresses the count without printing it. Placeholder additions,
-type substitutions, multiple omissions, and omissions from the `other` branch
-still fail.
-
-Only plural categories present in the generated localized document are checked.
-When a localized category is not present in the source document, its placeholder
-contract is compared with the source `other` category. The localized `other`
-category is required by Android resource syntax and is always checked.
-
-Failures identify the target locale, asset path when available, canonical string
-or plural-branch ID, and one of `android-resource-syntax`,
-`printf-placeholder-contract`, or `markdown-link-contract`. Semantic translation
+The portable Android workflow already parses and serializes localized output
+inside its format-owned pipeline. Neither output path repeats translation-fragment
+placeholder, link, or plural comparisons after generation. Semantic translation
 and accessibility findings still require qualified review and are not inferred
 from syntax.
 
