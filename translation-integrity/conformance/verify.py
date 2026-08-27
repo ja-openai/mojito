@@ -467,12 +467,60 @@ def text_sha256(message: dict[str, str]) -> str:
     return hashlib.sha256(message["text"].encode("utf-8")).hexdigest()
 
 
-def leading_whitespace(value: str) -> str:
-    return value[: len(value) - len(value.lstrip())]
+def is_python_strip_whitespace(character: str) -> bool:
+    code_point = ord(character)
+    return (
+        0x0009 <= code_point <= 0x000D
+        or 0x001C <= code_point <= 0x001F
+        or code_point == 0x0020
+        or code_point == 0x0085
+        or code_point == 0x00A0
+        or code_point == 0x1680
+        or 0x2000 <= code_point <= 0x200A
+        or 0x2028 <= code_point <= 0x2029
+        or code_point == 0x202F
+        or code_point == 0x205F
+        or code_point == 0x3000
+    )
 
 
-def trailing_whitespace(value: str) -> str:
-    return value[len(value.rstrip()) :]
+def whitespace_boundaries(value: str) -> tuple[str, str, str]:
+    leading_end = 0
+    while leading_end < len(value) and is_python_strip_whitespace(
+        value[leading_end]
+    ):
+        leading_end += 1
+
+    trailing_start = len(value)
+    while trailing_start > 0 and is_python_strip_whitespace(
+        value[trailing_start - 1]
+    ):
+        trailing_start -= 1
+
+    core = value[leading_end:trailing_start] if leading_end <= trailing_start else ""
+    return value[:leading_end], core, value[trailing_start:]
+
+
+def boundary_whitespace_diagnostics(
+    source: str, target: str
+) -> list[dict[str, Any]]:
+    source_leading, _, source_trailing = whitespace_boundaries(source)
+    target_leading, _, target_trailing = whitespace_boundaries(target)
+    if source_leading == target_leading and source_trailing == target_trailing:
+        return []
+    return [
+        {
+            "code": "boundary-whitespace-mismatch",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+                "expectedLeading": source_leading,
+                "expectedTrailing": source_trailing,
+                "actualLeading": target_leading,
+                "actualTrailing": target_trailing,
+            },
+        }
+    ]
 
 
 def scan_formatjs_tag_token(value: str, index: int) -> tuple[int, str, bool] | None:
@@ -688,10 +736,15 @@ def apply_repair_operations(
     result = target
     for operation in operations:
         if operation == "COPY_SOURCE_BOUNDARY_WHITESPACE":
+            source_leading, source_core, source_trailing = whitespace_boundaries(source)
+            _, target_core, _ = whitespace_boundaries(result)
+            assert source_core and target_core, (
+                "boundary-whitespace auto-repair requires nonempty stripped cores"
+            )
             result = (
-                leading_whitespace(source)
-                + result.strip()
-                + trailing_whitespace(source)
+                source_leading
+                + target_core
+                + source_trailing
             )
         elif operation == "DOUBLE_ASCII_APOSTROPHE_BEFORE_FORMATJS_TAG":
             findings = analyze_formatjs_tag_apostrophes(result)
@@ -1085,6 +1138,15 @@ def main() -> None:
             item["code"] in {"source-format-invalid", "target-format-invalid"}
             for item in diagnostics
         )
+        if "boundary-whitespace" in rules and not has_syntax_error:
+            expected_boundary_diagnostics = [
+                item
+                for item in diagnostics
+                if item["code"] == "boundary-whitespace-mismatch"
+            ]
+            assert expected_boundary_diagnostics == boundary_whitespace_diagnostics(
+                source["text"], target["text"]
+            ), f"{label}: boundary diagnostics do not match the Python strip predicate"
         if "formatjs-apostrophe-before-tag" in rules and not has_syntax_error:
             occurrences: Counter[str] = Counter()
             normalized_apostrophe_diagnostics: list[dict[str, Any]] = []
@@ -1277,6 +1339,10 @@ def main() -> None:
             assert not post_repair, (
                 f"{label}: schema-v1 safe repair must pass all declared rules"
             )
+            if "boundary-whitespace" in rules:
+                assert not boundary_whitespace_diagnostics(source["text"], computed), (
+                    f"{label}: repaired target still violates boundary whitespace"
+                )
             post_repair_policy = validate_diagnostics(
                 repair.get("expectedPolicyDiagnostics", []),
                 label=f"{label}.safeRepair.expectedPolicyDiagnostics",

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "corpusVersion": "0.5.0",
+  "corpusVersion": "0.6.0",
   "name": "translation-integrity",
   "offsetEncoding": "unicode-code-point",
   "policyEvaluationDate": "2030-01-01",
@@ -80,6 +80,51 @@
       },
       "policy": {
         "apostropheRepairStrategy": "compatibility-u2019"
+      }
+    },
+    {
+      "id": "dollar-template.boundary-whitespace-autorepair",
+      "description": "Dollar-template placeholders compose with exact Python boundary-whitespace repair.",
+      "tier": "cutover",
+      "profile": "dollar-template",
+      "rules": [
+        "argument-contract",
+        "boundary-whitespace",
+        "message-syntax"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "\u0085Hello $name\u2007"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": " Hola ${name} "
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "boundary-whitespace-mismatch",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "expectedLeading": "\u0085",
+              "expectedTrailing": "\u2007",
+              "actualLeading": " ",
+              "actualTrailing": " "
+            }
+          }
+        ],
+        "disposition": "AUTO_REPAIR_TARGET",
+        "safeRepair": {
+          "operations": [
+            "COPY_SOURCE_BOUNDARY_WHITESPACE"
+          ],
+          "expectedTarget": "\u0085Hola ${name}\u2007",
+          "expectedDiagnostics": []
+        }
+      },
+      "policy": {
+        "boundaryWhitespaceInvariant": true
       }
     },
     {
@@ -4786,6 +4831,27 @@
       }
     },
     {
+      "id": "whitespace.identical-all-whitespace.pass",
+      "description": "Identical all-whitespace messages have no mismatch and require no repair.",
+      "tier": "extended",
+      "profile": "plain",
+      "rules": [
+        "boundary-whitespace"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "\u0085\u2007"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "\u0085\u2007"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
+      }
+    },
+    {
       "id": "whitespace.internal.pass",
       "description": "Internal whitespace is translation content and is not normalized by a boundary rule.",
       "tier": "cutover",
@@ -4804,6 +4870,78 @@
       "expected": {
         "diagnostics": [],
         "disposition": "PASS"
+      }
+    },
+    {
+      "id": "whitespace.source-all-whitespace.reject",
+      "description": "A boundary mismatch with an all-whitespace source cannot be repaired safely.",
+      "tier": "cutover",
+      "profile": "plain",
+      "rules": [
+        "boundary-whitespace"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": " \t"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "TARGET"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "boundary-whitespace-mismatch",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "expectedLeading": " \t",
+              "expectedTrailing": " \t",
+              "actualLeading": "",
+              "actualTrailing": ""
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      },
+      "policy": {
+        "boundaryWhitespaceInvariant": true
+      }
+    },
+    {
+      "id": "whitespace.target-all-whitespace.reject",
+      "description": "A boundary mismatch with an all-whitespace target cannot be repaired safely.",
+      "tier": "cutover",
+      "profile": "plain",
+      "rules": [
+        "boundary-whitespace"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": " SOURCE "
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "\u0085\u2007"
+      },
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "boundary-whitespace-mismatch",
+            "severity": "error",
+            "subject": "target",
+            "details": {
+              "expectedLeading": " ",
+              "expectedTrailing": " ",
+              "actualLeading": "\u0085\u2007",
+              "actualTrailing": "\u0085\u2007"
+            }
+          }
+        ],
+        "disposition": "REJECT_TARGET"
+      },
+      "policy": {
+        "boundaryWhitespaceInvariant": true
       }
     },
     {
@@ -4847,6 +4985,27 @@
       },
       "policy": {
         "boundaryWhitespaceInvariant": true
+      }
+    },
+    {
+      "id": "whitespace.zero-width-space.pass",
+      "description": "Zero-width space is translation content, not Python strip boundary whitespace.",
+      "tier": "cutover",
+      "profile": "plain",
+      "rules": [
+        "boundary-whitespace"
+      ],
+      "source": {
+        "locale": "x-source",
+        "text": "\u200BSOURCE\u200B"
+      },
+      "target": {
+        "locale": "x-target",
+        "text": "TARGET"
+      },
+      "expected": {
+        "diagnostics": [],
+        "disposition": "PASS"
       }
     }
   ],
