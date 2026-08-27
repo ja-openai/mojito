@@ -37,9 +37,10 @@ python3 translation-integrity/conformance/verify.py
 ## FormatJS reference oracle
 
 [`formatjs_parser_expectations.json`](formatjs_parser_expectations.json) pins
-the runtime-specific raw error kinds and the two intentional maximum-depth
-policy differences for `@formatjs/icu-messageformat-parser` 3.5.10. It refers
-to case IDs in `manifest.json`; it does not copy the portable messages or their
+the runtime-specific raw error kinds, the two intentional maximum-depth policy
+differences, and the two raw-parser differences caused by the portable opaque
+tag adapter for `@formatjs/icu-messageformat-parser` 3.5.10. It refers to case
+IDs in `manifest.json`; it does not copy the portable messages or their
 normalized diagnostics.
 
 Run the real JavaScript parser oracle with the repository's already-installed
@@ -50,11 +51,12 @@ node translation-integrity/conformance/formatjs_parser_oracle.mjs
 ```
 
 The oracle verifies the package-lock and installed package versions before it
-parses every FormatJS source and target. It checks declared acceptance, raw
-FormatJS error kinds, Unicode code-point diagnostic ranges, source dominance,
-and the measured depth of the two inputs that upstream accepts but Mojito caps
-at 100. It uses `ignoreTag: true` because the corpus assigns rich-tag structure
-to a separate rule.
+parses every FormatJS source and target without adapter preprocessing. It checks
+declared acceptance, raw FormatJS error kinds, Unicode code-point diagnostic
+ranges, source dominance, the measured depth of the two inputs that upstream
+accepts but Mojito caps at 100, and exact metadata for intentional adapter
+differences. It uses `ignoreTag: true` because the corpus assigns rich-tag
+structure to a separate rule.
 
 The Java validation parser and its tests consume the same manifest and
 expectation file. The Java port is intentionally locale-neutral and does not
@@ -62,12 +64,22 @@ include a renderer or JavaScript `Intl.Locale`-dependent `j` skeleton
 resolution. Adding the parser does not by itself replace a production
 integrity checker; that requires adapter parity plus shadow or canary evidence.
 
-The neutral Java evaluators currently cover two structural slices. The
-FormatJS evaluator composes message syntax, argument membership, and
-application-controlled select structure across all 54 `cutover` cases whose
-rule sets are fully owned by those three rules. The dollar-template evaluator
-covers all five `cutover` cases owned only by message syntax and argument
-membership.
+The neutral Java evaluators currently cover three reusable structural slices.
+The rich-text-tag evaluator is placeholder-grammar neutral and is exercised in
+isolation across 17 non-syntax-dominated `cutover` cases spanning FormatJS,
+dollar-template, and double-brace profiles. The FormatJS evaluator composes
+message syntax, argument membership, application-controlled select structure,
+and the explicitly enabled rich-text-tag feature across all 62 `cutover` cases
+whose rule sets it owns. The dollar-template evaluator similarly composes its
+placeholder contract with the explicit tag feature across seven `cutover`
+cases.
+
+The rich-text-tag cutover gate intentionally matches the downstream Python
+checker: it compares exact sets of raw tokens found by `<.*?>`, with matching
+stopping at the first `>` and only `\n` excluded from dot. A set mismatch is
+normalized into missing, extra, or unbalanced diagnostics, but classification
+does not widen rejection. Repeated equal tokens and misnested equal sets remain
+`extended` behavior until shadow evidence supports stricter enforcement.
 
 The dollar-template cutover scanner intentionally matches Python
 `string.Template.get_identifiers()`: `$name` and `${name}` use the default
@@ -78,15 +90,14 @@ diagnostics remain `extended`; applying source-first syntax dominance to this
 profile is deferred until shadow evidence shows that enforcing it will not
 reject valid catalog data.
 
-Neither evaluator is registered on a Mojito repository or wired to
+None of these evaluators is registered on a Mojito repository or wired to
 enforcement; the remaining rule adapters and shadow evidence are still
 required before downstream checker retirement.
 
 The shared Java result model represents the complete manifest envelope,
 including policy diagnostics, review routing, exemptions, and deterministic
-safe repairs. The current FormatJS evaluator uses only its structural
-two-argument constructor; later composite adapters own policy and repair
-composition.
+safe repairs. The current evaluators use only the structural result constructor;
+later composite adapters own policy and repair composition.
 
 ## What the contract separates
 
@@ -217,8 +228,14 @@ Renderer behavior composes independently through features:
   FormatJS opening or closing tag token is unsafe for the configured renderer.
 
 For `formatjs` messages with `rich-text-tags`, ICU argument parsing and rich-tag
-validation remain separate: the syntax parser treats tag tokens as opaque, and
-the rich-tag rule owns their balance, nesting, names, attributes, and counts.
+validation remain separate. A default-off parser option lets the composite
+adapter recognize and consume the downstream Python parser's tag spans only
+from message contexts. Consuming the original span atomically keeps attribute
+braces, apostrophes, pound signs, and angle brackets opaque while retaining the
+original source locations. Raw/default FormatJS behavior remains unchanged, and
+the oracle records its intentional differences. The separate cutover rich-tag
+rule compares exact sets of distinct raw tokens; stricter balance, nesting, and
+multiplicity checks remain `extended`.
 The apostrophe rule is ICU quote-state aware. It distinguishes a quote-closing
 apostrophe immediately before a tag from a new quote opener, treats `#` as ICU
 syntax only inside plural/selectordinal branches, and ignores attribute quotes

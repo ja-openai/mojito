@@ -47,6 +47,24 @@
     "formatjs.syntax.unclosed-style.reject/target": "EXPECT_ARGUMENT_CLOSING_BRACE",
     "formatjs.syntax.unclosed-typed-before-style.reject/target": "EXPECT_ARGUMENT_CLOSING_BRACE"
   },
+  "adapterDifferenceByCaseSide": {
+    "formatjs.tag-attribute-malformed-icu-opacity.pass/source": {
+      "kind": "python-tag-span-opacity",
+      "rawErrorKind": "MALFORMED_ARGUMENT",
+      "rawRange": {
+        "start": 13,
+        "end": 14
+      }
+    },
+    "formatjs.tag-attribute-malformed-icu-opacity.pass/target": {
+      "kind": "python-tag-span-opacity",
+      "rawErrorKind": "MALFORMED_ARGUMENT",
+      "rawRange": {
+        "start": 13,
+        "end": 14
+      }
+    }
+  },
   "policyDifferenceByCaseSide": {
     "formatjs.syntax.selector-depth.reject/target": {
       "maxNestingDepth": 100,

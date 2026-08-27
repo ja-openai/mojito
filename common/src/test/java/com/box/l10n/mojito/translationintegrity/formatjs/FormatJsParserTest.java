@@ -123,6 +123,67 @@ class FormatJsParserTest {
   }
 
   @Test
+  void rawIgnoreTagParserStillParsesIcuSyntaxInsideAttributes() {
+    assertThat(parseError("<link title=\"{\">TEXT</link>", strict()).kind())
+        .isEqualTo(FormatJsParseErrorKind.MALFORMED_ARGUMENT);
+  }
+
+  @Test
+  void pythonCompatibilityConsumesRecognizedTagsAtomically() {
+    FormatJsParserOptions options = strict().toBuilder().pythonOpaqueTagCompatibility(true).build();
+    String message = "<tag title=\"'<\">{outside}";
+
+    assertThat(FormatJsParser.parse(message, strict())).noneMatch(Argument.class::isInstance);
+
+    List<FormatJsElement> ast = FormatJsParser.parse(message, options);
+
+    assertThat(assertInstanceOf(Literal.class, ast.get(0)).value()).isEqualTo("<tag title=\"'<\">");
+    assertThat(assertInstanceOf(Argument.class, ast.get(1)).value()).isEqualTo("outside");
+  }
+
+  @Test
+  void pythonCompatibilityRunsOnlyInMessageContexts() {
+    FormatJsParserOptions options = strict().toBuilder().pythonOpaqueTagCompatibility(true).build();
+    String quoted = "'<link title=\"x'{inside}y\"> {outside}";
+
+    assertThat(FormatJsParser.parse(quoted, options))
+        .filteredOn(Argument.class::isInstance)
+        .extracting(element -> ((Argument) element).value())
+        .containsExactly("inside", "outside");
+    assertThat(parseError("{value<link title=\"{\">}", options).kind())
+        .isEqualTo(FormatJsParseErrorKind.MALFORMED_ARGUMENT);
+  }
+
+  @Test
+  void pythonCompatibilityMatchesUnicodeTagStartAndPluralPoundContexts() {
+    FormatJsParserOptions options = strict().toBuilder().pythonOpaqueTagCompatibility(true).build();
+
+    List<FormatJsElement> unicodeTag =
+        FormatJsParser.parse("</β title=\"{ignored}>\">{outside}", options);
+    assertThat(assertInstanceOf(Literal.class, unicodeTag.get(0)).value())
+        .isEqualTo("</β title=\"{ignored}>\">");
+    assertThat(assertInstanceOf(Argument.class, unicodeTag.get(1)).value()).isEqualTo("outside");
+
+    PluralArgument plural =
+        assertInstanceOf(
+            PluralArgument.class,
+            FormatJsParser.parse(
+                    "{n, plural, other {<tag title=\"'#'{ignored}\">{outside}}}", options)
+                .get(0));
+    assertThat(plural.options().get("other").value())
+        .filteredOn(Argument.class::isInstance)
+        .extracting(element -> ((Argument) element).value())
+        .containsExactly("outside");
+
+    List<FormatJsElement> nonLetter =
+        FormatJsParser.parse("<\u0345 title=\"{notOpaque}\">", options);
+    assertThat(nonLetter)
+        .filteredOn(Argument.class::isInstance)
+        .extracting(element -> ((Argument) element).value())
+        .containsExactly("notOpaque");
+  }
+
+  @Test
   void rejectsTagAttributesAndMismatchedTags() {
     assertThat(parseError("<b class=x>x</b>", upstreamWithLocations()).kind())
         .isEqualTo(FormatJsParseErrorKind.INVALID_TAG);
@@ -241,6 +302,10 @@ class FormatJsParserTest {
     assertThat(FormatJsParserOptions.MOJITO_STRICT.maxNestingDepth()).isEqualTo(100);
     assertThat(FormatJsParserOptions.MOJITO_STRICT.captureLocation()).isTrue();
     assertThat(FormatJsParserOptions.MOJITO_STRICT.ignoreTag()).isTrue();
+    assertThat(FormatJsParserOptions.MOJITO_STRICT.pythonOpaqueTagCompatibility()).isFalse();
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> FormatJsParserOptions.builder().pythonOpaqueTagCompatibility(true).build());
   }
 
   @Test

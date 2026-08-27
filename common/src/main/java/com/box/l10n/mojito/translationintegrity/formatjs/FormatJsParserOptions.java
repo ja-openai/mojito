@@ -1,8 +1,8 @@
 package com.box.l10n.mojito.translationintegrity.formatjs;
 
 /**
- * Parser options matching {@code @formatjs/icu-messageformat-parser} 3.5.10, plus a Mojito
- * maximum-depth safety limit.
+ * Parser options matching {@code @formatjs/icu-messageformat-parser} 3.5.10, plus Mojito's
+ * maximum-depth safety limit and a default-off downstream compatibility mode.
  *
  * <p>The upstream locale option is intentionally not exposed. Mojito's validation parser is
  * locale-neutral; resolving {@code j} date skeleton fields requires the JavaScript runtime's pinned
@@ -13,7 +13,8 @@ public record FormatJsParserOptions(
     boolean requiresOtherClause,
     boolean shouldParseSkeletons,
     boolean captureLocation,
-    int maxNestingDepth) {
+    int maxNestingDepth,
+    boolean pythonOpaqueTagCompatibility) {
 
   /** Defaults of FormatJS's low-level {@code Parser} constructor. */
   public static final FormatJsParserOptions LOW_LEVEL_DEFAULTS = builder().build();
@@ -36,6 +37,9 @@ public record FormatJsParserOptions(
     if (maxNestingDepth < 0) {
       throw new IllegalArgumentException("maxNestingDepth must not be negative");
     }
+    if (pythonOpaqueTagCompatibility && !ignoreTag) {
+      throw new IllegalArgumentException("pythonOpaqueTagCompatibility requires ignoreTag=true");
+    }
   }
 
   public static Builder builder() {
@@ -48,7 +52,8 @@ public record FormatJsParserOptions(
         .requiresOtherClause(requiresOtherClause)
         .shouldParseSkeletons(shouldParseSkeletons)
         .captureLocation(captureLocation)
-        .maxNestingDepth(maxNestingDepth);
+        .maxNestingDepth(maxNestingDepth)
+        .pythonOpaqueTagCompatibility(pythonOpaqueTagCompatibility);
   }
 
   public static final class Builder {
@@ -58,6 +63,7 @@ public record FormatJsParserOptions(
     private boolean shouldParseSkeletons;
     private boolean captureLocation;
     private int maxNestingDepth;
+    private boolean pythonOpaqueTagCompatibility;
 
     private Builder() {}
 
@@ -86,9 +92,20 @@ public record FormatJsParserOptions(
       return this;
     }
 
+    /** Enables the downstream Python parser's message-level opaque-tag behavior. */
+    public Builder pythonOpaqueTagCompatibility(boolean pythonOpaqueTagCompatibility) {
+      this.pythonOpaqueTagCompatibility = pythonOpaqueTagCompatibility;
+      return this;
+    }
+
     public FormatJsParserOptions build() {
       return new FormatJsParserOptions(
-          ignoreTag, requiresOtherClause, shouldParseSkeletons, captureLocation, maxNestingDepth);
+          ignoreTag,
+          requiresOtherClause,
+          shouldParseSkeletons,
+          captureLocation,
+          maxNestingDepth,
+          pythonOpaqueTagCompatibility);
     }
   }
 }

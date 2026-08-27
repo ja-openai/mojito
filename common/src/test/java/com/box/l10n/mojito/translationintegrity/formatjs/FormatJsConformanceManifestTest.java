@@ -28,6 +28,7 @@ class FormatJsConformanceManifestTest {
         JSON.readTree(conformanceRoot.resolve("formatjs_parser_expectations.json").toFile());
     Map<String, FormatJsParseErrorKind> oracleErrorKinds =
         readOracleErrorKinds(parserExpectations.path("errorKindByCaseSide"));
+    JsonNode adapterDifferences = parserExpectations.path("adapterDifferenceByCaseSide");
     JsonNode policyDifferences = parserExpectations.path("policyDifferenceByCaseSide");
     assertExpectationMetadata(parserExpectations);
 
@@ -37,6 +38,7 @@ class FormatJsConformanceManifestTest {
     boolean checkedSelectorDepth = false;
     boolean checkedStyleDepth = false;
     Set<String> checkedOracleFailures = new LinkedHashSet<>();
+    Set<String> checkedAdapterDifferences = new LinkedHashSet<>();
     Set<String> checkedPolicyDifferences = new LinkedHashSet<>();
 
     for (JsonNode testCase : manifest.path("cases")) {
@@ -64,14 +66,16 @@ class FormatJsConformanceManifestTest {
           sourceDiagnostic,
           maximumDepth,
           oracleErrorKinds,
+          adapterDifferences,
           policyDifferences,
           mismatches,
           checkedOracleFailures,
+          checkedAdapterDifferences,
           checkedPolicyDifferences);
 
-      // The contract says a malformed source dominates the detector lane. An adapter must not
-      // attribute any target failure once source parsing fails.
-      if (!source.valid()) {
+      // Portable source syntax failure dominates the detector lane. A declared raw-parser adapter
+      // difference remains portable-valid, so its target side must still be checked.
+      if (sourceDiagnostic != null) {
         sourceDominated++;
         continue;
       }
@@ -87,9 +91,11 @@ class FormatJsConformanceManifestTest {
           targetDiagnostic,
           maximumDepth,
           oracleErrorKinds,
+          adapterDifferences,
           policyDifferences,
           mismatches,
           checkedOracleFailures,
+          checkedAdapterDifferences,
           checkedPolicyDifferences);
       if (id.equals("formatjs.syntax.selector-depth.reject")) {
         checkedSelectorDepth =
@@ -107,6 +113,8 @@ class FormatJsConformanceManifestTest {
     assertThat(sourceDominated).isGreaterThanOrEqualTo(2);
     assertThat(checkedOracleFailures)
         .containsExactlyInAnyOrderElementsOf(oracleErrorKinds.keySet());
+    assertThat(checkedAdapterDifferences)
+        .containsExactlyInAnyOrderElementsOf(fieldNames(adapterDifferences));
     assertThat(checkedPolicyDifferences)
         .containsExactlyInAnyOrderElementsOf(fieldNames(policyDifferences));
     assertThat(checkedSelectorDepth).isTrue();
@@ -130,12 +138,20 @@ class FormatJsConformanceManifestTest {
       JsonNode diagnostic,
       int maximumDepth,
       Map<String, FormatJsParseErrorKind> oracleErrorKinds,
+      JsonNode adapterDifferences,
       JsonNode policyDifferences,
       List<String> mismatches,
       Set<String> checkedOracleFailures,
+      Set<String> checkedAdapterDifferences,
       Set<String> checkedPolicyDifferences) {
     String caseSide = id + "/" + side;
     if (diagnostic == null) {
+      JsonNode adapterDifference = adapterDifferences.get(caseSide);
+      if (adapterDifference != null) {
+        checkedAdapterDifferences.add(caseSide);
+        compareAdapterDifference(caseSide, message, actual, adapterDifference, mismatches);
+        return;
+      }
       if (!actual.valid()) {
         mismatches.add(caseSide + ": unexpectedly invalid: " + actual.failureDescription());
       }
@@ -196,6 +212,37 @@ class FormatJsConformanceManifestTest {
           || actualRange.end() != range.path("end").asInt()) {
         mismatches.add(caseSide + ": expected code-point range " + range + ", got " + actualRange);
       }
+    }
+  }
+
+  private static void compareAdapterDifference(
+      String caseSide,
+      String message,
+      ParseObservation actual,
+      JsonNode adapterDifference,
+      List<String> mismatches) {
+    if (!adapterDifference.path("kind").asText().equals("python-tag-span-opacity")) {
+      mismatches.add(caseSide + ": unknown adapter difference " + adapterDifference);
+      return;
+    }
+    FormatJsParseErrorKind expectedKind =
+        FormatJsParseErrorKind.valueOf(adapterDifference.path("rawErrorKind").asText());
+    if (actual.error() == null || actual.error().kind() != expectedKind) {
+      mismatches.add(
+          caseSide
+              + ": expected raw adapter error "
+              + expectedKind
+              + ", got "
+              + actual.failureDescription());
+      return;
+    }
+    JsonNode expectedRange = adapterDifference.path("rawRange");
+    FormatJsCodePointRanges.CodePointRange actualRange =
+        FormatJsCodePointRanges.toCodePointRange(message, actual.error().location());
+    if (actualRange.start() != expectedRange.path("start").asInt()
+        || actualRange.end() != expectedRange.path("end").asInt()) {
+      mismatches.add(
+          caseSide + ": expected raw adapter range " + expectedRange + ", got " + actualRange);
     }
   }
 

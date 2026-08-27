@@ -25,7 +25,7 @@ class FormatJsTranslationIntegrityEvaluatorConformanceTest {
 
   private static final ObjectMapper JSON = new ObjectMapper();
   private static final Set<String> SUPPORTED_RULES =
-      Set.of("message-syntax", "argument-contract", "select-contract");
+      Set.of("message-syntax", "argument-contract", "select-contract", "rich-text-tag-contract");
 
   @Test
   void matchesEveryApplicableCutoverCase() throws IOException {
@@ -43,7 +43,8 @@ class FormatJsTranslationIntegrityEvaluatorConformanceTest {
       TranslationIntegrityEvaluation actual =
           evaluator.evaluate(
               testCase.path("source").path("text").asText(),
-              testCase.path("target").path("text").asText());
+              testCase.path("target").path("text").asText(),
+              containsText(testCase.path("features"), "rich-text-tags"));
       TranslationIntegrityEvaluation expected = expectedEvaluation(testCase.path("expected"));
       String mismatch = mismatch(expected, actual);
       if (mismatch != null) {
@@ -51,7 +52,7 @@ class FormatJsTranslationIntegrityEvaluatorConformanceTest {
       }
     }
 
-    assertThat(evaluated).isEqualTo(54);
+    assertThat(evaluated).isEqualTo(62);
     assertThat(mismatches).isEmpty();
   }
 
@@ -64,6 +65,52 @@ class FormatJsTranslationIntegrityEvaluatorConformanceTest {
         .singleElement()
         .extracting(TranslationIntegrityDiagnostic::range)
         .isEqualTo(new TranslationIntegrityRange(9, 14));
+  }
+
+  @Test
+  void enablesOpaqueTagCompatibilityOnlyWithTheRichTextFeature() {
+    String message = "<link title=\"{\">TEXT</link>";
+    FormatJsTranslationIntegrityEvaluator evaluator = new FormatJsTranslationIntegrityEvaluator();
+
+    assertThat(evaluator.evaluate(message, message).diagnostics())
+        .singleElement()
+        .extracting(TranslationIntegrityDiagnostic::code)
+        .isEqualTo("source-format-invalid");
+    assertThat(evaluator.evaluate(message, message, true))
+        .isEqualTo(TranslationIntegrityEvaluation.pass());
+  }
+
+  @Test
+  void preservesParserRangeAfterOpaqueTagParsing() {
+    String source = "🧭 <link title=\"{ignored}\"> SOURCE {name}</link>";
+    String target = "🧭 <link title=\"{ignored}\"> TARGET {name</link>";
+    int errorStart = target.codePointCount(0, target.indexOf("{name"));
+    int errorEnd = errorStart + "{name".codePointCount(0, "{name".length());
+
+    TranslationIntegrityEvaluation actual =
+        new FormatJsTranslationIntegrityEvaluator().evaluate(source, target, true);
+
+    assertThat(actual.diagnostics())
+        .singleElement()
+        .extracting(TranslationIntegrityDiagnostic::range)
+        .isEqualTo(new TranslationIntegrityRange(errorStart, errorEnd));
+  }
+
+  @Test
+  void preservesAnOuterIcuQuoteClosingInsideATagLikeSpan() {
+    String source = "'<link title=\"x'{inside}y\"> {name}";
+    String target = "'<link title=\"x'{inside}y\"> TARGET";
+
+    TranslationIntegrityEvaluation actual =
+        new FormatJsTranslationIntegrityEvaluator().evaluate(source, target, true);
+
+    assertThat(actual)
+        .isEqualTo(
+            new TranslationIntegrityEvaluation(
+                List.of(
+                    TranslationIntegrityDiagnostic.targetError(
+                        "variable-missing", Map.of("names", List.of("name")))),
+                TranslationIntegrityDisposition.REJECT_TARGET));
   }
 
   @Test
@@ -156,6 +203,15 @@ class FormatJsTranslationIntegrityEvaluatorConformanceTest {
     Set<String> rules = new HashSet<>();
     testCase.path("rules").forEach(rule -> rules.add(rule.asText()));
     return SUPPORTED_RULES.containsAll(rules);
+  }
+
+  private static boolean containsText(JsonNode array, String expected) {
+    for (JsonNode value : array) {
+      if (value.asText().equals(expected)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static TranslationIntegrityEvaluation expectedEvaluation(JsonNode expected) {

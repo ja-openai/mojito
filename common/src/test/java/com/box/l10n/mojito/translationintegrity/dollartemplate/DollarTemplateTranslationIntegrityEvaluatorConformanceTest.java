@@ -25,7 +25,8 @@ import org.junit.jupiter.api.Test;
 class DollarTemplateTranslationIntegrityEvaluatorConformanceTest {
 
   private static final ObjectMapper JSON = new ObjectMapper();
-  private static final Set<String> SUPPORTED_RULES = Set.of("message-syntax", "argument-contract");
+  private static final Set<String> SUPPORTED_RULES =
+      Set.of("message-syntax", "argument-contract", "rich-text-tag-contract");
 
   @Test
   void matchesEveryApplicableCutoverCase() throws IOException {
@@ -44,14 +45,15 @@ class DollarTemplateTranslationIntegrityEvaluatorConformanceTest {
       TranslationIntegrityEvaluation actual =
           evaluator.evaluate(
               testCase.path("source").path("text").asText(),
-              testCase.path("target").path("text").asText());
+              testCase.path("target").path("text").asText(),
+              containsText(testCase.path("features"), "rich-text-tags"));
       TranslationIntegrityEvaluation expected = expectedEvaluation(testCase.path("expected"));
       if (!expected.equals(actual)) {
         mismatches.add(id + ": expected " + expected + ", got " + actual);
       }
     }
 
-    assertThat(evaluated).isEqualTo(5);
+    assertThat(evaluated).isEqualTo(7);
     assertThat(mismatches).isEmpty();
   }
 
@@ -90,6 +92,15 @@ class DollarTemplateTranslationIntegrityEvaluatorConformanceTest {
     Set<String> rules = new HashSet<>();
     testCase.path("rules").forEach(rule -> rules.add(rule.asText()));
     return SUPPORTED_RULES.containsAll(rules);
+  }
+
+  private static boolean containsText(JsonNode array, String expected) {
+    for (JsonNode value : array) {
+      if (value.asText().equals(expected)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static TranslationIntegrityEvaluation expectedEvaluation(JsonNode expected) {

@@ -3,6 +3,7 @@ package com.box.l10n.mojito.translationintegrity.dollartemplate;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityDiagnostic;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityDisposition;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityEvaluation;
+import com.box.l10n.mojito.translationintegrity.richtag.RichTextTagTranslationIntegrityEvaluator;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -18,14 +19,22 @@ import java.util.TreeSet;
  *
  * <p>The compatibility scanner recognizes ASCII {@code $name} and {@code ${name}} identifiers and
  * treats {@code $$} as an escaped dollar. Invalid placeholder spellings contribute no identifier;
- * strict syntax rejection remains an extended, post-cutover behavior.
+ * strict syntax rejection remains an extended, post-cutover behavior. The independent rich-text-tag
+ * feature can be composed explicitly without changing placeholder parsing.
  */
 public final class DollarTemplateTranslationIntegrityEvaluator {
 
   private static final Comparator<String> CODE_POINT_ORDER =
       DollarTemplateTranslationIntegrityEvaluator::compareByCodePoint;
+  private static final RichTextTagTranslationIntegrityEvaluator RICH_TEXT_TAG_EVALUATOR =
+      new RichTextTagTranslationIntegrityEvaluator();
 
   public TranslationIntegrityEvaluation evaluate(String source, String target) {
+    return evaluate(source, target, false);
+  }
+
+  public TranslationIntegrityEvaluation evaluate(
+      String source, String target, boolean evaluateRichTextTags) {
     Objects.requireNonNull(source, "source");
     Objects.requireNonNull(target, "target");
 
@@ -45,6 +54,9 @@ public final class DollarTemplateTranslationIntegrityEvaluator {
       diagnostics.add(
           TranslationIntegrityDiagnostic.targetError(
               "variable-extra", Map.of("names", List.copyOf(extra))));
+    }
+    if (evaluateRichTextTags) {
+      diagnostics.addAll(RICH_TEXT_TAG_EVALUATOR.evaluate(source, target).diagnostics());
     }
 
     return diagnostics.isEmpty()
