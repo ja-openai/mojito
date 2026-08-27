@@ -12,13 +12,11 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.BulkImportRun;
-import com.box.l10n.mojito.entity.BulkImportRunItem;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
@@ -33,7 +31,6 @@ import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.tm.AddTMTextUnitCurrentVariantResult;
-import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.importer.BulkImportLineageService.ImportContext;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService.ImportMode;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService.ImportResult;
@@ -45,18 +42,16 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 public class BulkImportLineageServiceTest {
 
   private final BulkImportRunRepository runRepository = mock(BulkImportRunRepository.class);
-  private final BulkImportRunItemRepository itemRepository =
-      mock(BulkImportRunItemRepository.class);
   private final StructuredBlobStorage structuredBlobStorage = mock(StructuredBlobStorage.class);
   private final AuditorAwareImpl auditorAware = mock(AuditorAwareImpl.class);
   private final UserRepository userRepository = mock(UserRepository.class);
-  private final TMTextUnitRepository tmTextUnitRepository = mock(TMTextUnitRepository.class);
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   private BulkImportLineageService service;
@@ -93,7 +88,6 @@ public class BulkImportLineageServiceTest {
               }
               return run;
             });
-    when(itemRepository.saveAllAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
   }
 
   @After
@@ -151,29 +145,17 @@ public class BulkImportLineageServiceTest {
         .contains(
             "\"tmTextUnitId\":99514",
             "\"previousTmTextUnitVariantId\":3299000",
-            "\"resultingTmTextUnitVariantId\":3299044")
+            "\"resultingTmTextUnitVariantId\":3299044",
+            "\"translatorIdentity\":\"italian-translator@example.com\"",
+            "\"reviewerIdentity\":\"italian-reviewer@example.com\"")
+        .contains("\"status\":\"IMPORTED\"")
         .contains("\"status\":\"COMPLETED\"");
     assertThat(run.getActorType()).isEqualTo(HUMAN);
     assertThat(run.getActorIdentity()).isEqualTo("translator@example.com");
     assertThat(run.getStatus()).isEqualTo(BulkImportRun.Status.COMPLETED);
     assertThat(run.getImportedCount()).isEqualTo(1);
 
-    @SuppressWarnings("unchecked")
-    ArgumentCaptor<List<BulkImportRunItem>> itemCaptor = ArgumentCaptor.forClass(List.class);
-    verify(itemRepository).saveAllAndFlush(itemCaptor.capture());
-    assertThat(itemCaptor.getValue())
-        .singleElement()
-        .satisfies(
-            item -> {
-              assertThat(item.getTmTextUnit().getId()).isEqualTo(99514L);
-              assertThat(item.getPreviousTmTextUnitVariantId()).isEqualTo(3299000L);
-              assertThat(item.getResultingTmTextUnitVariant().getId()).isEqualTo(3299044L);
-              assertThat(item.getStatus()).isEqualTo(BulkImportRunItem.Status.IMPORTED);
-              assertThat(item.getTranslatorIdentity())
-                  .isEqualTo("italian-translator@example.com")
-                  .isNotEqualTo(run.getActorIdentity());
-              assertThat(item.getReviewerIdentity()).isEqualTo("italian-reviewer@example.com");
-            });
+    assertThat(run.getActorIdentity()).isNotEqualTo("italian-translator@example.com");
   }
 
   @Test
@@ -199,14 +181,8 @@ public class BulkImportLineageServiceTest {
         .put(eq(BULK_IMPORT_LINEAGE), any(), payloads.capture(), eq(Retention.PERMANENT));
     assertThat(payloads.getAllValues().getFirst())
         .contains("\"name\":\"SplashScreenV2.diveInWithName\"");
-
-    @SuppressWarnings("unchecked")
-    ArgumentCaptor<List<BulkImportRunItem>> itemCaptor = ArgumentCaptor.forClass(List.class);
-    verify(itemRepository).saveAllAndFlush(itemCaptor.capture());
-    assertThat(itemCaptor.getValue())
-        .singleElement()
-        .satisfies(
-            item -> assertThat(item.getTextUnitName()).isEqualTo("SplashScreenV2.diveInWithName"));
+    assertThat(payloads.getAllValues().get(1))
+        .contains("\"name\":\"SplashScreenV2.diveInWithName\"");
   }
 
   @Test
@@ -236,7 +212,6 @@ public class BulkImportLineageServiceTest {
   public void recordsExplicitUnknownTranslatorAndReviewerWithoutUsingImporterIdentity() {
     when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of(user));
     TextUnitForBatchMatcherImport textUnit = createTextUnit(99514L, "key");
-    when(tmTextUnitRepository.getReferenceById(99514L)).thenReturn(createTmTextUnit(99514L));
     BulkImportRun run =
         service.startRun(
             asset,
@@ -248,19 +223,12 @@ public class BulkImportLineageServiceTest {
 
     service.completeRun(run, List.of(textUnit), List.of());
 
-    @SuppressWarnings("unchecked")
-    ArgumentCaptor<List<BulkImportRunItem>> itemCaptor = ArgumentCaptor.forClass(List.class);
-    verify(itemRepository).saveAllAndFlush(itemCaptor.capture());
-    assertThat(itemCaptor.getValue())
-        .singleElement()
-        .satisfies(
-            item -> {
-              assertThat(item.getTranslatorIdentity())
-                  .isEqualTo(BulkImportLineageService.UNKNOWN_IDENTITY)
-                  .isNotEqualTo(run.getActorIdentity());
-              assertThat(item.getReviewerIdentity())
-                  .isEqualTo(BulkImportLineageService.UNKNOWN_IDENTITY);
-            });
+    ArgumentCaptor<String> payloads = ArgumentCaptor.forClass(String.class);
+    verify(structuredBlobStorage, org.mockito.Mockito.times(2))
+        .put(eq(BULK_IMPORT_LINEAGE), any(), payloads.capture(), eq(Retention.PERMANENT));
+    assertThat(payloads.getAllValues().get(1))
+        .contains("\"translatorIdentity\":\"UNKNOWN\"", "\"reviewerIdentity\":\"UNKNOWN\"")
+        .doesNotContain(run.getActorIdentity());
   }
 
   @Test
@@ -361,14 +329,12 @@ public class BulkImportLineageServiceTest {
     assertThat(runCaptor.getValue().getErrorMessage())
         .isEqualTo("Import failed: IllegalStateException");
     assertThat(runCaptor.getValue().getInputPayloadBlobName()).isNull();
-    verify(itemRepository, never()).saveAllAndFlush(any());
   }
 
   @Test
   public void marksRunFailedWhenPermanentOutputCannotBeWritten() {
     when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of(user));
     TextUnitForBatchMatcherImport textUnit = createTextUnit(99514L, "key");
-    when(tmTextUnitRepository.getReferenceById(99514L)).thenReturn(createTmTextUnit(99514L));
     BulkImportRun run =
         service.startRun(
             asset,
@@ -392,18 +358,44 @@ public class BulkImportLineageServiceTest {
     assertThat(run.getStatus()).isEqualTo(BulkImportRun.Status.FAILED);
     assertThat(run.getSkippedCount()).isEqualTo(1);
     assertThat(run.getOutputPayloadBlobName()).isNull();
-    verify(itemRepository).saveAllAndFlush(any());
+  }
+
+  @Test
+  public void listsRecentRunsWithABoundedQuery() {
+    BulkImportRun run = new BulkImportRun();
+    run.setRunId("batch-run-id");
+    run.setRepository(repository);
+    run.setAsset(asset);
+    run.setLocale(locale);
+    run.setActorType(HUMAN);
+    run.setActorIdentity(user.getUsername());
+    run.setSource(BulkImportLineageService.SOURCE_BATCH_API);
+    run.setImportMode(ImportMode.ALWAYS_IMPORT.name());
+    run.setIntegrityChecksType(IntegrityChecksType.SKIP.name());
+    run.setStatus(BulkImportRun.Status.COMPLETED);
+    run.setRequestedCount(4);
+    run.setImportedCount(3);
+    run.setSkippedCount(1);
+    when(runRepository.findAllByOrderByCreatedDateDescIdDesc(any(Pageable.class)))
+        .thenReturn(List.of(run));
+
+    assertThat(service.findRecentRuns(500))
+        .singleElement()
+        .satisfies(
+            summary -> {
+              assertThat(summary.runId()).isEqualTo("batch-run-id");
+              assertThat(summary.repositoryName()).isEqualTo(repository.getName());
+              assertThat(summary.importedCount()).isEqualTo(3);
+            });
+
+    ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+    verify(runRepository).findAllByOrderByCreatedDateDescIdDesc(pageableCaptor.capture());
+    assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(200);
   }
 
   private BulkImportLineageService createService() {
     return new BulkImportLineageService(
-        runRepository,
-        itemRepository,
-        structuredBlobStorage,
-        auditorAware,
-        userRepository,
-        tmTextUnitRepository,
-        objectMapper);
+        runRepository, structuredBlobStorage, auditorAware, userRepository, objectMapper);
   }
 
   private TextUnitForBatchMatcherImport createTextUnit(Long tmTextUnitId, String name) {
@@ -421,12 +413,6 @@ public class BulkImportLineageServiceTest {
     textUnit.setContent("Traduzione importata");
     textUnit.setStatus(TMTextUnitVariant.Status.APPROVED);
     textUnit.setIncludedInLocalizedFile(true);
-    return textUnit;
-  }
-
-  private TMTextUnit createTmTextUnit(Long id) {
-    TMTextUnit textUnit = new TMTextUnit();
-    textUnit.setId(id);
     return textUnit;
   }
 }

@@ -11,7 +11,6 @@ import com.box.l10n.mojito.entity.AssetExtraction;
 import com.box.l10n.mojito.entity.AssetIntegrityChecker;
 import com.box.l10n.mojito.entity.AssetTextUnit;
 import com.box.l10n.mojito.entity.BulkImportRun;
-import com.box.l10n.mojito.entity.BulkImportRunItem;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
@@ -33,6 +32,8 @@ import com.box.l10n.mojito.service.repository.RepositoryNameAlreadyUsedException
 import com.box.l10n.mojito.service.repository.RepositoryService;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTestData;
+import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
+import com.box.l10n.mojito.service.tm.TMTextUnitVariantCommentRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitVariantRepository;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcher;
@@ -42,6 +43,7 @@ import com.box.l10n.mojito.test.TestIdWatcher;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -83,13 +85,15 @@ public class TextUnitBatchImporterServiceTest extends ServiceTestBase {
 
   @Autowired BulkImportRunRepository bulkImportRunRepository;
 
-  @Autowired BulkImportRunItemRepository bulkImportRunItemRepository;
-
   @Autowired BulkImportLineageService bulkImportLineageService;
 
   @Autowired StructuredBlobStorage structuredBlobStorage;
 
   @Autowired TMTextUnitVariantRepository tmTextUnitVariantRepository;
+
+  @Autowired TMTextUnitVariantCommentRepository tmTextUnitVariantCommentRepository;
+
+  @Autowired TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository;
 
   @Test
   public void testAsyncImportTextUnitsNameOnly() throws InterruptedException {
@@ -167,27 +171,19 @@ public class TextUnitBatchImporterServiceTest extends ServiceTestBase {
     assertEquals(0, importRun.getSkippedCount());
     assertNotNull(importRun.getCompletedDate());
 
-    List<BulkImportRunItem> runItems =
-        bulkImportRunItemRepository.findByRun_IdOrderByIdAsc(importRun.getId());
-    assertEquals(3, runItems.size());
-    for (BulkImportRunItem item : runItems) {
-      assertEquals(BulkImportRunItem.Status.IMPORTED, item.getStatus());
-      assertNotNull(item.getResultingTmTextUnitVariant());
-      if (item.getTmTextUnit().getId().equals(tmTestData.addTMTextUnit2.getId())) {
-        assertEquals("translator@example.com", item.getTranslatorIdentity());
-        assertEquals("reviewer@example.com", item.getReviewerIdentity());
-        assertFalse(importRun.getActorIdentity().equals(item.getTranslatorIdentity()));
-      } else {
-        assertEquals(BulkImportLineageService.UNKNOWN_IDENTITY, item.getTranslatorIdentity());
-        assertEquals(BulkImportLineageService.UNKNOWN_IDENTITY, item.getReviewerIdentity());
-      }
+    for (TextUnitDTO importedTextUnit : textUnitDTOsFromSearch) {
       assertEquals(
           importRun.getInitiatingUser().getId(),
           tmTextUnitVariantRepository
-              .findById(item.getResultingTmTextUnitVariant().getId())
+              .findById(importedTextUnit.getTmTextUnitVariantId())
               .orElseThrow()
               .getCreatedByUser()
               .getId());
+      assertTrue(
+          tmTextUnitVariantCommentRepository
+              .findAllByTmTextUnitVariant_id(importedTextUnit.getTmTextUnitVariantId())
+              .stream()
+              .anyMatch(comment -> comment.getContent().contains(importRun.getRunId())));
     }
 
     String input =
@@ -208,13 +204,9 @@ public class TextUnitBatchImporterServiceTest extends ServiceTestBase {
     assertTrue(input.contains("\"translatorIdentity\":\"UNKNOWN\""));
     assertTrue(output.contains("\"status\":\"COMPLETED\""));
     assertTrue(output.contains("\"resultingTmTextUnitVariantId\":"));
-    assertEquals(
-        importRun.getRunId(),
-        bulkImportLineageService
-            .findRunsForTextUnit(
-                runItems.getFirst().getTmTextUnit().getId(), tmTestData.frFR.getId())
-            .getFirst()
-            .runId());
+    assertTrue(output.contains("\"translatorIdentity\":\"translator@example.com\""));
+    assertTrue(output.contains("\"reviewerIdentity\":\"reviewer@example.com\""));
+    assertFalse(importRun.getActorIdentity().equals("translator@example.com"));
   }
 
   @Test
@@ -230,30 +222,34 @@ public class TextUnitBatchImporterServiceTest extends ServiceTestBase {
     SecurityContext originalContext = SecurityContextHolder.getContext();
     try {
       SecurityContextHolder.clearContext();
-      textUnitBatchImporterService.importTextUnits(
-          List.of(textUnitDTO),
-          TextUnitBatchImporterService.IntegrityChecksType.SKIP,
-          TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT);
+      List<TextUnitBatchImporterService.ImportResult> importResults =
+          textUnitBatchImporterService.importTextUnits(
+              List.of(textUnitDTO),
+              TextUnitBatchImporterService.IntegrityChecksType.SKIP,
+              TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT);
+
+      BulkImportRun run = latestBulkImportRun();
+      assertEquals(BulkImportRun.ActorType.UNKNOWN, run.getActorType());
+      assertNull(run.getActorIdentity());
+      assertNull(run.getInitiatingUser());
+      assertNull(
+          importResults
+              .getFirst()
+              .addTMTextUnitCurrentVariantResult()
+              .getTmTextUnitCurrentVariant()
+              .getTmTextUnitVariant()
+              .getCreatedByUser());
+
+      String output =
+          structuredBlobStorage
+              .getString(
+                  StructuredBlobStorage.Prefix.BULK_IMPORT_LINEAGE, run.getOutputPayloadBlobName())
+              .orElseThrow();
+      assertTrue(output.contains("\"translatorIdentity\":\"UNKNOWN\""));
+      assertTrue(output.contains("\"reviewerIdentity\":\"UNKNOWN\""));
     } finally {
       SecurityContextHolder.setContext(originalContext);
     }
-
-    BulkImportRunItem item =
-        bulkImportRunItemRepository
-            .findByTmTextUnit_IdAndLocale_IdOrderByRun_CreatedDateDescIdDesc(
-                tmTestData.addTMTextUnit2.getId(), tmTestData.frFR.getId())
-            .getFirst();
-    BulkImportRun run = bulkImportRunRepository.findById(item.getRun().getId()).orElseThrow();
-    assertEquals(BulkImportRun.ActorType.UNKNOWN, run.getActorType());
-    assertNull(run.getActorIdentity());
-    assertNull(run.getInitiatingUser());
-    assertEquals(BulkImportLineageService.UNKNOWN_IDENTITY, item.getTranslatorIdentity());
-    assertEquals(BulkImportLineageService.UNKNOWN_IDENTITY, item.getReviewerIdentity());
-    assertNull(
-        tmTextUnitVariantRepository
-            .findById(item.getResultingTmTextUnitVariant().getId())
-            .orElseThrow()
-            .getCreatedByUser());
   }
 
   @Test
@@ -266,15 +262,19 @@ public class TextUnitBatchImporterServiceTest extends ServiceTestBase {
     firstImport.setName("TEST2");
     firstImport.setTarget("First rollback checkpoint");
 
-    textUnitBatchImporterService.importTextUnits(
-        List.of(firstImport),
-        TextUnitBatchImporterService.IntegrityChecksType.SKIP,
-        TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT);
-    BulkImportRunItem firstItem =
-        bulkImportRunItemRepository
-            .findByTmTextUnit_IdAndLocale_IdOrderByRun_CreatedDateDescIdDesc(
-                tmTestData.addTMTextUnit2.getId(), tmTestData.frFR.getId())
+    TextUnitBatchImporterService.ImportResult firstResult =
+        textUnitBatchImporterService
+            .importTextUnits(
+                List.of(firstImport),
+                TextUnitBatchImporterService.IntegrityChecksType.SKIP,
+                TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT)
             .getFirst();
+    Long firstResultingVariantId =
+        firstResult
+            .addTMTextUnitCurrentVariantResult()
+            .getTmTextUnitCurrentVariant()
+            .getTmTextUnitVariant()
+            .getId();
 
     TextUnitDTO secondImport = new TextUnitDTO();
     secondImport.setRepositoryName(tmTestData.repository.getName());
@@ -283,23 +283,31 @@ public class TextUnitBatchImporterServiceTest extends ServiceTestBase {
     secondImport.setName("TEST2");
     secondImport.setTarget("Second rollback checkpoint");
 
-    textUnitBatchImporterService.importTextUnits(
-        List.of(secondImport),
-        TextUnitBatchImporterService.IntegrityChecksType.SKIP,
-        TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT);
-    BulkImportRunItem secondItem =
-        bulkImportRunItemRepository
-            .findByTmTextUnit_IdAndLocale_IdOrderByRun_CreatedDateDescIdDesc(
-                tmTestData.addTMTextUnit2.getId(), tmTestData.frFR.getId())
+    TextUnitBatchImporterService.ImportResult secondResult =
+        textUnitBatchImporterService
+            .importTextUnits(
+                List.of(secondImport),
+                TextUnitBatchImporterService.IntegrityChecksType.SKIP,
+                TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT)
             .getFirst();
+    Long secondResultingVariantId =
+        secondResult
+            .addTMTextUnitCurrentVariantResult()
+            .getTmTextUnitCurrentVariant()
+            .getTmTextUnitVariant()
+            .getId();
 
-    assertEquals(
-        firstItem.getResultingTmTextUnitVariant().getId(),
-        secondItem.getPreviousTmTextUnitVariantId());
-    assertFalse(
-        secondItem
-            .getPreviousTmTextUnitVariantId()
-            .equals(secondItem.getResultingTmTextUnitVariant().getId()));
+    assertEquals(firstResultingVariantId, secondResult.previousTmTextUnitVariantId());
+    assertFalse(secondResult.previousTmTextUnitVariantId().equals(secondResultingVariantId));
+
+    String output =
+        structuredBlobStorage
+            .getString(
+                StructuredBlobStorage.Prefix.BULK_IMPORT_LINEAGE,
+                latestBulkImportRun().getOutputPayloadBlobName())
+            .orElseThrow();
+    assertTrue(output.contains("\"previousTmTextUnitVariantId\":" + firstResultingVariantId));
+    assertTrue(output.contains("\"resultingTmTextUnitVariantId\":" + secondResultingVariantId));
   }
 
   @Test
@@ -325,24 +333,14 @@ public class TextUnitBatchImporterServiceTest extends ServiceTestBase {
         bulkImportRunRepository
             .findByPollableTask_IdOrderByCreatedDateDesc(task.getId())
             .getFirst();
-    BulkImportRunItem item =
-        bulkImportRunItemRepository.findByRun_IdOrderByIdAsc(run.getId()).getFirst();
     assertEquals(BulkImportLineageService.SOURCE_BATCH_API, run.getSource());
     assertEquals(BulkImportRun.ActorType.HUMAN, run.getActorType());
     assertNotNull(run.getInitiatingUser());
-    assertEquals("actual-translator@example.com", item.getTranslatorIdentity());
-    assertEquals("actual-reviewer@example.com", item.getReviewerIdentity());
-    assertFalse(run.getActorIdentity().equals(item.getTranslatorIdentity()));
+    assertFalse(run.getActorIdentity().equals("actual-translator@example.com"));
 
     String runAudit =
         authenticatedRestTemplate.getForObject(
             "/api/monitoring/import-lineage/" + run.getRunId(), String.class);
-    String affectedTextUnitAudit =
-        authenticatedRestTemplate.getForObject(
-            "/api/monitoring/import-lineage/text-units/"
-                + tmTestData.addTMTextUnit2.getId()
-                + "?bcp47Tag=fr-FR",
-            String.class);
     String inputPayload =
         authenticatedRestTemplate.getForObject(
             "/api/monitoring/import-lineage/" + run.getRunId() + "/input", String.class);
@@ -350,10 +348,24 @@ public class TextUnitBatchImporterServiceTest extends ServiceTestBase {
         authenticatedRestTemplate.getForObject(
             "/api/monitoring/import-lineage/" + run.getRunId() + "/output", String.class);
 
-    assertTrue(runAudit.contains("actual-translator@example.com"));
-    assertTrue(affectedTextUnitAudit.contains(run.getRunId()));
+    assertTrue(runAudit.contains(run.getRunId()));
+    assertTrue(runAudit.contains(BulkImportLineageService.SOURCE_BATCH_API));
     assertTrue(inputPayload.contains("actual-reviewer@example.com"));
-    assertTrue(outputPayload.contains(item.getResultingTmTextUnitVariant().getId().toString()));
+    assertTrue(outputPayload.contains("actual-translator@example.com"));
+    assertTrue(outputPayload.contains("actual-reviewer@example.com"));
+
+    Long resultingVariantId =
+        tmTextUnitCurrentVariantRepository
+            .findByLocale_IdAndTmTextUnit_Id(
+                tmTestData.frFR.getId(), tmTestData.addTMTextUnit2.getId())
+            .getTmTextUnitVariant()
+            .getId();
+    assertTrue(outputPayload.contains(resultingVariantId.toString()));
+    assertTrue(
+        tmTextUnitVariantCommentRepository
+            .findAllByTmTextUnitVariant_id(resultingVariantId)
+            .stream()
+            .anyMatch(comment -> comment.getContent().contains(run.getRunId())));
   }
 
   @Test
@@ -735,5 +747,11 @@ public class TextUnitBatchImporterServiceTest extends ServiceTestBase {
     assertTrue(
         "should be included with proper placeholder",
         textUnitDTOs.get(0).isIncludedInLocalizedFile());
+  }
+
+  private BulkImportRun latestBulkImportRun() {
+    return bulkImportRunRepository.findAll().stream()
+        .max(Comparator.comparing(BulkImportRun::getId))
+        .orElseThrow();
   }
 }

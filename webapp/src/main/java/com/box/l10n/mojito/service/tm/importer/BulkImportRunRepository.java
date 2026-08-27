@@ -3,6 +3,8 @@ package com.box.l10n.mojito.service.tm.importer;
 import com.box.l10n.mojito.entity.BulkImportRun;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
@@ -12,4 +14,7 @@ public interface BulkImportRunRepository extends JpaRepository<BulkImportRun, Lo
   Optional<BulkImportRun> findByRunId(String runId);
 
   List<BulkImportRun> findByPollableTask_IdOrderByCreatedDateDesc(Long pollableTaskId);
+
+  @EntityGraph(attributePaths = {"repository", "asset", "locale", "pollableTask", "initiatingUser"})
+  List<BulkImportRun> findAllByOrderByCreatedDateDescIdDesc(Pageable pageable);
 }

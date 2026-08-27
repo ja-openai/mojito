@@ -9,7 +9,6 @@ import static com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage.Pref
 import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.BulkImportRun;
 import com.box.l10n.mojito.entity.BulkImportRun.ActorType;
-import com.box.l10n.mojito.entity.BulkImportRunItem;
 import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
@@ -21,7 +20,6 @@ import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
-import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService.ImportResult;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.ZonedDateTime;
@@ -35,6 +33,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -55,28 +54,28 @@ public class BulkImportLineageService {
   public static final String SOURCE_BATCH_IMPORTER = "TEXT_UNIT_BATCH_IMPORTER";
   public static final String UNKNOWN_IDENTITY = "UNKNOWN";
 
+  private enum OutputStatus {
+    IMPORTED,
+    SKIPPED,
+    UNMATCHED
+  }
+
   private final BulkImportRunRepository runRepository;
-  private final BulkImportRunItemRepository itemRepository;
   private final StructuredBlobStorage structuredBlobStorage;
   private final AuditorAwareImpl auditorAware;
   private final UserRepository userRepository;
-  private final TMTextUnitRepository tmTextUnitRepository;
   private final ObjectMapper objectMapper;
 
   public BulkImportLineageService(
       BulkImportRunRepository runRepository,
-      BulkImportRunItemRepository itemRepository,
       StructuredBlobStorage structuredBlobStorage,
       AuditorAwareImpl auditorAware,
       UserRepository userRepository,
-      TMTextUnitRepository tmTextUnitRepository,
       @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper) {
     this.runRepository = runRepository;
-    this.itemRepository = itemRepository;
     this.structuredBlobStorage = structuredBlobStorage;
     this.auditorAware = auditorAware;
     this.userRepository = userRepository;
-    this.tmTextUnitRepository = tmTextUnitRepository;
     this.objectMapper = objectMapper;
   }
 
@@ -134,16 +133,6 @@ public class BulkImportLineageService {
       List<OutputTextUnit> textUnits,
       String error) {}
 
-  public record RunItemSummary(
-      Long tmTextUnitId,
-      String textUnitName,
-      String locale,
-      Long previousTmTextUnitVariantId,
-      Long resultingTmTextUnitVariantId,
-      String status,
-      String translatorIdentity,
-      String reviewerIdentity) {}
-
   public record RunSummary(
       String runId,
       ZonedDateTime createdDate,
@@ -166,8 +155,7 @@ public class BulkImportLineageService {
       int skippedCount,
       String inputPayloadBlobName,
       String outputPayloadBlobName,
-      String errorMessage,
-      List<RunItemSummary> items) {}
+      String errorMessage) {}
 
   public ImportContext captureCurrentContext(String source) {
     Optional<User> currentUser = auditorAware.getCurrentAuditor();
@@ -275,8 +263,7 @@ public class BulkImportLineageService {
       List<TextUnitForBatchMatcherImport> textUnits,
       List<ImportResult> importResults) {
     try {
-      List<BulkImportRunItem> items = createItems(run, textUnits, importResults);
-      itemRepository.saveAllAndFlush(items);
+      List<OutputTextUnit> outputTextUnits = createOutputTextUnits(textUnits, importResults);
 
       run.setImportedCount(importResults.size());
       run.setSkippedCount(textUnits.size() - importResults.size());
@@ -288,7 +275,7 @@ public class BulkImportLineageService {
               run.getRequestedCount(),
               run.getImportedCount(),
               run.getSkippedCount(),
-              items.stream().map(this::toOutputTextUnit).toList(),
+              outputTextUnits,
               null);
       structuredBlobStorage.put(
           BULK_IMPORT_LINEAGE,
@@ -355,12 +342,11 @@ public class BulkImportLineageService {
   }
 
   @Transactional(readOnly = true)
-  public List<RunSummary> findRunsForTextUnit(Long tmTextUnitId, Long localeId) {
-    return itemRepository
-        .findByTmTextUnit_IdAndLocale_IdOrderByRun_CreatedDateDescIdDesc(tmTextUnitId, localeId)
+  public List<RunSummary> findRecentRuns(int limit) {
+    int normalizedLimit = Math.max(1, Math.min(limit, 200));
+    return runRepository
+        .findAllByOrderByCreatedDateDescIdDesc(PageRequest.of(0, normalizedLimit))
         .stream()
-        .map(BulkImportRunItem::getRun)
-        .distinct()
         .map(this::toRunSummary)
         .toList();
   }
@@ -407,10 +393,8 @@ public class BulkImportLineageService {
         comment.getContent());
   }
 
-  private List<BulkImportRunItem> createItems(
-      BulkImportRun run,
-      List<TextUnitForBatchMatcherImport> textUnits,
-      List<ImportResult> importResults) {
+  private List<OutputTextUnit> createOutputTextUnits(
+      List<TextUnitForBatchMatcherImport> textUnits, List<ImportResult> importResults) {
     Map<Long, ArrayDeque<ImportResult>> resultsByTextUnitId = new HashMap<>();
     for (ImportResult result : importResults) {
       TMTextUnitCurrentVariant currentVariant =
@@ -420,15 +404,8 @@ public class BulkImportLineageService {
           .add(result);
     }
 
-    List<BulkImportRunItem> items = new ArrayList<>(textUnits.size());
+    List<OutputTextUnit> outputTextUnits = new ArrayList<>(textUnits.size());
     for (TextUnitForBatchMatcherImport textUnit : textUnits) {
-      BulkImportRunItem item = new BulkImportRunItem();
-      item.setRun(run);
-      item.setLocale(run.getLocale());
-      item.setTextUnitName(getTextUnitName(textUnit));
-      item.setTranslatorIdentity(normalizeIdentity(textUnit.getTranslatorIdentity()));
-      item.setReviewerIdentity(normalizeIdentity(textUnit.getReviewerIdentity()));
-
       Long tmTextUnitId =
           textUnit.getCurrentTextUnit() == null
               ? null
@@ -439,19 +416,38 @@ public class BulkImportLineageService {
       if (result != null) {
         TMTextUnitCurrentVariant currentVariant =
             result.addTMTextUnitCurrentVariantResult().getTmTextUnitCurrentVariant();
-        item.setTmTextUnit(currentVariant.getTmTextUnit());
-        item.setPreviousTmTextUnitVariantId(result.previousTmTextUnitVariantId());
-        item.setResultingTmTextUnitVariant(currentVariant.getTmTextUnitVariant());
-        item.setStatus(BulkImportRunItem.Status.IMPORTED);
+        outputTextUnits.add(
+            new OutputTextUnit(
+                currentVariant.getTmTextUnit().getId(),
+                getTextUnitName(textUnit),
+                result.previousTmTextUnitVariantId(),
+                currentVariant.getTmTextUnitVariant().getId(),
+                OutputStatus.IMPORTED.name(),
+                normalizeIdentity(textUnit.getTranslatorIdentity()),
+                normalizeIdentity(textUnit.getReviewerIdentity())));
       } else if (tmTextUnitId != null) {
-        item.setTmTextUnit(tmTextUnitRepository.getReferenceById(tmTextUnitId));
-        item.setStatus(BulkImportRunItem.Status.SKIPPED);
+        outputTextUnits.add(
+            new OutputTextUnit(
+                tmTextUnitId,
+                getTextUnitName(textUnit),
+                null,
+                null,
+                OutputStatus.SKIPPED.name(),
+                normalizeIdentity(textUnit.getTranslatorIdentity()),
+                normalizeIdentity(textUnit.getReviewerIdentity())));
       } else {
-        item.setStatus(BulkImportRunItem.Status.UNMATCHED);
+        outputTextUnits.add(
+            new OutputTextUnit(
+                null,
+                getTextUnitName(textUnit),
+                null,
+                null,
+                OutputStatus.UNMATCHED.name(),
+                normalizeIdentity(textUnit.getTranslatorIdentity()),
+                normalizeIdentity(textUnit.getReviewerIdentity())));
       }
-      items.add(item);
     }
-    return items;
+    return outputTextUnits;
   }
 
   private String getTextUnitName(TextUnitForBatchMatcherImport textUnit) {
@@ -459,19 +455,6 @@ public class BulkImportLineageService {
       return textUnit.getName();
     }
     return textUnit.getCurrentTextUnit() == null ? null : textUnit.getCurrentTextUnit().getName();
-  }
-
-  private OutputTextUnit toOutputTextUnit(BulkImportRunItem item) {
-    return new OutputTextUnit(
-        item.getTmTextUnit() == null ? null : item.getTmTextUnit().getId(),
-        item.getTextUnitName(),
-        item.getPreviousTmTextUnitVariantId(),
-        item.getResultingTmTextUnitVariant() == null
-            ? null
-            : item.getResultingTmTextUnitVariant().getId(),
-        item.getStatus().name(),
-        item.getTranslatorIdentity(),
-        item.getReviewerIdentity());
   }
 
   private Optional<String> findPayload(String runId, boolean input) {
@@ -507,24 +490,7 @@ public class BulkImportLineageService {
         run.getSkippedCount(),
         run.getInputPayloadBlobName(),
         run.getOutputPayloadBlobName(),
-        run.getErrorMessage(),
-        itemRepository.findByRun_IdOrderByIdAsc(run.getId()).stream()
-            .map(this::toRunItemSummary)
-            .toList());
-  }
-
-  private RunItemSummary toRunItemSummary(BulkImportRunItem item) {
-    return new RunItemSummary(
-        item.getTmTextUnit() == null ? null : item.getTmTextUnit().getId(),
-        item.getTextUnitName(),
-        item.getLocale().getBcp47Tag(),
-        item.getPreviousTmTextUnitVariantId(),
-        item.getResultingTmTextUnitVariant() == null
-            ? null
-            : item.getResultingTmTextUnitVariant().getId(),
-        item.getStatus().name(),
-        item.getTranslatorIdentity(),
-        item.getReviewerIdentity());
+        run.getErrorMessage());
   }
 
   private String normalizeIdentity(String identity) {

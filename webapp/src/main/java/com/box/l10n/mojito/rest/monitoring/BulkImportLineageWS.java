@@ -1,7 +1,5 @@
 package com.box.l10n.mojito.rest.monitoring;
 
-import com.box.l10n.mojito.entity.Locale;
-import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.tm.importer.BulkImportLineageService;
 import com.box.l10n.mojito.service.tm.importer.BulkImportLineageService.RunSummary;
 import java.util.List;
@@ -20,12 +18,14 @@ import org.springframework.web.server.ResponseStatusException;
 public class BulkImportLineageWS {
 
   private final BulkImportLineageService bulkImportLineageService;
-  private final LocaleService localeService;
 
-  public BulkImportLineageWS(
-      BulkImportLineageService bulkImportLineageService, LocaleService localeService) {
+  public BulkImportLineageWS(BulkImportLineageService bulkImportLineageService) {
     this.bulkImportLineageService = bulkImportLineageService;
-    this.localeService = localeService;
+  }
+
+  @GetMapping
+  public List<RunSummary> getRecentRuns(@RequestParam(defaultValue = "50") int limit) {
+    return bulkImportLineageService.findRecentRuns(limit);
   }
 
   @GetMapping("/{runId}")
@@ -34,16 +34,6 @@ public class BulkImportLineageWS {
         .findRun(runId)
         .orElseThrow(
             () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bulk import run not found"));
-  }
-
-  @GetMapping("/text-units/{tmTextUnitId}")
-  public List<RunSummary> findTextUnitRuns(
-      @PathVariable Long tmTextUnitId, @RequestParam("bcp47Tag") String bcp47Tag) {
-    Locale locale = localeService.findByBcp47Tag(bcp47Tag);
-    if (locale == null) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Locale not found: " + bcp47Tag);
-    }
-    return bulkImportLineageService.findRunsForTextUnit(tmTextUnitId, locale.getId());
   }
 
   @GetMapping("/{runId}/input")

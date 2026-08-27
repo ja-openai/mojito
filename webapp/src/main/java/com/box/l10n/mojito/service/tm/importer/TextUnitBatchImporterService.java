@@ -271,6 +271,8 @@ public class TextUnitBatchImporterService {
                                             importMode,
                                             importContext,
                                             textUnitsForBatchImport);
+                                    addRunIdToExistingComments(
+                                        textUnitsForBatchImport, importRun.getRunId());
                                     try {
                                       if (!IntegrityChecksType.SKIP.equals(integrityChecksType)) {
                                         try (var timer2 =
@@ -623,6 +625,18 @@ public class TextUnitBatchImporterService {
     tmTextUnitVariantComment.setType(TMTextUnitVariantComment.Type.WORKBENCH_IMPORT);
     tmTextUnitVariantComment.setContent(importComment);
     return tmTextUnitVariantComment;
+  }
+
+  void addRunIdToExistingComments(List<TextUnitForBatchMatcherImport> textUnits, String runId) {
+    String runMarker = "Bulk import runId=" + runId;
+    textUnits.stream()
+        .flatMap(textUnit -> textUnit.getTmTextUnitVariantComments().stream())
+        .forEach(
+            comment ->
+                comment.setContent(
+                    Strings.isNullOrEmpty(comment.getContent())
+                        ? runMarker
+                        : comment.getContent() + "\n" + runMarker));
   }
 
   List<TextUnitForBatchMatcherImport> skipInvalidAndConvertToTextUnitForBatchImport(
