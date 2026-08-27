@@ -53,6 +53,20 @@ public final class FormatJsTranslationIntegrityEvaluator {
       APOSTROPHE_BEFORE_TAG_EVALUATOR =
           new FormatJsApostropheBeforeTagTranslationIntegrityEvaluator();
 
+  /** Evaluates an immutable named feature selection without positional boolean assembly. */
+  public TranslationIntegrityEvaluation evaluate(
+      String source, String target, FormatJsTranslationIntegrityOptions options) {
+    Objects.requireNonNull(options, "options");
+    return evaluate(
+        source,
+        target,
+        options.richTextTags(),
+        options.boundaryWhitespace(),
+        options.emailLiterals(),
+        options.urlLiterals(),
+        options.apostropheBeforeTag());
+  }
+
   public TranslationIntegrityEvaluation evaluate(String source, String target) {
     return evaluate(source, target, false, false, false, false);
   }

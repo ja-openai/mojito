@@ -63,8 +63,10 @@ fixed-point check on every repaired target.
 The Java validation parser and its tests consume the same manifest and
 expectation file. The Java port is intentionally locale-neutral and does not
 include a renderer or JavaScript `Intl.Locale`-dependent `j` skeleton
-resolution. Adding the parser does not by itself replace a production
-integrity checker; that requires adapter parity plus shadow or canary evidence.
+resolution. The `FORMATJS` and `DOLLAR_TEMPLATE` adapters expose the retained
+cutover selections through Mojito's standard repository checker configuration;
+downstream retirement still requires repository-specific preflight and canary
+evidence.
 
 The neutral Java evaluators currently cover seven reusable structural slices.
 The rich-text-tag evaluator is placeholder-grammar neutral and is exercised in
@@ -131,7 +133,8 @@ checker: it compares exact sets of raw tokens found by `<.*?>`, with matching
 stopping at the first `>` and only `\n` excluded from dot. A set mismatch is
 normalized into missing, extra, or unbalanced diagnostics, but classification
 does not widen rejection. Repeated equal tokens and misnested equal sets remain
-`extended` behavior until shadow evidence supports stricter enforcement.
+`extended` behavior until repository preflight and canary evidence supports
+stricter enforcement.
 
 The dollar-template cutover scanner intentionally matches Python
 `string.Template.get_identifiers()`: `$name` and `${name}` use the default
@@ -139,27 +142,36 @@ ASCII identifier grammar, `$$` is escaped, and malformed dollar tokens
 contribute no identifier. This preserves existing true-positive behavior
 without introducing a new cutover rejection. Strict invalid-placeholder
 diagnostics remain `extended`; applying source-first syntax dominance to this
-profile is deferred until shadow evidence shows that enforcing it will not
+profile is deferred until preflight and canary evidence shows that enforcing it will not
 reject valid catalog data.
 
-With corpus version 0.8.0, the implemented repository-profile arithmetic is
-85 of 86 web cutover cases (70 FormatJS-profile plus 15 shared plain cases) and
-24 of 24 common cutover cases (nine dollar-template plus 15 shared plain
-cases). The remaining web case also declares `waiver-policy`; producing its
-apostrophe finding does not make this structural evaluator a repository-policy
-adapter. This is executable contract coverage, not retirement evidence:
-production wiring, every mutation path, parity observation, and rollback
-ownership remain required.
+With corpus version 0.9.0, the immutable `web()` option bundle selects FormatJS
+syntax and contracts, rich tags, boundary whitespace, email and URL literals,
+and parser-aware apostrophe rejection. The immutable `common()` option bundle
+selects dollar-template arguments plus the grammar-neutral tag, boundary,
+email, and URL rules. Neither uses positional-boolean assembly in production.
 
-None of these evaluators is registered on a Mojito repository or wired to
-enforcement; the remaining rule adapters and shadow evidence are still
-required before downstream checker retirement.
+The Java save path intentionally does not synthesize the message ID, locale,
+date, waiver, or external-review context required by the portable policy cases.
+Those cases remain in the neutral corpus for a future explicitly approved
+policy consumer. The production `FORMATJS` and `DOLLAR_TEMPLATE` adapters are a
+prevention projection: target rejection and repairable-target dispositions fail
+the standard checker, persisted source defects are left for the bounded
+preflight, and no repair is applied. If the persisted source exceeds the parser
+input bound, the adapter allows the target save but cannot run the remaining
+source-to-target structural comparisons; rollout must resolve those source
+defects separately.
 
-The shared Java result model represents the complete manifest envelope,
+This is executable contract coverage plus production adapter wiring, not
+downstream-retirement evidence. Activation still requires a bounded read-only
+preflight, preservation of unrelated existing checker rows, repository canary
+evidence, rollback ownership, and an explicit audit of mutation paths that
+intentionally bypass repository checkers.
+
+The shared Java result model represents the portable manifest envelope,
 including policy diagnostics, review routing, exemptions, and deterministic
-safe repairs. The boundary composite preserves independent policy and review
-output and emits the deterministic boundary repair; later policy adapters still
-own waiver evaluation.
+boundary repair. Waiver and external-review composition are deferred outside
+the production save gate.
 
 ## What the contract separates
 
@@ -189,7 +201,7 @@ The corpus has two tiers:
 
 Passing the tier alone is not retirement evidence. A consumer must also map
 each legacy check to case IDs, prove adapter parity, and observe the new path in
-shadow or canary operation before disabling that check.
+repository preflight and canary operation before disabling that check.
 
 ## Case shape
 
@@ -414,7 +426,7 @@ consumer.
 
 ## Adapter requirements
 
-Every implementation should:
+Every full conformance implementation should:
 
 1. Load `manifest.json` directly; do not copy fixtures into language-specific
    tests.

@@ -38,6 +38,19 @@ public final class DollarTemplateTranslationIntegrityEvaluator {
   private static final UrlLiteralTranslationIntegrityEvaluator URL_LITERAL_EVALUATOR =
       new UrlLiteralTranslationIntegrityEvaluator();
 
+  /** Evaluates an immutable named feature selection without positional boolean assembly. */
+  public TranslationIntegrityEvaluation evaluate(
+      String source, String target, DollarTemplateTranslationIntegrityOptions options) {
+    Objects.requireNonNull(options, "options");
+    return evaluate(
+        source,
+        target,
+        options.richTextTags(),
+        options.boundaryWhitespace(),
+        options.emailLiterals(),
+        options.urlLiterals());
+  }
+
   public TranslationIntegrityEvaluation evaluate(String source, String target) {
     return evaluate(source, target, false, false, false, false);
   }
