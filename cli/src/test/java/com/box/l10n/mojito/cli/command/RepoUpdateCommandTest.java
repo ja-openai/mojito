@@ -8,12 +8,16 @@ import static org.junit.Assert.assertTrue;
 
 import com.box.l10n.mojito.cli.CLITestBase;
 import com.box.l10n.mojito.cli.command.param.Param;
+import com.box.l10n.mojito.entity.AssetIntegrityChecker;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.RepositoryLocale;
+import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckerType;
 import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import com.google.common.base.Joiner;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -339,6 +343,34 @@ public class RepoUpdateCommandTest extends CLITestBase {
         "Integrity checker should have been deleted",
         0,
         repository.getAssetIntegrityCheckers().size());
+  }
+
+  @Test
+  public void testUpdateTranslationIntegrityCheckers() throws Exception {
+    Repository repository = createTestRepoUsingRepoService();
+
+    getL10nJCommander()
+        .run(
+            "repo-update",
+            Param.REPOSITORY_NAME_SHORT,
+            repository.getName(),
+            RepoCommand.INTEGRITY_CHECK_SHORT_PARAM,
+            "json:FORMATJS,properties:DOLLAR_TEMPLATE");
+
+    repository = repositoryRepository.findByName(repository.getName());
+    Map<String, IntegrityCheckerType> checkerByExtension =
+        repository.getAssetIntegrityCheckers().stream()
+            .collect(
+                Collectors.toMap(
+                    AssetIntegrityChecker::getAssetExtension,
+                    AssetIntegrityChecker::getIntegrityCheckerType));
+    assertEquals(
+        Map.of(
+            "json",
+            IntegrityCheckerType.FORMATJS,
+            "properties",
+            IntegrityCheckerType.DOLLAR_TEMPLATE),
+        checkerByExtension);
   }
 
   @Test(expected = CommandException.class)
