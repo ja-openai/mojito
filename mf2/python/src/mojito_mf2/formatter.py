@@ -595,16 +595,6 @@ class _FormatContext:
             return None
         if annotation.number_select == "exact":
             return None
-        selection_value = (
-            _percent_plural_operand(value)
-            if annotation.function_name == "percent"
-            else value
-        )
-        selection_key = select_plural_category(
-            self.locale, selection_value, annotation.number_select
-        )
-        if selection_key is not None:
-            return selection_key
         source = self.sources.get(selector_name)
         if source is not None and annotation.function_name in {
             "integer",
@@ -612,12 +602,12 @@ class _FormatContext:
             "percent",
         }:
             # Locale-aware formatters may add grouping, decimal, or percent
-            # characters that the CLDR operand parser does not understand.
-            # If the rendered value could not be selected directly, reapply
-            # the portable numeric semantics to the source operand so options
-            # such as fraction digits and integer truncation are preserved.
+            # characters that are valid numeric syntax with different
+            # semantics. Always select from the source operand when available
+            # so options such as fraction digits and integer truncation are
+            # preserved without reparsing localized display text.
             try:
-                value = _numeric_plural_operand(
+                selection_value = _numeric_plural_operand(
                     FunctionCall(
                         value=_render_value(source.value),
                         raw_value=source.value,
@@ -629,10 +619,15 @@ class _FormatContext:
                 )
             except MF2Error:
                 return None
-            return select_plural_category(
-                self.locale, value, annotation.number_select
+        else:
+            selection_value = (
+                _percent_plural_operand(value)
+                if annotation.function_name == "percent"
+                else value
             )
-        return None
+        return select_plural_category(
+            self.locale, selection_value, annotation.number_select
+        )
 
     def _string_select(self, selector_name: str) -> bool:
         annotation = self.selector_annotations.get(selector_name)

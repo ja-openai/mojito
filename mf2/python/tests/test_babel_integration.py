@@ -227,6 +227,7 @@ class BabelIntegrationTest(unittest.TestCase):
             "mojito_mf2.babel"
         ).babel_function_registry()
         cases = [
+            ("number", "", 1_000, "es-ES", "other"),
             ("number", "", 1_000_000, "fr-FR", "many"),
             ("integer", "", 1_000_000, "fr-FR", "many"),
             ("integer", "", 1.2, "en", "one"),
