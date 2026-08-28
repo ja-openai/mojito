@@ -9,8 +9,15 @@ import (
 	"testing"
 )
 
+const (
+	defaultSourceFixtureDir = "../conformance/fixtures/source-to-model"
+	sourceFixtureDirEnv     = "MF2_CONFORMANCE_FIXTURES"
+)
+
 func TestSourceToModelFixtures(t *testing.T) {
-	for _, path := range fixturePaths(t, "../conformance/fixtures/source-to-model") {
+	checkedModels := 0
+	checkedFormatCases := 0
+	for _, path := range fixturePaths(t, sourceFixtureDir()) {
 		fixture := readFixture(t, path)
 		source := fixture["source"].(string)
 		parse := ParseToModel(source)
@@ -18,6 +25,7 @@ func TestSourceToModelFixtures(t *testing.T) {
 			t.Fatalf("%s: unexpected diagnostics: %#v", filepath.Base(path), parse.Diagnostics)
 		}
 		assertJSONEqual(t, filepath.Base(path)+": model", fixture["expectedModel"], parse.Model)
+		checkedModels++
 
 		model := parse.Model
 		for _, rawCase := range arrayValue(fixture["formatCases"]) {
@@ -32,6 +40,7 @@ func TestSourceToModelFixtures(t *testing.T) {
 			if actual.Value != stringValue(item["expected"]) {
 				t.Fatalf("%s: expected format %q, got %q", filepath.Base(path), stringValue(item["expected"]), actual.Value)
 			}
+			checkedFormatCases++
 		}
 		for _, rawCase := range arrayValue(fixture["partsCases"]) {
 			item := asObject(rawCase)
@@ -62,10 +71,17 @@ func TestSourceToModelFixtures(t *testing.T) {
 			assertErrorCodes(t, filepath.Base(path)+": fallback parts errors", actual.Errors, item)
 		}
 	}
+	if checkedModels == 0 || checkedFormatCases == 0 {
+		t.Fatalf(
+			"conformance fixture suite must contain at least one source model and one format case (found %d source models and %d format cases)",
+			checkedModels,
+			checkedFormatCases,
+		)
+	}
 }
 
 func TestInvalidSourceFixtures(t *testing.T) {
-	for _, path := range fixturePaths(t, "../conformance/fixtures/invalid-source") {
+	for _, path := range fixturePaths(t, siblingFixtureDir("invalid-source")) {
 		fixture := readFixture(t, path)
 		parse := ParseToModel(fixture["source"].(string))
 		if !parse.HasDiagnostics {
@@ -83,7 +99,7 @@ func TestInvalidSourceFixtures(t *testing.T) {
 }
 
 func TestFormatErrorFixtures(t *testing.T) {
-	for _, path := range fixturePaths(t, "../conformance/fixtures/format-errors") {
+	for _, path := range fixturePaths(t, siblingFixtureDir("format-errors")) {
 		fixture := readFixture(t, path)
 		expected := stringValue(asObject(fixture["expectedError"])["code"])
 		actual := FormatMessage(Model(mapValue(fixture["model"])), mapValue(fixture["arguments"]), Options{Locale: stringValue(fixture["locale"])})
@@ -161,7 +177,7 @@ func TestRecoveryCallbacksHandleEmptyAndDeclinedValues(t *testing.T) {
 }
 
 func TestLocaleKeyFixtures(t *testing.T) {
-	fixture := readFixture(t, "../conformance/fixtures/locale-key/cases.json")
+	fixture := readFixture(t, filepath.Join(siblingFixtureDir("locale-key"), "cases.json"))
 	checked := 0
 	for _, raw := range arrayValue(fixture["canonical"]) {
 		item := asObject(raw)
@@ -179,6 +195,17 @@ func TestLocaleKeyFixtures(t *testing.T) {
 	if checked == 0 {
 		t.Fatal("locale-key fixture did not contain any cases")
 	}
+}
+
+func sourceFixtureDir() string {
+	if root := os.Getenv(sourceFixtureDirEnv); root != "" {
+		return root
+	}
+	return defaultSourceFixtureDir
+}
+
+func siblingFixtureDir(name string) string {
+	return filepath.Join(filepath.Dir(sourceFixtureDir()), name)
 }
 
 func assertErrorCodesExact(t *testing.T, label string, actualErrors []Error, expected []string) {

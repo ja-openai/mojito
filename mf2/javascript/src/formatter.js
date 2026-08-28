@@ -179,16 +179,32 @@ class FormatContext {
         selectionKey: null,
         function: annotation?.function ?? null,
         source: null,
+        failed: true,
       };
     }
     const value = this.value(selector.name);
     const rendered = valueToString(value.rawValue);
     this.recordSelectorResolutionErrors(annotation);
+    let resolvedSelectionKey = null;
+    try {
+      resolvedSelectionKey = selectionKey(this.locale, annotation, value);
+    } catch (error) {
+      this.recoverSelectorError(error);
+      return {
+        rendered,
+        normalizedRendered: annotation?.isString ? normalizeStringKey(rendered) : null,
+        exactMatch: annotation == null || annotation.exactMatch,
+        selectionKey: null,
+        function: annotation?.function ?? null,
+        source: value.source,
+        failed: true,
+      };
+    }
     return {
       rendered,
       normalizedRendered: annotation?.isString ? normalizeStringKey(rendered) : null,
       exactMatch: annotation == null || annotation.exactMatch,
-      selectionKey: selectionKey(this.locale, annotation, value),
+      selectionKey: resolvedSelectionKey,
       function: annotation?.function ?? null,
       source: value.source,
     };
@@ -386,6 +402,7 @@ class FormatContext {
 
   keyMatchRank(key, selector) {
     if (key.type === "*") return 0;
+    if (selector.failed) return null;
     if ((selector.exactMatch && literalKeyMatches(key.value ?? "", selector)) || key.value === selector.selectionKey) return 1;
     if (selector.function == null) return null;
     try {
@@ -399,14 +416,20 @@ class FormatContext {
         inheritedSource: selector.source,
       });
     } catch (error) {
-      if (!this.fallback) throw error;
-      const recoverable = fallbackError(error);
-      this.errors.push(recoverable);
-      if (recoverable.code !== "bad-variant-key") {
-        this.errors.push(new MF2Error("bad-selector", "Selector failed to match."));
-      }
+      const recoverable = this.recoverSelectorError(error);
+      if (recoverable.code !== "bad-variant-key") selector.failed = true;
       return null;
     }
+  }
+
+  recoverSelectorError(error) {
+    if (!this.fallback) throw error;
+    const recoverable = fallbackError(error);
+    this.errors.push(recoverable);
+    if (!["bad-selector", "bad-variant-key"].includes(recoverable.code)) {
+      this.errors.push(new MF2Error("bad-selector", "Selector failed to match."));
+    }
+    return recoverable;
   }
 }
 
@@ -566,8 +589,40 @@ function unresolvedVariable(name) {
 }
 
 function fallbackError(error) {
-  if (error.code === "unsupported-function") return new MF2Error("unknown-function", error.message);
-  return error;
+  if (error instanceof MF2Error) {
+    if (error.code === "unsupported-function") {
+      return new MF2Error("unknown-function", error.message);
+    }
+    return error;
+  }
+  const code = safeErrorCode(error);
+  if (code === "unsupported-function") {
+    return new MF2Error("unknown-function", safeErrorMessage(error));
+  }
+  return new MF2Error(code ?? "error", safeErrorMessage(error));
+}
+
+function safeErrorCode(error) {
+  try {
+    return typeof error?.code === "string" ? error.code : null;
+  } catch {
+    return null;
+  }
+}
+
+function safeErrorMessage(error) {
+  if (error instanceof Error) {
+    try {
+      return error.message;
+    } catch {
+      return "Formatting failed.";
+    }
+  }
+  try {
+    return String(error);
+  } catch {
+    return "Formatting failed.";
+  }
 }
 
 function fallbackSource(expression) {
@@ -638,10 +693,13 @@ function bidiDirectionForFunction(functionRef, source) {
 }
 
 function bidiDirectionFromSource(source) {
-  if (!source) return null;
-  const value = functionOptionLiteral(source.function, "u:dir", null);
-  if (value != null) return parseBidiDirection(value);
-  return bidiDirectionFromSource(source.inherited);
+  let current = source;
+  while (current != null) {
+    const value = functionOptionLiteral(current.function, "u:dir", null);
+    if (value != null) return parseBidiDirection(value);
+    current = current.inherited;
+  }
+  return null;
 }
 
 function parseBidiDirection(value) {

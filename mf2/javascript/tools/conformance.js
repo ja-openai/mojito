@@ -73,6 +73,13 @@ export async function runConformance(fixtureDir) {
     }
   }
 
+  if (checkedModels === 0 || checkedCases === 0) {
+    throw new ConformanceFailure(
+      "Conformance fixture suite must contain at least one source model and one format case " +
+        `(found ${checkedModels} source models and ${checkedCases} format cases).`,
+    );
+  }
+
   const fixtureRoot = dirname(sourceDir);
   return {
     checkedModels,

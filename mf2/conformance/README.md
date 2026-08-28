@@ -128,6 +128,12 @@ Run every current language conformance runner against the shared source fixtures
 sh check_all_languages.sh
 ```
 
+Pass a different `source-to-model` directory as the first argument to run a
+complete sibling fixture tree from another location. The wrapper forwards that
+same root to all eight runtimes. Both the wrapper and each runtime runner reject
+a suite with zero aggregate source models or zero aggregate format cases, so a
+mistyped or empty path cannot report a false pass.
+
 ## Current Coverage
 
 The source-to-model fixtures currently cover:

@@ -131,6 +131,16 @@ object KotlinConformance {
             }
         }
 
+        if (checkedModels == 0 || checkedCases == 0) {
+            System.err.printf(
+                "Conformance fixture suite must contain at least one source model and one format case " +
+                    "(found %d source models and %d format cases).%n",
+                checkedModels,
+                checkedCases,
+            )
+            return 1
+        }
+
         val checkedInvalidSources = checkInvalidSourceFixtures(fixtureDir.parent)
         val checkedErrorCases = checkFormatErrorFixtures(fixtureDir.parent)
         val checkedLocaleKeyCases = checkLocaleKeyFixtures(fixtureDir.parent)

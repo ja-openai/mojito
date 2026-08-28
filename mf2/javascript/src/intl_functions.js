@@ -3,10 +3,10 @@ import {
   isDecimalSourceFunction,
   numericSourceOperand,
   parseDecimalNumber,
-  parseInteger,
   sourceOptionValue,
 } from "./function_support.js";
 import { registerNumericSelectors } from "./numeric_selectors.js";
+import { parseNonNegativeOption } from "./unlocalized_numeric_functions.js";
 import { formatOffset } from "./offset_function.js";
 
 export function createIntlFunctionRegistry(FunctionRegistry) {
@@ -164,12 +164,15 @@ function parseDate(rawValue, rendered, message) {
 }
 
 function parseSourceDate(source) {
-  if (source == null) return null;
-  if (["date", "time", "datetime"].includes(source.function?.name)) {
-    const parsed = parseDateValue(source.value);
-    if (parsed != null && !Number.isNaN(parsed.value.getTime())) return parsed;
+  let current = source;
+  while (current != null) {
+    if (["date", "time", "datetime"].includes(current.function?.name)) {
+      const parsed = parseDateValue(current.value);
+      if (parsed != null && !Number.isNaN(parsed.value.getTime())) return parsed;
+    }
+    current = current.inherited;
   }
-  return parseSourceDate(source.inherited);
+  return null;
 }
 
 const FLOATING_DATE_TIME_LITERAL = /^(?!0000)[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])(?:T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\.[0-9]{1,3})?)?$/;
@@ -289,9 +292,10 @@ function requireOneOf(optionName, value, allowed) {
 function nonNegativeIntegerOption(call, optionName, resolver = directOptionValue) {
   const value = resolver(call, optionName, null);
   if (value == null) return null;
-  const parsed = parseInteger(value);
-  if (parsed == null || parsed < 0) throw MF2Error.badOption(`${optionName} option must be a non-negative integer.`);
-  return parsed;
+  return parseNonNegativeOption(
+    value,
+    `${optionName} option must be a non-negative integer.`,
+  );
 }
 
 function directOptionValue(call, optionName, fallback) {
@@ -320,30 +324,41 @@ function inheritedOptionValue(call, optionName, fallback, sourceFunctions) {
 }
 
 function sourceOptionFrom(source, optionName, sourceFunctions) {
-  if (source == null) return MISSING_OPTION;
-  if (sourceFunctions.includes(source.function?.name)) {
-    const value = sourceOptionValue(source, optionName, MISSING_OPTION);
-    if (value !== MISSING_OPTION) return value;
+  let current = source;
+  while (current != null) {
+    if (sourceFunctions.includes(current.function?.name)) {
+      const value = sourceOptionValue(current, optionName, MISSING_OPTION);
+      if (value !== MISSING_OPTION) return value;
+    }
+    current = current.inherited;
   }
-  return sourceOptionFrom(source.inherited, optionName, sourceFunctions);
+  return MISSING_OPTION;
 }
 
 function inheritedNumericOptionValue(source, optionName, fallback, targetFunction) {
-  if (source == null || numericOptionIsDiscarded(targetFunction, optionName)) return fallback;
-  const sourceFunction = source.function?.name;
-  if (!isNumericFunctionName(sourceFunction) || numericOptionIsDiscarded(sourceFunction, optionName)) {
-    return fallback;
+  let current = source;
+  let target = targetFunction;
+  while (current != null) {
+    if (numericOptionIsDiscarded(target, optionName)) return fallback;
+    const sourceFunction = current.function?.name;
+    if (!isNumericFunctionName(sourceFunction)
+        || numericOptionIsDiscarded(sourceFunction, optionName)) return fallback;
+    const value = sourceOptionValue(current, optionName, MISSING_OPTION);
+    if (value !== MISSING_OPTION) return value;
+    target = sourceFunction;
+    current = current.inherited;
   }
-  const value = sourceOptionValue(source, optionName, MISSING_OPTION);
-  if (value !== MISSING_OPTION) return value;
-  return inheritedNumericOptionValue(source.inherited, optionName, fallback, sourceFunction);
+  return fallback;
 }
 
 function currencyOptionFrom(source) {
-  if (source == null || source.function?.name !== "currency") return MISSING_OPTION;
-  const value = sourceOptionValue(source, "currency", MISSING_OPTION);
-  if (value !== MISSING_OPTION) return value;
-  return currencyOptionFrom(source.inherited);
+  let current = source;
+  while (current != null && current.function?.name === "currency") {
+    const value = sourceOptionValue(current, "currency", MISSING_OPTION);
+    if (value !== MISSING_OPTION) return value;
+    current = current.inherited;
+  }
+  return MISSING_OPTION;
 }
 
 function isNumericFunctionName(functionName) {

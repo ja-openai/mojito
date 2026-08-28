@@ -348,6 +348,10 @@ Run all current checks:
 sh check.sh
 ```
 
+The full gate starts with a non-destructive generated-CLDR freshness check. It
+compares temporary generator output with both the working tree and Git index,
+including the exact tracked file set.
+
 Run only compile, type, format, lint, and syntax checks:
 
 ```sh

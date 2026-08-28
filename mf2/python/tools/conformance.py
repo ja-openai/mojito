@@ -105,6 +105,15 @@ def main(argv: list[str] | None = None) -> int:
             _assert_error_codes(fixture_path, "fallback parts errors", actual.errors, parts_case)
             checked_fallback_parts_cases += 1
 
+    if checked_source_cases == 0 or checked_cases == 0:
+        print(
+            "Conformance fixture suite must contain at least one source model and one "
+            f"format case (found {checked_source_cases} source models and "
+            f"{checked_cases} format cases).",
+            file=sys.stderr,
+        )
+        return 1
+
     try:
         checked_invalid_source_cases = _check_invalid_source_fixtures(fixture_dir.parent)
         checked_error_cases = _check_format_error_fixtures(fixture_dir.parent)

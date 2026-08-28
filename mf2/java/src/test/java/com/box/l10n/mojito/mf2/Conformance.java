@@ -130,6 +130,14 @@ public final class Conformance {
             }
         }
 
+        if (checkedModels == 0 || checkedCases == 0) {
+            System.err.printf(
+                    "Conformance fixture suite must contain at least one source model and one format case "
+                            + "(found %d source models and %d format cases).%n",
+                    checkedModels, checkedCases);
+            return 1;
+        }
+
         int checkedInvalidSources = checkInvalidSourceFixtures(fixtureDir.getParent());
         int checkedErrorCases = checkFormatErrorFixtures(fixtureDir.getParent());
         int checkedLocaleKeyCases = checkLocaleKeyFixtures(fixtureDir.getParent());

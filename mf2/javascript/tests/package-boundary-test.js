@@ -81,6 +81,7 @@ assert.equal(formattedCurrency.value, "Total: {$amount}");
 assert.deepEqual(formattedCurrency.errors.map((error) => error.code), ["unknown-function"]);
 const intlRegistry = createIntlFunctionRegistry(FunctionRegistry);
 assert.equal(intlRegistry.hasFormatter({ name: "currency" }), true);
+const numericRegistries = [FunctionRegistry.portable(), intlRegistry];
 const exactBeforeCategory = parseToModelFromParser(
   ".input {$count :integer}\n.match $count\none {{category}}\n1 {{exact}}\n* {{fallback}}",
 );
@@ -105,6 +106,111 @@ const badNumericVariantKeyResult = formatMessageFromFormatter(
 );
 assert.equal(badNumericVariantKeyResult.value, "fallback");
 assert.deepEqual(badNumericVariantKeyResult.errors.map((error) => error.code), ["bad-variant-key"]);
+const unsafeIntegerValues = [
+  "9007199254740993",
+  9007199254740993n,
+  "18446744073709551615",
+  18446744073709551615n,
+  Number.MAX_SAFE_INTEGER + 1,
+];
+for (const functionName of ["number", "integer", "percent"]) {
+  const unsafeInteger = parseToModelFromParser(`Value {$value :${functionName}}`);
+  const unsafeExact = parseToModelFromParser(
+    `.input {$value :${functionName} select=exact}\n` +
+      ".match $value\n" +
+      "9007199254740993 {{unsafe}}\n" +
+      "18446744073709551615 {{u64}}\n" +
+      "* {{fallback}}",
+  );
+  for (const functions of numericRegistries) {
+    for (const value of unsafeIntegerValues) {
+      for (const [model, expected, expectedErrors] of [
+        [unsafeInteger.model, "Value {$value}", ["bad-operand"]],
+        [unsafeExact.model, "fallback", ["bad-operand", "bad-selector"]],
+      ]) {
+        const result = formatMessageFromFormatter(model, { value }, { functions });
+        assert.equal(result.value, expected);
+        assert.deepEqual(result.errors.map((error) => error.code), expectedErrors);
+        assert.equal(result.errors[0] instanceof MF2Error, true);
+      }
+    }
+  }
+}
+const largeOffset = parseToModelFromParser("Value {$value :offset add=1}");
+const largeOffsetSelection = parseToModelFromParser(
+  ".input {$value :offset add=1}\n" +
+    ".match $value\n" +
+    "9007199254740994 {{unsafe}}\n" +
+    "18446744073709551616 {{u64}}\n" +
+    "* {{fallback}}",
+);
+const largeExactOffsetSelection = parseToModelFromParser(
+  ".input {$value :offset add=1 select=exact}\n" +
+    ".match $value\n" +
+    "9007199254740994 {{unsafe}}\n" +
+    "18446744073709551616 {{u64}}\n" +
+    "* {{fallback}}",
+);
+for (const functions of numericRegistries) {
+  for (const [value, expected, exactSelection] of [
+    ["9007199254740993", "9007199254740994", "unsafe"],
+    [9007199254740993n, "9007199254740994", "unsafe"],
+    ["18446744073709551615", "18446744073709551616", "u64"],
+    [18446744073709551615n, "18446744073709551616", "u64"],
+  ]) {
+    const display = formatMessageFromFormatter(largeOffset.model, { value }, { functions });
+    assert.equal(display.value, `Value ${expected}`);
+    assert.deepEqual(display.errors, []);
+    const selection = formatMessageFromFormatter(
+      largeOffsetSelection.model,
+      { value },
+      { functions },
+    );
+    assert.equal(selection.value, "fallback");
+    assert.deepEqual(selection.errors.map((error) => error.code), ["bad-selector"]);
+    assert.equal(selection.errors[0] instanceof MF2Error, true);
+    const exact = formatMessageFromFormatter(
+      largeExactOffsetSelection.model,
+      { value },
+      { functions },
+    );
+    assert.equal(exact.value, exactSelection);
+    assert.deepEqual(exact.errors, []);
+  }
+  const unsafeHostNumber = formatMessageFromFormatter(
+    largeOffset.model,
+    { value: Number.MAX_SAFE_INTEGER + 1 },
+    { functions },
+  );
+  assert.equal(unsafeHostNumber.value, "Value {$value}");
+  assert.deepEqual(unsafeHostNumber.errors.map((error) => error.code), ["bad-operand"]);
+}
+for (const functionName of ["number", "percent"]) {
+  for (const optionName of ["minimumFractionDigits", "maximumFractionDigits"]) {
+    const selectorOptionFailure = parseToModelFromParser(
+      `.input {$value :${functionName} ${optionName}=101}\n` +
+        ".match $value\n" +
+        "1 {{one}}\n" +
+        "2 {{two}}\n" +
+        "3 {{three}}\n" +
+        "* {{fallback}}",
+    );
+    for (const baseFunctions of numericRegistries) {
+      const functions = baseFunctions.withFunction(functionName, (call) => String(call.value));
+      const result = formatMessageFromFormatter(
+        selectorOptionFailure.model,
+        { value: 1 },
+        { functions },
+      );
+      assert.equal(result.value, "fallback");
+      assert.deepEqual(result.errors.map((error) => error.code), [
+        "bad-option",
+        "bad-selector",
+      ]);
+      assert.equal(result.errors.every((error) => error instanceof MF2Error), true);
+    }
+  }
+}
 const localizedNumericChain = parseToModelFromParser(
   ".local $value = {1000000 :number} {{Value: {$value :number maximumFractionDigits=0}}}",
 );
@@ -164,19 +270,52 @@ for (const source of [
     assert.deepEqual(result.errors, []);
   }
 }
-for (const maximumFractionDigits of [100, 101]) {
-  const portableFractionLimit = parseToModelFromParser(
-    `Value {1 :number maximumFractionDigits=${maximumFractionDigits}}`,
-  );
-  const result = formatMessageFromFormatter(portableFractionLimit.model);
-  if (maximumFractionDigits === 100) {
-    assert.equal(result.value, "Value 1");
-    assert.deepEqual(result.errors, []);
-  } else {
-    assert.equal(result.value, "Value {|1|}");
-    assert.deepEqual(result.errors.map((error) => error.code), ["bad-option"]);
+for (const functions of numericRegistries) {
+  for (const optionName of ["minimumFractionDigits", "maximumFractionDigits"]) {
+    for (const optionValue of [100, 101, 4097, "9".repeat(512)]) {
+      const boundedFraction = parseToModelFromParser(
+        `Value {1 :number ${optionName}=${optionValue}}`,
+      );
+      const result = formatMessageFromFormatter(boundedFraction.model, {}, { functions });
+      if (optionValue === 100) {
+        const expected = optionName === "minimumFractionDigits"
+          ? `Value 1.${"0".repeat(100)}`
+          : "Value 1";
+        assert.equal(result.value, expected);
+        assert.deepEqual(result.errors, []);
+      } else {
+        assert.equal(result.value, "Value {|1|}");
+        assert.deepEqual(result.errors.map((error) => error.code), ["bad-option"]);
+        assert.equal(result.errors[0] instanceof MF2Error, true);
+      }
+    }
   }
 }
+const deepNumericDeclarations = [".local $value0 = {1 :number}"];
+for (let index = 1; index < 7000; index += 1) {
+  deepNumericDeclarations.push(`.local $value${index} = {$value${index - 1} :number}`);
+}
+deepNumericDeclarations.push("{{{$value6999 :number}}}");
+const deepNumericChain = parseToModelFromParser(deepNumericDeclarations.join("\n"));
+assert.deepEqual(deepNumericChain.diagnostics, []);
+for (const functions of numericRegistries) {
+  const result = formatMessageFromFormatter(deepNumericChain.model, {}, { functions });
+  assert.equal(result.value, "1");
+  assert.deepEqual(result.errors, []);
+}
+const nativeRangeError = parseToModelFromParser("Value {1 :nativeRangeError}");
+const nativeRangeErrorRegistry = FunctionRegistry.portable().withFunction(
+  "nativeRangeError",
+  () => { throw new RangeError("host range failure"); },
+);
+const normalizedRangeError = formatMessageFromFormatter(
+  nativeRangeError.model,
+  {},
+  { functions: nativeRangeErrorRegistry },
+);
+assert.equal(normalizedRangeError.value, "Value {|1|}");
+assert.deepEqual(normalizedRangeError.errors.map((error) => error.code), ["error"]);
+assert.equal(normalizedRangeError.errors[0] instanceof MF2Error, true);
 const inheritedNumberOptions = parseToModelFromParser(
   ".input {$value :number minimumFractionDigits=2 signDisplay=always}\n{{{$value :number minimumFractionDigits=1}}}",
 );
