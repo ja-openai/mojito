@@ -164,7 +164,15 @@ class BabelIntegrationTest(unittest.TestCase):
         parsed = parse_to_model("{$amount :number}")
         self.assertIsNotNone(parsed.model, parsed.diagnostics)
 
-        for locale in ["not_a_locale", "invalid__locale", ""]:
+        for locale in [
+            "not_a_locale",
+            "invalid__locale",
+            "",
+            "a" * 129,
+            "-".join(["aa"] * 17),
+            f"en@{'x' * 129}",
+            "\ud800",
+        ]:
             with self.subTest(locale=locale):
                 formatted = format_message(
                     parsed.model,

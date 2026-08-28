@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from decimal import (
     Decimal,
     DecimalException,
@@ -41,6 +42,8 @@ def _passthrough(call: "FunctionCall") -> str:
 
 
 _MAX_DECIMAL_DIGITS = 1_000
+_MAX_DECIMAL_INTEGER_MAGNITUDE = 10**_MAX_DECIMAL_DIGITS
+_MAX_DECIMAL_TEXT_LENGTH = (_MAX_DECIMAL_DIGITS * 2) + 8
 _MAX_FRACTION_DIGITS = 1_000
 
 
@@ -214,12 +217,23 @@ def _parse_match_decimal(match: "FunctionMatch", message: str) -> Decimal:
 
 
 def _parse_source_decimal(source: object | None) -> Decimal | None:
-    if source is None:
-        return None
-    function = getattr(source, "function")
-    if _is_decimal_source_function(function):
-        return _parse_decimal_or_none(getattr(source, "value"))
-    return _parse_source_decimal(getattr(source, "inherited_source"))
+    for current in _iter_source_chain(source):
+        function = getattr(current, "function")
+        if _is_decimal_source_function(function):
+            return _parse_decimal_or_none(getattr(current, "value"))
+    return None
+
+
+def _iter_source_chain(source: object | None) -> Iterator[object]:
+    seen: set[int] = set()
+    current = source
+    while current is not None:
+        identity = id(current)
+        if identity in seen:
+            raise MF2Error("bad-operand", "Function source chain contains a cycle.")
+        seen.add(identity)
+        yield current
+        current = getattr(current, "inherited_source")
 
 
 def _parse_decimal(value: str | None, message: str) -> Decimal:
@@ -346,15 +360,14 @@ def _sign_display_always(function_ref: dict[str, object]) -> bool:
 
 
 def _inherited_sign_display_always(source: object | None) -> bool:
-    if source is None:
-        return False
-    function = getattr(source, "function")
-    if (
-        function.get("name") in {"number", "integer"}
-        and _source_option_value(source, "signDisplay") == "always"
-    ):
-        return True
-    return _inherited_sign_display_always(getattr(source, "inherited_source"))
+    for current in _iter_source_chain(source):
+        function = getattr(current, "function")
+        if (
+            function.get("name") in {"number", "integer"}
+            and _source_option_value(current, "signDisplay") == "always"
+        ):
+            return True
+    return False
 
 
 def _function_option_literal(
@@ -396,15 +409,14 @@ def _numeric_select_uses_variable(function_ref: dict[str, object]) -> bool:
 
 
 def _inherited_exact_numeric_source(source: object | None) -> bool:
-    if source is None:
-        return False
-    function = getattr(source, "function")
-    if (
-        _is_numeric_function(function)
-        and _source_option_value(source, "select") == "exact"
-    ):
-        return True
-    return _inherited_exact_numeric_source(getattr(source, "inherited_source"))
+    for current in _iter_source_chain(source):
+        function = getattr(current, "function")
+        if (
+            _is_numeric_function(function)
+            and _source_option_value(current, "select") == "exact"
+        ):
+            return True
+    return False
 
 
 def _invalid_numeric_selector(
@@ -456,7 +468,7 @@ def _parse_decimal_or_none(value: str) -> Decimal | None:
 
 
 def _has_decimal_syntax(text: str) -> bool:
-    if not text or len(text) > _MAX_DECIMAL_DIGITS or not text.isascii():
+    if not text or len(text) > _MAX_DECIMAL_TEXT_LENGTH or not text.isascii():
         return False
 
     unsigned = text.removeprefix("-")

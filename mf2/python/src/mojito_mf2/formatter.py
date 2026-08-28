@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, DecimalException, localcontext
 import unicodedata
 from typing import Any, Callable, cast
 
 from .errors import MF2Error
-from ._portable_functions import _numeric_plural_operand
+from ._portable_functions import (
+    _MAX_DECIMAL_INTEGER_MAGNITUDE,
+    _MAX_DECIMAL_TEXT_LENGTH,
+    _decimal_precision,
+    _numeric_plural_operand,
+    _validate_decimal_operand,
+)
 from .functions import (
     _DEFAULT_FUNCTION_REGISTRY,
     FunctionCall,
@@ -284,7 +290,7 @@ class _FormatContext:
         self.locale = locale
         self.functions = functions
         self.selector_annotations: dict[str, _SelectorAnnotation] = {}
-        self.failed_locals: set[str] = set()
+        self.failed_bindings: set[str] = set()
         self.errors: list[MF2Error] = []
         self.fallback = fallback
         self.on_missing_argument = on_missing_argument or _default_recovery
@@ -299,17 +305,25 @@ class _FormatContext:
                     continue
                 rendered = self._format_expression_output(value)
                 if rendered.had_error:
-                    self.failed_locals.add(declaration["name"])
+                    self._fail_binding(declaration["name"])
                 else:
                     self.values[declaration["name"]] = rendered.value
                     self.sources[declaration["name"]] = rendered.source
             elif declaration.get("type") == "local":
                 rendered = self._format_expression_output(declaration["value"])
                 if rendered.had_error:
-                    self.failed_locals.add(declaration["name"])
+                    self._fail_binding(declaration["name"])
                 else:
                     self.values[declaration["name"]] = rendered.value
                     self.sources[declaration["name"]] = rendered.source
+
+    def _fail_binding(self, name: str) -> None:
+        self.failed_bindings.add(name)
+        self.values.pop(name, None)
+        self.sources.pop(name, None)
+
+    def _has_value(self, name: str) -> bool:
+        return name in self.values
 
     def format_select_to_parts(
         self,
@@ -320,25 +334,28 @@ class _FormatContext:
         for selector in selectors:
             name = selector["name"]
             annotation = self.selector_annotations.get(name)
-            if name not in self.values:
+            if not self._has_value(name):
                 if self.fallback:
-                    if name not in self.failed_locals:
+                    if name not in self.failed_bindings:
                         self.errors.append(_unresolved_variable(name))
                     selector_values.append(
                         _SelectorValue(
                             rendered="",
                             raw_value="",
                             normalized_rendered=(
-                                _normalize_string_key("") if self._string_select(name) else None
+                                _normalize_string_key("")
+                                if self._string_select(name)
+                                else None
                             ),
                             exact_match=False,
                             selection_key=None,
-                            function=annotation.function if annotation else None,
+                            function=None,
                             source=None,
+                            available=False,
                         )
                     )
                     if annotation is not None and self.functions.has_selector(annotation.function):
-                        if name not in self.failed_locals:
+                        if name not in self.failed_bindings:
                             self.errors.append(
                                 MF2Error("bad-operand", "Selector operand is not available.")
                             )
@@ -361,6 +378,7 @@ class _FormatContext:
                     selection_key=self._selection_key(name, value),
                     function=annotation.function if annotation else None,
                     source=self.sources.get(name),
+                    available=True,
                 )
             )
 
@@ -444,20 +462,21 @@ class _FormatContext:
     def _format_expression_output(self, expression: dict[str, Any]) -> "_ExpressionOutput":
         had_error = False
         source: FunctionSource | None = None
+        function = expression.get("function")
         arg = expression.get("arg")
         if arg is None:
             value = ""
             raw_value = ""
         elif arg.get("type") == "literal":
-            value = arg.get("value", "")
-            raw_value = value
+            raw_value = arg.get("value", "")
+            value = ""
         elif arg.get("type") == "variable":
             name = arg["name"]
-            if name not in self.values:
+            if not self._has_value(name):
                 if self.fallback:
                     had_error = True
                     error = _unresolved_variable(name)
-                    if name not in self.failed_locals:
+                    if name not in self.failed_bindings:
                         self.errors.append(error)
                     if expression.get("function") is not None:
                         self.errors.append(
@@ -475,7 +494,7 @@ class _FormatContext:
                     raise MF2Error("missing-argument", f"Missing argument ${name}.")
             else:
                 raw_value = self.values[name]
-                value = _render_value(raw_value)
+                value = ""
                 source = self.sources.get(name)
         else:
             raise MF2Error("unsupported-expression-arg", f"Unsupported expression arg: {arg}")
@@ -487,7 +506,16 @@ class _FormatContext:
                 fallback_source=_fallback_source(expression),
             )
 
-        function = expression.get("function")
+        if arg is not None:
+            try:
+                value = _render_value_or_error(
+                    raw_value,
+                    "bad-operand",
+                    "Expression operand exceeds the supported rendering range.",
+                )
+            except MF2Error as error:
+                return self._format_error_output(expression, error)
+
         if function is None:
             return _ExpressionOutput(value=value, had_error=False, source=source)
         try:
@@ -512,16 +540,21 @@ class _FormatContext:
                 ),
             )
         except MF2Error as error:
-            if not self.fallback:
-                raise
-            recoverable = _fallback_error(error)
-            self.errors.append(recoverable)
-            fallback_source = _fallback_source(expression)
-            return _ExpressionOutput(
-                value=self._recover_format_error(expression, fallback_source, recoverable),
-                had_error=True,
-                fallback_source=fallback_source,
-            )
+            return self._format_error_output(expression, error)
+
+    def _format_error_output(
+        self, expression: dict[str, Any], error: MF2Error
+    ) -> "_ExpressionOutput":
+        if not self.fallback:
+            raise error
+        recoverable = _fallback_error(error)
+        self.errors.append(recoverable)
+        fallback_source = _fallback_source(expression)
+        return _ExpressionOutput(
+            value=self._recover_format_error(expression, fallback_source, recoverable),
+            had_error=True,
+            fallback_source=fallback_source,
+        )
 
     def _recover_missing_argument(
         self,
@@ -575,13 +608,21 @@ class _FormatContext:
         if option is None:
             return default
         if option.get("type") == "literal":
-            return str(option.get("value", ""))
+            return _render_value_or_error(
+                option.get("value", ""),
+                "bad-option",
+                "Function option exceeds the supported rendering range.",
+            )
         if option.get("type") == "variable":
-            return _render_value(self._argument(option["name"]))
+            return _render_value_or_error(
+                self._argument(option["name"]),
+                "bad-option",
+                "Function option exceeds the supported rendering range.",
+            )
         return default
 
     def _argument(self, name: str) -> Any:
-        if name not in self.values:
+        if not self._has_value(name):
             raise MF2Error("missing-argument", f"Missing argument ${name}.")
         return self.values[name]
 
@@ -651,6 +692,8 @@ class _FormatContext:
     def _key_match_rank(self, key: dict[str, Any], selector: "_SelectorValue") -> int | None:
         if key.get("type") == "*":
             return 0
+        if not selector.available:
+            return None
         value = str(key.get("value", ""))
         if (selector.exact_match and _literal_key_matches(value, selector)) or value == selector.selection_key:
             return 1
@@ -720,6 +763,7 @@ class _SelectorValue:
     selection_key: str | None
     function: dict[str, Any] | None
     source: FunctionSource | None
+    available: bool
 
 
 @dataclass(frozen=True)
@@ -756,14 +800,28 @@ def _normalize_string_key(value: str) -> str:
     return unicodedata.normalize("NFC", value)
 
 
-def _percent_plural_operand(value: Any) -> str:
+def _percent_plural_operand(value: Any) -> str | None:
     rendered = _render_value(value)
-    if rendered.endswith("%"):
-        return rendered[:-1].strip()
+    if len(rendered) > _MAX_DECIMAL_TEXT_LENGTH:
+        return None
+    has_percent_suffix = rendered.endswith("%")
+    numeric = rendered[:-1].strip() if has_percent_suffix else rendered
     try:
-        return str(Decimal(rendered) * Decimal(100))
-    except (InvalidOperation, ValueError):
-        return rendered
+        decimal = Decimal(numeric)
+        _validate_decimal_operand(
+            decimal, "Percent selector requires a bounded numeric operand."
+        )
+        if has_percent_suffix:
+            return numeric
+        with localcontext() as context:
+            context.prec = _decimal_precision(decimal) + 2
+            decimal *= Decimal(100)
+        _validate_decimal_operand(
+            decimal, "Percent selector requires a bounded numeric operand."
+        )
+        return str(decimal)
+    except (DecimalException, MF2Error, ValueError):
+        return None
 
 
 def _unresolved_variable(name: str) -> MF2Error:
@@ -822,6 +880,22 @@ def _render_value(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
     return str(value)
+
+
+def _render_value_or_error(value: Any, code: str, message: str) -> str:
+    if (
+        isinstance(value, int)
+        and not isinstance(value, bool)
+        and (
+            value >= _MAX_DECIMAL_INTEGER_MAGNITUDE
+            or value <= -_MAX_DECIMAL_INTEGER_MAGNITUDE
+        )
+    ):
+        raise MF2Error(code, message)
+    try:
+        return _render_value(value)
+    except (OverflowError, ValueError) as error:
+        raise MF2Error(code, message) from error
 
 
 def _parts_to_string(parts: list[MF2FormattedPart], bidi_isolation: str = "none") -> str:

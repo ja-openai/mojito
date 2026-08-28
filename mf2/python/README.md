@@ -86,7 +86,7 @@ Babel supports them. Babel does not expose localized natural relative-time
 terms, so `:relativeTime numeric=auto` reports `bad-option` instead of silently
 producing numeric output. The adapter accepts both BCP47 locale identifiers
 such as `fr-FR` and Babel-style identifiers such as `fr_FR`. Numeric formatters
-reject operands whose coefficient length or absolute decimal exponent exceeds
+reject operands whose coefficient length or absolute adjusted exponent exceeds
 1,000, and reject fraction-digit options above 1,000, with structured MF2
 diagnostics.
 Importing `mojito_mf2` does not import or require Babel;
@@ -98,6 +98,37 @@ Babel exposes one combined datetime style, so `:datetime` currently requires
 `dateStyle` and `timeStyle` to match when both are provided. Fixture-only
 handlers for Unicode official tests and demos live under `tools`, `tests`, or
 `examples`, not in the production formatter.
+
+## Security and resource boundaries
+
+The built-in parser and formatter treat argument strings as data. They do not
+reparse a username, translated value, or other argument as MF2, Python,
+JavaScript, a template, or a shell command. Pass untrusted external values as
+plain data such as strings, numbers, booleans, or `None`, not as attacker-owned
+Python objects: rendering an arbitrary object invokes its `__str__` method.
+
+`FunctionRegistry` formatters and selectors, plus recovery callbacks, are
+trusted in-process capabilities. They can execute arbitrary application code,
+perform I/O, or allocate without bound, so applications should register only
+allowlisted, side-effect-free, resource-bounded callbacks. A catalog controls
+which registered functions it invokes and which recovery paths it can trigger,
+including declarations evaluated before pattern selection, so do not expose
+file, network, shell, or similar authority through these callbacks. If an input
+or local declaration fails, its binding is quarantined: the raw value is
+unavailable to later expressions and callbacks, and a selector can match only
+`*` in that dimension.
+
+Python integer arguments over 1,000 decimal digits are rejected before string
+conversion. Portable numeric formatting and plural selection reject operands
+whose coefficient length or absolute adjusted exponent exceeds 1,000. Locale
+identifiers used by built-in plural lookup and Babel-backed functions are
+limited to 128 UTF-8 bytes and 16 subtags before structural fallback chains are
+built. These are rejection boundaries, not a universal sanitizer.
+
+Formatted strings are intentionally sink-neutral and unescaped. Escape or bind
+the final value for its destination—for example HTML text or attributes, URLs,
+JavaScript, SQL parameters, shell arguments, or structured logs. In particular,
+do not build SQL or shell commands by concatenating MF2 output.
 
 Catalogs can load the official Unicode MF2 model directly or parse source
 messages into the same model. A future package split can keep source parsing out

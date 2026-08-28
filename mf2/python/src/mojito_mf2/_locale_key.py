@@ -6,6 +6,9 @@ from typing import TypeVar
 
 T = TypeVar("T")
 
+_MAX_LOCALE_BYTES = 128
+_MAX_LOCALE_SUBTAGS = 16
+
 
 def canonical_locale_key(locale: str) -> str:
     return "-".join(_locale_parts(locale))
@@ -54,17 +57,31 @@ def _structural_lookup_chain(locale: str) -> list[str]:
 
 
 def _locale_parts(locale: str) -> list[str]:
+    _validate_locale_input(locale)
     raw_parts = [
         part
         for part in locale.strip().replace("_", "-").split("-")
         if part
     ]
+    if len(raw_parts) > _MAX_LOCALE_SUBTAGS:
+        raise ValueError("Locale identifier has too many subtags.")
     parts: list[str] = []
     for index, part in enumerate(raw_parts):
         if len(part) == 1:
             break
         parts.append(_canonical_subtag(index, part))
     return parts
+
+
+def _validate_locale_input(locale: str) -> None:
+    if len(locale) > _MAX_LOCALE_BYTES:
+        raise ValueError("Locale identifier exceeds the supported length.")
+    try:
+        encoded = locale.encode("utf-8")
+    except UnicodeEncodeError as error:
+        raise ValueError("Locale identifier must be valid UTF-8.") from error
+    if len(encoded) > _MAX_LOCALE_BYTES:
+        raise ValueError("Locale identifier exceeds the supported length.")
 
 
 def _canonical_subtag(index: int, part: str) -> str:

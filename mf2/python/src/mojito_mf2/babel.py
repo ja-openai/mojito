@@ -21,7 +21,7 @@ except ModuleNotFoundError as error:
 
 from .errors import MF2Error
 from .functions import FunctionCall, FunctionRegistry
-from ._locale_key import canonical_locale_key
+from ._locale_key import _validate_locale_input, canonical_locale_key
 from ._portable_functions import (
     _MAX_DECIMAL_DIGITS,
     _decimal_precision,
@@ -224,14 +224,15 @@ def _parse_decimal(value: Any, message: str) -> Decimal:
 
 
 def _babel_locale(call: FunctionCall) -> Locale:
-    raw_locale, separator, modifier = call.locale.partition("@")
-    canonical = canonical_locale_key(raw_locale)
-    if separator:
-        canonical = f"{canonical}@{modifier}"
     try:
+        _validate_locale_input(call.locale)
+        raw_locale, separator, modifier = call.locale.partition("@")
+        canonical = canonical_locale_key(raw_locale)
+        if separator:
+            canonical = f"{canonical}@{modifier}"
         return Locale.parse(canonical, sep="-")
     except (UnknownLocaleError, ValueError) as error:
-        raise MF2Error("bad-option", f"Unsupported locale: {call.locale}") from error
+        raise MF2Error("bad-option", "Unsupported locale identifier.") from error
 
 
 def _date_from(raw_value: Any, rendered: str) -> date:
