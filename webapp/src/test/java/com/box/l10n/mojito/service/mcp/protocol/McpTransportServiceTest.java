@@ -149,6 +149,17 @@ public class McpTransportServiceTest {
     assertThat(result.body()).isNull();
   }
 
+  @Test
+  public void requestTooLargeErrorIsPayloadFreeJsonRpcError() {
+    JsonNode error = service.requestTooLargeError();
+
+    assertThat(error.path("jsonrpc").asText()).isEqualTo("2.0");
+    assertThat(error.path("id").isNull()).isTrue();
+    assertThat(error.path("error").path("code").asInt()).isEqualTo(-32000);
+    assertThat(error.path("error").path("message").asText()).isEqualTo("Request body too large");
+    assertThat(error.has("result")).isFalse();
+  }
+
   private ObjectNode request(String method, int id) {
     ObjectNode request = objectMapper.createObjectNode();
     request.put("jsonrpc", "2.0");

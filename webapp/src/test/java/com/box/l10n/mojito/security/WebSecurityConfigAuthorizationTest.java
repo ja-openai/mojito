@@ -37,6 +37,8 @@ public class WebSecurityConfigAuthorizationTest {
   private static final String RESULT_PATH = REPORT_PATH + "/report/results/test-result";
   private static final String RECOMPUTE_PATH = REPORT_PATH + "/recompute";
   private static final String RECOMPUTE_RESULT_PATH = RECOMPUTE_PATH + "/results/test-result";
+  private static final String TRANSLATION_CORRECTIONS_PATH =
+      "/api/admin/translation-corrections/apply";
 
   @Autowired WebApplicationContext applicationContext;
 
@@ -73,6 +75,19 @@ public class WebSecurityConfigAuthorizationTest {
         .andExpect(status().isOk());
     mockMvc
         .perform(get(RECOMPUTE_RESULT_PATH).with(user("admin").roles("ADMIN")))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  public void onlyAdministratorsCanApplyGuardedTranslationCorrections() throws Exception {
+    mockMvc
+        .perform(post(TRANSLATION_CORRECTIONS_PATH).with(user("pm").roles("PM")))
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(post(TRANSLATION_CORRECTIONS_PATH).with(user("translator").roles("TRANSLATOR")))
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(post(TRANSLATION_CORRECTIONS_PATH).with(user("admin").roles("ADMIN")))
         .andExpect(status().isOk());
   }
 
@@ -115,6 +130,11 @@ public class WebSecurityConfigAuthorizationTest {
     @GetMapping(RECOMPUTE_PATH + "/results/{resultId}")
     String recomputeResult(@PathVariable String resultId) {
       return resultId;
+    }
+
+    @PostMapping(TRANSLATION_CORRECTIONS_PATH)
+    String applyTranslationCorrections() {
+      return "ok";
     }
   }
 }

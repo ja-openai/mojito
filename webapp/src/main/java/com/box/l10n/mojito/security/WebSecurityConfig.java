@@ -230,6 +230,11 @@ public class WebSecurityConfig {
                 .requestMatchers(
                     "/api/admin/linguist-time-spent", "/api/admin/linguist-time-spent/**")
                 .hasRole("ADMIN")
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/admin/translation-corrections",
+                    "/api/admin/translation-corrections/**")
+                .hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/mcp")
                 .authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/mcp")
