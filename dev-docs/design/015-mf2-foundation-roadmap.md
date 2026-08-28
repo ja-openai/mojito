@@ -191,7 +191,7 @@ Create a Python package with:
 - parser and data-model loader
 - formatter and `format_to_parts`
 - diagnostics with source offsets
-- pytest conformance runner
+- conformance runner
 - catalog/resource loading helpers
 - framework adapters only after core behavior is stable
 
@@ -203,7 +203,12 @@ Before calling any library production-ready:
 - parse -> model -> print/format behavior is stable
 - invalid syntax returns diagnostics, not crashes
 - fuzz/property tests do not panic
+- adversarial fixtures cover failed-binding quarantine, deep declaration chains,
+  and bounded numeric and locale inputs
+- shared, configurable source, model, output, and diagnostic budgets have
+  explicit rejection semantics across runtimes
 - locale/plural behavior is explicitly tested
+- callback capabilities and sink-specific output escaping are documented
 - public API and error model are documented
 - package install works in a clean project
 - performance is measured on realistic catalogs

@@ -462,16 +462,27 @@ except ImportError:
 
 DATA = {payload}
 
+_MAX_DECIMAL_DIGITS = 1_000
+_MAX_DECIMAL_TEXT_LENGTH = (_MAX_DECIMAL_DIGITS * 2) + 8
+_UNSUPPORTED_PLURAL_OPERAND = "Unsupported plural operand value."
+
 
 class NumberOperands:
     def __init__(self, value: Any):
-        raw = str(value).strip()
+        raw_text = str(value)
+        if len(raw_text) > _MAX_DECIMAL_TEXT_LENGTH:
+            raise ValueError(_UNSUPPORTED_PLURAL_OPERAND)
+        raw = raw_text.strip()
         try:
             decimal = Decimal(raw).copy_abs()
         except InvalidOperation as exc:
-            raise ValueError(f"Unsupported plural operand value: {{value!r}}") from exc
-        if not decimal.is_finite():
-            raise ValueError(f"Unsupported plural operand value: {{value!r}}")
+            raise ValueError(_UNSUPPORTED_PLURAL_OPERAND) from exc
+        if (
+            not decimal.is_finite()
+            or len(decimal.as_tuple().digits) > _MAX_DECIMAL_DIGITS
+            or abs(decimal.adjusted()) > _MAX_DECIMAL_DIGITS
+        ):
+            raise ValueError(_UNSUPPORTED_PLURAL_OPERAND)
 
         normalized = raw.lstrip("-+").lower()
         base = normalized.split("e", 1)[0]
@@ -503,6 +514,7 @@ def select(value: Any, locale: str, plural_type: str = "cardinal") -> str:
     rules_for_type = DATA.get(plural_type)
     if rules_for_type is None:
         return "other"
+    operands = NumberOperands(value)
     rule_id = _lookup_rule_id(
         rules_for_type["locales"],
         rules_for_type.get("parents", {{}}),
@@ -511,7 +523,6 @@ def select(value: Any, locale: str, plural_type: str = "cardinal") -> str:
     if rule_id is None:
         return "other"
     rule_set = next(rule for rule in rules_for_type["rules"] if rule["id"] == rule_id)
-    operands = NumberOperands(value)
     for item in rule_set["categories"]:
         condition = item["condition"]
         if condition is None or _matches_condition(operands, condition):
