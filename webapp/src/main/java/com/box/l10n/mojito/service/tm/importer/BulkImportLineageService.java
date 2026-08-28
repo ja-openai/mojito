@@ -18,6 +18,7 @@ import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.security.AuditorAwareImpl;
 import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.importer.TextUnitBatchImporterService.ImportResult;
@@ -52,6 +53,9 @@ public class BulkImportLineageService {
   public static final String SOURCE_GLOSSARY_TERM = "GLOSSARY_TERM";
   public static final String SOURCE_GLOSSARY_IMPORT = "GLOSSARY_IMPORT";
   public static final String SOURCE_BATCH_IMPORTER = "TEXT_UNIT_BATCH_IMPORTER";
+  public static final String AI_TRANSLATE_IDENTITY = "ai-translate";
+  public static final String MACHINE_TRANSLATION_IDENTITY = "machine-translation";
+  public static final String NOT_REVIEWED_IDENTITY = "NOT_REVIEWED";
   public static final String UNKNOWN_IDENTITY = "UNKNOWN";
 
   private enum OutputStatus {
@@ -64,6 +68,7 @@ public class BulkImportLineageService {
   private final StructuredBlobStorage structuredBlobStorage;
   private final AuditorAwareImpl auditorAware;
   private final UserRepository userRepository;
+  private final PollableTaskService pollableTaskService;
   private final ObjectMapper objectMapper;
 
   public BulkImportLineageService(
@@ -71,11 +76,13 @@ public class BulkImportLineageService {
       StructuredBlobStorage structuredBlobStorage,
       AuditorAwareImpl auditorAware,
       UserRepository userRepository,
+      PollableTaskService pollableTaskService,
       @Qualifier("fail_on_unknown_properties_false") ObjectMapper objectMapper) {
     this.runRepository = runRepository;
     this.structuredBlobStorage = structuredBlobStorage;
     this.auditorAware = auditorAware;
     this.userRepository = userRepository;
+    this.pollableTaskService = pollableTaskService;
     this.objectMapper = objectMapper;
   }
 
@@ -183,10 +190,13 @@ public class BulkImportLineageService {
       String capturedActorIdentity,
       String source) {
     Long initiatingUserId = capturedUserId;
-    if (initiatingUserId == null
-        && pollableTask != null
-        && pollableTask.getCreatedByUser() != null) {
-      initiatingUserId = pollableTask.getCreatedByUser().getId();
+    if (initiatingUserId == null && pollableTask != null) {
+      if (pollableTask.getId() != null) {
+        initiatingUserId =
+            pollableTaskService.getCreatedByUserIdWithAncestorFallback(pollableTask.getId());
+      } else if (pollableTask.getCreatedByUser() != null) {
+        initiatingUserId = pollableTask.getCreatedByUser().getId();
+      }
     }
 
     if (initiatingUserId != null) {
@@ -208,6 +218,16 @@ public class BulkImportLineageService {
         currentContext.actorIdentity(),
         source,
         pollableTask);
+  }
+
+  public ImportContext contextForPollableTask(
+      PollableTask pollableTask, String source, String fallbackServiceIdentity) {
+    ImportContext context = contextForPollableTask(pollableTask, null, null, null, source);
+    if (context.actorType() != UNKNOWN) {
+      return context;
+    }
+
+    return new ImportContext(null, SERVICE, fallbackServiceIdentity, source, pollableTask);
   }
 
   public BulkImportRun startRun(

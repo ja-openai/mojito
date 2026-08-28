@@ -785,7 +785,9 @@ public class AiTranslateService {
                             .KEEP_STATUS_IF_SAME_TARGET_AND_NOT_INCLUDED,
                         ALWAYS_IMPORT,
                         textUnitBatchImporterService.contextForPollableTask(
-                            currentTask, BulkImportLineageService.SOURCE_AI_TRANSLATE))
+                            currentTask,
+                            BulkImportLineageService.SOURCE_AI_TRANSLATE,
+                            BulkImportLineageService.AI_TRANSLATE_IDENTITY))
                     .stream()
                     .collect(
                         toMap(
@@ -1406,7 +1408,9 @@ public class AiTranslateService {
             .KEEP_STATUS_IF_SAME_TARGET_AND_NOT_INCLUDED,
         ALWAYS_IMPORT,
         textUnitBatchImporterService.contextForPollableTask(
-            currentTask, BulkImportLineageService.SOURCE_AI_TRANSLATE));
+            currentTask,
+            BulkImportLineageService.SOURCE_AI_TRANSLATE,
+            BulkImportLineageService.AI_TRANSLATE_IDENTITY));
 
     return forImport.stream()
         .filter(t -> t.error() != null)
@@ -1414,7 +1418,7 @@ public class AiTranslateService {
         .toList();
   }
 
-  private static TextUnitDTOWithVariantCommentOrError prepareForTextUnitDTOForImport(
+  static TextUnitDTOWithVariantCommentOrError prepareForTextUnitDTOForImport(
       String completionId,
       AiTranslateType aiTranslateType,
       Status importStatus,
@@ -1444,6 +1448,8 @@ public class AiTranslateService {
     String newTarget =
         AiTranslateTargetAutoFix.fixTarget(textUnitDTO.getSource(), targetWithMetadata.target());
     textUnitDTO.setTarget(newTarget);
+    textUnitDTO.setTranslatorIdentity(BulkImportLineageService.AI_TRANSLATE_IDENTITY);
+    textUnitDTO.setReviewerIdentity(BulkImportLineageService.NOT_REVIEWED_IDENTITY);
     // Reset target comment if this translation has its own comment. Do not carry over the previous
     // comment.
     textUnitDTO.setTargetComment(null);

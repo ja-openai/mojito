@@ -6,7 +6,9 @@ import com.google.common.base.Throwables;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +49,19 @@ public class PollableTaskService {
     // we don't use EAGER fetch on the entity anymore.
     fetchSubTasks(pollableTask);
     return pollableTask;
+  }
+
+  @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
+  public Long getCreatedByUserIdWithAncestorFallback(long id) {
+    PollableTask candidate = pollableTaskRepository.findById(id).orElse(null);
+    Set<Long> visitedTaskIds = new HashSet<>();
+    while (candidate != null && visitedTaskIds.add(candidate.getId())) {
+      if (candidate.getCreatedByUser() != null) {
+        return candidate.getCreatedByUser().getId();
+      }
+      candidate = candidate.getParentTask();
+    }
+    return null;
   }
 
   public PollableTask createPollableTask(

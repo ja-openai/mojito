@@ -78,7 +78,95 @@
 }
 
 .bulk-import-lineage-page {
-  max-width: 96rem;
+  max-width: 112rem;
+  height: calc(100vh - var(--app-shell-header-height));
+  overflow: hidden;
+}
+
+.bulk-import-lineage-page__layout {
+  flex: 1;
+  margin-top: var(--space-2);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.bulk-import-lineage-page__master,
+.bulk-import-lineage-page__detail,
+.bulk-import-lineage-page__runs-pane,
+.bulk-import-lineage-page__report-pane {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.bulk-import-lineage-page__detail {
+  display: flex;
+  flex-direction: column;
+}
+
+.bulk-import-lineage-page__runs-pane,
+.bulk-import-lineage-page__report-pane {
+  flex: 1;
+  gap: var(--space-3);
+}
+
+.bulk-import-lineage-page__runs-table-wrap,
+.bulk-import-lineage-page__report-table-wrap {
+  flex: 1;
+  min-height: 0;
+  max-width: 100%;
+  overflow: auto;
+}
+
+.bulk-import-lineage-page__runs-table-wrap .monitoring-page__table th,
+.bulk-import-lineage-page__report-table-wrap .monitoring-page__table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.bulk-import-lineage-page__runs-table {
+  min-width: 40rem;
+  table-layout: fixed;
+}
+
+.bulk-import-lineage-page__runs-table th:nth-child(1) {
+  width: 24%;
+}
+
+.bulk-import-lineage-page__runs-table th:nth-child(2) {
+  width: 23%;
+}
+
+.bulk-import-lineage-page__runs-table th:nth-child(3) {
+  width: 10%;
+}
+
+.bulk-import-lineage-page__runs-table th:nth-child(4) {
+  width: 23%;
+}
+
+.bulk-import-lineage-page__runs-table th:nth-child(5) {
+  width: 20%;
+}
+
+.bulk-import-lineage-page__runs-table th,
+.bulk-import-lineage-page__runs-table td {
+  vertical-align: top;
+}
+
+.bulk-import-lineage-page__report-table-wrap .monitoring-page__table {
+  min-width: 64rem;
+}
+
+.bulk-import-lineage-page__report-header {
+  align-items: flex-start;
+}
+
+.bulk-import-lineage-page__payload-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .bulk-import-lineage-page .monitoring-page__table tbody tr.is-selected {
@@ -90,7 +178,8 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-1);
-  min-width: 12rem;
+  width: 100%;
+  min-width: 0;
   padding: 0;
   border: 0;
   background: transparent;
@@ -111,6 +200,11 @@
   margin-top: var(--space-1);
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
+  overflow-wrap: anywhere;
+}
+
+.bulk-import-lineage-page__identity {
+  overflow-wrap: anywhere;
 }
 
 .bulk-import-lineage-page__status {
@@ -142,6 +236,37 @@
   min-width: 12rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 70rem) {
+  .bulk-import-lineage-page {
+    height: auto;
+    overflow: visible;
+  }
+
+  .bulk-import-lineage-page__layout {
+    flex: none;
+    overflow: visible;
+  }
+
+  .bulk-import-lineage-page__master,
+  .bulk-import-lineage-page__detail,
+  .bulk-import-lineage-page__runs-pane,
+  .bulk-import-lineage-page__report-pane {
+    overflow: visible;
+  }
+
+  .bulk-import-lineage-page__runs-pane,
+  .bulk-import-lineage-page__report-pane {
+    flex: none;
+  }
+
+  .bulk-import-lineage-page__runs-table-wrap,
+  .bulk-import-lineage-page__report-table-wrap {
+    flex: none;
+    overflow-x: auto;
+    overflow-y: visible;
+  }
 }
 
 @media (max-width: 48rem) {

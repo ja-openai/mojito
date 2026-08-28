@@ -15,6 +15,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
  * @author jaurambault
@@ -89,6 +91,42 @@ public class PollableTaskServiceTest extends ServiceTestBase {
     assertEquals(createSubTask2.getId(), iterator.next().getId());
 
     logger.debug(objectMapper.writeValueAsStringUnchecked(pollableTask));
+  }
+
+  @Test
+  public void testCreatedByUserFallsBackToPersistedAncestor() {
+    PollableTask root =
+        pollableTaskService.createPollableTask(
+            null,
+            testIdWatcher.getEntityName("testCreatedByUserFallsBackToPersistedAncestor-root"),
+            null,
+            1);
+    Long expectedUserId = root.getCreatedByUser().getId();
+
+    SecurityContext originalContext = SecurityContextHolder.getContext();
+    try {
+      SecurityContextHolder.clearContext();
+      PollableTask parent =
+          pollableTaskService.createPollableTask(
+              root.getId(),
+              testIdWatcher.getEntityName("testCreatedByUserFallsBackToPersistedAncestor-parent"),
+              null,
+              1);
+      PollableTask child =
+          pollableTaskService.createPollableTask(
+              parent.getId(),
+              testIdWatcher.getEntityName("testCreatedByUserFallsBackToPersistedAncestor-child"),
+              null,
+              0);
+
+      assertNull(parent.getCreatedByUser());
+      assertNull(child.getCreatedByUser());
+      assertEquals(
+          expectedUserId,
+          pollableTaskService.getCreatedByUserIdWithAncestorFallback(child.getId()));
+    } finally {
+      SecurityContextHolder.setContext(originalContext);
+    }
   }
 
   @Test
