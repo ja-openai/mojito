@@ -21,11 +21,17 @@ def main(argv: list[str] | None = None) -> int:
         for format_case in fixture.get("formatCases", []):
             cases.append(
                 {
-                    "name": f"{fixture['name']}[{format_case.get('locale', 'en')}]",
+                    "name": (
+                        fixture["name"]
+                        + (f"/{format_case['name']}" if format_case.get("name") else "")
+                        + f"[{format_case.get('locale', 'en')}]"
+                    ),
                     "locale": format_case.get("locale", "en"),
                     "bidiIsolation": format_case.get("bidiIsolation", "none"),
                     "source": fixture["source"],
-                    "expected": format_case["expected"],
+                    "expected": format_case.get("referenceExpected", {}).get(
+                        "icu4cxx", format_case["expected"]
+                    ),
                     "arguments": format_case.get("arguments", {}),
                 }
             )

@@ -2,7 +2,9 @@ import { MF2Error } from "./errors.js";
 import {
   functionOptionLiteral,
   isDecimalSourceFunction,
+  numericSourceOperand,
   parseDecimalNumber,
+  sourceOptionValue,
 } from "./function_support.js";
 
 export function registerUnlocalizedNumericFormatters(formatters) {
@@ -13,33 +15,64 @@ export function registerUnlocalizedNumericFormatters(formatters) {
 
 export function formatUnlocalizedNumber(call) {
   const value = parseCallDecimal(call, "Number function requires a numeric operand.");
-  return formatUnlocalizedDecimal(value, signDisplayAlways(call.function), minimumFractionDigits(call));
+  let formatted = formatUnlocalizedDecimalWithMaximumFractionDigits(value, maximumFractionDigits(call));
+  if (signDisplayAlways(call) && value >= 0) formatted = `+${formatted}`;
+  return appendMinimumFractionDigits(formatted, minimumFractionDigits(call));
 }
 
 export function formatUnlocalizedPercent(call) {
   const value = parseCallDecimal(call, "Percent function requires a numeric operand.");
   let formatted = formatUnlocalizedDecimalWithMaximumFractionDigits(value * 100, maximumFractionDigits(call));
-  if (signDisplayAlways(call.function) && value >= 0) formatted = `+${formatted}`;
+  if (signDisplayAlways(call) && value >= 0) formatted = `+${formatted}`;
   return `${appendMinimumFractionDigits(formatted, minimumFractionDigits(call))}%`;
 }
 
 export function formatUnlocalizedInteger(call) {
   const value = parseCallDecimal(call, "Integer function requires a numeric operand.");
   const integer = Math.trunc(value);
-  return signDisplayAlways(call.function) && integer >= 0 ? `+${integer}` : String(integer);
+  return signDisplayAlways(call) && integer >= 0 ? `+${integer}` : String(integer);
 }
 
 export function parseCallDecimal(call, message) {
-  let parsed = parseDecimalNumber(call.value);
-  if (parsed == null) parsed = parseSourceDecimal(call.inheritedSource);
+  let parsed = parseSourceDecimal(call.inheritedSource);
+  if (parsed == null) parsed = parseDecimalNumber(call.value);
   if (parsed == null) throw MF2Error.badOperand(message);
   return parsed;
 }
 
+export function numericSelectionOperand(resolvedValue, functionRef) {
+  if (functionOptionLiteral(functionRef, "select", "plural") === "exact") return null;
+  const source = resolvedValue.source;
+  const sourceInput = isDecimalSourceFunction(source?.function) ? numericSourceOperand(source) : null;
+  const input = sourceInput ?? resolvedValue.rawValue;
+  let value = parseDecimalNumber(input);
+  if (value == null) return null;
+
+  const optionValue = (name, fallback = null) => sourceOptionFrom(
+    source,
+    name,
+    functionOptionLiteral(functionRef, name, fallback),
+    functionRef.name,
+  );
+  const minimum = optionValue("minimumFractionDigits", "0");
+  const maximum = optionValue("maximumFractionDigits", null);
+  const minimumDigits = minimum == null ? 0 : parseNonNegativeOption(minimum, "minimumFractionDigits option must be a non-negative integer.");
+  const maximumDigits = maximum == null ? null : parseNonNegativeOption(maximum, "maximumFractionDigits option must be a non-negative integer.");
+
+  if (functionRef.name === "integer") return String(Math.trunc(value));
+  if (functionRef.name === "percent") value *= 100;
+  if (["number", "percent"].includes(functionRef.name)) {
+    return appendMinimumFractionDigits(
+      formatUnlocalizedDecimalWithMaximumFractionDigits(value, maximumDigits),
+      minimumDigits,
+    );
+  }
+  return String(input);
+}
+
 function parseSourceDecimal(source) {
-  if (source == null) return null;
-  if (isDecimalSourceFunction(source.function)) return parseDecimalNumber(source.value);
-  return parseSourceDecimal(source.inherited);
+  if (!isDecimalSourceFunction(source?.function)) return null;
+  return parseDecimalNumber(numericSourceOperand(source));
 }
 
 function formatUnlocalizedDecimal(value, signAlways, minimumFractionDigits) {
@@ -49,9 +82,17 @@ function formatUnlocalizedDecimal(value, signAlways, minimumFractionDigits) {
   return appendMinimumFractionDigits(formatted, minimumFractionDigits);
 }
 
-function formatUnlocalizedDecimalWithMaximumFractionDigits(value, digits) {
+export function formatUnlocalizedDecimalWithMaximumFractionDigits(value, digits) {
   if (digits == null) return formatUnlocalizedDecimal(value, false, 0);
-  let formatted = value.toFixed(digits);
+  let formatted;
+  try {
+    formatted = value.toFixed(digits);
+  } catch (error) {
+    if (error instanceof RangeError) {
+      throw MF2Error.badOption(`maximumFractionDigits option is outside the supported range: ${error.message}`);
+    }
+    throw error;
+  }
   while (formatted.includes(".") && formatted.endsWith("0")) formatted = formatted.slice(0, -1);
   if (formatted.endsWith(".")) formatted = formatted.slice(0, -1);
   return formatted;
@@ -68,20 +109,55 @@ function appendMinimumFractionDigits(formatted, minimumFractionDigits) {
 }
 
 function minimumFractionDigits(call) {
-  const value = call.optionValue("minimumFractionDigits", null);
+  const value = numericCallOptionValue(call, "minimumFractionDigits", null);
   return value == null ? 0 : parseNonNegativeOption(value, "minimumFractionDigits option must be a non-negative integer.");
 }
 
 function maximumFractionDigits(call) {
-  const value = call.optionValue("maximumFractionDigits", null);
+  const value = numericCallOptionValue(call, "maximumFractionDigits", null);
   return value == null ? null : parseNonNegativeOption(value, "maximumFractionDigits option must be a non-negative integer.");
 }
 
-function parseNonNegativeOption(value, message) {
+export function parseNonNegativeOption(value, message) {
   if (!/^\d+$/.test(String(value))) throw MF2Error.badOption(message);
   return Number(value);
 }
 
-function signDisplayAlways(functionRef) {
-  return functionOptionLiteral(functionRef, "signDisplay", null) === "always";
+function signDisplayAlways(call) {
+  return numericCallOptionValue(call, "signDisplay", null) === "always";
+}
+
+const MISSING_OPTION = Symbol("missing-option");
+
+function numericCallOptionValue(call, name, fallback) {
+  const direct = call.optionValue(name, MISSING_OPTION);
+  if (direct !== MISSING_OPTION) return direct;
+  return sourceOptionFrom(call.inheritedSource, name, fallback, call.function.name);
+}
+
+function sourceOptionFrom(source, name, fallback, targetFunction) {
+  if (source == null || numericOptionIsDiscarded(targetFunction, name)) return fallback;
+  const sourceFunction = source.function?.name;
+  if (!numericSourceFunctions(targetFunction).includes(sourceFunction)
+      || numericOptionIsDiscarded(sourceFunction, name)) return fallback;
+  const value = sourceOptionValue(source, name, MISSING_OPTION);
+  if (value !== MISSING_OPTION) return value;
+  return sourceOptionFrom(source.inherited, name, fallback, sourceFunction);
+}
+
+function numericSourceFunctions(functionName) {
+  return ["number", "integer", "percent", "offset"].includes(functionName)
+    ? ["number", "integer", "percent", "offset"]
+    : [];
+}
+
+function numericOptionIsDiscarded(functionName, optionName) {
+  if (functionName === "integer") {
+    return ["minimumFractionDigits", "maximumFractionDigits", "minimumSignificantDigits"].includes(optionName);
+  }
+  if (functionName === "percent") {
+    return ["minimumIntegerDigits", "roundingIncrement", "select"].includes(optionName);
+  }
+  if (functionName === "offset") return ["add", "subtract"].includes(optionName);
+  return false;
 }

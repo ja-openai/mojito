@@ -1,6 +1,7 @@
 import { MF2Error } from "./errors.js";
 import { selectCardinal, selectOrdinal } from "./cldr_plural_rules.js";
 import { createPortableFunctionRegistry } from "./portable_functions.js";
+import { numericSelectionOperand } from "./unlocalized_numeric_functions.js";
 import {
   functionOptionLiteral,
   inheritedExactNumericSource,
@@ -263,8 +264,8 @@ class FormatContext {
     const functionRef = expression.function;
     if (functionRef == null) return { value, hadError: false, source, direction: bidiDirectionFromSource(source) };
     this.recordFunctionResolutionErrors(functionRef, source);
-    const direction = bidiDirectionForFunction(functionRef, source);
     try {
+      const direction = bidiDirectionForFunction(functionRef, source);
       const formatted = this.functions.format({
         value,
         rawValue,
@@ -342,7 +343,8 @@ class FormatContext {
 
   recordFunctionResolutionErrors(functionRef, source) {
     if (!isNumericFunction(functionRef)) return;
-    if (!numericSelectUsesVariable(functionRef) && !inheritedExactNumericSource(source)) return;
+    if (!numericSelectUsesVariable(functionRef)
+        && !inheritedExactNumericSource(source, functionRef.name)) return;
     const error = new MF2Error("bad-option", "Numeric select option is not valid in this context.");
     if (!this.fallback) throw error;
     this.errors.push(error);
@@ -398,7 +400,11 @@ class FormatContext {
       });
     } catch (error) {
       if (!this.fallback) throw error;
-      this.errors.push(fallbackError(error), new MF2Error("bad-selector", "Selector failed to match."));
+      const recoverable = fallbackError(error);
+      this.errors.push(recoverable);
+      if (recoverable.code !== "bad-variant-key") {
+        this.errors.push(new MF2Error("bad-selector", "Selector failed to match."));
+      }
       return null;
     }
   }
@@ -518,8 +524,8 @@ class SelectorAnnotation {
 
 function selectionKey(locale, annotation, resolvedValue) {
   if (annotation == null || !annotation.isNumeric || annotation.numberSelect === "exact") return null;
-  let operand = valueToString(resolvedValue.rawValue);
-  if (annotation.function.name === "percent") operand = operand.endsWith("%") ? operand.slice(0, -1) : String(Number(operand) * 100);
+  const operand = numericSelectionOperand(resolvedValue, annotation.function);
+  if (operand == null) return null;
   return selectPluralCategory(locale, operand, annotation.numberSelect);
 }
 

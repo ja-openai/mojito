@@ -29,6 +29,15 @@ from .model import (
     MF2MessageModel,
 )
 from ._plural import select_plural_category
+from ._portable_functions import (
+    _inherited_exact_numeric_source,
+    _iter_source_chain,
+    _numeric_select_uses_variable,
+    _numeric_selection_operand,
+    _parse_non_negative_integer_option,
+    _parse_source_decimal,
+    _source_numeric_option_value,
+)
 
 
 @dataclass(frozen=True)
@@ -291,6 +300,7 @@ class _FormatContext:
         self.functions = functions
         self.selector_annotations: dict[str, _SelectorAnnotation] = {}
         self.failed_bindings: set[str] = set()
+        self.failed_selectors: set[int] = set()
         self.errors: list[MF2Error] = []
         self.fallback = fallback
         self.on_missing_argument = on_missing_argument or _default_recovery
@@ -330,6 +340,7 @@ class _FormatContext:
         selectors: list[dict[str, Any]],
         variants: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
+        self.failed_selectors.clear()
         selector_values = []
         for selector in selectors:
             name = selector["name"]
@@ -338,22 +349,22 @@ class _FormatContext:
                 if self.fallback:
                     if name not in self.failed_bindings:
                         self.errors.append(_unresolved_variable(name))
-                    selector_values.append(
-                        _SelectorValue(
-                            rendered="",
-                            raw_value="",
-                            normalized_rendered=(
-                                _normalize_string_key("")
-                                if self._string_select(name)
-                                else None
-                            ),
-                            exact_match=False,
-                            selection_key=None,
-                            function=None,
-                            source=None,
-                            available=False,
-                        )
+                    selector_value = _SelectorValue(
+                        rendered="",
+                        raw_value="",
+                        normalized_rendered=(
+                            _normalize_string_key("")
+                            if self._string_select(name)
+                            else None
+                        ),
+                        exact_match=False,
+                        selection_key=None,
+                        function=annotation.function if annotation else None,
+                        source=None,
+                        available=False,
                     )
+                    self.failed_selectors.add(id(selector_value))
+                    selector_values.append(selector_value)
                     if annotation is not None and self.functions.has_selector(annotation.function):
                         if name not in self.failed_bindings:
                             self.errors.append(
@@ -366,6 +377,7 @@ class _FormatContext:
                 raise MF2Error("missing-argument", f"Missing argument ${name}.")
             value = self.values[name]
             rendered = _render_value(value)
+            self._record_selector_resolution_errors(annotation)
             normalized_rendered = (
                 _normalize_string_key(rendered) if self._string_select(name) else None
             )
@@ -375,7 +387,9 @@ class _FormatContext:
                     raw_value=value,
                     normalized_rendered=normalized_rendered,
                     exact_match=self._exact_match(name),
-                    selection_key=self._selection_key(name, value),
+                    selection_key=self._selection_key(
+                        name, value, self.sources.get(name)
+                    ),
                     function=annotation.function if annotation else None,
                     source=self.sources.get(name),
                     available=True,
@@ -440,8 +454,17 @@ class _FormatContext:
                     }
                     if attributes := part.get("attributes"):
                         expression_part["attributes"] = attributes
+                    if rendered.direction is not None:
+                        expression_part["direction"] = rendered.direction
                     parts.append(expression_part)
             elif part_type == "markup":
+                if "u:dir" in part.get("options", {}):
+                    error = MF2Error(
+                        "bad-option", "u:dir is not valid on markup."
+                    )
+                    if not self.fallback:
+                        raise error
+                    self.errors.append(error)
                 markup_part: MF2MarkupPart = {
                     "type": "markup",
                     "kind": part.get("kind", ""),
@@ -517,8 +540,15 @@ class _FormatContext:
                 return self._format_error_output(expression, error)
 
         if function is None:
-            return _ExpressionOutput(value=value, had_error=False, source=source)
+            return _ExpressionOutput(
+                value=value,
+                had_error=False,
+                source=source,
+                direction=_bidi_direction_from_source(source),
+            )
+        self._record_function_resolution_errors(function, source)
         try:
+            direction = _bidi_direction_for_function(function, source)
             source_value = value if source is None else source.value
             return _ExpressionOutput(
                 value=self.functions.format(
@@ -538,6 +568,7 @@ class _FormatContext:
                     source,
                     lambda name, default: self._option_value(function, name, default),
                 ),
+                direction=direction,
             )
         except MF2Error as error:
             return self._format_error_output(expression, error)
@@ -626,48 +657,107 @@ class _FormatContext:
             raise MF2Error("missing-argument", f"Missing argument ${name}.")
         return self.values[name]
 
+    def _record_function_resolution_errors(
+        self,
+        function: dict[str, Any],
+        source: FunctionSource | None,
+    ) -> None:
+        annotation = _SelectorAnnotation.from_function(function)
+        if not annotation.is_numeric:
+            return
+        if not _numeric_select_uses_variable(function) and not (
+            _inherited_exact_numeric_source(
+                source, str(function.get("name", ""))
+            )
+        ):
+            return
+        error = MF2Error(
+            "bad-option",
+            "Numeric select option is not valid in this context.",
+        )
+        if not self.fallback:
+            raise error
+        self.errors.append(error)
+
+    def _record_selector_resolution_errors(
+        self, annotation: "_SelectorAnnotation | None"
+    ) -> None:
+        if annotation is None or annotation.function_name != "currency":
+            return
+        error = MF2Error(
+            "bad-selector", "Currency selector is not supported."
+        )
+        if not self.fallback:
+            raise error
+        self.errors.append(error)
+
     def _exact_match(self, selector_name: str) -> bool:
         annotation = self.selector_annotations.get(selector_name)
         return True if annotation is None else annotation.exact_match
 
-    def _selection_key(self, selector_name: str, value: Any) -> str | None:
+    def _selection_key(
+        self,
+        selector_name: str,
+        value: Any,
+        source: FunctionSource | None,
+    ) -> str | None:
         annotation = self.selector_annotations.get(selector_name)
         if annotation is None or not annotation.is_numeric:
             return None
+        operand = self._numeric_selection_operand(annotation, value, source)
+        return select_plural_category(
+            self.locale, operand, annotation.number_select
+        )
+
+    def _numeric_selection_operand(
+        self,
+        annotation: "_SelectorAnnotation",
+        value: Any,
+        source: FunctionSource | None,
+    ) -> str | None:
         if annotation.number_select == "exact":
             return None
-        source = self.sources.get(selector_name)
-        if source is not None and annotation.function_name in {
-            "integer",
-            "number",
-            "percent",
-        }:
-            # Locale-aware formatters may add grouping, decimal, or percent
-            # characters that can be parsed as a different CLDR operand.
-            # Apply the portable numeric semantics to the source operand so
-            # options such as fraction digits and integer truncation are
-            # preserved.
-            try:
-                selection_value = _numeric_plural_operand(
-                    FunctionCall(
-                        value=_render_value(source.value),
-                        raw_value=source.value,
-                        function=source.function,
-                        locale=self.locale,
-                        _option_resolver=source.option_value,
-                        inherited_source=source.inherited_source,
-                    )
-                )
-            except MF2Error:
-                return None
-        else:
-            selection_value = (
-                _percent_plural_operand(value)
-                if annotation.function_name == "percent"
-                else value
+        source_value = (
+            _parse_source_decimal(source)
+            if annotation.function_name != "offset"
+            else None
+        )
+        if source_value is None:
+            source_value = _render_value(value)
+
+        def option_value(name: str, default: str | None = None) -> str | None:
+            current = self._option_value(annotation.function, name, None)
+            if current is not None:
+                return current
+            return _source_numeric_option_value(
+                source,
+                name,
+                default,
+                target_function=annotation.function_name,
             )
-        return select_plural_category(
-            self.locale, selection_value, annotation.number_select
+
+        minimum = option_value("minimumFractionDigits", "0") or "0"
+        maximum = option_value("maximumFractionDigits")
+        try:
+            minimum_digits = _parse_non_negative_integer_option(
+                minimum,
+                "minimumFractionDigits option must be a non-negative integer.",
+            )
+            maximum_digits = (
+                None
+                if maximum is None
+                else _parse_non_negative_integer_option(
+                    maximum,
+                    "maximumFractionDigits option must be a non-negative integer.",
+                )
+            )
+        except MF2Error:
+            return None
+        return _numeric_selection_operand(
+            source_value,
+            annotation.function_name,
+            minimum_digits,
+            maximum_digits,
         )
 
     def _string_select(self, selector_name: str) -> bool:
@@ -697,7 +787,7 @@ class _FormatContext:
         value = str(key.get("value", ""))
         if (selector.exact_match and _literal_key_matches(value, selector)) or value == selector.selection_key:
             return 1
-        if selector.function is None:
+        if selector.function is None or id(selector) in self.failed_selectors:
             return None
         try:
             return self.functions.select(
@@ -716,8 +806,13 @@ class _FormatContext:
         except MF2Error as error:
             if not self.fallback:
                 raise
+            if error.code != "bad-variant-key":
+                self.failed_selectors.add(id(selector))
             self.errors.append(_fallback_error(error))
-            self.errors.append(MF2Error("bad-selector", "Selector failed to match."))
+            if error.code not in {"bad-selector", "bad-variant-key"}:
+                self.errors.append(
+                    MF2Error("bad-selector", "Selector failed to match.")
+                )
             return None
 
 
@@ -772,6 +867,7 @@ class _ExpressionOutput:
     had_error: bool
     source: FunctionSource | None = None
     fallback_source: str | None = None
+    direction: str | None = None
 
 
 def _default_recovery(context: MF2RecoveryContext) -> str:
@@ -907,11 +1003,47 @@ def _parts_to_string(parts: list[MF2FormattedPart], bidi_isolation: str = "none"
         elif part_type == "fallback":
             output.append(part["value"] if "value" in part else ("{" + part.get("source", "") + "}"))
         elif part_type == "expression":
-            output.append(_isolate_expression(part.get("value", ""), bidi_isolation))
+            output.append(
+                _isolate_expression(
+                    part.get("value", ""),
+                    bidi_isolation,
+                    part.get("direction"),
+                )
+            )
     return "".join(output)
 
 
-def _isolate_expression(value: str, bidi_isolation: str) -> str:
+def _isolate_expression(
+    value: str, bidi_isolation: str, direction: str | None = None
+) -> str:
     if bidi_isolation == "default":
-        return f"\u2068{value}\u2069"
+        marker = {"ltr": "\u2066", "rtl": "\u2067"}.get(direction, "\u2068")
+        return f"{marker}{value}\u2069"
     return value
+
+
+def _bidi_direction_for_function(
+    function: dict[str, Any], source: FunctionSource | None
+) -> str | None:
+    option = function.get("options", {}).get("u:dir")
+    if option is not None:
+        if option.get("type") != "literal":
+            raise MF2Error("bad-option", "u:dir option must be a literal.")
+        return _parse_bidi_direction(str(option.get("value", "")))
+    return _bidi_direction_from_source(source)
+
+
+def _bidi_direction_from_source(source: FunctionSource | None) -> str | None:
+    for current in _iter_source_chain(source):
+        option = current.function.get("options", {}).get("u:dir")
+        if option is not None:
+            if option.get("type") != "literal":
+                raise MF2Error("bad-option", "u:dir option must be a literal.")
+            return _parse_bidi_direction(str(option.get("value", "")))
+    return None
+
+
+def _parse_bidi_direction(value: str) -> str:
+    if value in {"auto", "ltr", "rtl"}:
+        return value
+    raise MF2Error("bad-option", "u:dir option must be auto, ltr, or rtl.")

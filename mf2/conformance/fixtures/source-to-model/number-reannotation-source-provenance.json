@@ -1,0 +1,193 @@
+{
+  "name": "number-reannotation-source-provenance",
+  "source": ".local $n = {1.29 :number maximumFractionDigits=1}\n.local $m = {$n :number maximumFractionDigits=2}\n.local $i = {1.25 :integer}\n.local $copy = {$i :number}\n.local $rounded = {1.9 :number maximumFractionDigits=0}\n.local $offset = {$rounded :offset add=1}\n.local $negative = {-1.9 :offset add=1}\n.local $integral = {0.0 :offset add=1}\n.match $m $negative $integral\nfew * * {{few {$m}}}\nother -0.9 one {{other {$m}; integer {$copy}; offset {$offset}; negative {$negative}; integral {$integral}}}\n* * * {{fallback {$m}}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "n",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "1.29" },
+          "function": {
+            "type": "function",
+            "name": "number",
+            "options": {
+              "maximumFractionDigits": { "type": "literal", "value": "1" }
+            }
+          }
+        }
+      },
+      {
+        "type": "local",
+        "name": "m",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "n" },
+          "function": {
+            "type": "function",
+            "name": "number",
+            "options": {
+              "maximumFractionDigits": { "type": "literal", "value": "2" }
+            }
+          }
+        }
+      },
+      {
+        "type": "local",
+        "name": "i",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "1.25" },
+          "function": { "type": "function", "name": "integer" }
+        }
+      },
+      {
+        "type": "local",
+        "name": "copy",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "i" },
+          "function": { "type": "function", "name": "number" }
+        }
+      },
+      {
+        "type": "local",
+        "name": "rounded",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "1.9" },
+          "function": {
+            "type": "function",
+            "name": "number",
+            "options": {
+              "maximumFractionDigits": { "type": "literal", "value": "0" }
+            }
+          }
+        }
+      },
+      {
+        "type": "local",
+        "name": "offset",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "rounded" },
+          "function": {
+            "type": "function",
+            "name": "offset",
+            "options": {
+              "add": { "type": "literal", "value": "1" }
+            }
+          }
+        }
+      },
+      {
+        "type": "local",
+        "name": "negative",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "-1.9" },
+          "function": {
+            "type": "function",
+            "name": "offset",
+            "options": {
+              "add": { "type": "literal", "value": "1" }
+            }
+          }
+        }
+      },
+      {
+        "type": "local",
+        "name": "integral",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "0.0" },
+          "function": {
+            "type": "function",
+            "name": "offset",
+            "options": {
+              "add": { "type": "literal", "value": "1" }
+            }
+          }
+        }
+      }
+    ],
+    "selectors": [
+      { "type": "variable", "name": "m" },
+      { "type": "variable", "name": "negative" },
+      { "type": "variable", "name": "integral" }
+    ],
+    "variants": [
+      {
+        "keys": [
+          { "type": "literal", "value": "few" },
+          { "type": "*" },
+          { "type": "*" }
+        ],
+        "value": [
+          "few ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "m" }
+          }
+        ]
+      },
+      {
+        "keys": [
+          { "type": "literal", "value": "other" },
+          { "type": "literal", "value": "-0.9" },
+          { "type": "literal", "value": "one" }
+        ],
+        "value": [
+          "other ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "m" }
+          },
+          "; integer ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "copy" }
+          },
+          "; offset ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "offset" }
+          },
+          "; negative ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "negative" }
+          },
+          "; integral ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "integral" }
+          }
+        ]
+      },
+      {
+        "keys": [
+          { "type": "*" },
+          { "type": "*" },
+          { "type": "*" }
+        ],
+        "value": [
+          "fallback ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "m" }
+          }
+        ]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "sr",
+      "arguments": {},
+      "expected": "other 1.29; integer 1; offset 2.9; negative -0.9; integral 1"
+    }
+  ]
+}

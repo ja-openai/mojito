@@ -94,6 +94,181 @@ fn public_runtime_api_exposes_result_and_parts() {
 }
 
 #[test]
+fn numeric_exact_matches_outrank_plural_categories() {
+    let result = format_source(
+        ".input {$count :integer}\n.match $count\n\
+         * {{fallback}}\none {{plural one}}\n1 {{exact one}}",
+        "en",
+        Arguments::new().with("count", 1),
+    );
+
+    assert_eq!(result.value, "exact one");
+    assert!(result.errors.is_empty(), "{:?}", result.errors);
+}
+
+#[test]
+fn number_exact_matches_use_canonical_integer_serialization() {
+    let result = format_source(
+        ".input {$value :number}\n.match $value\n\
+         1.0 {{decimal-spelling}}\n1 {{integer-spelling}}\n* {{fallback}}",
+        "en",
+        Arguments::new().with("value", 1),
+    );
+
+    assert_eq!(result.value, "integer-spelling");
+    assert!(result.errors.is_empty(), "{:?}", result.errors);
+}
+
+#[test]
+fn number_reannotations_inherit_resolved_options() {
+    let result = format_source(
+        ".local $number = {1.2 :number minimumFractionDigits=2}\n\
+         {{Value {$number :number}}}",
+        "en",
+        Arguments::new(),
+    );
+
+    assert_eq!(result.value, "Value 1.20");
+    assert!(result.errors.is_empty(), "{:?}", result.errors);
+}
+
+#[test]
+fn number_reannotations_use_semantic_operands_before_rounded_display() {
+    let result = format_source(
+        ".local $number = {1.29 :number maximumFractionDigits=1}\n\
+         {{Value {$number :number maximumFractionDigits=2}}}",
+        "en",
+        Arguments::new(),
+    );
+
+    assert_eq!(result.value, "Value 1.29");
+    assert!(result.errors.is_empty(), "{:?}", result.errors);
+}
+
+#[test]
+fn exact_selection_inherits_options_from_resolved_number_chains() {
+    let result = format_source(
+        ".local $rounded = {1.29 :number maximumFractionDigits=1 signDisplay=always}\n\
+         .local $selected = {$rounded :number}\n\
+         .match $selected\n\
+         1.3 {{rounded}}\n1.29 {{raw}}\n* {{fallback}}",
+        "en",
+        Arguments::new(),
+    );
+
+    assert_eq!(result.value, "rounded");
+    assert!(result.errors.is_empty(), "{:?}", result.errors);
+}
+
+#[test]
+fn offset_uses_the_semantic_decimal_operand_before_rounded_display() {
+    let result = format_source(
+        ".local $number = {-1.9 :number maximumFractionDigits=0}\n\
+         .local $offset = {$number :offset add=1}\n\
+         {{{$offset}}}",
+        "en",
+        Arguments::new(),
+    );
+
+    assert_eq!(result.value, "-0.9");
+    assert!(result.errors.is_empty(), "{:?}", result.errors);
+
+    let reannotated = format_source(
+        ".local $number = {-1.9 :number maximumFractionDigits=0}\n\
+         .local $offset = {$number :offset add=1}\n\
+         .local $copy = {$offset :number maximumFractionDigits=1}\n\
+         {{{$copy}}}",
+        "en",
+        Arguments::new(),
+    );
+
+    assert_eq!(reannotated.value, "-0.9");
+    assert!(reannotated.errors.is_empty(), "{:?}", reannotated.errors);
+}
+
+#[test]
+fn number_maximum_fraction_digits_rounds_display() {
+    let result = format_source(
+        "Value {1.29 :number maximumFractionDigits=1}",
+        "en",
+        Arguments::new(),
+    );
+
+    assert_eq!(result.value, "Value 1.3");
+    assert!(result.errors.is_empty(), "{:?}", result.errors);
+}
+
+#[test]
+fn excessive_maximum_fraction_digits_recovers_with_bad_option() {
+    let result = format_source(
+        "Value {1 :number maximumFractionDigits=65536}",
+        "en",
+        Arguments::new(),
+    );
+
+    assert_eq!(result.value, "Value {|1|}");
+    assert_eq!(error_codes(&result.errors), vec!["bad-option"]);
+}
+
+#[test]
+fn excessive_minimum_fraction_digits_recovers_with_bad_option() {
+    let result = format_source(
+        "Value {1 :number minimumFractionDigits=65536}",
+        "en",
+        Arguments::new(),
+    );
+
+    assert_eq!(result.value, "Value {|1|}");
+    assert_eq!(error_codes(&result.errors), vec!["bad-option"]);
+}
+
+#[test]
+fn inherited_excessive_fraction_digits_report_during_selection() {
+    fn permissive_number_formatter(
+        call: mojito_mf2::FunctionCall<'_>,
+    ) -> Result<String, Diagnostic> {
+        Ok(call.value().to_string())
+    }
+
+    let parsed = parse_to_model(
+        ".local $source = {1 :number minimumFractionDigits=65536}\n\
+         .local $selected = {$source :number}\n\
+         .match $selected\n\
+         one {{one}}\n* {{fallback}}",
+    );
+    assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+    let registry =
+        FunctionRegistry::portable().with_function("number", permissive_number_formatter);
+    let result = format_with_options(
+        parsed.model.as_ref().expect("model exists"),
+        &Arguments::new(),
+        "en",
+        &registry,
+        BidiIsolation::None,
+    )
+    .expect("format succeeds");
+
+    assert_eq!(result.value, "fallback");
+    assert_eq!(
+        error_codes(&result.errors),
+        vec!["bad-option", "bad-selector"]
+    );
+}
+
+#[test]
+fn invalid_numeric_variant_keys_report_and_do_not_stop_selection() {
+    let result = format_source(
+        ".input {$value :number}\n.match $value\n\
+         horse {{invalid}}\n1 {{valid-exact}}\n* {{fallback}}",
+        "en",
+        Arguments::new().with("value", 1),
+    );
+
+    assert_eq!(result.value, "valid-exact");
+    assert_eq!(error_codes(&result.errors), vec!["bad-variant-key"]);
+}
+
+#[test]
 fn cardinal_plural_categories_match_every_existing_generated_rule() {
     let path =
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../cldr/generated/all/plural_rules.json");
@@ -237,6 +412,14 @@ fn unsupported_default_function_recovers_with_diagnostic() {
 
 fn error_codes(errors: &[Diagnostic]) -> Vec<&str> {
     errors.iter().map(|error| error.code.as_str()).collect()
+}
+
+fn format_source(source: &str, locale: &str, arguments: Arguments) -> mojito_mf2::FormatResult {
+    let parsed = parse_to_model(source);
+    assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+    let model = parsed.model.as_ref().expect("model exists");
+    let options = FormatOptions::new(locale);
+    format_message_with_options(model, arguments, &options).expect("format succeeds")
 }
 
 #[test]

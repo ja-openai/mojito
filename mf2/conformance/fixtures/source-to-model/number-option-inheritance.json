@@ -1,0 +1,162 @@
+{
+  "name": "number-option-inheritance",
+  "source": ".input {$value :number minimumFractionDigits=1 signDisplay=always}\n.local $copy = {$value :number}\n.local $decimal = {1 :number minimumFractionDigits=2 minimumSignificantDigits=3}\n.local $integer = {$decimal :integer}\n.local $integerCopy = {$integer :number}\n.local $percent = {1 :percent minimumFractionDigits=2}\n.local $percentCopy = {$percent :number}\n.match $copy\none {{one {$copy}; integer {$integerCopy}; percent {$percentCopy}}}\nother {{other {$copy}; integer {$integerCopy}; percent {$percentCopy}}}\n* {{fallback {$copy}; integer {$integerCopy}; percent {$percentCopy}}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "value",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "value" },
+          "function": {
+            "type": "function",
+            "name": "number",
+            "options": {
+              "minimumFractionDigits": { "type": "literal", "value": "1" },
+              "signDisplay": { "type": "literal", "value": "always" }
+            }
+          }
+        }
+      },
+      {
+        "type": "local",
+        "name": "copy",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "value" },
+          "function": { "type": "function", "name": "number" }
+        }
+      },
+      {
+        "type": "local",
+        "name": "decimal",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "1" },
+          "function": {
+            "type": "function",
+            "name": "number",
+            "options": {
+              "minimumFractionDigits": { "type": "literal", "value": "2" },
+              "minimumSignificantDigits": { "type": "literal", "value": "3" }
+            }
+          }
+        }
+      },
+      {
+        "type": "local",
+        "name": "integer",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "decimal" },
+          "function": { "type": "function", "name": "integer" }
+        }
+      },
+      {
+        "type": "local",
+        "name": "integerCopy",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "integer" },
+          "function": { "type": "function", "name": "number" }
+        }
+      },
+      {
+        "type": "local",
+        "name": "percent",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "1" },
+          "function": {
+            "type": "function",
+            "name": "percent",
+            "options": {
+              "minimumFractionDigits": { "type": "literal", "value": "2" }
+            }
+          }
+        }
+      },
+      {
+        "type": "local",
+        "name": "percentCopy",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "percent" },
+          "function": { "type": "function", "name": "number" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "copy" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "one" }],
+        "value": [
+          "one ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "copy" }
+          },
+          "; integer ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "integerCopy" }
+          },
+          "; percent ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "percentCopy" }
+          }
+        ]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "other" }],
+        "value": [
+          "other ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "copy" }
+          },
+          "; integer ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "integerCopy" }
+          },
+          "; percent ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "percentCopy" }
+          }
+        ]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": [
+          "fallback ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "copy" }
+          },
+          "; integer ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "integerCopy" }
+          },
+          "; percent ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "percentCopy" }
+          }
+        ]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "value": 1 },
+      "expected": "other +1.0; integer 1; percent 1.00"
+    }
+  ]
+}

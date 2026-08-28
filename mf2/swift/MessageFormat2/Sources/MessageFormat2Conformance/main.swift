@@ -302,6 +302,234 @@ private func runPublicApiEdgeChecks() throws {
         emptyFormatErrorParts.parts,
         [.text("Hello "), .fallback(source: "$name", value: "")]
     )
+
+    let differentialCases: [(
+        label: String,
+        source: String,
+        arguments: [String: MF2Value],
+        expected: String,
+        errors: [String]
+    )] = [
+        (
+            "exact numeric key precedence",
+            ".input {$count :integer}\n.match $count\none {{category}}\n1 {{exact}}\n* {{fallback}}",
+            ["count": .number("1")],
+            "exact",
+            []
+        ),
+        (
+            "canonical exact numeric serialization",
+            ".input {$value :number}\n.match $value\n1.0 {{decimal}}\n1 {{integer}}\n* {{fallback}}",
+            ["value": .number("1")],
+            "integer",
+            []
+        ),
+        (
+            "invalid numeric key continuation",
+            ".input {$value :number}\n.match $value\nhorse {{horse}}\n1 {{exact}}\n* {{fallback}}",
+            ["value": .number("1")],
+            "exact",
+            ["bad-variant-key"]
+        ),
+        (
+            "failed input fallback",
+            ".input {$foo :number} {{bar {$foo}}}",
+            ["foo": .string("foo")],
+            "bar {$foo}",
+            ["bad-operand"]
+        ),
+        (
+            "inherited number options",
+            ".local $n = {1.2 :number minimumFractionDigits=2} {{Value {$n :number}}}",
+            [:],
+            "Value 1.20",
+            []
+        ),
+        (
+            "maximum fraction digits",
+            "Value {1.29 :number maximumFractionDigits=1}",
+            [:],
+            "Value 1.3",
+            []
+        ),
+        (
+            "maximum fraction digits accepted boundary",
+            "Value {1 :number maximumFractionDigits=1000}",
+            [:],
+            "Value 1",
+            []
+        ),
+        (
+            "minimum fraction digits accepted boundary",
+            "Value {1 :number minimumFractionDigits=1000}",
+            [:],
+            "Value 1." + String(repeating: "0", count: 1_000),
+            []
+        ),
+        (
+            "minimum integer offset subtraction",
+            "{-1 :offset subtract=-9223372036854775808}",
+            [:],
+            "9223372036854775807",
+            []
+        ),
+        (
+            "minimum integer offset source chain",
+            ".local $offset = {-1 :offset subtract=-9223372036854775808} "
+                + "{{Value {$offset :offset add=0}}}",
+            [:],
+            "Value 9223372036854775807",
+            []
+        ),
+        (
+            "out-of-range integral number",
+            "{9223372036854775807 :number}",
+            [:],
+            "{|9223372036854775807|}",
+            ["bad-operand"]
+        ),
+        (
+            "out-of-range offset number reannotation",
+            ".local $offset = {-1 :offset subtract=-9223372036854775808} "
+                + "{{Value {$offset :number}}}",
+            [:],
+            "Value {$offset}",
+            ["bad-operand"]
+        ),
+        (
+            "out-of-range integral integer",
+            "{9223372036854775807 :integer}",
+            [:],
+            "{|9223372036854775807|}",
+            ["bad-operand"]
+        ),
+        (
+            "out-of-range offset integer reannotation",
+            ".local $offset = {-1 :offset subtract=-9223372036854775808} "
+                + "{{Value {$offset :integer}}}",
+            [:],
+            "Value {$offset}",
+            ["bad-operand"]
+        ),
+        (
+            "excessive maximum fraction digits",
+            "Value {1 :number maximumFractionDigits=65536}",
+            [:],
+            "Value {|1|}",
+            ["bad-option"]
+        ),
+        (
+            "excessive minimum fraction digits",
+            "Value {1 :number minimumFractionDigits=65536}",
+            [:],
+            "Value {|1|}",
+            ["bad-option"]
+        ),
+        (
+            "percent multiplication overflow",
+            "{1E308 :percent}",
+            [:],
+            "{|1E308|}",
+            ["bad-operand"]
+        ),
+        (
+            "offset arithmetic range failure",
+            "{1E127 :offset add=9223372036854775807}",
+            [:],
+            "{|1E127|}",
+            ["bad-operand"]
+        ),
+        (
+            "variable numeric select",
+            "variable select {1 :number select=$bad}",
+            ["bad": .string("exact")],
+            "variable select 1",
+            ["bad-option"]
+        ),
+        (
+            "inherited exact select",
+            ".local $sel = {1 :number select=exact} "
+                + ".local $bad = {$sel :number} "
+                + ".match $bad 1 {{ONE}} * {{operand select {$bad}}}",
+            [:],
+            "operand select 1",
+            ["bad-option", "bad-selector"]
+        ),
+    ]
+    for item in differentialCases {
+        let model = try parsePublicApiModel(item.source)
+        let result = try formatMessage(model, arguments: item.arguments)
+        try expectValue("public-api \(item.label)", result.value, item.expected)
+        try expectCodes("public-api \(item.label) errors", result.errors, item.errors)
+    }
+
+    let permissiveInteger = MF2FunctionRegistry.portable.withFunction("integer") { call in
+        call.value
+    }
+    let integerSelector = try parsePublicApiModel(
+        ".input {$value :integer}\n.match $value\n"
+            + "9223372036854775807 {{exact}}\n* {{fallback}}"
+    )
+    let integerSelectorResult = try formatMessage(
+        integerSelector,
+        arguments: ["value": .number("9223372036854775807")],
+        functions: permissiveInteger
+    )
+    try expectValue(
+        "public-api out-of-range integer selector",
+        integerSelectorResult.value,
+        "fallback"
+    )
+    try expectCodes(
+        "public-api out-of-range integer selector errors",
+        integerSelectorResult.errors,
+        ["bad-selector"]
+    )
+
+    let permissiveNumber = MF2FunctionRegistry.portable.withFunction("number") { call in
+        call.value
+    }
+    let inheritedFractionSelector = try parsePublicApiModel(
+        ".local $source = {1 :number minimumFractionDigits=65536} "
+            + ".local $selected = {$source :number} "
+            + ".match $selected one {{one}} * {{fallback}}"
+    )
+    let inheritedFractionResult = try formatMessage(
+        inheritedFractionSelector,
+        functions: permissiveNumber
+    )
+    try expectValue(
+        "public-api inherited excessive fraction selector",
+        inheritedFractionResult.value,
+        "fallback"
+    )
+    try expectCodes(
+        "public-api inherited excessive fraction selector errors",
+        inheritedFractionResult.errors,
+        ["bad-option", "bad-selector"]
+    )
+
+    let permissivePercent = MF2FunctionRegistry.portable.withFunction("percent") { call in
+        call.value
+    }
+    let percentSelector = try parsePublicApiModel(
+        ".input {$value :percent}\n.match $value\nother {{other}}\n* {{fallback}}"
+    )
+    let percentSelectorResult = try formatMessage(
+        percentSelector,
+        arguments: ["value": .number("1E308")],
+        functions: permissivePercent
+    )
+    try expectValue(
+        "public-api overflowing percent selector",
+        percentSelectorResult.value,
+        "fallback"
+    )
+    try expectCodes(
+        "public-api overflowing percent selector errors",
+        percentSelectorResult.errors,
+        ["bad-selector"]
+    )
 }
 
 private func parsePublicApiModel(_ source: String) throws -> MF2Message {

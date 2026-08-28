@@ -10,7 +10,7 @@ use icu_locale_core::Locale;
 
 use crate::diagnostic::Diagnostic;
 
-use super::{FunctionCall, FunctionRegistry};
+use super::{portable_functions, FunctionCall, FunctionRegistry, FunctionSourceRef};
 
 pub(super) fn register(registry: &mut FunctionRegistry) {
     registry.register_formatter("number", format_icu4x_number);
@@ -21,7 +21,7 @@ pub(super) fn register(registry: &mut FunctionRegistry) {
 }
 
 fn format_icu4x_number(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
-    let mut value = parse_decimal(call.value())
+    let mut value = parse_call_decimal(&call)
         .map_err(|_| bad_operand("Number function requires a numeric operand."))?;
     apply_fraction_digit_options(&mut value, &call)?;
     apply_sign_display(&mut value, &call)?;
@@ -29,7 +29,7 @@ fn format_icu4x_number(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
 }
 
 fn format_icu4x_integer(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
-    let mut value = parse_decimal(call.value())
+    let mut value = parse_call_decimal(&call)
         .map_err(|_| bad_operand("Integer function requires a numeric operand."))?;
     value.trunc(0);
     apply_sign_display(&mut value, &call)?;
@@ -38,7 +38,7 @@ fn format_icu4x_integer(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
 
 fn format_icu4x_date(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
     validate_utc_time_zone(&call)?;
-    let date = parse_date_value(call.value())
+    let date = parse_temporal_value(call.value(), call.inherited_source(), parse_date_value)
         .map_err(|_| bad_operand("Date function requires an ISO date or datetime operand."))?;
     let style = date_style(&call, "dateStyle", "length", "medium")?;
     format_date(call.locale(), date, style)
@@ -46,7 +46,7 @@ fn format_icu4x_date(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
 
 fn format_icu4x_time(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
     validate_utc_time_zone(&call)?;
-    let time = parse_time_value(call.value())
+    let time = parse_temporal_value(call.value(), call.inherited_source(), parse_time_value)
         .map_err(|_| bad_operand("Time function requires an ISO time or datetime operand."))?;
     let style = time_style(&call, "timeStyle", "precision", "medium")?;
     format_time(call.locale(), time, style)
@@ -54,8 +54,10 @@ fn format_icu4x_time(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
 
 fn format_icu4x_datetime(call: FunctionCall<'_>) -> Result<String, Diagnostic> {
     validate_utc_time_zone(&call)?;
-    let datetime = parse_datetime_value(call.value())
-        .map_err(|_| bad_operand("Datetime function requires an ISO date or datetime operand."))?;
+    let datetime =
+        parse_temporal_value(call.value(), call.inherited_source(), parse_datetime_value).map_err(
+            |_| bad_operand("Datetime function requires an ISO date or datetime operand."),
+        )?;
     let style = call.option_value("style")?;
     if let Some(style) = style {
         let style = date_time_style(&style)?;
@@ -188,6 +190,14 @@ fn parse_decimal(value: &str) -> Result<Decimal, ()> {
     Decimal::from_str(value).map_err(|_| ())
 }
 
+fn parse_call_decimal(call: &FunctionCall<'_>) -> Result<Decimal, ()> {
+    parse_source_decimal(call.inherited_source()).or_else(|_| parse_decimal(call.value()))
+}
+
+fn parse_source_decimal(source: Option<FunctionSourceRef<'_>>) -> Result<Decimal, ()> {
+    parse_decimal(&super::portable_functions::numeric_source_operand(source)?)
+}
+
 fn apply_fraction_digit_options(
     value: &mut Decimal,
     call: &FunctionCall<'_>,
@@ -202,7 +212,7 @@ fn apply_fraction_digit_options(
 }
 
 fn apply_sign_display(value: &mut Decimal, call: &FunctionCall<'_>) -> Result<(), Diagnostic> {
-    match call.option_value("signDisplay")?.as_deref() {
+    match numeric_option_value(call, "signDisplay")?.as_deref() {
         Some("always") => value.apply_sign_display(SignDisplay::Always),
         Some("exceptZero") => value.apply_sign_display(SignDisplay::ExceptZero),
         Some("never") => value.apply_sign_display(SignDisplay::Never),
@@ -221,7 +231,7 @@ fn non_negative_i16_option(
     call: &FunctionCall<'_>,
     option_name: &str,
 ) -> Result<Option<i16>, Diagnostic> {
-    let Some(value) = call.option_value(option_name)? else {
+    let Some(value) = numeric_option_value(call, option_name)? else {
         return Ok(None);
     };
     if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
@@ -235,6 +245,20 @@ fn non_negative_i16_option(
         ))
     })?;
     Ok(Some(parsed))
+}
+
+fn numeric_option_value(
+    call: &FunctionCall<'_>,
+    option_name: &str,
+) -> Result<Option<String>, Diagnostic> {
+    match call.option_value(option_name)? {
+        Some(value) => Ok(Some(value)),
+        None => portable_functions::inherited_numeric_option_value(
+            call.inherited_source(),
+            option_name,
+            &call.function().name,
+        ),
+    }
 }
 
 fn parse_locale(locale: &str) -> Result<Locale, Diagnostic> {
@@ -253,9 +277,35 @@ fn validate_utc_time_zone(call: &FunctionCall<'_>) -> Result<(), Diagnostic> {
     }
 }
 
+fn parse_temporal_value<T>(
+    value: &str,
+    source: Option<FunctionSourceRef<'_>>,
+    parse: fn(&str) -> Result<T, ()>,
+) -> Result<T, ()> {
+    parse_temporal_source(source, parse).or_else(|_| parse(value))
+}
+
+fn parse_temporal_source<T>(
+    source: Option<FunctionSourceRef<'_>>,
+    parse: fn(&str) -> Result<T, ()>,
+) -> Result<T, ()> {
+    let Some(source) = source else {
+        return Err(());
+    };
+    if matches!(
+        source.function().name.as_str(),
+        "date" | "time" | "datetime"
+    ) {
+        if let Ok(value) = parse(source.value()) {
+            return Ok(value);
+        }
+    }
+    parse_temporal_source(source.inherited_source(), parse)
+}
+
 fn parse_datetime_value(value: &str) -> Result<DateTime<Iso>, ()> {
     let value = strip_utc_suffix(value);
-    let (date, time) = value.split_once('T').ok_or(())?;
+    let (date, time) = value.split_once('T').unwrap_or((value, "00:00:00"));
     Ok(DateTime {
         date: parse_date(date)?,
         time: parse_time(time)?,
@@ -270,7 +320,16 @@ fn parse_date_value(value: &str) -> Result<Date<Iso>, ()> {
 
 fn parse_time_value(value: &str) -> Result<Time, ()> {
     let value = strip_utc_suffix(value);
-    let time = value.split_once('T').map_or(value, |(_, time)| time);
+    let time = value.split_once('T').map_or_else(
+        || {
+            if parse_date(value).is_ok() {
+                "00:00:00"
+            } else {
+                value
+            }
+        },
+        |(_, time)| time,
+    );
     parse_time(time)
 }
 

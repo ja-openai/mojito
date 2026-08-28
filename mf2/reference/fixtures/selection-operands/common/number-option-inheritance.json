@@ -1,0 +1,18 @@
+{
+  "name": "reference-number-option-inheritance",
+  "source": ".input {$value :number minimumFractionDigits=1 signDisplay=always}\n.local $copy = {$value :number}\n.local $decimal = {1 :number minimumFractionDigits=2 minimumSignificantDigits=3}\n.local $integer = {$decimal :integer}\n.local $integerCopy = {$integer :number}\n.local $percent = {1 :percent minimumFractionDigits=2}\n.local $percentCopy = {$percent :number}\n.match $copy\none {{one {$copy}; integer {$integerCopy}; percent {$percentCopy}}}\nother {{other {$copy}; integer {$integerCopy}; percent {$percentCopy}}}\n* {{fallback {$copy}; integer {$integerCopy}; percent {$percentCopy}}}",
+  "formatCases": [
+    {
+      "name": "inherited-visible-fraction-affects-selection",
+      "locale": "en",
+      "arguments": { "value": 1 },
+      "expected": "other +1.0; integer 1; percent 1.00",
+      "referenceExpected": {
+        "icu4j": "fallback +1.0; integer 1.00; percent 1.00"
+      },
+      "referenceUnsupported": {
+        "icu4cxx": "U_MF_UNKNOWN_FUNCTION_ERROR"
+      }
+    }
+  ]
+}

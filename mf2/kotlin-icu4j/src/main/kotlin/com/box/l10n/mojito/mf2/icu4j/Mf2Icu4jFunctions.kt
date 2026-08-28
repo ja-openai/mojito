@@ -4,6 +4,8 @@ import com.box.l10n.mojito.mf2.Mf2Error
 import com.box.l10n.mojito.mf2.Mf2FunctionCall
 import com.box.l10n.mojito.mf2.Mf2FunctionRegistry
 import com.box.l10n.mojito.mf2.Mf2FunctionSource
+import com.box.l10n.mojito.mf2.numericSourceOperand
+import com.box.l10n.mojito.mf2.resolvedCurrencyCode
 import com.ibm.icu.text.DateFormat
 import com.ibm.icu.text.DisplayContext
 import com.ibm.icu.text.NumberFormat
@@ -65,7 +67,7 @@ object Mf2Icu4jFunctions {
     private fun formatCurrency(call: Mf2FunctionCall): String {
         val value = numericValue(call, "Currency function requires a numeric operand.")
         val currencyCode = currencyCode(call)
-            ?: throw Mf2Error.badOption("Currency function requires a currency option.")
+            ?: throw Mf2Error.badOperand("Currency function requires a currency operand or currency option.")
         val format = NumberFormat.getCurrencyInstance(locale(call))
         try {
             format.currency = Currency.getInstance(currencyCode.uppercase(Locale.ROOT))
@@ -134,11 +136,12 @@ object Mf2Icu4jFunctions {
         ULocale.forLanguageTag(call.locale.replace('_', '-'))
 
     private fun numericValue(call: Mf2FunctionCall, message: String): Double {
-        val value = when (val raw = call.rawValue) {
-            is Number -> raw.toDouble()
-            else -> call.value.toDoubleOrNull() ?: throw Mf2Error.badOperand(message)
-        }
-        if (!value.isFinite()) throw Mf2Error.badOperand(message)
+        val value = numericSourceOperand(call.inheritedSource)?.toDoubleOrNull()?.takeIf { it.isFinite() }
+            ?: when (val raw = call.rawValue) {
+                is Number -> raw.toDouble()
+                else -> call.value.toDoubleOrNull()
+            }
+        if (value == null || !value.isFinite()) throw Mf2Error.badOperand(message)
         return value
     }
 
@@ -166,6 +169,7 @@ object Mf2Icu4jFunctions {
         parseZonedDateTime(call.value)?.let {
             return Date.from(it.withZoneSameInstant(zone).toLocalDate().atStartOfDay(zone).toInstant())
         }
+        sourceDateValue(call.inheritedSource, zone)?.let { return it }
         throw Mf2Error.badOperand("Date function requires a date or datetime operand.")
     }
 
@@ -186,6 +190,7 @@ object Mf2Icu4jFunctions {
         parseZonedDateTime(call.value)?.let {
             return Date.from(it.toInstant())
         }
+        sourceTimeValue(call.inheritedSource, zone)?.let { return it }
         throw Mf2Error.badOperand("Time function requires a time or datetime operand.")
     }
 
@@ -204,7 +209,41 @@ object Mf2Icu4jFunctions {
         parseLocalDate(call.value)?.let {
             return Date.from(it.atStartOfDay(zone).toInstant())
         }
+        sourceDateTimeValue(call.inheritedSource, zone)?.let { return it }
         throw Mf2Error.badOperand("Datetime function requires a date or datetime operand.")
+    }
+
+    private fun sourceDateValue(source: Mf2FunctionSource?, zone: ZoneId): Date? {
+        if (source == null) return null
+        parseLocalDate(source.value)?.let {
+            return Date.from(it.atStartOfDay(zone).toInstant())
+        }
+        parseZonedDateTime(source.value)?.let {
+            return Date.from(it.withZoneSameInstant(zone).toLocalDate().atStartOfDay(zone).toInstant())
+        }
+        return sourceDateValue(source.inherited, zone)
+    }
+
+    private fun sourceTimeValue(source: Mf2FunctionSource?, zone: ZoneId): Date? {
+        if (source == null) return null
+        parseLocalTime(source.value)?.let {
+            return Date.from(it.atDate(epochDate).atZone(zone).toInstant())
+        }
+        parseZonedDateTime(source.value)?.let {
+            return Date.from(it.toInstant())
+        }
+        return sourceTimeValue(source.inherited, zone)
+    }
+
+    private fun sourceDateTimeValue(source: Mf2FunctionSource?, zone: ZoneId): Date? {
+        if (source == null) return null
+        parseZonedDateTime(source.value)?.let {
+            return Date.from(it.toInstant())
+        }
+        parseLocalDate(source.value)?.let {
+            return Date.from(it.atStartOfDay(zone).toInstant())
+        }
+        return sourceDateTimeValue(source.inherited, zone)
     }
 
     private fun parseLocalDate(value: String): LocalDate? =
@@ -364,22 +403,7 @@ object Mf2Icu4jFunctions {
     private fun parseNonNegativeInteger(value: String, message: String): Int =
         value.toIntOrNull()?.takeIf { it >= 0 } ?: throw Mf2Error.badOption(message)
 
-    private fun currencyCode(call: Mf2FunctionCall): String? =
-        call.optionValue("currency", null) ?: inheritedCurrencyCode(call.inheritedSource)
-
-    private fun inheritedCurrencyCode(source: Mf2FunctionSource?): String? {
-        if (source == null) return null
-        if (source.function["name"] == "currency") {
-            sourceOptionValue(source, "currency")?.let { return it }
-        }
-        return inheritedCurrencyCode(source.inherited)
-    }
-
-    private fun sourceOptionValue(source: Mf2FunctionSource, name: String): String? {
-        val options = source.function["options"] as? Map<*, *> ?: return null
-        val option = options[name] as? Map<*, *> ?: return null
-        return if (option["type"] == "literal") option["value"] as? String else null
-    }
+    private fun currencyCode(call: Mf2FunctionCall): String? = resolvedCurrencyCode(call)
 
     private fun applySignDisplay(formatted: String, value: Double, call: Mf2FunctionCall): String {
         val signDisplay = optionOneOf(call, "signDisplay", "auto", "auto", "always")

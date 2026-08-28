@@ -223,15 +223,16 @@ Before calling any library production-ready:
    matching, and catalog fallback policies belong outside the plural runtime.
 2. Keep generated CLDR plural coverage all-locale by default while adding
    package-size gates and locale-allowlist build checks for embedded clients.
-3. Expand placeholder/plural conformance beyond category coverage: annotated
-   `:string` selectors, missing arguments, invalid selector declarations, and
-   reference behavior for explicit number selector options across ICU
-   implementations.
+3. Extend the shared 47-case platform operand/resolved-value loader from
+   Python/JavaScript/PHP to JVM, Swift, and Rust adapters, while keeping
+   host-library display differences explicit.
 4. Align Rust parser fixtures with ICU requirements for annotated selectors.
 5. Define small V0 runtime APIs for formatting from the Unicode model without
    shipping source parsers.
 6. Add package-size and hot-loop perf checks for the V0 subset.
-7. Expand the reference harness beyond ICU4J/ICU4C++ to JavaScript and the
-   official Unicode test corpus.
+7. Wire the official Unicode test corpus directly into Python, Swift, and
+   Kotlin; Rust, Java, JavaScript, Go, and PHP already wire all 461 cases, with
+   the dependency-free Rust/JavaScript cores explicitly skipping 32
+   platform-owned currency/date/time cases.
 8. After V0 stabilizes, grow the Rust prototype toward editor spans, recovery,
    formatting, and Wasm/LSP packaging.

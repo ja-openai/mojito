@@ -32,6 +32,7 @@ internal object Mf2JdkFunctions {
         val format = NumberFormat.getNumberInstance(locale(call.locale))
         format.isGroupingUsed = false
         minimumFractionDigits(call)?.let { format.minimumFractionDigits = it }
+        maximumFractionDigits(call)?.let { format.maximumFractionDigits = it }
         return applySignDisplay(format.format(value), value, call)
     }
 
@@ -53,7 +54,8 @@ internal object Mf2JdkFunctions {
 
     private fun formatCurrency(call: Mf2FunctionCall): String {
         val value = Mf2PortableFunctions.parseCallDecimal(call, "Currency function requires a numeric operand.")
-        val currency = currencyCode(call) ?: throw Mf2Error.badOperand("Currency function requires a currency option.")
+        val currency = currencyCode(call)
+            ?: throw Mf2Error.badOperand("Currency function requires a currency operand or currency option.")
         val format = NumberFormat.getCurrencyInstance(locale(call.locale))
         try {
             format.currency = Currency.getInstance(currency)
@@ -99,16 +101,7 @@ internal object Mf2JdkFunctions {
             .format(dateTime.withZoneSameInstant(zone))
     }
 
-    private fun currencyCode(call: Mf2FunctionCall): String? =
-        call.optionValue("currency", null) ?: inheritedCurrencyCode(call.inheritedSource)
-
-    private fun inheritedCurrencyCode(source: Mf2FunctionSource?): String? {
-        if (source == null) return null
-        if (source.function["name"] == "currency") {
-            sourceOptionValue(source, "currency", null)?.let { return it }
-        }
-        return inheritedCurrencyCode(source.inherited)
-    }
+    private fun currencyCode(call: Mf2FunctionCall): String? = resolvedCurrencyCode(call)
 
     private fun currencyFractionDigits(call: Mf2FunctionCall): Int? {
         val value = call.optionValue("fractionDigits", null)
@@ -125,7 +118,7 @@ internal object Mf2JdkFunctions {
             ?.let { Mf2PortableFunctions.parseNonNegativeOption(it, "maximumFractionDigits option must be a non-negative integer.") }
 
     private fun applySignDisplay(formatted: String, value: Double, call: Mf2FunctionCall): String =
-        if (value >= 0.0 && functionOptionLiteral(call.function, "signDisplay", null) == "always") "+$formatted" else formatted
+        if (value >= 0.0 && call.optionValue("signDisplay", null) == "always") "+$formatted" else formatted
 
     private fun locale(locale: String): Locale = Locale.forLanguageTag(locale.replace('_', '-'))
 

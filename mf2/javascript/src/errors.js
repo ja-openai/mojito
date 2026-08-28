@@ -21,4 +21,8 @@ export class MF2Error extends Error {
   static badOption(message) {
     return new MF2Error("bad-option", message);
   }
+
+  static badVariantKey(message) {
+    return new MF2Error("bad-variant-key", message);
+  }
 }

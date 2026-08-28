@@ -1,0 +1,10 @@
+{
+  "name": "reference-percent-cardinal-selection",
+  "source": ".input {$value :percent}\n.match $value\nzero {{zero}}\none {{one}}\ntwo {{two}}\nfew {{few}}\nmany {{many}}\nother {{other}}\n* {{other}}",
+  "formatCases": [
+    { "name": "french-grouped-million-percent", "locale": "fr", "arguments": { "value": "10000" }, "expected": "many" },
+    { "name": "arabic-few-percent", "locale": "ar", "arguments": { "value": "0.03" }, "expected": "few" },
+    { "name": "arabic-many-percent", "locale": "ar", "arguments": { "value": "0.11" }, "expected": "many" },
+    { "name": "arabic-zero-percent", "locale": "ar", "arguments": { "value": "0" }, "expected": "zero" }
+  ]
+}

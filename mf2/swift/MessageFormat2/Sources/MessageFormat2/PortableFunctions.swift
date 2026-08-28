@@ -1,5 +1,7 @@
 import Foundation
 
+private let maximumPortableFractionDigits = 1_000
+
 func makePortableFunctionRegistry() -> MF2FunctionRegistry {
     let formatters: [String: MF2FunctionFormatter] = [
         "string": passthroughFunction,
@@ -23,20 +25,25 @@ private func passthroughFunction(_ call: MF2FunctionCall) throws -> String {
 
 private func formatUnlocalizedNumber(_ call: MF2FunctionCall) throws -> String {
     let value = try parseCallNumber(call, error: .badOperand("Number function requires a numeric operand."))
-    return try formatUnlocalizedNumber(
+    var formatted = try formatUnlocalizedNumberWithMaximumFractionDigits(
         value,
-        minimumFractionDigits: minimumFractionDigits(call),
-        signAlways: signDisplayAlways(call.function)
+        maximumFractionDigits: maximumFractionDigits(call)
     )
+    formatted = try appendMinimumFractionDigits(formatted, minimumFractionDigits(call))
+    return try signDisplayAlways(call) && value >= 0 ? "+\(formatted)" : formatted
 }
 
 private func formatUnlocalizedPercent(_ call: MF2FunctionCall) throws -> String {
     let value = try parseCallNumber(call, error: .badOperand("Percent function requires a numeric operand."))
+    let percent = value * 100
+    guard percent.isFinite else {
+        throw MF2Error.badOperand("Percent function requires a bounded numeric operand.")
+    }
     var formatted = try formatUnlocalizedNumberWithMaximumFractionDigits(
-        value * 100,
+        percent,
         maximumFractionDigits: maximumFractionDigits(call)
     )
-    if signDisplayAlways(call.function), value >= 0 {
+    if try signDisplayAlways(call), value >= 0 {
         formatted = "+\(formatted)"
     }
     return try "\(appendMinimumFractionDigits(formatted, minimumFractionDigits(call)))%"
@@ -44,23 +51,46 @@ private func formatUnlocalizedPercent(_ call: MF2FunctionCall) throws -> String 
 
 private func formatUnlocalizedInteger(_ call: MF2FunctionCall) throws -> String {
     let value = try parseCallNumber(call, error: .badOperand("Integer function requires a numeric operand."))
-    let integer = Int(value.rounded(.towardZero))
-    return signDisplayAlways(call.function) && integer >= 0 ? "+\(integer)" : String(integer)
+    let integer = try truncatedInteger(
+        value,
+        error: .badOperand("Integer function requires an operand in the supported integer range.")
+    )
+    return try signDisplayAlways(call) && integer >= 0 ? "+\(integer)" : String(integer)
 }
 
 private func offsetFunction(_ call: MF2FunctionCall) throws -> String {
-    let value = try parseInteger(call.value, error: .badOperand("Offset function requires a numeric operand."))
+    let operand = try resolvedNumericSourceText(call.inheritedSource) ?? call.value
+    guard let value = parseDecimal(operand) else {
+        throw MF2Error.badOperand("Offset function requires a numeric operand.")
+    }
     let add = try call.optionValue("add")
     let subtract = try call.optionValue("subtract")
     guard (add == nil) != (subtract == nil) else {
         throw MF2Error.badOption("Offset function requires exactly one of add or subtract.")
     }
+    let offset: Int
     if let add {
-        let result = value + (try parseInteger(add, error: .badOption("Offset add option must be an integer.")))
-        return try inheritedSignDisplayAlways(call.inheritedSource) && result >= 0 ? "+\(result)" : String(result)
+        offset = try parseInteger(add, error: .badOption("Offset add option must be an integer."))
+    } else {
+        offset = try parseInteger(
+            subtract ?? "",
+            error: .badOption("Offset subtract option must be an integer.")
+        )
     }
-    let result = value - (try parseInteger(subtract ?? "", error: .badOption("Offset subtract option must be an integer.")))
-    return try inheritedSignDisplayAlways(call.inheritedSource) && result >= 0 ? "+\(result)" : String(result)
+    guard let result = applyIntegerOffset(
+        value,
+        offset: offset,
+        subtract: subtract != nil
+    ) else {
+        throw MF2Error.badOperand("Offset function result is outside the supported decimal range.")
+    }
+    let formatted = canonicalDecimal(result)
+    let signAlways = try resolvedOptionValue(
+        call,
+        name: "signDisplay",
+        inheritedFrom: numericOptionSources(for: call.function.name)
+    ) == "always"
+    return signAlways && !decimalIsNegative(result) ? "+\(formatted)" : formatted
 }
 
 private func selectNumber(_ match: MF2FunctionMatch) throws -> Int? {
@@ -68,10 +98,8 @@ private func selectNumber(_ match: MF2FunctionMatch) throws -> Int? {
         throw MF2Error.badSelector("Number selector cannot match this operand.")
     }
     let value = try parseMatchNumber(match, error: .badSelector("Number selector requires a numeric operand."))
-    guard let key = Double(match.key) else {
-        return nil
-    }
-    return value == key ? 1 : nil
+    try validateNumericVariantKey(match.key)
+    return try match.key == numericMatchOperand(match, value: value) ? 2 : nil
 }
 
 private func selectPercent(_ match: MF2FunctionMatch) throws -> Int? {
@@ -79,10 +107,11 @@ private func selectPercent(_ match: MF2FunctionMatch) throws -> Int? {
         throw MF2Error.badSelector("Percent selector cannot match this operand.")
     }
     let value = try parseMatchNumber(match, error: .badSelector("Percent selector requires a numeric operand.")) * 100
-    guard let key = Double(match.key) else {
-        return nil
+    guard value.isFinite else {
+        throw MF2Error.badSelector("Percent selector requires a bounded numeric operand.")
     }
-    return value == key ? 1 : nil
+    try validateNumericVariantKey(match.key)
+    return try match.key == numericMatchOperand(match, value: value) ? 2 : nil
 }
 
 private func selectInteger(_ match: MF2FunctionMatch) throws -> Int? {
@@ -90,42 +119,131 @@ private func selectInteger(_ match: MF2FunctionMatch) throws -> Int? {
         throw MF2Error.badSelector("Integer selector cannot match this operand.")
     }
     let value = try parseMatchNumber(match, error: .badSelector("Integer selector requires a numeric operand."))
-    guard let key = Int(match.key) else {
-        return nil
-    }
-    return Int(value.rounded(.towardZero)) == key ? 1 : nil
+    try validateNumericVariantKey(match.key)
+    let integer = try truncatedInteger(
+        value,
+        error: .badSelector("Integer selector operand is outside the supported integer range.")
+    )
+    return match.key == String(integer) ? 2 : nil
 }
 
 private func selectOffset(_ match: MF2FunctionMatch) throws -> Int? {
-    let value = try parseInteger(match.value, error: .badSelector("Offset selector requires a numeric operand."))
-    guard let key = Int(match.key) else {
-        return nil
+    let value = try parseMatchNumber(
+        match,
+        error: .badSelector("Offset selector requires a numeric operand.")
+    )
+    try validateNumericVariantKey(match.key)
+    return try match.key == numericMatchOperand(match, value: value) ? 2 : nil
+}
+
+private func numericMatchOperand(_ match: MF2FunctionMatch, value: Double) throws -> String {
+    let numericFunctions = numericOptionSources(for: match.function.name)
+    let minimum = try parseNonNegativeIntegerOption(
+        resolvedOptionValue(
+            match,
+            name: "minimumFractionDigits",
+            inheritedFrom: numericFunctions
+        ) ?? "0",
+        error: .badOption("minimumFractionDigits option must be a non-negative integer.")
+    )
+    let maximum = try resolvedOptionValue(
+        match,
+        name: "maximumFractionDigits",
+        inheritedFrom: numericFunctions
+    ).map {
+        try parseNonNegativeIntegerOption(
+            $0,
+            error: .badOption("maximumFractionDigits option must be a non-negative integer.")
+        )
     }
-    return value == key ? 1 : nil
+    return try appendMinimumFractionDigits(
+        try formatUnlocalizedNumberWithMaximumFractionDigits(
+            value,
+            maximumFractionDigits: maximum
+        ),
+        minimum
+    )
+}
+
+private func validateNumericVariantKey(_ key: String) throws {
+    if ["zero", "one", "two", "few", "many", "other"].contains(key) || isDecimalLiteral(key) {
+        return
+    }
+    throw MF2Error.badVariantKey(
+        "Numeric selector keys must be number literals or plural keywords."
+    )
 }
 
 private func parseCallNumber(_ call: MF2FunctionCall, error: MF2Error) throws -> Double {
-    if let parsed = parseNumber(call.value) ?? parseSourceNumber(call.inheritedSource) {
+    if let parsed = try resolvedNumericSourceValue(call.inheritedSource) {
+        return parsed
+    }
+    if let parsed = parseNumber(call.value) {
         return parsed
     }
     throw error
 }
 
 private func parseMatchNumber(_ match: MF2FunctionMatch, error: MF2Error) throws -> Double {
-    if let parsed = parseNumber(match.value) ?? parseSourceNumber(match.inheritedSource) {
+    if let parsed = try resolvedNumericSourceValue(match.inheritedSource) {
+        return parsed
+    }
+    if let parsed = parseNumber(match.value) {
         return parsed
     }
     throw error
 }
 
-private func parseSourceNumber(_ source: MF2FunctionSource?) -> Double? {
+func resolvedNumericSourceValue(_ source: MF2FunctionSource?) throws -> Double? {
+    guard let operand = try resolvedNumericSourceText(source) else {
+        return nil
+    }
+    return parseNumber(operand)
+}
+
+func resolvedNumericSourceText(_ source: MF2FunctionSource?) throws -> String? {
+    guard let source, isDecimalSourceFunction(source.function) else {
+        return nil
+    }
+    return try numericSourceOperandText(source)
+}
+
+private func numericSourceOperandText(_ source: MF2FunctionSource?) throws -> String? {
     guard let source else {
         return nil
     }
-    if isDecimalSourceFunction(source.function) {
-        return parseNumber(source.value)
+    let operand = try numericSourceOperandText(source.inheritedSource) ?? source.value
+    guard isDecimalSourceFunction(source.function) else {
+        return operand
     }
-    return parseSourceNumber(source.inheritedSource)
+    guard let decimal = parseDecimal(operand) else {
+        return nil
+    }
+    switch source.function.name {
+    case "integer":
+        return canonicalDecimal(truncateDecimal(decimal))
+    case "offset":
+        let add = try source.optionValue("add")
+        let subtract = try source.optionValue("subtract")
+        guard (add == nil) != (subtract == nil),
+              let delta = try? parseInteger(
+                  add ?? subtract ?? "",
+                  error: .badOption("Offset option must be an integer.")
+              )
+        else {
+            return nil
+        }
+        guard let result = applyIntegerOffset(
+            decimal,
+            offset: delta,
+            subtract: subtract != nil
+        ) else {
+            return nil
+        }
+        return canonicalDecimal(result)
+    default:
+        return canonicalDecimal(decimal)
+    }
 }
 
 private func parseNumber(_ value: String) -> Double? {
@@ -135,6 +253,128 @@ private func parseNumber(_ value: String) -> Double? {
     return parsed
 }
 
+private func parseDecimal(_ value: String) -> Decimal? {
+    guard isDecimalLiteral(value),
+          let parsed = Decimal(string: value, locale: Locale(identifier: "en_US_POSIX")),
+          NSDecimalNumber(decimal: parsed) != .notANumber
+    else {
+        return nil
+    }
+    return parsed
+}
+
+private func applyIntegerOffset(
+    _ value: Decimal,
+    offset: Int,
+    subtract: Bool
+) -> Decimal? {
+    var value = value
+    var offset = Decimal(offset)
+    var result = Decimal()
+    let error = subtract
+        ? NSDecimalSubtract(&result, &value, &offset, .plain)
+        : NSDecimalAdd(&result, &value, &offset, .plain)
+    guard error == .noError else {
+        return nil
+    }
+    return result
+}
+
+private func truncateDecimal(_ value: Decimal) -> Decimal {
+    var value = value
+    var result = Decimal()
+    NSDecimalRound(
+        &result,
+        &value,
+        0,
+        decimalIsNegative(value) ? .up : .down
+    )
+    return result
+}
+
+private func decimalIsNegative(_ value: Decimal) -> Bool {
+    var value = value
+    var zero = Decimal.zero
+    return NSDecimalCompare(&value, &zero) == .orderedAscending
+}
+
+private func canonicalDecimal(_ value: Decimal) -> String {
+    NSDecimalNumber(decimal: value).stringValue
+}
+
+func numericSelectionOperand(
+    value: MF2Value,
+    function: MF2Function,
+    source: MF2FunctionSource?
+) throws -> MF2Value? {
+    if functionOptionLiteral(function, name: "select") == "exact" {
+        return nil
+    }
+    let sourceInput = try resolvedNumericSourceText(source)
+    let input = function.name == "offset" ? value.rendered : (sourceInput ?? value.rendered)
+    guard var number = parseNumber(input) else {
+        return nil
+    }
+    let inheritedMinimum = try inheritedOptionValue(
+        source,
+        name: "minimumFractionDigits",
+        targetFunction: function.name,
+        from: numericOptionSources(for: function.name)
+    )
+    let minimumText = functionOptionLiteral(function, name: "minimumFractionDigits")
+        ?? inheritedMinimum
+        ?? "0"
+    let inheritedMaximum = try inheritedOptionValue(
+        source,
+        name: "maximumFractionDigits",
+        targetFunction: function.name,
+        from: numericOptionSources(for: function.name)
+    )
+    let maximumText = functionOptionLiteral(function, name: "maximumFractionDigits")
+        ?? inheritedMaximum
+    guard let minimum = try? parseNonNegativeIntegerOption(
+        minimumText,
+        error: .badOption("minimumFractionDigits option must be a non-negative integer.")
+    ) else {
+        return nil
+    }
+    let maximum: Int?
+    if let maximumText {
+        guard let parsed = try? parseNonNegativeIntegerOption(
+            maximumText,
+            error: .badOption("maximumFractionDigits option must be a non-negative integer.")
+        ) else {
+            return nil
+        }
+        maximum = parsed
+    } else {
+        maximum = nil
+    }
+
+    if function.name == "integer" {
+        guard let integer = Int64(exactly: number.rounded(.towardZero)) else {
+            return nil
+        }
+        return .number(String(integer))
+    }
+    if function.name == "percent" {
+        number *= 100
+        guard number.isFinite else {
+            return nil
+        }
+    }
+    if function.name == "number" || function.name == "percent" {
+        guard let rendered = try? formatUnlocalizedNumberWithMaximumFractionDigits(
+            number,
+            maximumFractionDigits: maximum
+        ), let padded = try? appendMinimumFractionDigits(rendered, minimum) else {
+            return nil
+        }
+        return .number(padded)
+    }
+    return .number(input)
+}
+
 private func parseInteger(_ value: String, error: MF2Error) throws -> Int {
     guard let parsed = Int(value), String(parsed) == value || (value.hasPrefix("+") && String(parsed) == String(value.dropFirst())) else {
         throw error
@@ -142,27 +382,54 @@ private func parseInteger(_ value: String, error: MF2Error) throws -> Int {
     return parsed
 }
 
+private func truncatedInteger(_ value: Double, error: MF2Error) throws -> Int64 {
+    guard value.isFinite,
+          let integer = Int64(exactly: value.rounded(.towardZero))
+    else {
+        throw error
+    }
+    return integer
+}
+
 private func formatUnlocalizedNumber(
     _ value: Double,
     minimumFractionDigits: Int = 0,
     signAlways: Bool = false
-) -> String {
+) throws -> String {
+    guard value.isFinite else {
+        throw MF2Error.badOperand("Numeric operand must be finite.")
+    }
     let output: String
-    if value.isFinite, value.rounded(.towardZero) == value {
-        output = String(Int64(value))
+    if value.rounded(.towardZero) == value {
+        guard let integer = Int64(exactly: value) else {
+            throw MF2Error.badOperand(
+                "Numeric operand is outside the supported integer range."
+            )
+        }
+        output = String(integer)
     } else {
         output = String(value)
     }
-    let formatted = appendMinimumFractionDigits(output, minimumFractionDigits)
+    let formatted = try appendMinimumFractionDigits(output, minimumFractionDigits)
     return signAlways && value >= 0 ? "+\(formatted)" : formatted
 }
 
 private func formatUnlocalizedNumberWithMaximumFractionDigits(
     _ value: Double,
     maximumFractionDigits: Int?
-) -> String {
+) throws -> String {
+    guard value.isFinite else {
+        throw MF2Error.badOperand("Numeric operand must be finite.")
+    }
     guard let maximumFractionDigits else {
-        return formatUnlocalizedNumber(value)
+        return try formatUnlocalizedNumber(value)
+    }
+    guard maximumFractionDigits >= 0,
+          maximumFractionDigits <= maximumPortableFractionDigits
+    else {
+        throw MF2Error.badOption(
+            "maximumFractionDigits option exceeds the supported range."
+        )
     }
     var output = String(
         format: "%.\(maximumFractionDigits)f",
@@ -179,7 +446,11 @@ private func formatUnlocalizedNumberWithMaximumFractionDigits(
 }
 
 private func minimumFractionDigits(_ call: MF2FunctionCall) throws -> Int {
-    guard let value = try call.optionValue("minimumFractionDigits") else {
+    guard let value = try resolvedOptionValue(
+        call,
+        name: "minimumFractionDigits",
+        inheritedFrom: numericOptionSources(for: call.function.name)
+    ) else {
         return 0
     }
     return try parseNonNegativeIntegerOption(
@@ -189,7 +460,11 @@ private func minimumFractionDigits(_ call: MF2FunctionCall) throws -> Int {
 }
 
 private func maximumFractionDigits(_ call: MF2FunctionCall) throws -> Int? {
-    guard let value = try call.optionValue("maximumFractionDigits") else {
+    guard let value = try resolvedOptionValue(
+        call,
+        name: "maximumFractionDigits",
+        inheritedFrom: numericOptionSources(for: call.function.name)
+    ) else {
         return nil
     }
     return try parseNonNegativeIntegerOption(
@@ -199,25 +474,21 @@ private func maximumFractionDigits(_ call: MF2FunctionCall) throws -> Int? {
 }
 
 private func parseNonNegativeIntegerOption(_ value: String, error: MF2Error) throws -> Int {
-    guard isNonNegativeIntegerLiteral(value), let parsed = Int(value) else {
+    guard isNonNegativeIntegerLiteral(value),
+          let parsed = Int(value),
+          parsed <= maximumPortableFractionDigits
+    else {
         throw error
     }
     return parsed
 }
 
-private func signDisplayAlways(_ function: MF2Function) -> Bool {
-    functionOptionLiteral(function, name: "signDisplay") == "always"
-}
-
-private func inheritedSignDisplayAlways(_ source: MF2FunctionSource?) throws -> Bool {
-    guard let source else {
-        return false
-    }
-    if (source.function.name == "number" || source.function.name == "integer"),
-       try source.optionValue("signDisplay") == "always" {
-        return true
-    }
-    return try inheritedSignDisplayAlways(source.inheritedSource)
+private func signDisplayAlways(_ call: MF2FunctionCall) throws -> Bool {
+    try resolvedOptionValue(
+        call,
+        name: "signDisplay",
+        inheritedFrom: numericOptionSources(for: call.function.name)
+    ) == "always"
 }
 
 private func invalidNumericSelector(_ function: MF2Function, source: MF2FunctionSource?) throws -> Bool {
@@ -227,7 +498,12 @@ private func invalidNumericSelector(_ function: MF2Function, source: MF2Function
     if functionOptionLiteral(function, name: "select") == "exact" {
         return false
     }
-    return try inheritedExactNumericSource(source)
+    return try inheritedOptionValue(
+        source,
+        name: "select",
+        targetFunction: function.name,
+        from: numericOptionSources(for: function.name)
+    ) == "exact"
 }
 
 private func numericSelectUsesVariable(_ function: MF2Function) -> Bool {
@@ -235,16 +511,6 @@ private func numericSelectUsesVariable(_ function: MF2Function) -> Bool {
         return true
     }
     return false
-}
-
-private func inheritedExactNumericSource(_ source: MF2FunctionSource?) throws -> Bool {
-    guard let source else {
-        return false
-    }
-    if isNumericFunction(source.function), try source.optionValue("select") == "exact" {
-        return true
-    }
-    return try inheritedExactNumericSource(source.inheritedSource)
 }
 
 private func isNumericFunction(_ function: MF2Function) -> Bool {
@@ -262,7 +528,17 @@ private func functionOptionLiteral(_ function: MF2Function, name: String) -> Str
     return nil
 }
 
-private func appendMinimumFractionDigits(_ value: String, _ minimumFractionDigits: Int) -> String {
+private func appendMinimumFractionDigits(
+    _ value: String,
+    _ minimumFractionDigits: Int
+) throws -> String {
+    guard minimumFractionDigits >= 0,
+          minimumFractionDigits <= maximumPortableFractionDigits
+    else {
+        throw MF2Error.badOption(
+            "minimumFractionDigits option exceeds the supported range."
+        )
+    }
     guard minimumFractionDigits > 0 else {
         return value
     }

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync, readdirSync } from "node:fs";
 
 import * as core from "@mojito-mf2/core";
 import {
@@ -17,6 +18,27 @@ const parsed = parseToModel("Hello {$name}");
 assert.equal(parsed.diagnostics.length, 0);
 assert.equal(formatMessage(parsed.model, { name: "Mojito" }).value, "Hello Mojito");
 assert.equal(formatMessage(parsed.model, { name: "Safe" }).value, "Hello Safe");
+const prototypeNamedOptions = parseToModel(
+  "{1 :number __proto__=option @__proto__=attribute} " +
+    "{#tag __proto__=markup-option @__proto__=markup-attribute /}",
+);
+assert.deepEqual(prototypeNamedOptions.diagnostics, []);
+assert.deepEqual(prototypeNamedOptions.model.pattern[0].function.options.__proto__, {
+  type: "literal",
+  value: "option",
+});
+assert.deepEqual(prototypeNamedOptions.model.pattern[0].attributes.__proto__, {
+  type: "literal",
+  value: "attribute",
+});
+assert.deepEqual(prototypeNamedOptions.model.pattern[2].options.__proto__, {
+  type: "literal",
+  value: "markup-option",
+});
+assert.deepEqual(prototypeNamedOptions.model.pattern[2].attributes.__proto__, {
+  type: "literal",
+  value: "markup-attribute",
+});
 assert.deepEqual(formatMessageToPartsFromRoot(parsed.model, { name: "Safe Parts" }).parts, [
   { type: "text", value: "Hello " },
   { type: "expression", value: "Safe Parts" },
@@ -46,6 +68,10 @@ assert.deepEqual(formatMessageToPartsFromRoot(badInteger.model, { name: "abc" },
   { type: "text", value: "Hello " },
   { type: "fallback", source: "$name", value: "" },
 ]);
+const badBidiDirection = parseToModel("Value {42 :number u:dir=sideways}");
+const badBidiDirectionResult = formatMessage(badBidiDirection.model);
+assert.equal(badBidiDirectionResult.value, "Value {|42|}");
+assert.deepEqual(badBidiDirectionResult.errors.map((error) => error.code), ["bad-option"]);
 assert.equal(FunctionRegistry.defaults().hasFormatter({ name: "string" }), true);
 assert.equal(FunctionRegistry.portable().hasFormatter({ name: "number" }), true);
 assert.equal(createPortableFunctionRegistry(FunctionRegistry).hasFormatter({ name: "number" }), true);
@@ -55,6 +81,246 @@ assert.equal(formattedCurrency.value, "Total: {$amount}");
 assert.deepEqual(formattedCurrency.errors.map((error) => error.code), ["unknown-function"]);
 const intlRegistry = createIntlFunctionRegistry(FunctionRegistry);
 assert.equal(intlRegistry.hasFormatter({ name: "currency" }), true);
+const exactBeforeCategory = parseToModelFromParser(
+  ".input {$count :integer}\n.match $count\none {{category}}\n1 {{exact}}\n* {{fallback}}",
+);
+assert.equal(
+  formatMessageFromFormatter(exactBeforeCategory.model, { count: 1 }, { functions: intlRegistry }).value,
+  "exact",
+);
+const canonicalExactNumber = parseToModelFromParser(
+  ".input {$value :number}\n.match $value\n1.0 {{decimal spelling}}\n1 {{integer spelling}}\n* {{fallback}}",
+);
+assert.equal(
+  formatMessageFromFormatter(canonicalExactNumber.model, { value: 1 }, { functions: intlRegistry }).value,
+  "integer spelling",
+);
+const badNumericVariantKey = parseToModelFromParser(
+  ".input {$value :number}\n.match $value\nhorse {{horse}}\n* {{fallback}}",
+);
+const badNumericVariantKeyResult = formatMessageFromFormatter(
+  badNumericVariantKey.model,
+  { value: 1 },
+  { functions: intlRegistry },
+);
+assert.equal(badNumericVariantKeyResult.value, "fallback");
+assert.deepEqual(badNumericVariantKeyResult.errors.map((error) => error.code), ["bad-variant-key"]);
+const localizedNumericChain = parseToModelFromParser(
+  ".local $value = {1000000 :number} {{Value: {$value :number maximumFractionDigits=0}}}",
+);
+assert.equal(
+  formatMessageFromFormatter(localizedNumericChain.model, {}, { locale: "fr", functions: intlRegistry }).value,
+  `Value: ${new Intl.NumberFormat("fr", { maximumFractionDigits: 0 }).format(1000000)}`,
+);
+const transformedNumericChain = parseToModelFromParser(
+  ".local $value = {1000000.9 :integer} {{Value: {$value :number}}}",
+);
+assert.equal(
+  formatMessageFromFormatter(transformedNumericChain.model, {}, { locale: "fr", functions: intlRegistry }).value,
+  `Value: ${new Intl.NumberFormat("fr").format(1000000)}`,
+);
+const semanticNumericReannotation = parseToModelFromParser(
+  ".local $value = {1.29 :number maximumFractionDigits=1} " +
+    "{{Value {$value :number maximumFractionDigits=2}}}",
+);
+for (const functions of [FunctionRegistry.portable(), intlRegistry]) {
+  const result = formatMessageFromFormatter(semanticNumericReannotation.model, {}, { functions });
+  assert.equal(result.value, "Value 1.29");
+  assert.deepEqual(result.errors, []);
+}
+for (const suffix of [
+  "{{{$offset}}}",
+  ".local $copy = {$offset :number maximumFractionDigits=1}\n{{{$copy}}}",
+]) {
+  const semanticDecimalOffset = parseToModelFromParser(
+    ".local $number = {-1.9 :number maximumFractionDigits=0}\n" +
+      ".local $offset = {$number :offset add=1}\n" +
+      suffix,
+  );
+  for (const functions of [FunctionRegistry.portable(), intlRegistry]) {
+    const result = formatMessageFromFormatter(semanticDecimalOffset.model, {}, { functions });
+    assert.equal(result.value, "-0.9");
+    assert.deepEqual(result.errors, []);
+  }
+}
+for (const source of [
+  ".input {$value :number maximumFractionDigits=1}\n" +
+    ".match $value\n1000.3 {{rounded}}\n* {{fallback}}",
+  ".input {$value :number maximumFractionDigits=1}\n" +
+    ".local $copy = {$value :number}\n" +
+    ".match $copy\n1000.3 {{rounded}}\n* {{fallback}}",
+  ".input {$value :number maximumFractionDigits=1}\n" +
+    ".local $copy = {$value :number maximumFractionDigits=2}\n" +
+    ".match $copy\n1000.29 {{rounded}}\n* {{fallback}}",
+]) {
+  const roundedExactSelection = parseToModelFromParser(source);
+  for (const functions of [FunctionRegistry.portable(), intlRegistry]) {
+    const result = formatMessageFromFormatter(
+      roundedExactSelection.model,
+      { value: 1000.29 },
+      { locale: "en", functions },
+    );
+    assert.equal(result.value, "rounded");
+    assert.deepEqual(result.errors, []);
+  }
+}
+for (const maximumFractionDigits of [100, 101]) {
+  const portableFractionLimit = parseToModelFromParser(
+    `Value {1 :number maximumFractionDigits=${maximumFractionDigits}}`,
+  );
+  const result = formatMessageFromFormatter(portableFractionLimit.model);
+  if (maximumFractionDigits === 100) {
+    assert.equal(result.value, "Value 1");
+    assert.deepEqual(result.errors, []);
+  } else {
+    assert.equal(result.value, "Value {|1|}");
+    assert.deepEqual(result.errors.map((error) => error.code), ["bad-option"]);
+  }
+}
+const inheritedNumberOptions = parseToModelFromParser(
+  ".input {$value :number minimumFractionDigits=2 signDisplay=always}\n{{{$value :number minimumFractionDigits=1}}}",
+);
+assert.equal(
+  formatMessageFromFormatter(inheritedNumberOptions.model, { value: 1 }, { functions: intlRegistry }).value,
+  "+1.0",
+);
+const inheritedSelectionOptions = parseToModelFromParser(
+  ".input {$value :number minimumFractionDigits=1}\n" +
+    ".local $copy = {$value :number}\n" +
+    ".match $copy\none {{one}}\nother {{other}}\n* {{fallback}}",
+);
+assert.equal(
+  formatMessageFromFormatter(inheritedSelectionOptions.model, { value: 1 }, { functions: intlRegistry }).value,
+  "other",
+);
+const inheritedCurrency = parseToModelFromParser(
+  ".local $value = {42 :currency currency=EUR} {{{$value :currency}}}",
+);
+assert.equal(
+  formatMessageFromFormatter(inheritedCurrency.model, {}, { locale: "en-US", functions: intlRegistry }).value,
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "EUR" }).format(42),
+);
+const overriddenCurrency = parseToModelFromParser(
+  ".local $value = {42 :currency currency=USD} {{{$value :currency currency=EUR}}}",
+);
+const overriddenCurrencyResult = formatMessageFromFormatter(
+  overriddenCurrency.model,
+  {},
+  { locale: "en-US", functions: intlRegistry },
+);
+assert.deepEqual(overriddenCurrencyResult.errors.map((error) => error.code), ["bad-option"]);
+const semanticTimePrecision = parseToModelFromParser(
+  "At {|2006-01-02T15:04:06Z| :datetime timePrecision=second timeZone=UTC}",
+);
+assert.equal(
+  formatMessageFromFormatter(semanticTimePrecision.model, {}, { locale: "en-US", functions: intlRegistry }).value,
+  `At ${new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZone: "UTC",
+  }).format(new Date("2006-01-02T15:04:06Z"))}`,
+);
+const inheritedDateOperand = parseToModelFromParser(
+  ".local $value = {|2006-01-02T01:04:06Z| :datetime timeZone=UTC} " +
+    "{{Date: {$value :date timeZone=|America/Los_Angeles|}}}",
+);
+assert.equal(
+  formatMessageFromFormatter(inheritedDateOperand.model, {}, { locale: "en-US", functions: intlRegistry }).value,
+  `Date: ${new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeZone: "America/Los_Angeles",
+  }).format(new Date("2006-01-02T01:04:06Z"))}`,
+);
+const floatingDate = parseToModelFromParser(
+  "Date: {|2006-01-02| :date timeZone=|America/Los_Angeles|}",
+);
+assert.equal(
+  formatMessageFromFormatter(floatingDate.model, {}, { locale: "en-US", functions: intlRegistry }).value,
+  `Date: ${new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeZone: "America/Los_Angeles",
+  }).format(new Date("2006-01-02T08:00:00Z"))}`,
+);
+const previousProcessTimeZone = process.env.TZ;
+try {
+  process.env.TZ = "UTC";
+  const floatingDateTime = parseToModelFromParser(
+    "At {|2006-01-02T01:04:06| :datetime " +
+      "dateStyle=medium timePrecision=second timeZone=|America/Los_Angeles|}",
+  );
+  assert.equal(
+    formatMessageFromFormatter(floatingDateTime.model, {}, { locale: "en-US", functions: intlRegistry }).value,
+    `At ${new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZone: "America/Los_Angeles",
+    }).format(new Date("2006-01-02T09:04:06Z"))}`,
+  );
+  const floatingTimeWithZoneName = parseToModelFromParser(
+    "At {|2006-01-02T01:04:06| :time timeStyle=long timeZone=|America/Los_Angeles|}",
+  );
+  assert.equal(
+    formatMessageFromFormatter(
+      floatingTimeWithZoneName.model,
+      {},
+      { locale: "en-US", functions: intlRegistry },
+    ).value,
+    `At ${new Intl.DateTimeFormat("en-US", {
+      timeStyle: "long",
+      timeZone: "America/Los_Angeles",
+    }).format(new Date("2006-01-02T09:04:06Z"))}`,
+  );
+  for (const [literal, expectedInstant] of [
+    ["2024-03-10T02:30:00", "2024-03-10T10:30:00Z"],
+    ["2024-11-03T01:30:00", "2024-11-03T08:30:00Z"],
+  ]) {
+    const daylightSavingTransition = parseToModelFromParser(
+      `At {|${literal}| :time timeStyle=long timeZone=|America/Los_Angeles|}`,
+    );
+    assert.equal(
+      formatMessageFromFormatter(
+        daylightSavingTransition.model,
+        {},
+        { locale: "en-US", functions: intlRegistry },
+      ).value,
+      `At ${new Intl.DateTimeFormat("en-US", {
+        timeStyle: "long",
+        timeZone: "America/Los_Angeles",
+      }).format(new Date(expectedInstant))}`,
+    );
+  }
+} finally {
+  if (previousProcessTimeZone == null) delete process.env.TZ;
+  else process.env.TZ = previousProcessTimeZone;
+}
+for (const [literal, expectedInstant] of [
+  ["2006-01-02T01:04:06Z", "2006-01-02T01:04:06Z"],
+  ["2006-01-02T01:04:06+02:00", "2006-01-01T23:04:06Z"],
+]) {
+  const instantDateTime = parseToModelFromParser(
+    `At {|${literal}| :datetime dateStyle=medium timePrecision=second timeZone=UTC}`,
+  );
+  assert.equal(
+    formatMessageFromFormatter(instantDateTime.model, {}, { locale: "en-US", functions: intlRegistry }).value,
+    `At ${new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZone: "UTC",
+    }).format(new Date(expectedInstant))}`,
+  );
+}
 const relative = parseToModelFromParser("Due {$delta :relativeTime unit=day}");
 for (const locale of ["en", "fr", "ja", "ar"]) {
   assert.equal(
@@ -72,6 +338,30 @@ assert.equal(
   formatMessageFromFormatter(intlLegacyDate.model, { instant: "2026-05-21T14:30:15Z" }, { locale: "fr-FR", functions: intlRegistry }).value,
   `At ${new Intl.DateTimeFormat("fr-FR", { dateStyle: "full", timeStyle: "short", timeZone: "UTC" }).format(new Date("2026-05-21T14:30:15Z"))}`,
 );
+const selectionFixtureRoot = new URL("../../reference/fixtures/selection-operands/", import.meta.url);
+const resolvedValueFixtureRoot = new URL("../../reference/fixtures/resolved-values/", import.meta.url);
+const adapterFixtureGroups = [
+  ...["common", "icu4j", "adapters"].map((group) => new URL(`${group}/`, selectionFixtureRoot)),
+  new URL("adapters/", resolvedValueFixtureRoot),
+];
+let checkedSelectionCases = 0;
+for (const groupUrl of adapterFixtureGroups) {
+  for (const filename of readdirSync(groupUrl).filter((name) => name.endsWith(".json")).sort()) {
+    const fixture = JSON.parse(readFileSync(new URL(filename, groupUrl), "utf8"));
+    const selection = parseToModelFromParser(fixture.source);
+    assert.deepEqual(selection.diagnostics, [], fixture.name);
+    for (const formatCase of fixture.formatCases) {
+      const actual = formatMessageFromFormatter(selection.model, formatCase.arguments, {
+        locale: formatCase.locale,
+        functions: intlRegistry,
+      });
+      assert.equal(actual.value, formatCase.expected, `${fixture.name}/${formatCase.name}`);
+      assert.deepEqual(actual.errors, [], `${fixture.name}/${formatCase.name}`);
+      checkedSelectionCases += 1;
+    }
+  }
+}
+assert.equal(checkedSelectionCases, 47);
 assert.equal(new MF2Error("test", "test").code, "test");
 assert.equal("partsToString" in core, false);
 assert.equal("formatMessageStrict" in core, false);

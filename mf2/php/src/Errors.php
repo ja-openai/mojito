@@ -33,6 +33,11 @@ final class MF2Error extends \Exception
     {
         return new self('bad-option', $message);
     }
+
+    public static function badVariantKey(string $message): self
+    {
+        return new self('bad-variant-key', $message);
+    }
 }
 
 namespace Mojito\MessageFormat2\Internal;

@@ -133,3 +133,90 @@ public final class MF2FunctionSource {
         try optionResolver(name, defaultValue)
     }
 }
+
+func resolvedOptionValue(
+    _ call: MF2FunctionCall,
+    name: String,
+    inheritedFrom functionNames: Set<String>
+) throws -> String? {
+    if let value = try call.optionValue(name) {
+        return value
+    }
+    return try inheritedOptionValue(
+        call.inheritedSource,
+        name: name,
+        targetFunction: call.function.name,
+        from: functionNames
+    )
+}
+
+func resolvedOptionValue(
+    _ match: MF2FunctionMatch,
+    name: String,
+    inheritedFrom functionNames: Set<String>
+) throws -> String? {
+    if let value = try match.optionValue(name) {
+        return value
+    }
+    return try inheritedOptionValue(
+        match.inheritedSource,
+        name: name,
+        targetFunction: match.function.name,
+        from: functionNames
+    )
+}
+
+func inheritedOptionValue(
+    _ source: MF2FunctionSource?,
+    name: String,
+    targetFunction: String,
+    from functionNames: Set<String>
+) throws -> String? {
+    guard let source, !numericOptionIsDiscarded(function: targetFunction, option: name) else {
+        return nil
+    }
+    let sourceFunction = source.function.name
+    guard functionNames.contains(sourceFunction),
+          !numericOptionIsDiscarded(function: sourceFunction, option: name)
+    else {
+        return nil
+    }
+    if let value = try source.optionValue(name) {
+        return value
+    }
+    let inheritedSources = sourceFunction == "currency"
+        ? Set(["currency"])
+        : numericOptionSources(for: sourceFunction)
+    return try inheritedOptionValue(
+        source.inheritedSource,
+        name: name,
+        targetFunction: sourceFunction,
+        from: inheritedSources
+    )
+}
+
+func numericOptionSources(for functionName: String) -> Set<String> {
+    switch functionName {
+    case "number", "integer", "percent", "offset":
+        ["number", "integer", "percent", "offset"]
+    default:
+        []
+    }
+}
+
+private func numericOptionIsDiscarded(function: String, option: String) -> Bool {
+    switch function {
+    case "integer":
+        [
+            "minimumFractionDigits",
+            "maximumFractionDigits",
+            "minimumSignificantDigits",
+        ].contains(option)
+    case "percent":
+        ["minimumIntegerDigits", "roundingIncrement", "select"].contains(option)
+    case "offset":
+        ["add", "subtract"].contains(option)
+    default:
+        false
+    }
+}

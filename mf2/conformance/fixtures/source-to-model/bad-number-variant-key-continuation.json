@@ -1,0 +1,38 @@
+{
+  "name": "bad-number-variant-key-continuation",
+  "source": ".input {$value :number}\n.match $value\nhorse {{invalid key}}\n1 {{valid exact}}\n* {{fallback}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "value",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "value" },
+          "function": { "type": "function", "name": "number" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "value" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "horse" }],
+        "value": ["invalid key"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "1" }],
+        "value": ["valid exact"]
+      },
+      { "keys": [{ "type": "*" }], "value": ["fallback"] }
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": { "value": 1 },
+      "expected": "valid exact",
+      "expectedErrors": [{ "code": "bad-variant-key" }]
+    }
+  ]
+}

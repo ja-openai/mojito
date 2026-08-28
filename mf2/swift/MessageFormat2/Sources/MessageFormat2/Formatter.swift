@@ -235,7 +235,10 @@ private struct MF2FormatContext {
                 }
                 let rendered = try formatExpressionOutput(value)
                 if rendered.hadError {
-                    failedLocals.insert(MF2NameKey(name))
+                    let key = MF2NameKey(name)
+                    failedLocals.insert(key)
+                    values.removeValue(forKey: key)
+                    sources.removeValue(forKey: key)
                 } else {
                     let key = MF2NameKey(name)
                     values[key] = .string(rendered.value)
@@ -282,13 +285,18 @@ private struct MF2FormatContext {
                 throw MF2Error.missingArgument(selector.name)
             }
             let annotation = selectorAnnotations[MF2NameKey(selector.name)]
+            try recordSelectorResolutionErrors(annotation)
             let rendered = value.rendered
             return MF2SelectorValue(
                 rendered: rendered,
                 rawValue: value,
                 normalizedRendered: annotation?.isString == true ? normalizeStringKey(rendered) : nil,
                 exactMatch: annotation?.exactMatch ?? true,
-                selectionKey: selectionKey(selectorName: selector.name, value: value),
+                selectionKey: try selectionKey(
+                    selectorName: selector.name,
+                    value: value,
+                    source: sources[MF2NameKey(selector.name)]
+                ),
                 function: annotation?.function,
                 source: sources[MF2NameKey(selector.name)]
             )
@@ -404,6 +412,7 @@ private struct MF2FormatContext {
             guard let function = expression.function else {
                 return MF2ExpressionOutput(value: value, hadError: false)
             }
+            try recordFunctionResolutionErrors(function, source: source)
             let optionValues = values
             do {
                 return try MF2ExpressionOutput(
@@ -514,13 +523,21 @@ private struct MF2FormatContext {
         selectorAnnotations[MF2NameKey(selectorName)]?.exactMatch ?? true
     }
 
-    private func selectionKey(selectorName: String, value: MF2Value) -> String? {
+    private func selectionKey(
+        selectorName: String,
+        value: MF2Value,
+        source: MF2FunctionSource?
+    ) throws -> String? {
         guard let annotation = selectorAnnotations[MF2NameKey(selectorName)], annotation.isNumeric else {
             return nil
         }
-        let selectionValue = annotation.function.name == "percent"
-            ? percentPluralOperand(value)
-            : value
+        guard let selectionValue = try numericSelectionOperand(
+            value: value,
+            function: annotation.function,
+            source: source
+        ) else {
+            return nil
+        }
         return selectPluralCategory(
             locale: locale,
             value: selectionValue,
@@ -579,10 +596,54 @@ private struct MF2FormatContext {
                     throw error
                 }
                 errors.append(fallbackError(error))
-                errors.append(.badSelector("Selector failed to match."))
+                if error.code != "bad-selector", error.code != "bad-variant-key" {
+                    errors.append(.badSelector("Selector failed to match."))
+                }
                 return nil
             }
         }
+    }
+
+    private mutating func recordFunctionResolutionErrors(
+        _ function: MF2Function,
+        source: MF2FunctionSource?
+    ) throws {
+        guard ["number", "integer", "percent", "offset"].contains(function.name) else {
+            return
+        }
+        let selectUsesVariable: Bool
+        if case .variable? = function.options["select"] {
+            selectUsesVariable = true
+        } else {
+            selectUsesVariable = false
+        }
+        let hasInheritedExact = try inheritedOptionValue(
+            source,
+            name: "select",
+            targetFunction: function.name,
+            from: numericOptionSources(for: function.name)
+        ) == "exact"
+        guard selectUsesVariable || hasInheritedExact else {
+            return
+        }
+        let error = MF2Error.badOption("Numeric select option is not valid in this context.")
+        guard fallback else {
+            throw error
+        }
+        errors.append(error)
+    }
+
+    private mutating func recordSelectorResolutionErrors(
+        _ annotation: MF2SelectorAnnotation?
+    ) throws {
+        guard annotation?.function.name == "currency" else {
+            return
+        }
+        let error = MF2Error.badSelector("Currency selector is not supported.")
+        guard fallback else {
+            throw error
+        }
+        errors.append(error)
     }
 }
 
@@ -727,24 +788,6 @@ private func literalKeyMatches(_ value: String, selector: MF2SelectorValue) -> B
 
 private func normalizeStringKey(_ value: String) -> String {
     value.precomposedStringWithCanonicalMapping
-}
-
-private func percentPluralOperand(_ value: MF2Value) -> MF2Value {
-    let rendered = value.rendered
-    if rendered.hasSuffix("%") {
-        return .number(String(rendered.dropLast()))
-    }
-    guard let number = Double(rendered) else {
-        return value
-    }
-    return .number(formatPluralNumber(number * 100))
-}
-
-private func formatPluralNumber(_ value: Double) -> String {
-    if value.isFinite, value.rounded(.towardZero) == value {
-        return String(Int64(value))
-    }
-    return String(value)
 }
 
 private func fallbackError(_ error: MF2Error) -> MF2Error {

@@ -1,0 +1,30 @@
+{
+  "name": "failed-input-declaration-fallback",
+  "source": ".input {$foo :number} {{bar {$foo}}}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "foo",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "foo" },
+          "function": { "type": "function", "name": "number" }
+        }
+      }
+    ],
+    "pattern": [
+      "bar ",
+      { "type": "expression", "arg": { "type": "variable", "name": "foo" } }
+    ]
+  },
+  "fallbackCases": [
+    {
+      "locale": "en",
+      "arguments": { "foo": "foo" },
+      "expected": "bar {$foo}",
+      "expectedErrors": [{ "code": "bad-operand" }]
+    }
+  ]
+}

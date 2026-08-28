@@ -1,0 +1,12 @@
+{
+  "name": "reference-bad-number-key-with-valid",
+  "source": ".input {$value :number}\n.match $value\nhorse {{invalid-key}}\n1 {{valid-exact}}\n* {{fallback}}",
+  "formatCases": [
+    {
+      "name": "continue-after-invalid-key",
+      "locale": "en",
+      "arguments": { "value": 1 },
+      "expected": "valid-exact"
+    }
+  ]
+}

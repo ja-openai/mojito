@@ -44,7 +44,7 @@ copy_generated "$TMP_DIR/all/python/cldr_plural_rules.py" \
 copy_generated "$TMP_DIR/all/rust/cldr_plural_rules.rs" \
   "$ROOT/rust/mojito-mf2/src/cldr_plural_rules.rs"
 copy_generated "$TMP_DIR/all/swift/CldrPluralRules.swift" \
-  "$ROOT/swift/MessageFormat2/Sources/MessageFormat2Runtime/CldrPluralRules.swift"
+  "$ROOT/swift/MessageFormat2/Sources/MessageFormat2/CldrPluralRules.swift"
 copy_generated "$TMP_DIR/all/java/com/box/l10n/mojito/mf2/CldrPluralRules.java" \
   "$ROOT/java/src/main/java/com/box/l10n/mojito/mf2/CldrPluralRules.java"
 copy_generated "$TMP_DIR/all/kotlin/com/box/l10n/mojito/mf2/CldrPluralRules.kt" \

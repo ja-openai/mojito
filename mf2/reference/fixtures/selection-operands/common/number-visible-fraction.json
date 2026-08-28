@@ -1,0 +1,9 @@
+{
+  "name": "reference-number-visible-fraction-selection",
+  "source": ".input {$value :number minimumFractionDigits=1}\n.match $value\nzero {{zero}}\none {{one}}\ntwo {{two}}\nfew {{few}}\nmany {{many}}\nother {{other}}\n* {{other}}",
+  "formatCases": [
+    { "name": "russian-integer-rendered-with-fraction", "locale": "ru", "arguments": { "value": 1 }, "expected": "other" },
+    { "name": "slovenian-integer-rendered-with-fraction", "locale": "sl", "arguments": { "value": 1 }, "expected": "few" },
+    { "name": "french-million-rendered-with-fraction", "locale": "fr", "arguments": { "value": 1000000 }, "expected": "other" }
+  ]
+}

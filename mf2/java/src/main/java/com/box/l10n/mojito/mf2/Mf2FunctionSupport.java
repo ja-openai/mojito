@@ -1,13 +1,15 @@
 package com.box.l10n.mojito.mf2;
 
-final class Mf2FunctionSupport {
+import java.math.BigDecimal;
+
+public final class Mf2FunctionSupport {
     private Mf2FunctionSupport() {}
 
     static double parseCallDecimal(Mf2FunctionRegistry.FunctionCall call, String message)
             throws Mf2Exception {
-        Double parsed = parseDecimalNumber(call.value());
+        Double parsed = parseSourceDecimal(call.inheritedSource());
         if (parsed == null) {
-            parsed = parseSourceDecimal(call.inheritedSource());
+            parsed = parseDecimalNumber(call.value());
         }
         if (parsed == null) {
             throw Mf2Exception.badOperand(message);
@@ -17,13 +19,99 @@ final class Mf2FunctionSupport {
 
     static Double parseSourceDecimal(Mf2FunctionRegistry.FunctionSourceRef source)
             throws Mf2Exception {
+        if (source == null || !isDecimalSourceFunction(source.function())) {
+            return null;
+        }
+        return parseDecimalNumber(numericSourceOperand(source));
+    }
+
+    public static String numericSourceOperand(
+            Mf2FunctionRegistry.FunctionSourceRef source) throws Mf2Exception {
+        if (source == null || !isDecimalSourceFunction(source.function())) {
+            return null;
+        }
+        return numericSourceOperandChain(source);
+    }
+
+    static String inheritedNumericOptionValue(
+            String targetFunction,
+            Mf2FunctionRegistry.FunctionSourceRef source,
+            String optionName,
+            String fallback)
+            throws Mf2Exception {
+        if (source == null || blocksInheritedOption(targetFunction, optionName)) {
+            return fallback;
+        }
+        String sourceFunction = source.function().name();
+        if (!canInheritOptionsFrom(targetFunction, sourceFunction)
+                || blocksInheritedOption(sourceFunction, optionName)) {
+            return fallback;
+        }
+        if (source.function().options().containsKey(optionName)) {
+            return source.optionValue(optionName, fallback);
+        }
+        return inheritedNumericOptionValue(
+                sourceFunction, source.inheritedSource(), optionName, fallback);
+    }
+
+    public static String resolvedCurrencyCode(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        String inherited = inheritedCurrencyCode(call.inheritedSource());
+        boolean hasDirectOption = call.function().options().containsKey("currency");
+        if (inherited != null && hasDirectOption) {
+            throw new Mf2Exception(
+                    "bad-option",
+                    "Currency option cannot override an existing currency operand.");
+        }
+        if (inherited != null) {
+            return inherited;
+        }
+        return hasDirectOption ? call.optionValue("currency", null) : null;
+    }
+
+    private static String numericSourceOperandChain(
+            Mf2FunctionRegistry.FunctionSourceRef source) throws Mf2Exception {
         if (source == null) {
             return null;
         }
-        if (isDecimalSourceFunction(source.function())) {
-            return parseDecimalNumber(source.value());
+        String operand = numericSourceOperandChain(source.inheritedSource());
+        if (operand == null) {
+            operand = source.value();
         }
-        return parseSourceDecimal(source.inheritedSource());
+        String functionName = source.function().name();
+        if (!isDecimalSourceFunction(source.function())) {
+            return operand;
+        }
+        Double parsed = parseDecimalNumber(operand);
+        if (parsed == null) {
+            return null;
+        }
+        if (functionName.equals("integer")) {
+            return Long.toString((long) parsed.doubleValue());
+        }
+        if (functionName.equals("offset")) {
+            String add = source.optionValue("add", null);
+            String subtract = source.optionValue("subtract", null);
+            return adjustedOffsetOperand(operand, add, subtract);
+        }
+        return operand;
+    }
+
+    static String adjustedOffsetOperand(String operand, String add, String subtract) {
+        if (parseDecimalNumber(operand) == null
+                || (add == null) == (subtract == null)) {
+            return null;
+        }
+        Long delta = parseInteger(add == null ? subtract : add);
+        if (delta == null) {
+            return null;
+        }
+        BigDecimal value = new BigDecimal(operand);
+        BigDecimal adjustment = BigDecimal.valueOf(delta);
+        BigDecimal result = add == null
+                ? value.subtract(adjustment)
+                : value.add(adjustment);
+        return result.stripTrailingZeros().toPlainString();
     }
 
     static Double parseDecimalNumber(String value) {
@@ -36,6 +124,10 @@ final class Mf2FunctionSupport {
         } catch (NumberFormatException error) {
             return null;
         }
+    }
+
+    static boolean isDecimalLiteral(String value) {
+        return isWellFormedDecimalLiteral(value);
     }
 
     static int parseNonNegativeOption(String value, String message)
@@ -112,5 +204,60 @@ final class Mf2FunctionSupport {
 
     private static boolean isDecimalSourceFunction(Mf2Message.FunctionRef function) {
         return isNumericFunction(function) || function.name().equals("currency");
+    }
+
+    private static boolean canInheritOptionsFrom(
+            String targetFunction, String sourceFunction) {
+        if (targetFunction.equals("currency")) {
+            return sourceFunction.equals("currency");
+        }
+        return isNumericFunctionName(targetFunction)
+                && isNumericFunctionName(sourceFunction);
+    }
+
+    private static boolean isNumericFunctionName(String functionName) {
+        return functionName.equals("number")
+                || functionName.equals("integer")
+                || functionName.equals("percent")
+                || functionName.equals("offset");
+    }
+
+    private static boolean blocksInheritedOption(
+            String functionName, String optionName) {
+        if (functionName.equals("integer")) {
+            return optionName.equals("minimumFractionDigits")
+                    || optionName.equals("maximumFractionDigits")
+                    || optionName.equals("minimumSignificantDigits");
+        }
+        if (functionName.equals("percent")) {
+            return optionName.equals("minimumIntegerDigits")
+                    || optionName.equals("roundingIncrement")
+                    || optionName.equals("select");
+        }
+        return functionName.equals("offset")
+                && (optionName.equals("add") || optionName.equals("subtract"));
+    }
+
+    private static String inheritedCurrencyCode(
+            Mf2FunctionRegistry.FunctionSourceRef source) throws Mf2Exception {
+        if (source == null || !source.function().name().equals("currency")) {
+            return null;
+        }
+        String currency = source.optionValue("currency", null);
+        if (currency != null) {
+            return currency;
+        }
+        return inheritedCurrencyCode(source.inheritedSource());
+    }
+
+    private static Long parseInteger(String value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException error) {
+            return null;
+        }
     }
 }

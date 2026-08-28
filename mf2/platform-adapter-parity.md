@@ -4,7 +4,7 @@ This note tracks concrete differences between the current MF2 platform-backed
 function registries. It is intentionally scoped to runtime behavior and package
 boundaries; portable/unlocalized registries should stay dependency-free.
 
-Last audited: 2026-06-01.
+Last audited: 2026-08-27.
 
 ## Registry Coverage
 
@@ -105,6 +105,13 @@ The safest common baseline is UTC:
 The common contract is: support `timeZone` when the backend can do it, or reject
 unsupported zones explicitly. Do not silently ignore a non-UTC `timeZone`.
 
+JavaScript Intl also distinguishes floating calendar values from instants. A
+zone-less date or datetime such as `2006-01-02` is interpreted as wall-clock
+fields in the requested target zone, so `America/Los_Angeles` does not shift it
+to January 1. An explicit `Z` or numeric offset denotes an instant and is
+converted into the target zone. Package tests cover ordinary dates plus DST gap
+and overlap boundaries.
+
 ### Relative Time
 
 Relative time is the least portable platform function:
@@ -131,17 +138,57 @@ platform currency adapter. Currency formatting still varies by host library and
 locale data version: JDK `ja-JP` currently rounds EUR to zero fraction digits in
 the demo, while ICU4J/PHP Intl keep cents for the same value.
 
+Mojito treats `:number` as a currency-type/provenance barrier: a later
+`:currency` expression must provide its own currency code, while retaining the
+semantic numeric value. An explicit later code replaces the earlier currency.
+ICU4J currently carries the earlier code across `:number`; that intentional
+policy difference is documented once in `conformance/coverage-audit.md` rather
+than expanded into a repetitive currency matrix.
+
 ### Percent Scaling
 
 All current platform adapters treat `0.1234` as `12.3%` when a percent function
 is registered. This matches portable behavior and should remain part of the
 cross-language contract.
 
+### Selection Operands Versus Display
+
+Platform number formatters may group digits, shape digits, localize decimal
+separators, or add percent/currency affixes. That display string is never a
+valid substitute for the numeric operand used by plural selection. The runtime
+now preserves the original source value and derives a locale-neutral selection
+operand after function semantics (`:integer` truncation, fraction options,
+`:percent` scaling, or `:offset`) while retaining the localized string only for
+display.
+
+The shared selection-operand fixture matrix gates this boundary end-to-end in
+Babel, JavaScript Intl, and PHP Intl, with focused invariants in JDK, ICU4J,
+Foundation, and ICU4X adapters. See `conformance/coverage-audit.md`.
+
+Resolved numeric values also retain inherited options across reannotation,
+with options on the new expression overriding inherited values. They retain
+the semantic numeric value, not a rounded or localized display string:
+reannotating `1.29 :number maximumFractionDigits=1` with max 2 uses `1.29`,
+reannotating `1.25 :integer` as `:number` uses the integer result `1`, and
+applying `:offset add=1` to `1.9 :number maximumFractionDigits=0` yields `2.9`
+rather than adding to its rounded display. Formatting and selection must
+both use that value and the resulting option set; a reannotation or chained
+numeric function is not a reset to platform defaults or a second parse of
+prior display output.
+
+Option propagation is function-specific. A number-to-number chain retains
+`minimumFractionDigits` and `signDisplay`; `:integer` discards inherited
+fraction-digit and minimum-significant-digit options before a later `:number`;
+and a `:percent` resolved value retains `minimumFractionDigits` when consumed
+by `:number`. The cross-runtime fixtures use ordinary finite decimals and
+small offsets. They do not promise arbitrary precision or identical behavior
+past each host's numeric, formatter, or offset limits.
+
 ## Recommended Follow-Up Slices
 
-1. Add a single shared platform parity fixture or demo that uses the same
-   source strings, values, locale tags, and option names across all adapters.
-   Keep assertions structural where host locale data legitimately differs.
+1. Extend the shared platform fixture loader from Python/JavaScript/PHP to the
+   JVM, Swift, and Rust harnesses; keep display assertions structural where host
+   locale data legitimately differs.
 2. Decide whether Java/Kotlin JDK defaults should enable grouping for
    `:number`, `:integer`, and `:percent`.
 3. Add a datetime-style mapping note for Python Babel or a richer Babel

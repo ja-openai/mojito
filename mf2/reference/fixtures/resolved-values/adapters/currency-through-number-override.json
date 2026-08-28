@@ -1,0 +1,12 @@
+{
+  "name": "adapter-currency-through-number-override",
+  "source": ".local $usd = {42 :currency currency=USD}\n.local $plain = {$usd :number}\n{{Value {$plain :currency currency=EUR}}}",
+  "formatCases": [
+    {
+      "name": "explicit-currency-replacement",
+      "locale": "en",
+      "arguments": {},
+      "expected": "Value €42.00"
+    }
+  ]
+}

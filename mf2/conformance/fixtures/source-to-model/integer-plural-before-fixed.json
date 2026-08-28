@@ -34,12 +34,12 @@
     {
       "locale": "en",
       "arguments": { "count": 1 },
-      "expected": "plural one"
+      "expected": "exact one"
     },
     {
       "locale": "en",
       "arguments": { "count": 1.2 },
-      "expected": "plural one"
+      "expected": "exact one"
     },
     {
       "locale": "en",

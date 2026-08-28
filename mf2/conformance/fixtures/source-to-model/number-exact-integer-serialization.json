@@ -1,0 +1,37 @@
+{
+  "name": "number-exact-integer-serialization",
+  "source": ".input {$value :number}\n.match $value\n1.0 {{decimal spelling}}\n1 {{integer spelling}}\n* {{fallback}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "input",
+        "name": "value",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "value" },
+          "function": { "type": "function", "name": "number" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "value" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "1.0" }],
+        "value": ["decimal spelling"]
+      },
+      {
+        "keys": [{ "type": "literal", "value": "1" }],
+        "value": ["integer spelling"]
+      },
+      { "keys": [{ "type": "*" }], "value": ["fallback"] }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": { "value": 1 },
+      "expected": "integer spelling"
+    }
+  ]
+}

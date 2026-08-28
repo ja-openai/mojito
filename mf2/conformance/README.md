@@ -4,14 +4,22 @@ This directory owns the shared MF2 test corpus for Mojito and the runtime
 libraries.
 
 The official Unicode MessageFormat WG test suite is vendored separately under
-`../third_party/message-format-wg/test`. The Rust parser runner reads the
-upstream test shape directly via `cargo run -- unicode-tests`, currently wiring
+`../third_party/message-format-wg/test`. Rust, Java, JavaScript, Go, and PHP
+read the upstream test shape directly, currently wiring
 syntax success/error, bidi syntax, data-model error, `:string` function,
 `:number`, `:percent`, `:currency`, date/time/datetime validation, `:offset`,
-`:integer`, `u:` options, fallback, and pattern-selection checks. Its checked-in baseline lives in
-`unicode-official-baseline.json`; update it in the same commit when official
-pass/skip/not-wired counts intentionally change. All currently vendored
-official tests are wired by the Rust runner.
+`:integer`, `u:` options, fallback, and pattern-selection checks. The checked-in
+baselines live in `unicode-official-baseline.json` and
+`unicode-official-baseline-core.json`; update the appropriate file in the same
+commit when official pass/skip/not-wired counts intentionally change. All 461
+currently vendored official tests are wired by those five runners. Java, Go,
+and PHP pass 461; the dependency-free Rust and JavaScript core runners pass 429
+and explicitly skip the 32 currency/date/time cases owned by platform adapters.
+Python, Swift, and Kotlin do not yet consume the official suite directly.
+The shared source corpus currently contains 72 models and 850 output cases.
+
+See `coverage-audit.md` for the exact layer/runtime matrix, the platform-adapter
+and ICU differential coverage, and the remaining gaps.
 
 ## Contract
 
@@ -135,7 +143,14 @@ The source-to-model fixtures currently cover:
 - escaped braces and backslash
 - function annotations and options, including `:number`, `:integer`, `:string`,
   and `:currency`, quoted option values containing spaces, variable-valued
-  options, and optional whitespace around `=`
+  options, optional whitespace around `=`, numeric option inheritance through
+  reannotation for both plural selection and display, inherited `signDisplay`,
+  function-specific option filtering through `:integer`, option retention from
+  `:percent` to `:number`, non-tie `maximumFractionDigits` display rounding,
+  and preservation of semantic numeric values rather than rounded display
+  strings across reannotation and subsequent `:offset` operations; `:number`
+  is also a currency-type/provenance barrier that preserves the semantic number
+  so a later `:currency currency=EUR` can explicitly replace the currency
 - unregistered custom functions rejected by default formatters
 - `.input`, including multiple declarations before a quoted pattern
 - `.local`, including chained locals
@@ -147,8 +162,12 @@ The source-to-model fixtures currently cover:
 - exact-match `.match` selectors and catch-all fallback, including multi-selector
   matching, selector-order priority independent of variant row order,
   `:number select=exact`, `:integer select=exact`, and primitive `:string`
-  selector values, exact numeric/category ties where row order decides the
-  winner, plus quoted literal variant keys distinct from catch-all `*`;
+  selector values, exact numeric keys outranking plural-category keys regardless
+  of variant source order, canonical integer exact serialization for integer
+  values without `minimumFractionDigits`, `minimumIntegerDigits`,
+  `minimumSignificantDigits`, or `maximumSignificantDigits`, one explicit
+  Mojito policy for direct decimal offset key `-0.9`, and quoted literal variant
+  keys distinct from catch-all `*`;
   `:string` selection normalizes comparison keys to NFC internally without
   mutating the parsed model or formatted output
 - fixed numeric variant keys for `:offset` locals, including the common
@@ -156,10 +175,13 @@ The source-to-model fixtures currently cover:
   fixed keys such as `1`, plural categories such as `one`, and a
   selector-priority case where the raw count row wins over an earlier offset
   row; variable-valued offset options are also fixture-backed so shifted plural
-  category selection is not limited to hardcoded deltas
-- fallback formatting for unresolved variables and unresolved select selectors,
-  including fallback parts with `source` metadata and collected
-  `unresolved-variable` errors
+  category selection is not limited to hardcoded deltas. These ordinary finite
+  fixtures do not claim arbitrary precision or uniform overflow behavior beyond
+  host numeric and offset limits
+- fallback formatting for unresolved variables, failed annotated declarations,
+  and unresolved select selectors, including fallback parts with `source`
+  metadata, collected errors, and continuation past an invalid numeric variant
+  key to a later valid exact match
 - direct and simple indirect selector annotations for `.match`
 - cardinal and ordinal plural category selection across every generated CLDR
   plural locale, including generated category fixtures checked by Rust, Swift,
@@ -167,8 +189,9 @@ The source-to-model fixtures currently cover:
 
 Variable, function, markup, option, and attribute identifiers now have fixture
 coverage for Unicode names, edge bidi controls, namespaces, combining marks in
-names, canonical-equivalence preservation, and basic invalid identifier
-diagnostics. Deeper identifier edge cases remain open.
+names, canonical-equivalence preservation, the valid name `__proto__` in option
+and attribute maps, and basic invalid identifier diagnostics. Deeper identifier
+edge cases remain open.
 
 The invalid-source fixtures currently cover:
 
@@ -200,3 +223,4 @@ The format-error fixtures currently cover:
 - invalid local declaration dependency order, including self references and
   later-local references through function options
 - missing runtime arguments in expressions, locals, and selectors
+- non-finite and invalid numeric operands

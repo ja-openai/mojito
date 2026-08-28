@@ -63,6 +63,84 @@ $badTimeZoneOutput = format_message($badTimeZone, ['start' => '2026-05-21T14:30:
 ]);
 assert_error_codes('invalid timeZone errors', $badTimeZoneOutput['errors'], ['bad-option']);
 
+$reannotationCases = [
+    [
+        'localized number source and inherited options',
+        ".local \$n = {1000000 :number minimumFractionDigits=2}\n{{Value {\$n :number}}}",
+        'fr-FR',
+        'Value ' . expected_number('fr-FR', 1000000, minFractionDigits: 2),
+    ],
+    [
+        'localized currency source and inherited currency',
+        ".local \$n = {1234.5 :currency currency=EUR}\n{{Value {\$n :currency}}}",
+        'fr-FR',
+        'Value ' . expected_currency('fr-FR', 1234.5, 'EUR'),
+    ],
+    [
+        'localized datetime source and replacement timeZone',
+        ".local \$d = {|2026-05-21T14:30:15Z| :datetime dateStyle=medium timeStyle=medium timeZone=UTC}\n"
+            . "{{Value {\$d :time timeStyle=short timeZone=|America/Los_Angeles|}}}",
+        'ja-JP',
+        'Value ' . expected_date(
+            'ja-JP',
+            '2026-05-21T14:30:15Z',
+            IntlDateFormatter::NONE,
+            IntlDateFormatter::SHORT,
+            'America/Los_Angeles',
+        ),
+    ],
+];
+foreach ($reannotationCases as [$label, $caseSource, $locale, $expected]) {
+    $caseParse = parse_to_model($caseSource);
+    assert_same("{$label} diagnostics", [], $caseParse['diagnostics']);
+    $actual = format_message($caseParse['model'], [], [
+        'locale' => $locale,
+        'functions' => IntlFunctions::registry(),
+    ]);
+    assert_error_codes("{$label} errors", $actual['errors'], []);
+    assert_same("{$label} output", $expected, $actual['value']);
+}
+
+$currencyBarrierPrefix = ".local \$usd = {42 :currency currency=USD}\n"
+    . ".local \$plain = {\$usd :number}\n";
+$missingCurrency = parse_to_model($currencyBarrierPrefix . "{{Value {\$plain :currency}}}");
+assert_same('currency provenance barrier diagnostics', [], $missingCurrency['diagnostics']);
+$missingCurrencyOutput = format_message($missingCurrency['model'], [], [
+    'locale' => 'en-US',
+    'functions' => IntlFunctions::registry(),
+]);
+assert_error_codes('currency provenance barrier errors', $missingCurrencyOutput['errors'], ['bad-operand']);
+
+$selectionFixtureRoot = __DIR__ . '/../../reference/fixtures/selection-operands';
+$resolvedValueFixtureRoot = __DIR__ . '/../../reference/fixtures/resolved-values';
+$checkedSelectionCases = 0;
+$fixturePatterns = [
+    "{$selectionFixtureRoot}/common/*.json",
+    "{$selectionFixtureRoot}/icu4j/*.json",
+    "{$selectionFixtureRoot}/adapters/*.json",
+    "{$resolvedValueFixtureRoot}/adapters/*.json",
+];
+foreach ($fixturePatterns as $fixturePattern) {
+    $paths = glob($fixturePattern);
+    sort($paths, SORT_STRING);
+    foreach ($paths as $path) {
+        $fixture = json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
+        $selectionParse = parse_to_model($fixture['source']);
+        assert_same("{$fixture['name']} diagnostics", [], $selectionParse['diagnostics']);
+        foreach ($fixture['formatCases'] as $case) {
+            $actual = format_message($selectionParse['model'], $case['arguments'], [
+                'locale' => $case['locale'],
+                'functions' => IntlFunctions::registry(),
+            ]);
+            $label = "{$fixture['name']}/{$case['name']}";
+            assert_same("{$label} output", $case['expected'], $actual['value']);
+            assert_error_codes("{$label} errors", $actual['errors'], []);
+            $checkedSelectionCases += 1;
+        }
+    }
+}
+assert_same('adapter differential case count', 47, $checkedSelectionCases);
+
 echo "PHP Intl function registry tests passed.\n";
 
 function expected_output(string $locale, array $arguments): string
