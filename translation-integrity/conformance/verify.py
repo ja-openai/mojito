@@ -27,7 +27,18 @@ LEGACY_EMAIL_LITERAL = re.compile(
 LEGACY_URL_LITERAL = re.compile(
     r"https?://[a-zA-Z0-9.]+\.[a-zA-Z]{2,}[a-zA-Z0-9/_\-?#+%]*"
 )
-BANNED_MANIFEST_TERMS = ("openai", "chatgpt")
+BANNED_MANIFEST_TERMS = (
+    "openai",
+    "open ai",
+    "chatgpt",
+    "codex",
+    "sora",
+    "dall-e",
+    "dalle",
+    "gpt-",
+    "oai-",
+    "oai_",
+)
 
 CASE_FIELDS = {
     "id",
