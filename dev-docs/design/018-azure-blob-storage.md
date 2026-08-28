@@ -117,17 +117,29 @@ unmatched requests exist only in the stored output.
 The initiating actor and upstream attribution are deliberately separate. The authenticated user is
 captured before Quartz scheduling and used for the variant's `createdByUser`; `translatedBy` and
 `approvedBy` aliases populate translator and reviewer identity when supplied. Missing upstream
-attribution is stored as `UNKNOWN`, never inferred from the initiator.
+attribution is stored as `UNKNOWN`, never inferred from the initiator. Unattended AI Translate and
+machine-translation jobs use the stable service identities `ai-translate` and
+`machine-translation` only when no authenticated or pollable-task user exists. Their generated
+strings carry the same service identity as translator and `NOT_REVIEWED` as reviewer; a real human
+initiator on the import task or one of its parent tasks always takes precedence and is never
+relabeled as the translator or reviewer. Existing `UNKNOWN` run actors and payload attribution are
+not inferred or rewritten at read time.
 
 The prefix uses the configured default blob backend unless it has an explicit route. Production
-must explicitly route this prefix to Azure so the per-string payloads do not fall back to MySQL:
+must explicitly route this prefix to Azure so new per-string payloads do not fall back to MySQL.
+Start with the database-fallback route so payloads written to `mblob` before that configuration
+remain readable and are backfilled on access:
 
 ```properties
 l10n.azure.blob-storage.enabled=true
 l10n.azure.blob-storage.endpoint=https://<account>.blob.core.windows.net
 l10n.azure.blob-storage.container=mojito
-l10n.blob-storage.routing.prefixes.bulk-import-lineage=azure
+l10n.blob-storage.routing.prefixes.bulk-import-lineage=azure-with-database-fallback
 ```
+
+After operators verify that required historical payloads are present in Azure, switch the route to
+plain `azure`. Switching directly from the default database route to plain `azure` strands existing
+database-backed payloads because reads use the currently configured backend.
 
 Database, S3, and Azure storage all preserve the `Retention.PERMANENT` contract. Provider lifecycle
 rules for temporary `retention=MIN_1_DAY` objects must not match this permanent prefix. Admin-only

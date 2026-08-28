@@ -120,10 +120,9 @@ public class RepositoryMachineTranslationService {
                                         .getOrDefault(sourceText, Collections.emptyList())
                                         .stream()
                                         .map(
-                                            textUnitDTO -> {
-                                              textUnitDTO.setTarget(translationDTO.getText());
-                                              return textUnitDTO;
-                                            });
+                                            textUnitDTO ->
+                                                prepareForImport(
+                                                    textUnitDTO, translationDTO.getText()));
                               } else {
                                 logger.error(
                                     "There must be a translation available but if not, just skip");
@@ -140,10 +139,19 @@ public class RepositoryMachineTranslationService {
                     TextUnitBatchImporterService.ImportMode.ALWAYS_IMPORT,
                     null,
                     textUnitBatchImporterService.contextForPollableTask(
-                        currentTask, BulkImportLineageService.SOURCE_MACHINE_TRANSLATION));
+                        currentTask,
+                        BulkImportLineageService.SOURCE_MACHINE_TRANSLATION,
+                        BulkImportLineageService.MACHINE_TRANSLATION_IDENTITY));
               });
     }
 
     return new PollableFutureTaskResult<>();
+  }
+
+  static TextUnitDTO prepareForImport(TextUnitDTO textUnitDTO, String translatedText) {
+    textUnitDTO.setTarget(translatedText);
+    textUnitDTO.setTranslatorIdentity(BulkImportLineageService.MACHINE_TRANSLATION_IDENTITY);
+    textUnitDTO.setReviewerIdentity(BulkImportLineageService.NOT_REVIEWED_IDENTITY);
+    return textUnitDTO;
   }
 }

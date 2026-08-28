@@ -350,6 +350,12 @@ public class TextUnitBatchImporterService {
     return bulkImportLineageService.contextForPollableTask(pollableTask, null, null, null, source);
   }
 
+  public ImportContext contextForPollableTask(
+      PollableTask pollableTask, String source, String fallbackServiceIdentity) {
+    return bulkImportLineageService.contextForPollableTask(
+        pollableTask, source, fallbackServiceIdentity);
+  }
+
   /**
    * Maps text units to import with existing text units by first looking up by the tm text unit id
    * then the name of used text unit and finally the name of unused text unit (if there is only one

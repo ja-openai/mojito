@@ -29,6 +29,7 @@ import com.box.l10n.mojito.security.AuditorAwareImpl;
 import com.box.l10n.mojito.service.asset.ImportTextUnitJobInput;
 import com.box.l10n.mojito.service.blobstorage.Retention;
 import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
+import com.box.l10n.mojito.service.pollableTask.PollableTaskService;
 import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.tm.AddTMTextUnitCurrentVariantResult;
 import com.box.l10n.mojito.service.tm.importer.BulkImportLineageService.ImportContext;
@@ -52,6 +53,7 @@ public class BulkImportLineageServiceTest {
   private final StructuredBlobStorage structuredBlobStorage = mock(StructuredBlobStorage.class);
   private final AuditorAwareImpl auditorAware = mock(AuditorAwareImpl.class);
   private final UserRepository userRepository = mock(UserRepository.class);
+  private final PollableTaskService pollableTaskService = mock(PollableTaskService.class);
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   private BulkImportLineageService service;
@@ -275,6 +277,7 @@ public class BulkImportLineageServiceTest {
   public void recoversActorFromPersistedPollableTaskWhenWorkerContextIsMissing() {
     when(auditorAware.getCurrentAuditor()).thenReturn(Optional.empty());
     when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+    when(pollableTaskService.getCreatedByUserIdWithAncestorFallback(42L)).thenReturn(user.getId());
     PollableTask task = new PollableTask();
     task.setId(42L);
     task.setCreatedByUser(user);
@@ -302,6 +305,88 @@ public class BulkImportLineageServiceTest {
     assertThat(context.actorIdentity()).isNull();
     assertThat(context.initiatingUser()).isNull();
     assertThat(context.pollableTask()).isSameAs(task);
+  }
+
+  @Test
+  public void usesServiceFallbackWhenPollableTaskHasNoActor() {
+    when(auditorAware.getCurrentAuditor()).thenReturn(Optional.empty());
+    PollableTask task = new PollableTask();
+    task.setId(42L);
+
+    ImportContext context =
+        service.contextForPollableTask(
+            task,
+            BulkImportLineageService.SOURCE_AI_TRANSLATE,
+            BulkImportLineageService.AI_TRANSLATE_IDENTITY);
+
+    assertThat(context.actorType()).isEqualTo(SERVICE);
+    assertThat(context.actorIdentity()).isEqualTo(BulkImportLineageService.AI_TRANSLATE_IDENTITY);
+    assertThat(context.initiatingUser()).isNull();
+    assertThat(context.pollableTask()).isSameAs(task);
+  }
+
+  @Test
+  public void preservesPollableTaskUserOverServiceFallback() {
+    when(auditorAware.getCurrentAuditor()).thenReturn(Optional.empty());
+    when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+    when(pollableTaskService.getCreatedByUserIdWithAncestorFallback(42L)).thenReturn(user.getId());
+    PollableTask task = new PollableTask();
+    task.setId(42L);
+    task.setCreatedByUser(user);
+
+    ImportContext context =
+        service.contextForPollableTask(
+            task,
+            BulkImportLineageService.SOURCE_AI_TRANSLATE,
+            BulkImportLineageService.AI_TRANSLATE_IDENTITY);
+
+    assertThat(context.actorType()).isEqualTo(HUMAN);
+    assertThat(context.actorIdentity()).isEqualTo(user.getUsername());
+    assertThat(context.initiatingUser()).isSameAs(user);
+  }
+
+  @Test
+  public void preservesAncestorPollableTaskUserOverServiceFallback() {
+    when(auditorAware.getCurrentAuditor()).thenReturn(Optional.empty());
+    when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+    when(pollableTaskService.getCreatedByUserIdWithAncestorFallback(42L)).thenReturn(user.getId());
+    PollableTask rootTask = new PollableTask();
+    rootTask.setId(40L);
+    rootTask.setCreatedByUser(user);
+    PollableTask parentTask = new PollableTask();
+    parentTask.setId(41L);
+    parentTask.setParentTask(rootTask);
+    PollableTask childTask = new PollableTask();
+    childTask.setId(42L);
+    childTask.setParentTask(parentTask);
+
+    ImportContext context =
+        service.contextForPollableTask(
+            childTask,
+            BulkImportLineageService.SOURCE_AI_TRANSLATE,
+            BulkImportLineageService.AI_TRANSLATE_IDENTITY);
+
+    assertThat(context.actorType()).isEqualTo(HUMAN);
+    assertThat(context.actorIdentity()).isEqualTo(user.getUsername());
+    assertThat(context.initiatingUser()).isSameAs(user);
+    assertThat(context.pollableTask()).isSameAs(childTask);
+  }
+
+  @Test
+  public void preservesCurrentUserOverServiceFallback() {
+    when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of(user));
+    PollableTask task = new PollableTask();
+    task.setId(42L);
+
+    ImportContext context =
+        service.contextForPollableTask(
+            task,
+            BulkImportLineageService.SOURCE_AI_TRANSLATE,
+            BulkImportLineageService.AI_TRANSLATE_IDENTITY);
+
+    assertThat(context.actorType()).isEqualTo(HUMAN);
+    assertThat(context.actorIdentity()).isEqualTo(user.getUsername());
+    assertThat(context.initiatingUser()).isSameAs(user);
   }
 
   @Test
@@ -395,7 +480,12 @@ public class BulkImportLineageServiceTest {
 
   private BulkImportLineageService createService() {
     return new BulkImportLineageService(
-        runRepository, structuredBlobStorage, auditorAware, userRepository, objectMapper);
+        runRepository,
+        structuredBlobStorage,
+        auditorAware,
+        userRepository,
+        pollableTaskService,
+        objectMapper);
   }
 
   private TextUnitForBatchMatcherImport createTextUnit(Long tmTextUnitId, String name) {
