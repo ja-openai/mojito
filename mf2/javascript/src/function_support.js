@@ -1,3 +1,5 @@
+export const MAX_FRACTION_DIGITS = 100;
+
 export function functionOptionLiteral(functionRef, name, fallback) {
   const option = functionRef.options?.[name];
   return option?.type === "literal" ? option.value : fallback;
@@ -18,11 +20,17 @@ export function numericSelectUsesVariable(functionRef) {
 }
 
 export function inheritedExactNumericSource(source, targetFunction) {
-  if (source == null || targetFunction === "percent" || !isNumericFunction(source.function)) return false;
-  const sourceFunction = source.function.name;
-  if (sourceFunction === "percent") return false;
-  if (sourceOptionValue(source, "select", null) === "exact") return true;
-  return inheritedExactNumericSource(source.inherited, sourceFunction);
+  let current = source;
+  let target = targetFunction;
+  while (current != null) {
+    if (target === "percent" || !isNumericFunction(current.function)) return false;
+    const sourceFunction = current.function.name;
+    if (sourceFunction === "percent") return false;
+    if (sourceOptionValue(current, "select", null) === "exact") return true;
+    target = sourceFunction;
+    current = current.inherited;
+  }
+  return false;
 }
 
 export function isDecimalSourceFunction(functionRef) {
@@ -33,7 +41,8 @@ export function parseDecimalNumber(value) {
   const text = String(value);
   if (!/^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$/.test(text)) return null;
   const parsed = Number(text);
-  return Number.isFinite(parsed) ? parsed : null;
+  if (!Number.isFinite(parsed)) return null;
+  return Number.isInteger(parsed) && !Number.isSafeInteger(parsed) ? null : parsed;
 }
 
 export function parseInteger(value) {
@@ -44,19 +53,25 @@ export function parseInteger(value) {
 
 export function numericSourceOperand(source) {
   if (source == null) return null;
-  let operand = numericSourceOperand(source.inherited);
-  if (operand == null) operand = source.value;
-  const name = source.function?.name;
-  if (!isDecimalSourceFunction(source.function)) return operand;
-  const parsed = parseDecimalNumber(operand);
-  if (parsed == null) return null;
-  if (name === "integer") return String(Math.trunc(parsed));
-  if (name === "offset") {
-    const add = sourceOptionValue(source, "add", null);
-    const subtract = sourceOptionValue(source, "subtract", null);
-    const delta = parseInteger(add ?? subtract);
-    if (delta == null || (add == null) === (subtract == null)) return null;
-    return addIntegerOffset(operand, add == null ? -delta : delta);
+  const chain = [];
+  for (let current = source; current != null; current = current.inherited) chain.push(current);
+  let operand = null;
+  for (let index = chain.length - 1; index >= 0; index -= 1) {
+    const current = chain[index];
+    if (operand == null) operand = current.value;
+    const name = current.function?.name;
+    if (!isDecimalSourceFunction(current.function)) continue;
+    const parsed = parseDecimalNumber(operand);
+    if (parsed == null) return null;
+    if (name === "integer") operand = String(Math.trunc(parsed));
+    if (name === "offset") {
+      const add = sourceOptionValue(current, "add", null);
+      const subtract = sourceOptionValue(current, "subtract", null);
+      const delta = parseInteger(add ?? subtract);
+      if (delta == null || (add == null) === (subtract == null)) return null;
+      operand = addIntegerOffset(operand, add == null ? -delta : delta);
+      if (operand == null) return null;
+    }
   }
   return String(operand);
 }
@@ -65,8 +80,10 @@ const MAX_EXPANDED_DECIMAL_DIGITS = 4096;
 
 export function addIntegerOffset(value, delta) {
   if (!Number.isSafeInteger(delta)) return null;
+  if (typeof value === "number"
+      && (!Number.isFinite(value)
+          || (Number.isInteger(value) && !Number.isSafeInteger(value)))) return null;
   const text = String(value);
-  if (parseDecimalNumber(text) == null && parseInteger(text) == null) return null;
   const match = /^([+-]?)(\d+)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(text);
   if (match == null) return null;
 

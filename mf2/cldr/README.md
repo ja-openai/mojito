@@ -67,9 +67,16 @@ rules are intentionally not applied to plural selection; ICU4J comparison probes
 cover cases like `pt-AO`, `sr-Latn`, `az-Arab`, and Unicode extensions.
 
 Runtime packages vendor the all-locale generated file into their package source
-trees so they remain installable without reaching outside the package. Use
-`check_generated.sh` in CI to fail when vendored generated files drift from the
-shared generator.
+trees so they remain installable without reaching outside the package. The full
+MF2 gate runs `check_generated.sh`, which generates an expected layout in a
+temporary directory and compares it with both the working tree and Git index.
+It does not update either copy. Expected destinations must be present and
+tracked, and the shared `generated/all` tree must not contain extra files. Run
+`update_generated.sh` explicitly to regenerate, then stage every generated
+destination before rerunning the gate. Generation currently reads Unicode CLDR
+`main`, so this freshness check requires network access and intentionally fails
+when upstream data changes until the generated destinations are reviewed and
+updated together.
 
 Validate generated all-locale cardinal and ordinal category selection against
 ICU4J `PluralRules`:

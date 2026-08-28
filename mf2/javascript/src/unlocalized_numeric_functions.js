@@ -1,5 +1,6 @@
 import { MF2Error } from "./errors.js";
 import {
+  MAX_FRACTION_DIGITS,
   functionOptionLiteral,
   isDecimalSourceFunction,
   numericSourceOperand,
@@ -48,6 +49,9 @@ export function numericSelectionOperand(resolvedValue, functionRef) {
   let value = parseDecimalNumber(input);
   if (value == null) return null;
 
+  if (functionRef.name === "integer") return String(Math.trunc(value));
+  if (functionRef.name === "offset") return String(input);
+
   const optionValue = (name, fallback = null) => sourceOptionFrom(
     source,
     name,
@@ -59,7 +63,6 @@ export function numericSelectionOperand(resolvedValue, functionRef) {
   const minimumDigits = minimum == null ? 0 : parseNonNegativeOption(minimum, "minimumFractionDigits option must be a non-negative integer.");
   const maximumDigits = maximum == null ? null : parseNonNegativeOption(maximum, "maximumFractionDigits option must be a non-negative integer.");
 
-  if (functionRef.name === "integer") return String(Math.trunc(value));
   if (functionRef.name === "percent") value *= 100;
   if (["number", "percent"].includes(functionRef.name)) {
     return appendMinimumFractionDigits(
@@ -67,7 +70,7 @@ export function numericSelectionOperand(resolvedValue, functionRef) {
       minimumDigits,
     );
   }
-  return String(input);
+  return null;
 }
 
 function parseSourceDecimal(source) {
@@ -119,8 +122,17 @@ function maximumFractionDigits(call) {
 }
 
 export function parseNonNegativeOption(value, message) {
-  if (!/^\d+$/.test(String(value))) throw MF2Error.badOption(message);
-  return Number(value);
+  const text = String(value);
+  if (text.length === 0 || text.length > 16 || !/^\d+$/.test(text)) {
+    throw MF2Error.badOption(message);
+  }
+  const normalized = text.replace(/^0+/, "") || "0";
+  if (normalized.length > String(MAX_FRACTION_DIGITS).length) {
+    throw MF2Error.badOption(message);
+  }
+  const parsed = Number(normalized);
+  if (parsed > MAX_FRACTION_DIGITS) throw MF2Error.badOption(message);
+  return parsed;
 }
 
 function signDisplayAlways(call) {
@@ -136,13 +148,19 @@ function numericCallOptionValue(call, name, fallback) {
 }
 
 function sourceOptionFrom(source, name, fallback, targetFunction) {
-  if (source == null || numericOptionIsDiscarded(targetFunction, name)) return fallback;
-  const sourceFunction = source.function?.name;
-  if (!numericSourceFunctions(targetFunction).includes(sourceFunction)
-      || numericOptionIsDiscarded(sourceFunction, name)) return fallback;
-  const value = sourceOptionValue(source, name, MISSING_OPTION);
-  if (value !== MISSING_OPTION) return value;
-  return sourceOptionFrom(source.inherited, name, fallback, sourceFunction);
+  let current = source;
+  let target = targetFunction;
+  while (current != null) {
+    if (numericOptionIsDiscarded(target, name)) return fallback;
+    const sourceFunction = current.function?.name;
+    if (!numericSourceFunctions(target).includes(sourceFunction)
+        || numericOptionIsDiscarded(sourceFunction, name)) return fallback;
+    const value = sourceOptionValue(current, name, MISSING_OPTION);
+    if (value !== MISSING_OPTION) return value;
+    target = sourceFunction;
+    current = current.inherited;
+  }
+  return fallback;
 }
 
 function numericSourceFunctions(functionName) {

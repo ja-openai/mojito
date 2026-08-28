@@ -19,14 +19,18 @@ $formatCases = 0;
 $partsCases = 0;
 $formatErrorCases = 0;
 $localeCases = 0;
+$sourceModels = 0;
+$sourceFixtureDir = $argv[1] ?? __DIR__ . '/../../conformance/fixtures/source-to-model';
+$fixtureRoot = dirname($sourceFixtureDir);
 
-foreach (fixture_paths(__DIR__ . '/../../conformance/fixtures/source-to-model') as $path) {
+foreach (fixture_paths($sourceFixtureDir) as $path) {
     $fixture = read_json($path);
     $parse = parse_to_model($fixture['source']);
     if ($parse['hasDiagnostics']) {
         fail(basename($path) . ': unexpected diagnostics ' . json_encode($parse['diagnostics'], JSON_UNESCAPED_UNICODE));
     }
     assert_json_equal(basename($path) . ': model', $fixture['expectedModel'], $parse['model']);
+    $sourceModels += 1;
     foreach ($fixture['formatCases'] ?? [] as $case) {
         $actual = format_message($parse['model'], $case['arguments'] ?? [], [
             'locale' => $case['locale'] ?? 'en',
@@ -60,7 +64,14 @@ foreach (fixture_paths(__DIR__ . '/../../conformance/fixtures/source-to-model') 
     }
 }
 
-foreach (fixture_paths(__DIR__ . '/../../conformance/fixtures/invalid-source') as $path) {
+if ($sourceModels === 0 || $formatCases === 0) {
+    fail(
+        'Conformance fixture suite must contain at least one source model and one format case '
+        . "(found {$sourceModels} source models and {$formatCases} format cases)."
+    );
+}
+
+foreach (fixture_paths($fixtureRoot . '/invalid-source') as $path) {
     $fixture = read_json($path);
     $parse = parse_to_model($fixture['source']);
     if (!$parse['hasDiagnostics']) {
@@ -70,7 +81,7 @@ foreach (fixture_paths(__DIR__ . '/../../conformance/fixtures/invalid-source') a
     assert_contains_all(basename($path) . ': diagnostics', $actual, expected_codes($fixture['expectedDiagnostics'] ?? []));
 }
 
-foreach (fixture_paths(__DIR__ . '/../../conformance/fixtures/format-errors') as $path) {
+foreach (fixture_paths($fixtureRoot . '/format-errors') as $path) {
     $fixture = read_json($path);
     $expected = $fixture['expectedError']['code'];
     try {
@@ -82,7 +93,7 @@ foreach (fixture_paths(__DIR__ . '/../../conformance/fixtures/format-errors') as
     $formatErrorCases += 1;
 }
 
-$localeFixture = read_json(__DIR__ . '/../../conformance/fixtures/locale-key/cases.json');
+$localeFixture = read_json($fixtureRoot . '/locale-key/cases.json');
 foreach (($localeFixture['canonical'] ?? $localeFixture['canonicalCases'] ?? []) as $case) {
     assert_same('canonical locale', $case['expected'], canonical_locale_key($case['source']));
     $localeCases += 1;
@@ -92,7 +103,7 @@ foreach (($localeFixture['lookupChains'] ?? $localeFixture['lookupCases'] ?? [])
     $localeCases += 1;
 }
 
-echo "PHP MF2 conformance runner passed {$formatCases} format cases, {$partsCases} parts cases, {$formatErrorCases} format error cases, and {$localeCases} locale cases.\n";
+echo "PHP MF2 conformance runner passed {$sourceModels} source models, {$formatCases} format cases, {$partsCases} parts cases, {$formatErrorCases} format error cases, and {$localeCases} locale cases.\n";
 
 function fixture_paths(string $root): array
 {

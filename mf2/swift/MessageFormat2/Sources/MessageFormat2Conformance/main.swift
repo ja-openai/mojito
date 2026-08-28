@@ -123,6 +123,13 @@ do {
         }
     }
 
+    guard checkedSourceCases > 0 else {
+        throw ConformanceError.noSourceCases
+    }
+    guard checkedCases > 0 else {
+        throw ConformanceError.noFormatCases
+    }
+
     let checkedErrorCases = try runFormatErrorFixtures(
         fixtureRoot: fixtureDirectory.deletingLastPathComponent()
     )

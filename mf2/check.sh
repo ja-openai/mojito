@@ -3,7 +3,9 @@ set -eu
 
 cd "$(dirname "$0")"
 
+sh cldr/check_generated.sh
 sh static_check.sh
+sh conformance/check_all_languages_test.sh
 (cd cldr && sh validate_plural_rules.sh)
 (cd cldr && sh validate_number_data.sh)
 (cd cldr && sh validate_relative_time_data.sh)

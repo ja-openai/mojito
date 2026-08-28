@@ -66,6 +66,20 @@ canonical option names. Legacy `length`, `precision`, `dateLength`,
 `timePrecision`, and shared `style` aliases are accepted for parity with the
 other runtimes.
 
+Numeric operands for `:number`, `:integer`, and `:percent` are limited to
+JavaScript's safe integer range. Integral strings and `BigInt` values outside
+that range are rejected with an MF2 diagnostic instead of being silently
+rounded; this package does not promise arbitrary-precision numeric formatting.
+`:offset` still formats large decimal strings and `BigInt` values exactly, but
+ordinary numeric/category selection for those values is rejected. An
+`:offset select=exact` declaration can safely match the exact formatted result
+without numeric coercion. Unsafe host `number` values are always rejected
+because their original integer value has already been lost.
+
+Both the portable and Intl registries cap `minimumFractionDigits` and
+`maximumFractionDigits` at 100. Larger values are rejected as bad options
+before allocation or delegation to a host formatter.
+
 TypeScript uses the same JavaScript package. The public `.d.ts` files
 live beside the ESM modules and are exposed through the package root `types`
 condition. This keeps TypeScript as a typed consumer surface for

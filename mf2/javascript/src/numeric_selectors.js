@@ -44,6 +44,7 @@ export function selectInteger(match) {
 }
 
 export function selectOffset(match) {
+  if (functionOptionLiteral(match.function, "select", null) === "exact") return null;
   const value = parseMatchDecimal(match, "Offset selector requires a numeric operand.");
   validateNumericVariantKey(match);
   return exactDecimalKeyMatches(match, value) ? 2 : null;
@@ -106,13 +107,19 @@ function numericMatchOptionValue(match, name, fallback) {
 }
 
 function sourceOptionFrom(source, name, fallback, targetFunction) {
-  if (source == null || numericOptionIsDiscarded(targetFunction, name)) return fallback;
-  const sourceFunction = source.function?.name;
-  if (!numericSourceFunctions(targetFunction).includes(sourceFunction)
-      || numericOptionIsDiscarded(sourceFunction, name)) return fallback;
-  const value = sourceOptionValue(source, name, MISSING_OPTION);
-  if (value !== MISSING_OPTION) return value;
-  return sourceOptionFrom(source.inherited, name, fallback, sourceFunction);
+  let current = source;
+  let target = targetFunction;
+  while (current != null) {
+    if (numericOptionIsDiscarded(target, name)) return fallback;
+    const sourceFunction = current.function?.name;
+    if (!numericSourceFunctions(target).includes(sourceFunction)
+        || numericOptionIsDiscarded(sourceFunction, name)) return fallback;
+    const value = sourceOptionValue(current, name, MISSING_OPTION);
+    if (value !== MISSING_OPTION) return value;
+    target = sourceFunction;
+    current = current.inherited;
+  }
+  return fallback;
 }
 
 function numericSourceFunctions(functionName) {

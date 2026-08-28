@@ -1,8 +1,8 @@
 # MF2 Conformance and Differential Coverage Audit
 
-Audited: 2026-08-27. The differential investigation started from revision
-`50cecdfd93`; the current counts below include the confirmed regression cases
-admitted during that investigation.
+Audited: 2026-08-27; adversarial follow-up: 2026-08-28. The differential
+investigation started from revision `50cecdfd93`; the current counts below
+include the confirmed regression cases admitted during that investigation.
 
 Normative claims below refer to the Unicode
 [MessageFormat specification](https://www.unicode.org/reports/tr35/tr35-messageFormat.html)
@@ -110,6 +110,18 @@ Run the public shared regressions with:
 sh conformance/check_all_languages.sh
 ```
 
+### Adversarial QA Guardrails
+
+| Confirmed gap | Durable regression and disposition |
+| --- | --- |
+| Empty or misrouted custom conformance suites could pass | The wrapper forwards one canonical fixture root to all eight runtimes, every runner rejects zero aggregate source models or format cases, and the full gate exercises empty/no-format suites plus direct Go/PHP path handling |
+| JavaScript silently rounded integral operands outside its safe numeric range | Portable and Intl package tests cover number, integer, percent, exact selection, and offset. Unsafe values now produce bounded structured MF2 diagnostics instead of changed digits or a wrong branch; selection preserves its one additional `bad-selector`, and exact string/BigInt offset display remains supported |
+| JavaScript fraction-digit options controlled unbounded work/output | Portable and Intl paths validate a maximum of 100 fraction digits before numeric conversion, host formatter construction, or output padding; bounded and hundreds-of-digits rejection cases are table-driven |
+| Native numeric options leaked host arithmetic failures | Rust validates portable fraction-digit options against a 1,000-digit implementation limit before formatting or selection, so `maximumFractionDigits=65536` recovers with `bad-option`. Swift applies `:offset subtract` directly with checked decimal subtraction, so `subtract=-9223372036854775808` preserves representable results without overflowing an intermediate negation; decimal arithmetic failures and integral values that cannot round-trip through the portable `Double`/`Int64` boundary recover with `bad-operand` |
+| Swift portable numeric conversion and padding trusted host bounds | Every portable `Double`-to-integer conversion used by formatting, selection-key generation, and selector matching is checked; percent scaling must remain finite; and minimum/maximum fraction digits are capped at 1,000 before `String(format:)` or padding. Direct, reannotated, and permissive-custom-formatter selector probes recover with bounded `bad-operand`, `bad-option`, and `bad-selector` diagnostics instead of trapping or allocating attacker-selected output |
+| Recursive JavaScript source traversal leaked a host stack error on a 7,000-declaration chain | All inherited-source walks used by the public formatter are iterative; the package test runs the deep chain through portable and Intl registries and separately verifies that a host `RangeError` is returned as an `MF2Error` |
+| Generated CLDR drift was not part of the maintained full gate | `check.sh` generates into a temporary root and compares exact working-tree and Git-index path/content sets without rewriting either copy |
+
 ### Intentional or Runtime-Policy Differences
 
 | Difference | Representative observation | Disposition |
@@ -119,7 +131,7 @@ sh conformance/check_all_languages.sh
 | Boolean and null host values | ICU4J, ICU4C, JSON, and host runtimes do not expose identical bool/null operand types or coercions | No shared expectation is inferred from a harness conversion or broad output mismatch alone |
 | Default/tie rounding | Host libraries can differ on binary `1.005` and unspecified rounding defaults | The shared max-fraction regression uses non-tie `1.29`; host-specific tie behavior stays in adapter tests |
 | Exact serialization outside TR35's canonical-integer subset | TR35 requires canonical integer spelling only when the resolved value is an integer and none of `minimumFractionDigits`, `minimumIntegerDigits`, `minimumSignificantDigits`, or `maximumSignificantDigits` is set; other cases are implementation-defined | The option-free integer case is normative. Direct offset result `-0.9` matching key `-0.9` is one deliberate Mojito cross-runtime policy (ICU4J 78.3 falls back); no broader decimal/option permutation matrix is claimed |
-| Numeric precision and offset bounds | Shared regressions use ordinary finite values such as `1.29`, `1.9`, `-1.9`, and `0.0` | Runtimes use host numeric representations and practical limits. The suite does not claim arbitrary precision or identical overflow behavior; TR35 permits implementation limits and unsupported-operation or host-overflow behavior for out-of-range offsets |
+| Numeric precision and offset bounds | Shared regressions use ordinary finite values such as `1.29`, `1.9`, `-1.9`, and `0.0` | Runtimes use host numeric representations and practical limits. The suite does not claim arbitrary precision or identical overflow behavior; JavaScript explicitly rejects unsafe integral operands instead of coercing them, and TR35 permits implementation limits for out-of-range values |
 | Currency type through `:number` | `.local $usd={42 :currency currency=USD}; .local $plain={$usd :number}` followed by `{$plain :currency}` | Mojito intentionally treats `:number` as a currency-type/provenance barrier, so an implicit final currency is a `bad-operand`; the barrier must preserve the semantic number, and an explicit final `currency=EUR` must format `Value €42.00`. ICU4J 78.3 instead carries USD and renders `Value $42.00`, while ICU4C 77.1 reports `U_MF_UNKNOWN_FUNCTION_ERROR`. One common reference row records the policy difference and one adapter row gates the objective explicit-replacement invariant |
 
 ### ICU Preview or Unsupported Surface

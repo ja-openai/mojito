@@ -537,6 +537,13 @@ fn conformance(fixture_dir: &Path) {
         }
     }
 
+    if checked_models == 0 || checked_format_cases == 0 {
+        fail(format!(
+            "Conformance fixture suite must contain at least one source model and one format case \
+             (found {checked_models} source models and {checked_format_cases} format cases)."
+        ));
+    }
+
     let fixture_root = fixture_dir.parent().unwrap_or_else(|| Path::new("."));
     let checked_invalid_sources = check_invalid_source_fixtures(fixture_root);
     let checked_format_error_cases = check_format_error_fixtures(fixture_root);
