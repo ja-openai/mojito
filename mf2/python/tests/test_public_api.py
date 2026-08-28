@@ -10,6 +10,7 @@ from mojito_mf2 import (
     FunctionRegistry,
     FunctionSource,
     FormatResult,
+    MF2Error,
     MF2ParseDiagnostic,
     PartsResult,
     MF2RecoveryContext,
@@ -216,6 +217,36 @@ class PublicApiTest(unittest.TestCase):
         self.assertEqual("selected", formatted.value)
         self.assertTrue(formatted.ok)
 
+    def test_custom_selector_failure_is_reported_once(self) -> None:
+        result = parse_to_model(
+            ".input {$state :test:select} "
+            ".match $state "
+            "ready {{ready}} "
+            "waiting {{waiting}} "
+            "* {{fallback}}"
+        )
+        self.assertFalse(result.has_diagnostics, result.diagnostics)
+
+        def fail_selector(_: FunctionMatch) -> int | None:
+            raise MF2Error("bad-selector", "Selector failed.")
+
+        registry = (
+            FunctionRegistry()
+            .with_function("test:select", lambda call: call.value)
+            .with_selector("test:select", fail_selector)
+        )
+
+        formatted = format_message(
+            result.model,
+            {"state": "ready"},
+            functions=registry,
+        )
+
+        self.assertEqual("fallback", formatted.value)
+        self.assertEqual(
+            ["bad-selector"], [error.code for error in formatted.errors]
+        )
+
     def test_default_percent_function_formats_and_selects(self) -> None:
         message = {
             "type": "message",
@@ -263,6 +294,130 @@ class PublicApiTest(unittest.TestCase):
 
         self.assertEqual("12.5%", format_message(message).value)
         self.assertEqual("selected", format_message(select, {"ratio": "0.125"}).value)
+
+    def test_numeric_exact_match_outranks_plural_category(self) -> None:
+        result = parse_to_model(
+            ".input {$count :integer} "
+            ".match $count "
+            "one {{plural one}} "
+            "1 {{exact one}} "
+            "* {{fallback}}"
+        )
+        self.assertFalse(result.has_diagnostics, result.diagnostics)
+
+        self.assertEqual(
+            "exact one",
+            format_message(result.model, {"count": 1}, locale="en").value,
+        )
+        self.assertEqual(
+            "exact one",
+            format_message(result.model, {"count": 1.2}, locale="en").value,
+        )
+
+    def test_number_exact_match_uses_canonical_integer_serialization(self) -> None:
+        result = parse_to_model(
+            ".input {$value :number} "
+            ".match $value "
+            "1.0 {{decimal spelling}} "
+            "1 {{integer spelling}} "
+            "* {{fallback}}"
+        )
+        self.assertFalse(result.has_diagnostics, result.diagnostics)
+
+        formatted = format_message(result.model, {"value": 1}, locale="en")
+
+        self.assertEqual("integer spelling", formatted.value)
+        self.assertEqual([], formatted.errors)
+
+    def test_numeric_selector_reports_invalid_variant_key(self) -> None:
+        result = parse_to_model(
+            ".input {$value :number} "
+            ".match $value "
+            "horse {{horse}} "
+            "1 {{exact}} "
+            "* {{fallback}}"
+        )
+        self.assertFalse(result.has_diagnostics, result.diagnostics)
+
+        formatted = format_message(result.model, {"value": 1}, locale="en")
+
+        self.assertEqual("exact", formatted.value)
+        self.assertEqual(
+            ["bad-variant-key"], [error.code for error in formatted.errors]
+        )
+
+    def test_failed_annotated_input_does_not_leak_raw_argument(self) -> None:
+        result = parse_to_model(".input {$value :number} {{Value {$value}}}")
+        self.assertFalse(result.has_diagnostics, result.diagnostics)
+
+        formatted = format_message(result.model, {"value": "not-a-number"})
+
+        self.assertEqual("Value {$value}", formatted.value)
+        self.assertEqual(["bad-operand"], [error.code for error in formatted.errors])
+
+    def test_numeric_select_option_must_be_literal(self) -> None:
+        result = parse_to_model("Value {1 :number select=$mode}")
+        self.assertFalse(result.has_diagnostics, result.diagnostics)
+
+        formatted = format_message(result.model, {"mode": "exact"})
+
+        self.assertEqual("Value 1", formatted.value)
+        self.assertEqual(["bad-option"], [error.code for error in formatted.errors])
+
+        inherited = parse_to_model(
+            ".local $source = {1 :number select=exact} "
+            ".local $value = {$source :number} "
+            ".match $value "
+            "1 {{exact}} "
+            "* {{fallback {$value}}}"
+        )
+        self.assertFalse(inherited.has_diagnostics, inherited.diagnostics)
+
+        inherited_formatted = format_message(inherited.model)
+
+        self.assertEqual("fallback 1", inherited_formatted.value)
+        self.assertEqual(
+            ["bad-option", "bad-selector"],
+            [error.code for error in inherited_formatted.errors],
+        )
+
+    def test_bidi_direction_controls_isolation_and_propagates(self) -> None:
+        cases = [
+            ("ltr", "\u2066"),
+            ("rtl", "\u2067"),
+            ("auto", "\u2068"),
+        ]
+        for direction, marker in cases:
+            with self.subTest(direction=direction):
+                result = parse_to_model(
+                    f"Value {{text :string u:dir={direction}}}"
+                )
+                self.assertFalse(result.has_diagnostics, result.diagnostics)
+                formatted = format_message(
+                    result.model, bidi_isolation="default"
+                )
+                parts = format_message_to_parts(result.model)
+                self.assertEqual(f"Value {marker}text\u2069", formatted.value)
+                self.assertEqual(direction, parts.parts[1].get("direction"))
+
+        propagated = parse_to_model(
+            ".local $value = {text :string u:dir=rtl} {{Value {$value}}}"
+        )
+        self.assertEqual(
+            "Value \u2067text\u2069",
+            format_message(
+                propagated.model, bidi_isolation="default"
+            ).value,
+        )
+
+    def test_bidi_direction_is_invalid_on_markup(self) -> None:
+        result = parse_to_model("{#tag u:dir=rtl}value{/tag}")
+        self.assertFalse(result.has_diagnostics, result.diagnostics)
+
+        formatted = format_message(result.model)
+
+        self.assertEqual("value", formatted.value)
+        self.assertEqual(["bad-option"], [error.code for error in formatted.errors])
 
     def test_default_registry_does_not_ship_currency_shim(self) -> None:
         result = parse_to_model("Total: {$amount :currency currency=USD}")
@@ -336,6 +491,26 @@ class PublicApiTest(unittest.TestCase):
                 self.assertEqual(
                     ["bad-operand"], [error.code for error in formatted.errors]
                 )
+
+    def test_portable_number_applies_fraction_options(self) -> None:
+        cases = [
+            ("{$amount :number maximumFractionDigits=1}", "1.29", "1.3"),
+            (
+                ".local $amount = {1.2 :number minimumFractionDigits=2} "
+                "{{{$amount :number}}}",
+                None,
+                "1.20",
+            ),
+        ]
+
+        for source, amount, expected in cases:
+            with self.subTest(source=source):
+                parsed = parse_to_model(source)
+                self.assertFalse(parsed.has_diagnostics, parsed.diagnostics)
+                arguments = {} if amount is None else {"amount": amount}
+                formatted = format_message(parsed.model, arguments)
+                self.assertEqual(expected, formatted.value)
+                self.assertEqual([], formatted.errors)
 
     def test_portable_numeric_formatting_handles_large_bounded_values(self) -> None:
         cases = [

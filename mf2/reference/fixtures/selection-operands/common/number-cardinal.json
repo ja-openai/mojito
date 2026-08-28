@@ -1,0 +1,29 @@
+{
+  "name": "reference-number-cardinal-selection",
+  "source": ".input {$value :number}\n.match $value\nzero {{zero}}\none {{one}}\ntwo {{two}}\nfew {{few}}\nmany {{many}}\nother {{other}}\n* {{other}}",
+  "formatCases": [
+    { "name": "arabic-zero", "locale": "ar", "arguments": { "value": "0" }, "expected": "zero" },
+    { "name": "arabic-one", "locale": "ar", "arguments": { "value": "1" }, "expected": "one" },
+    { "name": "arabic-two", "locale": "ar", "arguments": { "value": "2" }, "expected": "two" },
+    { "name": "arabic-few", "locale": "ar", "arguments": { "value": "3" }, "expected": "few" },
+    { "name": "arabic-many", "locale": "ar", "arguments": { "value": "11" }, "expected": "many" },
+    { "name": "arabic-other", "locale": "ar", "arguments": { "value": "100" }, "expected": "other" },
+    { "name": "welsh-zero", "locale": "cy", "arguments": { "value": "0" }, "expected": "zero" },
+    { "name": "welsh-one", "locale": "cy", "arguments": { "value": "1" }, "expected": "one" },
+    { "name": "welsh-two", "locale": "cy", "arguments": { "value": "2" }, "expected": "two" },
+    { "name": "welsh-few", "locale": "cy", "arguments": { "value": "3" }, "expected": "few" },
+    { "name": "welsh-many", "locale": "cy", "arguments": { "value": "6" }, "expected": "many" },
+    { "name": "welsh-other", "locale": "cy", "arguments": { "value": "4" }, "expected": "other" },
+    { "name": "russian-negative-one", "locale": "ru", "arguments": { "value": "-1" }, "expected": "one" },
+    { "name": "russian-negative-two", "locale": "ru", "arguments": { "value": "-2" }, "expected": "few" },
+    { "name": "russian-zero", "locale": "ru", "arguments": { "value": "0" }, "expected": "many" },
+    { "name": "russian-decimal", "locale": "ru", "arguments": { "value": "1.5" }, "expected": "other" },
+    { "name": "french-zero", "locale": "fr", "arguments": { "value": "0" }, "expected": "one" },
+    { "name": "french-other", "locale": "fr", "arguments": { "value": "2" }, "expected": "other" },
+    { "name": "french-grouped-million", "locale": "fr", "arguments": { "value": "1000000" }, "expected": "many" },
+    { "name": "spanish-grouped-million", "locale": "es", "arguments": { "value": "1000000" }, "expected": "many" },
+    { "name": "italian-grouped-million", "locale": "it", "arguments": { "value": "1000000" }, "expected": "many" },
+    { "name": "portuguese-grouped-million", "locale": "pt", "arguments": { "value": "1000000" }, "expected": "many" },
+    { "name": "slovenian-decimal", "locale": "sl", "arguments": { "value": "1.5" }, "expected": "few" }
+  ]
+}

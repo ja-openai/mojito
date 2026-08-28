@@ -9,7 +9,7 @@ with examples, integration tests, and a local CLI runner:
 - format the model with string arguments
 - run shared conformance fixtures
 - report a scoreboard against the vendored Unicode MessageFormat WG official
-  tests, guarded by `../../conformance/unicode-official-baseline.json`
+  tests, guarded by `../../conformance/unicode-official-baseline-core.json`
 - emit stable diagnostic codes
 
 ## Shape

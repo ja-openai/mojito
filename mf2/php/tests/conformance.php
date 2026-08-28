@@ -110,6 +110,11 @@ function assert_public_api_boundary(): void
     assert_same('unsupported function fallback', 'Total: {$amount}', $formatted['value']);
     assert_json_equal('unsupported function diagnostic', ['unknown-function'], array_map(static fn($error): string => error_code($error), $formatted['errors']));
 
+    $largeOffset = parse_to_model('Value {123456789012345.9 :offset add=1}')['model'];
+    $largeOffsetResult = format_message($largeOffset);
+    assert_same('exact decimal offset', 'Value 123456789012346.9', $largeOffsetResult['value']);
+    assert_json_equal('exact decimal offset errors', [], $largeOffsetResult['errors']);
+
     $message = parse_to_model('Hello {$name}')['model'];
     $emptyMissing = format_message($message, [], [
         'onMissingArgument' => static fn(array $context): string => '',
@@ -232,7 +237,10 @@ function assert_contains_all(string $label, array $actual, array $expected): voi
 function assert_error_codes(string $label, array $actualErrors, array $expectedErrors): void
 {
     $actual = array_map(static fn(Throwable $error): string => error_code($error), $actualErrors);
-    assert_contains_all($label, $actual, expected_codes($expectedErrors));
+    $expected = expected_codes($expectedErrors);
+    sort($actual, SORT_STRING);
+    sort($expected, SORT_STRING);
+    assert_json_equal($label, $expected, $actual);
 }
 
 function expected_codes(array $items): array

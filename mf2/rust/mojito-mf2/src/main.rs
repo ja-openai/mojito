@@ -215,9 +215,9 @@ fn main() {
             let path = args
                 .next()
                 .unwrap_or_else(|| "../../third_party/message-format-wg/test".to_string());
-            let baseline = args
-                .next()
-                .unwrap_or_else(|| "../../conformance/unicode-official-baseline.json".to_string());
+            let baseline = args.next().unwrap_or_else(|| {
+                "../../conformance/unicode-official-baseline-core.json".to_string()
+            });
             unicode_tests::run(Path::new(&path), Path::new(&baseline));
         }
         _ => usage_and_exit(),

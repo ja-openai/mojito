@@ -237,7 +237,8 @@ public final class Mf2Formatter {
                         inputValue.rawValue(),
                         function,
                         locale,
-                        (optionName, defaultValue) -> optionValue(function, optionName, defaultValue),
+                        (optionName, defaultValue) -> resolvedOptionValue(
+                                function, inputValue.source(), optionName, defaultValue),
                         sourceRef(inputValue.source())));
                 String sourceValue = inputValue.source() == null ? rendered : inputValue.source().value();
                 putLocal(input.name(), ResolvedValue.string(
@@ -401,6 +402,7 @@ public final class Mf2Formatter {
             }
             recordFunctionResolutionErrors(function, source);
             BidiDirection direction = bidiDirectionForFunction(function, source);
+            ResolvedFunctionSource inheritedSource = source;
             try {
                 String sourceValue = source == null ? value : source.value();
                 return new ExpressionOutput(
@@ -409,7 +411,8 @@ public final class Mf2Formatter {
                                 rawValue,
                                 function,
                                 locale,
-                                (optionName, defaultValue) -> optionValue(function, optionName, defaultValue),
+                                (optionName, defaultValue) -> resolvedOptionValue(
+                                        function, inheritedSource, optionName, defaultValue),
                                 sourceRef(source))),
                         false,
                         new ResolvedFunctionSource(sourceValue, function, source),
@@ -485,6 +488,19 @@ public final class Mf2Formatter {
             };
         }
 
+        private String resolvedOptionValue(
+                Mf2Message.FunctionRef function,
+                ResolvedFunctionSource source,
+                String optionName,
+                String defaultValue)
+                throws Mf2Exception {
+            if (function.options().containsKey(optionName)) {
+                return optionValue(function, optionName, defaultValue);
+            }
+            return Mf2FunctionSupport.inheritedNumericOptionValue(
+                    function.name(), sourceRef(source), optionName, defaultValue);
+        }
+
         private boolean exactMatch(String selectorName) {
             SelectorAnnotation annotation = selectorAnnotation(selectorName);
             return annotation == null || annotation.exactMatch();
@@ -494,8 +510,44 @@ public final class Mf2Formatter {
             if (annotation == null || !annotation.isNumeric()) {
                 return null;
             }
-            String operand = annotation.operandForSelection(value);
-            return operand == null ? null : PluralRules.selectPluralCategory(locale, operand, annotation.numberSelect());
+            if (annotation.numberSelect() == NumberSelect.EXACT) {
+                return null;
+            }
+            String rendered = value.rendered();
+            if (annotation.function().name().equals("offset")) {
+                return PluralRules.selectPluralCategory(
+                        locale, rendered, annotation.numberSelect());
+            }
+            Double parsed;
+            try {
+                parsed = value.source() == null
+                        ? Mf2FunctionSupport.parseDecimalNumber(rendered)
+                        : Mf2FunctionSupport.parseSourceDecimal(sourceRef(value.source()));
+            } catch (Mf2Exception ignored) {
+                return null;
+            }
+            if (parsed == null) {
+                return null;
+            }
+            try {
+                String minimum = resolvedOptionValue(
+                        annotation.function(), value.source(), "minimumFractionDigits", "0");
+                String maximum = resolvedOptionValue(
+                        annotation.function(), value.source(), "maximumFractionDigits", null);
+                String operand = Mf2UnlocalizedNumericFunctions.selectionOperand(
+                        parsed,
+                        annotation.function().name(),
+                        Mf2FunctionSupport.parseNonNegativeOption(
+                                minimum, "minimumFractionDigits option must be a non-negative integer."),
+                        maximum == null
+                                ? null
+                                : Mf2FunctionSupport.parseNonNegativeOption(
+                                        maximum,
+                                        "maximumFractionDigits option must be a non-negative integer."));
+                return PluralRules.selectPluralCategory(locale, operand, annotation.numberSelect());
+            } catch (Mf2Exception ignored) {
+                return null;
+            }
         }
 
         private boolean hasValue(String name) {
@@ -589,14 +641,17 @@ public final class Mf2Formatter {
                                 selector.function(),
                                 literal.value(),
                                 locale,
-                                (optionName, defaultValue) -> optionValue(selector.function(), optionName, defaultValue),
+                                (optionName, defaultValue) -> resolvedOptionValue(
+                                        selector.function(), selector.source(), optionName, defaultValue),
                                 sourceRef(selector.source())));
                     } catch (Mf2Exception error) {
                         if (!fallback) {
                             throw error;
                         }
                         errors.add(fallbackError(error));
-                        errors.add(new Mf2Exception("bad-selector", "Selector failed to match."));
+                        if (!error.code().equals("bad-variant-key")) {
+                            errors.add(new Mf2Exception("bad-selector", "Selector failed to match."));
+                        }
                         yield null;
                     }
                 }
@@ -619,7 +674,9 @@ public final class Mf2Formatter {
             if (!isNumericFunction(function)) {
                 return;
             }
-            if (numericSelectUsesVariable(function) || inheritedExactNumericSource(sourceRef(source))) {
+            if (numericSelectUsesVariable(function)
+                    || "exact".equals(Mf2FunctionSupport.inheritedNumericOptionValue(
+                            function.name(), sourceRef(source), "select", null))) {
                 Mf2Exception error = new Mf2Exception(
                         "bad-option",
                         "Numeric select option is not valid in this context.");
@@ -888,17 +945,6 @@ public final class Mf2Formatter {
         return function.options().get("select") instanceof Mf2Message.VariableArgument;
     }
 
-    private static boolean inheritedExactNumericSource(Mf2FunctionRegistry.FunctionSourceRef source)
-            throws Mf2Exception {
-        if (source == null) {
-            return false;
-        }
-        if (isNumericFunction(source.function()) && "exact".equals(source.optionValue("select", null))) {
-            return true;
-        }
-        return inheritedExactNumericSource(source.inheritedSource());
-    }
-
     private static BidiDirection bidiDirectionForFunction(
             Mf2Message.FunctionRef function, ResolvedFunctionSource source) throws Mf2Exception {
         String value = functionOptionLiteral(function, "u:dir", null);
@@ -973,24 +1019,6 @@ public final class Mf2Formatter {
             return isNumericFunction(function);
         }
 
-        String operandForSelection(ResolvedValue value) {
-            String rendered = value.rendered();
-            if (function.name().equals("percent")) {
-                if (rendered.endsWith("%")) {
-                    return rendered.substring(0, rendered.length() - 1);
-                }
-                String sourceValue = value.source() == null ? rendered : value.source().value();
-                try {
-                    return Double.toString(Double.parseDouble(sourceValue) * 100.0);
-                } catch (NumberFormatException ignored) {
-                    return null;
-                }
-            }
-            if (function.name().equals("number")) {
-                return value.source() == null ? rendered : value.source().value();
-            }
-            return rendered;
-        }
     }
 
     private record SelectorValue(

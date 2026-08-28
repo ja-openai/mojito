@@ -260,11 +260,20 @@ public final class Icu4jReference {
         for (JsonNode formatCase : fixture.path("formatCases")) {
           String locale = formatCase.path("locale").asText("en");
           String name = fixture.path("name").asText(fixturePath.getFileName().toString());
+          String caseName = formatCase.path("name").asText();
           Map<String, Object> arguments = toMap(formatCase.path("arguments"));
-          String expected = formatCase.path("expected").asText();
+          String expected = formatCase
+              .path("referenceExpected")
+              .path("icu4j")
+              .asText(formatCase.path("expected").asText());
           String bidiIsolation = formatCase.path("bidiIsolation").asText("none");
           cases.add(buildCase(
-              name + "[" + locale + "]", source, locale, bidiIsolation, arguments, expected));
+              name + (caseName.isEmpty() ? "" : "/" + caseName) + "[" + locale + "]",
+              source,
+              locale,
+              bidiIsolation,
+              arguments,
+              expected));
         }
       }
     }

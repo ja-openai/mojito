@@ -297,6 +297,14 @@ object KotlinConformance {
             ),
             KotlinFormattedPartJson.toMaps(emptyFormatErrorParts.parts),
         )
+
+        val roundedNumber = Mf2Formatter.formatMessage(
+            model = parsePublicApiModel("{${'$'}value :number maximumFractionDigits=1}"),
+            arguments = mapOf("value" to 1.29),
+            functions = Mf2FunctionRegistry.portable(),
+        )
+        assertPublicApiValue("maximumFractionDigits", "1.3", roundedNumber.value)
+        assertPublicApiCodes("maximumFractionDigits errors", emptyList(), roundedNumber.errors)
     }
 
     private fun parsePublicApiModel(source: String): Mf2Model {

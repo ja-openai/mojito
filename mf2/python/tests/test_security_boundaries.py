@@ -275,6 +275,40 @@ class SecurityBoundariesTest(unittest.TestCase):
                 self.assertEqual("fallback", excessive_input_exponent.value)
                 self.assertEqual("fallback", excessive_text.value)
 
+    def test_scientific_plural_operands_drop_nonsemantic_fraction_zeros(
+        self,
+    ) -> None:
+        for function, value in [
+            ("number", "1.0e1000"),
+            ("number", "1.2345e1000"),
+            ("percent", "1.0e998"),
+            ("percent", "1.2345e998"),
+            ("integer", "1.0e1000"),
+            ("integer", "1.2345e1000"),
+            ("integer", "-1.2345e1000"),
+        ]:
+            with self.subTest(function=function):
+                parsed = parse_to_model(
+                    f".input {{$n :{function}}}\n"
+                    ".match $n\n"
+                    "many {{selected}}\n"
+                    "* {{fallback}}"
+                )
+                self.assertIsNotNone(parsed.model, parsed.diagnostics)
+                registry = FunctionRegistry().with_function(
+                    function, lambda call: call.value
+                )
+
+                formatted = format_message(
+                    parsed.model,
+                    {"n": value},
+                    locale="ru",
+                    functions=registry,
+                )
+
+                self.assertEqual("selected", formatted.value)
+                self.assertEqual([], formatted.errors)
+
     def test_argument_text_is_never_reparsed_as_code_or_mf2(self) -> None:
         parsed = parse_to_model("Value: {$value}")
         self.assertIsNotNone(parsed.model, parsed.diagnostics)
@@ -364,7 +398,7 @@ class SecurityBoundariesTest(unittest.TestCase):
         for _ in range(depth):
             source = FunctionSource(
                 value="localized",
-                function={"name": "test:pass", "options": {}},
+                function={"name": "number", "options": {}},
                 inherited_source=source,
                 _option_resolver=lambda _name, default: default,
             )
@@ -376,7 +410,7 @@ class SecurityBoundariesTest(unittest.TestCase):
     def test_cyclic_function_source_chain_is_rejected(self) -> None:
         source = FunctionSource(
             value="localized",
-            function={"name": "test:pass", "options": {}},
+            function={"name": "number", "options": {}},
             inherited_source=None,
             _option_resolver=lambda _name, default: default,
         )

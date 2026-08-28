@@ -51,7 +51,7 @@
     "demo": "node examples/demo.js",
     "demo:intl": "node examples/intl-demo.js",
     "generate:plurals": "sh ../cldr/update_generated.sh",
-    "unicode-tests": "node tools/unicode-tests.js ../third_party/message-format-wg/test ../conformance/unicode-official-baseline.json"
+    "unicode-tests": "node tools/unicode-tests.js ../third_party/message-format-wg/test ../conformance/unicode-official-baseline-core.json"
   },
   "devDependencies": {
     "typescript": "~5.6.3"

@@ -252,7 +252,7 @@ func assertErrorCodes(t *testing.T, label string, actual []Error, item map[strin
 	for _, err := range actual {
 		actualCodes = append(actualCodes, err.Code)
 	}
-	if !containsAll(actualCodes, expected) {
+	if !reflect.DeepEqual(actualCodes, expected) {
 		t.Fatalf("%s: expected error codes %v, got %v", label, expected, actualCodes)
 	}
 }

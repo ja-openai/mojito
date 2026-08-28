@@ -418,8 +418,10 @@ class _Parser:
                 return content
             self.index += 1
         self.push_diagnostic(
-            "unclosed-placeholder",
-            "Placeholder is missing a closing brace.",
+            "unclosed-quoted-literal" if in_quote else "unclosed-placeholder",
+            "Quoted literal is missing closing '|'."
+            if in_quote
+            else "Placeholder is missing a closing brace.",
             start,
             len(self.source),
         )

@@ -16,7 +16,12 @@ final class Mf2UnlocalizedNumericFunctions {
     private static String formatNumber(Mf2FunctionRegistry.FunctionCall call)
             throws Mf2Exception {
         double value = Mf2FunctionSupport.parseCallDecimal(call, "Number function requires a numeric operand.");
-        return formatDecimalNumber(value, Mf2PortableFunctions.signDisplayAlways(call.function()), minimumFractionDigits(call));
+        String formatted = formatDecimalWithMaximumFractionDigits(
+                value, maximumFractionDigits(call));
+        if (signDisplayAlways(call) && value >= 0.0) {
+            formatted = "+" + formatted;
+        }
+        return appendMinimumFractionDigits(formatted, minimumFractionDigits(call));
     }
 
     private static String formatPercent(Mf2FunctionRegistry.FunctionCall call)
@@ -24,7 +29,7 @@ final class Mf2UnlocalizedNumericFunctions {
         double value = Mf2FunctionSupport.parseCallDecimal(call, "Percent function requires a numeric operand.");
         return formatPercentNumber(
                 value,
-                Mf2PortableFunctions.signDisplayAlways(call.function()),
+                signDisplayAlways(call),
                 minimumFractionDigits(call),
                 maximumFractionDigits(call));
     }
@@ -33,7 +38,26 @@ final class Mf2UnlocalizedNumericFunctions {
             throws Mf2Exception {
         double value = Mf2FunctionSupport.parseCallDecimal(call, "Integer function requires a numeric operand.");
         return Mf2PortableFunctions.formatIntegerNumber(
-                (long) value, Mf2PortableFunctions.signDisplayAlways(call.function()));
+                (long) value, signDisplayAlways(call));
+    }
+
+    static String selectionOperand(
+            double value,
+            String functionName,
+            int minimumFractionDigits,
+            Integer maximumFractionDigits) {
+        if (functionName.equals("integer")) {
+            return Long.toString((long) value);
+        }
+        if (functionName.equals("percent")) {
+            value *= 100.0;
+        }
+        if (functionName.equals("number") || functionName.equals("percent")) {
+            return appendMinimumFractionDigits(
+                    formatDecimalWithMaximumFractionDigits(value, maximumFractionDigits),
+                    minimumFractionDigits);
+        }
+        return Double.toString(value);
     }
 
     static String formatDecimalNumber(double value, boolean signDisplayAlways, int minimumFractionDigits) {
@@ -113,5 +137,10 @@ final class Mf2UnlocalizedNumericFunctions {
         }
         return Mf2FunctionSupport.parseNonNegativeOption(
                 value, "maximumFractionDigits option must be a non-negative integer.");
+    }
+
+    private static boolean signDisplayAlways(Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        return "always".equals(call.optionValue("signDisplay", null));
     }
 }

@@ -1,0 +1,18 @@
+{
+  "name": "reference-number-offset-source-provenance",
+  "source": ".local $rounded = {1.9 :number maximumFractionDigits=0}\n.local $roundedOffset = {$rounded :offset add=1}\n.local $negative = {-1.9 :offset add=1}\n.local $integral = {0.0 :offset add=1}\n.match $negative $integral\n-0.9 one {{negative {$negative}; integral {$integral}; rounded {$roundedOffset}}}\n* * {{fallback {$negative}; integral {$integral}; rounded {$roundedOffset}}}",
+  "formatCases": [
+    {
+      "name": "offset-selection-and-semantic-number",
+      "locale": "en",
+      "arguments": {},
+      "expected": "negative -0.9; integral 1; rounded 2.9",
+      "referenceExpected": {
+        "icu4j": "fallback -0.9; integral 1; rounded 2.9"
+      },
+      "referenceUnsupported": {
+        "icu4cxx": "U_MF_UNKNOWN_FUNCTION_ERROR"
+      }
+    }
+  ]
+}

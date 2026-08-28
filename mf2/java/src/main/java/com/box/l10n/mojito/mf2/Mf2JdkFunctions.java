@@ -40,6 +40,10 @@ final class Mf2JdkFunctions {
         if (minimumFractionDigits != null) {
             format.setMinimumFractionDigits(minimumFractionDigits);
         }
+        Integer maximumFractionDigits = maximumFractionDigits(call);
+        if (maximumFractionDigits != null) {
+            format.setMaximumFractionDigits(maximumFractionDigits);
+        }
         return applySignDisplay(format.format(value), value, call);
     }
 
@@ -73,7 +77,8 @@ final class Mf2JdkFunctions {
                 call, "Currency function requires a numeric operand.");
         String currency = currencyCode(call);
         if (currency == null) {
-            throw Mf2Exception.badOperand("Currency function requires a currency option.");
+            throw Mf2Exception.badOperand(
+                    "Currency function requires a currency operand or currency option.");
         }
         NumberFormat format = NumberFormat.getCurrencyInstance(locale(call.locale()));
         try {
@@ -124,25 +129,7 @@ final class Mf2JdkFunctions {
 
     private static String currencyCode(Mf2FunctionRegistry.FunctionCall call)
             throws Mf2Exception {
-        String currency = call.optionValue("currency", null);
-        if (currency != null) {
-            return currency;
-        }
-        return inheritedCurrencyCode(call.inheritedSource());
-    }
-
-    private static String inheritedCurrencyCode(Mf2FunctionRegistry.FunctionSourceRef source)
-            throws Mf2Exception {
-        if (source == null) {
-            return null;
-        }
-        if (source.function().name().equals("currency")) {
-            String currency = source.optionValue("currency", null);
-            if (currency != null) {
-                return currency;
-            }
-        }
-        return inheritedCurrencyCode(source.inheritedSource());
+        return Mf2FunctionSupport.resolvedCurrencyCode(call);
     }
 
     private static Integer currencyFractionDigits(Mf2FunctionRegistry.FunctionCall call)
@@ -174,16 +161,12 @@ final class Mf2JdkFunctions {
     }
 
     private static String applySignDisplay(
-            String formatted, double value, Mf2FunctionRegistry.FunctionCall call) {
-        if (value >= 0.0 && "always".equals(functionOptionLiteral(call.function(), "signDisplay", null))) {
+            String formatted, double value, Mf2FunctionRegistry.FunctionCall call)
+            throws Mf2Exception {
+        if (value >= 0.0 && "always".equals(call.optionValue("signDisplay", null))) {
             return "+" + formatted;
         }
         return formatted;
-    }
-
-    private static String functionOptionLiteral(Mf2Message.FunctionRef function, String name, String fallback) {
-        Mf2Message.ExpressionArgument option = function.options().get(name);
-        return option instanceof Mf2Message.LiteralArgument literal ? literal.value() : fallback;
     }
 
     private static Locale locale(String locale) {

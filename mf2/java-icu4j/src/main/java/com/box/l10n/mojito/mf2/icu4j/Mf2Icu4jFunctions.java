@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.mf2.icu4j;
 
 import com.box.l10n.mojito.mf2.Mf2Exception;
+import com.box.l10n.mojito.mf2.Mf2FunctionSupport;
 import com.box.l10n.mojito.mf2.Mf2FunctionRegistry;
 import com.ibm.icu.text.DateFormat;
 import com.ibm.icu.text.DisplayContext;
@@ -71,7 +72,8 @@ public final class Mf2Icu4jFunctions {
         double value = numericValue(call, "Currency function requires a numeric operand.");
         String currencyCode = currencyCode(call);
         if (currencyCode == null) {
-            throw badOption("Currency function requires a currency option.");
+            throw badOperand(
+                    "Currency function requires a currency operand or currency option.");
         }
         NumberFormat format = NumberFormat.getCurrencyInstance(locale(call));
         try {
@@ -146,21 +148,35 @@ public final class Mf2Icu4jFunctions {
 
     private static double numericValue(Mf2FunctionRegistry.FunctionCall call, String message)
             throws Mf2Exception {
-        Object rawValue = call.rawValue();
-        double value;
-        if (rawValue instanceof Number number) {
+        Double value = parseFiniteDouble(
+                Mf2FunctionSupport.numericSourceOperand(call.inheritedSource()));
+        if (value == null && call.rawValue() instanceof Number number) {
             value = number.doubleValue();
-        } else {
+        }
+        if (value == null) {
             try {
                 value = Double.parseDouble(call.value());
-            } catch (NumberFormatException error) {
-                throw badOperand(message);
+            } catch (NumberFormatException ignored) {
             }
         }
-        if (!Double.isFinite(value)) {
+        if (value == null || !Double.isFinite(value)) {
             throw badOperand(message);
         }
         return value;
+    }
+
+    private static Double parseFiniteDouble(String value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            double parsed = Double.parseDouble(value);
+            if (Double.isFinite(parsed)) {
+                return parsed;
+            }
+        } catch (NumberFormatException ignored) {
+        }
+        return null;
     }
 
     private static Date dateValue(Mf2FunctionRegistry.FunctionCall call, ZoneId zone)
@@ -344,25 +360,7 @@ public final class Mf2Icu4jFunctions {
 
     private static String currencyCode(Mf2FunctionRegistry.FunctionCall call)
             throws Mf2Exception {
-        String currency = call.optionValue("currency", null);
-        if (currency != null) {
-            return currency;
-        }
-        return inheritedCurrencyCode(call.inheritedSource());
-    }
-
-    private static String inheritedCurrencyCode(Mf2FunctionRegistry.FunctionSourceRef source)
-            throws Mf2Exception {
-        if (source == null) {
-            return null;
-        }
-        if (source.function().name().equals("currency")) {
-            String currency = source.optionValue("currency", null);
-            if (currency != null) {
-                return currency;
-            }
-        }
-        return inheritedCurrencyCode(source.inheritedSource());
+        return Mf2FunctionSupport.resolvedCurrencyCode(call);
     }
 
     private static String dateStyleOption(Mf2FunctionRegistry.FunctionCall call)

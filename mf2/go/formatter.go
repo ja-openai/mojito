@@ -278,7 +278,7 @@ func (c *formatContext) applyInputDeclaration(input map[string]any) error {
 		Function: functionRef,
 		Locale:   c.locale,
 		OptionValue: func(optionName, defaultValue string) (string, error) {
-			return c.optionValue(functionRef, optionName, defaultValue)
+			return c.resolvedOptionValue(functionRef, inputValue.source, optionName, defaultValue)
 		},
 		InheritedSource: inputValue.source,
 	})
@@ -504,7 +504,7 @@ func (c *formatContext) formatExpressionOutput(expression map[string]any) (expre
 		Function: functionRef,
 		Locale:   c.locale,
 		OptionValue: func(optionName, defaultValue string) (string, error) {
-			return c.optionValue(functionRef, optionName, defaultValue)
+			return c.resolvedOptionValue(functionRef, source, optionName, defaultValue)
 		},
 		InheritedSource: source,
 	})
@@ -582,6 +582,51 @@ func (c *formatContext) optionValue(functionRef map[string]any, optionName, fall
 	}
 }
 
+func (c *formatContext) resolvedOptionValue(functionRef map[string]any, source *FunctionSource, optionName, fallback string) (string, error) {
+	if hasOwn(asObject(functionRef["options"]), optionName) {
+		return c.optionValue(functionRef, optionName, fallback)
+	}
+	return inheritedNumericOptionValue(stringField(functionRef, "name"), source, optionName, fallback)
+}
+
+func inheritedNumericOptionValue(targetFunction string, source *FunctionSource, optionName, fallback string) (string, error) {
+	if source == nil || numericOptionIsDiscarded(targetFunction, optionName) {
+		return fallback, nil
+	}
+	sourceFunction := stringField(source.Function, "name")
+	if !inheritsNumericOptionsFrom(targetFunction, sourceFunction) || numericOptionIsDiscarded(sourceFunction, optionName) {
+		return fallback, nil
+	}
+	if hasOwn(asObject(source.Function["options"]), optionName) {
+		return sourceOptionValue(source, optionName, fallback)
+	}
+	return inheritedNumericOptionValue(sourceFunction, source.Inherited, optionName, fallback)
+}
+
+func inheritsNumericOptionsFrom(targetFunction, sourceFunction string) bool {
+	switch targetFunction {
+	case "number", "integer", "percent", "offset":
+		return sourceFunction == "number" || sourceFunction == "integer" || sourceFunction == "percent" || sourceFunction == "offset"
+	case "currency":
+		return sourceFunction == "currency"
+	default:
+		return false
+	}
+}
+
+func numericOptionIsDiscarded(functionName, optionName string) bool {
+	switch functionName {
+	case "integer":
+		return optionName == "minimumFractionDigits" || optionName == "maximumFractionDigits" || optionName == "minimumSignificantDigits"
+	case "percent":
+		return optionName == "minimumIntegerDigits" || optionName == "roundingIncrement" || optionName == "select"
+	case "offset":
+		return optionName == "add" || optionName == "subtract"
+	default:
+		return false
+	}
+}
+
 func (c *formatContext) hasValue(name string) bool {
 	return !c.failedLocals[name] && (c.locals[name].rawValue != nil || hasOwn(c.locals, name) || hasOwnAny(c.arguments, name))
 }
@@ -594,7 +639,7 @@ func (c *formatContext) value(name string) resolvedValue {
 }
 
 func (c *formatContext) recordFunctionResolutionErrors(functionRef map[string]any, source *FunctionSource) error {
-	if !isNumericFunction(functionRef) || (!numericSelectUsesVariable(functionRef) && !inheritedExactNumericSource(source)) {
+	if !isNumericFunction(functionRef) || (!numericSelectUsesVariable(functionRef) && !inheritedExactNumericSource(source, stringField(functionRef, "name"))) {
 		return nil
 	}
 	err := badOption("Numeric select option is not valid in this context.")
@@ -673,7 +718,7 @@ func (c *formatContext) keyMatchRank(key map[string]any, selector selectorValue)
 		Key:      value,
 		Locale:   c.locale,
 		OptionValue: func(optionName, defaultValue string) (string, error) {
-			return c.optionValue(selector.function, optionName, defaultValue)
+			return c.resolvedOptionValue(selector.function, selector.source, optionName, defaultValue)
 		},
 		InheritedSource: selector.source,
 	})
@@ -681,7 +726,11 @@ func (c *formatContext) keyMatchRank(key map[string]any, selector selectorValue)
 		if !c.fallback {
 			return 0, false, err
 		}
-		c.errors = append(c.errors, fallbackError(err), mf2Error("bad-selector", "Selector failed to match."))
+		recoverable := fallbackError(err)
+		c.errors = append(c.errors, recoverable)
+		if recoverable.Code != "bad-variant-key" {
+			c.errors = append(c.errors, mf2Error("bad-selector", "Selector failed to match."))
+		}
 		return 0, false, nil
 	}
 	if rank == nil {

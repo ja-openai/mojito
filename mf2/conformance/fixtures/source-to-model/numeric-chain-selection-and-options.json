@@ -1,0 +1,87 @@
+{
+  "name": "numeric-chain-selection-and-options",
+  "source": ".local $percent = {1 :percent signDisplay=always}\n.local $offset = {$percent :offset add=1}\n.local $integer = {1.9 :integer}\n.local $copy = {$integer :number}\n.match $copy\none {{one {$offset}}}\n* {{fallback {$offset}}}",
+  "expectedModel": {
+    "type": "select",
+    "declarations": [
+      {
+        "type": "local",
+        "name": "percent",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "1" },
+          "function": {
+            "type": "function",
+            "name": "percent",
+            "options": {
+              "signDisplay": { "type": "literal", "value": "always" }
+            }
+          }
+        }
+      },
+      {
+        "type": "local",
+        "name": "offset",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "percent" },
+          "function": {
+            "type": "function",
+            "name": "offset",
+            "options": {
+              "add": { "type": "literal", "value": "1" }
+            }
+          }
+        }
+      },
+      {
+        "type": "local",
+        "name": "integer",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "literal", "value": "1.9" },
+          "function": { "type": "function", "name": "integer" }
+        }
+      },
+      {
+        "type": "local",
+        "name": "copy",
+        "value": {
+          "type": "expression",
+          "arg": { "type": "variable", "name": "integer" },
+          "function": { "type": "function", "name": "number" }
+        }
+      }
+    ],
+    "selectors": [{ "type": "variable", "name": "copy" }],
+    "variants": [
+      {
+        "keys": [{ "type": "literal", "value": "one" }],
+        "value": [
+          "one ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "offset" }
+          }
+        ]
+      },
+      {
+        "keys": [{ "type": "*" }],
+        "value": [
+          "fallback ",
+          {
+            "type": "expression",
+            "arg": { "type": "variable", "name": "offset" }
+          }
+        ]
+      }
+    ]
+  },
+  "formatCases": [
+    {
+      "locale": "en",
+      "arguments": {},
+      "expected": "one +2"
+    }
+  ]
+}

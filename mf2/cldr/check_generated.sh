@@ -10,7 +10,7 @@ GENERATED_PATHS="
 mf2/cldr/generated/all
 mf2/python/src/mojito_mf2/_cldr_plural_rules.py
 mf2/rust/mojito-mf2/src/cldr_plural_rules.rs
-mf2/swift/MessageFormat2/Sources/MessageFormat2Runtime/CldrPluralRules.swift
+mf2/swift/MessageFormat2/Sources/MessageFormat2/CldrPluralRules.swift
 mf2/java/src/main/java/com/box/l10n/mojito/mf2/CldrPluralRules.java
 mf2/kotlin/src/main/kotlin/com/box/l10n/mojito/mf2/CldrPluralRules.kt
 mf2/javascript/src/cldr_plural_rules.js

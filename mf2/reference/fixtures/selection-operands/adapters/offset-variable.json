@@ -1,0 +1,10 @@
+{
+  "name": "adapter-offset-variable-selection",
+  "source": ".input {$value :integer}\n.input {$step :integer}\n.local $adjusted = {$value :offset subtract=$step}\n.match $adjusted\nzero {{zero}}\none {{one}}\ntwo {{two}}\nfew {{few}}\nmany {{many}}\nother {{other}}\n* {{other}}",
+  "formatCases": [
+    { "name": "fixed-one", "locale": "en", "arguments": { "value": 2, "step": 1 }, "expected": "one" },
+    { "name": "french-million", "locale": "fr", "arguments": { "value": 1000001, "step": 1 }, "expected": "many" },
+    { "name": "russian-negative", "locale": "ru", "arguments": { "value": -1, "step": 1 }, "expected": "few" },
+    { "name": "arabic-zero", "locale": "ar", "arguments": { "value": 10, "step": 10 }, "expected": "zero" }
+  ]
+}

@@ -32,7 +32,7 @@ class UnicodeTestFailure extends Error {}
 
 export async function runUnicodeTests(root, baselinePath) {
   const testRoot = root ?? resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "third_party", "message-format-wg", "test");
-  const baseline = baselinePath ?? resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "conformance", "unicode-official-baseline.json");
+  const baseline = baselinePath ?? resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "conformance", "unicode-official-baseline-core.json");
   const summary = {
     passed: 0,
     skipped: 0,

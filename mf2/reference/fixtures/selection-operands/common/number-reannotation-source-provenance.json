@@ -1,0 +1,16 @@
+{
+  "name": "reference-number-reannotation-source-provenance",
+  "source": ".local $n = {1.29 :number maximumFractionDigits=1}\n.local $m = {$n :number maximumFractionDigits=2}\n.local $i = {1.25 :integer}\n.local $copy = {$i :number}\n.match $m\nfew {{few {$m}}}\nother {{other {$m}; integer {$copy}}}\n* {{fallback {$m}}}",
+  "formatCases": [
+    {
+      "name": "override-does-not-consume-rounded-display",
+      "locale": "sr",
+      "arguments": {},
+      "expected": "other 1,29; integer 1",
+      "referenceExpected": {
+        "icu4j": "fallback 1,29",
+        "icu4cxx": "other 1,29; integer 1,25"
+      }
+    }
+  ]
+}

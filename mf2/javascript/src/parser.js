@@ -382,7 +382,7 @@ class Parser {
     if (!tokens) return null;
     let index = 0;
     let functionRef = null;
-    const attributes = {};
+    const attributes = Object.create(null);
     if (index < tokens.length && tokens[index].startsWith(":")) {
       const result = this.parseFunctionAnnotation(tokens, index, start, end);
       if (!result) return null;
@@ -455,7 +455,7 @@ class Parser {
       this.pushDiagnostic("unsupported-expression", "Function annotation must separate options with whitespace.", start, end);
       return null;
     }
-    const options = {};
+    const options = Object.create(null);
     index += 1;
     while (index < tokens.length && !tokens[index].startsWith("@")) {
       const option = this.parseOptionTokens(tokens, index, start, end);
@@ -612,8 +612,8 @@ class Parser {
   parseMarkupTail(rest, start, end) {
     const tokens = this.splitTailTokens(rest, start, end);
     if (!tokens) return null;
-    const options = {};
-    const attributes = {};
+    const options = Object.create(null);
+    const attributes = Object.create(null);
     let seenAttribute = false;
     let index = 0;
     while (index < tokens.length) {

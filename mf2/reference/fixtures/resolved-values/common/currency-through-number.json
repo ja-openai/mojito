@@ -1,0 +1,15 @@
+{
+  "name": "reference-currency-through-number",
+  "source": ".local $usd = {42 :currency currency=USD}\n.local $plain = {$usd :number}\n{{Value {$plain :currency}}}",
+  "formatCases": [
+    {
+      "name": "implicit-currency-provenance",
+      "locale": "en",
+      "arguments": {},
+      "expected": "Value $42.00",
+      "referenceUnsupported": {
+        "icu4cxx": "U_MF_UNKNOWN_FUNCTION_ERROR"
+      }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "reference-number-exact-selection",
+  "source": ".input {$value :number select=exact}\n.match $value\n-2 {{negative-two}}\n1.0 {{decimal-spelling}}\n1 {{integer-spelling}}\n1.5 {{decimal}}\n1000000 {{million}}\n* {{fallback}}",
+  "formatCases": [
+    { "name": "negative", "locale": "fr", "arguments": { "value": "-2" }, "expected": "negative-two" },
+    { "name": "canonical-integer-spelling", "locale": "en", "arguments": { "value": 1 }, "expected": "integer-spelling" },
+    {
+      "name": "decimal",
+      "locale": "fr",
+      "arguments": { "value": "1.5" },
+      "expected": "decimal",
+      "referenceExpected": { "icu4cxx": "fallback" }
+    },
+    {
+      "name": "grouped-million",
+      "locale": "fr",
+      "arguments": { "value": "1000000" },
+      "expected": "million",
+      "referenceExpected": { "icu4cxx": "fallback" }
+    },
+    { "name": "fallback", "locale": "fr", "arguments": { "value": "7" }, "expected": "fallback" }
+  ]
+}

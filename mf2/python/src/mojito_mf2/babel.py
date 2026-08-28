@@ -19,15 +19,16 @@ except ModuleNotFoundError as error:
         'Babel support is optional. Install it with: pip install "mojito-mf2[babel]"'
     ) from error
 
-from .errors import MF2Error
-from .functions import FunctionCall, FunctionRegistry
 from ._locale_key import _validate_locale_input, canonical_locale_key
 from ._portable_functions import (
-    _MAX_DECIMAL_DIGITS,
     _decimal_precision,
+    _iter_source_chain,
+    _numeric_option_value,
+    _parse_call_decimal,
     _parse_non_negative_integer_option,
-    _validate_decimal_operand,
 )
+from .errors import MF2Error
+from .functions import FunctionCall, FunctionRegistry, FunctionSource
 
 __all__ = ["babel_function_registry"]
 
@@ -47,7 +48,9 @@ def babel_function_registry() -> FunctionRegistry:
 
 
 def _format_number(call: FunctionCall) -> str:
-    value = _parse_decimal(call.value, "Number function requires a numeric operand.")
+    value = _parse_call_decimal(
+        call, "Number function requires a numeric operand."
+    )
     try:
         with localcontext() as context:
             context.prec = _decimal_precision(value, _maximum_fraction_digits(call))
@@ -65,7 +68,9 @@ def _format_number(call: FunctionCall) -> str:
 
 
 def _format_percent(call: FunctionCall) -> str:
-    value = _parse_decimal(call.value, "Percent function requires a numeric operand.")
+    value = _parse_call_decimal(
+        call, "Percent function requires a numeric operand."
+    )
     try:
         with localcontext() as context:
             context.prec = _decimal_precision(value, _maximum_fraction_digits(call)) + 2
@@ -83,7 +88,9 @@ def _format_percent(call: FunctionCall) -> str:
 
 
 def _format_integer(call: FunctionCall) -> str:
-    value = _parse_decimal(call.value, "Integer function requires a numeric operand.")
+    value = _parse_call_decimal(
+        call, "Integer function requires a numeric operand."
+    )
     try:
         with localcontext() as context:
             context.prec = _decimal_precision(value)
@@ -99,10 +106,24 @@ def _format_integer(call: FunctionCall) -> str:
 
 
 def _format_currency(call: FunctionCall) -> str:
-    value = _parse_decimal(call.value, "Currency function requires a numeric operand.")
-    currency = call.option_value("currency")
+    value = _parse_call_decimal(
+        call, "Currency function requires a numeric operand."
+    )
+    direct_currency = call.option_value("currency")
+    inherited_currency = _inherited_option_value(
+        call.inherited_source, "currency", {"currency"}
+    )
+    if inherited_currency is not None and direct_currency is not None:
+        raise MF2Error(
+            "bad-option",
+            "Currency option cannot override an existing currency operand.",
+        )
+    currency = inherited_currency or direct_currency
     if currency is None:
-        raise MF2Error("bad-option", "Currency function requires a currency option.")
+        raise MF2Error(
+            "bad-operand",
+            "Currency function requires a currency operand or currency option.",
+        )
     try:
         with localcontext() as context:
             context.prec = _decimal_precision(value, 2)
@@ -116,7 +137,7 @@ def _format_currency(call: FunctionCall) -> str:
 
 
 def _format_date(call: FunctionCall) -> str:
-    value = _date_from(call.raw_value, call.value)
+    value = _date_from(call.raw_value, call.value, call.inherited_source)
     return format_date(
         value,
         format=_date_style(call),
@@ -125,28 +146,28 @@ def _format_date(call: FunctionCall) -> str:
 
 
 def _format_time(call: FunctionCall) -> str:
-    value = _time_from(call.raw_value, call.value)
+    value = _time_from(call.raw_value, call.value, call.inherited_source)
     return format_time(
         value,
         format=_time_style(call),
         locale=_babel_locale(call),
-        tzinfo=_time_zone(call),
+        tzinfo=_time_zone(call, value),
     )
 
 
 def _format_datetime(call: FunctionCall) -> str:
-    value = _datetime_from(call.raw_value, call.value)
+    value = _datetime_from(call.raw_value, call.value, call.inherited_source)
     return format_datetime(
         value,
         format=_datetime_style(call),
         locale=_babel_locale(call),
-        tzinfo=_time_zone(call),
+        tzinfo=_time_zone(call, value),
     )
 
 
 def _format_relative_time(call: FunctionCall) -> str:
-    value = _parse_decimal(
-        call.value, "Relative time function requires a numeric operand."
+    value = _parse_call_decimal(
+        call, "Relative time function requires a numeric operand."
     )
     unit = _option_one_of(
         call,
@@ -202,25 +223,13 @@ def _maximum_fraction_digits(call: FunctionCall) -> int | None:
 
 
 def _non_negative_integer_option(call: FunctionCall, name: str) -> int | None:
-    value = call.option_value(name)
+    value = _numeric_option_value(call, name)
     if value is None:
         return None
     return _parse_non_negative_integer_option(
         value,
         f"{name} option must be a non-negative integer.",
     )
-
-
-def _parse_decimal(value: Any, message: str) -> Decimal:
-    text = str(value)
-    if len(text) > _MAX_DECIMAL_DIGITS:
-        raise MF2Error("bad-operand", message)
-    try:
-        parsed = Decimal(text)
-    except DecimalException as error:
-        raise MF2Error("bad-operand", message) from error
-    _validate_decimal_operand(parsed, message)
-    return parsed
 
 
 def _babel_locale(call: FunctionCall) -> Locale:
@@ -235,7 +244,11 @@ def _babel_locale(call: FunctionCall) -> Locale:
         raise MF2Error("bad-option", "Unsupported locale identifier.") from error
 
 
-def _date_from(raw_value: Any, rendered: str) -> date:
+def _date_from(
+    raw_value: Any,
+    rendered: str,
+    source: FunctionSource | None,
+) -> date:
     if isinstance(raw_value, datetime):
         return raw_value.date()
     if isinstance(raw_value, date):
@@ -246,12 +259,21 @@ def _date_from(raw_value: Any, rendered: str) -> date:
         parsed_datetime = _parse_datetime_or_none(rendered)
         if parsed_datetime is not None:
             return parsed_datetime.date()
+        inherited = _inherited_source_value(source, {"date", "datetime"})
+        if inherited is not None:
+            inherited_date = _parse_date_or_datetime_date(inherited)
+            if inherited_date is not None:
+                return inherited_date
         raise MF2Error(
             "bad-operand", "Date function requires a date operand."
         ) from error
 
 
-def _time_from(raw_value: Any, rendered: str) -> time | datetime:
+def _time_from(
+    raw_value: Any,
+    rendered: str,
+    source: FunctionSource | None,
+) -> time | datetime:
     if isinstance(raw_value, datetime):
         return raw_value
     if isinstance(raw_value, time):
@@ -262,12 +284,21 @@ def _time_from(raw_value: Any, rendered: str) -> time | datetime:
         parsed_datetime = _parse_datetime_or_none(rendered)
         if parsed_datetime is not None:
             return parsed_datetime
+        inherited = _inherited_source_value(source, {"time", "datetime"})
+        if inherited is not None:
+            inherited_time = _parse_time_or_datetime(inherited)
+            if inherited_time is not None:
+                return inherited_time
         raise MF2Error(
             "bad-operand", "Time function requires a time operand."
         ) from error
 
 
-def _datetime_from(raw_value: Any, rendered: str) -> datetime:
+def _datetime_from(
+    raw_value: Any,
+    rendered: str,
+    source: FunctionSource | None,
+) -> datetime:
     if isinstance(raw_value, datetime):
         return raw_value
     if isinstance(raw_value, date):
@@ -275,7 +306,55 @@ def _datetime_from(raw_value: Any, rendered: str) -> datetime:
     parsed_datetime = _parse_datetime_or_none(rendered)
     if parsed_datetime is not None:
         return parsed_datetime
+    inherited = _inherited_source_value(source, {"date", "datetime"})
+    if inherited is not None:
+        inherited_datetime = _parse_datetime_or_none(inherited)
+        if inherited_datetime is not None:
+            return inherited_datetime
+        try:
+            return datetime.combine(date.fromisoformat(inherited), time())
+        except ValueError:
+            pass
     raise MF2Error("bad-operand", "Datetime function requires a datetime operand.")
+
+
+def _parse_date_or_datetime_date(value: str) -> date | None:
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        parsed_datetime = _parse_datetime_or_none(value)
+        return parsed_datetime.date() if parsed_datetime is not None else None
+
+
+def _parse_time_or_datetime(value: str) -> time | datetime | None:
+    try:
+        return time.fromisoformat(value)
+    except ValueError:
+        return _parse_datetime_or_none(value)
+
+
+def _inherited_source_value(
+    source: FunctionSource | None, function_names: set[str]
+) -> str | None:
+    if source is None:
+        return None
+    if source.function.get("name") not in function_names:
+        return None
+    return source.value
+
+
+def _inherited_option_value(
+    source: FunctionSource | None,
+    option_name: str,
+    function_names: set[str],
+) -> str | None:
+    for current in _iter_source_chain(source):
+        if current.function.get("name") not in function_names:
+            return None
+        value = current.option_value(option_name)
+        if value is not None:
+            return value
+    return None
 
 
 def _parse_datetime_or_none(rendered: str) -> datetime | None:
@@ -290,21 +369,39 @@ def _date_style(call: FunctionCall) -> str:
 
 
 def _time_style(call: FunctionCall) -> str:
-    return _style(call, ("timeStyle", "precision", "style"), "medium", "Time style")
+    time_style = call.option_value("timeStyle")
+    if time_style is not None:
+        return _validate_style(time_style, "Time style")
+    precision = call.option_value("precision")
+    if precision is not None:
+        return _precision_style(precision, "Time precision")
+    return _validate_style(
+        call.option_value("style", "medium") or "medium", "Time style"
+    )
 
 
 def _datetime_style(call: FunctionCall) -> str:
     shared = call.option_value("style")
-    date_style = _first_option(call, ("dateStyle", "dateLength"))
-    time_style = _first_option(call, ("timeStyle", "timePrecision"))
+    date_style = call.option_value("dateStyle")
+    time_style = call.option_value("timeStyle")
     if date_style is not None and time_style is not None and date_style != time_style:
         raise MF2Error(
             "bad-option",
             "Babel datetime formatting currently requires dateStyle and timeStyle to match.",
         )
-    return _validate_style(
-        date_style or time_style or shared or "medium", "Datetime style"
-    )
+    if date_style is not None or time_style is not None:
+        return _validate_style(
+            date_style or time_style or "medium", "Datetime style"
+        )
+    date_length = call.option_value("dateLength")
+    time_precision = call.option_value("timePrecision")
+    if date_length is not None:
+        if time_precision is not None:
+            _precision_style(time_precision, "Datetime timePrecision")
+        return _validate_style(date_length, "Datetime dateLength")
+    if time_precision is not None:
+        return _precision_style(time_precision, "Datetime timePrecision")
+    return _validate_style(shared or "medium", "Datetime style")
 
 
 def _style(
@@ -333,6 +430,17 @@ def _validate_style(value: str, label: str) -> str:
     )
 
 
+def _precision_style(value: str, label: str) -> str:
+    if value == "second":
+        return "medium"
+    if value in {"hour", "minute"}:
+        return "short"
+    raise MF2Error(
+        "bad-option",
+        f"{label} option must be one of hour, minute, second.",
+    )
+
+
 def _option_one_of(
     call: FunctionCall,
     option_name: str,
@@ -348,10 +456,18 @@ def _option_one_of(
     return value
 
 
-def _time_zone(call: FunctionCall) -> Any:
-    value = call.option_value("timeZone", "UTC") or "UTC"
+def _time_zone(call: FunctionCall, temporal_value: time | datetime) -> Any:
+    option = call.option_value("timeZone", "UTC") or "UTC"
+    if option == "input":
+        input_timezone = getattr(temporal_value, "tzinfo", None)
+        if input_timezone is None or temporal_value.utcoffset() is None:
+            raise MF2Error(
+                "bad-operand",
+                "timeZone=input requires an operand with a time zone or offset.",
+            )
+        return input_timezone
     try:
-        return get_timezone(value)
+        return get_timezone(option)
     except Exception as error:
         raise MF2Error(
             "bad-option",
@@ -373,10 +489,7 @@ def _timedelta(value: Decimal, unit: str) -> timedelta:
 
 
 def _apply_sign_display(rendered: str, value: Decimal, call: FunctionCall) -> str:
-    if (
-        value >= 0
-        and _function_option_literal(call.function, "signDisplay") == "always"
-    ):
+    if value >= 0 and _numeric_option_value(call, "signDisplay") == "always":
         return f"+{rendered}"
     return rendered
 

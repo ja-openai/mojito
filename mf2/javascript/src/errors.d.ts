@@ -8,4 +8,5 @@ export class MF2Error extends Error {
   static badOperand(message: string): MF2Error;
   static badSelector(message: string): MF2Error;
   static badOption(message: string): MF2Error;
+  static badVariantKey(message: string): MF2Error;
 }

@@ -248,7 +248,12 @@ The current conformance slice covers:
   option and attribute names
 - function annotations and literal/variable options in the data model, including
   quoted option values containing spaces, variable-valued options, and optional
-  whitespace around `=`
+  whitespace around `=`, inherited numeric options across reannotation for
+  selection and display, inherited `signDisplay`, function-specific option
+  filtering through `:integer`, percent-to-number option retention, non-tie
+  `maximumFractionDigits` display rounding, and preservation of semantic
+  numeric values across reannotation without consuming previously rounded
+  display text, including chained `:offset` calculations
 - formatter function registries in Rust/Swift/Python/Java; callbacks receive a
   rendered string plus the raw runtime value (`serde_json::Value`, `MF2Value`,
   Python object, or Java `Object`) so demos and app-specific functions can avoid
@@ -269,22 +274,28 @@ The current conformance slice covers:
 - Rust `:integer` built-in formatting that truncates numeric operands, reports
   invalid selector options, and supports exact selection of the formatted value
 - expression and markup attributes in the data model, including quoted attribute
-  values containing spaces
+  values containing spaces and prototype-like names such as `__proto__`
 - `.input` and `.local` declarations, including multiple inputs and chained locals
 - markup placeholders, stripped from string output for now
 - `format_to_parts` / `formatToParts` output for text, expression output, and
   markup boundaries, preserving expression attributes plus markup options and
   attributes for UI renderers
 - safe default formatting APIs that return output plus collected runtime errors
-  for unresolved variables/selectors, including fallback parts with source
-  metadata
+  for unresolved variables/selectors and failed annotated declarations,
+  including fallback parts with source metadata and continued selection after
+  invalid numeric variant keys
 - opt-in `default` bidi isolation for string formatting, wrapping expression
   output in Unicode FSI/PDI, with `u:dir` selecting LRI/RLI/FSI when present
   while keeping parts output raw
 - exact-match `.match` selectors with catch-all fallback, including
   multi-selector matching,
   `:number select=exact`, `:integer select=exact`, and quoted literal variant
-  keys such as `|*|` that remain distinct from catch-all `*`
+  keys such as `|*|` that remain distinct from catch-all `*`; numeric exact
+  keys outrank plural-category keys regardless of source order. Canonical
+  integer spelling is required for integer values without
+  `minimumFractionDigits`, `minimumIntegerDigits`, `minimumSignificantDigits`,
+  or `maximumSignificantDigits`; direct decimal offset key `-0.9` is an explicit
+  Mojito policy rather than a general ICU/TR35 decimal-serialization claim
 - Rust selector function hooks for custom `.match` functions; the official
   Unicode pattern-selection runner uses test-only selector functions and
   best-match ranking plus resolved-value metadata propagation through inputs
@@ -307,8 +318,10 @@ The current conformance slice covers:
 Rust, Swift, Python, Java, Kotlin, JavaScript, Go, and PHP currently parse MF2 source
 into the official data model for this slice and run the shared source-to-model,
 formatting, parts, fallback, invalid-source, model-validation, and locale-key
-fixtures. Rust, Java, JavaScript, Go, and PHP also run the vendored Unicode
-MessageFormat WG suite at 461 passed, 0 skipped, 0 not wired.
+fixtures. Rust, Java, JavaScript, Go, and PHP also wire all 461 vendored Unicode
+MessageFormat WG tests. Java, Go, and PHP pass all 461; the dependency-free Rust
+and JavaScript core runners pass 429 and explicitly skip the 32 platform
+currency/date/time cases, with 0 tests not wired.
 
 ## V0 Target
 
@@ -346,6 +359,22 @@ Run only the shared conformance suite across all current language runtimes:
 ```sh
 sh conformance/check_all_languages.sh
 ```
+
+Run the count-asserting ICU4J selection gate; it also runs the ICU4C++
+extension when that optional preview toolchain is available:
+
+```sh
+sh reference/check.sh
+```
+
+Require ICU4C++ availability in a provisioned environment with:
+
+```sh
+MF2_REQUIRE_ICU4C=1 sh reference/check.sh
+```
+
+The exact suite/layer inventory and remaining gaps are documented in
+`conformance/coverage-audit.md`.
 
 Run the vendored Unicode MessageFormat WG suite directly:
 

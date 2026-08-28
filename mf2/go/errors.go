@@ -32,6 +32,10 @@ func badSelector(message string) Error {
 	return mf2Error("bad-selector", message)
 }
 
+func badVariantKey(message string) Error {
+	return mf2Error("bad-variant-key", message)
+}
+
 func unsupportedFunction(name string) Error {
 	return mf2Error("unsupported-function", "Function :"+name+" is not supported by this formatter registry.")
 }

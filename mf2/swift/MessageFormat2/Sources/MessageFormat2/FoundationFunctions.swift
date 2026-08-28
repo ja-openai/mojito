@@ -52,7 +52,7 @@ private func formatFoundationInteger(_ call: MF2FunctionCall) throws -> String {
 private func formatFoundationCurrency(_ call: MF2FunctionCall) throws -> String {
     let value = try parseFoundationNumber(call, message: "Currency function requires a numeric operand.")
     guard let currency = try currencyCode(call) else {
-        throw MF2Error.badOption("Currency function requires a currency option.")
+        throw MF2Error.badOperand("Currency function requires a currency option.")
     }
     guard isCurrencyCode(currency) else {
         throw MF2Error.badOption("Currency option must be an ISO 4217 currency code.")
@@ -62,7 +62,7 @@ private func formatFoundationCurrency(_ call: MF2FunctionCall) throws -> String 
     formatter.locale = foundationLocale(call.locale)
     formatter.numberStyle = .currency
     formatter.currencyCode = currency.uppercased()
-    if let fractionDigits = try nonNegativeIntegerOption(call, "fractionDigits") {
+    if let fractionDigits = try currencyFractionDigits(call) {
         formatter.minimumFractionDigits = fractionDigits
         formatter.maximumFractionDigits = fractionDigits
     }
@@ -70,30 +70,45 @@ private func formatFoundationCurrency(_ call: MF2FunctionCall) throws -> String 
 }
 
 private func formatFoundationDate(_ call: MF2FunctionCall) throws -> String {
-    let date = try foundationDate(call, message: "Date function requires a date or datetime operand.")
+    let timeZone = try timeZone(call)
+    let date = try foundationDate(
+        call,
+        timeZone: timeZone,
+        message: "Date function requires a date or datetime operand."
+    )
     let formatter = DateFormatter()
     formatter.locale = foundationLocale(call.locale)
-    formatter.timeZone = try timeZone(call)
+    formatter.timeZone = timeZone
     formatter.dateStyle = try dateStyle(try dateStyleOption(call))
     formatter.timeStyle = .none
     return formatter.string(from: date)
 }
 
 private func formatFoundationTime(_ call: MF2FunctionCall) throws -> String {
-    let date = try foundationDate(call, message: "Time function requires a time or datetime operand.")
+    let timeZone = try timeZone(call)
+    let date = try foundationDate(
+        call,
+        timeZone: timeZone,
+        message: "Time function requires a time or datetime operand."
+    )
     let formatter = DateFormatter()
     formatter.locale = foundationLocale(call.locale)
-    formatter.timeZone = try timeZone(call)
+    formatter.timeZone = timeZone
     formatter.dateStyle = .none
     formatter.timeStyle = try timeStyle(try timeStyleOption(call))
     return formatter.string(from: date)
 }
 
 private func formatFoundationDateTime(_ call: MF2FunctionCall) throws -> String {
-    let date = try foundationDate(call, message: "Datetime function requires a date or datetime operand.")
+    let timeZone = try timeZone(call)
+    let date = try foundationDate(
+        call,
+        timeZone: timeZone,
+        message: "Datetime function requires a date or datetime operand."
+    )
     let formatter = DateFormatter()
     formatter.locale = foundationLocale(call.locale)
-    formatter.timeZone = try timeZone(call)
+    formatter.timeZone = timeZone
     formatter.dateStyle = try dateStyle(try dateTimeDateStyleOption(call))
     formatter.timeStyle = try timeStyle(try dateTimeTimeStyleOption(call))
     return formatter.string(from: date)
@@ -101,7 +116,10 @@ private func formatFoundationDateTime(_ call: MF2FunctionCall) throws -> String 
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
     private func formatFoundationRelativeTime(_ call: MF2FunctionCall) throws -> String {
-        let value = try parseFoundationInteger(call.value, error: .badOperand("Relative time function requires an integer operand."))
+        let value = try parseFoundationInteger(
+            call,
+            error: .badOperand("Relative time function requires an integer operand.")
+        )
         let unit = try optionOneOf(
             call,
             "unit",
@@ -164,20 +182,13 @@ private func formatFoundationDateTime(_ call: MF2FunctionCall) throws -> String 
 #endif
 
 private func parseFoundationNumber(_ call: MF2FunctionCall, message: String) throws -> Double {
-    if let parsed = parseFoundationNumberLiteral(call.value) ?? parseSourceNumber(call.inheritedSource) {
+    if let parsed = try resolvedNumericSourceValue(call.inheritedSource) {
+        return parsed
+    }
+    if let parsed = parseFoundationNumberLiteral(call.value) {
         return parsed
     }
     throw MF2Error.badOperand(message)
-}
-
-private func parseSourceNumber(_ source: MF2FunctionSource?) -> Double? {
-    guard let source else {
-        return nil
-    }
-    if source.function.name == "number" || source.function.name == "integer" || source.function.name == "percent" || source.function.name == "currency" {
-        return parseFoundationNumberLiteral(source.value)
-    }
-    return parseSourceNumber(source.inheritedSource)
 }
 
 private func parseFoundationNumberLiteral(_ value: String) -> Double? {
@@ -202,6 +213,16 @@ private func parseFoundationInteger(_ value: String, error: MF2Error) throws -> 
     return parsed
 }
 
+private func parseFoundationInteger(_ call: MF2FunctionCall, error: MF2Error) throws -> Int {
+    if let source = try resolvedNumericSourceValue(call.inheritedSource) {
+        return Int(source.rounded(.towardZero))
+    }
+    if let direct = try? parseFoundationInteger(call.value, error: error) {
+        return direct
+    }
+    throw error
+}
+
 private func formatterString(_ formatter: NumberFormatter, _ value: Double) throws -> String {
     guard let output = formatter.string(from: NSNumber(value: value)) else {
         throw MF2Error.badOperand("Number formatter could not format the operand.")
@@ -210,15 +231,35 @@ private func formatterString(_ formatter: NumberFormatter, _ value: Double) thro
 }
 
 private func applySignDisplay(_ formatted: String, value: Double, call: MF2FunctionCall) throws -> String {
-    if value >= 0.0, try call.optionValue("signDisplay") == "always" {
+    if value >= 0.0,
+       try resolvedOptionValue(
+           call,
+           name: "signDisplay",
+           inheritedFrom: numericOptionSources(for: call.function.name)
+       ) == "always" {
         return "+\(formatted)"
     }
     return formatted
 }
 
 private func applyFractionOptions(_ call: MF2FunctionCall, formatter: NumberFormatter) throws {
-    let minimum = try nonNegativeIntegerOption(call, "minimumFractionDigits")
-    let maximum = try nonNegativeIntegerOption(call, "maximumFractionDigits")
+    let numericFunctions = numericOptionSources(for: call.function.name)
+    let minimum = try nonNegativeIntegerOption(
+        resolvedOptionValue(
+            call,
+            name: "minimumFractionDigits",
+            inheritedFrom: numericFunctions
+        ),
+        "minimumFractionDigits"
+    )
+    let maximum = try nonNegativeIntegerOption(
+        resolvedOptionValue(
+            call,
+            name: "maximumFractionDigits",
+            inheritedFrom: numericFunctions
+        ),
+        "maximumFractionDigits"
+    )
     if let minimum, let maximum, maximum < minimum {
         throw MF2Error.badOption("maximumFractionDigits option must be greater than or equal to minimumFractionDigits.")
     }
@@ -230,8 +271,8 @@ private func applyFractionOptions(_ call: MF2FunctionCall, formatter: NumberForm
     }
 }
 
-private func nonNegativeIntegerOption(_ call: MF2FunctionCall, _ name: String) throws -> Int? {
-    guard let value = try call.optionValue(name) else {
+private func nonNegativeIntegerOption(_ value: String?, _ name: String) throws -> Int? {
+    guard let value else {
         return nil
     }
     guard value.range(of: #"^\d+$"#, options: .regularExpression) == value.startIndex..<value.endIndex,
@@ -242,54 +283,70 @@ private func nonNegativeIntegerOption(_ call: MF2FunctionCall, _ name: String) t
     return parsed
 }
 
-private func currencyCode(_ call: MF2FunctionCall) throws -> String? {
-    if let currency = try call.optionValue("currency") {
-        return currency
-    }
-    return try inheritedCurrencyCode(call.inheritedSource)
-}
-
-private func inheritedCurrencyCode(_ source: MF2FunctionSource?) throws -> String? {
-    guard let source else {
+private func currencyFractionDigits(_ call: MF2FunctionCall) throws -> Int? {
+    let value = try resolvedOptionValue(
+        call,
+        name: "fractionDigits",
+        inheritedFrom: ["currency"]
+    )
+    if value == "auto" {
         return nil
     }
-    if source.function.name == "currency", let currency = try source.optionValue("currency") {
-        return currency
+    return try nonNegativeIntegerOption(value, "fractionDigits")
+}
+
+private func currencyCode(_ call: MF2FunctionCall) throws -> String? {
+    let direct = try call.optionValue("currency")
+    let inherited = try inheritedOptionValue(
+        call.inheritedSource,
+        name: "currency",
+        targetFunction: "currency",
+        from: ["currency"]
+    )
+    if inherited != nil, direct != nil {
+        throw MF2Error.badOption(
+            "Currency option cannot override the currency of a currency operand."
+        )
     }
-    return try inheritedCurrencyCode(source.inheritedSource)
+    return inherited ?? direct
 }
 
 private func isCurrencyCode(_ value: String) -> Bool {
     value.range(of: #"^[A-Za-z]{3}$"#, options: .regularExpression) == value.startIndex..<value.endIndex
 }
 
-private func foundationDate(_ call: MF2FunctionCall, message: String) throws -> Date {
-    if let parsed = parseFoundationDate(call.value) ?? parseSourceDate(call.inheritedSource) {
+private func foundationDate(_ call: MF2FunctionCall, timeZone: TimeZone, message: String) throws -> Date {
+    if let parsed = parseFoundationDate(call.value, timeZone: timeZone)
+        ?? parseSourceDate(call.inheritedSource, timeZone: timeZone)
+    {
         return parsed
     }
     throw MF2Error.badOperand(message)
 }
 
-private func parseSourceDate(_ source: MF2FunctionSource?) -> Date? {
+private func parseSourceDate(_ source: MF2FunctionSource?, timeZone: TimeZone) -> Date? {
     guard let source else {
         return nil
     }
     if source.function.name == "date" || source.function.name == "time" || source.function.name == "datetime" {
-        return parseFoundationDate(source.value)
+        return parseFoundationDate(source.value, timeZone: timeZone)
     }
-    return parseSourceDate(source.inheritedSource)
+    return parseSourceDate(source.inheritedSource, timeZone: timeZone)
 }
 
-private func parseFoundationDate(_ value: String) -> Date? {
+private func parseFoundationDate(_ value: String, timeZone: TimeZone) -> Date? {
     parseISO8601Date(value)
-        ?? parseFixedDate(value, format: "yyyy-MM-dd'T'HH:mm:ss")
-        ?? parseFixedDate(value, format: "yyyy-MM-dd'T'HH:mm")
-        ?? parseFixedDate(value, format: "yyyy-MM-dd")
-        ?? parseFixedDate(value, format: "HH:mm:ss")
-        ?? parseFixedDate(value, format: "HH:mm")
+        ?? parseFixedDate(value, format: "yyyy-MM-dd'T'HH:mm:ss", timeZone: timeZone)
+        ?? parseFixedDate(value, format: "yyyy-MM-dd'T'HH:mm", timeZone: timeZone)
+        ?? parseFixedDate(value, format: "yyyy-MM-dd", timeZone: timeZone)
+        ?? parseFixedDate(value, format: "HH:mm:ss", timeZone: timeZone)
+        ?? parseFixedDate(value, format: "HH:mm", timeZone: timeZone)
 }
 
 private func parseISO8601Date(_ value: String) -> Date? {
+    guard value.range(of: #"(Z|[+-]\d{2}:\d{2})$"#, options: .regularExpression) != nil else {
+        return nil
+    }
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     if let date = formatter.date(from: value) {
@@ -299,11 +356,11 @@ private func parseISO8601Date(_ value: String) -> Date? {
     return formatter.date(from: value)
 }
 
-private func parseFixedDate(_ value: String, format: String) -> Date? {
+private func parseFixedDate(_ value: String, format: String, timeZone: TimeZone) -> Date? {
     let formatter = DateFormatter()
     formatter.locale = Locale(identifier: "en_US_POSIX")
     formatter.calendar = Calendar(identifier: .gregorian)
-    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    formatter.timeZone = timeZone
     formatter.dateFormat = format
     return formatter.date(from: value)
 }

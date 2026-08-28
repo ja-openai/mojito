@@ -201,12 +201,19 @@ private class FormatContext(
                     rawValue = inputValue.rawValue,
                     function = functionRef,
                     locale = locale,
-                    optionResolver = { optionName, fallbackValue -> optionValue(functionRef, optionName, fallbackValue) },
+                    optionResolver = { optionName, fallbackValue ->
+                        resolvedOptionValue(functionRef, inputValue.source, optionName, fallbackValue)
+                    },
                     inheritedSource = inputValue.source,
                 ),
             )
             val sourceValue = inputValue.source?.value ?: rendered
-            locals[name] = ResolvedValue(formatted, Mf2FunctionSource(sourceValue, functionRef, inputValue.source))
+            locals[name] = ResolvedValue(
+                formatted,
+                Mf2FunctionSource(sourceValue, functionRef, inputValue.source) { optionName, fallbackValue ->
+                    optionValue(functionRef, optionName, fallbackValue)
+                },
+            )
         } catch (error: Mf2Error) {
             if (!fallback) throw error
             errors += fallbackError(error)
@@ -268,7 +275,13 @@ private class FormatContext(
             rendered = rendered,
             normalizedRendered = if (annotation?.isString == true) normalizeStringKey(rendered) else null,
             exactMatch = annotation == null || annotation.exactMatch,
-            selectionKey = selectionKey(locale, annotation, resolved),
+            selectionKey = selectionKey(locale, annotation, resolved) { name, fallback ->
+                if (annotation == null) {
+                    fallback
+                } else {
+                    resolvedOptionValue(annotation.function, resolved.source, name, fallback)
+                }
+            },
             function = annotation?.function,
             source = resolved.source,
         )
@@ -373,11 +386,20 @@ private class FormatContext(
                     rawValue = rawValue,
                     function = functionRef,
                     locale = locale,
-                    optionResolver = { optionName, fallbackValue -> optionValue(functionRef, optionName, fallbackValue) },
+                    optionResolver = { optionName, fallbackValue ->
+                        resolvedOptionValue(functionRef, source, optionName, fallbackValue)
+                    },
                     inheritedSource = source,
                 ),
             )
-            ExpressionOutput(formatted, false, Mf2FunctionSource(source?.value ?: value, functionRef, source), direction)
+            ExpressionOutput(
+                formatted,
+                false,
+                Mf2FunctionSource(source?.value ?: value, functionRef, source) { optionName, fallbackValue ->
+                    optionValue(functionRef, optionName, fallbackValue)
+                },
+                direction,
+            )
         } catch (error: Mf2Error) {
             if (!fallback) throw error
             val recoverable = fallbackError(error)
@@ -449,13 +471,40 @@ private class FormatContext(
         }
     }
 
+    private fun resolvedOptionValue(
+        functionRef: Map<String, Any?>,
+        source: Mf2FunctionSource?,
+        optionName: String,
+        fallbackValue: String?,
+    ): String? {
+        if (asMap(functionRef["options"]).containsKey(optionName)) {
+            return optionValue(functionRef, optionName, fallbackValue)
+        }
+        return inheritedNumericOptionValue(
+            stringValue(functionRef["name"]),
+            source,
+            optionName,
+            fallbackValue,
+        )
+    }
+
     private fun hasValue(name: String): Boolean = !failedLocals.contains(name) && (locals.containsKey(name) || arguments.containsKey(name))
 
     private fun value(name: String): ResolvedValue = locals[name] ?: ResolvedValue(arguments[name], null)
 
     private fun recordFunctionResolutionErrors(functionRef: Map<String, Any?>, source: FunctionSource?) {
         if (!isNumericFunction(functionRef)) return
-        if (!numericSelectUsesVariable(functionRef) && !inheritedExactNumericSource(source)) return
+        if (
+            !numericSelectUsesVariable(functionRef) &&
+            inheritedNumericOptionValue(
+                stringValue(functionRef["name"]),
+                source,
+                "select",
+                null,
+            ) != "exact"
+        ) {
+            return
+        }
         val error = Mf2Error.badOption("Numeric select option is not valid in this context.")
         if (!fallback) throw error
         errors += error
@@ -504,14 +553,18 @@ private class FormatContext(
                     function = functionRef,
                     key = keyValue,
                     locale = locale,
-                    optionResolver = { optionName, fallbackValue -> optionValue(functionRef, optionName, fallbackValue) },
+                    optionResolver = { optionName, fallbackValue ->
+                        resolvedOptionValue(functionRef, selector.source, optionName, fallbackValue)
+                    },
                     inheritedSource = selector.source,
                 ),
             )
         } catch (error: Mf2Error) {
             if (!fallback) throw error
             errors += fallbackError(error)
-            errors += Mf2Error.badSelector("Selector failed to match.")
+            if (error.code != "bad-variant-key") {
+                errors += Mf2Error.badSelector("Selector failed to match.")
+            }
             null
         }
     }
@@ -654,18 +707,36 @@ private fun literalKeyMatches(value: String, selector: SelectorValue): Boolean =
         normalizeStringKey(value) == selector.normalizedRendered
     }
 
-private fun selectionKey(locale: String, annotation: SelectorAnnotation?, resolvedValue: ResolvedValue): String? {
+private fun selectionKey(
+    locale: String,
+    annotation: SelectorAnnotation?,
+    resolvedValue: ResolvedValue,
+    optionValue: (String, String?) -> String?,
+): String? {
     if (annotation == null || !annotation.isNumeric || annotation.numberSelect == "exact") return null
-    var operand = valueToString(resolvedValue.rawValue)
-    if (annotation.function["name"] == "percent") {
-        operand = if (operand.endsWith("%")) {
-            operand.dropLast(1)
-        } else {
-            val sourceValue = resolvedValue.source?.value ?: operand
-            val sourceNumber = sourceValue.toDoubleOrNull() ?: return null
-            formatNumberValue(sourceNumber * 100.0)
-        }
+    val functionName = stringValue(annotation.function["name"])
+    val rendered = valueToString(resolvedValue.rawValue)
+    if (functionName == "offset") {
+        return selectPluralCategory(locale, rendered, annotation.numberSelect)
     }
+    val sourceValue = resolvedValue.source?.let(::numericSourceOperand) ?: rendered
+    val sourceNumber = Mf2PortableFunctions.parseDecimalNumber(sourceValue) ?: return null
+    val minimum = optionValue("minimumFractionDigits", "0") ?: "0"
+    val maximum = optionValue("maximumFractionDigits", null)
+    val operand = Mf2UnlocalizedNumericFunctions.selectionOperand(
+        sourceNumber,
+        functionName,
+        Mf2PortableFunctions.parseNonNegativeOption(
+            minimum,
+            "minimumFractionDigits option must be a non-negative integer.",
+        ),
+        maximum?.let {
+            Mf2PortableFunctions.parseNonNegativeOption(
+                it,
+                "maximumFractionDigits option must be a non-negative integer.",
+            )
+        },
+    )
     return selectPluralCategory(locale, operand, annotation.numberSelect)
 }
 

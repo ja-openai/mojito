@@ -1,0 +1,22 @@
+{
+  "name": "reference-integer-cardinal-selection",
+  "source": ".input {$value :integer}\n.match $value\nzero {{zero}}\none {{one}}\n1 {{exact-one}}\ntwo {{two}}\nfew {{few}}\nmany {{many}}\nother {{other}}\n* {{other}}",
+  "formatCases": [
+    {
+      "name": "french-grouped-million",
+      "locale": "fr",
+      "arguments": { "value": "1000000.9" },
+      "expected": "many",
+      "referenceExpected": { "icu4cxx": "other" }
+    },
+    { "name": "russian-negative-decimal", "locale": "ru", "arguments": { "value": "-2.9" }, "expected": "few" },
+    { "name": "exact-before-category", "locale": "en", "arguments": { "value": 1.2 }, "expected": "exact-one" },
+    {
+      "name": "slovenian-decimal",
+      "locale": "sl",
+      "arguments": { "value": "1.9" },
+      "expected": "exact-one",
+      "referenceExpected": { "icu4cxx": "two" }
+    }
+  ]
+}

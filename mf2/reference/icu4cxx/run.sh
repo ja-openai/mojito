@@ -57,6 +57,11 @@ if [ "${1:-}" = "--prepare-only" ]; then
   exit 0
 fi
 
+if [ "${1:-}" = "--detect-prefix" ]; then
+  detect_icu_prefix
+  exit 0
+fi
+
 if [ "${1:-}" = "--no-prepare" ]; then
   shift
   "${BIN}" "$@"

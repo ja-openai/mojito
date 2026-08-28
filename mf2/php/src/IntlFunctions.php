@@ -53,7 +53,10 @@ final class IntlFunctions
     {
         $value = self::numericValue($call, 'Currency function requires a numeric operand.');
         $currency = self::currencyCode($call);
-        if ($currency === null || preg_match('/^[A-Za-z]{3}$/', $currency) !== 1) {
+        if ($currency === null) {
+            throw MF2Error::badOperand('Currency function requires a currency operand or currency option.');
+        }
+        if (preg_match('/^[A-Za-z]{3}$/', $currency) !== 1) {
             throw MF2Error::badOption('Currency function requires a three-letter currency option.');
         }
         $formatter = self::numberFormatter($call, \NumberFormatter::CURRENCY);
@@ -123,10 +126,8 @@ final class IntlFunctions
         $rawValue = $call['rawValue'] ?? null;
         if (is_int($rawValue) || is_float($rawValue)) {
             $value = (float) $rawValue;
-        } elseif (is_numeric($call['value'] ?? null)) {
-            $value = (float) $call['value'];
         } else {
-            throw MF2Error::badOperand($message);
+            $value = Internal\parse_call_decimal($call, $message);
         }
         if (!is_finite($value)) {
             throw MF2Error::badOperand($message);
@@ -140,6 +141,10 @@ final class IntlFunctions
         if ($rawValue instanceof \DateTimeInterface) {
             return \DateTimeImmutable::createFromInterface($rawValue);
         }
+        $sourceValue = self::sourceDateTimeValue($call['inheritedSource'] ?? null, $timeZone);
+        if ($sourceValue !== null) {
+            return $sourceValue;
+        }
         $text = (string) ($call['value'] ?? '');
         if ($text === '') {
             throw MF2Error::badOperand($message);
@@ -149,6 +154,21 @@ final class IntlFunctions
         } catch (\Exception) {
             throw MF2Error::badOperand($message);
         }
+    }
+
+    private static function sourceDateTimeValue(?array $source, \DateTimeZone $timeZone): ?\DateTimeImmutable
+    {
+        if ($source === null) {
+            return null;
+        }
+        if (in_array($source['function']['name'] ?? '', ['date', 'time', 'datetime'], true)) {
+            try {
+                return new \DateTimeImmutable((string) $source['value'], $timeZone);
+            } catch (\Exception) {
+                // Continue to the original semantic source instead of reparsing localized display text.
+            }
+        }
+        return self::sourceDateTimeValue($source['inherited'] ?? null, $timeZone);
     }
 
     private static function setOptionalFractionDigits(\NumberFormatter $formatter, array $call): void
@@ -179,7 +199,15 @@ final class IntlFunctions
 
     private static function currencyCode(array $call): ?string
     {
-        return self::option($call, 'currency', null) ?? self::sourceOption($call['inheritedSource'] ?? null, 'currency');
+        $sourceCurrency = self::sourceOption($call['inheritedSource'] ?? null, 'currency');
+        $hasDirectCurrency = array_key_exists('currency', $call['function']['options'] ?? []);
+        if ($sourceCurrency !== null) {
+            if ($hasDirectCurrency) {
+                throw MF2Error::badOption('Currency option cannot override an existing currency operand.');
+            }
+            return $sourceCurrency;
+        }
+        return self::option($call, 'currency', null);
     }
 
     private static function option(array $call, string $name, ?string $fallback): ?string
@@ -190,14 +218,12 @@ final class IntlFunctions
 
     private static function sourceOption(?array $source, string $name): ?string
     {
-        if ($source === null) {
+        if ($source === null || ($source['function']['name'] ?? null) !== 'currency') {
             return null;
         }
-        if (($source['function']['name'] ?? null) === 'currency') {
-            $value = ($source['optionValue'] ?? static fn(string $name, mixed $fallback): mixed => $fallback)($name, null);
-            if ($value !== null) {
-                return (string) $value;
-            }
+        $value = ($source['optionValue'] ?? static fn(string $name, mixed $fallback): mixed => $fallback)($name, null);
+        if ($value !== null) {
+            return (string) $value;
         }
         return self::sourceOption($source['inherited'] ?? null, $name);
     }

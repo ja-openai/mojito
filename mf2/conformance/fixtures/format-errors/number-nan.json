@@ -1,0 +1,17 @@
+{
+  "name": "number-nan",
+  "model": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "value" },
+        "function": { "type": "function", "name": "number" }
+      }
+    ]
+  },
+  "locale": "en",
+  "arguments": { "value": "NaN" },
+  "expectedError": { "code": "bad-operand" }
+}

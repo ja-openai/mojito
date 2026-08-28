@@ -1,0 +1,17 @@
+{
+  "name": "number-negative-infinity",
+  "model": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": { "type": "variable", "name": "value" },
+        "function": { "type": "function", "name": "number" }
+      }
+    ]
+  },
+  "locale": "en",
+  "arguments": { "value": "-Infinity" },
+  "expectedError": { "code": "bad-operand" }
+}

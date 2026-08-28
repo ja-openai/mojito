@@ -187,7 +187,7 @@ final class FormatContext
                 'rawValue' => $inputValue['rawValue'],
                 'function' => $functionRef,
                 'locale' => $this->locale,
-                'optionValue' => fn(string $optionName, mixed $fallback): mixed => $this->optionValue($functionRef, $optionName, $fallback),
+                'optionValue' => fn(string $optionName, mixed $fallback): mixed => $this->resolvedOptionValue($functionRef, $inputValue['source'], $optionName, $fallback),
                 'inheritedSource' => $inputValue['source'],
             ]);
             $sourceValue = $inputValue['source']['value'] ?? $rendered;
@@ -251,7 +251,14 @@ final class FormatContext
             'rendered' => $rendered,
             'normalizedRendered' => $annotation?->isString() ? normalize_string_key($rendered) : null,
             'exactMatch' => $annotation === null || $annotation->exactMatch(),
-            'selectionKey' => selection_key($this->locale, $annotation, $value),
+            'selectionKey' => selection_key(
+                $this->locale,
+                $annotation,
+                $value,
+                fn(string $optionName, mixed $fallback): mixed => $annotation === null
+                    ? $fallback
+                    : $this->resolvedOptionValue($annotation->function, $value['source'], $optionName, $fallback),
+            ),
             'function' => $annotation?->function,
             'source' => $value['source'],
         ];
@@ -360,7 +367,7 @@ final class FormatContext
                 'rawValue' => $rawValue,
                 'function' => $functionRef,
                 'locale' => $this->locale,
-                'optionValue' => fn(string $name, mixed $fallback): mixed => $this->optionValue($functionRef, $name, $fallback),
+                'optionValue' => fn(string $name, mixed $fallback): mixed => $this->resolvedOptionValue($functionRef, $source, $name, $fallback),
                 'inheritedSource' => $source,
             ]);
             $sourceValue = $source['value'] ?? $value;
@@ -430,6 +437,29 @@ final class FormatContext
         return $fallback;
     }
 
+    private function resolvedOptionValue(array $functionRef, ?array $source, string $optionName, mixed $fallback): mixed
+    {
+        if (array_key_exists($optionName, $functionRef['options'] ?? [])) {
+            return $this->optionValue($functionRef, $optionName, $fallback);
+        }
+        return $this->inheritedNumericOptionValue((string) ($functionRef['name'] ?? ''), $source, $optionName, $fallback);
+    }
+
+    private function inheritedNumericOptionValue(string $targetFunction, ?array $source, string $optionName, mixed $fallback): mixed
+    {
+        if ($source === null || numeric_option_is_discarded($targetFunction, $optionName)) {
+            return $fallback;
+        }
+        $sourceFunction = (string) ($source['function']['name'] ?? '');
+        if (!inherits_numeric_options_from($targetFunction, $sourceFunction) || numeric_option_is_discarded($sourceFunction, $optionName)) {
+            return $fallback;
+        }
+        if (array_key_exists($optionName, $source['function']['options'] ?? [])) {
+            return ($source['optionValue'])($optionName, $fallback);
+        }
+        return $this->inheritedNumericOptionValue($sourceFunction, $source['inherited'], $optionName, $fallback);
+    }
+
     private function hasValue(string $name): bool
     {
         return !isset($this->failedLocals[$name]) && (array_key_exists($name, $this->locals) || array_key_exists($name, $this->arguments));
@@ -445,7 +475,8 @@ final class FormatContext
         if (!is_numeric_function($functionRef)) {
             return;
         }
-        if (!numeric_select_uses_variable($functionRef) && !inherited_exact_numeric_source($source)) {
+        if (!numeric_select_uses_variable($functionRef)
+            && !inherited_exact_numeric_source($source, (string) ($functionRef['name'] ?? ''))) {
             return;
         }
         $error = new MF2Error('bad-option', 'Numeric select option is not valid in this context.');
@@ -523,15 +554,23 @@ final class FormatContext
                 'function' => $selector['function'],
                 'key' => (string) ($key['value'] ?? ''),
                 'locale' => $this->locale,
-                'optionValue' => fn(string $name, mixed $fallback): mixed => $this->optionValue($selector['function'], $name, $fallback),
+                'optionValue' => fn(string $name, mixed $fallback): mixed => $this->resolvedOptionValue(
+                    $selector['function'],
+                    $selector['source'],
+                    $name,
+                    $fallback,
+                ),
                 'inheritedSource' => $selector['source'],
             ]);
         } catch (\Throwable $error) {
             if (!$this->fallback) {
                 throw $error;
             }
-            $this->errors[] = fallback_error($error);
-            $this->errors[] = new MF2Error('bad-selector', 'Selector failed to match.');
+            $recoverable = fallback_error($error);
+            $this->errors[] = $recoverable;
+            if ($recoverable->mf2Code !== 'bad-variant-key') {
+                $this->errors[] = new MF2Error('bad-selector', 'Selector failed to match.');
+            }
             return null;
         }
     }
@@ -695,14 +734,14 @@ final class SelectorAnnotation
     }
 }
 
-function selection_key(string $locale, ?SelectorAnnotation $annotation, array $resolvedValue): ?string
+function selection_key(string $locale, ?SelectorAnnotation $annotation, array $resolvedValue, callable $optionValue): ?string
 {
     if ($annotation === null || !$annotation->isNumeric() || $annotation->numberSelect === 'exact') {
         return null;
     }
-    $operand = value_to_string($resolvedValue['rawValue']);
-    if (($annotation->function['name'] ?? '') === 'percent') {
-        $operand = str_ends_with($operand, '%') ? substr($operand, 0, -1) : value_to_string(((float) $operand) * 100);
+    $operand = numeric_selection_operand($resolvedValue, $annotation->function, $optionValue);
+    if ($operand === null) {
+        return null;
     }
     return select_plural_category($locale, $operand, $annotation->numberSelect);
 }

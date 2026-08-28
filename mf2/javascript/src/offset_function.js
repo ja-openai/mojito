@@ -1,15 +1,36 @@
 import { MF2Error } from "./errors.js";
-import { parseInteger, sourceOptionValue } from "./function_support.js";
+import {
+  addIntegerOffset,
+  isNumericFunction,
+  numericSourceOperand,
+  parseDecimalNumber,
+  parseInteger,
+  sourceOptionValue,
+} from "./function_support.js";
 
 export function formatOffset(call) {
-  const value = parseRequiredInteger(call.value, "Offset function requires a numeric operand.");
-  const result = value + offsetDelta(call);
-  return inheritedSignDisplayAlways(call.inheritedSource) && result >= 0 ? `+${result}` : String(result);
+  const operand = numericSourceOperand(call.inheritedSource) ?? String(call.value);
+  if (parseDecimalNumber(operand) == null && parseInteger(operand) == null) {
+    throw MF2Error.badOperand("Offset function requires a numeric operand.");
+  }
+  const result = addIntegerOffset(operand, offsetDelta(call));
+  if (result == null) throw MF2Error.badOperand("Offset function requires a numeric operand.");
+  const numericResult = parseDecimalNumber(result);
+  return signDisplayAlways(call) && numericResult >= 0 ? `+${result}` : result;
+}
+
+function signDisplayAlways(call) {
+  const direct = call.optionValue("signDisplay", null);
+  return direct == null
+    ? inheritedSignDisplayAlways(call.inheritedSource)
+    : direct === "always";
 }
 
 function inheritedSignDisplayAlways(source) {
   if (source == null) return false;
-  if ((source.function?.name === "number" || source.function?.name === "integer") && sourceOptionValue(source, "signDisplay", null) === "always") return true;
+  if (!isNumericFunction(source.function)) return false;
+  const value = sourceOptionValue(source, "signDisplay", null);
+  if (value != null) return value === "always";
   return inheritedSignDisplayAlways(source.inherited);
 }
 

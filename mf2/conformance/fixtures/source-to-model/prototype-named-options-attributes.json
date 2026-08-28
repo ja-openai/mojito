@@ -1,0 +1,36 @@
+{
+  "name": "prototype-named-options-attributes",
+  "source": "{1 :number __proto__=option @__proto__=attribute} {#tag __proto__=markup-option @__proto__=markup-attribute /}",
+  "expectedModel": {
+    "type": "message",
+    "declarations": [],
+    "pattern": [
+      {
+        "type": "expression",
+        "arg": { "type": "literal", "value": "1" },
+        "function": {
+          "type": "function",
+          "name": "number",
+          "options": {
+            "__proto__": { "type": "literal", "value": "option" }
+          }
+        },
+        "attributes": {
+          "__proto__": { "type": "literal", "value": "attribute" }
+        }
+      },
+      " ",
+      {
+        "type": "markup",
+        "kind": "standalone",
+        "name": "tag",
+        "options": {
+          "__proto__": { "type": "literal", "value": "markup-option" }
+        },
+        "attributes": {
+          "__proto__": { "type": "literal", "value": "markup-attribute" }
+        }
+      }
+    ]
+  }
+}

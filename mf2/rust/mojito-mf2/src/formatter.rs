@@ -1160,6 +1160,18 @@ impl<'a> FormatContext<'a> {
         match key {
             VariantKey::CatchAll => Ok(Some(0)),
             VariantKey::Literal { value } => {
+                if selector.function.as_ref().is_some_and(is_numeric_function)
+                    && !is_valid_numeric_variant_key(value)
+                {
+                    let error = bad_variant_key(format!(
+                        "Numeric selector key {value:?} is neither a number literal nor a plural category."
+                    ));
+                    if self.fallback {
+                        self.errors.push(error);
+                        return Ok(None);
+                    }
+                    return Err(error);
+                }
                 if (selector.exact_match && literal_key_matches(value, selector))
                     || selector
                         .selection_key
@@ -1381,10 +1393,13 @@ impl<'a> FormatContext<'a> {
             return Ok(());
         }
         if numeric_select_uses_variable(function)
-            || inherited_exact_numeric_source(source.map(|source| FunctionSourceRef {
-                source,
-                values: &self.values,
-            }))?
+            || inherited_exact_numeric_source(
+                source.map(|source| FunctionSourceRef {
+                    source,
+                    values: &self.values,
+                }),
+                &function.name,
+            )?
         {
             let error = bad_option("Numeric select option is not valid in this context.");
             if self.fallback {
@@ -1437,7 +1452,48 @@ impl<'a> FormatContext<'a> {
         value: &ResolvedValue,
     ) -> Option<String> {
         let annotation = annotation?;
-        annotation.selection_key(&self.locale, value)
+        let semantic_source_value = value.source.as_ref().and_then(|source| {
+            portable_functions::numeric_source_operand(Some(FunctionSourceRef {
+                source,
+                values: &self.values,
+            }))
+            .ok()
+        });
+        let minimum =
+            self.numeric_option_for_selector(&annotation.function, value, "minimumFractionDigits");
+        let maximum =
+            self.numeric_option_for_selector(&annotation.function, value, "maximumFractionDigits");
+        annotation.selection_key(
+            &self.locale,
+            value,
+            semantic_source_value.as_deref(),
+            minimum.as_deref(),
+            maximum.as_deref(),
+        )
+    }
+
+    fn numeric_option_for_selector(
+        &self,
+        function: &FunctionRef,
+        value: &ResolvedValue,
+        name: &str,
+    ) -> Option<String> {
+        option_value(function, &self.values, name)
+            .ok()
+            .flatten()
+            .or_else(|| {
+                let source = value.source.as_ref()?;
+                portable_functions::inherited_numeric_option_value(
+                    Some(FunctionSourceRef {
+                        source,
+                        values: &self.values,
+                    }),
+                    name,
+                    &function.name,
+                )
+                .ok()
+                .flatten()
+            })
     }
 }
 
@@ -1538,11 +1594,23 @@ impl SelectorAnnotation {
         self.function.name == "string"
     }
 
-    fn selection_key(&self, locale: &str, value: &ResolvedValue) -> Option<String> {
+    fn selection_key(
+        &self,
+        locale: &str,
+        value: &ResolvedValue,
+        semantic_source_value: Option<&str>,
+        minimum_fraction_digits: Option<&str>,
+        maximum_fraction_digits: Option<&str>,
+    ) -> Option<String> {
         if !self.is_numeric() {
             return None;
         }
-        let operands = NumberOperands::from_str(&self.operand_for_selection(value)?)?;
+        let operands = NumberOperands::from_str(&self.operand_for_selection(
+            value,
+            semantic_source_value,
+            minimum_fraction_digits,
+            maximum_fraction_digits,
+        )?)?;
         match self.number_select {
             NumberSelect::Plural => {
                 Some(select_cardinal_plural_category(locale, operands).to_string())
@@ -1558,16 +1626,25 @@ impl SelectorAnnotation {
         is_numeric_function(&self.function)
     }
 
-    fn operand_for_selection(&self, value: &ResolvedValue) -> Option<String> {
+    fn operand_for_selection(
+        &self,
+        value: &ResolvedValue,
+        semantic_source_value: Option<&str>,
+        minimum_fraction_digits: Option<&str>,
+        maximum_fraction_digits: Option<&str>,
+    ) -> Option<String> {
         let rendered = value.rendered();
-        if self.function.name == "percent" {
-            if let Some(percent) = rendered.strip_suffix('%') {
-                return Some(percent.to_string());
-            }
-            let value = parse_decimal_number(value.source_value(&rendered).as_str()).ok()?;
-            return Some((value * 100.0).to_string());
-        }
-        Some(rendered)
+        let source_value = semantic_source_value.unwrap_or(&rendered);
+        let parsed = parse_decimal_number(source_value).ok()?;
+        let minimum = minimum_fraction_digits
+            .unwrap_or("0")
+            .parse::<usize>()
+            .ok()?;
+        let maximum = maximum_fraction_digits
+            .map(str::parse::<usize>)
+            .transpose()
+            .ok()?;
+        portable_functions::numeric_selection_operand(parsed, &self.function.name, minimum, maximum)
     }
 }
 
@@ -1651,6 +1728,11 @@ fn normalize_string_key(value: &str) -> String {
     value.nfc().collect()
 }
 
+fn is_valid_numeric_variant_key(value: &str) -> bool {
+    parse_decimal_number(value).is_ok()
+        || matches!(value, "zero" | "one" | "two" | "few" | "many" | "other")
+}
+
 fn is_fallback_variant(variant: &Variant) -> bool {
     variant
         .keys
@@ -1682,6 +1764,10 @@ fn bad_operand(message: impl Into<String>) -> Diagnostic {
 
 fn bad_selector(message: impl Into<String>) -> Diagnostic {
     Diagnostic::new("bad-selector", message, 0, 0)
+}
+
+fn bad_variant_key(message: impl Into<String>) -> Diagnostic {
+    Diagnostic::new("bad-variant-key", message, 0, 0)
 }
 
 fn bad_option(message: impl Into<String>) -> Diagnostic {
