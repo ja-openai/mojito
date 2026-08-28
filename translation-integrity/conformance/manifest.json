@@ -4006,11 +4006,11 @@
       ],
       "source": {
         "locale": "x-source",
-        "text": "Open preview in full screen"
+        "text": "Open chart in expanded view"
       },
       "target": {
         "locale": "x-target",
-        "text": "PREVIEW"
+        "text": "CHART"
       },
       "policy": {
         "externalFindings": [
@@ -4050,11 +4050,11 @@
       ],
       "source": {
         "locale": "x-source",
-        "text": "Preview failed to load"
+        "text": "Map failed to load"
       },
       "target": {
         "locale": "x-target",
-        "text": "PREVIEW IS LOADING"
+        "text": "MAP IS LOADING"
       },
       "policy": {
         "externalFindings": [
@@ -4086,7 +4086,7 @@
     },
     {
       "id": "policy.external-feature-presence-review.route",
-      "description": "An external product review finding preserves an omitted or incorrectly added capability reference across paired messages.",
+      "description": "An external domain review finding preserves an omitted or incorrectly added capability reference across paired messages.",
       "tier": "extended",
       "profile": "plain",
       "rules": [
@@ -4094,11 +4094,11 @@
       ],
       "source": {
         "locale": "x-source",
-        "text": "This mode may use saved context"
+        "text": "This device may use stored preferences"
       },
       "target": {
         "locale": "x-target",
-        "text": "THIS MODE MAY USE FILES"
+        "text": "THIS DEVICE MAY USE SENSOR DATA"
       },
       "policy": {
         "externalFindings": [
@@ -4138,11 +4138,11 @@
       ],
       "source": {
         "locale": "x-source",
-        "text": "Use light appearance; select orange"
+        "text": "Use metric units; select blue"
       },
       "target": {
         "locale": "x-target",
-        "text": "USE DARK APPEARANCE; SELECT PINK"
+        "text": "USE IMPERIAL UNITS; SELECT GREEN"
       },
       "policy": {
         "externalFindings": [
