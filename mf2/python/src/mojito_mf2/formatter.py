@@ -6,6 +6,7 @@ import unicodedata
 from typing import Any, Callable, cast
 
 from .errors import MF2Error
+from ._portable_functions import _numeric_plural_operand
 from .functions import (
     _DEFAULT_FUNCTION_REGISTRY,
     FunctionCall,
@@ -592,9 +593,41 @@ class _FormatContext:
         annotation = self.selector_annotations.get(selector_name)
         if annotation is None or not annotation.is_numeric:
             return None
-        if annotation.function_name == "percent":
-            value = _percent_plural_operand(value)
-        return select_plural_category(self.locale, value, annotation.number_select)
+        if annotation.number_select == "exact":
+            return None
+        source = self.sources.get(selector_name)
+        if source is not None and annotation.function_name in {
+            "integer",
+            "number",
+            "percent",
+        }:
+            # Locale-aware formatters may add grouping, decimal, or percent
+            # characters that can be parsed as a different CLDR operand.
+            # Apply the portable numeric semantics to the source operand so
+            # options such as fraction digits and integer truncation are
+            # preserved.
+            try:
+                selection_value = _numeric_plural_operand(
+                    FunctionCall(
+                        value=_render_value(source.value),
+                        raw_value=source.value,
+                        function=source.function,
+                        locale=self.locale,
+                        _option_resolver=source.option_value,
+                        inherited_source=source.inherited_source,
+                    )
+                )
+            except MF2Error:
+                return None
+        else:
+            selection_value = (
+                _percent_plural_operand(value)
+                if annotation.function_name == "percent"
+                else value
+            )
+        return select_plural_category(
+            self.locale, selection_value, annotation.number_select
+        )
 
     def _string_select(self, selector_name: str) -> bool:
         annotation = self.selector_annotations.get(selector_name)
@@ -726,7 +759,7 @@ def _normalize_string_key(value: str) -> str:
 def _percent_plural_operand(value: Any) -> str:
     rendered = _render_value(value)
     if rendered.endswith("%"):
-        return rendered[:-1]
+        return rendered[:-1].strip()
     try:
         return str(Decimal(rendered) * Decimal(100))
     except (InvalidOperation, ValueError):

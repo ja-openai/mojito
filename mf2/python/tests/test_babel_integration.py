@@ -222,6 +222,78 @@ class BabelIntegrationTest(unittest.TestCase):
                 self.assertNotIn("{$amount}", formatted.value)
 
     @unittest.skipIf(not BABEL_AVAILABLE, "Babel is not installed")
+    def test_babel_registry_preserves_numeric_semantics_for_plural_selection(self) -> None:
+        functions = importlib.import_module(
+            "mojito_mf2.babel"
+        ).babel_function_registry()
+        cases = [
+            ("number", "", 1_000, "es-ES", "other"),
+            ("number", "", 1_000_000, "fr-FR", "many"),
+            ("integer", "", 1_000_000, "fr-FR", "many"),
+            ("integer", "", 1.2, "en", "one"),
+            ("percent", "", "0.01", "fr-FR", "one"),
+            ("percent", "", "0.015", "cs", "many"),
+            ("number", " minimumFractionDigits=1", 1, "ru", "other"),
+            ("number", " maximumFractionDigits=0", "1.2", "en", "one"),
+        ]
+
+        for function, options, count, locale, expected in cases:
+            with self.subTest(
+                function=function,
+                options=options,
+                count=count,
+                locale=locale,
+            ):
+                parsed = parse_to_model(
+                    f".input {{$count :{function}{options}}}\n"
+                    ".match $count\n"
+                    f"{expected} {{{{{expected}}}}}\n"
+                    "* {{fallback}}"
+                )
+                self.assertIsNotNone(parsed.model, parsed.diagnostics)
+
+                formatted = format_message(
+                    parsed.model,
+                    {"count": count},
+                    locale=locale,
+                    functions=functions,
+                )
+
+                self.assertEqual([], formatted.errors)
+                self.assertEqual(expected, formatted.value)
+
+    @unittest.skipIf(not BABEL_AVAILABLE, "Babel is not installed")
+    def test_babel_registry_keeps_exact_numeric_selection_semantics(self) -> None:
+        functions = importlib.import_module(
+            "mojito_mf2.babel"
+        ).babel_function_registry()
+        cases = [
+            ("number", 1_000_000, "1000000"),
+            ("integer", 1.2, "1"),
+            ("percent", "0.01", "1"),
+        ]
+
+        for function, count, key in cases:
+            with self.subTest(function=function, count=count, key=key):
+                parsed = parse_to_model(
+                    f".input {{$count :{function} select=exact}}\n"
+                    ".match $count\n"
+                    f"{key} {{{{selected}}}}\n"
+                    "* {{fallback}}"
+                )
+                self.assertIsNotNone(parsed.model, parsed.diagnostics)
+
+                formatted = format_message(
+                    parsed.model,
+                    {"count": count},
+                    locale="fr-FR",
+                    functions=functions,
+                )
+
+                self.assertEqual([], formatted.errors)
+                self.assertEqual("selected", formatted.value)
+
+    @unittest.skipIf(not BABEL_AVAILABLE, "Babel is not installed")
     def test_babel_registry_recovers_for_unbounded_numeric_operands(self) -> None:
         functions = importlib.import_module(
             "mojito_mf2.babel"
