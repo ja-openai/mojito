@@ -88,6 +88,39 @@ def _format_unlocalized_integer(call: "FunctionCall") -> str:
     )
 
 
+def _numeric_plural_operand(call: "FunctionCall") -> str:
+    function_name = call.function.get("name")
+    if function_name == "integer":
+        value = _parse_call_decimal(
+            call, "Integer function requires a numeric operand."
+        ).to_integral_value(rounding=ROUND_DOWN)
+        return _format_unlocalized_decimal(value)
+
+    message = (
+        "Percent function requires a numeric operand."
+        if function_name == "percent"
+        else "Number function requires a numeric operand."
+    )
+    value = _parse_call_decimal(call, message)
+    if function_name == "percent":
+        try:
+            with localcontext() as context:
+                context.prec = _decimal_precision(value) + 2
+                value *= Decimal(100)
+            _validate_decimal_operand(value, message)
+        except DecimalException as error:
+            raise MF2Error("bad-operand", message) from error
+
+    formatted = _format_unlocalized_decimal_with_maximum_fraction_digits(
+        value,
+        _maximum_fraction_digits(call),
+    )
+    return _append_minimum_fraction_digits(
+        formatted,
+        _minimum_fraction_digits(call),
+    )
+
+
 def _offset(call: "FunctionCall") -> str:
     value = _parse_integer(call.value, "Offset function requires a numeric operand.")
     add = call.option_value("add")
