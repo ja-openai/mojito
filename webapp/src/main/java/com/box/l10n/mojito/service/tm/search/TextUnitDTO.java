@@ -16,6 +16,7 @@ public class TextUnitDTO {
   private Long localeId;
   private String name;
   private String source;
+  private String messageFormat;
   private String comment;
   private String target;
   private String targetLocale;
@@ -83,6 +84,14 @@ public class TextUnitDTO {
 
   public void setSource(String source) {
     this.source = source;
+  }
+
+  public String getMessageFormat() {
+    return messageFormat != null ? messageFormat : MessageFormatDetector.detect(source, assetPath);
+  }
+
+  public void setMessageFormat(String messageFormat) {
+    this.messageFormat = MessageFormatDetector.normalize(messageFormat);
   }
 
   public String getComment() {

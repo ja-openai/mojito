@@ -10,6 +10,11 @@ import type * as GlossariesApi from '../../api/glossaries';
 import type * as ReviewProjectsApi from '../../api/review-projects';
 import type { ApiReviewProjectDetail, ApiReviewProjectTextUnit } from '../../api/review-projects';
 import type { ApiUserProfile } from '../../api/users';
+import type * as Mf2TranslationEditorModule from '../../components/mf2/Mf2TranslationEditor';
+import type {
+  Mf2TranslationEditorHandle,
+  Mf2TranslationEditorProps,
+} from '../../components/mf2/Mf2TranslationEditor';
 import { REVIEW_PROJECT_DETAIL_QUERY_KEY } from '../../hooks/useReviewProjectDetail';
 import { UserContext } from '../../hooks/useUser';
 import {
@@ -22,6 +27,8 @@ const matchGlossaryTermsMock = vi.hoisted(() => vi.fn());
 const fetchPrecomputedAiReviewMock = vi.hoisted(() => vi.fn());
 const requestAiReviewMock = vi.hoisted(() => vi.fn());
 const saveReviewProjectTextUnitDecisionMock = vi.hoisted(() => vi.fn());
+const visibleTextEditorEnabledMock = vi.hoisted(() => vi.fn(() => true));
+const mf2TranslationEditorHostMock = vi.hoisted(() => ({ enabled: false, errorCount: 0 }));
 
 vi.mock('../../api/ai-review', () => ({
   fetchPrecomputedAiReview: fetchPrecomputedAiReviewMock,
@@ -48,6 +55,89 @@ vi.mock('../../api/review-projects', async (importActual) => {
   };
 });
 
+vi.mock('../../components/mf2/Mf2TranslationEditor', async (importActual) => {
+  const actual = await importActual<typeof Mf2TranslationEditorModule>();
+  const { forwardRef, useEffect, useImperativeHandle, useRef } = await import('react');
+
+  const HostGateMf2Editor = forwardRef<Mf2TranslationEditorHandle, Mf2TranslationEditorProps>(
+    function HostGateMf2Editor(props, ref) {
+      const {
+        className,
+        initialMode,
+        initialTarget,
+        locale,
+        mode,
+        onChange,
+        onKeyDown,
+        onSubmit,
+        source,
+        target: controlledTarget,
+      } = props;
+      const editorRef = useRef<HTMLTextAreaElement | null>(null);
+      const target = controlledTarget ?? initialTarget ?? source;
+      const errorCount = mf2TranslationEditorHostMock.errorCount;
+
+      useImperativeHandle(
+        ref,
+        () => ({
+          blur: () => editorRef.current?.blur(),
+          focus: () => editorRef.current?.focus(),
+        }),
+        [],
+      );
+
+      useEffect(() => {
+        onChange?.({
+          diagnostics: Array.from({ length: errorCount }, (_, index) => ({
+            code: `host-test-error-${index + 1}`,
+            message: 'Injected MF2 contract error.',
+            severity: 'error',
+          })),
+          locale: locale ?? 'en',
+          mode: mode ?? initialMode ?? 'rich',
+          target,
+        });
+      }, [errorCount, initialMode, locale, mode, onChange, target]);
+
+      return (
+        <section className={className} onKeyDown={onKeyDown}>
+          <textarea
+            aria-label="Target Message"
+            className="mf2-pm-view"
+            onKeyDown={(event) => {
+              if (
+                event.key === 'Enter' &&
+                !event.shiftKey &&
+                !event.altKey &&
+                (event.metaKey || event.ctrlKey)
+              ) {
+                event.preventDefault();
+                event.stopPropagation();
+                onSubmit?.();
+              }
+            }}
+            readOnly
+            ref={editorRef}
+            value={target}
+          />
+        </section>
+      );
+    },
+  );
+
+  const ActualMf2TranslationEditor = actual.Mf2TranslationEditor;
+  const Mf2TranslationEditor = forwardRef<Mf2TranslationEditorHandle, Mf2TranslationEditorProps>(
+    function Mf2TranslationEditor(props, ref) {
+      if (mf2TranslationEditorHostMock.enabled) {
+        return <HostGateMf2Editor {...props} ref={ref} />;
+      }
+      return <ActualMf2TranslationEditor {...props} ref={ref} />;
+    },
+  );
+
+  return { ...actual, Mf2TranslationEditor };
+});
+
 vi.mock('../../components/virtual/useVirtualRows', () => ({
   useVirtualRows: () => ({
     scrollRef: { current: null },
@@ -60,7 +150,7 @@ vi.mock('../../components/virtual/useVirtualRows', () => ({
 }));
 
 vi.mock('../../hooks/useVisibleTextEditorEnabled', () => ({
-  useVisibleTextEditorEnabled: () => true,
+  useVisibleTextEditorEnabled: () => visibleTextEditorEnabledMock(),
 }));
 
 type ReviewProjectPageViewProps = ComponentProps<typeof ReviewProjectPageView>;
@@ -96,6 +186,10 @@ beforeEach(() => {
   matchGlossaryTermsMock.mockReset();
   matchGlossaryTermsMock.mockResolvedValue({ matchedTerms: [] });
   saveReviewProjectTextUnitDecisionMock.mockReset();
+  visibleTextEditorEnabledMock.mockReset();
+  visibleTextEditorEnabledMock.mockReturnValue(true);
+  mf2TranslationEditorHostMock.enabled = false;
+  mf2TranslationEditorHostMock.errorCount = 0;
 });
 
 const user: ApiUserProfile = {
@@ -130,6 +224,27 @@ const textUnit: ApiReviewProjectTextUnit = {
   },
   terminologyFeedbacks: [],
 };
+
+const mf2Source = `.input {$count :number}
+{{You have {$count} files.}}`;
+
+function buildMf2TextUnit(target: string): ApiReviewProjectTextUnit {
+  return {
+    ...textUnit,
+    id: 103,
+    tmTextUnit: {
+      ...textUnit.tmTextUnit!,
+      id: 5,
+      name: 'files.count',
+      content: mf2Source,
+    },
+    baselineTmTextUnitVariant: {
+      ...textUnit.baselineTmTextUnitVariant!,
+      id: 32,
+      content: target,
+    },
+  };
+}
 
 const project: ApiReviewProjectDetail = {
   id: 7,
@@ -315,6 +430,74 @@ describe('ReviewProjectPageView', () => {
         textUnitId: textUnit.id,
         target: textUnit.baselineTmTextUnitVariant?.content,
         decisionState: 'DECIDED',
+      }),
+    );
+  });
+
+  it('accepts from the focused translation editor shortcut', async () => {
+    const onRequestSaveDecision = vi.fn();
+    renderReviewProjectPageView({
+      mutations: buildMutations({ onRequestSaveDecision }),
+    });
+
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    fireEvent.keyDown(editor, { key: 'Enter', ctrlKey: true });
+
+    expect(onRequestSaveDecision).toHaveBeenCalledWith(
+      expect.objectContaining({
+        decisionState: 'DECIDED',
+        status: 'APPROVED',
+        textUnitId: textUnit.id,
+      }),
+    );
+  });
+
+  it('blurs the native translation textarea on Escape when Visible Editor is off', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    renderReviewProjectPageView();
+
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    expect(editor).toBeInstanceOf(HTMLTextAreaElement);
+    editor.focus();
+    expect(editor).toHaveFocus();
+
+    fireEvent.keyDown(editor, { key: 'Escape' });
+
+    expect(editor).not.toHaveFocus();
+  });
+
+  it('moves focus from the native translation textarea on Tab when Visible Editor is off', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    renderReviewProjectPageView();
+
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    const comment = screen.getByPlaceholderText(
+      'Explain why you chose this translation (if not obvious).',
+    );
+    editor.focus();
+
+    const wasNotCancelled = fireEvent.keyDown(editor, { key: 'Tab' });
+
+    expect(wasNotCancelled).toBe(false);
+    expect(comment).toHaveFocus();
+  });
+
+  it('handles Cmd+Enter from the native translation textarea when Visible Editor is off', async () => {
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    const onRequestSaveDecision = vi.fn();
+    renderReviewProjectPageView({
+      mutations: buildMutations({ onRequestSaveDecision }),
+    });
+
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    const wasNotCancelled = fireEvent.keyDown(editor, { key: 'Enter', metaKey: true });
+
+    expect(wasNotCancelled).toBe(false);
+    expect(onRequestSaveDecision).toHaveBeenCalledWith(
+      expect.objectContaining({
+        decisionState: 'DECIDED',
+        status: 'APPROVED',
+        textUnitId: textUnit.id,
       }),
     );
   });
@@ -578,6 +761,136 @@ describe('ReviewProjectPageView', () => {
       expect(protectedToken).toHaveTextContent('price');
       expect(protectedToken).toHaveClass('visible-text-editor__protected-token--icu-placeholder');
     });
+  });
+
+  it('routes source-declared MF2 to the structured editor', async () => {
+    const mf2TextUnit = buildMf2TextUnit(`.input {$count :number}
+.match $count
+one {{Você tem {$count} arquivo.}}
+* {{Você tem {$count} arquivos.}}`);
+
+    renderReviewProjectPageView({
+      project: {
+        ...project,
+        reviewProjectTextUnits: [mf2TextUnit],
+      },
+    });
+
+    expect(await screen.findByRole('textbox', { name: 'Target count: one' })).toHaveClass(
+      'mf2-pm-view',
+    );
+    expect(screen.getByText('Source contract')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Raw' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Translation' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /Placeholders/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('Target language')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Accept' })).toBeEnabled();
+    });
+  });
+
+  it('accepts and advances from a focused valid MF2 editor', async () => {
+    const onRequestSaveDecision = vi.fn();
+    const mf2TextUnit = buildMf2TextUnit(`.input {$count :number}
+.match $count
+one {{Você tem {$count} arquivo.}}
+* {{Você tem {$count} arquivos.}}`);
+
+    renderReviewProjectPageView({
+      project: {
+        ...project,
+        reviewProjectTextUnits: [mf2TextUnit],
+      },
+      mutations: buildMutations({ onRequestSaveDecision }),
+    });
+
+    const editor = await screen.findByRole('textbox', { name: 'Target count: one' });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Accept' })).toBeEnabled();
+    });
+    fireEvent.keyDown(editor, { key: 'Enter', ctrlKey: true, shiftKey: true });
+
+    expect(onRequestSaveDecision).toHaveBeenCalledWith(
+      expect.objectContaining({
+        decisionState: 'DECIDED',
+        status: 'APPROVED',
+        textUnitId: mf2TextUnit.id,
+      }),
+    );
+  });
+
+  it('blocks MF2 acceptance while the target has contract errors', async () => {
+    mf2TranslationEditorHostMock.enabled = true;
+    mf2TranslationEditorHostMock.errorCount = 1;
+    const onRequestSaveDecision = vi.fn();
+    const mf2TextUnit = buildMf2TextUnit(`.input {$count :number}
+{{Você tem {$rogue} arquivos.}}`);
+
+    renderReviewProjectPageView({
+      project: {
+        ...project,
+        reviewProjectTextUnits: [mf2TextUnit],
+      },
+      mutations: buildMutations({ onRequestSaveDecision }),
+    });
+
+    const editor = await screen.findByRole('textbox', { name: 'Target Message' });
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /Fix \d+ MF2 errors? before accepting/,
+    );
+    expect(screen.getByRole('button', { name: 'Accept' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Decided' })).toBeDisabled();
+
+    fireEvent.keyDown(editor, { key: 'Enter', ctrlKey: true });
+    fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true, shiftKey: true });
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Context' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Translation status' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Accepted' }));
+
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Translation status' })).toHaveTextContent(
+      'To review',
+    );
+  });
+
+  it('allows an invalid rejected MF2 translation to be marked decided', async () => {
+    mf2TranslationEditorHostMock.enabled = true;
+    mf2TranslationEditorHostMock.errorCount = 1;
+    const onRequestDecisionState = vi.fn();
+    const onRequestSaveDecision = vi.fn();
+    const mf2TextUnit = buildMf2TextUnit(`.input {$count :number}
+{{Você tem {$rogue} arquivos.}}`);
+    const rejectedMf2TextUnit = {
+      ...mf2TextUnit,
+      baselineTmTextUnitVariant: {
+        ...mf2TextUnit.baselineTmTextUnitVariant!,
+        includedInLocalizedFile: false,
+      },
+    };
+
+    renderReviewProjectPageView({
+      project: {
+        ...project,
+        reviewProjectTextUnits: [rejectedMf2TextUnit],
+      },
+      mutations: buildMutations({ onRequestDecisionState, onRequestSaveDecision }),
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /Fix \d+ MF2 errors? before accepting/,
+    );
+    expect(screen.getByRole('button', { name: 'Accept' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Decided' })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Decided' }));
+
+    expect(onRequestDecisionState).toHaveBeenCalledWith({
+      decisionState: 'DECIDED',
+      expectedCurrentTmTextUnitVariantId: null,
+      textUnitId: rejectedMf2TextUnit.id,
+    });
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
   });
 
   it('overlays staged find-replace text', async () => {

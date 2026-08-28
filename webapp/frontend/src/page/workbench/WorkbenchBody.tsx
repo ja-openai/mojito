@@ -1,13 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
-import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { fetchGlossaries } from '../../api/glossaries';
 import type { ApiRepository } from '../../api/repositories';
 import type { TextUnitSearchRequest } from '../../api/text-units';
 import { LocalePill } from '../../components/LocalePill';
+import { isMf2Message } from '../../components/mf2/messageFormat';
+import {
+  Mf2TranslationEditor,
+  type Mf2TranslationEditorSnapshot,
+} from '../../components/mf2/Mf2TranslationEditor';
+import { sourceLiteralPreview } from '../../components/mf2/model';
 import { Modal } from '../../components/Modal';
 import { PillDropdown } from '../../components/PillDropdown';
+import type { TranslationEditorHandle } from '../../components/TranslationEditorHandle';
 import {
   TranslationTextEditor,
   type TranslationTextEditorKeyDownEvent,
@@ -16,10 +23,7 @@ import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useMeasuredRowRefs } from '../../components/virtual/useMeasuredRowRefs';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
-import type {
-  VisibleTextEditorHandle,
-  VisibleTextMarksMode,
-} from '../../components/VisibleTextEditor';
+import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
 import { VisibleTextRenderer } from '../../components/VisibleTextRenderer';
 import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
 import { formatLocalDateTime, getLocalAndUtcDateTimeTooltip } from '../../utils/dateTime';
@@ -44,7 +48,7 @@ type WorkbenchBodyProps = {
   onChangeEditingValue: (value: string) => void;
   onChangeStatus: (rowId: string, status: string) => void;
   statusOptions: string[];
-  translationInputRef: RefObject<VisibleTextEditorHandle>;
+  translationInputRef: MutableRefObject<TranslationEditorHandle | null>;
   registerRowRef: (rowId: string, element: HTMLDivElement | null) => void;
   isSaving: boolean;
   saveErrorMessage: string | null;
@@ -131,11 +135,29 @@ export function WorkbenchBody({
   showDateMetadata,
 }: WorkbenchBodyProps) {
   const navigate = useNavigate();
+  const editingRow = editingRowId ? rows.find((row) => row.id === editingRowId) : null;
+  const editingRowIsMf2 = Boolean(
+    editingRow &&
+    isMf2Message({
+      messageFormat: editingRow.messageFormat,
+      source: editingRow.source,
+    }),
+  );
+  const [mf2Validation, setMf2Validation] = useState<{
+    documentKey: string;
+    errorCount: number;
+  } | null>(null);
   const editingTextTokenGuard = useProtectedTextTokenGuard(
     editingValue,
-    isVisibleTextEditorEnabled && editingRowId ? 'icu-html' : 'none',
+    isVisibleTextEditorEnabled && editingRowId && !editingRowIsMf2 ? 'icu-html' : 'none',
   );
   const registerRowRefRef = useRef(registerRowRef);
+  const setTranslationInputRef = useCallback(
+    (editor: TranslationEditorHandle | null) => {
+      translationInputRef.current = editor;
+    },
+    [translationInputRef],
+  );
 
   // Keep latest callback without changing ref callback identities.
   registerRowRefRef.current = registerRowRef;
@@ -500,9 +522,16 @@ export function WorkbenchBody({
               }
 
               const isEditing = editingRowId === row.id;
-              const useAssistedTranslationEditor = isVisibleTextEditorEnabled && isEditing;
-              const useAssistedTranslationPreview = isVisibleTextEditorEnabled && !isEditing;
-              const useAssistedSourcePreview = isVisibleTextEditorEnabled;
+              const rowIsMf2 = isMf2Message({
+                messageFormat: row.messageFormat,
+                source: row.source,
+              });
+              const useMf2TranslationEditor = rowIsMf2 && isEditing;
+              const useAssistedTranslationEditor =
+                !rowIsMf2 && isVisibleTextEditorEnabled && isEditing;
+              const useAssistedTranslationPreview =
+                !rowIsMf2 && isVisibleTextEditorEnabled && !isEditing;
+              const useAssistedSourcePreview = !rowIsMf2 && isVisibleTextEditorEnabled;
               const translationValue = isEditing ? editingValue : (row.translation ?? '');
               const translationDirection = isRtlLocale(row.locale) ? 'rtl' : 'ltr';
               const translationLocale = row.locale;
@@ -518,6 +547,14 @@ export function WorkbenchBody({
               const isStatusSaving = statusSavingRowIds.has(row.id);
               const isEdited = editedRowIds.has(row.id);
               const isStatusOpen = openStatusRowId === row.id;
+              const mf2DocumentKey = `${row.id}:${row.source}:${row.translation ?? ''}`;
+              const mf2ErrorCount =
+                useMf2TranslationEditor && mf2Validation?.documentKey === mf2DocumentKey
+                  ? mf2Validation.errorCount
+                  : null;
+              const mf2HasErrors =
+                useMf2TranslationEditor && (mf2ErrorCount == null || mf2ErrorCount > 0);
+              const canSaveRowEditing = canSaveEditing && !mf2HasErrors;
               const isUnused = !row.isUsed;
               const hasActiveCollection = Boolean(activeCollectionName);
               const isInCollection = hasActiveCollection
@@ -532,13 +569,23 @@ export function WorkbenchBody({
                 }
                 if (isPrimaryActionShortcut(event)) {
                   event.preventDefault();
-                  onSaveEditing();
+                  if (canSaveRowEditing) {
+                    onSaveEditing();
+                  }
                 }
+              };
+              const handleMf2Snapshot = (snapshot: Mf2TranslationEditorSnapshot) => {
+                setMf2Validation({
+                  documentKey: mf2DocumentKey,
+                  errorCount: snapshot.diagnostics.filter(
+                    (diagnostic) => diagnostic.severity === 'error',
+                  ).length,
+                });
               };
 
               return {
                 key: row.id,
-                className: 'workbench-page__row',
+                className: `workbench-page__row${useMf2TranslationEditor ? ' workbench-page__row--mf2-editing' : ''}`,
                 props: {
                   'data-index': virtualRow.index,
                   'data-workbench-row-id': row.id,
@@ -622,7 +669,9 @@ export function WorkbenchBody({
                       {showDateMetadata ? <WorkbenchDateMetadata row={row} /> : null}
                     </div>
                     <div className="workbench-page__cell workbench-page__cell--source">
-                      {useAssistedSourcePreview ? (
+                      {rowIsMf2 ? (
+                        <WorkbenchMf2Preview ariaLabel="MF2 source" value={row.source} />
+                      ) : useAssistedSourcePreview ? (
                         <VisibleTextRenderer
                           className="workbench-page__text-block workbench-page__source-text"
                           value={row.source ?? ''}
@@ -641,10 +690,47 @@ export function WorkbenchBody({
                       </div>
                     </div>
                     <div
-                      className="workbench-page__cell workbench-page__cell--translation"
+                      className={`workbench-page__cell workbench-page__cell--translation${
+                        useMf2TranslationEditor ? ' workbench-page__cell--translation-mf2' : ''
+                      }`}
                       data-editing={isEditing ? 'true' : undefined}
                     >
-                      {useAssistedTranslationPreview ? (
+                      {useMf2TranslationEditor ? (
+                        <Mf2TranslationEditor
+                          className="workbench-page__mf2-editor"
+                          documentKey={mf2DocumentKey}
+                          locale={row.locale}
+                          onChange={handleMf2Snapshot}
+                          onSubmit={() => {
+                            if (canSaveRowEditing && !isSaving) {
+                              onSaveEditing();
+                            }
+                          }}
+                          onTargetChange={onChangeEditingValue}
+                          readOnly={!row.canEdit || isSaving}
+                          ref={setTranslationInputRef}
+                          showActiveSourceComparison
+                          showArgumentInputs={false}
+                          showLocaleSelector={false}
+                          showPreview={false}
+                          showSource={false}
+                          source={row.source}
+                          submitLabel="accept"
+                          target={translationValue}
+                        />
+                      ) : rowIsMf2 ? (
+                        <WorkbenchMf2Preview
+                          ariaLabel="MF2 translation editor"
+                          disabled={!row.canEdit || isSaving}
+                          emptyLabel="No translation yet"
+                          onFocus={
+                            row.canEdit && !isSaving
+                              ? () => onStartEditing(row.id, row.translation)
+                              : undefined
+                          }
+                          value={translationValue}
+                        />
+                      ) : useAssistedTranslationPreview ? (
                         <VisibleTextRenderer
                           ariaLabel="Text editor"
                           className="workbench-page__translation-input"
@@ -689,7 +775,7 @@ export function WorkbenchBody({
                           }
                           disabled={!row.canEdit || isSaving}
                           readOnly={!isEditing || !row.canEdit || isSaving}
-                          ref={isEditing ? translationInputRef : undefined}
+                          ref={isEditing ? setTranslationInputRef : undefined}
                           marksMode={translationMarksMode}
                           protectedDiagnostics={translationProtectedDiagnostics}
                           protectedTokens={translationProtectedTokens}
@@ -720,10 +806,12 @@ export function WorkbenchBody({
                                   event.stopPropagation();
                                   onSaveEditing();
                                 }}
-                                disabled={!canSaveEditing || isSaving}
+                                disabled={!canSaveRowEditing || isSaving}
                                 title={
-                                  !canSaveEditing
-                                    ? 'Already accepted. Edit the translation to save again.'
+                                  !canSaveRowEditing
+                                    ? mf2HasErrors
+                                      ? 'Fix the MF2 errors before accepting.'
+                                      : 'Already accepted. Edit the translation to save again.'
                                     : undefined
                                 }
                               >
@@ -800,6 +888,40 @@ export function WorkbenchBody({
           />
         )}
       </div>
+    </div>
+  );
+}
+
+function WorkbenchMf2Preview({
+  ariaLabel,
+  disabled = false,
+  emptyLabel = 'Empty message',
+  onFocus,
+  value,
+}: {
+  ariaLabel: string;
+  disabled?: boolean;
+  emptyLabel?: string;
+  onFocus?: () => void;
+  value: string;
+}) {
+  const preview = sourceLiteralPreview(value).trim();
+  const isInteractive = Boolean(onFocus) && !disabled;
+
+  return (
+    <div
+      aria-disabled={disabled || undefined}
+      aria-label={ariaLabel}
+      aria-readonly="true"
+      className={`workbench-page__mf2-preview${isInteractive ? ' is-interactive' : ''}`}
+      onFocus={isInteractive ? onFocus : undefined}
+      role="textbox"
+      tabIndex={isInteractive ? 0 : undefined}
+    >
+      <span className={`workbench-page__mf2-preview-text${preview ? '' : ' is-empty'}`}>
+        {preview || emptyLabel}
+      </span>
+      <span className="workbench-page__mf2-badge">MF2</span>
     </div>
   );
 }

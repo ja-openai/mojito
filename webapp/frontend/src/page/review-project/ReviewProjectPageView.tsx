@@ -65,6 +65,11 @@ import { GlossaryMatchesPanel } from '../../components/GlossaryMatchesPanel';
 import { IcuPreviewSection } from '../../components/IcuPreviewSection';
 import { IntegrityCheckAlertModal } from '../../components/IntegrityCheckAlertModal';
 import { LocalePill } from '../../components/LocalePill';
+import { isMf2Message } from '../../components/mf2/messageFormat';
+import {
+  Mf2TranslationEditor,
+  type Mf2TranslationEditorSnapshot,
+} from '../../components/mf2/Mf2TranslationEditor';
 import { Modal } from '../../components/Modal';
 import { Pill } from '../../components/Pill';
 import { PillDropdown } from '../../components/PillDropdown';
@@ -78,6 +83,7 @@ import {
   TextUnitHistoryTimeline,
   type TextUnitHistoryTimelineEntry,
 } from '../../components/TextUnitHistoryTimeline';
+import type { TranslationEditorHandle } from '../../components/TranslationEditorHandle';
 import {
   TranslationTextEditor,
   type TranslationTextEditorKeyDownEvent,
@@ -85,10 +91,7 @@ import {
 import { getRowHeightPx } from '../../components/virtual/getRowHeightPx';
 import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
-import type {
-  VisibleTextEditorHandle,
-  VisibleTextMarksMode,
-} from '../../components/VisibleTextEditor';
+import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
 import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
 import { useUser } from '../../hooks/useUser';
 import { useVisibleTextEditorEnabled } from '../../hooks/useVisibleTextEditorEnabled';
@@ -202,6 +205,7 @@ type TerminologyConfidenceChoice = 'unspecified' | '1' | '2' | '3' | '4' | '5';
 type TerminologyResolutionStatusChoice = ApiTerminologyResolutionStatus;
 type ContextTab = 'glossary' | 'icu' | 'history' | 'context';
 type DetailEditorField = 'translation' | 'comment' | 'decisionNotes';
+type DetailEditorKeyEvent = TranslationTextEditorKeyDownEvent | React.KeyboardEvent<HTMLElement>;
 
 const SAVING_INDICATOR_DELAY_MS = 200;
 const DEFAULT_AI_REVIEW_PROMPT = 'Review the translation and suggest improvements.';
@@ -1835,7 +1839,10 @@ function DetailPane({
   const [aiInput, setAiInput] = useState('');
   const [isAiResponding, setIsAiResponding] = useState(false);
   const heroRef = useRef<HTMLDivElement | null>(null);
-  const translationRef = useRef<VisibleTextEditorHandle | null>(null);
+  const translationRef = useRef<TranslationEditorHandle | null>(null);
+  const setTranslationRef = useCallback((editor: TranslationEditorHandle | null) => {
+    translationRef.current = editor;
+  }, []);
   const commentRef = useRef<HTMLTextAreaElement | null>(null);
   const decisionNotesRef = useRef<HTMLTextAreaElement | null>(null);
   const savingIndicatorTimeoutRef = useRef<number | null>(null);
@@ -1850,6 +1857,10 @@ function DetailPane({
       : null;
   const textUnitName = textUnit.tmTextUnit?.name ?? `Text unit ${textUnit.id}`;
   const source = textUnit.tmTextUnit?.content ?? null;
+  const sourceIsMf2 = isMf2Message({
+    messageFormat: textUnit.tmTextUnit?.messageFormat,
+    source,
+  });
   const sourceComment = textUnit.tmTextUnit?.comment ?? null;
   const baselineVariant = textUnit.baselineTmTextUnitVariant;
   const baselineStatusKey = getStatusKey(baselineVariant);
@@ -1947,16 +1958,37 @@ function DetailPane({
     [updateTranslationDraft],
   );
   const hasIcuMessage = useMemo(
-    () => hasIcuParameters(source) || hasIcuParameters(draftTarget),
-    [draftTarget, source],
+    () => !sourceIsMf2 && (hasIcuParameters(source) || hasIcuParameters(draftTarget)),
+    [draftTarget, source, sourceIsMf2],
   );
+  const mf2DocumentKey = `${textUnit.id}:${snapshot.expectedCurrentVariantId ?? 'none'}:${
+    textUnit.reviewProjectTextUnitSuggestion?.id ?? 'none'
+  }:${source ?? ''}`;
+  const [mf2Validation, setMf2Validation] = useState<{
+    documentKey: string;
+    errorCount: number;
+  } | null>(null);
+  const mf2ErrorCount =
+    sourceIsMf2 && mf2Validation?.documentKey === mf2DocumentKey ? mf2Validation.errorCount : null;
+  const mf2HasErrors = sourceIsMf2 && (mf2ErrorCount == null || mf2ErrorCount > 0);
   const draftTargetTokenGuard = useProtectedTextTokenGuard(
     draftTarget,
-    isVisibleTextEditorEnabled ? 'icu-html' : 'none',
+    isVisibleTextEditorEnabled && !sourceIsMf2 ? 'icu-html' : 'none',
   );
   const draftTargetProtectedTokens = draftTargetTokenGuard.protectedTokens;
   const draftTargetProtectedDiagnostics = draftTargetTokenGuard.diagnostics;
   const validateDraftTarget = draftTargetTokenGuard.validateNextValue;
+
+  const handleMf2Snapshot = useCallback(
+    (nextSnapshot: Mf2TranslationEditorSnapshot) => {
+      setMf2Validation({
+        documentKey: mf2DocumentKey,
+        errorCount: nextSnapshot.diagnostics.filter((diagnostic) => diagnostic.severity === 'error')
+          .length,
+      });
+    },
+    [mf2DocumentKey],
+  );
   const [draftTerminologyRecommendation, setDraftTerminologyRecommendation] =
     useState<ApiTerminologyFeedbackRecommendation | null>(terminologySnapshot.recommendation);
   const [draftTerminologyConfidence, setDraftTerminologyConfidence] =
@@ -2460,7 +2492,7 @@ function DetailPane({
   const isTerminologyNotesDirty = draftTerminologyNotesNormalized !== terminologySnapshot.notes;
   const canAccept = isTerminologyProject
     ? !isSavingGlobal && draftTerminologyRecommendation != null && isTerminologyNotesDirty
-    : !isSavingGlobal && (!isAcceptedAndDecided || isDirty);
+    : !isSavingGlobal && !mf2HasErrors && (!isAcceptedAndDecided || isDirty);
   const canApplyTerminologyResolution =
     isTerminologyProject &&
     !isSpecialistTerminologyProject &&
@@ -2505,7 +2537,11 @@ function DetailPane({
       decisionNotesOverride?: string | null;
     } = {}) => {
       const nextTarget = targetOverride ?? draftTarget;
-      const nextStatusApi = mapChoiceToApi(statusChoiceOverride ?? draftStatusChoice);
+      const nextStatusChoice = statusChoiceOverride ?? draftStatusChoice;
+      if (sourceIsMf2 && mf2HasErrors && nextStatusChoice === 'ACCEPTED') {
+        return;
+      }
+      const nextStatusApi = mapChoiceToApi(nextStatusChoice);
       mutations.onRequestSaveDecision({
         textUnitId: textUnit.id,
         tmTextUnitId: workbenchTextUnitId,
@@ -2531,9 +2567,11 @@ function DetailPane({
       draftDecisionNotesNormalized,
       draftStatusChoice,
       draftTarget,
+      mf2HasErrors,
       mutations,
       projectId,
       snapshot.expectedCurrentVariantId,
+      sourceIsMf2,
       textUnit.id,
       localeTag,
       workbenchTextUnitId,
@@ -2722,7 +2760,7 @@ function DetailPane({
   );
 
   const handleTextEditorKeyDown = useCallback(
-    (event: TranslationTextEditorKeyDownEvent, field: DetailEditorField) => {
+    (event: DetailEditorKeyEvent, field: DetailEditorField) => {
       if (event.key === 'Escape') {
         blurDetailEditor(field);
         event.stopPropagation();
@@ -2747,7 +2785,13 @@ function DetailPane({
   );
 
   const handleTranslationEditorKeyDown = useCallback(
-    (event: TranslationTextEditorKeyDownEvent) => {
+    (event: DetailEditorKeyEvent) => {
+      if (
+        event.target instanceof HTMLElement &&
+        !event.target.closest('textarea, [role="textbox"]')
+      ) {
+        return;
+      }
       handleTextEditorKeyDown(event, 'translation');
       if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
@@ -2774,8 +2818,19 @@ function DetailPane({
     requestSaveTerminologyResolution,
   ]);
 
+  const handleMf2Accept = useCallback(() => {
+    if (!canAccept) {
+      return;
+    }
+    handleAccept();
+    translationRef.current?.blur();
+  }, [canAccept, handleAccept]);
+
   const handleStatusChange = useCallback(
     (next: StatusChoice) => {
+      if (sourceIsMf2 && mf2HasErrors && next === 'ACCEPTED') {
+        return;
+      }
       setDraftStatusChoice(next);
       if (isStatusDropdownDisabled || next === snapshot.statusChoice) {
         return;
@@ -2789,12 +2844,14 @@ function DetailPane({
     },
     [
       isStatusDropdownDisabled,
+      mf2HasErrors,
       requestSaveDecision,
       setDraftStatusChoice,
       snapshot.comment,
       snapshot.decisionNotes,
       snapshot.statusChoice,
       snapshot.target,
+      sourceIsMf2,
     ],
   );
 
@@ -3001,7 +3058,9 @@ function DetailPane({
     }
     if (
       active instanceof HTMLElement &&
-      active.closest('.review-project-detail__input--translation.visible-text-editor')
+      active.closest(
+        '.review-project-detail__input--translation.visible-text-editor, .review-project-detail__mf2-editor',
+      )
     ) {
       return translationRef.current;
     }
@@ -3094,6 +3153,9 @@ function DetailPane({
       if (focusedEditor) {
         event.preventDefault();
       }
+      if (sourceIsMf2 && mf2HasErrors) {
+        return;
+      }
       if (event.shiftKey) {
         if (mutations.showValidationDialog || mutations.isSaving) {
           return;
@@ -3134,21 +3196,26 @@ function DetailPane({
     isDirty,
     isEditableTarget,
     isTerminologyProject,
+    mf2HasErrors,
     mutations.isSaving,
     mutations.showValidationDialog,
     onQueueAdvance,
     requestDecisionState,
+    sourceIsMf2,
     snapshot.decisionState,
   ]);
 
   const handleDecisionStateChange = useCallback(
     (nextState: DecisionStateChoice) => {
+      if (nextState === 'DECIDED' && sourceIsMf2 && mf2HasErrors && !isRejected) {
+        return;
+      }
       if (nextState === snapshot.decisionState) {
         return;
       }
       requestDecisionState(nextState);
     },
-    [requestDecisionState, snapshot.decisionState],
+    [isRejected, mf2HasErrors, requestDecisionState, snapshot.decisionState, sourceIsMf2],
   );
 
   const handleUseCurrent = useCallback(() => {
@@ -3742,34 +3809,67 @@ function DetailPane({
                     </Pill>
                   ) : null}
                 </div>
-                <TranslationTextEditor
-                  key={textUnit.id}
-                  assisted={isVisibleTextEditorEnabled}
-                  className={`review-project-detail__input review-project-detail__input--autosize review-project-detail__input--translation${
-                    isRejected ? ' review-project-detail__input--rejected' : ''
-                  }`}
-                  ref={translationRef}
-                  value={draftTarget}
-                  onChange={setDraftTarget}
-                  ariaLabel="Translation"
-                  controlBar={
-                    isVisibleTextEditorEnabled
-                      ? {
-                          marksMode: translationMarksMode,
-                          onChangeMarksMode: setTranslationMarksMode,
-                          protectedTokenCount: draftTargetProtectedTokens.length,
-                        }
-                      : undefined
-                  }
-                  spellCheck={true}
-                  lang={translationLang}
-                  disabled={isSavingGlobal}
-                  onKeyDown={handleTranslationEditorKeyDown}
-                  marksMode={translationMarksMode}
-                  protectedDiagnostics={draftTargetProtectedDiagnostics}
-                  protectedTokens={draftTargetProtectedTokens}
-                  validateNextValue={isVisibleTextEditorEnabled ? validateDraftTarget : undefined}
-                />
+                {sourceIsMf2 ? (
+                  <>
+                    <Mf2TranslationEditor
+                      key={textUnit.id}
+                      className={`review-project-detail__mf2-editor${
+                        isRejected ? ' review-project-detail__mf2-editor--rejected' : ''
+                      }`}
+                      documentKey={mf2DocumentKey}
+                      locale={localeTag}
+                      onChange={handleMf2Snapshot}
+                      onKeyDown={handleTranslationEditorKeyDown}
+                      onSubmit={handleMf2Accept}
+                      onTargetChange={setDraftTarget}
+                      readOnly={isSavingGlobal}
+                      ref={setTranslationRef}
+                      showActiveSourceComparison
+                      showArgumentInputs={false}
+                      showLocaleSelector={false}
+                      showPreview={false}
+                      showSource={false}
+                      source={source ?? ''}
+                      submitLabel="accept"
+                      target={draftTarget}
+                    />
+                    {mf2ErrorCount != null && mf2ErrorCount > 0 ? (
+                      <div className="review-project-detail__mf2-save-error" role="alert">
+                        Fix {mf2ErrorCount} MF2 error{mf2ErrorCount === 1 ? '' : 's'} before
+                        accepting.
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <TranslationTextEditor
+                    key={textUnit.id}
+                    assisted={isVisibleTextEditorEnabled}
+                    className={`review-project-detail__input review-project-detail__input--autosize review-project-detail__input--translation${
+                      isRejected ? ' review-project-detail__input--rejected' : ''
+                    }`}
+                    ref={setTranslationRef}
+                    value={draftTarget}
+                    onChange={setDraftTarget}
+                    ariaLabel="Translation"
+                    controlBar={
+                      isVisibleTextEditorEnabled
+                        ? {
+                            marksMode: translationMarksMode,
+                            onChangeMarksMode: setTranslationMarksMode,
+                            protectedTokenCount: draftTargetProtectedTokens.length,
+                          }
+                        : undefined
+                    }
+                    spellCheck={true}
+                    lang={translationLang}
+                    disabled={isSavingGlobal}
+                    onKeyDown={handleTranslationEditorKeyDown}
+                    marksMode={translationMarksMode}
+                    protectedDiagnostics={draftTargetProtectedDiagnostics}
+                    protectedTokens={draftTargetProtectedTokens}
+                    validateNextValue={isVisibleTextEditorEnabled ? validateDraftTarget : undefined}
+                  />
+                )}
               </div>
 
               <div className="review-project-detail__editor-controls">
@@ -3792,7 +3892,7 @@ function DetailPane({
                         snapshot.decisionState === 'DECIDED' ? ' is-active' : ''
                       }`}
                       onClick={() => handleDecisionStateChange('DECIDED')}
-                      disabled={isDirty || isSavingGlobal}
+                      disabled={isDirty || isSavingGlobal || (mf2HasErrors && !isRejected)}
                       aria-pressed={snapshot.decisionState === 'DECIDED'}
                     >
                       Decided
@@ -3993,11 +4093,15 @@ function DetailPane({
                   label: 'Glossary',
                   count: glossaryMatchesQuery.data?.length,
                 },
-                {
-                  value: 'icu' as const,
-                  label: 'Placeholders',
-                  count: hasIcuMessage ? 1 : undefined,
-                },
+                ...(sourceIsMf2
+                  ? []
+                  : [
+                      {
+                        value: 'icu' as const,
+                        label: 'Placeholders',
+                        count: hasIcuMessage ? 1 : undefined,
+                      },
+                    ]),
                 { value: 'history' as const, label: 'History' },
                 { value: 'context' as const, label: 'Context' },
               ].map((tab) =>
@@ -4055,7 +4159,11 @@ function DetailPane({
               ) : null}
 
               {activeContextTab === 'icu' ? (
-                hasIcuMessage ? (
+                sourceIsMf2 ? (
+                  <div className="review-project-detail__context-empty">
+                    MF2 structure and diagnostics are available in the translation editor.
+                  </div>
+                ) : hasIcuMessage ? (
                   <IcuPreviewSection
                     sourceMessage={source}
                     targetMessage={draftTarget}

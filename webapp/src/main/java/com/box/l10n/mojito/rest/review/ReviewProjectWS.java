@@ -22,6 +22,7 @@ import com.box.l10n.mojito.service.review.ReviewProjectTextUnitDetail;
 import com.box.l10n.mojito.service.review.SearchReviewProjectRequestsView;
 import com.box.l10n.mojito.service.review.SearchReviewProjectsCriteria;
 import com.box.l10n.mojito.service.review.SearchReviewProjectsView;
+import com.box.l10n.mojito.service.tm.search.MessageFormatDetector;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import java.time.ZonedDateTime;
@@ -786,6 +787,7 @@ public class ReviewProjectWS {
         Long id,
         String name,
         String content,
+        String messageFormat,
         String comment,
         ZonedDateTime createdDate,
         Asset asset,
@@ -1097,6 +1099,8 @@ public class ReviewProjectWS {
             view.tmTextUnit().id(),
             view.tmTextUnit().name(),
             view.tmTextUnit().content(),
+            MessageFormatDetector.detect(
+                view.tmTextUnit().content(), view.tmTextUnit().asset().assetPath()),
             view.tmTextUnit().comment(),
             view.tmTextUnit().createdDate(),
             new GetReviewProjectResponse.Asset(
@@ -1160,6 +1164,7 @@ public class ReviewProjectWS {
             detail.tmTextUnitId(),
             detail.tmTextUnitName(),
             detail.tmTextUnitContent(),
+            MessageFormatDetector.detect(detail.tmTextUnitContent(), detail.assetPath()),
             detail.tmTextUnitComment(),
             detail.tmTextUnitCreatedDate(),
             asset,
