@@ -41,11 +41,37 @@ What this scaffold includes
   - run one Mojito-owned, read-only bounded query and perform carryover/structural analysis in memory
   - return uncapped totals with capped, redacted evidence; never mutate translations or create incidents
   - see `dev-docs/design/027-review-project-decision-integrity-audit.md`
+- An admin-only guarded translation-correction operation:
+  - `translation.apply_corrections` through MCP and
+    `POST /api/admin/translation-corrections/apply` through REST
+  - require explicit confirmation and, per row, the Review Project, Review Project text unit,
+    repository id and name, locale, TM text unit, current variant, exact old target, and replacement
+  - accept target-locale translation Review Projects (`EMERGENCY`, `NORMAL`, and `BUG_FIXES`);
+    reject repository source locales, `TERMINOLOGY`, `TERM_CANDIDATE`, and fail-closed `UNKNOWN`
+  - lock the current variant first, then lock and re-read the complete audited identity graph before
+    comparing every identity and the exact stored old target; normalize only the replacement before
+    applying it
+  - process at most 1,000 rows in independent transactions and return ordered `APPLIED`, `CONFLICT`,
+    or `ERROR` results without echoing old/replacement payloads for skipped rows
+  - authorize the MCP mutation before typed argument conversion, then reject the whole request before
+    any row transaction if a repository name exceeds 255 characters, a locale exceeds 255 characters,
+    an old/replacement target exceeds 1,000,000 characters, or all string fields exceed 8,000,000
+    characters in aggregate
+  - write through `TMService` without an override path, force `REVIEW_NEEDED`, preserve the prior
+    inclusion flag and comment, leave Review Project decision evidence untouched, and never log the
+    translation content from the shared variant-write path
+  - flush, clear, and immediately re-read the current row before reporting an applied result; return
+    the durable ids, stored target, status, and explicit verification checks
 - A remote MCP transport at `/api/mcp` that supports:
   - `initialize`
   - `tools/list`
   - `tools/call`
   - `notifications/initialized`
+- Authenticated `POST /api/mcp` requests have a non-overridable 32 MiB raw-body ceiling. The
+  controller checks declared length and also performs a bounded servlet-stream read before JSON
+  parsing, so missing, chunked, or inaccurate `Content-Length` values cannot bypass the limit.
+  `l10n.mcp.max-request-bytes` may lower, but never raise, the ceiling. The size preserves the
+  existing 20 MiB decoded `image.upload` contract after base64 expansion plus the JSON envelope.
 - The transport is Streamable-HTTP compatible in sync mode:
   - `POST /api/mcp` returns `application/json`
   - `GET /api/mcp` returns `405 Method Not Allowed` because streaming is not implemented yet
@@ -69,6 +95,14 @@ Current limitations
 - Slack stays in draft mode for the incident workflow; send remains a follow-up integration.
 - Task inspection is lookup-by-id only. It does not yet provide search/listing for recent failed tasks.
 - Review Project decision integrity is operator-invoked only; no cron or persisted audit history is included.
+- Guarded translation correction is synchronous and deliberately bounded to 1,000 independent
+  row transactions, 1,000,000 characters per translation field, and 8,000,000 aggregate string
+  characters per request. The shared 32 MiB raw MCP ceiling is enforced first, so heavily escaped
+  or unusually encoded/non-ASCII JSON can be rejected with HTTP 413 before reaching those looser
+  character limits. Callers own higher-level batch lineage, retry selection, and rollback planning.
+  An unexpected transaction-boundary failure returns `CORRECTION_OUTCOME_UNKNOWN`, and a lost HTTP
+  response can hide a committed result; callers must re-read current state before retrying either
+  case.
 
 Task inspection example
 

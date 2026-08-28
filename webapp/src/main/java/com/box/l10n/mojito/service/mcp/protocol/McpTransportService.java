@@ -120,6 +120,10 @@ public class McpTransportService {
     return errorResponse(null, -32700, "Parse error");
   }
 
+  public JsonNode requestTooLargeError() {
+    return errorResponse(null, -32000, "Request body too large");
+  }
+
   private TransportResult handleNotification(ObjectNode messageObject) {
     String method = messageObject.path("method").asText();
     if ("notifications/initialized".equals(method) || method.startsWith("notifications/")) {

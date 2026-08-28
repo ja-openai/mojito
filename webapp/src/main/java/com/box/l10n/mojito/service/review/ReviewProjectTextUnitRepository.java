@@ -3,9 +3,11 @@ package com.box.l10n.mojito.service.review;
 import com.box.l10n.mojito.entity.review.ReviewProjectStatus;
 import com.box.l10n.mojito.entity.review.ReviewProjectTextUnit;
 import com.box.l10n.mojito.service.badtranslation.BadTranslationReviewProjectMatchRow;
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,6 +16,22 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 @RepositoryRestResource(exported = false)
 public interface ReviewProjectTextUnitRepository
     extends JpaRepository<ReviewProjectTextUnit, Long> {
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query(
+      """
+      select rptu
+      from ReviewProjectTextUnit rptu
+      join fetch rptu.reviewProject reviewProject
+      join fetch reviewProject.locale locale
+      join fetch rptu.tmTextUnit textUnit
+      join fetch textUnit.tm tm
+      join fetch textUnit.asset asset
+      join fetch asset.repository repository
+      join fetch repository.sourceLocale sourceLocale
+      where rptu.id = :id
+      """)
+  Optional<ReviewProjectTextUnit> findGuardedCorrectionIdentityForUpdateById(@Param("id") Long id);
 
   @Query(
       """

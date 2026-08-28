@@ -24,6 +24,8 @@ public abstract class TypedMcpToolHandler<I> implements McpToolHandler {
 
   @Override
   public final McpToolCallResult call(JsonNode arguments) {
+    authorizeBeforeInputConversion(arguments);
+
     if (arguments == null || arguments.isNull()) {
       throw new IllegalArgumentException("arguments are required");
     }
@@ -36,6 +38,9 @@ public abstract class TypedMcpToolHandler<I> implements McpToolHandler {
     Object result = execute(input);
     return McpToolCallResult.success("ok", objectMapper.valueToTree(result));
   }
+
+  /** Allows role-sensitive tools to fail closed before typed input conversion. */
+  protected void authorizeBeforeInputConversion(JsonNode arguments) {}
 
   protected abstract Object execute(I input);
 }

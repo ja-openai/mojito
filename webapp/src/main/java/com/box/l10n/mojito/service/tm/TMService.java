@@ -844,11 +844,7 @@ public class TMService {
       ZonedDateTime createdDate,
       User createdBy) {
 
-    logger.debug(
-        "Add TMTextUnitVariant for tmId: {} locale id: {}, content: {}",
-        tmTextUnitId,
-        localeId,
-        content);
+    logger.debug("Add TMTextUnitVariant for tmId: {} locale id: {}", tmTextUnitId, localeId);
 
     Preconditions.checkNotNull(content, "content must not be null when adding a TMTextUnitVariant");
 

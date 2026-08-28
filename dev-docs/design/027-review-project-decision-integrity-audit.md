@@ -111,10 +111,55 @@ Product names, model names, colors, and short actions may correctly remain uncha
 This is not a comprehensive linguistic review. The service never rejects, approves, overwrites, or
 otherwise changes a translation, and it never creates bad-translation incidents.
 
-## Security and payload bounds
+## Separate remediation boundary
 
-- `/api/mcp` requires authentication; this tool additionally checks the current user's admin role
-  before parsing or querying.
+Audit findings are never fed automatically into a write path. When an operator has separately
+reviewed an exact correction, the admin-only `translation.apply_corrections` MCP tool (or its
+`POST /api/admin/translation-corrections/apply` REST equivalent) provides a distinct guarded
+compare-and-set operation.
+
+Each correction must supply the Review Project id, Review Project text-unit id, repository id and
+name, locale, TM text-unit id, expected current variant id, exact expected old target, and exact
+replacement. The application resolves the identity to locate and pessimistically lock the current
+translation row, then locks and reloads the complete Review Project/repository identity graph before
+revalidating every guard, the expected variant, and the byte-for-byte old target. A missing or
+changed guard is an ordered `CONFLICT` result and never a write. The expected old target is not
+normalized; only the replacement follows Mojito's normal NFC storage semantics. Only target-locale
+translation Review Projects are eligible: `EMERGENCY`, `NORMAL`, and `BUG_FIXES` remain supported,
+while repository source locales, `TERMINOLOGY`, `TERM_CANDIDATE`, and fail-closed `UNKNOWN` are
+rejected before the current translation is locked or written.
+
+Applied rows use the ordinary `TMService` persistence path without an override, always create a
+`REVIEW_NEEDED` variant, preserve the previous inclusion flag and comment, and do not rewrite the
+Review Project decision row. The transaction flushes and clears its persistence context, re-reads
+the current row, and verifies the durable identity, variant, target, status, and inclusion flag
+before returning `APPLIED`. Any failed read-back verification rolls back that row. Independent
+per-row transactions allow a bounded batch to return structured applied/conflict/error outcomes;
+conflict and error results contain stable codes and the requested identity only, not translation payloads,
+credentials, SQL details, or stack traces. An unexpected failure at the transaction boundary returns
+`CORRECTION_OUTCOME_UNKNOWN`; the caller must re-read the guarded current variant and exact target
+before deciding whether to retry. A response can also be lost after commit, so higher-level durable
+run lineage and rollback evidence remain the caller's responsibility.
+
+The mutation MCP adapter checks the admin role before typed argument conversion. Both MCP and REST
+then share request-wide service validation before any row transaction: at most 1,000 rows, 255
+characters for repository name and locale, 1,000,000 characters for either target field, and
+8,000,000 characters across all string fields. The shared `TMService` write path logs ids but never
+translation content.
+
+The authenticated `/api/mcp` route also enforces a non-overridable 32 MiB raw request ceiling after
+route authorization but before MVC body binding or JSON parsing. It rejects oversized declared
+lengths and independently bounds the servlet stream, covering chunked, missing, or inaccurate
+`Content-Length` values with HTTP 413. `l10n.mcp.max-request-bytes` may lower the limit but cannot
+raise it. The ceiling preserves the existing 20 MiB decoded image-upload operation after base64 and
+envelope overhead while strictly bounding pre-parse allocation. It is intentionally independent of
+the correction service's character counts, so heavily escaped or unusually encoded/non-ASCII JSON
+may reach the raw-byte ceiling before the 8,000,000-character semantic limit.
+
+## Audit security and payload bounds
+
+- `/api/mcp` requires authentication; the audit tool additionally checks the current user's admin
+  role before interpreting the requested time bounds or querying.
 - The descriptor declares the tool read-only and dry-run by default, while server-side code is also
   transactionally read-only.
 - Full source and target payloads are not returned. Previews are single-line and limited to 160
@@ -140,6 +185,11 @@ Before using the tool as the daily operator path:
    for a non-admin account.
 4. Run the 26-hour investigation through MCP and compare summary counts with one controlled
    application-side verification.
+
+Before enabling guarded correction for an operator workflow, also verify the deployed application
+advertises `translation.apply_corrections`, rejects a non-admin call, and returns a no-write conflict
+for a deliberately stale request. A real staging correction requires separate authorization and
+must be independently re-read to confirm the returned variant is current and `REVIEW_NEEDED`.
 
 The optional daily Quartz canary invokes this same audit service and publishes bounded, tag-free
 Micrometer summaries; it does not add a second query or persist remediation. Keep
