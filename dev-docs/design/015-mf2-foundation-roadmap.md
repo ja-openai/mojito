@@ -146,7 +146,7 @@ large enough to prevent false confidence.
 
 ## Phase 3: Mojito MF2 UI
 
-Add MF2-aware editor surfaces:
+The long-term MF2-aware editor direction includes:
 
 - syntax and semantic highlighting
 - diagnostics with ranges and stable codes
@@ -154,24 +154,32 @@ Add MF2-aware editor surfaces:
 - variable completion and rename safety
 - locale-aware preview values
 - target/source structure comparison
-- target-language-only variant support
+- target-locale variant support where the source contract permits it
 - deterministic checks before AI assistance
 
-Start in a dedicated MF2 preview/editor tool, then wire into Workbench and
-text-unit detail.
+The production-shaped React editor is now integrated into both the Workbench
+active translation row and Review Project detail. API-provided
+`messageFormat: "MF2"` source metadata selects the shared
+`Mf2TranslationEditor`; a strict source-declaration check remains only as a
+compatibility fallback when older API payloads omit the field. Translators get
+structured, flat `.match` variant rows, source/target contract diagnostics, and
+a raw CodeMirror repair path without choosing a parser mode.
 
-The first prototype is deliberately simpler than the target Mojito UI:
+The integrated editor also supports target-locale plural promotion when the
+source declares a compatible numeric selector input, even when the source
+message itself does not use `.match`. Promotion creates the target locale's CLDR
+rows plus a wildcard fallback while preserving the existing target in that
+fallback. It does not permit arbitrary target selectors: undeclared,
+non-selector-capable, or annotation-mismatched inputs remain errors.
 
-- static HTML/CSS/JavaScript, no build step
-- Rust-backed dev server for real parser diagnostics, preview, and parts output
-- translator workbench layout with raw MF2 hidden behind an advanced disclosure
-- structured variant cards for `.input` + `.match` messages
-- mechanical plural template insertion
-- locale/argument preview and format-to-parts output
-- local diagnostics for the supported Rust prototype slice
-
-This lets us validate translator and PM workflows before choosing CodeMirror,
-Monaco, React component boundaries, or `mf2lsp` Wasm integration.
+The original static Rust-backed prototype remains useful for parser/runtime
+experiments, but it is no longer the Workbench integration path. The current
+backend classifies a final `.mf2` source asset extension directly and uses strict
+source shape for mixed or legacy assets. The remaining backend boundary is to
+make repository or asset configuration authoritative for MF2 classification and
+to enforce MF2 parse and source/target contract validation on every server-side
+mutation path. Frontend diagnostics currently protect the interactive save and
+accept flows, but are not an authoritative asset validator.
 
 ## Phase 4: Native Swift
 

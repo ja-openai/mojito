@@ -15,6 +15,7 @@ export type WorkbenchRow = {
   locale: string;
   localeId: number | null;
   source: string;
+  messageFormat?: 'MF2' | null;
   translation: string | null;
   sourceCreatedDate: string | null;
   translationCreatedDate: string | null;

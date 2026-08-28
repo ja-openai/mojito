@@ -19,13 +19,14 @@ breaks. Placeholder protection is the next layer on the same editor foundation.
   - visible spaces and line breaks
   - protected ICU MessageFormat 1 placeholders
   - protected platform placeholders such as Android/iOS printf specifiers
-  - demo MF2 placeholders
+  - MF2-like demo placeholders for the generic editor tooling
   - later bidi controls, syntax diagnostics, and source-target structure checks
 - Keep a raw-edit path that round-trips through the same canonical string.
 
 ## Non-Goals
 
-- Full MF2 editor behavior in this pass.
+- Implementing full MF2 behavior inside this generic ProseMirror component;
+  production MF2 messages use the dedicated structured editor.
 - Replacing backend integrity checks with frontend checks.
 - Building a mobile editor implementation in the web repo.
 
@@ -139,7 +140,7 @@ Current frontend extraction supports these token kinds:
 - `icu-pound`: ICU plural `#` markers inside plural option bodies.
 - `html-tag`: HTML/XML-like tags such as `<link>` and `</link>`.
 - `platform-placeholder`: common printf/Foundation/Android-style placeholders.
-- `mf2-demo`: prototype-only MF2-like variables/declarations.
+- `mf2-demo`: MF2-like variables/declarations used only by generic editor demos.
 
 The production surfaces should call this user-facing concept “placeholders” in
 UI copy. “Token” remains an implementation term for extracted ranges in code and
@@ -198,28 +199,32 @@ API and the editor renders them as inline diagnostic marks. These diagnostics ar
 not controlled by the hidden-character display setting; Hidden chars Off still
 shows malformed-placeholder warnings.
 
-### MF2 Demo
+### Structured MF2 Editor
 
-Use a small demo extractor for MF2-like placeholders and declarations:
+The generic protected-editor tooling retains a small `mf2-demo` extractor for
+fixtures such as:
 
 - `{$name}`
 - `:function`
 - `.input ...`
 - `.match ...`
 
-This is demo-only until an MF2 parser with stable source spans is available.
-Earlier MF2 Workbench prototypes had stronger source-aware behavior, including
-placeholder completion from source `.input` declarations, IME-safe completion,
-brace diagnostics, and missing/unknown-placeholder warnings. Those capabilities
-should be ported as completion and diagnostic providers on top of the shared
-ProseMirror editor rather than restored as a separate textarea implementation.
-The old prototype's pure MF2 model has been ported into frontend utilities for
-source placeholder extraction, completion ranges, completion application, and
-brace/missing/unknown-placeholder diagnostics. The shared ProseMirror editor now
-exposes a compact completion surface and the MF2 prototype wires it to those
-utilities for source placeholder completion. Remaining MF2 work is to replace the
-demo extractor with parser-backed spans and harden IME composition behavior
-before any production MF2 rollout.
+That extractor is not the production MF2 path. Workbench and Review Project now
+route MF2 messages to the shared `Mf2TranslationEditor`, which uses the MF2
+JavaScript parser/model, structured flat selector and variant rows, source/target
+contract diagnostics, and a raw CodeMirror repair mode. A source-declared
+compatible numeric input can be promoted into target-locale plural rows plus a
+wildcard fallback even when the source message is plain rather than a `.match`;
+undeclared, non-selector-capable, and annotation-mismatched target selectors are
+rejected.
+
+API-provided source `messageFormat` metadata controls this routing. Explicit
+metadata is authoritative in the frontend; strict source-declaration detection
+is only a compatibility fallback for older payloads that omit the field. The
+current backend derives the metadata from a final `.mf2` source asset extension
+or, for mixed and legacy assets, strict source shape. Repository- or
+asset-configured MF2 declaration and server-side parse/contract validation on
+all mutation paths remain follow-up work.
 
 ### Backend Integrity Checker Bridge
 
@@ -234,7 +239,9 @@ Production integration should add a REST endpoint that returns placeholder
 ranges and labels for a source/target pair using the repository's configured
 integrity checkers. The frontend extractor is still valuable for instant ICU
 and platform-placeholder feedback, but the server should be authoritative for
-repository-specific placeholder rules.
+repository-specific placeholder rules. This generic placeholder-range bridge is
+separate from the remaining MF2 backend work: authoritative asset classification
+and MF2 parse/contract validation.
 
 ## Protection Profile Direction
 
@@ -247,6 +254,10 @@ modes for debugging, but the production editor should keep this internal:
 - ICU/html/platform extractors provide instant frontend feedback
 - backend integrity checkers provide authoritative repository-specific ranges
 - Edit placeholders mode remains the escape hatch when detection is wrong
+
+MF2 is a format-specific exception to this generic profile: when source
+metadata says `MF2`, the host uses the dedicated structured editor rather than
+asking the translator to select a protection profile.
 
 ## Placeholder Edit Escape Hatch
 
@@ -295,6 +306,25 @@ path remains the native textarea. This lets admins and early testers validate th
 ProseMirror editor in Workbench and Review Project without adding runtime cost
 or editor behavior changes for everyone else.
 
+MF2 routing is independent of that generic-editor preference. Workbench active
+MF2 rows and Review Project MF2 detail editors always use the structured editor,
+with locale controlled by the host and the source shown through the surrounding
+surface plus active-form comparison. The shared focus/blur handle and primary
+keyboard action preserve each host's save or accept workflow. Parser and
+source/target contract errors disable those interactive actions until repaired.
+
+Interactive validation is bounded before the JavaScript parser runs. Each MF2
+source and target is limited to 65,536 UTF-16 code units and 1,024 brace
+characters; exceeding either limit produces an editor error without constructing
+a model. These fixed browser limits are a defense-in-depth safety envelope, not
+authoritative server validation or the shared configurable runtime policy tracked
+by `MF2-01`. Workbench therefore does not eagerly parse every loaded MF2 row and
+does not offer bulk acceptance for loaded MF2 current variants: each row must be
+accepted through its bounded individual validation path. Review Project keeps
+invalid MF2 translations from being accepted, while an already rejected row may
+still be marked decided because that transition does not accept the invalid
+target.
+
 ## Mobile Direction
 
 For iOS and Android, ProseMirror is not the runtime. The portable pieces should
@@ -326,4 +356,5 @@ mobile clients.
 - Toggle changes do not mutate raw text.
 - Workbench and Review Project save flows receive the exact raw string.
 - Browser verification covers LTR, RTL, line breaks, repeated spaces, NBSP,
-  ICU placeholders, and MF2 demo placeholders.
+  ICU placeholders, the generic MF2 demo token mode, and the dedicated
+  structured MF2 flow.

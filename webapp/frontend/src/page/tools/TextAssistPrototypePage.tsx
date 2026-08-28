@@ -2,6 +2,7 @@ import './text-assist-prototype-page.css';
 
 import { useMemo, useRef, useState } from 'react';
 
+import { Mf2TranslationEditor } from '../../components/mf2/Mf2TranslationEditor';
 import {
   type VisibleTextCompletionOption,
   VisibleTextEditor,
@@ -77,6 +78,8 @@ const SAMPLES: Sample[] = [
 ];
 
 const DEFAULT_SAMPLE = SAMPLES[0];
+const MF2_TRANSLATION_SOURCE = `.input {$count :number}
+{{You have {$count} files.}}`;
 
 const directionOptions: Array<{ value: DirectionMode; label: string }> = [
   { value: 'ltr', label: 'LTR' },
@@ -102,6 +105,7 @@ export function TextAssistPrototypePage() {
   const [editorSelection, setEditorSelection] = useState<{ start: number; end: number } | null>(
     null,
   );
+  const [mf2Translation, setMf2Translation] = useState('');
   const editorRef = useRef<VisibleTextEditorHandle | null>(null);
 
   const protectedDiagnostics = useMemo(
@@ -269,6 +273,30 @@ export function TextAssistPrototypePage() {
             )}
           </div>
         </div>
+
+        <section className="text-assist-prototype__structured-mf2">
+          <div className="text-assist-prototype__section-heading">
+            <div>
+              <h2>Structured MF2 translation editor</h2>
+              <p>
+                French can promote the source-declared count into flat locale plural forms without
+                changing the English source.
+              </p>
+            </div>
+            <button type="button" onClick={() => setMf2Translation('')}>
+              Reset target
+            </button>
+          </div>
+          <Mf2TranslationEditor
+            locale="fr"
+            onTargetChange={setMf2Translation}
+            showArgumentInputs={false}
+            showLocaleSelector={false}
+            showPreview={false}
+            source={MF2_TRANSLATION_SOURCE}
+            target={mf2Translation}
+          />
+        </section>
       </div>
     </div>
   );

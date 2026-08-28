@@ -112,6 +112,7 @@ export type ApiReviewProjectTextUnit = {
     id: number;
     name?: number | string | null;
     content?: string | null;
+    messageFormat?: string | null;
     comment?: string | null;
     createdDate?: string | null;
     asset?: {

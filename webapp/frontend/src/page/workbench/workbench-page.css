@@ -1139,6 +1139,32 @@
   z-index: 3;
 }
 
+.workbench-page__row--mf2-editing > .workbench-page__cell--meta {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.workbench-page__row--mf2-editing > .workbench-page__cell--source {
+  grid-column: 2 / 4;
+  grid-row: 1;
+}
+
+.workbench-page__row--mf2-editing > .workbench-page__cell--locale {
+  grid-column: 4;
+  grid-row: 1;
+}
+
+.workbench-page__row--mf2-editing > .workbench-page__cell--status {
+  grid-column: 5;
+  grid-row: 1;
+}
+
+.workbench-page__row--mf2-editing > .workbench-page__cell--translation-mf2 {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-width: 0;
+}
+
 .workbench-page__cell {
   min-width: 0;
   color: var(--color-text);
@@ -1157,6 +1183,63 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.workbench-page__mf2-preview {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-height: 3.25rem;
+  padding: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.workbench-page__mf2-preview.is-interactive {
+  cursor: text;
+}
+
+.workbench-page__mf2-preview.is-interactive:hover,
+.workbench-page__mf2-preview.is-interactive:focus-visible {
+  outline: 0;
+  border-color: color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.workbench-page__mf2-preview-text {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+}
+
+.workbench-page__mf2-preview-text.is-empty {
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-weight: var(--font-weight-regular);
+}
+
+.workbench-page__mf2-badge {
+  flex: none;
+  min-height: 1.25rem;
+  padding: 0 var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 28%, var(--color-border));
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-accent) 76%, var(--color-text));
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.15rem;
+}
+
+.workbench-page__mf2-editor {
+  width: 100%;
 }
 
 .workbench-page__cell--locale {

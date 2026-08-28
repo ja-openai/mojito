@@ -1,17 +1,15 @@
 import '../../components/chip-dropdown.css';
 import './workbench-page.css';
 
-import { type RefObject, useState } from 'react';
+import { type MutableRefObject, useState } from 'react';
 
 import type { ApiRepository } from '../../api/repositories';
 import type { TextUnitSearchRequest } from '../../api/text-units';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { IntegrityCheckAlertModal } from '../../components/IntegrityCheckAlertModal';
 import { Modal } from '../../components/Modal';
-import type {
-  VisibleTextEditorHandle,
-  VisibleTextMarksMode,
-} from '../../components/VisibleTextEditor';
+import type { TranslationEditorHandle } from '../../components/TranslationEditorHandle';
+import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
 import { useVisibleTextEditorEnabled } from '../../hooks/useVisibleTextEditorEnabled';
 import type { GlossaryWorkbenchContext } from '../../utils/glossaryWorkbench';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
@@ -78,7 +76,7 @@ type Props = {
   showDiscardDialog: boolean;
   onConfirmDiscardEditing: () => void;
   onDismissDiscardEditing: () => void;
-  translationInputRef: RefObject<VisibleTextEditorHandle>;
+  translationInputRef: MutableRefObject<TranslationEditorHandle | null>;
   registerRowRef: (rowId: string, element: HTMLDivElement | null) => void;
   searchAttribute: WorkbenchTextSearchCondition['field'];
   searchType: WorkbenchTextSearchCondition['searchType'];

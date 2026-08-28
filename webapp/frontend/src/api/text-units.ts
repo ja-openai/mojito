@@ -42,6 +42,8 @@ export type ApiTextUnit = {
   target?: string | null;
   targetLocale: string;
   targetComment?: string | null;
+  // "MF2" routes the row to the structured MessageFormat 2 editor.
+  messageFormat?: string | null;
   pluralForm?: string | null;
   pluralFormOther?: string | null;
   doNotTranslate?: boolean;

@@ -1,6 +1,6 @@
 import type { InfiniteData } from '@tanstack/react-query';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   type ApiTextUnit,
@@ -10,7 +10,9 @@ import {
   type TextUnitSearchRequest,
   updateTextUnitCurrentVariantsStatus,
 } from '../../api/text-units';
-import type { VisibleTextEditorHandle } from '../../components/VisibleTextEditor';
+import { isMf2Message } from '../../components/mf2/messageFormat';
+import { mf2TranslationErrorCount } from '../../components/mf2/translationValidation';
+import type { TranslationEditorHandle } from '../../components/TranslationEditorHandle';
 import {
   buildIntegrityCheckErrorReport,
   checkTextUnitIntegrityWithRetry,
@@ -84,7 +86,7 @@ type UseWorkbenchEditsResult = {
   onSaveEditing: () => void;
   onChangeEditingValue: (value: string) => void;
   onChangeStatus: (rowId: string, status: string) => void;
-  translationInputRef: RefObject<VisibleTextEditorHandle>;
+  translationInputRef: MutableRefObject<TranslationEditorHandle | null>;
   registerRowRef: (rowId: string, element: HTMLDivElement | null) => void;
   isSaving: boolean;
   isApplyingBulkAction: boolean;
@@ -115,6 +117,19 @@ type UseWorkbenchEditsResult = {
   clearWorksetEdits: () => void;
 };
 
+function rowHasMf2Errors(row: WorkbenchRow, target = row.translation ?? '') {
+  if (!isMf2Message({ messageFormat: row.messageFormat, source: row.source })) {
+    return false;
+  }
+  return (
+    mf2TranslationErrorCount({
+      locale: row.locale,
+      source: row.source,
+      target,
+    }) > 0
+  );
+}
+
 export function useWorkbenchEdits({
   apiRows,
   canSearch,
@@ -144,7 +159,7 @@ export function useWorkbenchEdits({
   const [statusSavingRowIds, setStatusSavingRowIds] = useState<Set<string>>(() => new Set());
   const [worksetEdits, setWorksetEdits] = useState<Map<string, WorksetEditEntry>>(() => new Map());
   const [diffRowId, setDiffRowId] = useState<string | null>(null);
-  const translationInputRef = useRef<VisibleTextEditorHandle>(null);
+  const translationInputRef = useRef<TranslationEditorHandle>(null);
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const saveAttemptRef = useRef(0);
   const queryClient = useQueryClient();
@@ -315,6 +330,16 @@ export function useWorkbenchEdits({
             .filter((row) => row.canEdit && typeof row.tmTextUnitCurrentVariantId === 'number')
             .map((row) => row.tmTextUnitCurrentVariantId as number),
         ),
+      ),
+    [apiRows],
+  );
+  const hasMf2CurrentVariantRows = useMemo(
+    () =>
+      apiRows.some(
+        (row) =>
+          row.canEdit &&
+          typeof row.tmTextUnitCurrentVariantId === 'number' &&
+          isMf2Message({ messageFormat: row.messageFormat, source: row.source }),
       ),
     [apiRows],
   );
@@ -566,6 +591,10 @@ export function useWorkbenchEdits({
     if (editingValue === editingInitialValue && row.status === 'Accepted') {
       return;
     }
+    if (rowHasMf2Errors(row, editingValue)) {
+      setSaveErrorMessage('Fix the MF2 errors before accepting.');
+      return;
+    }
 
     setSaveErrorMessage(null);
 
@@ -610,6 +639,10 @@ export function useWorkbenchEdits({
 
       const statusUpdate = mapUiStatusToApi(status);
       if (!statusUpdate || !statusUpdate.status) {
+        return;
+      }
+      if (statusUpdate.status === 'APPROVED' && rowHasMf2Errors(row, target)) {
+        setSaveErrorMessage('Fix the MF2 errors before accepting.');
         return;
       }
 
@@ -691,6 +724,12 @@ export function useWorkbenchEdits({
       if (!mapUiStatusToApi(statusLabel)?.status) {
         return;
       }
+      if (mapUiStatusToApi(statusLabel)?.status === 'APPROVED' && hasMf2CurrentVariantRows) {
+        setBulkActionErrorMessage(
+          'Accept loaded MF2 translations individually so each row can be validated safely.',
+        );
+        return;
+      }
       setBulkActionErrorMessage(null);
       setPendingBulkAction({
         kind: 'status',
@@ -698,7 +737,7 @@ export function useWorkbenchEdits({
         statusLabel,
       });
     },
-    [deletableCurrentVariantIds.length],
+    [deletableCurrentVariantIds.length, hasMf2CurrentVariantRows],
   );
 
   const confirmBulkAction = useCallback(() => {
@@ -717,13 +756,26 @@ export function useWorkbenchEdits({
       setPendingBulkAction(null);
       return;
     }
+    if (statusUpdate.status === 'APPROVED' && hasMf2CurrentVariantRows) {
+      setPendingBulkAction(null);
+      setBulkActionErrorMessage(
+        'Accept loaded MF2 translations individually so each row can be validated safely.',
+      );
+      return;
+    }
 
     void updateAllStatusesMutation.mutateAsync({
       tmTextUnitCurrentVariantIds: deletableCurrentVariantIds,
       status: statusUpdate.status,
       includedInLocalizedFile: statusUpdate.includedInLocalizedFile,
     });
-  }, [deleteAllMutation, deletableCurrentVariantIds, pendingBulkAction, updateAllStatusesMutation]);
+  }, [
+    deleteAllMutation,
+    deletableCurrentVariantIds,
+    hasMf2CurrentVariantRows,
+    pendingBulkAction,
+    updateAllStatusesMutation,
+  ]);
 
   const dismissBulkAction = useCallback(() => {
     setPendingBulkAction(null);

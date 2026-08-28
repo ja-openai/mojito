@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { type ComponentProps, createRef } from 'react';
+import { type ComponentProps } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { VisibleTextEditorHandle } from '../../components/VisibleTextEditor';
+import type { TranslationEditorHandle } from '../../components/TranslationEditorHandle';
 import type { WorkbenchRow } from './workbench-types';
 import { WorkbenchBody } from './WorkbenchBody';
 
@@ -60,7 +60,7 @@ function renderWorkbenchBody(overrides: Partial<WorkbenchBodyProps> = {}) {
       queries: { retry: false },
     },
   });
-  const translationInputRef = createRef<VisibleTextEditorHandle>();
+  const translationInputRef: { current: TranslationEditorHandle | null } = { current: null };
   const props: WorkbenchBodyProps = {
     rows: [editingRow],
     editingRowId: editingRow.id,
@@ -144,6 +144,59 @@ describe('WorkbenchBody', () => {
       expect(protectedToken).toHaveTextContent('price');
       expect(protectedToken).toHaveClass('visible-text-editor__protected-token--icu-placeholder');
     });
+  });
+
+  it('routes an MF2 source to the structured editor', async () => {
+    const mf2Row: WorkbenchRow = {
+      ...editingRow,
+      messageFormat: 'MF2',
+      source: `.input {$count :number}
+{{You have {$count} files.}}`,
+      translation: `.input {$count :number}
+.match $count
+one {{Você tem {$count} arquivo.}}
+* {{Você tem {$count} arquivos.}}`,
+    };
+    renderWorkbenchBody({
+      editingValue: mf2Row.translation ?? '',
+      rows: [mf2Row],
+    });
+
+    expect(await screen.findByRole('textbox', { name: 'Target count: one' })).toHaveClass(
+      'mf2-pm-view',
+    );
+    expect(screen.getByText('Source contract')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Raw' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Text editor' })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Accept' })).toBeEnabled();
+    });
+  });
+
+  it('blocks an initially invalid MF2 target from being accepted', async () => {
+    const onSaveEditing = vi.fn();
+    const mf2Row: WorkbenchRow = {
+      ...editingRow,
+      messageFormat: 'MF2',
+      source: `.input {$count :number}
+{{You have {$count} files.}}`,
+      translation: `.input {$count :number}
+{{Você tem {$rogue} arquivos.}}`,
+    };
+    renderWorkbenchBody({
+      editingValue: mf2Row.translation ?? '',
+      onSaveEditing,
+      rows: [mf2Row],
+    });
+
+    const editor = await screen.findByRole('textbox', { name: 'Target Message' });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Accept' })).toBeDisabled();
+    });
+
+    fireEvent.keyDown(editor, { key: 'Enter', ctrlKey: true });
+
+    expect(onSaveEditing).not.toHaveBeenCalled();
   });
 
   it('opens ICU form controls from the active translation row', async () => {

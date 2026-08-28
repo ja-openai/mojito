@@ -2197,7 +2197,7 @@
 }
 
 @media (max-width: 960px) {
-  .review-project-detail__grid {
+  .review-project-detail__layout {
     grid-template-columns: 1fr;
   }
 
@@ -2334,6 +2334,24 @@
 .review-project-detail__input--translation {
   font-size: 1rem;
   font-weight: 500;
+}
+
+.review-project-detail__mf2-editor {
+  width: 100%;
+  min-width: 0;
+  font-size: 1rem;
+}
+
+.review-project-detail__mf2-editor--rejected {
+  border-color: color-mix(in srgb, var(--color-danger) 40%, transparent);
+  background: color-mix(in srgb, var(--color-danger) 4%, var(--color-surface));
+}
+
+.review-project-detail__mf2-save-error {
+  margin-top: var(--space-2);
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
 }
 
 .review-project-detail__input--translation:not(.review-project-detail__input--rejected):hover:not(

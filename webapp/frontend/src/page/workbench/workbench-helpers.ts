@@ -5,6 +5,7 @@ import {
   getCanonicalTextSearch,
   type TextUnitSearchRequest,
 } from '../../api/text-units';
+import { normalizeMessageFormat } from '../../components/mf2/messageFormat';
 import { WORKSET_SIZE_DEFAULT, WORKSET_SIZE_MIN } from './workbench-constants';
 import type { WorkbenchRow } from './workbench-types';
 
@@ -14,6 +15,10 @@ export const clampWorksetSize = (value: number) => {
   }
   return Math.max(WORKSET_SIZE_MIN, value);
 };
+
+function hasApiMessageFormat(textUnit: ApiTextUnit): boolean {
+  return Object.prototype.hasOwnProperty.call(textUnit, 'messageFormat');
+}
 
 export function updateInfiniteData<T>(
   data: InfiniteData<T[], number> | undefined,
@@ -78,6 +83,9 @@ export function mapApiTextUnitToRow(
     locale: textUnit.targetLocale,
     localeId: textUnit.localeId ?? null,
     source: textUnit.source ?? '',
+    messageFormat: hasApiMessageFormat(textUnit)
+      ? normalizeMessageFormat(textUnit.messageFormat)
+      : undefined,
     translation,
     sourceCreatedDate: textUnit.tmTextUnitCreatedDate ?? null,
     translationCreatedDate: textUnit.createdDate ?? null,
