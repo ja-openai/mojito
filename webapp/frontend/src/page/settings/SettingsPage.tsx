@@ -61,7 +61,10 @@ export function SettingsPage() {
     useState<ReviewProjectShortcutHelpPreference>(() =>
       loadReviewProjectShortcutHelpPreference(defaultShortcutHelpPreference),
     );
-  const [visibleTextEditorEnabled, setVisibleTextEditorEnabled] = useState(() =>
+  const [savedVisibleTextEditorEnabled, setSavedVisibleTextEditorEnabled] = useState(() =>
+    loadVisibleTextEditorEnabled(username),
+  );
+  const [visibleTextEditorDraft, setVisibleTextEditorDraft] = useState(() =>
     loadVisibleTextEditorEnabled(username),
   );
   const [worksetDraft, setWorksetDraft] = useState<string>(() =>
@@ -139,7 +142,9 @@ export function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    setVisibleTextEditorEnabled(loadVisibleTextEditorEnabled(username));
+    const nextVisibleTextEditorEnabled = loadVisibleTextEditorEnabled(username);
+    setSavedVisibleTextEditorEnabled(nextVisibleTextEditorEnabled);
+    setVisibleTextEditorDraft(nextVisibleTextEditorEnabled);
     const nextDefaultReviewTeamIds = loadDefaultReviewProjectTeamIds(username);
     setSavedDefaultReviewTeamIds(nextDefaultReviewTeamIds);
     setDefaultReviewTeamDraft(nextDefaultReviewTeamIds);
@@ -204,6 +209,7 @@ export function SettingsPage() {
   );
   const canResetDefaultReviewTeams =
     savedDefaultReviewTeamIds.length > 0 || defaultReviewTeamDraft.length > 0;
+  const isVisibleTextEditorDirty = visibleTextEditorDraft !== savedVisibleTextEditorEnabled;
 
   const handleSaveWorksetPreference = () => {
     if (!parsedWorkset.valid || !isWorksetDirty) {
@@ -246,9 +252,12 @@ export function SettingsPage() {
     setShortcutHelpPreference(nextPreference);
   };
 
-  const handleVisibleTextEditorChange = (enabled: boolean) => {
-    saveVisibleTextEditorEnabled(enabled, username);
-    setVisibleTextEditorEnabled(enabled);
+  const handleSaveVisibleTextEditorPreference = () => {
+    if (!isVisibleTextEditorDirty) {
+      return;
+    }
+    saveVisibleTextEditorEnabled(visibleTextEditorDraft, username);
+    setSavedVisibleTextEditorEnabled(visibleTextEditorDraft);
   };
 
   return (
@@ -311,8 +320,8 @@ export function SettingsPage() {
           <label className="settings-radio-option">
             <input
               type="checkbox"
-              checked={visibleTextEditorEnabled}
-              onChange={(event) => handleVisibleTextEditorChange(event.target.checked)}
+              checked={visibleTextEditorDraft}
+              onChange={(event) => setVisibleTextEditorDraft(event.target.checked)}
             />
             <span className="settings-radio-option__body">
               <span className="settings-radio-option__label">
@@ -326,8 +335,29 @@ export function SettingsPage() {
             </span>
           </label>
           <p className="settings-hint">
-            Saved separately for each Mojito user in this browser. New users start with it off.
+            Saved separately for each Mojito user in this browser after you select Save. New users
+            start with it off.
           </p>
+        </div>
+        <div className="settings-card__footer">
+          <div className="settings-actions">
+            <button
+              type="button"
+              className="settings-button settings-button--primary"
+              onClick={handleSaveVisibleTextEditorPreference}
+              disabled={!isVisibleTextEditorDirty}
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              className="settings-button settings-button--ghost"
+              onClick={() => setVisibleTextEditorDraft(false)}
+              disabled={!visibleTextEditorDraft}
+            >
+              Reset
+            </button>
+          </div>
         </div>
       </section>
 
