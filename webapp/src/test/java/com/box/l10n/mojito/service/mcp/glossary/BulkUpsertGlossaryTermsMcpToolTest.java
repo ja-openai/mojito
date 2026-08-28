@@ -8,7 +8,12 @@ import com.box.l10n.mojito.service.glossary.GlossaryManagementService;
 import com.box.l10n.mojito.service.glossary.GlossaryTermService;
 import java.util.List;
 import java.util.stream.IntStream;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 public class BulkUpsertGlossaryTermsMcpToolTest {
 
@@ -20,6 +25,16 @@ public class BulkUpsertGlossaryTermsMcpToolTest {
   private final BulkUpsertGlossaryTermsMcpTool tool =
       new BulkUpsertGlossaryTermsMcpTool(
           ObjectMapper.withNoFailOnUnknownProperties(), glossaryMcpSupport, glossaryTermService);
+
+  @Before
+  public void setUp() {
+    authenticateAs("ROLE_TRANSLATOR");
+  }
+
+  @After
+  public void tearDown() {
+    SecurityContextHolder.clearContext();
+  }
 
   @Test
   public void executeDefaultsToDryRunAndDoesNotUpsert() {
@@ -44,6 +59,7 @@ public class BulkUpsertGlossaryTermsMcpToolTest {
 
   @Test
   public void executeAppliesTermsWithTranslationsAndLinkedTextUnitEvidence() {
+    authenticateAs("ROLE_PM");
     Object result =
         tool.execute(
             new BulkUpsertGlossaryTermsMcpTool.Input(
@@ -70,6 +86,19 @@ public class BulkUpsertGlossaryTermsMcpToolTest {
                     new BulkUpsertGlossaryTermsMcpTool.OperationPreview(
                         0, 20L, "actions", "Actions", "CANDIDATE", "AUTOMATED", 1, 1, 1)),
                 List.of(glossaryTermService.termView)));
+  }
+
+  @Test
+  public void executeRejectsTranslatorApplyingTerms() {
+    assertThatThrownBy(
+            () ->
+                tool.execute(
+                    new BulkUpsertGlossaryTermsMcpTool.Input(
+                        4L, null, false, List.of(termInput(20L, "Actions")))))
+        .isInstanceOf(AccessDeniedException.class)
+        .hasMessage("PM or admin role required to apply glossary changes");
+
+    assertThat(glossaryTermService.upsertCallCount).isZero();
   }
 
   @Test
@@ -123,6 +152,11 @@ public class BulkUpsertGlossaryTermsMcpToolTest {
         List.of(
             new BulkUpsertGlossaryTermsMcpTool.EvidenceInput(
                 "STRING_USAGE", "Used in onboarding CTA", null, 281663L, null, null, null, null)));
+  }
+
+  private static void authenticateAs(String role) {
+    SecurityContextHolder.getContext()
+        .setAuthentication(new TestingAuthenticationToken("operator", "ignored", role));
   }
 
   private static final class FakeGlossaryManagementService extends GlossaryManagementService {

@@ -16,6 +16,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -23,6 +26,7 @@ public class BulkUpsertGlossaryTermsMcpTool
     extends TypedMcpToolHandler<BulkUpsertGlossaryTermsMcpTool.Input> {
 
   private static final int MAX_TERMS = 1_000;
+  private static final Set<String> WRITE_ROLES = Set.of("ROLE_PM", "ROLE_ADMIN");
   private static final Set<String> EVIDENCE_TYPES =
       Set.of(
           GlossaryTermEvidence.EVIDENCE_TYPE_SCREENSHOT,
@@ -34,7 +38,7 @@ public class BulkUpsertGlossaryTermsMcpTool
       new McpToolDescriptor(
           "glossary.term.bulk_upsert",
           "Bulk upsert glossary terms",
-          "Create or update glossary terms from normalized JSON. Use this after an MCP client has inspected source code or massaged CSV/Excel bootstrap data. dryRun defaults to true; set dryRun=false only after reviewing the returned plan.",
+          "Create or update glossary terms from normalized JSON. Use this after an MCP client has inspected source code or massaged CSV/Excel bootstrap data. dryRun defaults to true; applying changes requires a PM or admin.",
           false,
           true,
           List.of(
@@ -249,6 +253,9 @@ public class BulkUpsertGlossaryTermsMcpTool
           operations,
           List.of());
     }
+    if (!hasCurrentAuthenticationWriteRole()) {
+      throw new AccessDeniedException("PM or admin role required to apply glossary changes");
+    }
 
     List<GlossaryTermService.TermView> upsertedTerms =
         new ArrayList<>(validatedInput.terms().size());
@@ -263,6 +270,14 @@ public class BulkUpsertGlossaryTermsMcpTool
         upsertedTerms.size(),
         operations,
         upsertedTerms);
+  }
+
+  private boolean hasCurrentAuthenticationWriteRole() {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    return authentication != null
+        && authentication.isAuthenticated()
+        && authentication.getAuthorities().stream()
+            .anyMatch(authority -> WRITE_ROLES.contains(authority.getAuthority()));
   }
 
   private Input validate(Input input) {
