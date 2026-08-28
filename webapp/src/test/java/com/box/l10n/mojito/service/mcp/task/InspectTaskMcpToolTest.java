@@ -11,12 +11,28 @@ import com.box.l10n.mojito.service.repository.RepositoryRepository;
 import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Optional;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 public class InspectTaskMcpToolTest {
 
+  @Before
+  public void setUp() {
+    SecurityContextHolder.clearContext();
+  }
+
+  @After
+  public void tearDown() {
+    SecurityContextHolder.clearContext();
+  }
+
   @Test
   public void executeReturnsTaskInspectionFromService() {
+    authenticateAs("ROLE_TRANSLATOR");
     RecordingInspectionService pollableTaskInspectionService = new RecordingInspectionService();
     pollableTaskInspectionService.inspection =
         new PollableTaskInspectionService.TaskInspection(
@@ -54,6 +70,7 @@ public class InspectTaskMcpToolTest {
 
   @Test
   public void executeRequiresTaskId() {
+    authenticateAs("ROLE_ADMIN");
     InspectTaskMcpTool tool =
         new InspectTaskMcpTool(
             ObjectMapper.withNoFailOnUnknownProperties(), new RecordingInspectionService());
@@ -61,6 +78,26 @@ public class InspectTaskMcpToolTest {
     assertThatThrownBy(() -> tool.execute(new InspectTaskMcpTool.Input(null)))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("taskId is required");
+  }
+
+  @Test
+  public void executeRequiresTranslationRoleBeforeInspectingTask() {
+    authenticateAs("ROLE_USER");
+    RecordingInspectionService pollableTaskInspectionService = new RecordingInspectionService();
+    InspectTaskMcpTool tool =
+        new InspectTaskMcpTool(
+            ObjectMapper.withNoFailOnUnknownProperties(), pollableTaskInspectionService);
+
+    assertThatThrownBy(() -> tool.execute(new InspectTaskMcpTool.Input(50255159L)))
+        .isInstanceOf(AccessDeniedException.class)
+        .hasMessage("Translator, PM, or admin role required");
+
+    assertThat(pollableTaskInspectionService.seenTaskId).isNull();
+  }
+
+  private static void authenticateAs(String role) {
+    SecurityContextHolder.getContext()
+        .setAuthentication(new TestingAuthenticationToken("operator", "ignored", role));
   }
 
   private static class RecordingInspectionService extends PollableTaskInspectionService {
