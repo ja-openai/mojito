@@ -11,4 +11,8 @@ public record McpToolCallResult(boolean error, String message, JsonNode structur
   public static McpToolCallResult error(String message) {
     return new McpToolCallResult(true, message, null);
   }
+
+  public static McpToolCallResult error(String message, JsonNode structuredContent) {
+    return new McpToolCallResult(true, message, structuredContent);
+  }
 }

@@ -62,6 +62,12 @@ What this scaffold includes
     translation content from the shared variant-write path
   - flush, clear, and immediately re-read the current row before reporting an applied result; return
     the durable ids, stored target, status, and explicit verification checks
+- An admin-only exact repeated-current-target discovery tool:
+  - `translation.find_repeated_current_targets`
+  - scan all current non-source translations, or require both sides to belong to one Review Project
+  - use exact same-locale target equality and exact source inequality, with no time or reviewer rule
+  - return stable, uncapped keyset pages of candidate members; never infer or mutate a correction
+  - see `dev-docs/design/030-repeated-current-target-discovery.md`
 - A remote MCP transport at `/api/mcp` that supports:
   - `initialize`
   - `tools/list`
@@ -94,7 +100,8 @@ Current limitations
 - No resumable event or subscription state.
 - Slack stays in draft mode for the incident workflow; send remains a follow-up integration.
 - Task inspection is lookup-by-id only. It does not yet provide search/listing for recent failed tasks.
-- Review Project decision integrity is operator-invoked only; no cron or persisted audit history is included.
+- Review Project decision integrity and repeated-current-target discovery are operator-invoked only;
+  no persisted audit history is included.
 - Guarded translation correction is synchronous and deliberately bounded to 1,000 independent
   row transactions, 1,000,000 characters per translation field, and 8,000,000 aggregate string
   characters per request. The shared 32 MiB raw MCP ceiling is enforced first, so heavily escaped
