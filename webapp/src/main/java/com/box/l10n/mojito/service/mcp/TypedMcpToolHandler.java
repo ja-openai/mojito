@@ -2,6 +2,7 @@ package com.box.l10n.mojito.service.mcp;
 
 import com.box.l10n.mojito.json.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.Objects;
 
 public abstract class TypedMcpToolHandler<I> implements McpToolHandler {
@@ -35,8 +36,16 @@ public abstract class TypedMcpToolHandler<I> implements McpToolHandler {
       throw new IllegalArgumentException("arguments could not be parsed");
     }
 
-    Object result = execute(input);
-    return McpToolCallResult.success("ok", objectMapper.valueToTree(result));
+    try {
+      Object result = execute(input);
+      return McpToolCallResult.success("ok", objectMapper.valueToTree(result));
+    } catch (McpToolExecutionException exception) {
+      ObjectNode structuredContent = objectMapper.createObjectNode();
+      structuredContent.put("code", exception.getCode());
+      structuredContent.put("message", exception.getMessage());
+      structuredContent.set("details", objectMapper.valueToTree(exception.getDetails()));
+      return McpToolCallResult.error(exception.getMessage(), structuredContent);
+    }
   }
 
   /** Allows role-sensitive tools to fail closed before typed input conversion. */

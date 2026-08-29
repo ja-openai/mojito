@@ -1,10 +1,16 @@
 # Review Project Decision Integrity Audit
 
+> **Scope correction:** this bounded decision-history tool is retained for recent structural checks
+> and as a timing canary. Its 30-second adjacency heuristic is not the complete repeated-target
+> detector and must not be used to enumerate or confirm carryover defects. Complete discovery uses
+> `translation.find_repeated_current_targets`; see
+> `dev-docs/design/030-repeated-current-target-discovery.md`.
+
 ## Purpose
 
 Give Codex and other authenticated operators a narrow Mojito-owned interface for investigating
-recent Review Project decisions. The client must not connect to MySQL, submit SQL, or mutate
-translations.
+recent Review Project decisions and deterministic structural risks. The client must not connect to
+MySQL, submit SQL, or mutate translations.
 
 The first interface is the read-only MCP tool
 `review_project.audit_decision_integrity`. A REST wrapper and a scheduled job are intentionally not
