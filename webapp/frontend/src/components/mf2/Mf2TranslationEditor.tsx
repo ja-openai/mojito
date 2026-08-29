@@ -50,6 +50,7 @@ import {
   sourceDeclaredLocalePluralSelectors,
   sourceFormLabelForTargetModel,
   sourceInputContractItems,
+  sourceLiteralPreview,
   sourceVariantForTargetModel,
 } from './model';
 import {
@@ -332,10 +333,24 @@ export const Mf2TranslationEditor = forwardRef<
     lineCount(activePattern),
     lineCount(activeSourcePattern),
   );
-  const sourceContractText = useMemo(
-    () => sourceInputContractItems(sourceModel).join(' ') || 'No source inputs',
+  const sourceVariablesText = useMemo(
+    () => sourceInputContractItems(sourceModel).join(' '),
     [sourceModel],
   );
+  const activeSourceComparison = useMemo(() => {
+    if (!showActiveSourceComparison) return null;
+    if (activeSourcePattern) {
+      return { label: activeSourceFormLabel, value: activeSourcePattern };
+    }
+    const fallbackValue = sourceModel
+      ? sourceLiteralPreview(source).trim() || source.trim()
+      : source.trim();
+    if (!fallbackValue) return null;
+    return {
+      label: sourceModel ? activeSourceFormLabel : 'Invalid source',
+      value: fallbackValue,
+    };
+  }, [activeSourceFormLabel, activeSourcePattern, showActiveSourceComparison, source, sourceModel]);
   const shortcutsId = `${editorId}-shortcuts`;
   const snapshotSignature = useMemo(
     () => editorSnapshotSignature(target, diagnostics, locale, mode),
@@ -579,7 +594,7 @@ export const Mf2TranslationEditor = forwardRef<
             </select>
           </label>
         ) : null}
-        <div className="mf2-segmented">
+        <div aria-label="Editor mode" className="mf2-segmented" role="group">
           <button type="button" aria-pressed={mode === 'rich'} onClick={() => selectMode('rich')}>
             Edit
           </button>
@@ -612,9 +627,11 @@ export const Mf2TranslationEditor = forwardRef<
       {mode === 'rich' ? (
         <div className="mf2-edit-row">
           <div className="mf2-forms">
-            <div className="mf2-form-meta-row">
-              <SourceContract text={sourceContractText} />
-            </div>
+            {sourceVariablesText ? (
+              <div className="mf2-form-meta-row">
+                <SourceVariables text={sourceVariablesText} />
+              </div>
+            ) : null}
             {variants.map((variant, index) => {
               const label = formLabel(variant.keys, selectors);
               const formDiagnostics = diagnosticsForForm(diagnostics, label);
@@ -648,10 +665,10 @@ export const Mf2TranslationEditor = forwardRef<
                   </span>
                   {index === activeVariantIndex ? (
                     <div className="mf2-form-editor-cell">
-                      {showActiveSourceComparison && activeSourcePattern ? (
+                      {activeSourceComparison ? (
                         <ActiveSourceComparison
-                          label={activeSourceFormLabel}
-                          value={activeSourcePattern}
+                          label={activeSourceComparison.label}
+                          value={activeSourceComparison.value}
                         />
                       ) : null}
                       <div className="mf2-form-editor-slot">
@@ -717,12 +734,15 @@ export const Mf2TranslationEditor = forwardRef<
         </div>
       ) : null}
 
-      {mode === 'raw' && showActiveSourceComparison && activeSourcePattern ? (
-        <ActiveSourceComparison label={activeSourceFormLabel} value={activeSourcePattern} />
+      {mode === 'raw' && activeSourceComparison ? (
+        <ActiveSourceComparison
+          label={activeSourceComparison.label}
+          value={activeSourceComparison.value}
+        />
       ) : null}
-      {mode === 'raw' ? (
+      {mode === 'raw' && sourceVariablesText ? (
         <div className="mf2-form-meta-row mf2-raw-contract-row">
-          <SourceContract text={sourceContractText} />
+          <SourceVariables text={sourceVariablesText} />
         </div>
       ) : null}
       <RawMf2CodeMirror
@@ -833,11 +853,11 @@ export const Mf2TranslationEditor = forwardRef<
   );
 });
 
-function SourceContract({ text }: { text: string }) {
+function SourceVariables({ text }: { text: string }) {
   return (
     <div className="mf2-form-contract">
-      <span>Source contract</span>
-      <code>{text}</code>
+      <span>Variables</span>
+      <code title={text}>{text}</code>
     </div>
   );
 }
@@ -856,13 +876,36 @@ function argumentInputValue(value: unknown) {
 }
 
 function ActiveSourceComparison({ label, value }: { label: string; value: string }) {
+  const { detail, heading } = sourceComparisonHeading(label);
   return (
     <div className="mf2-active-source-comparison">
-      <span>Source</span>
-      <strong>{label}</strong>
+      <div className="mf2-active-source-comparison__heading">
+        <span>{heading}</span>
+        {detail ? (
+          <>
+            <span aria-hidden="true">·</span>
+            <strong>{detail}</strong>
+          </>
+        ) : null}
+      </div>
       <p dir="auto">{value}</p>
     </div>
   );
+}
+
+function sourceComparisonHeading(label: string) {
+  if (label === 'Message') return { detail: null, heading: 'Source' };
+  if (label === 'Invalid source') return { detail: 'invalid MF2', heading: 'Source' };
+  if (label === 'No matching source form') {
+    return { detail: 'no matching form', heading: 'Source' };
+  }
+  return {
+    detail: label
+      .split(' / ')
+      .map((part) => part.replace(/^([^:]+):/u, (_match, selector: string) => `$${selector}:`))
+      .join(' / '),
+    heading: 'Source form',
+  };
 }
 
 function FormIssueBadge({ diagnostics }: { diagnostics: Array<EditorDiagnostic> }) {

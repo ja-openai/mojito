@@ -669,9 +669,9 @@ export function WorkbenchBody({
                       {showDateMetadata ? <WorkbenchDateMetadata row={row} /> : null}
                     </div>
                     <div className="workbench-page__cell workbench-page__cell--source">
-                      {rowIsMf2 ? (
+                      {rowIsMf2 && !useMf2TranslationEditor ? (
                         <WorkbenchMf2Preview ariaLabel="MF2 source" value={row.source} />
-                      ) : useAssistedSourcePreview ? (
+                      ) : !rowIsMf2 && useAssistedSourcePreview ? (
                         <VisibleTextRenderer
                           className="workbench-page__text-block workbench-page__source-text"
                           value={row.source ?? ''}
@@ -680,11 +680,11 @@ export function WorkbenchBody({
                           spellCheck={false}
                           tokenMode="icu-html"
                         />
-                      ) : (
+                      ) : !rowIsMf2 ? (
                         <div className="workbench-page__text-block workbench-page__source-text">
                           {row.source ?? ''}
                         </div>
-                      )}
+                      ) : null}
                       <div className="workbench-page__text-block workbench-page__source-comment">
                         {row.comment ?? ''}
                       </div>
