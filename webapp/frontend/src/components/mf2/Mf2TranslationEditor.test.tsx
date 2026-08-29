@@ -28,6 +28,33 @@ function ControlledEmptyTarget({ onTargetChange }: { onTargetChange: (target: st
 }
 
 describe('Mf2TranslationEditor', () => {
+  it('summarizes source variables and exposes editor mode state', async () => {
+    const user = userEvent.setup();
+    render(
+      <Mf2TranslationEditor
+        showArgumentInputs={false}
+        showPreview={false}
+        showSource={false}
+        source={COUNT_SOURCE}
+        target={COUNT_SOURCE}
+      />,
+    );
+
+    const variables = screen.getByText('Variables').closest('.mf2-form-contract');
+    expect(variables).toHaveTextContent('.input {$count :number}');
+    expect(screen.queryByText('Source contract')).not.toBeInTheDocument();
+
+    const edit = screen.getByRole('button', { name: 'Edit' });
+    const raw = screen.getByRole('button', { name: 'Raw' });
+    expect(edit).toHaveAttribute('aria-pressed', 'true');
+    expect(raw).toHaveAttribute('aria-pressed', 'false');
+
+    await user.click(raw);
+
+    expect(edit).toHaveAttribute('aria-pressed', 'false');
+    expect(raw).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('promotes a controlled empty target into flat locale plural forms', async () => {
     const user = userEvent.setup();
     const onTargetChange = vi.fn();
@@ -106,7 +133,7 @@ other {{}}
 
   it('surfaces malformed source diagnostics without target ranges', async () => {
     let lastSnapshot: Mf2TranslationEditorSnapshot | undefined;
-    render(
+    const { container } = render(
       <Mf2TranslationEditor
         locale="fr"
         onChange={(snapshot) => {
@@ -116,11 +143,15 @@ other {{}}
         showLocaleSelector={false}
         showPreview={false}
         showSource={false}
+        showActiveSourceComparison
         source=".input {$count :number"
         target="Vous avez des fichiers."
       />,
     );
 
+    const sourceComparison = container.querySelector('.mf2-active-source-comparison');
+    expect(sourceComparison).toHaveTextContent('Source·invalid MF2');
+    expect(sourceComparison).toHaveTextContent('.input {$count :number');
     expect(
       (await screen.findAllByText(/Source: Placeholder is missing a closing brace/)).length,
     ).toBeGreaterThan(0);

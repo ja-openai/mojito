@@ -769,7 +769,7 @@ describe('ReviewProjectPageView', () => {
 one {{Você tem {$count} arquivo.}}
 * {{Você tem {$count} arquivos.}}`);
 
-    renderReviewProjectPageView({
+    const { container } = renderReviewProjectPageView({
       project: {
         ...project,
         reviewProjectTextUnits: [mf2TextUnit],
@@ -779,7 +779,13 @@ one {{Você tem {$count} arquivo.}}
     expect(await screen.findByRole('textbox', { name: 'Target count: one' })).toHaveClass(
       'mf2-pm-view',
     );
-    expect(screen.getByText('Source contract')).toBeInTheDocument();
+    expect(screen.getByText('Variables')).toBeInTheDocument();
+    expect(container.querySelector('.review-project-detail__value--source')).toHaveTextContent(
+      '.input {$count :number}',
+    );
+    expect(container.querySelector('.review-project-detail__value--source')).toHaveTextContent(
+      'You have {$count} files.',
+    );
     expect(screen.getByRole('button', { name: 'Raw' })).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Translation' })).not.toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: /Placeholders/ })).not.toBeInTheDocument();

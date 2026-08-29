@@ -149,6 +149,7 @@ describe('WorkbenchBody', () => {
   it('routes an MF2 source to the structured editor', async () => {
     const mf2Row: WorkbenchRow = {
       ...editingRow,
+      comment: 'Shown to translators',
       messageFormat: 'MF2',
       source: `.input {$count :number}
 {{You have {$count} files.}}`,
@@ -157,7 +158,7 @@ describe('WorkbenchBody', () => {
 one {{Você tem {$count} arquivo.}}
 * {{Você tem {$count} arquivos.}}`,
     };
-    renderWorkbenchBody({
+    const { container } = renderWorkbenchBody({
       editingValue: mf2Row.translation ?? '',
       rows: [mf2Row],
     });
@@ -165,12 +166,37 @@ one {{Você tem {$count} arquivo.}}
     expect(await screen.findByRole('textbox', { name: 'Target count: one' })).toHaveClass(
       'mf2-pm-view',
     );
-    expect(screen.getByText('Source contract')).toBeInTheDocument();
+    expect(screen.getByText('Variables')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'MF2 source' })).not.toBeInTheDocument();
+    expect(screen.getByText('Shown to translators')).toBeInTheDocument();
+    expect(container.querySelector('.mf2-active-source-comparison')).toHaveTextContent(
+      'You have {$count} files.',
+    );
     expect(screen.getByRole('button', { name: 'Raw' })).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Text editor' })).not.toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Accept' })).toBeEnabled();
     });
+  });
+
+  it('keeps the compact MF2 source preview on collapsed rows', () => {
+    const mf2Row: WorkbenchRow = {
+      ...editingRow,
+      messageFormat: 'MF2',
+      source: `.input {$count :number}
+{{You have {$count} files.}}`,
+      translation: `.input {$count :number}
+{{Você tem {$count} arquivos.}}`,
+    };
+    renderWorkbenchBody({
+      editingRowId: null,
+      editingValue: '',
+      rows: [mf2Row],
+    });
+
+    expect(screen.getByRole('textbox', { name: 'MF2 source' })).toHaveTextContent(
+      'You have {$count} files.',
+    );
   });
 
   it('blocks an initially invalid MF2 target from being accepted', async () => {

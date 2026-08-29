@@ -308,10 +308,12 @@ or editor behavior changes for everyone else.
 
 MF2 routing is independent of that generic-editor preference. Workbench active
 MF2 rows and Review Project MF2 detail editors always use the structured editor,
-with locale controlled by the host and the source shown through the surrounding
-surface plus active-form comparison. The shared focus/blur handle and primary
-keyboard action preserve each host's save or accept workflow. Parser and
-source/target contract errors disable those interactive actions until repaired.
+with locale controlled by the host. Workbench shows a compact source preview on
+collapsed rows and replaces it with the active source-form comparison while a
+row is editing; Review Project retains its separate source panel. The shared
+focus/blur handle and primary keyboard action preserve each host's save or
+accept workflow. Parser and source/target contract errors disable those
+interactive actions until repaired.
 
 Interactive validation is bounded before the JavaScript parser runs. Each MF2
 source and target is limited to 65,536 UTF-16 code units and 1,024 brace
