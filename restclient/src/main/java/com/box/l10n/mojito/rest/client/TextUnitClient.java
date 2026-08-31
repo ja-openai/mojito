@@ -45,7 +45,8 @@ public class TextUnitClient extends BaseClient {
   public enum SearchType {
     EXACT,
     CONTAINS,
-    ILIKE
+    ILIKE,
+    REGEX
   }
 
   public enum StatusFilter {
