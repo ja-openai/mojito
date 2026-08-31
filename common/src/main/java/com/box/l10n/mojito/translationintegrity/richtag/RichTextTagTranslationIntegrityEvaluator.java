@@ -12,23 +12,18 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Evaluates the language-neutral rich-text-tag cutover contract.
  *
  * <p>The rejection gate intentionally matches the legacy Python checker: compare the exact sets of
  * raw tokens found by {@code re.findall(r"(<.*?>)", message)}. Python's default dot does not cross
- * {@code \n}, so the Java pattern spells that boundary explicitly. Multiplicity and nesting do not
+ * {@code \n}, so the scanner spells that boundary explicitly. Multiplicity and nesting do not
  * create a cutover rejection when the raw sets are equal; those stricter checks remain extended
  * behavior.
  */
 public final class RichTextTagTranslationIntegrityEvaluator {
 
-  private static final Pattern RAW_TAG = Pattern.compile("<[^\\n]*?>");
-  private static final Pattern STRUCTURAL_TAG =
-      Pattern.compile("^<(/?)([A-Za-z0-9_.:-]+)(?:\\s[^\\n]*?)?\\s*(/?)>$");
   private static final Comparator<String> CODE_POINT_ORDER =
       RichTextTagTranslationIntegrityEvaluator::compareByCodePoint;
 
@@ -132,13 +127,104 @@ public final class RichTextTagTranslationIntegrityEvaluator {
     return Collections.unmodifiableSet(result);
   }
 
-  private static ParsedTag parseStructuralTag(String rawTag) {
-    Matcher matcher = STRUCTURAL_TAG.matcher(rawTag);
-    if (!matcher.matches()) {
+  static List<String> extractRawTags(CharSequence message) {
+    Objects.requireNonNull(message, "message");
+
+    List<String> rawTags = new ArrayList<>();
+    int cursor = 0;
+    while (cursor < message.length()) {
+      while (cursor < message.length() && message.charAt(cursor) != '<') {
+        cursor++;
+      }
+      if (cursor == message.length()) {
+        break;
+      }
+
+      int start = cursor++;
+      while (cursor < message.length()) {
+        char current = message.charAt(cursor++);
+        if (current == '>') {
+          rawTags.add(message.subSequence(start, cursor).toString());
+          break;
+        }
+        if (current == '\n') {
+          break;
+        }
+      }
+    }
+    return List.copyOf(rawTags);
+  }
+
+  static ParsedTag parseStructuralTag(CharSequence rawTag) {
+    Objects.requireNonNull(rawTag, "rawTag");
+
+    int contentEnd = rawTag.length() - 1;
+    if (contentEnd < 2 || rawTag.charAt(0) != '<' || rawTag.charAt(contentEnd) != '>') {
       return null;
     }
-    return new ParsedTag(
-        matcher.group(2), !matcher.group(1).isEmpty(), !matcher.group(3).isEmpty());
+
+    int cursor = 1;
+    boolean closing = rawTag.charAt(cursor) == '/';
+    if (closing) {
+      cursor++;
+    }
+
+    int nameStart = cursor;
+    while (cursor < contentEnd && isStructuralNameCharacter(rawTag.charAt(cursor))) {
+      cursor++;
+    }
+    if (cursor == nameStart) {
+      return null;
+    }
+
+    boolean selfClosing = cursor < contentEnd && rawTag.charAt(contentEnd - 1) == '/';
+    int suffixEnd = selfClosing ? contentEnd - 1 : contentEnd;
+    if (!matchesStructuralSuffix(rawTag, cursor, suffixEnd)) {
+      return null;
+    }
+
+    return new ParsedTag(rawTag.subSequence(nameStart, cursor).toString(), closing, selfClosing);
+  }
+
+  private static boolean matchesStructuralSuffix(CharSequence rawTag, int start, int end) {
+    if (start == end) {
+      return true;
+    }
+    if (!isRegexWhitespace(rawTag.charAt(start))) {
+      return false;
+    }
+
+    for (int index = start + 1; index < end; index++) {
+      if (rawTag.charAt(index) != '\n') {
+        continue;
+      }
+      for (int suffixIndex = index; suffixIndex < end; suffixIndex++) {
+        if (!isRegexWhitespace(rawTag.charAt(suffixIndex))) {
+          return false;
+        }
+      }
+      break;
+    }
+    return true;
+  }
+
+  private static boolean isStructuralNameCharacter(char value) {
+    return (value >= 'A' && value <= 'Z')
+        || (value >= 'a' && value <= 'z')
+        || (value >= '0' && value <= '9')
+        || value == '_'
+        || value == '.'
+        || value == ':'
+        || value == '-';
+  }
+
+  private static boolean isRegexWhitespace(char value) {
+    return value == ' '
+        || value == '\t'
+        || value == '\n'
+        || value == '\u000B'
+        || value == '\f'
+        || value == '\r';
   }
 
   private static int compareByCodePoint(String left, String right) {
@@ -162,9 +248,7 @@ public final class RichTextTagTranslationIntegrityEvaluator {
     private static TagInventory from(String message) {
       Set<String> rawTags = new TreeSet<>(CODE_POINT_ORDER);
       Map<String, TagCounts> countsByName = new TreeMap<>(CODE_POINT_ORDER);
-      Matcher matcher = RAW_TAG.matcher(message);
-      while (matcher.find()) {
-        String rawTag = matcher.group();
+      for (String rawTag : extractRawTags(message)) {
         rawTags.add(rawTag);
         ParsedTag parsed = parseStructuralTag(rawTag);
         if (parsed == null || parsed.selfClosing()) {
@@ -180,7 +264,7 @@ public final class RichTextTagTranslationIntegrityEvaluator {
     }
   }
 
-  private record ParsedTag(String name, boolean closing, boolean selfClosing) {}
+  record ParsedTag(String name, boolean closing, boolean selfClosing) {}
 
   private record TagCounts(int openCount, int closeCount) {
 

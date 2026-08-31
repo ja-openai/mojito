@@ -18,11 +18,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
 class RichTextTagTranslationIntegrityEvaluatorConformanceTest {
 
   private static final ObjectMapper JSON = new ObjectMapper();
+  private static final Pattern LEGACY_RAW_TAG = Pattern.compile("<[^\\n]*?>");
+  private static final Pattern LEGACY_STRUCTURAL_TAG =
+      Pattern.compile("^<(/?)([A-Za-z0-9_.:-]+)(?:\\s[^\\n]*?)?\\s*(/?)>$");
 
   @Test
   void matchesEveryNonDominatedCutoverRuleExpectationAcrossProfiles() throws IOException {
@@ -137,6 +142,64 @@ class RichTextTagTranslationIntegrityEvaluatorConformanceTest {
         .isEqualTo(TranslationIntegrityEvaluation.pass());
   }
 
+  @Test
+  void rawTagScannerMatchesLegacyRegexBoundaries() {
+    for (String message :
+        List.of(
+            "",
+            "no tags",
+            "<>",
+            "<<>>",
+            "<a><b>",
+            "<no close",
+            "<no\n<yes>",
+            "<a\rb>",
+            "<a\u2028b>",
+            "prefix <a title=\"same>remainder\"> suffix")) {
+      assertThat(RichTextTagTranslationIntegrityEvaluator.extractRawTags(message))
+          .as("legacy matches for %s", message)
+          .containsExactlyElementsOf(legacyRawTags(message));
+    }
+  }
+
+  @Test
+  void structuralTagScannerMatchesLegacyRegexCaptures() {
+    for (String rawTag :
+        List.of(
+            "<a>",
+            "</a>",
+            "<a/>",
+            "<a />",
+            "<a x=y>",
+            "<a / >",
+            "<a//>",
+            "<>",
+            "<a!>",
+            "<a\rtitle>",
+            "<a\u2028title>",
+            "<a\nx>",
+            "<a \n >",
+            "<a \n x>")) {
+      assertThat(RichTextTagTranslationIntegrityEvaluator.parseStructuralTag(rawTag))
+          .as("legacy structural parse for %s", rawTag)
+          .isEqualTo(legacyStructuralTag(rawTag));
+    }
+  }
+
+  @Test
+  void scannersHaveBoundedCharacterVisitsForHostileNearMisses() {
+    CountingCharSequence rawNearMiss = new CountingCharSequence("<".repeat(4_096));
+    CountingCharSequence structuralNearMiss =
+        new CountingCharSequence("<a " + " ".repeat(4_096) + "/ >");
+
+    assertThat(RichTextTagTranslationIntegrityEvaluator.extractRawTags(rawNearMiss)).isEmpty();
+    assertThat(rawNearMiss.characterReads()).isLessThanOrEqualTo(2L * rawNearMiss.length());
+    assertThat(RichTextTagTranslationIntegrityEvaluator.parseStructuralTag(structuralNearMiss))
+        .isEqualTo(new RichTextTagTranslationIntegrityEvaluator.ParsedTag("a", false, false));
+    assertThat(structuralNearMiss.characterReads())
+        .isLessThanOrEqualTo(3L * structuralNearMiss.length());
+  }
+
   private static boolean isApplicable(JsonNode testCase) {
     return testCase.path("tier").asText().equals("cutover")
         && containsText(testCase.path("rules"), "rich-text-tag-contract")
@@ -196,6 +259,25 @@ class RichTextTagTranslationIntegrityEvaluatorConformanceTest {
             diagnostics, TranslationIntegrityDisposition.REJECT_TARGET);
   }
 
+  private static List<String> legacyRawTags(String message) {
+    List<String> matches = new ArrayList<>();
+    Matcher matcher = LEGACY_RAW_TAG.matcher(message);
+    while (matcher.find()) {
+      matches.add(matcher.group());
+    }
+    return List.copyOf(matches);
+  }
+
+  private static RichTextTagTranslationIntegrityEvaluator.ParsedTag legacyStructuralTag(
+      String rawTag) {
+    Matcher matcher = LEGACY_STRUCTURAL_TAG.matcher(rawTag);
+    if (!matcher.matches()) {
+      return null;
+    }
+    return new RichTextTagTranslationIntegrityEvaluator.ParsedTag(
+        matcher.group(2), !matcher.group(1).isEmpty(), !matcher.group(3).isEmpty());
+  }
+
   private static Path findConformanceRoot() {
     Path current = Path.of("").toAbsolutePath();
     while (current != null) {
@@ -206,5 +288,35 @@ class RichTextTagTranslationIntegrityEvaluatorConformanceTest {
       current = current.getParent();
     }
     throw new IllegalStateException("Could not locate translation-integrity/conformance fixtures");
+  }
+
+  private static final class CountingCharSequence implements CharSequence {
+
+    private final String value;
+    private long characterReads;
+
+    private CountingCharSequence(String value) {
+      this.value = value;
+    }
+
+    @Override
+    public int length() {
+      return value.length();
+    }
+
+    @Override
+    public char charAt(int index) {
+      characterReads++;
+      return value.charAt(index);
+    }
+
+    @Override
+    public CharSequence subSequence(int start, int end) {
+      return value.subSequence(start, end);
+    }
+
+    private long characterReads() {
+      return characterReads;
+    }
   }
 }

@@ -15,7 +15,7 @@ public final class UrlLiteralTranslationIntegrityEvaluator {
         extractUrls(source), extractUrls(target), "immutable-url-missing", "immutable-url-extra");
   }
 
-  static List<String> extractUrls(String message) {
+  static List<String> extractUrls(CharSequence message) {
     return LiteralMultisetTranslationIntegrityEvaluator.extract(message, "http", URL_PATTERN);
   }
 }
