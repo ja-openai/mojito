@@ -576,10 +576,13 @@ public class TextUnitBatchImporterService {
           textUnitChecker.check(currentTextUnit.getSource(), textUnitForBatchImport.getContent());
         } catch (IntegrityCheckException ice) {
           logger.info(
-              "Integrity check failed for string with source:\n{}\n\nand content:\n{}",
-              currentTextUnit.getSource(),
-              textUnitForBatchImport.getContent(),
-              ice);
+              "Integrity check failed: tmTextUnitId={}, localeId={}, sourceLength={}, "
+                  + "targetLength={}, checker={}",
+              currentTextUnit.getTmTextUnitId(),
+              currentTextUnit.getLocaleId(),
+              Strings.nullToEmpty(currentTextUnit.getSource()).length(),
+              Strings.nullToEmpty(textUnitForBatchImport.getContent()).length(),
+              textUnitChecker.getClass().getSimpleName());
 
           if (pluralIntegrityCheckerRelaxer.shouldRelaxIntegrityCheck(
               currentTextUnit.getSource(),

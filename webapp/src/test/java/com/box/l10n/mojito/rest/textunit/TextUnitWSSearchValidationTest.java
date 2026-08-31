@@ -2,15 +2,26 @@ package com.box.l10n.mojito.rest.textunit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
+import com.box.l10n.mojito.entity.Asset;
+import com.box.l10n.mojito.entity.AssetIntegrityChecker;
+import com.box.l10n.mojito.entity.Repository;
+import com.box.l10n.mojito.entity.TMTextUnit;
+import com.box.l10n.mojito.service.assetintegritychecker.AssetIntegrityCheckerRepository;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
+import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckerFactory;
+import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckerType;
+import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.TranslationIntegrityCheckerException;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
+import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.search.TextUnitDTO;
 import com.box.l10n.mojito.service.tm.search.TextUnitSearcherParameters;
 import com.box.l10n.mojito.service.tm.search.TextUnitTextSearch;
@@ -21,8 +32,11 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Optional;
+import java.util.Set;
 import org.junit.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 public class TextUnitWSSearchValidationTest {
@@ -146,6 +160,52 @@ public class TextUnitWSSearchValidationTest {
     assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, exception.getStatusCode());
     assertEquals("Missing placeholder", exception.getReason());
     verify(integrityCheckService).checkTMTextUnitIntegrity(321L, "Bonjour");
+    verifyNoInteractions(tmService);
+  }
+
+  @Test
+  public void addTextUnitUsesConfiguredFormatJsCheckerBeforeSaving() {
+    Repository repository = new Repository();
+    Asset asset = new Asset();
+    asset.setRepository(repository);
+    asset.setPath("messages.json");
+    TMTextUnit tmTextUnit = new TMTextUnit();
+    tmTextUnit.setAsset(asset);
+    tmTextUnit.setContent("Hello {name}");
+
+    AssetIntegrityChecker configuredChecker = new AssetIntegrityChecker();
+    configuredChecker.setRepository(repository);
+    configuredChecker.setAssetExtension("json");
+    configuredChecker.setIntegrityCheckerType(IntegrityCheckerType.FORMATJS);
+    AssetIntegrityCheckerRepository checkerRepository = mock(AssetIntegrityCheckerRepository.class);
+    when(checkerRepository.findByRepositoryAndAssetExtension(repository, "json"))
+        .thenReturn(Set.of(configuredChecker));
+
+    IntegrityCheckerFactory checkerFactory = new IntegrityCheckerFactory();
+    ReflectionTestUtils.setField(
+        checkerFactory, "assetIntegrityCheckerRepository", checkerRepository);
+    TMTextUnitRepository textUnitRepository = mock(TMTextUnitRepository.class);
+    when(textUnitRepository.findById(321L)).thenReturn(Optional.of(tmTextUnit));
+    TMTextUnitIntegrityCheckService integrityCheckService = new TMTextUnitIntegrityCheckService();
+    ReflectionTestUtils.setField(integrityCheckService, "integrityCheckerFactory", checkerFactory);
+    ReflectionTestUtils.setField(integrityCheckService, "tmTextUnitRepository", textUnitRepository);
+
+    TMService tmService = mock(TMService.class);
+    textUnitWS.tmTextUnitIntegrityCheckService = integrityCheckService;
+    textUnitWS.tmService = tmService;
+    textUnitWS.userService = mock(UserService.class);
+    TextUnitDTO textUnit = new TextUnitDTO();
+    textUnit.setTmTextUnitId(321L);
+    textUnit.setLocaleId(12L);
+    textUnit.setTarget("Bonjour {other}");
+
+    ResponseStatusException exception =
+        assertThrows(ResponseStatusException.class, () -> textUnitWS.addTextUnit(textUnit));
+
+    assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, exception.getStatusCode());
+    assertTrue(exception.getCause() instanceof TranslationIntegrityCheckerException);
+    assertTrue(exception.getReason().contains("FORMATJS translation integrity rejected target"));
+    verify(checkerRepository).findByRepositoryAndAssetExtension(repository, "json");
     verifyNoInteractions(tmService);
   }
 
