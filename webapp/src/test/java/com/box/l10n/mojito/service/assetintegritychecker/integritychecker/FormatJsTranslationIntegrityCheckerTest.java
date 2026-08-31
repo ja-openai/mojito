@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityDisposition;
+import com.box.l10n.mojito.translationintegrity.TranslationIntegrityInputLimits;
 import org.junit.Test;
 
 public class FormatJsTranslationIntegrityCheckerTest {
@@ -55,5 +56,26 @@ public class FormatJsTranslationIntegrityCheckerTest {
   @Test
   public void allowsTargetWhenSourceIsInvalid() {
     checker.check("Hello {name", "Bonjour {name}");
+  }
+
+  @Test
+  public void rejectsOversizedTargetBeforeParsing() {
+    String oversized = "x".repeat(TranslationIntegrityInputLimits.MAX_UTF16_CODE_UNITS + 1);
+
+    TranslationIntegrityCheckerException exception =
+        assertThrows(
+            TranslationIntegrityCheckerException.class,
+            () -> checker.check("Hello {name}", oversized));
+
+    assertEquals(
+        "FORMATJS translation integrity rejected target [REJECT_TARGET]: target-input-too-long",
+        exception.getMessage());
+  }
+
+  @Test
+  public void allowsOversizedPersistedSourceWithoutParsing() {
+    String oversized = "x".repeat(TranslationIntegrityInputLimits.MAX_UTF16_CODE_UNITS + 1);
+
+    checker.check(oversized, "Bonjour {name}");
   }
 }

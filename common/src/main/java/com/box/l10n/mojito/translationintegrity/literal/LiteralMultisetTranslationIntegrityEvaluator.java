@@ -76,9 +76,9 @@ final class LiteralMultisetTranslationIntegrityEvaluator {
             diagnostics, TranslationIntegrityDisposition.REJECT_TARGET);
   }
 
-  static List<String> extract(String message, String fastPathMarker, Pattern pattern) {
+  static List<String> extract(CharSequence message, String fastPathMarker, Pattern pattern) {
     Objects.requireNonNull(message, "message");
-    if (!message.contains(fastPathMarker)) {
+    if (!contains(message, fastPathMarker)) {
       return List.of();
     }
     List<String> matches = new ArrayList<>();
@@ -86,6 +86,28 @@ final class LiteralMultisetTranslationIntegrityEvaluator {
     while (matcher.find()) {
       matches.add(matcher.group());
     }
+    return immutableSorted(matches);
+  }
+
+  private static boolean contains(CharSequence message, String marker) {
+    if (marker.isEmpty()) {
+      return true;
+    }
+    int lastStart = message.length() - marker.length();
+    for (int start = 0; start <= lastStart; start++) {
+      int markerIndex = 0;
+      while (markerIndex < marker.length()
+          && message.charAt(start + markerIndex) == marker.charAt(markerIndex)) {
+        markerIndex++;
+      }
+      if (markerIndex == marker.length()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static List<String> immutableSorted(List<String> matches) {
     matches.sort(CODE_POINT_ORDER);
     return List.copyOf(matches);
   }

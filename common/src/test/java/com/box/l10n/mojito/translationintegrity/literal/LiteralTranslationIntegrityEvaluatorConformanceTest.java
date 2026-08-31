@@ -14,14 +14,19 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
 class LiteralTranslationIntegrityEvaluatorConformanceTest {
 
   private static final ObjectMapper JSON = new ObjectMapper();
+  private static final Pattern LEGACY_EMAIL_PATTERN =
+      Pattern.compile("[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}");
 
   @Test
   void emailEvaluatorMatchesEveryApplicableCutoverCase() throws IOException {
@@ -52,6 +57,35 @@ class LiteralTranslationIntegrityEvaluatorConformanceTest {
   }
 
   @Test
+  void emailScannerMatchesLegacyGreedyAndNonOverlappingBoundaries() {
+    for (String message :
+        List.of(
+            "a@b.co-foo",
+            "a@b.com.x-",
+            "a@b.c",
+            ".+@-.ab",
+            "a@b.co-x@y.zz",
+            "a@b.co1",
+            "a@b.co.more",
+            "a@b.co@c.de",
+            "a@b.co-x@c.de",
+            "a@b@c.co")) {
+      assertThat(EmailLiteralTranslationIntegrityEvaluator.extractEmails(message))
+          .as("legacy matches for %s", message)
+          .containsExactlyElementsOf(legacyEmailMatches(message));
+    }
+  }
+
+  @Test
+  void emailScannerHasBoundedCharacterVisitsForHostileNearMiss() {
+    CountingCharSequence nearMiss =
+        new CountingCharSequence("a".repeat(4_096) + "@" + "b".repeat(4_096));
+
+    assertThat(EmailLiteralTranslationIntegrityEvaluator.extractEmails(nearMiss)).isEmpty();
+    assertThat(nearMiss.characterReads()).isLessThanOrEqualTo(4L * nearMiss.length());
+  }
+
+  @Test
   void urlExtractionMatchesLegacyPartialRegexQuirks() {
     assertThat(UrlLiteralTranslationIntegrityEvaluator.extractUrls("HTTP://example.invalid/path"))
         .isEmpty();
@@ -68,6 +102,14 @@ class LiteralTranslationIntegrityEvaluatorConformanceTest {
             UrlLiteralTranslationIntegrityEvaluator.extractUrls(
                 "https://hyphen-host.example.invalid/path"))
         .isEmpty();
+  }
+
+  @Test
+  void urlRegexHasBoundedCharacterVisitsForHostileNearMiss() {
+    CountingCharSequence nearMiss = new CountingCharSequence("https://" + "a".repeat(4_096));
+
+    assertThat(UrlLiteralTranslationIntegrityEvaluator.extractUrls(nearMiss)).isEmpty();
+    assertThat(nearMiss.characterReads()).isLessThanOrEqualTo(16L * nearMiss.length());
   }
 
   @Test
@@ -150,6 +192,16 @@ class LiteralTranslationIntegrityEvaluatorConformanceTest {
         null);
   }
 
+  private static List<String> legacyEmailMatches(String message) {
+    List<String> matches = new ArrayList<>();
+    Matcher matcher = LEGACY_EMAIL_PATTERN.matcher(message);
+    while (matcher.find()) {
+      matches.add(matcher.group());
+    }
+    Collections.sort(matches);
+    return List.copyOf(matches);
+  }
+
   private static boolean containsText(JsonNode array, String expected) {
     for (JsonNode value : array) {
       if (value.asText().equals(expected)) {
@@ -179,5 +231,35 @@ class LiteralTranslationIntegrityEvaluatorConformanceTest {
       current = current.getParent();
     }
     throw new IllegalStateException("Could not locate translation-integrity/conformance fixtures");
+  }
+
+  private static final class CountingCharSequence implements CharSequence {
+
+    private final String value;
+    private long characterReads;
+
+    private CountingCharSequence(String value) {
+      this.value = value;
+    }
+
+    @Override
+    public int length() {
+      return value.length();
+    }
+
+    @Override
+    public char charAt(int index) {
+      characterReads++;
+      return value.charAt(index);
+    }
+
+    @Override
+    public CharSequence subSequence(int start, int end) {
+      return value.subSequence(start, end);
+    }
+
+    private long characterReads() {
+      return characterReads;
+    }
   }
 }

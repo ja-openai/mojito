@@ -3,6 +3,7 @@ package com.box.l10n.mojito.translationintegrity.formatjs;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityDiagnostic;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityDisposition;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityEvaluation;
+import com.box.l10n.mojito.translationintegrity.TranslationIntegrityInputLimits;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityRange;
 import com.box.l10n.mojito.translationintegrity.formatjs.FormatJsElement.Argument;
 import com.box.l10n.mojito.translationintegrity.formatjs.FormatJsElement.DateArgument;
@@ -112,6 +113,11 @@ public final class FormatJsTranslationIntegrityEvaluator {
       boolean evaluateEmailLiterals,
       boolean evaluateUrlLiterals,
       boolean evaluateApostropheBeforeTag) {
+    TranslationIntegrityEvaluation inputLimitEvaluation =
+        TranslationIntegrityInputLimits.evaluate(source, target);
+    if (inputLimitEvaluation.disposition() != TranslationIntegrityDisposition.PASS) {
+      return inputLimitEvaluation;
+    }
     if (evaluateApostropheBeforeTag && !evaluateRichTextTags) {
       throw new IllegalArgumentException(
           "evaluateApostropheBeforeTag requires evaluateRichTextTags=true");
@@ -129,7 +135,7 @@ public final class FormatJsTranslationIntegrityEvaluator {
             target,
             apostropheEvaluation,
             repairedTarget ->
-                evaluateWithoutBoundaryWhitespace(
+                evaluateWithoutBoundaryWhitespaceWithinLimits(
                     source,
                     repairedTarget,
                     evaluateRichTextTags,
@@ -152,6 +158,26 @@ public final class FormatJsTranslationIntegrityEvaluator {
     return evaluateApostropheBeforeTag
         ? APOSTROPHE_BEFORE_TAG_EVALUATOR.compose(target, structuralEvaluation)
         : structuralEvaluation;
+  }
+
+  private TranslationIntegrityEvaluation evaluateWithoutBoundaryWhitespaceWithinLimits(
+      String source,
+      String target,
+      boolean evaluateRichTextTags,
+      boolean evaluateEmailLiterals,
+      boolean evaluateUrlLiterals,
+      boolean evaluateApostropheBeforeTag) {
+    TranslationIntegrityEvaluation inputLimitEvaluation =
+        TranslationIntegrityInputLimits.evaluate(source, target);
+    return inputLimitEvaluation.disposition() == TranslationIntegrityDisposition.PASS
+        ? evaluateWithoutBoundaryWhitespace(
+            source,
+            target,
+            evaluateRichTextTags,
+            evaluateEmailLiterals,
+            evaluateUrlLiterals,
+            evaluateApostropheBeforeTag)
+        : inputLimitEvaluation;
   }
 
   private TranslationIntegrityEvaluation evaluateStructural(

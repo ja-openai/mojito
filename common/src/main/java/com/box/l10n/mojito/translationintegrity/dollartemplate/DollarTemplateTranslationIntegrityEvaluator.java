@@ -3,6 +3,7 @@ package com.box.l10n.mojito.translationintegrity.dollartemplate;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityDiagnostic;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityDisposition;
 import com.box.l10n.mojito.translationintegrity.TranslationIntegrityEvaluation;
+import com.box.l10n.mojito.translationintegrity.TranslationIntegrityInputLimits;
 import com.box.l10n.mojito.translationintegrity.literal.EmailLiteralTranslationIntegrityEvaluator;
 import com.box.l10n.mojito.translationintegrity.literal.UrlLiteralTranslationIntegrityEvaluator;
 import com.box.l10n.mojito.translationintegrity.richtag.RichTextTagTranslationIntegrityEvaluator;
@@ -77,6 +78,11 @@ public final class DollarTemplateTranslationIntegrityEvaluator {
       boolean evaluateBoundaryWhitespace,
       boolean evaluateEmailLiterals,
       boolean evaluateUrlLiterals) {
+    TranslationIntegrityEvaluation inputLimitEvaluation =
+        TranslationIntegrityInputLimits.evaluate(source, target);
+    if (inputLimitEvaluation.disposition() != TranslationIntegrityDisposition.PASS) {
+      return inputLimitEvaluation;
+    }
     TranslationIntegrityEvaluation structuralEvaluation =
         evaluateStructural(
             source, target, evaluateRichTextTags, evaluateEmailLiterals, evaluateUrlLiterals);
@@ -86,13 +92,27 @@ public final class DollarTemplateTranslationIntegrityEvaluator {
             target,
             structuralEvaluation,
             repairedTarget ->
-                evaluateStructural(
+                evaluateStructuralWithinLimits(
                     source,
                     repairedTarget,
                     evaluateRichTextTags,
                     evaluateEmailLiterals,
                     evaluateUrlLiterals))
         : structuralEvaluation;
+  }
+
+  private TranslationIntegrityEvaluation evaluateStructuralWithinLimits(
+      String source,
+      String target,
+      boolean evaluateRichTextTags,
+      boolean evaluateEmailLiterals,
+      boolean evaluateUrlLiterals) {
+    TranslationIntegrityEvaluation inputLimitEvaluation =
+        TranslationIntegrityInputLimits.evaluate(source, target);
+    return inputLimitEvaluation.disposition() == TranslationIntegrityDisposition.PASS
+        ? evaluateStructural(
+            source, target, evaluateRichTextTags, evaluateEmailLiterals, evaluateUrlLiterals)
+        : inputLimitEvaluation;
   }
 
   private TranslationIntegrityEvaluation evaluateStructural(
