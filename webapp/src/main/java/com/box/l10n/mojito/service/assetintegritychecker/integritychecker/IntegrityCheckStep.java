@@ -111,7 +111,7 @@ public class IntegrityCheckStep extends BasePipelineStep {
               getTextUnitIntegrityCheckers(asset);
 
           for (TextUnitIntegrityChecker textUnitIntegrityChecker : textUnitIntegrityCheckers) {
-            textUnitIntegrityChecker.check(textUnit.getSource().toString(), target.toString());
+            textUnitIntegrityChecker.check(tmTextUnit.getContent(), target.toString());
           }
         } catch (IntegrityCheckException e) {
           TMTextUnitVariantCommentAnnotation tmTextUnitVariantCommentAnnotation =

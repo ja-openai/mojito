@@ -15,6 +15,8 @@ import com.box.l10n.mojito.entity.Locale;
 import com.box.l10n.mojito.entity.PollableTask;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.RepositoryLocale;
+import com.box.l10n.mojito.entity.TMTextUnitVariant;
+import com.box.l10n.mojito.entity.TMTextUnitVariantComment;
 import com.box.l10n.mojito.service.asset.VirtualAsset;
 import com.box.l10n.mojito.service.asset.VirtualAssetBadRequestException;
 import com.box.l10n.mojito.service.asset.VirtualAssetService;
@@ -747,6 +749,79 @@ public class TextUnitBatchImporterServiceTest extends ServiceTestBase {
     assertTrue(
         "should be included with proper placeholder",
         textUnitDTOs.get(0).isIncludedInLocalizedFile());
+  }
+
+  @Test
+  public void testFormatJsCheckerRejectsBatchThenAcceptsCorrection() throws Exception {
+    Repository repository =
+        repositoryService.createRepository(
+            testIdWatcher.getEntityName("testFormatJsCheckerRejectsBatch"));
+    Locale frFR = repositoryService.addRepositoryLocale(repository, "fr-FR").getLocale();
+
+    VirtualAsset virtualAsset = new VirtualAsset();
+    virtualAsset.setRepositoryId(repository.getId());
+    virtualAsset.setPath("messages.json");
+    virtualAsset = virtualAssetService.createOrUpdateVirtualAsset(virtualAsset);
+
+    VirtualAssetTextUnit virtualAssetTextUnit = new VirtualAssetTextUnit();
+    virtualAssetTextUnit.setName("greeting");
+    virtualAssetTextUnit.setContent("Hello {name}");
+    virtualAssetService.addTextUnits(virtualAsset.getId(), List.of(virtualAssetTextUnit)).get();
+
+    AssetIntegrityChecker assetIntegrityChecker = new AssetIntegrityChecker();
+    assetIntegrityChecker.setAssetExtension("json");
+    assetIntegrityChecker.setIntegrityCheckerType(IntegrityCheckerType.FORMATJS);
+    repositoryService.updateAssetIntegrityCheckers(
+        repository, Sets.newHashSet(assetIntegrityChecker));
+
+    TextUnitDTO textUnitDTO = new TextUnitDTO();
+    textUnitDTO.setRepositoryName(repository.getName());
+    textUnitDTO.setTargetLocale(frFR.getBcp47Tag());
+    textUnitDTO.setAssetPath(virtualAsset.getPath());
+    textUnitDTO.setName("greeting");
+    textUnitDTO.setTarget("Bonjour {other}");
+
+    PollableFuture<Void> importTask =
+        textUnitBatchImporterService.asyncImportTextUnits(
+            List.of(textUnitDTO), fromLegacy(false, false));
+    pollableTaskService.waitForPollableTask(importTask.getPollableTask().getId());
+
+    TextUnitSearcherParameters searchParameters = new TextUnitSearcherParametersForTesting();
+    searchParameters.setRepositoryNames(List.of(repository.getName()));
+    searchParameters.setAssetPath(virtualAsset.getPath());
+    searchParameters.setLocaleTags(List.of(frFR.getBcp47Tag()));
+    searchParameters.setName("greeting");
+
+    List<TextUnitDTO> textUnits = textUnitSearcher.search(searchParameters);
+    assertEquals(1, textUnits.size());
+    TextUnitDTO rejected = textUnits.getFirst();
+    assertEquals("Bonjour {other}", rejected.getTarget());
+    assertEquals(TMTextUnitVariant.Status.TRANSLATION_NEEDED, rejected.getStatus());
+    assertFalse(rejected.isIncludedInLocalizedFile());
+    List<TMTextUnitVariantComment> integrityErrors =
+        tmTextUnitVariantCommentRepository
+            .findAllByTmTextUnitVariant_id(rejected.getTmTextUnitVariantId())
+            .stream()
+            .filter(
+                comment ->
+                    TMTextUnitVariantComment.Type.INTEGRITY_CHECK.equals(comment.getType())
+                        && TMTextUnitVariantComment.Severity.ERROR.equals(comment.getSeverity()))
+            .toList();
+    assertEquals(1, integrityErrors.size());
+    assertTrue(integrityErrors.getFirst().getContent().contains("FORMATJS"));
+
+    textUnitDTO.setTarget("Bonjour {name}");
+    importTask =
+        textUnitBatchImporterService.asyncImportTextUnits(
+            List.of(textUnitDTO), fromLegacy(false, false));
+    pollableTaskService.waitForPollableTask(importTask.getPollableTask().getId());
+
+    textUnits = textUnitSearcher.search(searchParameters);
+    assertEquals(1, textUnits.size());
+    TextUnitDTO corrected = textUnits.getFirst();
+    assertEquals("Bonjour {name}", corrected.getTarget());
+    assertEquals(TMTextUnitVariant.Status.APPROVED, corrected.getStatus());
+    assertTrue(corrected.isIncludedInLocalizedFile());
   }
 
   private BulkImportRun latestBulkImportRun() {

@@ -120,4 +120,53 @@ public class AssetIntegrityCheckerServiceTest extends ServiceTestBase {
     assertFalse(textUnitVariants.get(0).isIncludedInLocalizedFile());
     assertEquals(TMTextUnitVariant.Status.TRANSLATION_NEEDED, textUnitVariants.get(0).getStatus());
   }
+
+  @Test
+  public void testXliffIntegrityCheckerUsesPersistedSource()
+      throws RepositoryLocaleCreationException,
+          ExecutionException,
+          InterruptedException,
+          RepositoryNameAlreadyUsedException,
+          AssetUpdateException,
+          UnsupportedAssetFilterTypeException {
+    Repository repository =
+        repositoryService.createRepository(testIdWatcher.getEntityName("repository"));
+    String frFR = "fr-FR";
+    repositoryService.addRepositoryLocale(repository, frFR);
+    assetIntegrityCheckerService.addToRepository(
+        repository, ASSET_PATH, IntegrityCheckerType.FORMATJS);
+
+    String persistedSource = "Hello {name}";
+    String sourceXliff =
+        xliffDataFactory.generateSourceXliff(
+            List.of(xliffDataFactory.createTextUnit(1L, "tu1", persistedSource, null)));
+    PollableFuture<Asset> assetPollableFuture =
+        assetService.addOrUpdateAssetAndProcessIfNeeded(
+            repository.getId(), ASSET_PATH, sourceXliff, false, null, null, null, null, null, null);
+    pollableTaskService.waitForPollableTask(assetPollableFuture.getPollableTask().getId());
+
+    Long tmId = repository.getTm().getId();
+    TMTextUnit tmTextUnit = tmTextUnitRepository.findByTm_id(tmId).get(0);
+    String targetXliff =
+        xliffDataFactory.generateTargetXliff(
+            List.of(
+                xliffDataFactory.createTextUnit(
+                    tmTextUnit.getId(),
+                    "tu1",
+                    "Hello",
+                    null,
+                    "Bonjour",
+                    frFR,
+                    XliffState.TRANSLATED)),
+            frFR);
+
+    tmService.updateTMWithXLIFFById(targetXliff, null);
+
+    Locale frFRLocale = localeService.findByBcp47Tag(frFR);
+    List<TMTextUnitVariant> textUnitVariants =
+        tmTextUnitVariantRepository.findAllByLocale_IdAndTmTextUnit_Tm_id(frFRLocale.getId(), tmId);
+    assertEquals(1, textUnitVariants.size());
+    assertFalse(textUnitVariants.get(0).isIncludedInLocalizedFile());
+    assertEquals(TMTextUnitVariant.Status.TRANSLATION_NEEDED, textUnitVariants.get(0).getStatus());
+  }
 }
