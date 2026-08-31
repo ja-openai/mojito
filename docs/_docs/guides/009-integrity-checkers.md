@@ -22,7 +22,9 @@ We use `mojito-cli` to configure integrity checkers in a repository.  Integrity 
 |:---------------------------------------|:------------------------------- ---------------|:-------------------------------------|
 | COMPOSITE_FORMAT                       | resw, resx                                     | RESW, RESX                           |
 | MESSAGE_FORMAT                         | properties                                     | Java Properties                      |
-| FORMATJS_RICH_TEXT                     | json                                           | FormatJS rich-text messages          |
+| FORMATJS                               | json                                           | FormatJS ICU messages                |
+| DOLLAR_TEMPLATE                        | properties, json                               | Python-style dollar templates        |
+| FORMATJS_RICH_TEXT                     | json                                           | Legacy FormatJS apostrophe check      |
 | PRINTF_LIKE                            | xml, strings,                                  | Android Strings, iOS/Mac Strings,    |
 | SIMPLE_PRINTF_LIKE                     |                                                |                                      |
 | WHITESPACE                             |                                                |                                      |
@@ -73,6 +75,55 @@ checkers using the standard repository integrity-checker option:
 For example, `l'<privacyLink>...</privacyLink>` is rejected while
 `l''<privacyLink>...</privacyLink>` is accepted. The checker does not modify translations or
 generated files.
+
+### Translation Integrity Checkers
+
+`FORMATJS` and `DOLLAR_TEMPLATE` are parser-backed, prevention-only checkers. `FORMATJS`
+validates message syntax, arguments and select branches, rich-text tags, boundary whitespace,
+immutable email and URL literals, and the apostrophe-before-tag rule. `DOLLAR_TEMPLATE` validates
+Python-style `$name` and `${name}` placeholders plus the grammar-neutral tag, whitespace, email,
+and URL rules.
+
+Both checkers report every deterministic target finding from the selected rule bundle. They never
+rewrite a translation: a finding that has a deterministic repair in the neutral conformance corpus
+is still rejected at Mojito's mutation boundary. Persisted source defects are reported by the
+preflight command but do not reject a target save, because that operation cannot repair the source.
+
+Each source and target is limited to 65,536 UTF-16 code units before parser-backed validation.
+An oversized target fails the integrity check. An oversized source is a source defect and is
+reported by preflight. Because the source cannot be parsed safely, a save against an oversized
+persisted source does not receive the remaining source-to-target structural comparisons; resolve
+that source defect before rollout.
+
+Before enabling either checker, run a bounded read-only sample of active, used, non-rejected
+current translations:
+
+```bash
+    mojito translation-integrity-preflight -n MyFormatJsRepo \
+        --asset-extension json --checker-type FORMATJS --max-text-units 25
+```
+
+The command prints text-unit IDs, locales, asset paths, and diagnostic codes, but never source or
+target text. It exits with status `2` when it finds target rejections or repairable target findings.
+Source defects are advisory. An empty scope is an error rather than a successful preflight. One run
+requests at most 101 exact-extension records and evaluates at most 100 records or 5,000,000 UTF-16
+code units, whichever comes first. The code-unit threshold bounds evaluation after the REST
+response is received; it is not a network-payload limit. A truncated result is a sample, not an
+exhaustive or transactionally stable database scan. Narrow by locale or use a separate audited
+database scan when complete inventory evidence is required.
+
+After resolving the findings, enable the checker through the existing repository configuration:
+
+```bash
+    mojito repo-update -n MyFormatJsRepo -it "json:FORMATJS"
+    mojito repo-update -n MyTemplateRepo -it "properties:DOLLAR_TEMPLATE"
+```
+
+`repo-update -it` replaces the repository's complete checker set. Include any unrelated existing
+rows that must remain. Also replace overlapping legacy rows deliberately instead of configuring
+both generations by accident; otherwise imports can receive duplicate comments and direct saves
+can expose whichever checker fails first. `FORMATJS_RICH_TEXT` remains available unchanged for
+repositories that are not ready for the broader `FORMATJS` contract.
 
 
 
@@ -164,7 +215,11 @@ from syntax.
 ### Handling Rejected Translations
 
 
-While importing offline translations, the integrity checker catches errors and reject translations with errors.  The number of rejected translations show up in the Repository page.
+Interactive saves run configured integrity checkers before writing and return an error without
+replacing the current translation. Offline, XLIFF, and localized-asset imports preserve their
+existing bulk semantics: Mojito stores an invalid candidate as `TRANSLATION_NEEDED`, excludes it
+from localized output, and adds an integrity-check error comment. The number of excluded
+translations appears on the Repository page.
 
 ![Repository with Rejected Translation](./images/repository-rejected-translation.png)
 
