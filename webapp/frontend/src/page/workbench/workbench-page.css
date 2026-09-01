@@ -1225,19 +1225,6 @@
   font-weight: var(--font-weight-regular);
 }
 
-.workbench-page__mf2-badge {
-  flex: none;
-  min-height: 1.25rem;
-  padding: 0 var(--space-2);
-  border: 1px solid color-mix(in srgb, var(--color-accent) 28%, var(--color-border));
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
-  color: color-mix(in srgb, var(--color-accent) 76%, var(--color-text));
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  line-height: 1.15rem;
-}
-
 .workbench-page__mf2-editor {
   width: 100%;
 }

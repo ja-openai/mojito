@@ -195,8 +195,11 @@ one {{Você tem {$count} arquivo.}}
       rows: [mf2Row],
     });
 
-    expect(screen.getByRole('textbox', { name: 'MF2 source' })).toHaveTextContent(
+    expect(screen.getByRole('textbox', { name: 'MF2 source' }).textContent).toBe(
       'You have {$count} files.',
+    );
+    expect(screen.getByRole('textbox', { name: 'MF2 translation editor' }).textContent).toBe(
+      'Você tem {$count} arquivos.',
     );
   });
 
@@ -224,8 +227,6 @@ one {{Você tem {$count} arquivo.}}
     );
     const editor = screen.getByRole('textbox', { name: 'Text editor' });
     expect(editor).toHaveValue(mf2Row.translation);
-    expect(container.querySelector('.workbench-page__mf2-badge')).not.toBeInTheDocument();
-
     fireEvent.focus(editor);
     expect(onStartEditing).toHaveBeenCalledWith(mf2Row.id, mf2Row.translation);
   });
@@ -273,7 +274,6 @@ one {{Você tem {$count} arquivo.}}
       mf2Row.source,
     );
     expect(screen.getByRole('textbox', { name: 'Text editor' })).toHaveValue(mf2Row.translation);
-    expect(container.querySelector('.workbench-page__mf2-badge')).not.toBeInTheDocument();
   });
 
   it('uses the native raw editor for active MF2 rows when placeholder highlights are off', () => {

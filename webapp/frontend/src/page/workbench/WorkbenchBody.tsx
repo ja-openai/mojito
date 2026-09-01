@@ -924,7 +924,6 @@ function WorkbenchMf2Preview({
       <span className={`workbench-page__mf2-preview-text${preview ? '' : ' is-empty'}`}>
         {preview || emptyLabel}
       </span>
-      <span className="workbench-page__mf2-badge">MF2</span>
     </div>
   );
 }
