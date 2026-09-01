@@ -1,12 +1,22 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useState } from 'react';
+import { StrictMode, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Mf2TranslationEditor, type Mf2TranslationEditorSnapshot } from './Mf2TranslationEditor';
 
 const COUNT_SOURCE = `.input {$count :number}
 {{You have {$count} files.}}`;
+
+const COUNT_SELECT_SOURCE = `.input {$count :number}
+.match $count
+one {{You have one file.}}
+* {{You have files.}}`;
+
+const COUNT_SELECT_TARGET = `.input {$count :number}
+.match $count
+one {{Vous avez un fichier.}}
+* {{Vous avez des fichiers.}}`;
 
 function ControlledEmptyTarget({ onTargetChange }: { onTargetChange: (target: string) => void }) {
   const [target, setTarget] = useState('');
@@ -25,6 +35,73 @@ function ControlledEmptyTarget({ onTargetChange }: { onTargetChange: (target: st
       target={target}
     />
   );
+}
+
+function restoreDescriptor(target: object, name: string, descriptor?: PropertyDescriptor) {
+  if (descriptor) {
+    Object.defineProperty(target, name, descriptor);
+    return;
+  }
+  delete (target as Record<string, unknown>)[name];
+}
+
+function installRangeGeometryMock() {
+  const getBoundingClientRect = Object.getOwnPropertyDescriptor(
+    Range.prototype,
+    'getBoundingClientRect',
+  );
+  const getClientRects = Object.getOwnPropertyDescriptor(Range.prototype, 'getClientRects');
+  const scrollBy = Object.getOwnPropertyDescriptor(window, 'scrollBy');
+  const rect = {
+    bottom: 1,
+    height: 1,
+    left: 0,
+    right: 1,
+    top: 0,
+    width: 1,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  } as DOMRect;
+  const rects = {
+    0: rect,
+    length: 1,
+    item: (index: number) => (index === 0 ? rect : null),
+    [Symbol.iterator]: function* () {
+      yield rect;
+    },
+  } as DOMRectList;
+
+  Object.defineProperty(Range.prototype, 'getClientRects', {
+    configurable: true,
+    value: () => rects,
+  });
+  Object.defineProperty(Range.prototype, 'getBoundingClientRect', {
+    configurable: true,
+    value: () => rect,
+  });
+  Object.defineProperty(window, 'scrollBy', {
+    configurable: true,
+    value: vi.fn(),
+  });
+
+  return () => {
+    restoreDescriptor(Range.prototype, 'getClientRects', getClientRects);
+    restoreDescriptor(Range.prototype, 'getBoundingClientRect', getBoundingClientRect);
+    restoreDescriptor(window, 'scrollBy', scrollBy);
+  };
+}
+
+function placeCaret(element: HTMLElement, offset: number) {
+  const text = element.querySelector('p')?.firstChild;
+  if (!text) throw new Error('Expected the MF2 editor to contain a text node.');
+  const range = document.createRange();
+  range.setStart(text, offset);
+  range.collapse(true);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  document.dispatchEvent(new Event('selectionchange'));
 }
 
 describe('Mf2TranslationEditor', () => {
@@ -78,6 +155,46 @@ other {{}}
     expect(
       screen.queryByRole('button', { name: 'Add fr plural forms for $count' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('keeps focus while moving down and back up through forms', async () => {
+    const restoreRangeGeometry = installRangeGeometryMock();
+    const user = userEvent.setup();
+
+    try {
+      render(
+        <StrictMode>
+          <Mf2TranslationEditor
+            showArgumentInputs={false}
+            showPreview={false}
+            showSource={false}
+            source={COUNT_SELECT_SOURCE}
+            target={COUNT_SELECT_TARGET}
+          />
+        </StrictMode>,
+      );
+
+      const one = screen.getByRole('textbox', { name: 'Target count: one' });
+      one.focus();
+      placeCaret(one, 2);
+      expect(one).toHaveFocus();
+
+      await user.keyboard('{Shift>}{ArrowDown}{/Shift}');
+
+      const fallback = screen.getByRole('textbox', { name: 'Target count: fallback' });
+      expect(fallback).toHaveFocus();
+      expect(window.getSelection()?.isCollapsed).toBe(true);
+      expect(fallback.contains(window.getSelection()?.anchorNode ?? null)).toBe(true);
+
+      await user.keyboard('{Shift>}{ArrowUp}{/Shift}');
+
+      const restored = screen.getByRole('textbox', { name: 'Target count: one' });
+      expect(restored).toHaveFocus();
+      expect(window.getSelection()?.isCollapsed).toBe(true);
+      expect(restored.contains(window.getSelection()?.anchorNode ?? null)).toBe(true);
+    } finally {
+      restoreRangeGeometry();
+    }
   });
 
   it('tracks controlled target prop updates without emitting a local change', async () => {

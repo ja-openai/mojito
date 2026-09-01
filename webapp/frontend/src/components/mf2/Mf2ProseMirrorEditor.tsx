@@ -44,6 +44,7 @@ type CompletionState = {
 
 type Mf2ProseMirrorEditorProps = {
   ariaLabel: string;
+  focusOnMount?: boolean;
   describedBy?: string;
   direction: 'ltr' | 'rtl';
   minLines: number;
@@ -116,6 +117,7 @@ export const Mf2ProseMirrorEditor = forwardRef<
     ariaLabel,
     describedBy,
     direction,
+    focusOnMount = false,
     minLines,
     onChange,
     onNextForm,
@@ -368,6 +370,7 @@ export const Mf2ProseMirrorEditor = forwardRef<
       state: createState(pattern),
     });
     viewRef.current = view;
+    if (focusOnMount) view.focus();
     return () => {
       view.destroy();
       viewRef.current = null;

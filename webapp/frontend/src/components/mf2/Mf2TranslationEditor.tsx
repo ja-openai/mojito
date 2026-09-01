@@ -403,7 +403,7 @@ export const Mf2TranslationEditor = forwardRef<
     if (!focusAfterVariantMoveRef.current || mode !== 'rich') return;
     focusAfterVariantMoveRef.current = false;
     proseMirrorRef.current?.focus();
-  }, [activeVariantIndex, mode]);
+  }, [activeVariantIndex, mode, target]);
 
   const closeCompletion = useCallback(() => {}, []);
 
@@ -502,8 +502,8 @@ export const Mf2TranslationEditor = forwardRef<
   }
 
   function selectVariant(index: number, focusEditor = false) {
-    setActiveVariant(index);
     focusAfterVariantMoveRef.current = focusEditor;
+    setActiveVariant(index);
     closeCompletion();
   }
 
@@ -511,9 +511,9 @@ export const Mf2TranslationEditor = forwardRef<
     if (readOnly) return;
     const result = addLocalePluralRows(targetModel, localeRowSuggestions, sourceModel);
     if (!result) return;
+    focusAfterVariantMoveRef.current = true;
     replaceTargetModel(result.model);
     setActiveVariant(result.activeIndex);
-    focusAfterVariantMoveRef.current = true;
     closeCompletion();
   }
 
@@ -526,9 +526,9 @@ export const Mf2TranslationEditor = forwardRef<
       locale,
     );
     if (!result) return;
+    focusAfterVariantMoveRef.current = true;
     replaceTargetModel(result.model);
     setActiveVariant(result.activeIndex);
-    focusAfterVariantMoveRef.current = true;
     closeCompletion();
   }
 
@@ -536,9 +536,9 @@ export const Mf2TranslationEditor = forwardRef<
     if (readOnly) return;
     const result = removeInvalidLocalePluralRows(targetModel, invalidLocaleRows);
     if (!result) return;
+    focusAfterVariantMoveRef.current = true;
     replaceTargetModel(result.model);
     setActiveVariant(result.activeIndex);
-    focusAfterVariantMoveRef.current = true;
     closeCompletion();
   }
 
@@ -671,6 +671,7 @@ export const Mf2TranslationEditor = forwardRef<
                           ariaLabel={`Target ${label}`}
                           describedBy={richEditorCanMutate ? shortcutsId : undefined}
                           direction={direction}
+                          focusOnMount={focusAfterVariantMoveRef.current}
                           minLines={activeEditorMinLines}
                           onChange={updateActivePattern}
                           onNextForm={() => moveActiveForm(1)}
