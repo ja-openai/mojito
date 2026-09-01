@@ -309,4 +309,51 @@ other {{}}
 
     expect(onSubmit).toHaveBeenCalledOnce();
   });
+
+  it.each([
+    ['back', '['],
+    ['forward', ']'],
+  ])('blocks the browser %s shortcut while the rich editor is focused', (_direction, key) => {
+    const onTargetChange = vi.fn();
+    render(
+      <Mf2TranslationEditor
+        onTargetChange={onTargetChange}
+        showArgumentInputs={false}
+        showPreview={false}
+        showSource={false}
+        source="Hello"
+        target="Bonjour"
+      />,
+    );
+
+    const editor = screen.getByRole('textbox', { name: 'Target Message' });
+    editor.focus();
+
+    expect(fireEvent.keyDown(editor, { key, metaKey: true })).toBe(false);
+    expect(editor).toHaveFocus();
+    expect(editor).toHaveTextContent('Bonjour');
+    expect(onTargetChange).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['Control+[', { ctrlKey: true }],
+    ['Command+Shift+[', { metaKey: true, shiftKey: true }],
+  ])('does not block %s in the rich editor', (_shortcut, modifiers) => {
+    render(
+      <Mf2TranslationEditor
+        showArgumentInputs={false}
+        showPreview={false}
+        showSource={false}
+        source="Hello"
+        target="Bonjour"
+      />,
+    );
+
+    expect(
+      fireEvent.keyDown(screen.getByRole('textbox', { name: 'Target Message' }), {
+        key: '[',
+        ...modifiers,
+      }),
+    ).toBe(true);
+  });
 });

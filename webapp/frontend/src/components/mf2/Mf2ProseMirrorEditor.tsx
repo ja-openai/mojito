@@ -58,6 +58,16 @@ type Mf2ProseMirrorEditorProps = {
   readOnly: boolean;
 };
 
+function isBrowserHistoryShortcut(event: KeyboardEvent) {
+  return (
+    event.metaKey &&
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.shiftKey &&
+    (event.key === '[' || event.key === ']')
+  );
+}
+
 const schema = new Schema({
   nodes: {
     doc: { content: 'paragraph' },
@@ -249,6 +259,11 @@ export const Mf2ProseMirrorEditor = forwardRef<
             },
           },
           handleKeyDown: (view, event) => {
+            if (!readOnlyRef.current && isBrowserHistoryShortcut(event)) {
+              event.preventDefault();
+              event.stopPropagation();
+              return true;
+            }
             if (readOnlyRef.current) return false;
             if (view.composing || composingRef.current || event.isComposing) return false;
             const navigation = formNavigationIntent(event);
