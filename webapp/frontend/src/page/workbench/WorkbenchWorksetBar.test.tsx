@@ -13,12 +13,14 @@ function renderWorksetBar({
   onChangeShowProtectedTokens = noop,
   onChangeShowDateMetadata = noop,
   showDateMetadata = false,
+  showEditorDisplayOptions = true,
 }: {
   canManageTranslations: boolean;
   onChangeMarksMode?: (mode: 'auto' | 'all' | 'off') => void;
   onChangeShowProtectedTokens?: (show: boolean) => void;
   onChangeShowDateMetadata?: (show: boolean) => void;
   showDateMetadata?: boolean;
+  showEditorDisplayOptions?: boolean;
 }) {
   const collections: WorkbenchCollection[] = [];
 
@@ -44,7 +46,7 @@ function renderWorksetBar({
       isApplyingBulkAction={false}
       onRequestDeleteAll={noop}
       onRequestBulkStatusChange={noop}
-      showDisplayOptions
+      showEditorDisplayOptions={showEditorDisplayOptions}
       marksMode="auto"
       onChangeMarksMode={onChangeMarksMode}
       showProtectedTokens
@@ -158,6 +160,29 @@ describe('WorkbenchWorksetBar permissions', () => {
 
     await user.click(screen.getByRole('button', { name: 'Display options' }));
     expect(screen.getByText('Dates')).toBeInTheDocument();
+    await user.click(
+      within(screen.getByRole('menu')).getByRole('button', {
+        name: /Show created and translated dates/,
+      }),
+    );
+
+    expect(handleChangeShowDateMetadata).toHaveBeenCalledWith(true);
+  });
+
+  it('keeps date display available when the assisted editor is off', async () => {
+    const user = userEvent.setup();
+    const handleChangeShowDateMetadata = vi.fn();
+    renderWorksetBar({
+      canManageTranslations: false,
+      onChangeShowDateMetadata: handleChangeShowDateMetadata,
+      showEditorDisplayOptions: false,
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Display options' }));
+
+    expect(screen.getByText('Dates')).toBeInTheDocument();
+    expect(screen.queryByText('Hidden characters')).not.toBeInTheDocument();
+    expect(screen.queryByText('Placeholder highlights')).not.toBeInTheDocument();
     await user.click(
       within(screen.getByRole('menu')).getByRole('button', {
         name: /Show created and translated dates/,

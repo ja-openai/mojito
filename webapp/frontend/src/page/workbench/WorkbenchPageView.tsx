@@ -416,7 +416,7 @@ export function WorkbenchPageView({
         isApplyingBulkAction={isApplyingBulkAction}
         onRequestDeleteAll={onRequestDeleteAll}
         onRequestBulkStatusChange={onRequestBulkStatusChange}
-        showDisplayOptions={isVisibleTextEditorEnabled}
+        showEditorDisplayOptions={isVisibleTextEditorEnabled}
         marksMode={translationMarksMode}
         onChangeMarksMode={setTranslationMarksMode}
         showProtectedTokens={showProtectedTokens}

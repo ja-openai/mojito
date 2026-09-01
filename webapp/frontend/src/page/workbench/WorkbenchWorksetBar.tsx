@@ -1,6 +1,9 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 
-import { MultiSectionFilterChip } from '../../components/filters/MultiSectionFilterChip';
+import {
+  type FilterSection,
+  MultiSectionFilterChip,
+} from '../../components/filters/MultiSectionFilterChip';
 import { NumericPresetDropdown } from '../../components/NumericPresetDropdown';
 import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
 import { resultSizePresets } from './workbench-constants';
@@ -67,7 +70,7 @@ type WorkbenchWorksetBarProps = {
   isApplyingBulkAction: boolean;
   onRequestDeleteAll: () => void;
   onRequestBulkStatusChange: (status: string) => void;
-  showDisplayOptions: boolean;
+  showEditorDisplayOptions: boolean;
   marksMode: VisibleTextMarksMode;
   onChangeMarksMode: (mode: VisibleTextMarksMode) => void;
   showProtectedTokens: boolean;
@@ -115,7 +118,7 @@ export function WorkbenchWorksetBar({
   isApplyingBulkAction,
   onRequestDeleteAll,
   onRequestBulkStatusChange,
-  showDisplayOptions,
+  showEditorDisplayOptions,
   marksMode,
   onChangeMarksMode,
   showProtectedTokens,
@@ -216,11 +219,12 @@ export function WorkbenchWorksetBar({
     );
   }
 
-  if (hasSearched && showDisplayOptions) {
+  if (hasSearched) {
     parts.push(
       <DisplayDropdown
         key="display"
         disabled={disabled}
+        showEditorOptions={showEditorDisplayOptions}
         marksMode={marksMode}
         onChangeMarksMode={onChangeMarksMode}
         showProtectedTokens={showProtectedTokens}
@@ -323,6 +327,7 @@ export function WorkbenchWorksetBar({
 
 function DisplayDropdown({
   disabled,
+  showEditorOptions,
   marksMode,
   onChangeMarksMode,
   showProtectedTokens,
@@ -331,6 +336,7 @@ function DisplayDropdown({
   onChangeShowDateMetadata,
 }: {
   disabled: boolean;
+  showEditorOptions: boolean;
   marksMode: VisibleTextMarksMode;
   onChangeMarksMode: (mode: VisibleTextMarksMode) => void;
   showProtectedTokens: boolean;
@@ -340,6 +346,34 @@ function DisplayDropdown({
 }) {
   const tokenDisplayValue = showProtectedTokens ? 'on' : 'off';
   const dateMetadataValue = showDateMetadata ? 'on' : 'off';
+  const sections: Array<FilterSection> = [];
+
+  if (showEditorOptions) {
+    sections.push(
+      {
+        kind: 'radio',
+        label: 'Hidden characters',
+        options: marksModeOptions,
+        value: marksMode,
+        onChange: (value) => onChangeMarksMode(value as VisibleTextMarksMode),
+      },
+      {
+        kind: 'radio',
+        label: 'Placeholder highlights',
+        options: tokenDisplayOptions,
+        value: tokenDisplayValue,
+        onChange: (value) => onChangeShowProtectedTokens(value === 'on'),
+      },
+    );
+  }
+
+  sections.push({
+    kind: 'radio',
+    label: 'Dates',
+    options: dateMetadataOptions,
+    value: dateMetadataValue,
+    onChange: (value) => onChangeShowDateMetadata(value === 'on'),
+  });
 
   return (
     <MultiSectionFilterChip
@@ -353,29 +387,7 @@ function DisplayDropdown({
       closeOnSelection
       disabled={disabled}
       summary="Display"
-      sections={[
-        {
-          kind: 'radio',
-          label: 'Hidden characters',
-          options: marksModeOptions,
-          value: marksMode,
-          onChange: (value) => onChangeMarksMode(value as VisibleTextMarksMode),
-        },
-        {
-          kind: 'radio',
-          label: 'Placeholder highlights',
-          options: tokenDisplayOptions,
-          value: tokenDisplayValue,
-          onChange: (value) => onChangeShowProtectedTokens(value === 'on'),
-        },
-        {
-          kind: 'radio',
-          label: 'Dates',
-          options: dateMetadataOptions,
-          value: dateMetadataValue,
-          onChange: (value) => onChangeShowDateMetadata(value === 'on'),
-        },
-      ]}
+      sections={sections}
     />
   );
 }
