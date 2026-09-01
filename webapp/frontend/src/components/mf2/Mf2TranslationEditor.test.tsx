@@ -107,7 +107,7 @@ function placeCaret(element: HTMLElement, offset: number) {
 describe('Mf2TranslationEditor', () => {
   it('keeps source input syntax out of the guided editor and available in advanced source', async () => {
     const user = userEvent.setup();
-    render(
+    const { container } = render(
       <Mf2TranslationEditor
         showArgumentInputs={false}
         showPreview={false}
@@ -119,6 +119,28 @@ describe('Mf2TranslationEditor', () => {
 
     expect(screen.queryByText('Variables')).not.toBeInTheDocument();
     expect(screen.queryByText('Source contract')).not.toBeInTheDocument();
+    expect(screen.queryByText('No parser or contract issues.')).not.toBeInTheDocument();
+    expect(screen.getByText('Insert special')).toBeVisible();
+    expect(screen.getByText('placeholder menu')).not.toBeVisible();
+
+    await user.click(screen.getByText('Shortcuts'));
+
+    expect(screen.getByText('placeholder menu')).toBeVisible();
+    expect(container.querySelector('.mf2-inline-editor')).toHaveClass(
+      'mf2-inline-editor--menu-open',
+    );
+
+    await user.click(screen.getByText('Insert special'));
+
+    expect(screen.getByText('placeholder menu')).not.toBeVisible();
+    expect(screen.getByText('No-break space')).toBeVisible();
+
+    await user.keyboard('{Escape}');
+
+    expect(screen.getByText('No-break space')).not.toBeVisible();
+    expect(container.querySelector('.mf2-inline-editor')).not.toHaveClass(
+      'mf2-inline-editor--menu-open',
+    );
 
     const advancedSource = screen.getByRole('button', { name: 'Advanced source' });
     expect(advancedSource).toHaveAttribute('aria-pressed', 'false');
@@ -364,6 +386,10 @@ other {{}}
     expect(
       (await screen.findAllByText(/Source: Placeholder is missing a closing brace/)).length,
     ).toBeGreaterThan(0);
+    const diagnosticDetails = container.querySelector('.mf2-diagnostics');
+    expect(diagnosticDetails).not.toHaveAttribute('open');
+    fireEvent.click(diagnosticDetails?.querySelector('summary') as HTMLElement);
+    expect(diagnosticDetails).toHaveAttribute('open');
     await waitFor(() => {
       const sourceDiagnostic = lastSnapshot?.diagnostics.find(
         (diagnostic) => diagnostic.code === 'source-unclosed-placeholder',
@@ -375,6 +401,24 @@ other {{}}
       expect(sourceDiagnostic).not.toHaveProperty('start');
       expect(sourceDiagnostic).not.toHaveProperty('end');
     });
+  });
+
+  it('distinguishes warning-only diagnostics from errors', () => {
+    const { container } = render(
+      <Mf2TranslationEditor
+        showArgumentInputs={false}
+        showLocaleSelector={false}
+        showPreview={false}
+        showSource={false}
+        source={COUNT_SOURCE}
+        target="{{Vous avez des fichiers.}}"
+      />,
+    );
+
+    const diagnosticDetails = container.querySelector('.mf2-diagnostics');
+    expect(diagnosticDetails).toHaveClass('mf2-diagnostics-warning');
+    expect(diagnosticDetails).not.toHaveClass('mf2-diagnostics-error');
+    expect(diagnosticDetails?.querySelector('summary')).toHaveTextContent(/warning/);
   });
 
   it.each([

@@ -224,7 +224,11 @@ and syntax protected while `Hidden chars: Auto / All / Off` changes only
 display decorations without replacing editor state or history. Full-document
 CodeMirror editing is exposed as **Advanced source**, not as **Edit
 placeholders**: unlike the generic editor's scoped escape hatch, it can change
-declarations, selectors, keys, and every variant at once.
+declarations, selectors, keys, and every variant at once. Keyboard reference is
+available through a compact **Shortcuts** disclosure instead of occupying an
+always-visible row. Clean documents do not show a passive success diagnostic;
+form badges, inline diagnostics, and a collapsible issue summary appear only
+when there is something actionable.
 
 API-provided source `messageFormat` metadata controls this routing. Explicit
 metadata is authoritative in the frontend; strict source-declaration detection

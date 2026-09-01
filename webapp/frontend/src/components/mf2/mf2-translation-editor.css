@@ -1,5 +1,4 @@
 .mf2-inline-editor {
-  --mf2-color-ok: var(--color-accent);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: var(--color-surface);
@@ -402,7 +401,6 @@
 
 .mf2-shortcuts {
   align-items: center;
-  border-top: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
   color: var(--color-text-muted);
   display: flex;
   flex-wrap: wrap;
@@ -410,17 +408,6 @@
   font-weight: 400;
   gap: 5px 8px;
   line-height: 1.2;
-  padding: 5px 0 0;
-}
-
-.mf2-shortcuts::before {
-  color: var(--color-text-subtle);
-  content: 'Shortcuts';
-  font-size: 9px;
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  margin-right: 2px;
-  text-transform: uppercase;
 }
 
 .mf2-shortcut-chip {
@@ -481,7 +468,7 @@
   cursor: pointer;
   font: inherit;
   font-weight: 450;
-  padding: 0;
+  padding: 0 0.375rem;
 }
 
 .mf2-inline-diagnostics {
@@ -524,17 +511,43 @@
   position: relative;
 }
 
-.mf2-shortcut-special summary {
+.mf2-shortcut-help {
+  position: static;
+}
+
+.mf2-shortcut-help > summary,
+.mf2-shortcut-special > summary {
+  align-items: center;
   color: var(--color-accent);
   cursor: pointer;
   display: inline-flex;
+  font-size: var(--font-size-xs);
   font-weight: 450;
+  height: 1.5rem;
   list-style: none;
+  padding: 0 0.375rem;
   user-select: none;
 }
 
-.mf2-shortcut-special summary::-webkit-details-marker {
+.mf2-shortcut-help > summary::-webkit-details-marker,
+.mf2-shortcut-special > summary::-webkit-details-marker {
   display: none;
+}
+
+.mf2-shortcut-help__content {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--color-text) 14%, transparent);
+  inline-size: min(520px, calc(100% - 1.25rem));
+  inset-inline-end: 0.625rem;
+  inset-inline-start: auto;
+  margin-top: 6px;
+  min-width: 0;
+  padding: 8px;
+  position: absolute;
+  top: 100%;
+  z-index: 110;
 }
 
 .mf2-shortcut-special[open] .mf2-text-tool-grid {
@@ -665,11 +678,6 @@
   min-height: 140px;
 }
 
-.mf2-raw-shortcuts {
-  margin: 0 8px 8px;
-  padding-top: 6px;
-}
-
 .mf2-raw .cm-lintRange.mf2-cm-diagnostic {
   background-repeat: repeat-x;
   border-radius: 3px;
@@ -699,17 +707,28 @@
 
 .mf2-diagnostics {
   border-top: 1px solid var(--color-border);
+  padding: 6px 8px;
+}
+
+.mf2-diagnostics > summary {
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mf2-diagnostics-error > summary {
+  color: var(--color-danger);
+}
+
+.mf2-diagnostics-warning > summary {
+  color: var(--color-warning);
+}
+
+.mf2-diagnostics__issues {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 8px;
-}
-
-.mf2-ok {
-  background: color-mix(in srgb, var(--color-accent) 9%, var(--color-surface));
-  border-radius: 999px;
-  color: var(--mf2-color-ok);
-  padding: 4px 8px;
+  padding-top: 6px;
 }
 
 .mf2-issue {

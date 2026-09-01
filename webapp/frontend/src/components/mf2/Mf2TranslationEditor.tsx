@@ -74,6 +74,8 @@ export type Mf2TranslationEditorHandle = TranslationEditorHandle;
 
 export type Mf2EditorMode = 'rich' | 'raw';
 
+type Mf2ControlMenu = 'hidden-characters' | 'insert-special' | 'shortcuts';
+
 export type Mf2LocaleOption = {
   label: string;
   value: string;
@@ -221,7 +223,7 @@ export const Mf2TranslationEditor = forwardRef<
   const [draftLocale, setDraftLocale] = useState(controlledLocale ?? 'en');
   const [draftMode, setDraftMode] = useState<Mf2EditorMode>(initialMode);
   const [draftTarget, setDraftTarget] = useState(initialTarget ?? source);
-  const [isControlsMenuOpen, setIsControlsMenuOpen] = useState(false);
+  const [openControlMenu, setOpenControlMenu] = useState<Mf2ControlMenu | null>(null);
   const [argValues, setArgValues] = useState<Record<string, unknown>>(args);
   const [rawReplaceCommand, setRawReplaceCommand] = useState<RawDocumentCommand | null>(null);
   const [rawTextToolCommand, setRawTextToolCommand] = useState<RawTextToolCommand | null>(null);
@@ -496,7 +498,7 @@ export const Mf2TranslationEditor = forwardRef<
 
   function selectMode(nextMode: Mf2EditorMode) {
     if (nextMode === mode) return;
-    setIsControlsMenuOpen(false);
+    setOpenControlMenu(null);
     if (!modeIsControlled) setDraftMode(nextMode);
     onModeChange?.(nextMode);
     closeCompletion();
@@ -584,7 +586,7 @@ export const Mf2TranslationEditor = forwardRef<
     <section
       className={classNames(
         'mf2-inline-editor',
-        isControlsMenuOpen ? 'mf2-inline-editor--menu-open' : undefined,
+        openControlMenu ? 'mf2-inline-editor--menu-open' : undefined,
         className,
       )}
       data-debug={String(debug)}
@@ -691,22 +693,6 @@ export const Mf2TranslationEditor = forwardRef<
                           ref={proseMirrorRef}
                         />
                       </div>
-                      {richEditorCanMutate ? (
-                        <ShortcutStrip
-                          completionHasMatches={activeSourcePlaceholders.length > 0}
-                          completionOpen={false}
-                          id={shortcutsId}
-                          missing={missing}
-                          commandEnterLabel={onSubmit ? submitLabel : 'next form'}
-                          nextFormShortcut={nextFormShortcut}
-                          onApplyTextTool={applyTextTool}
-                          onRestoreMissing={() => {
-                            if (!richEditorCanMutate) return;
-                            proseMirrorRef.current?.restoreMissingPlaceholders(missing);
-                            proseMirrorRef.current?.focus();
-                          }}
-                        />
-                      ) : null}
                       <InlineDiagnostics
                         diagnostics={inlineDiagnostics}
                         totalCount={diagnostics.length}
@@ -766,17 +752,6 @@ export const Mf2TranslationEditor = forwardRef<
         ref={rawEditorRef}
       />
       {mode === 'raw' && !readOnly ? (
-        <RawShortcutStrip
-          missing={targetModel ? missing : []}
-          commandEnterLabel={onSubmit ? submitLabel : 'next form'}
-          nextFormShortcut={nextFormShortcut}
-          onApplyTextTool={applyRawTextTool}
-          onRestoreMissing={restoreRawMissingPlaceholders}
-          redoShortcut={rawRedoShortcut}
-          undoShortcut={rawUndoShortcut}
-        />
-      ) : null}
-      {mode === 'raw' && !readOnly ? (
         <>
           <LocaleSelectorStarter
             candidates={sourceLocaleSelectorCandidates}
@@ -801,9 +776,9 @@ export const Mf2TranslationEditor = forwardRef<
             disabled={readOnly}
             mode={marksMode}
             onChange={onChangeMarksMode}
-            onOpenChange={setIsControlsMenuOpen}
+            onOpenChange={(open) => setOpenControlMenu(open ? 'hidden-characters' : null)}
             onRestoreFocus={() => proseMirrorRef.current?.focus()}
-            open={isControlsMenuOpen}
+            open={openControlMenu === 'hidden-characters'}
           />
         ) : null}
         <button
@@ -816,22 +791,60 @@ export const Mf2TranslationEditor = forwardRef<
         >
           {mode === 'raw' ? 'Guided editor' : 'Advanced source'}
         </button>
+        {(mode === 'raw' && !readOnly) || (mode === 'rich' && richEditorCanMutate) ? (
+          <>
+            <SpecialTextTools
+              onApplyTextTool={mode === 'raw' ? applyRawTextTool : applyTextTool}
+              onOpenChange={(open) => setOpenControlMenu(open ? 'insert-special' : null)}
+              onRestoreFocus={() => {
+                if (mode === 'raw') rawEditorRef.current?.focus();
+                else proseMirrorRef.current?.focus();
+              }}
+              open={openControlMenu === 'insert-special'}
+            />
+            <RestoreMissingButton
+              missing={mode === 'raw' && !targetModel ? [] : missing}
+              onRestoreMissing={() => {
+                if (mode === 'raw') {
+                  restoreRawMissingPlaceholders();
+                  return;
+                }
+                proseMirrorRef.current?.restoreMissingPlaceholders(missing);
+                proseMirrorRef.current?.focus();
+              }}
+            />
+            <ShortcutHelp
+              commandEnterLabel={onSubmit ? submitLabel : 'next form'}
+              id={shortcutsId}
+              nextFormShortcut={nextFormShortcut}
+              onOpenChange={(open) => setOpenControlMenu(open ? 'shortcuts' : null)}
+              onRestoreFocus={() => {
+                if (mode === 'raw') rawEditorRef.current?.focus();
+                else proseMirrorRef.current?.focus();
+              }}
+              open={openControlMenu === 'shortcuts'}
+              redoShortcut={mode === 'raw' ? rawRedoShortcut : undefined}
+              undoShortcut={mode === 'raw' ? rawUndoShortcut : undefined}
+            />
+          </>
+        ) : null}
       </TranslationEditorControlBar>
 
-      <div className="mf2-diagnostics">
-        {diagnostics.length ? (
-          diagnostics.map((diagnostic, index) => (
-            <span
-              className={`mf2-issue mf2-issue-${diagnostic.severity}`}
-              key={diagnosticRenderKey(diagnostic, index)}
-            >
-              <strong>{diagnostic.code}</strong> {diagnostic.message}
-            </span>
-          ))
-        ) : (
-          <span className="mf2-ok">No parser or contract issues.</span>
-        )}
-      </div>
+      {diagnostics.length ? (
+        <details className={`mf2-diagnostics mf2-diagnostics-${issueSeverity(diagnostics)}`}>
+          <summary>{diagnosticSummaryLabel(diagnostics)}</summary>
+          <div className="mf2-diagnostics__issues">
+            {diagnostics.map((diagnostic, index) => (
+              <span
+                className={`mf2-issue mf2-issue-${diagnostic.severity}`}
+                key={diagnosticRenderKey(diagnostic, index)}
+              >
+                <strong>{diagnostic.code}</strong> {diagnostic.message}
+              </span>
+            ))}
+          </div>
+        </details>
+      ) : null}
 
       {showPreview ? (
         <div className={`mf2-preview-row ${showArgumentInputs ? '' : 'mf2-preview-row-single'}`}>
@@ -977,35 +990,99 @@ function InlineDiagnostics({
   );
 }
 
-function RawShortcutStrip({
+function ShortcutHelp({
   commandEnterLabel,
-  missing,
+  id,
   nextFormShortcut,
-  onApplyTextTool,
-  onRestoreMissing,
+  onOpenChange,
+  onRestoreFocus,
+  open,
   redoShortcut,
   undoShortcut,
 }: {
   commandEnterLabel: string;
-  missing: Array<string>;
+  id: string;
   nextFormShortcut: string;
-  onApplyTextTool: (tool: TextTool) => void;
-  onRestoreMissing: () => void;
-  redoShortcut: string;
-  undoShortcut: string;
+  onOpenChange: (open: boolean) => void;
+  onRestoreFocus: () => void;
+  open: boolean;
+  redoShortcut?: string;
+  undoShortcut?: string;
 }) {
   return (
-    <div className="mf2-shortcuts mf2-raw-shortcuts">
-      <ShortcutKey keys="{ or $" label="placeholder menu" />
-      <ShortcutKey keys={undoShortcut} label="undo" />
-      <ShortcutKey keys={redoShortcut} label="redo" />
-      <ShortcutKey keys="Shift+Down" label="next form" />
-      <ShortcutKey keys="Shift+Up" label="previous form" />
-      <ShortcutKey keys={nextFormShortcut} label={commandEnterLabel} />
-      <SpecialTextTools onApplyTextTool={onApplyTextTool} />
-      <RestoreMissingButton missing={missing} onRestoreMissing={onRestoreMissing} />
-      <span className="mf2-shortcut-note">Parser errors are highlighted inline.</span>
-    </div>
+    <EditorControlDisclosure
+      className="mf2-shortcut-help"
+      label="Shortcuts"
+      onOpenChange={onOpenChange}
+      onRestoreFocus={onRestoreFocus}
+      open={open}
+    >
+      <div className="mf2-shortcuts mf2-shortcut-help__content" id={id}>
+        <ShortcutKey keys="{ or $" label="placeholder menu" />
+        {undoShortcut ? <ShortcutKey keys={undoShortcut} label="undo" /> : null}
+        {redoShortcut ? <ShortcutKey keys={redoShortcut} label="redo" /> : null}
+        <ShortcutKey keys="Shift+Down" label="next form" />
+        <ShortcutKey keys="Shift+Up" label="previous form" />
+        <ShortcutKey keys={nextFormShortcut} label={commandEnterLabel} />
+        {undoShortcut ? (
+          <span className="mf2-shortcut-note">Parser errors are highlighted inline.</span>
+        ) : null}
+      </div>
+    </EditorControlDisclosure>
+  );
+}
+
+function EditorControlDisclosure({
+  children,
+  className,
+  label,
+  onOpenChange,
+  onRestoreFocus,
+  open,
+}: {
+  children: ReactNode;
+  className: string;
+  label: string;
+  onOpenChange: (open: boolean) => void;
+  onRestoreFocus: () => void;
+  open: boolean;
+}) {
+  const disclosureRef = useRef<HTMLDetailsElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!disclosureRef.current?.contains(event.target as Node)) onOpenChange(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      onOpenChange(false);
+      onRestoreFocus();
+    };
+
+    window.addEventListener('pointerdown', handlePointerDown, true);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown, true);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onOpenChange, onRestoreFocus, open]);
+
+  return (
+    <details className={className} open={open} ref={disclosureRef}>
+      <summary
+        onClick={(event) => {
+          event.preventDefault();
+          onOpenChange(!open);
+        }}
+        onMouseDown={(event) => event.preventDefault()}
+      >
+        {label}
+      </summary>
+      {children}
+    </details>
   );
 }
 
@@ -1133,48 +1210,6 @@ function rowSummary(rows: Array<InvalidLocalePluralRow>) {
   return categorySummary(uniqueRows);
 }
 
-function ShortcutStrip({
-  commandEnterLabel,
-  completionHasMatches,
-  completionOpen,
-  id,
-  missing,
-  nextFormShortcut,
-  onApplyTextTool,
-  onRestoreMissing,
-}: {
-  commandEnterLabel: string;
-  completionHasMatches: boolean;
-  completionOpen: boolean;
-  id: string;
-  missing: Array<string>;
-  nextFormShortcut: string;
-  onApplyTextTool: (tool: TextTool) => void;
-  onRestoreMissing: () => void;
-}) {
-  return (
-    <div className="mf2-shortcuts" id={id}>
-      <ShortcutKey keys="{ or $" label="placeholder menu" />
-      {completionOpen ? (
-        <>
-          {completionHasMatches ? (
-            <>
-              <ShortcutKey keys="Enter" label="accept" />
-              <ShortcutKey keys="Up/Down" label="choose" />
-            </>
-          ) : null}
-          <ShortcutKey keys="Esc" label="close" />
-        </>
-      ) : null}
-      <ShortcutKey keys="Shift+Down" label="next form" />
-      <ShortcutKey keys="Shift+Up" label="previous form" />
-      <ShortcutKey keys={nextFormShortcut} label={commandEnterLabel} />
-      <SpecialTextTools onApplyTextTool={onApplyTextTool} />
-      <RestoreMissingButton missing={missing} onRestoreMissing={onRestoreMissing} />
-    </div>
-  );
-}
-
 function RestoreMissingButton({
   missing,
   onRestoreMissing,
@@ -1185,7 +1220,8 @@ function RestoreMissingButton({
   if (!missing.length) return null;
   return (
     <button
-      className="mf2-shortcut-action"
+      className="visible-text-editor__control-button mf2-shortcut-action"
+      data-translation-editor-control
       onClick={onRestoreMissing}
       onMouseDown={(event) => event.preventDefault()}
       type="button"
@@ -1195,17 +1231,32 @@ function RestoreMissingButton({
   );
 }
 
-function SpecialTextTools({ onApplyTextTool }: { onApplyTextTool: (tool: TextTool) => void }) {
+function SpecialTextTools({
+  onApplyTextTool,
+  onOpenChange,
+  onRestoreFocus,
+  open,
+}: {
+  onApplyTextTool: (tool: TextTool) => void;
+  onOpenChange: (open: boolean) => void;
+  onRestoreFocus: () => void;
+  open: boolean;
+}) {
   return (
-    <details className="mf2-shortcut-special">
-      <summary onMouseDown={(event) => event.preventDefault()}>Insert special</summary>
+    <EditorControlDisclosure
+      className="mf2-shortcut-special"
+      label="Insert special"
+      onOpenChange={onOpenChange}
+      onRestoreFocus={onRestoreFocus}
+      open={open}
+    >
       <div className="mf2-text-tool-grid">
         {TEXT_TOOLS.map((tool) => (
           <button
             key={tool.code}
-            onClick={(event) => {
+            onClick={() => {
               onApplyTextTool(tool);
-              event.currentTarget.closest('details')?.removeAttribute('open');
+              onOpenChange(false);
             }}
             onMouseDown={(event) => event.preventDefault()}
             title={tool.title}
@@ -1216,8 +1267,17 @@ function SpecialTextTools({ onApplyTextTool }: { onApplyTextTool: (tool: TextToo
           </button>
         ))}
       </div>
-    </details>
+    </EditorControlDisclosure>
   );
+}
+
+function diagnosticSummaryLabel(diagnostics: Array<EditorDiagnostic>) {
+  const errors = diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length;
+  const warnings = diagnostics.length - errors;
+  const errorLabel = `${errors} error${errors === 1 ? '' : 's'}`;
+  const warningLabel = `${warnings} warning${warnings === 1 ? '' : 's'}`;
+  if (errors && warnings) return `${errorLabel}, ${warningLabel}`;
+  return errors ? errorLabel : warningLabel;
 }
 
 function ShortcutKey({ keys, label }: { keys: string; label: string }) {
