@@ -289,6 +289,8 @@ export function TextAssistPrototypePage() {
           </div>
           <Mf2TranslationEditor
             locale="fr"
+            marksMode={marksMode}
+            onChangeMarksMode={setMarksMode}
             onTargetChange={setMf2Translation}
             showArgumentInputs={false}
             showLocaleSelector={false}

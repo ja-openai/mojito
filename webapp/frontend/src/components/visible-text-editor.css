@@ -30,7 +30,8 @@
   --visible-text-editor-icu-surface: color-mix(in srgb, var(--color-accent) 9%, transparent);
 }
 
-.visible-text-editor {
+.visible-text-editor,
+.mf2-prose {
   --visible-text-editor-hidden-mark-background: color-mix(
     in srgb,
     var(--color-text-muted) 12%,
@@ -51,6 +52,9 @@
     var(--color-text-muted) 82%,
     var(--color-text)
   );
+}
+
+.visible-text-editor {
   background: var(--color-surface);
   border: var(--border-width) solid color-mix(in srgb, var(--color-border) 78%, transparent);
   border-radius: var(--radius-2);

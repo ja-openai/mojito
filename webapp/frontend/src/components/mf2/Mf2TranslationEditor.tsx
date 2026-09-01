@@ -14,7 +14,9 @@ import {
   useState,
 } from 'react';
 
+import { HiddenCharactersMenu, TranslationEditorControlBar } from '../TranslationEditorControls';
 import type { TranslationEditorHandle } from '../TranslationEditorHandle';
+import type { VisibleTextMarksMode } from '../visibleTextFormatting';
 import {
   diagnosticRenderKey,
   diagnosticsForForm,
@@ -85,8 +87,10 @@ export type Mf2TranslationEditorProps = {
   initialTarget?: string;
   locale?: string;
   localeOptions?: Array<Mf2LocaleOption>;
+  marksMode?: VisibleTextMarksMode;
   mode?: Mf2EditorMode;
   onChange?: (snapshot: Mf2TranslationEditorSnapshot) => void;
+  onChangeMarksMode?: (mode: VisibleTextMarksMode) => void;
   onLocaleChange?: (locale: string) => void;
   onModeChange?: (mode: Mf2EditorMode) => void;
   onKeyDown?: (event: ReactKeyboardEvent<HTMLElement>) => void;
@@ -190,8 +194,10 @@ export const Mf2TranslationEditor = forwardRef<
     initialTarget,
     locale: controlledLocale,
     localeOptions,
+    marksMode = 'auto',
     mode: controlledMode,
     onChange,
+    onChangeMarksMode,
     onLocaleChange,
     onModeChange,
     onKeyDown,
@@ -215,6 +221,7 @@ export const Mf2TranslationEditor = forwardRef<
   const [draftLocale, setDraftLocale] = useState(controlledLocale ?? 'en');
   const [draftMode, setDraftMode] = useState<Mf2EditorMode>(initialMode);
   const [draftTarget, setDraftTarget] = useState(initialTarget ?? source);
+  const [isControlsMenuOpen, setIsControlsMenuOpen] = useState(false);
   const [argValues, setArgValues] = useState<Record<string, unknown>>(args);
   const [rawReplaceCommand, setRawReplaceCommand] = useState<RawDocumentCommand | null>(null);
   const [rawTextToolCommand, setRawTextToolCommand] = useState<RawTextToolCommand | null>(null);
@@ -489,6 +496,7 @@ export const Mf2TranslationEditor = forwardRef<
 
   function selectMode(nextMode: Mf2EditorMode) {
     if (nextMode === mode) return;
+    setIsControlsMenuOpen(false);
     if (!modeIsControlled) setDraftMode(nextMode);
     onModeChange?.(nextMode);
     closeCompletion();
@@ -574,45 +582,43 @@ export const Mf2TranslationEditor = forwardRef<
 
   return (
     <section
-      className={classNames('mf2-inline-editor', className)}
+      className={classNames(
+        'mf2-inline-editor',
+        isControlsMenuOpen ? 'mf2-inline-editor--menu-open' : undefined,
+        className,
+      )}
       data-debug={String(debug)}
       data-mode={mode}
       data-readonly={String(readOnly)}
       data-target-direction={direction}
       onKeyDown={onKeyDown}
     >
-      <header className="mf2-inline-toolbar">
-        {showLocaleSelector ? (
-          <label>
-            <span>Target language</span>
-            <select value={locale} onChange={(event) => selectLocale(event.currentTarget.value)}>
-              {effectiveLocaleOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        <div aria-label="Editor mode" className="mf2-segmented" role="group">
-          <button type="button" aria-pressed={mode === 'rich'} onClick={() => selectMode('rich')}>
-            Edit
-          </button>
-          <button type="button" aria-pressed={mode === 'raw'} onClick={() => selectMode('raw')}>
-            Raw
-          </button>
-        </div>
-        {showDebugTools ? (
-          <button
-            type="button"
-            data-debug
-            aria-pressed={debug}
-            onClick={() => setDebug((value) => !value)}
-          >
-            {debug ? 'Hide debug' : 'Debug'}
-          </button>
-        ) : null}
-      </header>
+      {showLocaleSelector || showDebugTools ? (
+        <header className="mf2-inline-toolbar">
+          {showLocaleSelector ? (
+            <label>
+              <span>Target language</span>
+              <select value={locale} onChange={(event) => selectLocale(event.currentTarget.value)}>
+                {effectiveLocaleOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {showDebugTools ? (
+            <button
+              type="button"
+              data-debug
+              aria-pressed={debug}
+              onClick={() => setDebug((value) => !value)}
+            >
+              {debug ? 'Hide debug' : 'Debug'}
+            </button>
+          ) : null}
+        </header>
+      ) : null}
 
       {showSource ? (
         <div className="mf2-source-prose">
@@ -672,6 +678,7 @@ export const Mf2TranslationEditor = forwardRef<
                           describedBy={richEditorCanMutate ? shortcutsId : undefined}
                           direction={direction}
                           focusOnMount={focusAfterVariantMoveRef.current}
+                          marksMode={marksMode}
                           minLines={activeEditorMinLines}
                           onChange={updateActivePattern}
                           onNextForm={() => moveActiveForm(1)}
@@ -787,6 +794,29 @@ export const Mf2TranslationEditor = forwardRef<
       {mode === 'raw' ? (
         <InlineDiagnostics diagnostics={inlineDiagnostics} totalCount={diagnostics.length} />
       ) : null}
+
+      <TranslationEditorControlBar className="mf2-editor-controls">
+        {mode === 'rich' && onChangeMarksMode ? (
+          <HiddenCharactersMenu
+            disabled={readOnly}
+            mode={marksMode}
+            onChange={onChangeMarksMode}
+            onOpenChange={setIsControlsMenuOpen}
+            onRestoreFocus={() => proseMirrorRef.current?.focus()}
+            open={isControlsMenuOpen}
+          />
+        ) : null}
+        <button
+          aria-pressed={mode === 'raw'}
+          className="visible-text-editor__control-button visible-text-editor__mode-button"
+          data-translation-editor-control
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => selectMode(mode === 'rich' ? 'raw' : 'rich')}
+          type="button"
+        >
+          {mode === 'raw' ? 'Guided editor' : 'Advanced source'}
+        </button>
+      </TranslationEditorControlBar>
 
       <div className="mf2-diagnostics">
         {diagnostics.length ? (

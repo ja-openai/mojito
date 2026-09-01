@@ -701,7 +701,9 @@ export function WorkbenchBody({
                           className="workbench-page__mf2-editor"
                           documentKey={mf2DocumentKey}
                           locale={row.locale}
+                          marksMode={translationMarksMode}
                           onChange={handleMf2Snapshot}
+                          onChangeMarksMode={onChangeTranslationMarksMode}
                           onSubmit={() => {
                             if (canSaveRowEditing && !isSaving) {
                               onSaveEditing();

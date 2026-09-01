@@ -1,6 +1,107 @@
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, createElement, createRef, type Ref } from 'react';
+import { describe, expect, it, vi } from 'vitest';
 
-import { mf2ProseMirrorDocFromPattern, mf2ProseMirrorPatternFromDoc } from './Mf2ProseMirrorEditor';
+import {
+  mf2ProseMirrorDocFromPattern,
+  Mf2ProseMirrorEditor,
+  type Mf2ProseMirrorEditorHandle,
+  mf2ProseMirrorPatternFromDoc,
+} from './Mf2ProseMirrorEditor';
+
+function editorElement({
+  marksMode,
+  onChange = vi.fn(),
+  pattern,
+  ref,
+}: {
+  marksMode: 'all' | 'auto' | 'off';
+  onChange?: (pattern: string) => void;
+  pattern: string;
+  ref?: Ref<Mf2ProseMirrorEditorHandle>;
+}) {
+  return createElement(Mf2ProseMirrorEditor, {
+    ariaLabel: 'Target Message',
+    direction: 'ltr',
+    marksMode,
+    minLines: 1,
+    onChange,
+    onNextForm: vi.fn(),
+    onPreviousForm: vi.fn(),
+    pattern,
+    placeholderSources: {},
+    placeholders: [],
+    readOnly: false,
+    ref,
+  });
+}
+
+function placeCaret(element: HTMLElement, offset: number) {
+  const text = element.querySelector('p')?.firstChild;
+  if (!text) throw new Error('Expected the MF2 editor to contain a text node.');
+  const range = document.createRange();
+  range.setStart(text, offset);
+  range.collapse(true);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  document.dispatchEvent(new Event('selectionchange'));
+}
+
+function installRangeGeometryMock() {
+  const getBoundingClientRect = Object.getOwnPropertyDescriptor(
+    Range.prototype,
+    'getBoundingClientRect',
+  );
+  const getClientRects = Object.getOwnPropertyDescriptor(Range.prototype, 'getClientRects');
+  const scrollBy = Object.getOwnPropertyDescriptor(window, 'scrollBy');
+  const rect = {
+    bottom: 1,
+    height: 1,
+    left: 0,
+    right: 1,
+    top: 0,
+    width: 1,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  } as DOMRect;
+  const rects = {
+    0: rect,
+    length: 1,
+    item: (index: number) => (index === 0 ? rect : null),
+    [Symbol.iterator]: function* () {
+      yield rect;
+    },
+  } as DOMRectList;
+
+  Object.defineProperty(Range.prototype, 'getClientRects', {
+    configurable: true,
+    value: () => rects,
+  });
+  Object.defineProperty(Range.prototype, 'getBoundingClientRect', {
+    configurable: true,
+    value: () => rect,
+  });
+  Object.defineProperty(window, 'scrollBy', {
+    configurable: true,
+    value: vi.fn(),
+  });
+
+  return () => {
+    restoreDescriptor(Range.prototype, 'getClientRects', getClientRects);
+    restoreDescriptor(Range.prototype, 'getBoundingClientRect', getBoundingClientRect);
+    restoreDescriptor(window, 'scrollBy', scrollBy);
+  };
+}
+
+function restoreDescriptor(target: object, name: string, descriptor?: PropertyDescriptor) {
+  if (descriptor) {
+    Object.defineProperty(target, name, descriptor);
+    return;
+  }
+  delete (target as Record<string, unknown>)[name];
+}
 
 describe('Mf2ProseMirrorEditor pattern conversion', () => {
   it.each([
@@ -104,5 +205,83 @@ describe('Mf2ProseMirrorEditor pattern conversion', () => {
       type: 'doc',
     });
     expect(mf2ProseMirrorPatternFromDoc(doc)).toBe(pattern);
+  });
+});
+
+describe('Mf2ProseMirrorEditor hidden character marks', () => {
+  it('marks only risky whitespace in auto mode', async () => {
+    const { container } = render(editorElement({ marksMode: 'auto', pattern: 'Hello  world ' }));
+
+    await screen.findByRole('textbox', { name: 'Target Message' });
+
+    expect(
+      container.querySelectorAll('.visible-text-editor__marked-char--space[data-marker="·"]'),
+    ).toHaveLength(3);
+  });
+
+  it('marks normal spaces in all mode', async () => {
+    const { container } = render(editorElement({ marksMode: 'all', pattern: 'Hello world' }));
+
+    await screen.findByRole('textbox', { name: 'Target Message' });
+
+    expect(
+      container.querySelectorAll('.visible-text-editor__marked-char--space[data-marker="·"]'),
+    ).toHaveLength(1);
+  });
+
+  it('does not mark hidden characters in off mode', async () => {
+    const { container } = render(
+      editorElement({ marksMode: 'off', pattern: 'Hello  world\u200e' }),
+    );
+
+    await screen.findByRole('textbox', { name: 'Target Message' });
+
+    expect(container.querySelector('.visible-text-editor__marked-char')).not.toBeInTheDocument();
+    expect(container.querySelector('.visible-text-editor__marker-widget')).not.toBeInTheDocument();
+  });
+
+  it('keeps the current marks mode when an external pattern update rebuilds the document', async () => {
+    const { container, rerender } = render(
+      editorElement({ marksMode: 'all', pattern: 'Hello world' }),
+    );
+    await screen.findByRole('textbox', { name: 'Target Message' });
+    expect(container.querySelector('.visible-text-editor__marked-char')).toBeInTheDocument();
+
+    rerender(editorElement({ marksMode: 'off', pattern: 'Hello world' }));
+    expect(container.querySelector('.visible-text-editor__marked-char')).not.toBeInTheDocument();
+
+    rerender(editorElement({ marksMode: 'off', pattern: 'Hello again' }));
+    expect(container.querySelector('.visible-text-editor__marked-char')).not.toBeInTheDocument();
+  });
+
+  it('updates marks without replacing the editor or clearing edit history', async () => {
+    const restoreRangeGeometry = installRangeGeometryMock();
+    const ref = createRef<Mf2ProseMirrorEditorHandle>();
+    const onChange = vi.fn();
+    try {
+      const { container, rerender } = render(
+        editorElement({ marksMode: 'all', onChange, pattern: 'Hello world', ref }),
+      );
+      const editor = await screen.findByRole('textbox', { name: 'Target Message' });
+      editor.focus();
+      placeCaret(editor, 5);
+
+      act(() => {
+        expect(ref.current?.applyTextTool({ text: '!' })).toBe(true);
+      });
+      expect(onChange).toHaveBeenLastCalledWith('Hello! world');
+
+      rerender(editorElement({ marksMode: 'off', onChange, pattern: 'Hello! world', ref }));
+
+      expect(screen.getByRole('textbox', { name: 'Target Message' })).toBe(editor);
+      expect(editor).toHaveFocus();
+      expect(container.querySelector('.visible-text-editor__marked-char')).not.toBeInTheDocument();
+
+      fireEvent.keyDown(editor, { ctrlKey: true, key: 'z' });
+
+      await waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Hello world'));
+    } finally {
+      restoreRangeGeometry();
+    }
   });
 });

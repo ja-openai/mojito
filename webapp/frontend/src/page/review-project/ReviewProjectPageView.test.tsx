@@ -786,7 +786,8 @@ one {{Você tem {$count} arquivo.}}
     expect(container.querySelector('.review-project-detail__value--source')).toHaveTextContent(
       'You have {$count} files.',
     );
-    expect(screen.getByRole('button', { name: 'Raw' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hidden characters: Auto' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Advanced source' })).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Translation' })).not.toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: /Placeholders/ })).not.toBeInTheDocument();
     expect(screen.queryByText('Target language')).not.toBeInTheDocument();

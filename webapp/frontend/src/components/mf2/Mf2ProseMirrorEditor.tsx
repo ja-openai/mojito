@@ -3,8 +3,8 @@ import { history, redo, undo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 import { Schema } from 'prosemirror-model';
-import { EditorState, NodeSelection, Plugin, TextSelection } from 'prosemirror-state';
-import { EditorView } from 'prosemirror-view';
+import { EditorState, NodeSelection, Plugin, PluginKey, TextSelection } from 'prosemirror-state';
+import { Decoration, DecorationSet, EditorView } from 'prosemirror-view';
 import {
   forwardRef,
   useCallback,
@@ -17,6 +17,15 @@ import {
   useState,
 } from 'react';
 
+import { getVisibleTextMarker } from '../../utils/textCharacters';
+import {
+  resolveVisibleTextMarksMode,
+  shouldRenderVisibleTextWidget,
+  shouldShowVisibleTextIssueMarker,
+  visibleTextMarkerClassFor,
+  type VisibleTextMarksMode,
+  visibleTextWidgetText,
+} from '../visibleTextFormatting';
 import { formNavigationIntent } from './keyboard';
 import {
   bracedPatternPartsInPattern,
@@ -48,6 +57,7 @@ type Mf2ProseMirrorEditorProps = {
   focusOnMount?: boolean;
   describedBy?: string;
   direction: 'ltr' | 'rtl';
+  marksMode?: VisibleTextMarksMode;
   minLines: number;
   onChange: (pattern: string) => void;
   onNextForm: () => void;
@@ -156,6 +166,8 @@ const schema = new Schema({
   marks: {},
 });
 
+const visibleTextPluginKey = new PluginKey<VisibleTextMarksMode>('mf2-visible-text');
+
 export const Mf2ProseMirrorEditor = forwardRef<
   Mf2ProseMirrorEditorHandle,
   Mf2ProseMirrorEditorProps
@@ -165,6 +177,7 @@ export const Mf2ProseMirrorEditor = forwardRef<
     describedBy,
     direction,
     focusOnMount = false,
+    marksMode,
     minLines,
     onChange,
     onNextForm,
@@ -189,6 +202,9 @@ export const Mf2ProseMirrorEditor = forwardRef<
   const placeholdersRef = useRef(placeholders);
   const placeholderSourcesRef = useRef(placeholderSources);
   const readOnlyRef = useRef(readOnly);
+  const resolvedMarksMode = resolveVisibleTextMarksMode(marksMode, undefined);
+  const marksModeRef = useRef(resolvedMarksMode);
+  marksModeRef.current = resolvedMarksMode;
   const [completion, setCompletion] = useState<CompletionState | null>(null);
   const completionId = useId();
   const filteredCompletionNames = useMemo(
@@ -380,6 +396,7 @@ export const Mf2ProseMirrorEditor = forwardRef<
             'Mod-z': undo,
             'Shift-Mod-z': redo,
           }),
+          createVisibleTextPlugin(marksModeRef.current),
           completionPlugin,
           keymap(baseKeymap),
         ],
@@ -430,6 +447,12 @@ export const Mf2ProseMirrorEditor = forwardRef<
     // EditorView owns this host for the component lifetime; later effects synchronize props.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useLayoutEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch(view.state.tr.setMeta(visibleTextPluginKey, resolvedMarksMode));
+  }, [resolvedMarksMode]);
 
   useLayoutEffect(() => {
     const view = viewRef.current;
@@ -604,6 +627,106 @@ export function mf2ProseMirrorPatternFromDoc(doc: ProseMirrorNode) {
     if (node.type.name === 'syntax') chunks.push(stringNodeAttribute(node, 'source'));
   });
   return chunks.join('');
+}
+
+function createVisibleTextPlugin(initialMarksMode: VisibleTextMarksMode) {
+  return new Plugin<VisibleTextMarksMode>({
+    key: visibleTextPluginKey,
+    props: {
+      decorations(state) {
+        return buildVisibleTextDecorations(
+          state.doc,
+          visibleTextPluginKey.getState(state) ?? 'auto',
+        );
+      },
+    },
+    state: {
+      init: () => initialMarksMode,
+      apply(transaction, current) {
+        return (
+          (transaction.getMeta(visibleTextPluginKey) as VisibleTextMarksMode | undefined) ?? current
+        );
+      },
+    },
+  });
+}
+
+function buildVisibleTextDecorations(doc: ProseMirrorNode, marksMode: VisibleTextMarksMode) {
+  if (marksMode === 'off') return DecorationSet.empty;
+
+  const decorations: Array<Decoration> = [];
+  const value = doc.textContent;
+  let textOffset = 0;
+
+  doc.descendants((node, pos) => {
+    if (!node.isText) {
+      if (node.isLeaf) textOffset += node.textContent.length;
+      return !node.isLeaf;
+    }
+
+    let nodeOffset = 0;
+    for (const char of Array.from(node.text ?? '')) {
+      const marker = getVisibleTextMarker(char);
+      const from = pos + nodeOffset;
+      const to = from + char.length;
+      const rawStart = textOffset + nodeOffset;
+      const rawEnd = rawStart + char.length;
+      nodeOffset += char.length;
+
+      if (
+        !marker ||
+        (marksMode === 'auto' &&
+          !shouldShowVisibleTextIssueMarker(value, { char, rawEnd, rawStart }))
+      ) {
+        continue;
+      }
+
+      if (shouldRenderVisibleTextWidget(char, marker.text)) {
+        decorations.push(
+          Decoration.widget(from, () => createVisibleTextMarkerWidget(char, marker), {
+            key: `${from}-${marker.text}`,
+            side: -1,
+          }),
+        );
+        continue;
+      }
+
+      decorations.push(
+        Decoration.inline(
+          from,
+          to,
+          {
+            class: `visible-text-editor__marked-char visible-text-editor__marked-char--${visibleTextMarkerClassFor(
+              char,
+            )}`,
+            'data-marker': visibleTextWidgetText(marker.text),
+            title: marker.label,
+          },
+          {
+            inclusiveEnd: false,
+            inclusiveStart: false,
+          },
+        ),
+      );
+    }
+
+    textOffset += node.nodeSize;
+    return false;
+  });
+
+  return DecorationSet.create(doc, decorations);
+}
+
+function createVisibleTextMarkerWidget(char: string, marker: { label: string; text: string }) {
+  const element = document.createElement('span');
+  element.className = `visible-text-editor__marker-widget visible-text-editor__marker-widget--${visibleTextMarkerClassFor(
+    char,
+  )}`;
+  element.textContent = visibleTextWidgetText(marker.text);
+  element.setAttribute('aria-hidden', 'true');
+  element.setAttribute('contenteditable', 'false');
+  element.setAttribute('title', marker.label);
+  return element;
 }
 
 function patternTextFromSource(value: string) {

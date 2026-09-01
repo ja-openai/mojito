@@ -3818,7 +3818,9 @@ function DetailPane({
                       }`}
                       documentKey={mf2DocumentKey}
                       locale={localeTag}
+                      marksMode={translationMarksMode}
                       onChange={handleMf2Snapshot}
+                      onChangeMarksMode={setTranslationMarksMode}
                       onKeyDown={handleTranslationEditorKeyDown}
                       onSubmit={handleMf2Accept}
                       onTargetChange={setDraftTarget}

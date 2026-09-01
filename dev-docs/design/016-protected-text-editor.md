@@ -218,6 +218,14 @@ wildcard fallback even when the source message is plain rather than a `.match`;
 undeclared, non-selector-capable, and annotation-mismatched target selectors are
 rejected.
 
+The structured editor reuses the production editor's compact hidden-character
+control and marker presentation. Its default guided mode keeps MF2 expressions
+and syntax protected while `Hidden chars: Auto / All / Off` changes only
+display decorations without replacing editor state or history. Full-document
+CodeMirror editing is exposed as **Advanced source**, not as **Edit
+placeholders**: unlike the generic editor's scoped escape hatch, it can change
+declarations, selectors, keys, and every variant at once.
+
 API-provided source `messageFormat` metadata controls this routing. Explicit
 metadata is authoritative in the frontend; strict source-declaration detection
 is only a compatibility fallback for older payloads that omit the field. The

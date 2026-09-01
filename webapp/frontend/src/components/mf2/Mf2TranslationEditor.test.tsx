@@ -105,7 +105,7 @@ function placeCaret(element: HTMLElement, offset: number) {
 }
 
 describe('Mf2TranslationEditor', () => {
-  it('keeps source input syntax out of Edit and available in Raw', async () => {
+  it('keeps source input syntax out of the guided editor and available in advanced source', async () => {
     const user = userEvent.setup();
     render(
       <Mf2TranslationEditor
@@ -120,17 +120,53 @@ describe('Mf2TranslationEditor', () => {
     expect(screen.queryByText('Variables')).not.toBeInTheDocument();
     expect(screen.queryByText('Source contract')).not.toBeInTheDocument();
 
-    const edit = screen.getByRole('button', { name: 'Edit' });
-    const raw = screen.getByRole('button', { name: 'Raw' });
-    expect(edit).toHaveAttribute('aria-pressed', 'true');
-    expect(raw).toHaveAttribute('aria-pressed', 'false');
+    const advancedSource = screen.getByRole('button', { name: 'Advanced source' });
+    expect(advancedSource).toHaveAttribute('aria-pressed', 'false');
 
-    await user.click(raw);
+    await user.click(advancedSource);
 
-    expect(edit).toHaveAttribute('aria-pressed', 'false');
-    expect(raw).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Guided editor' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     const variables = screen.getByText('Variables').closest('.mf2-form-contract');
     expect(variables).toHaveTextContent('.input {$count :number}');
+  });
+
+  it('uses the shared hidden-character control without losing editor focus', async () => {
+    const restoreRangeGeometry = installRangeGeometryMock();
+    const user = userEvent.setup();
+
+    function ControlledMarksMode() {
+      const [marksMode, setMarksMode] = useState<'auto' | 'all' | 'off'>('auto');
+      return (
+        <Mf2TranslationEditor
+          marksMode={marksMode}
+          onChangeMarksMode={setMarksMode}
+          showArgumentInputs={false}
+          showLocaleSelector={false}
+          showPreview={false}
+          showSource={false}
+          source="Hello"
+          target="Bonjour  monde"
+        />
+      );
+    }
+
+    try {
+      render(<ControlledMarksMode />);
+      const editor = screen.getByRole('textbox', { name: 'Target Message' });
+      editor.focus();
+
+      await user.click(screen.getByRole('button', { name: 'Hidden characters: Auto' }));
+      await user.click(screen.getByRole('option', { name: 'All' }));
+
+      expect(screen.getByRole('button', { name: 'Hidden characters: All' })).toBeInTheDocument();
+      expect(editor).toHaveFocus();
+      expect(editor.textContent).toBe('Bonjour  monde');
+    } finally {
+      restoreRangeGeometry();
+    }
   });
 
   it('promotes a controlled empty target into flat locale plural forms', async () => {

@@ -41,6 +41,7 @@ import {
   type VisibleTextIcuMessage,
   visibleTextIcuMessageKey,
 } from '../utils/visibleTextIcuDisplay';
+import { HiddenCharactersMenu, TranslationEditorControlBar } from './TranslationEditorControls';
 import {
   resolveVisibleTextMarksMode,
   shouldRenderVisibleTextWidget,
@@ -171,12 +172,6 @@ const TOKEN_DROP_BOUNDARY_CLASS = 'visible-text-editor__protected-token--drop-bo
 const TOKEN_DROP_BLOCKED_CLASS = 'visible-text-editor__protected-token--drop-blocked';
 const protectedEditBlockedMessage =
   'Placeholder edit blocked. Use Edit placeholders to change placeholders or tags.';
-const marksModeOptions: { value: VisibleTextMarksMode; label: string }[] = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'all', label: 'All' },
-  { value: 'off', label: 'Off' },
-];
-
 function visibleIcuSyntaxTokenContent(raw: string, fallbackText: string): string | DOMOutputSpec {
   const display = visibleIcuSyntaxDisplay(raw);
   if (display.kind === 'empty') {
@@ -1992,7 +1987,6 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
     );
     const [isMarksMenuOpen, setIsMarksMenuOpen] = useState(false);
     const icuFormMenuRef = useRef<HTMLDivElement | null>(null);
-    const marksMenuRef = useRef<HTMLDivElement | null>(null);
     onChangeRef.current = onChange;
     onFocusRef.current = onFocus;
     onKeyDownRef.current = onKeyDown;
@@ -2405,8 +2399,6 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
     const shouldShowControlStatus = Boolean(blockedEditMessage);
     const shouldAnnounceControlStatus = Boolean(blockedEditMessage);
     const controlMarksMode = controlBar?.marksMode ?? resolvedMarksMode;
-    const controlMarksLabel =
-      marksModeOptions.find((option) => option.value === controlMarksMode)?.label ?? 'Auto';
     const activeExactValueInsertion = controlBar?.icuExactFormInsertions?.find(
       (insertion) => insertion.id === exactValueInsertionId && insertion.kind === 'exact-value',
     );
@@ -2425,30 +2417,6 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
             messageType: insertion.messageType ?? 'plural',
           }) === activeIcuFormGroupKey,
       ) ?? [];
-    useEffect(() => {
-      if (!isMarksMenuOpen) {
-        return;
-      }
-
-      const handlePointerDown = (event: PointerEvent) => {
-        if (marksMenuRef.current?.contains(event.target as Node)) {
-          return;
-        }
-        setIsMarksMenuOpen(false);
-      };
-      const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key === 'Escape') {
-          setIsMarksMenuOpen(false);
-        }
-      };
-
-      window.addEventListener('pointerdown', handlePointerDown, true);
-      window.addEventListener('keydown', handleKeyDown);
-      return () => {
-        window.removeEventListener('pointerdown', handlePointerDown, true);
-        window.removeEventListener('keydown', handleKeyDown);
-      };
-    }, [isMarksMenuOpen]);
     useEffect(() => {
       if (!activeIcuFormGroupKey) {
         return;
@@ -2563,50 +2531,16 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
       setExactValueError(null);
     };
     const controlBarElement = controlBar ? (
-      <div className="visible-text-editor__control-bar" aria-label="Text editor controls">
+      <TranslationEditorControlBar>
         {controlBar.onChangeMarksMode ? (
-          <div className="visible-text-editor__marks-control" ref={marksMenuRef}>
-            <button
-              type="button"
-              className="visible-text-editor__marks-button"
-              aria-expanded={isMarksMenuOpen}
-              aria-haspopup="listbox"
-              aria-label={`Hidden characters: ${controlMarksLabel}`}
-              disabled={controlBarDisabled}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => setIsMarksMenuOpen((current) => !current)}
-              title="Choose hidden character display"
-            >
-              <span className="visible-text-editor__marks-label">Hidden chars</span>
-              <span className="visible-text-editor__marks-value">{controlMarksLabel}</span>
-              <span className="visible-text-editor__marks-chevron" aria-hidden="true" />
-            </button>
-            {isMarksMenuOpen ? (
-              <div
-                className="visible-text-editor__marks-menu"
-                role="listbox"
-                aria-label="Hidden characters"
-              >
-                {marksModeOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className="visible-text-editor__marks-option"
-                    role="option"
-                    aria-selected={option.value === controlMarksMode}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => {
-                      controlBar.onChangeMarksMode?.(option.value);
-                      setIsMarksMenuOpen(false);
-                      viewRef.current?.focus();
-                    }}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
+          <HiddenCharactersMenu
+            disabled={controlBarDisabled}
+            mode={controlMarksMode}
+            onChange={controlBar.onChangeMarksMode}
+            onOpenChange={setIsMarksMenuOpen}
+            onRestoreFocus={() => viewRef.current?.focus()}
+            open={isMarksMenuOpen}
+          />
         ) : null}
         {controlBar.onToggleRawMode ? (
           <button
@@ -2641,7 +2575,7 @@ export const VisibleTextEditor = forwardRef<VisibleTextEditorHandle, Props>(
             {controlStatus}
           </span>
         ) : null}
-      </div>
+      </TranslationEditorControlBar>
     ) : null;
 
     const icuFormMenuElement =
