@@ -779,7 +779,7 @@ one {{Você tem {$count} arquivo.}}
     expect(await screen.findByRole('textbox', { name: 'Target count: one' })).toHaveClass(
       'mf2-pm-view',
     );
-    expect(screen.getByText('Variables')).toBeInTheDocument();
+    expect(screen.queryByText('Variables')).not.toBeInTheDocument();
     expect(container.querySelector('.review-project-detail__value--source')).toHaveTextContent(
       '.input {$count :number}',
     );

@@ -627,11 +627,6 @@ export const Mf2TranslationEditor = forwardRef<
       {mode === 'rich' ? (
         <div className="mf2-edit-row">
           <div className="mf2-forms">
-            {sourceVariablesText ? (
-              <div className="mf2-form-meta-row">
-                <SourceVariables text={sourceVariablesText} />
-              </div>
-            ) : null}
             {variants.map((variant, index) => {
               const label = formLabel(variant.keys, selectors);
               const formDiagnostics = diagnosticsForForm(diagnostics, label);

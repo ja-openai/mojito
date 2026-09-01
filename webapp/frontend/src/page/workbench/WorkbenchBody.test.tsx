@@ -166,7 +166,7 @@ one {{Você tem {$count} arquivo.}}
     expect(await screen.findByRole('textbox', { name: 'Target count: one' })).toHaveClass(
       'mf2-pm-view',
     );
-    expect(screen.getByText('Variables')).toBeInTheDocument();
+    expect(screen.queryByText('Variables')).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'MF2 source' })).not.toBeInTheDocument();
     expect(screen.getByText('Shown to translators')).toBeInTheDocument();
     expect(container.querySelector('.mf2-active-source-comparison')).toHaveTextContent(

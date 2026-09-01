@@ -28,7 +28,7 @@ function ControlledEmptyTarget({ onTargetChange }: { onTargetChange: (target: st
 }
 
 describe('Mf2TranslationEditor', () => {
-  it('summarizes source variables and exposes editor mode state', async () => {
+  it('keeps source input syntax out of Edit and available in Raw', async () => {
     const user = userEvent.setup();
     render(
       <Mf2TranslationEditor
@@ -40,8 +40,7 @@ describe('Mf2TranslationEditor', () => {
       />,
     );
 
-    const variables = screen.getByText('Variables').closest('.mf2-form-contract');
-    expect(variables).toHaveTextContent('.input {$count :number}');
+    expect(screen.queryByText('Variables')).not.toBeInTheDocument();
     expect(screen.queryByText('Source contract')).not.toBeInTheDocument();
 
     const edit = screen.getByRole('button', { name: 'Edit' });
@@ -53,6 +52,8 @@ describe('Mf2TranslationEditor', () => {
 
     expect(edit).toHaveAttribute('aria-pressed', 'false');
     expect(raw).toHaveAttribute('aria-pressed', 'true');
+    const variables = screen.getByText('Variables').closest('.mf2-form-contract');
+    expect(variables).toHaveTextContent('.input {$count :number}');
   });
 
   it('promotes a controlled empty target into flat locale plural forms', async () => {
