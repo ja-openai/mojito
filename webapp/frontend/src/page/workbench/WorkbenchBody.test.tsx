@@ -199,6 +199,59 @@ one {{Você tem {$count} arquivo.}}
     );
   });
 
+  it('keeps raw MF2 serialization on collapsed rows when the assisted editor is off', () => {
+    const onStartEditing = vi.fn();
+    const mf2Row: WorkbenchRow = {
+      ...editingRow,
+      messageFormat: 'MF2',
+      source: `.input {$count :number}
+{{You have {$count} files.}}`,
+      translation: `.input {$count :number}
+{{Você tem {$count} arquivos.}}`,
+    };
+    const { container } = renderWorkbenchBody({
+      editingRowId: null,
+      editingValue: '',
+      isVisibleTextEditorEnabled: false,
+      onStartEditing,
+      rows: [mf2Row],
+    });
+
+    expect(screen.queryByRole('textbox', { name: 'MF2 source' })).not.toBeInTheDocument();
+    expect(container.querySelector('.workbench-page__source-text')?.textContent).toBe(
+      mf2Row.source,
+    );
+    const editor = screen.getByRole('textbox', { name: 'Text editor' });
+    expect(editor).toHaveValue(mf2Row.translation);
+    expect(container.querySelector('.workbench-page__mf2-badge')).not.toBeInTheDocument();
+
+    fireEvent.focus(editor);
+    expect(onStartEditing).toHaveBeenCalledWith(mf2Row.id, mf2Row.translation);
+  });
+
+  it('uses the native raw editor for active MF2 rows when the assisted editor is off', () => {
+    const mf2Row: WorkbenchRow = {
+      ...editingRow,
+      messageFormat: 'MF2',
+      source: `.input {$count :number}
+{{You have {$count} files.}}`,
+      translation: `.input {$count :number}
+{{Você tem {$count} arquivos.}}`,
+    };
+    renderWorkbenchBody({
+      editingValue: mf2Row.translation ?? '',
+      isVisibleTextEditorEnabled: false,
+      rows: [mf2Row],
+    });
+
+    const editor = screen.getByRole('textbox', { name: 'Text editor' });
+    expect(editor.tagName).toBe('TEXTAREA');
+    expect(editor).toHaveValue(mf2Row.translation);
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Raw' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /Target count:/u })).not.toBeInTheDocument();
+  });
+
   it('blocks an initially invalid MF2 target from being accepted', async () => {
     const onSaveEditing = vi.fn();
     const mf2Row: WorkbenchRow = {
