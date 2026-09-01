@@ -526,7 +526,8 @@ export function WorkbenchBody({
                 messageFormat: row.messageFormat,
                 source: row.source,
               });
-              const useMf2TranslationEditor = rowIsMf2 && isVisibleTextEditorEnabled && isEditing;
+              const useAssistedMf2 = rowIsMf2 && isVisibleTextEditorEnabled && showProtectedTokens;
+              const useMf2TranslationEditor = useAssistedMf2 && isEditing;
               const useAssistedTranslationEditor =
                 !rowIsMf2 && isVisibleTextEditorEnabled && isEditing;
               const useAssistedTranslationPreview =
@@ -669,7 +670,7 @@ export function WorkbenchBody({
                       {showDateMetadata ? <WorkbenchDateMetadata row={row} /> : null}
                     </div>
                     <div className="workbench-page__cell workbench-page__cell--source">
-                      {rowIsMf2 && isVisibleTextEditorEnabled && !useMf2TranslationEditor ? (
+                      {useAssistedMf2 && !useMf2TranslationEditor ? (
                         <WorkbenchMf2Preview ariaLabel="MF2 source" value={row.source} />
                       ) : !rowIsMf2 && useAssistedSourcePreview ? (
                         <VisibleTextRenderer
@@ -718,7 +719,7 @@ export function WorkbenchBody({
                           submitLabel="accept"
                           target={translationValue}
                         />
-                      ) : rowIsMf2 && isVisibleTextEditorEnabled ? (
+                      ) : useAssistedMf2 ? (
                         <WorkbenchMf2Preview
                           ariaLabel="MF2 translation editor"
                           disabled={!row.canEdit || isSaving}

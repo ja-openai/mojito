@@ -306,12 +306,13 @@ path remains the native textarea. This lets admins and early testers validate th
 ProseMirror editor in Workbench and Review Project without adding runtime cost
 or editor behavior changes for everyone else.
 
-Workbench MF2 routing follows that generic-editor preference. With the assisted
-editor enabled, Workbench shows compact MF2 previews on collapsed rows and
-replaces them with the structured editor and active source-form comparison while
-a row is editing. With it disabled, Workbench shows the raw MF2 serialization
-and keeps editing in the native textarea. Review Project MF2 detail editors keep
-using the structured editor, with locale controlled by the host. The shared
+Workbench MF2 routing follows that generic-editor preference and the Workbench
+placeholder-highlights display option. With both enabled, Workbench shows
+compact MF2 previews on collapsed rows and replaces them with the structured
+editor and active source-form comparison while a row is editing. With either
+disabled, Workbench shows the raw MF2 serialization and keeps editing in the
+native textarea. Review Project MF2 detail editors keep using the structured
+editor, with locale controlled by the host. The shared
 focus/blur handle and primary keyboard action preserve each host's save or
 accept workflow. Parser and source/target contract errors disable those
 interactive actions until repaired.
