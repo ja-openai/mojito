@@ -19,6 +19,7 @@ import {
 
 import { formNavigationIntent } from './keyboard';
 import {
+  bracedPatternPartsInPattern,
   filterPlaceholderNames,
   placeholderCompletionConsumesClosingBrace,
   placeholderCompletionToken,
@@ -86,6 +87,10 @@ const schema = new Schema({
       },
       group: 'inline',
       inline: true,
+      leafText: (node) => {
+        const name = stringNodeAttribute(node, 'name');
+        return stringNodeAttribute(node, 'source') || `{$${name}}`;
+      },
       parseDOM: [
         {
           getAttrs: (node) => {
@@ -112,6 +117,38 @@ const schema = new Schema({
             title: source || `{$${name}}`,
           },
           `{$${name}}`,
+        ];
+      },
+    },
+    syntax: {
+      atom: true,
+      attrs: {
+        source: { default: '' },
+      },
+      group: 'inline',
+      inline: true,
+      leafText: (node) => stringNodeAttribute(node, 'source'),
+      parseDOM: [
+        {
+          getAttrs: (node) => {
+            if (!(node instanceof HTMLElement)) return false;
+            return { source: node.dataset.mf2Syntax ?? '' };
+          },
+          tag: 'span[data-mf2-syntax]',
+        },
+      ],
+      selectable: true,
+      toDOM: (node) => {
+        const source = stringNodeAttribute(node, 'source');
+        return [
+          'span',
+          {
+            class: 'mf2-chip mf2-pm-chip mf2-pm-syntax',
+            'data-mf2-syntax': source,
+            contenteditable: 'false',
+            title: source,
+          },
+          source,
         ];
       },
     },
@@ -321,7 +358,7 @@ export const Mf2ProseMirrorEditor = forwardRef<
             }
             if (
               (event.key === 'Backspace' || event.key === 'Delete') &&
-              deletePlaceholderAtSelection(view, event.key)
+              deleteProtectedNodeAtSelection(view, event.key)
             ) {
               event.preventDefault();
               closeCompletion();
@@ -533,13 +570,25 @@ export const Mf2ProseMirrorEditor = forwardRef<
 // eslint-disable-next-line react-refresh/only-export-components -- Pure conversion helper used by tests.
 export function mf2ProseMirrorDocFromPattern(pattern: string) {
   const nodes: Array<ProseMirrorNode> = [];
+  const placeholders = new Map(
+    placeholderExpressionsInPattern(pattern).map((expression) => [expression.from, expression]),
+  );
   let index = 0;
-  for (const expression of placeholderExpressionsInPattern(pattern)) {
-    if (expression.from > index) nodes.push(schema.text(pattern.slice(index, expression.from)));
-    nodes.push(placeholderNode(expression.name, expression.source));
-    index = expression.to;
+  for (const part of bracedPatternPartsInPattern(pattern)) {
+    if (part.from > index) {
+      nodes.push(schema.text(patternTextFromSource(pattern.slice(index, part.from))));
+    }
+    const placeholder = placeholders.get(part.from);
+    nodes.push(
+      placeholder?.to === part.to
+        ? placeholderNode(placeholder.name, placeholder.source)
+        : syntaxNode(part.source),
+    );
+    index = part.to;
   }
-  if (index < pattern.length) nodes.push(schema.text(pattern.slice(index)));
+  if (index < pattern.length) {
+    nodes.push(schema.text(patternTextFromSource(pattern.slice(index))));
+  }
   return schema.nodes.doc.create(null, [schema.nodes.paragraph.create(null, nodes)]);
 }
 
@@ -547,13 +596,22 @@ export function mf2ProseMirrorDocFromPattern(pattern: string) {
 export function mf2ProseMirrorPatternFromDoc(doc: ProseMirrorNode) {
   const chunks: Array<string> = [];
   doc.descendants((node) => {
-    if (node.isText) chunks.push(node.text ?? '');
+    if (node.isText) chunks.push(patternTextToSource(node.text ?? ''));
     if (node.type.name === 'placeholder') {
       const name = stringNodeAttribute(node, 'name');
       chunks.push(stringNodeAttribute(node, 'source') || `{$${name}}`);
     }
+    if (node.type.name === 'syntax') chunks.push(stringNodeAttribute(node, 'source'));
   });
   return chunks.join('');
+}
+
+function patternTextFromSource(value: string) {
+  return value.replace(/\\([\\{}])/gu, '$1');
+}
+
+function patternTextToSource(value: string) {
+  return value.replace(/[\\{}]/gu, '\\$&');
 }
 
 function stringNodeAttribute(node: ProseMirrorNode, name: string) {
@@ -593,6 +651,10 @@ function placeholderNode(name: string, source = `{$${name}}`) {
   return schema.nodes.placeholder.create({ name, source });
 }
 
+function syntaxNode(source: string) {
+  return schema.nodes.syntax.create({ source });
+}
+
 function completionRangeFromSelection(state: EditorState) {
   if (!state.selection.empty) return null;
   const parentStart = state.selection.$from.start();
@@ -607,22 +669,26 @@ function completionRangeFromSelection(state: EditorState) {
   };
 }
 
-function deletePlaceholderAtSelection(view: EditorView, key: string) {
+function deleteProtectedNodeAtSelection(view: EditorView, key: string) {
   const { selection } = view.state;
-  if (selection instanceof NodeSelection && selection.node.type.name === 'placeholder') {
-    dispatchPlaceholderDelete(view, selection.from, selection.to, selection.from);
+  if (selection instanceof NodeSelection && isProtectedNode(selection.node)) {
+    dispatchProtectedNodeDelete(view, selection.from, selection.to, selection.from);
     return true;
   }
   if (!selection.empty) return false;
   const adjacentNode = key === 'Backspace' ? selection.$from.nodeBefore : selection.$from.nodeAfter;
-  if (adjacentNode?.type.name !== 'placeholder') return false;
+  if (!adjacentNode || !isProtectedNode(adjacentNode)) return false;
   const from = key === 'Backspace' ? selection.from - adjacentNode.nodeSize : selection.from;
   const to = key === 'Backspace' ? selection.from : selection.from + adjacentNode.nodeSize;
-  dispatchPlaceholderDelete(view, from, to, from);
+  dispatchProtectedNodeDelete(view, from, to, from);
   return true;
 }
 
-function dispatchPlaceholderDelete(view: EditorView, from: number, to: number, cursor: number) {
+function isProtectedNode(node: ProseMirrorNode) {
+  return node.type.name === 'placeholder' || node.type.name === 'syntax';
+}
+
+function dispatchProtectedNodeDelete(view: EditorView, from: number, to: number, cursor: number) {
   const transaction = view.state.tr.delete(from, to);
   const position = Math.max(0, Math.min(cursor, transaction.doc.content.size));
   view.dispatch(

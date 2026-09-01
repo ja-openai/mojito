@@ -84,6 +84,12 @@ export type PlaceholderExpression = {
   to: number;
 };
 
+export type BracedPatternPart = {
+  from: number;
+  source: string;
+  to: number;
+};
+
 export type EditorModel =
   | {
       declarations: Array<EditorDeclaration>;
@@ -798,6 +804,23 @@ export function placeholderExpressionsInPattern(pattern: string): Array<Placehol
     index = end;
   }
   return expressions;
+}
+
+export function bracedPatternPartsInPattern(pattern: string): Array<BracedPatternPart> {
+  const value = String(pattern ?? '');
+  const parts: Array<BracedPatternPart> = [];
+  for (let index = 0; index < value.length; index += 1) {
+    if (value[index] !== '{' || isEscapedAt(value, index)) continue;
+    const end = preservableBracedPatternPartEnd(value, index);
+    if (end == null) continue;
+    parts.push({
+      from: index,
+      source: value.slice(index, end + 1),
+      to: end + 1,
+    });
+    index = end;
+  }
+  return parts;
 }
 
 function variableExpressionEnd(value: string, start: number) {
@@ -2513,7 +2536,13 @@ function patternValueToSource(pattern: string) {
 function preservableBracedPatternPartEnd(value: string, start: number) {
   const end = variableExpressionEnd(value, start);
   if (end == null) return null;
-  const content = value.slice(start + 1, end).trim();
+  let contentStart = start + 1;
+  while (contentStart < end) {
+    const char = codePointCharAt(value, contentStart);
+    if (!isMf2SyntaxWhitespace(char)) break;
+    contentStart += char.length;
+  }
+  const content = value.slice(contentStart, end);
   return PRESERVABLE_BRACED_PATTERN_START_RE.test(content) ? end : null;
 }
 

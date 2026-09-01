@@ -229,6 +229,61 @@ other {{}}
     expect(onTargetChange).not.toHaveBeenCalled();
   });
 
+  function ControlledLiteralBraceTarget({
+    onTargetChange,
+  }: {
+    onTargetChange: (target: string) => void;
+  }) {
+    const [target, setTarget] = useState('Bonjour');
+    return (
+      <Mf2TranslationEditor
+        locale="fr"
+        onTargetChange={(nextTarget) => {
+          onTargetChange(nextTarget);
+          setTarget(nextTarget);
+        }}
+        showArgumentInputs={false}
+        showLocaleSelector={false}
+        showPreview={false}
+        showSource={false}
+        source="Hello {$name}"
+        target={target}
+      />
+    );
+  }
+
+  it('keeps a typed literal brace visible and preserves the caret', async () => {
+    const restoreRangeGeometry = installRangeGeometryMock();
+    const user = userEvent.setup();
+    const onTargetChange = vi.fn();
+
+    try {
+      render(<ControlledLiteralBraceTarget onTargetChange={onTargetChange} />);
+      const editor = screen.getByRole('textbox', { name: 'Target Message' });
+      editor.focus();
+      placeCaret(editor, 3);
+
+      await user.keyboard('{{');
+
+      expect(editor).toHaveTextContent('Bon{jour');
+      expect(onTargetChange).toHaveBeenLastCalledWith('Bon\\{jour');
+      expect(
+        await screen.findByRole('listbox', { name: 'Placeholder suggestions for {' }),
+      ).toBeVisible();
+      expect(window.getSelection()?.anchorNode?.textContent).toBe('Bon{jour');
+      expect(window.getSelection()?.anchorOffset).toBe(4);
+
+      await user.keyboard('x');
+
+      expect(editor).toHaveTextContent('Bon{xjour');
+      expect(onTargetChange).toHaveBeenLastCalledWith('Bon\\{xjour');
+      expect(window.getSelection()?.anchorNode?.textContent).toBe('Bon{xjour');
+      expect(window.getSelection()?.anchorOffset).toBe(5);
+    } finally {
+      restoreRangeGeometry();
+    }
+  });
+
   it('can hide the locale selector while retaining the controlled locale', () => {
     render(
       <Mf2TranslationEditor
