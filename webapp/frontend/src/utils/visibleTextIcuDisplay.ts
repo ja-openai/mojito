@@ -97,7 +97,12 @@ export function visibleProtectedTokenText(kind: string, raw: string): string {
     return visibleIcuSyntaxDisplay(raw).text;
   }
 
-  if (kind === 'icu-placeholder' || kind === 'mf2-demo' || kind === 'placeholder') {
+  if (
+    kind === 'icu-placeholder' ||
+    kind === 'mf2-demo' ||
+    kind === 'mf2-placeholder' ||
+    kind === 'placeholder'
+  ) {
     return visibleBracePlaceholderText(raw) ?? raw;
   }
 

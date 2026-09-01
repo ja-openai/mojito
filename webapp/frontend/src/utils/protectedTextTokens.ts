@@ -10,6 +10,8 @@ export type ProtectedTextTokenKind =
   | 'html-tag'
   | 'icu-placeholder'
   | 'icu-syntax'
+  | 'mf2-placeholder'
+  | 'mf2-syntax'
   | 'platform-placeholder'
   | 'mf2-demo';
 export type ProtectedTextTokenMode = 'icu' | 'icu-html' | 'mf2-demo' | 'none';
@@ -19,6 +21,7 @@ export type ProtectedTextToken = {
   end: number;
   label: string;
   kind: ProtectedTextTokenKind;
+  displayText?: string;
 };
 
 export type ProtectedTextDiagnostic = {

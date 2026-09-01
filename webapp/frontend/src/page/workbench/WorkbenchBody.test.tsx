@@ -189,18 +189,31 @@ one {{Você tem {$count} arquivo.}}
       translation: `.input {$count :number}
 {{Você tem {$count} arquivos.}}`,
     };
-    renderWorkbenchBody({
+    const onStartEditing = vi.fn();
+    const { container } = renderWorkbenchBody({
       editingRowId: null,
       editingValue: '',
+      onStartEditing,
       rows: [mf2Row],
     });
 
-    expect(screen.getByRole('textbox', { name: 'MF2 source' }).textContent).toBe(
-      'You have {$count} files.',
-    );
-    expect(screen.getByRole('textbox', { name: 'MF2 translation editor' }).textContent).toBe(
-      'Você tem {$count} arquivos.',
-    );
+    const sourcePreview = screen.getByRole('textbox', { name: 'MF2 source' });
+    const translationPreview = screen.getByRole('textbox', {
+      name: 'MF2 translation editor',
+    });
+    expect(sourcePreview).toHaveTextContent('You have count files.');
+    expect(translationPreview).toHaveTextContent('Você tem count arquivos.');
+    const variables = screen.getAllByLabelText('MF2 variable count');
+    expect(variables).toHaveLength(2);
+    variables.forEach((variable) => {
+      expect(variable).toHaveClass('visible-text-editor__protected-token--mf2-placeholder');
+      expect(variable).toHaveAttribute('data-raw', '{$count}');
+      expect(variable).toHaveTextContent('count');
+    });
+    expect(container.querySelector('.workbench-page__mf2-badge')).not.toBeInTheDocument();
+
+    fireEvent.focus(translationPreview);
+    expect(onStartEditing).toHaveBeenCalledWith(mf2Row.id, mf2Row.translation);
   });
 
   it('keeps raw MF2 serialization on collapsed rows when the assisted editor is off', () => {

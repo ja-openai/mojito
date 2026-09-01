@@ -12,6 +12,7 @@ import {
   type Mf2TranslationEditorSnapshot,
 } from '../../components/mf2/Mf2TranslationEditor';
 import { sourceLiteralPreview } from '../../components/mf2/model';
+import { mf2PatternPreview } from '../../components/mf2/preview';
 import { Modal } from '../../components/Modal';
 import { PillDropdown } from '../../components/PillDropdown';
 import type { TranslationEditorHandle } from '../../components/TranslationEditorHandle';
@@ -671,7 +672,11 @@ export function WorkbenchBody({
                     </div>
                     <div className="workbench-page__cell workbench-page__cell--source">
                       {useAssistedMf2 && !useMf2TranslationEditor ? (
-                        <WorkbenchMf2Preview ariaLabel="MF2 source" value={row.source} />
+                        <WorkbenchMf2Preview
+                          ariaLabel="MF2 source"
+                          marksMode={translationMarksMode}
+                          value={row.source}
+                        />
                       ) : !rowIsMf2 && useAssistedSourcePreview ? (
                         <VisibleTextRenderer
                           className="workbench-page__text-block workbench-page__source-text"
@@ -726,6 +731,9 @@ export function WorkbenchBody({
                           ariaLabel="MF2 translation editor"
                           disabled={!row.canEdit || isSaving}
                           emptyLabel="No translation yet"
+                          lang={translationLocale}
+                          dir={translationDirection}
+                          marksMode={translationMarksMode}
                           onFocus={
                             row.canEdit && !isSaving
                               ? () => onStartEditing(row.id, row.translation)
@@ -897,18 +905,25 @@ export function WorkbenchBody({
 
 function WorkbenchMf2Preview({
   ariaLabel,
+  dir = 'auto',
   disabled = false,
   emptyLabel = 'Empty message',
+  lang,
+  marksMode,
   onFocus,
   value,
 }: {
   ariaLabel: string;
+  dir?: 'ltr' | 'rtl' | 'auto';
   disabled?: boolean;
   emptyLabel?: string;
+  lang?: string;
+  marksMode: VisibleTextMarksMode;
   onFocus?: () => void;
   value: string;
 }) {
-  const preview = sourceLiteralPreview(value).trim();
+  const preview = useMemo(() => mf2PatternPreview(sourceLiteralPreview(value).trim()), [value]);
+  const isEmpty = preview.value.length === 0;
   const isInteractive = Boolean(onFocus) && !disabled;
 
   return (
@@ -921,9 +936,17 @@ function WorkbenchMf2Preview({
       role="textbox"
       tabIndex={isInteractive ? 0 : undefined}
     >
-      <span className={`workbench-page__mf2-preview-text${preview ? '' : ' is-empty'}`}>
-        {preview || emptyLabel}
-      </span>
+      <VisibleTextRenderer
+        className={`workbench-page__mf2-preview-text${isEmpty ? ' is-empty' : ''}`}
+        dir={dir}
+        disabled={disabled}
+        lang={lang}
+        marksMode={isEmpty ? 'off' : marksMode}
+        protectedTokens={isEmpty ? [] : preview.protectedTokens}
+        showProtectedTokens={!isEmpty}
+        spellCheck={false}
+        value={isEmpty ? emptyLabel : preview.value}
+      />
     </div>
   );
 }

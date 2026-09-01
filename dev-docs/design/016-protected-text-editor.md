@@ -141,6 +141,8 @@ Current frontend extraction supports these token kinds:
 - `html-tag`: HTML/XML-like tags such as `<link>` and `</link>`.
 - `platform-placeholder`: common printf/Foundation/Android-style placeholders.
 - `mf2-demo`: MF2-like variables/declarations used only by generic editor demos.
+- `mf2-placeholder` and `mf2-syntax`: model-derived variable expressions and
+  braced constructs supplied explicitly by production MF2 previews.
 
 The production surfaces should call this user-facing concept “placeholders” in
 UI copy. “Token” remains an implementation term for extracted ranges in code and
@@ -320,11 +322,14 @@ or editor behavior changes for everyone else.
 
 Workbench MF2 routing follows that generic-editor preference and the Workbench
 placeholder-highlights display option. With both enabled, Workbench shows
-compact MF2 previews on collapsed rows and replaces them with the structured
-editor and active source-form comparison while a row is editing. With either
-disabled, Workbench shows the raw MF2 serialization and keeps editing in the
-native textarea. Review Project MF2 detail editors keep using the structured
-editor, with locale controlled by the host. The shared
+compact MF2 previews on collapsed rows. Those previews reuse the lightweight
+renderer's hidden-character marks and protected-chip presentation, but receive
+exact variable and syntax ranges from the MF2 model rather than the generic
+demo regex; escaped brace lookalikes remain literal text. Editing replaces the
+preview with the structured editor and active source-form comparison. With
+either preference disabled, Workbench shows the raw MF2 serialization and keeps
+editing in the native textarea. Review Project MF2 detail editors keep using the
+structured editor, with locale controlled by the host. The shared
 focus/blur handle and primary keyboard action preserve each host's save or
 accept workflow. Parser and source/target contract errors disable those
 interactive actions until repaired.

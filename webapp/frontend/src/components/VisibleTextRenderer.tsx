@@ -373,7 +373,8 @@ function renderPart(part: TextPart, index: number, icuGroup: VisibleTextIcuMessa
   }
 
   if (part.kind === 'protected-token') {
-    const displayText = visibleProtectedTokenText(part.token.kind, part.text);
+    const displayText =
+      part.token.displayText ?? visibleProtectedTokenText(part.token.kind, part.text);
     const emptySyntaxClass =
       part.token.kind === 'icu-syntax' && !displayText
         ? ' visible-text-editor__protected-token--empty-icu-syntax'

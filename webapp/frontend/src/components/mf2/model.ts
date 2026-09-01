@@ -2496,7 +2496,11 @@ function argToSource(arg?: RuntimeArgValue) {
   return quotedLiteralToSource(arg.value ?? '');
 }
 
-function patternTextToSource(text: string) {
+export function patternTextFromSource(text: string) {
+  return String(text ?? '').replace(/\\([\\{}])/gu, '$1');
+}
+
+export function patternTextToSource(text: string) {
   return String(text ?? '').replace(/[\\{}]/gu, '\\$&');
 }
 

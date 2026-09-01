@@ -30,6 +30,8 @@ import { formNavigationIntent } from './keyboard';
 import {
   bracedPatternPartsInPattern,
   filterPlaceholderNames,
+  patternTextFromSource,
+  patternTextToSource,
   placeholderCompletionConsumesClosingBrace,
   placeholderCompletionToken,
   placeholderExpressionsInPattern,
@@ -727,14 +729,6 @@ function createVisibleTextMarkerWidget(char: string, marker: { label: string; te
   element.setAttribute('contenteditable', 'false');
   element.setAttribute('title', marker.label);
   return element;
-}
-
-function patternTextFromSource(value: string) {
-  return value.replace(/\\([\\{}])/gu, '$1');
-}
-
-function patternTextToSource(value: string) {
-  return value.replace(/[\\{}]/gu, '\\$&');
 }
 
 function stringNodeAttribute(node: ProseMirrorNode, name: string) {
