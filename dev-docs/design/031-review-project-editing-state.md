@@ -22,7 +22,7 @@ and [additional failure evidence](../investigations/2026-09-01-review-project-fo
 | --- | --- | --- |
 | Latest server row | Project query cache | Receiving it does not implicitly replace a dirty draft. A refresh failure keeps the mounted editor. A delayed acknowledgement cannot replace an already observed different source or third revision. |
 | Translation, status, comment, notes and reviewed source/revision | Row editing session | The draft and its original source identity and base are kept together. Clean sessions may adopt a refresh; dirty sessions retain their base until explicit reset or a matched successful save. |
-| Input composition and editor callbacks | Row detail session | Incomplete composition cannot submit or navigate. Callbacks from a previous row cannot edit the active session. |
+| Input composition and editor callbacks | Row detail session | Incomplete composition cannot submit, navigate or insert an editor line break. The structured editor stops composition events before its keymaps without canceling native input-method handling. Callbacks from a previous row cannot edit the active session. |
 | AI conversation and suggestions | Row, locale and reviewed context | Old content cannot be paired with the new row's target-change handler. |
 | Save/check/conflict/failure/success | One mutation operation | Each operation freezes its request before yielding and carries a stable operation ID through explicit recovery. Each attempt has its own ID. |
 | Use external discard choice | Accepted recovery request | Capture the field values when that request starts. Its acknowledgement replaces only fields unchanged since that choice; newer edits remain unsaved. |
@@ -158,7 +158,7 @@ supports a claim that the entire page is free of defects.
 
 ## Recorded local results
 
-The September 2 verification passed **781 frontend tests across 75 files**,
+The post-integration September 2 verification passed **806 frontend tests across 76 files**,
 **90 targeted backend tests**, formatting/lint checks and a TypeScript/Vite
 production build. Integrated browser/Spring/local-MySQL checks covered a
 deliberately lost real HTTP 200, exhausted retries, real 409 conflicts, route
@@ -169,5 +169,6 @@ See the [confidence record](../investigations/2026-09-02-review-project-confiden
 for methods, the earlier misleading test boundary and remaining release limits.
 Earlier controlled-response results are retained as historical summaries in the
 [adversarial record](../investigations/2026-09-01-review-project-adversarial-verification.md).
-Original captures remain in ignored local `target/` evidence directories. These
+The ignored raw captures were transient and did not survive the subsequent laptop
+restart; permanent regression tests remain the durable reviewable evidence. These
 records do not claim production-incident attribution or deployment verification.

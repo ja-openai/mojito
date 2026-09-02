@@ -244,8 +244,11 @@ same dismissed completion. Guided serialization escapes that text as `\{` in raw
 MF2; literal `}` and `\` similarly serialize as `\}` and `\\`. Shortcuts help
 explains those escapes without adding extra menu actions. Arrow keys wrap through
 choices, Enter accepts the active choice, Escape dismisses it, and command-Enter
-retains the host's save/accept action. Focus stays in the editor and the listbox
-exposes its selected option to assistive technology.
+retains the host's save/accept action. Outside completion, Enter and Shift-Enter
+insert an inline line break without exposing protected syntax. Composition events
+stop before editor keymaps without canceling the native input-method event. Focus
+stays in the editor and the listbox exposes its selected option to assistive
+technology.
 
 API-provided source `messageFormat` metadata controls this routing. Explicit
 metadata is authoritative in the frontend; strict source-declaration detection

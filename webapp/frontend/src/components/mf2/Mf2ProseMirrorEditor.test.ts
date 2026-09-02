@@ -212,6 +212,98 @@ describe('Mf2ProseMirrorEditor pattern conversion', () => {
     });
     expect(mf2ProseMirrorPatternFromDoc(doc)).toBe(pattern);
   });
+
+  it('represents and preserves every line-break sequence as an inline hard break', () => {
+    const pattern = 'Line one\r\nLine two\nUse {$name}\rLine four';
+    const doc = mf2ProseMirrorDocFromPattern(pattern);
+
+    expect(doc.toJSON()).toEqual({
+      content: [
+        {
+          content: [
+            { text: 'Line one', type: 'text' },
+            { attrs: { raw: '\r\n' }, type: 'hardBreak' },
+            { text: 'Line two', type: 'text' },
+            { attrs: { raw: '\n' }, type: 'hardBreak' },
+            { text: 'Use ', type: 'text' },
+            { attrs: { name: 'name', source: '{$name}' }, type: 'placeholder' },
+            { attrs: { raw: '\r' }, type: 'hardBreak' },
+            { text: 'Line four', type: 'text' },
+          ],
+          type: 'paragraph',
+        },
+      ],
+      type: 'doc',
+    });
+    expect(mf2ProseMirrorPatternFromDoc(doc)).toBe(pattern);
+  });
+});
+
+describe('MF2 guided multiline editing', () => {
+  let restoreGeometry: () => void;
+
+  beforeEach(() => {
+    restoreGeometry = installRangeGeometryMock();
+  });
+
+  afterEach(() => {
+    restoreGeometry();
+  });
+
+  it.each([
+    ['Enter', '{Enter}'],
+    ['Shift+Enter', '{Shift>}{Enter}{/Shift}'],
+  ])(
+    'inserts a line break with %s without exposing protected placeholders',
+    async (_name, keys) => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      const onSubmit = vi.fn();
+      render(
+        editorElement({
+          marksMode: 'off',
+          onChange,
+          onSubmit,
+          pattern: 'Hello {$name}!',
+          placeholders: ['name'],
+        }),
+      );
+      const editor = screen.getByRole('textbox', { name: 'Target Message' });
+      editor.focus();
+      placeCaret(editor, 6);
+
+      await user.keyboard(keys);
+
+      expect(editor.querySelectorAll('br')).toHaveLength(1);
+      expect(editor.querySelector('[data-placeholder="name"]')).toHaveTextContent('{$name}');
+      expect(onChange).toHaveBeenLastCalledWith('Hello \n{$name}!');
+      expect(onSubmit).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['Enter with a modern composition event', { isComposing: true }],
+    ['Shift+Enter with a modern composition event', { isComposing: true, shiftKey: true }],
+    ['Enter with a legacy IME event', { keyCode: 229 }],
+    ['Shift+Enter with a legacy IME event', { keyCode: 229, shiftKey: true }],
+  ])('leaves %s to the input method', (_name, eventState) => {
+    const onChange = vi.fn();
+    render(editorElement({ marksMode: 'off', onChange, pattern: 'Hello' }));
+    const editor = screen.getByRole('textbox', { name: 'Target Message' });
+    editor.focus();
+    placeCaret(editor, 5);
+
+    const notCancelled = fireEvent.keyDown(editor, { key: 'Enter', ...eventState });
+
+    expect(notCancelled).toBe(true);
+    expect(editor.querySelector('br')).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(editor, { key: 'Enter' });
+
+    expect(editor.querySelectorAll('br:not(.ProseMirror-trailingBreak)')).toHaveLength(1);
+    expect(onChange).toHaveBeenLastCalledWith('Hello\n');
+  });
 });
 
 describe('Mf2ProseMirrorEditor hidden character marks', () => {
@@ -244,6 +336,29 @@ describe('Mf2ProseMirrorEditor hidden character marks', () => {
 
     expect(container.querySelector('.visible-text-editor__marked-char')).not.toBeInTheDocument();
     expect(container.querySelector('.visible-text-editor__marker-widget')).not.toBeInTheDocument();
+  });
+
+  it('renders a line-break marker before the inline hard break', async () => {
+    const { container } = render(
+      editorElement({ marksMode: 'auto', pattern: 'Line one\nLine two' }),
+    );
+
+    const editor = await screen.findByRole('textbox', { name: 'Target Message' });
+    const paragraph = editor.querySelector('p');
+    const childNodes = Array.from(paragraph?.childNodes ?? []);
+    const hardBreakIndex = childNodes.findIndex((node) => node.nodeName === 'BR');
+    const markerIndex = childNodes.findIndex(
+      (node) =>
+        node instanceof HTMLElement &&
+        node.classList.contains('visible-text-editor__marker-widget--line-break'),
+    );
+
+    expect(
+      container.querySelector('.visible-text-editor__marker-widget--line-break'),
+    ).toBeVisible();
+    expect(hardBreakIndex).toBeGreaterThanOrEqual(0);
+    expect(markerIndex).toBeGreaterThanOrEqual(0);
+    expect(markerIndex).toBeLessThan(hardBreakIndex);
   });
 
   it('keeps the current marks mode when an external pattern update rebuilds the document', async () => {

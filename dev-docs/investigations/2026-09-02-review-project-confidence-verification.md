@@ -23,6 +23,7 @@ its missing transitions; see the [state design](../design/031-review-project-edi
 | Delayed acknowledgements replaced an observed different source or third cache revision | Preserve the observed cache state and draft, then require checking the saved result. Revision strings remain opaque. |
 | Earlier revisions omitted backing-source/locale identity, allowing a metadata remap between check and write | v2 binds source/locale identity. Metadata replacement and saves share parent/current-row lock ordering and refresh identity after waiting. Five MySQL regressions cover stale writes and both transaction orderings. |
 | A translation committed, then the statistics listener caused HTTP 500 | Resolve repository identity without detached traversal and keep ancillary post-commit statistics failures from misreporting a committed save. |
+| Later guided MF2 line-break handling consumed plain Enter during an IME event after the Review guard yielded | Stop composition key events at the ProseMirror DOM-event boundary without canceling native input-method handling. Component tests cover Enter and Shift-Enter with modern and legacy composition signals; the Review workflow test proves the draft stays exact and does not save or move. |
 
 The last failure was observed through the actual browser, Spring server and
 MySQL: the decided-count update cleared the entity manager, then a post-commit
@@ -74,7 +75,7 @@ test identity; they did not validate vendor roles or SSO end to end.
 
 | Check | Result |
 | --- | --- |
-| Full frontend check | ESLint, Prettier and **781 tests across 75 files** passed |
+| Full frontend check | ESLint, Prettier and **806 tests across 76 files** passed after the later MF2 integration and composition hardening |
 | Production frontend build | TypeScript and Vite passed; existing chunk-size and dynamic-import warnings remain |
 | Locally served optimized bundle | Fetched bytes matched the new build; interactive fault tests used the development server |
 | Backend regressions | **90 targeted tests passed**: the existing 80 without warmup workarounds, five identity tests, four cold acknowledgement/connection tests and one warm-import listener test |
@@ -84,25 +85,27 @@ test identity; they did not validate vendor roles or SSO end to end.
 Before checkpointing, incident-derived fixtures were replaced with synthetic
 Gujarati examples and the public notes were reduced to reusable findings and
 methods. A fresh Spotless run and frontend formatting, lint, TypeScript and full
-test run passed: **781 tests across 75 files**. Application code and backend tests
+test run passed. After the MF2 editor integration and composition fix, another
+full run passed **806 tests across 76 files**. Application code and backend tests
 remained byte-identical to the previously verified version; the 90 backend tests
 and browser/build checks above were not rerun as part of this documentation and
 fixture cleanup. The only warning in the fresh checks was the existing local npm
 proxy configuration option.
 
-An earlier frontend workflow URL assertion timed out once after the next target
-had rendered. Isolated and subsequent full runs passed. Router-transition timing
-remains a candidate explanation rather than a demonstrated cause; the assertion
-was not weakened.
+The earlier frontend workflow URL assertion timed out once after the next target
+had rendered, and recurred once in the first post-restart full run alongside a
+login-config mock failure. Both failed tests passed in isolation and the next full
+run passed. Router-transition timing remains a candidate explanation rather than
+a demonstrated cause; no assertion was weakened.
 
 ## Evidence and remaining release boundaries
 
 Raw logs, exact commands, request/response/DOM captures, synthetic fixture scripts,
-database assertions and served-build comparisons are retained in the ignored
-local `target/review-project-confidence-20260902/` directory. Original notes and
-fixtures are preserved in its `checkpoint-prep/original-files/` subdirectory.
-These local artifacts are excluded from the public change. Permanent regressions
-under `webapp/frontend/src/page/review-project/` and
+database assertions and served-build comparisons were kept in an ignored local
+`target/review-project-confidence-20260902/` directory during the original run.
+Those transient artifacts did not survive the later laptop restart and are not
+claimed as retained evidence. Permanent regressions under
+`webapp/frontend/src/page/review-project/` and
 `webapp/src/test/java/com/box/l10n/mojito/` provide reviewable coverage.
 
 - Matching client/server deployment, verification of the served artifacts and

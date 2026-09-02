@@ -95,6 +95,18 @@ const schema = new Schema({
       toDOM: () => ['p', 0],
     },
     text: { group: 'inline' },
+    hardBreak: {
+      atom: true,
+      attrs: {
+        raw: { default: '\n' },
+      },
+      group: 'inline',
+      inline: true,
+      leafText: (node) => stringNodeAttribute(node, 'raw') || '\n',
+      parseDOM: [{ tag: 'br' }],
+      selectable: false,
+      toDOM: () => ['br'],
+    },
     placeholder: {
       atom: true,
       attrs: {
@@ -315,6 +327,8 @@ export const Mf2ProseMirrorEditor = forwardRef<
 
   const createState = useCallback(
     (nextPattern: string) => {
+      const isCompositionKeyEvent = (view: EditorView, event: KeyboardEvent) =>
+        view.composing || composingRef.current || event.isComposing || event.keyCode === 229;
       const completionPlugin = new Plugin({
         props: {
           handleDOMEvents: {
@@ -335,6 +349,8 @@ export const Mf2ProseMirrorEditor = forwardRef<
               closeCompletion();
               return false;
             },
+            // Skip every ProseMirror keymap while leaving the native IME event uncancelled.
+            keydown: (view, event) => isCompositionKeyEvent(view, event),
           },
           handleKeyDown: (view, event) => {
             if (!readOnlyRef.current && isBrowserHistoryShortcut(event)) {
@@ -343,13 +359,7 @@ export const Mf2ProseMirrorEditor = forwardRef<
               return true;
             }
             if (readOnlyRef.current) return false;
-            if (
-              view.composing ||
-              composingRef.current ||
-              event.isComposing ||
-              event.keyCode === 229
-            )
-              return false;
+            if (isCompositionKeyEvent(view, event)) return false;
             const navigation = formNavigationIntent(event);
             if (navigation) {
               event.preventDefault();
@@ -434,6 +444,10 @@ export const Mf2ProseMirrorEditor = forwardRef<
           }),
           createVisibleTextPlugin(marksModeRef.current),
           completionPlugin,
+          keymap({
+            Enter: insertLineBreak,
+            'Shift-Enter': insertLineBreak,
+          }),
           keymap(baseKeymap),
         ],
         schema,
@@ -658,7 +672,7 @@ export function mf2ProseMirrorDocFromPattern(pattern: string) {
   let index = 0;
   for (const part of bracedPatternPartsInPattern(pattern)) {
     if (part.from > index) {
-      nodes.push(schema.text(patternTextFromSource(pattern.slice(index, part.from))));
+      appendPatternTextNodes(nodes, pattern.slice(index, part.from));
     }
     const placeholder = placeholders.get(part.from);
     nodes.push(
@@ -669,7 +683,7 @@ export function mf2ProseMirrorDocFromPattern(pattern: string) {
     index = part.to;
   }
   if (index < pattern.length) {
-    nodes.push(schema.text(patternTextFromSource(pattern.slice(index))));
+    appendPatternTextNodes(nodes, pattern.slice(index));
   }
   return schema.nodes.doc.create(null, [schema.nodes.paragraph.create(null, nodes)]);
 }
@@ -679,6 +693,7 @@ export function mf2ProseMirrorPatternFromDoc(doc: ProseMirrorNode) {
   const chunks: Array<string> = [];
   doc.descendants((node) => {
     if (node.isText) chunks.push(patternTextToSource(node.text ?? ''));
+    if (node.type.name === 'hardBreak') chunks.push(stringNodeAttribute(node, 'raw') || '\n');
     if (node.type.name === 'placeholder') {
       const name = stringNodeAttribute(node, 'name');
       chunks.push(stringNodeAttribute(node, 'source') || `{$${name}}`);
@@ -718,6 +733,26 @@ function buildVisibleTextDecorations(doc: ProseMirrorNode, marksMode: VisibleTex
   let textOffset = 0;
 
   doc.descendants((node, pos) => {
+    if (node.type.name === 'hardBreak') {
+      const raw = stringNodeAttribute(node, 'raw') || '\n';
+      const char = raw.includes('\n') ? '\n' : '\r';
+      const marker = getVisibleTextMarker(char);
+      const rawStart = textOffset;
+      const rawEnd = rawStart + raw.length;
+      if (
+        marker &&
+        (marksMode === 'all' || shouldShowVisibleTextIssueMarker(value, { char, rawEnd, rawStart }))
+      ) {
+        decorations.push(
+          Decoration.widget(pos, () => createVisibleTextMarkerWidget(char, marker), {
+            key: `${pos}-${marker.text}`,
+            side: -1,
+          }),
+        );
+      }
+      textOffset += raw.length;
+      return false;
+    }
     if (!node.isText) {
       if (node.isLeaf) textOffset += node.textContent.length;
       return !node.isLeaf;
@@ -786,6 +821,45 @@ function createVisibleTextMarkerWidget(char: string, marker: { label: string; te
   element.setAttribute('contenteditable', 'false');
   element.setAttribute('title', marker.label);
   return element;
+}
+
+function appendPatternTextNodes(nodes: Array<ProseMirrorNode>, source: string) {
+  let textStart = 0;
+  let index = 0;
+
+  while (index < source.length) {
+    const char = source[index];
+    if (char !== '\n' && char !== '\r') {
+      index += 1;
+      continue;
+    }
+    appendPatternTextNode(nodes, source.slice(textStart, index));
+    const raw = char === '\r' && source[index + 1] === '\n' ? '\r\n' : char;
+    nodes.push(schema.nodes.hardBreak.create({ raw }));
+    index += raw.length;
+    textStart = index;
+  }
+
+  appendPatternTextNode(nodes, source.slice(textStart));
+}
+
+function appendPatternTextNode(nodes: Array<ProseMirrorNode>, source: string) {
+  const text = patternTextFromSource(source);
+  if (text) nodes.push(schema.text(text));
+}
+
+function insertLineBreak(
+  state: EditorState,
+  dispatch?: (transaction: EditorState['tr']) => void,
+  view?: EditorView,
+) {
+  if (view && !view.editable) return false;
+  dispatch?.(
+    state.tr
+      .replaceSelectionWith(state.schema.nodes.hardBreak.create({ raw: '\n' }))
+      .scrollIntoView(),
+  );
+  return true;
 }
 
 function stringNodeAttribute(node: ProseMirrorNode, name: string) {

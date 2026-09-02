@@ -852,16 +852,17 @@ describe('Review Project composition shortcuts', () => {
     expect(editor).toHaveTextContent('Updated You have');
     const updatedMessage = message.replace('You have', 'Updated You have');
     if (start) fireEvent.compositionStart(editor);
+    let notCancelled = false;
     await act(async () => {
-      fireEvent.keyDown(editor, {
+      notCancelled = fireEvent.keyDown(editor, {
         key: 'Enter',
-        ctrlKey: true,
-        shiftKey: true,
         isComposing,
         keyCode,
       });
       await Promise.resolve();
     });
+    expect(notCancelled).toBe(true);
+    expect(editor.querySelector('br')).toBeNull();
     expect(saveMock).not.toHaveBeenCalled();
     expect(decisionStateMock).not.toHaveBeenCalled();
     expect(screen.getByTestId('review-location')).toHaveTextContent('tu=201');

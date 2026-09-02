@@ -258,6 +258,58 @@ other {{}}
     }
   });
 
+  it('keeps declarations, sibling forms, and placeholders while adding a line', async () => {
+    const restoreRangeGeometry = installRangeGeometryMock();
+    const user = userEvent.setup();
+    const onTargetChange = vi.fn();
+    const source = `.input {$count :number}
+.match $count
+one {{You have {$count} file.}}
+* {{You have {$count} files.}}`;
+    const initialTarget = `.input {$count :number}
+.match $count
+one {{Vous avez {$count} fichier.}}
+* {{Vous avez {$count} fichiers.}}`;
+
+    function ControlledSelectTarget() {
+      const [target, setTarget] = useState(initialTarget);
+      return (
+        <Mf2TranslationEditor
+          onTargetChange={(nextTarget) => {
+            onTargetChange(nextTarget);
+            setTarget(nextTarget);
+          }}
+          showArgumentInputs={false}
+          showLocaleSelector={false}
+          showPreview={false}
+          showSource={false}
+          source={source}
+          target={target}
+        />
+      );
+    }
+
+    try {
+      render(<ControlledSelectTarget />);
+      const editor = screen.getByRole('textbox', { name: 'Target count: one' });
+      editor.focus();
+      placeCaret(editor, 'Vous avez '.length);
+
+      await user.keyboard('{Enter}Deuxième ligne ');
+
+      expect(onTargetChange).toHaveBeenLastCalledWith(`.input {$count :number}
+.match $count
+one {{Vous avez \nDeuxième ligne {$count} fichier.}}
+* {{Vous avez {$count} fichiers.}}`);
+      expect(editor.querySelector('[data-placeholder="count"]')).toHaveTextContent('{$count}');
+      expect(screen.getByRole('button', { name: /count: fallback/u })).toHaveTextContent(
+        'Vous avez {$count} fichiers.',
+      );
+    } finally {
+      restoreRangeGeometry();
+    }
+  });
+
   it('tracks controlled target prop updates without emitting a local change', async () => {
     const onTargetChange = vi.fn();
     const { rerender } = render(
@@ -431,8 +483,10 @@ other {{}}
     ['Ctrl+Enter', { ctrlKey: true }],
   ])('submits from the rich editor with %s', (_shortcut, modifiers) => {
     const onSubmit = vi.fn();
+    const onTargetChange = vi.fn();
     render(
       <Mf2TranslationEditor
+        onTargetChange={onTargetChange}
         onSubmit={onSubmit}
         showArgumentInputs={false}
         showPreview={false}
@@ -448,6 +502,8 @@ other {{}}
     });
 
     expect(onSubmit).toHaveBeenCalledOnce();
+    expect(onTargetChange).not.toHaveBeenCalled();
+    expect(screen.getByRole('textbox', { name: 'Target Message' }).querySelector('br')).toBeNull();
   });
 
   it.each([
