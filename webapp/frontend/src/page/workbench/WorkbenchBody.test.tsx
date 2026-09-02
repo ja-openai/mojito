@@ -227,6 +227,9 @@ paused {{En pause}}
       const fallback = within(preview).getByLabelText('MF2 fallback selector');
       expect(fallback).toHaveAttribute('data-raw', '*');
       expect(fallback).toHaveTextContent('fallback');
+      expect(fallback).toHaveClass('visible-text-editor__protected-token--mf2-syntax');
+      expect(fallback).not.toHaveClass('visible-text-editor__protected-token--mf2-placeholder');
+      expect(within(preview).queryByLabelText('MF2 variable status')).not.toBeInTheDocument();
       expect(preview).not.toHaveTextContent('* fallback');
     });
     expect(container.querySelector('.workbench-page__mf2-badge')).not.toBeInTheDocument();
@@ -252,11 +255,8 @@ paused {{En pause}}
 
     const sourcePreview = screen.getByRole('textbox', { name: 'MF2 source' });
     const variables = within(sourcePreview).getAllByLabelText('MF2 variable count');
-    expect(variables).toHaveLength(2);
-    expect(variables.map((variable) => variable.getAttribute('data-raw'))).toEqual([
-      '{$count :number}',
-      '{$count}',
-    ]);
+    expect(variables).toHaveLength(1);
+    expect(variables[0]).toHaveAttribute('data-raw', '{$count}');
     variables.forEach((variable) => {
       expect(variable).toHaveClass('visible-text-editor__protected-token--mf2-placeholder');
       expect(variable.textContent).toBe(variable.getAttribute('data-raw'));

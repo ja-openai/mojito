@@ -329,12 +329,13 @@ the complete serialized MF2 document on collapsed rows rather than resolving a
 selected message to one form. The serialization is line-clamped to keep the
 result list compact, while the full document remains available to assistive
 technology and when editing starts. These previews reuse the lightweight
-renderer's hidden-character marks and protected-chip presentation, but receive
-MF2-aware variable and syntax ranges rather than the generic demo regex; escaped
-brace lookalikes remain literal text. Assisted previews render wildcard selector
-keys as a single `fallback` chip while preserving `*` as the raw value; exact
-syntax remains visible in Raw mode. Editing keeps the source preview in the
-source column and opens the structured editor in the translation column when the
+renderer's hidden-character marks and highlight only runtime expressions inside
+message patterns as protected placeholders; declarations, selector structure,
+and variant keys remain plain monospace text. Escaped brace lookalikes remain
+literal text. Assisted previews render wildcard selector keys as the plain label
+`fallback` while preserving `*` as the raw value; exact syntax remains visible
+in Raw mode. Editing keeps the source preview in the source column and opens the
+structured editor in the translation column when the
 Workbench is wider than 1,100 pixels. On narrower layouts, the editor moves to a
 full-row second line. With either preference disabled, Workbench shows the raw
 MF2 serialization without protected highlighting and keeps editing in the native

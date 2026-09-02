@@ -62,21 +62,30 @@ describe('mf2PatternPreview', () => {
 });
 
 describe('mf2DocumentPreview', () => {
-  it('shows the complete serialized document with protected variables', () => {
+  it('protects variables in a simple unquoted message', () => {
+    const source = 'Hello {$name}.';
+    const preview = mf2DocumentPreview(source);
+
+    expect(preview.protectedTokens).toEqual([
+      expect.objectContaining({
+        displayText: '{$name}',
+        kind: 'mf2-placeholder',
+        label: 'MF2 variable name',
+      }),
+    ]);
+  });
+
+  it('protects only variables rendered inside the serialized message pattern', () => {
     const source = `.input {$count :number}
 {{You have {$count} files.}}`;
     const preview = mf2DocumentPreview(source);
 
     expect(preview.value).toBe(source);
-    expect(preview.protectedTokens).toHaveLength(2);
+    expect(preview.protectedTokens).toHaveLength(1);
     expect(
       preview.protectedTokens.map((token) => preview.value.slice(token.start, token.end)),
-    ).toEqual(['{$count :number}', '{$count}']);
+    ).toEqual(['{$count}']);
     expect(preview.protectedTokens).toEqual([
-      expect.objectContaining({
-        displayText: '{$count :number}',
-        kind: 'mf2-placeholder',
-      }),
       expect.objectContaining({
         displayText: '{$count}',
         kind: 'mf2-placeholder',
@@ -104,6 +113,70 @@ other {{Other files}}
     );
     expect(fallback).toMatchObject({ displayText: 'fallback', kind: 'mf2-syntax' });
     expect(preview.value.slice(fallback?.start, fallback?.end)).toBe('*');
+    expect(
+      preview.protectedTokens.some(
+        (token) => preview.value.slice(token.start, token.end) === '{$count :number}',
+      ),
+    ).toBe(false);
+  });
+
+  it('ignores variables in local declarations and quoted variant keys', () => {
+    const source = `.local $copy = {$source}
+.match $copy
+|{{not a pattern}}| {{Use {$copy}}}
+* {{Fallback {$copy}}}`;
+    const preview = mf2DocumentPreview(source);
+    const variables = preview.protectedTokens.filter((token) => token.kind === 'mf2-placeholder');
+
+    expect(variables).toHaveLength(2);
+    expect(variables.map((token) => preview.value.slice(token.start, token.end))).toEqual([
+      '{$copy}',
+      '{$copy}',
+    ]);
+    expect(variables.every((token) => token.start > source.indexOf('.match'))).toBe(true);
+  });
+
+  it('finds patterns after pipes and backslashes in bare variant keys', () => {
+    const source = String.raw`.input {$status :string}
+.match $status
+foo|bar {{Pipe {$name}}}
+foo\{{Backslash {$name}}}
+* {{Other {$name}}}`;
+    const preview = mf2DocumentPreview(source);
+    const variables = preview.protectedTokens.filter((token) => token.kind === 'mf2-placeholder');
+
+    expect(variables).toHaveLength(3);
+    expect(variables.map((token) => preview.value.slice(token.start, token.end))).toEqual([
+      '{$name}',
+      '{$name}',
+      '{$name}',
+    ]);
+  });
+
+  it('treats later directive-like lines in a simple message as pattern text', () => {
+    const source = `Intro {$before}
+.input {$name}
+.match text {$after}`;
+    const preview = mf2DocumentPreview(source);
+
+    expect(
+      preview.protectedTokens.map((token) => preview.value.slice(token.start, token.end)),
+    ).toEqual(['{$before}', '{$name}', '{$after}']);
+  });
+
+  it('recognizes every MF2 bidi marker as leading syntax whitespace', () => {
+    const source = `\u061c.input {$status :string}
+\u061c.match $status
+foo|bar {{Hi {$name}}}
+* {{Other {$name}}}`;
+    const preview = mf2DocumentPreview(source);
+    const variables = preview.protectedTokens.filter((token) => token.kind === 'mf2-placeholder');
+
+    expect(variables).toHaveLength(2);
+    expect(variables.every((token) => token.label === 'MF2 variable name')).toBe(true);
+    expect(preview.protectedTokens.some((token) => token.label === 'MF2 variable status')).toBe(
+      false,
+    );
   });
 
   it('does not treat a quoted literal star as a fallback selector', () => {
@@ -135,10 +208,7 @@ active {{Active}`;
     const preview = mf2DocumentPreview(source);
 
     expect(preview.value).toBe(source);
-    expect(preview.protectedTokens[0]).toMatchObject({
-      displayText: '{$status :string}',
-      kind: 'mf2-placeholder',
-    });
+    expect(preview.protectedTokens).toEqual([]);
   });
 
   it('does not scan oversized raw fallbacks for preview tokens', () => {
