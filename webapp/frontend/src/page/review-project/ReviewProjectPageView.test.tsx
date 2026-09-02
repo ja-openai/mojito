@@ -787,7 +787,11 @@ one {{Você tem {$count} arquivo.}}
       'You have {$count} files.',
     );
     expect(screen.getByRole('button', { name: 'Hidden characters: Auto' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit placeholders' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: 'Placeholder editing is off. Edit placeholders',
+      }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Translation' })).not.toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: /Placeholders/ })).not.toBeInTheDocument();
     expect(screen.queryByText('Target language')).not.toBeInTheDocument();

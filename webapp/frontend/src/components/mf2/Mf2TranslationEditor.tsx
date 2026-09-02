@@ -782,14 +782,24 @@ export const Mf2TranslationEditor = forwardRef<
           />
         ) : null}
         <button
+          aria-label={
+            mode === 'raw'
+              ? 'Placeholder editing is on. Lock placeholders'
+              : 'Placeholder editing is off. Edit placeholders'
+          }
           aria-pressed={mode === 'raw'}
           className="visible-text-editor__control-button visible-text-editor__mode-button"
           data-translation-editor-control
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => selectMode(mode === 'rich' ? 'raw' : 'rich')}
+          title={
+            mode === 'raw'
+              ? 'Placeholder editing is on. Lock placeholders'
+              : 'Placeholder editing is off. Edit placeholders'
+          }
           type="button"
         >
-          {mode === 'raw' ? 'Guided editor' : 'Edit placeholders'}
+          {mode === 'raw' ? 'Lock placeholders' : 'Edit placeholders'}
         </button>
         {(mode === 'raw' && !readOnly) || (mode === 'rich' && richEditorCanMutate) ? (
           <>

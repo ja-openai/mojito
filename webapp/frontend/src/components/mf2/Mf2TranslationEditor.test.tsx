@@ -142,15 +142,18 @@ describe('Mf2TranslationEditor', () => {
       'mf2-inline-editor--menu-open',
     );
 
-    const editPlaceholders = screen.getByRole('button', { name: 'Edit placeholders' });
+    const editPlaceholders = screen.getByRole('button', {
+      name: 'Placeholder editing is off. Edit placeholders',
+    });
     expect(editPlaceholders).toHaveAttribute('aria-pressed', 'false');
 
     await user.click(editPlaceholders);
 
-    expect(screen.getByRole('button', { name: 'Guided editor' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    expect(
+      screen.getByRole('button', {
+        name: 'Placeholder editing is on. Lock placeholders',
+      }),
+    ).toHaveAttribute('aria-pressed', 'true');
     const variables = screen.getByText('Variables').closest('.mf2-form-contract');
     expect(variables).toHaveTextContent('.input {$count :number}');
   });
