@@ -328,14 +328,17 @@ result list compact, while the full document remains available to assistive
 technology and when editing starts. These previews reuse the lightweight
 renderer's hidden-character marks and protected-chip presentation, but receive
 MF2-aware variable and syntax ranges rather than the generic demo regex; escaped
-brace lookalikes remain literal text. Editing replaces the preview with the
-structured editor and active source-form comparison. With either preference
-disabled, Workbench shows the raw MF2 serialization without
-protected highlighting and keeps editing in the native textarea. Review Project
-MF2 detail editors keep using the structured editor, with locale controlled by
-the host. The shared focus/blur handle and primary keyboard action preserve each
-host's save or accept workflow. Parser and source/target contract errors disable
-those interactive actions until repaired.
+brace lookalikes remain literal text. Assisted previews render wildcard selector
+keys as a single `fallback` chip while preserving `*` as the raw value; exact
+syntax remains visible in Raw mode. Editing keeps the source preview in the
+source column and opens the structured editor in the translation column when the
+Workbench is wider than 1,100 pixels. On narrower layouts, the editor moves to a
+full-row second line. With either preference disabled, Workbench shows the raw
+MF2 serialization without protected highlighting and keeps editing in the native
+textarea. Review Project MF2 detail editors keep using the structured editor,
+with locale controlled by the host. The shared focus/blur handle and primary
+keyboard action preserve each host's save or accept workflow. Parser and
+source/target contract errors disable those interactive actions until repaired.
 
 Interactive validation is bounded before the JavaScript parser runs. Each MF2
 source and target is limited to 65,536 UTF-16 code units and 1,024 brace

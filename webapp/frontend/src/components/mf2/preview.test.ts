@@ -99,6 +99,33 @@ other {{Other files}}
     expect(preview.value).toContain('many {{Many files}}');
     expect(preview.value).toContain('other {{Other files}}');
     expect(preview.value).toContain('* {{Files: {$count}}}');
+    const fallback = preview.protectedTokens.find(
+      (token) => token.label === 'MF2 fallback selector',
+    );
+    expect(fallback).toMatchObject({ displayText: 'fallback', kind: 'mf2-syntax' });
+    expect(preview.value.slice(fallback?.start, fallback?.end)).toBe('*');
+  });
+
+  it('does not treat a quoted literal star as a fallback selector', () => {
+    const source = `.input {$kind :string}
+.input {$count :number}
+.match $kind $count
+|*| one {{Literal star}}
+| * | one {{Spaced literal star}}
+|foo * bar| one {{Embedded literal star}}
+|foo \\| * bar| one {{Escaped pipe and literal star}}
+* * {{Fallback}}`;
+    const preview = mf2DocumentPreview(source);
+    const fallbacks = preview.protectedTokens.filter(
+      (token) => token.label === 'MF2 fallback selector',
+    );
+
+    expect(fallbacks).toHaveLength(2);
+    expect(fallbacks.map((token) => preview.value.slice(token.start, token.end))).toEqual([
+      '*',
+      '*',
+    ]);
+    expect(fallbacks.some((token) => token.start === source.indexOf('|*|') + 1)).toBe(false);
   });
 
   it('shows malformed input as the complete raw serialization', () => {

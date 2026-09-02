@@ -167,11 +167,11 @@ one {{Você tem {$count} arquivo.}}
       'mf2-pm-view',
     );
     expect(screen.queryByText('Variables')).not.toBeInTheDocument();
-    expect(screen.queryByRole('textbox', { name: 'MF2 source' })).not.toBeInTheDocument();
-    expect(screen.getByText('Shown to translators')).toBeInTheDocument();
-    expect(container.querySelector('.mf2-active-source-comparison')).toHaveTextContent(
-      'You have {$count} files.',
+    expect(screen.getByRole('textbox', { name: 'MF2 source' })).toHaveTextContent(
+      '.input {$count :number}',
     );
+    expect(screen.getByText('Shown to translators')).toBeInTheDocument();
+    expect(container.querySelector('.mf2-active-source-comparison')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Hidden characters: Auto' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Advanced source' })).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Text editor' })).not.toBeInTheDocument();
@@ -213,12 +213,18 @@ paused {{En pause}}
     expect(sourcePreview).toHaveTextContent('.match $status');
     expect(sourcePreview).toHaveTextContent('active {{Active}}');
     expect(sourcePreview).toHaveTextContent('paused {{Paused}}');
-    expect(sourcePreview).toHaveTextContent('* {{Unknown}}');
+    expect(sourcePreview).toHaveTextContent('fallback {{Unknown}}');
     expect(translationPreview).toHaveTextContent('.input {$status :string}');
     expect(translationPreview).toHaveTextContent('.match $status');
     expect(translationPreview).toHaveTextContent('active {{Actif}}');
     expect(translationPreview).toHaveTextContent('paused {{En pause}}');
-    expect(translationPreview).toHaveTextContent('* {{Inconnu}}');
+    expect(translationPreview).toHaveTextContent('fallback {{Inconnu}}');
+    [sourcePreview, translationPreview].forEach((preview) => {
+      const fallback = within(preview).getByLabelText('MF2 fallback selector');
+      expect(fallback).toHaveAttribute('data-raw', '*');
+      expect(fallback).toHaveTextContent('fallback');
+      expect(preview).not.toHaveTextContent('* fallback');
+    });
     expect(container.querySelector('.workbench-page__mf2-badge')).not.toBeInTheDocument();
 
     fireEvent.focus(translationPreview);

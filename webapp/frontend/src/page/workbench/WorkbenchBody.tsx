@@ -670,7 +670,7 @@ export function WorkbenchBody({
                       {showDateMetadata ? <WorkbenchDateMetadata row={row} /> : null}
                     </div>
                     <div className="workbench-page__cell workbench-page__cell--source">
-                      {useAssistedMf2 && !useMf2TranslationEditor ? (
+                      {useAssistedMf2 ? (
                         <WorkbenchMf2Preview
                           ariaLabel="MF2 source"
                           marksMode={translationMarksMode}
@@ -716,7 +716,6 @@ export function WorkbenchBody({
                           onTargetChange={onChangeEditingValue}
                           readOnly={!row.canEdit || isSaving}
                           ref={setTranslationInputRef}
-                          showActiveSourceComparison
                           showArgumentInputs={false}
                           showLocaleSelector={false}
                           showPreview={false}
