@@ -1,12 +1,15 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   fetchLinguistTimeSpentReport,
   type LinguistTimeSpentReport,
+  recomputeLinguistTimeSpentReport,
 } from '../../api/linguist-time-spent';
+import { type ApiUser, fetchAllUsersAdmin } from '../../api/users';
 import { AdminLinguistTimeSpentPage } from './AdminLinguistTimeSpentPage';
 
 const userState = vi.hoisted(() => ({ role: 'ROLE_ADMIN' }));
@@ -25,6 +28,30 @@ vi.mock('../../api/linguist-time-spent', () => ({
   fetchLinguistTimeSpentReport: vi.fn(),
   recomputeLinguistTimeSpentReport: vi.fn(),
 }));
+
+vi.mock('../../api/users', () => ({ fetchAllUsersAdmin: vi.fn() }));
+
+const users = [
+  {
+    id: 501,
+    username: 'reviewer@example.test',
+    givenName: 'Morgan',
+    surname: 'Chen',
+    enabled: true,
+    canTranslateAllLocales: true,
+    authorities: [{ authority: 'ROLE_TRANSLATOR' }],
+  },
+  {
+    id: 502,
+    username: 'former.reviewer@example.test',
+    givenName: 'Alexandra',
+    surname: 'Rivera',
+    commonName: 'Alex Rivera',
+    enabled: false,
+    canTranslateAllLocales: false,
+    authorities: [{ authority: 'ROLE_USER' }],
+  },
+] satisfies ApiUser[];
 
 const summary = {
   windowCount: 1,
@@ -148,6 +175,12 @@ describe('AdminLinguistTimeSpentPage', () => {
     vi.clearAllMocks();
     userState.role = 'ROLE_ADMIN';
     vi.mocked(fetchLinguistTimeSpentReport).mockResolvedValue(report);
+    vi.mocked(fetchAllUsersAdmin).mockResolvedValue(users);
+    vi.mocked(recomputeLinguistTimeSpentReport).mockResolvedValue({
+      matchedProjectCount: 1,
+      computedWindowCount: 1,
+      backfilledWindowCount: 0,
+    });
   });
 
   it('shows observed review cadence without invented pauses or discrepancy flags', async () => {
@@ -163,12 +196,102 @@ describe('AdminLinguistTimeSpentPage', () => {
     expect(screen.queryByRole('columnheader', { name: 'Discrepancy' })).not.toBeInTheDocument();
   });
 
-  it('redirects project managers without fetching the report', async () => {
+  it('searches users by name, username, or ID and applies or clears the selected translator', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const translatorFilter = screen.getByRole('button', { name: 'Filter by translator' });
+    await waitFor(() => expect(translatorFilter).toBeEnabled());
+    expect(translatorFilter).toHaveTextContent('All translators');
+    await user.click(translatorFilter);
+
+    const menu = within(screen.getByRole('menu'));
+    expect(menu.getByRole('button', { name: /Morgan Chen/ })).toBeInTheDocument();
+    const search = screen.getByPlaceholderText('Search by name, username, or ID');
+    for (const query of ['aLeX rIvErA', 'Alexandra', 'former.reviewer@example.test', '502']) {
+      await user.clear(search);
+      await user.type(search, query);
+
+      expect(
+        menu.getByRole('button', { name: /Alex Rivera.*former\.reviewer@example\.test · ID 502/ }),
+      ).toBeEnabled();
+      expect(menu.queryByRole('button', { name: /Morgan Chen/ })).not.toBeInTheDocument();
+      expect(fetchLinguistTimeSpentReport).toHaveBeenCalledTimes(1);
+      expect(recomputeLinguistTimeSpentReport).not.toHaveBeenCalled();
+    }
+
+    await user.click(menu.getByRole('button', { name: /Alex Rivera/ }));
+    expect(translatorFilter).toHaveTextContent('Alex Rivera');
+    expect(fetchLinguistTimeSpentReport).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await waitFor(() =>
+      expect(fetchLinguistTimeSpentReport).toHaveBeenLastCalledWith(
+        expect.objectContaining({ translatorUserId: 502 }),
+      ),
+    );
+    await waitFor(() => expect(translatorFilter).toBeEnabled());
+
+    await user.click(translatorFilter);
+    await user.click(screen.getByRole('button', { name: 'All translators' }));
+    expect(translatorFilter).toHaveTextContent('All translators');
+    expect(fetchLinguistTimeSpentReport).toHaveBeenCalledTimes(2);
+
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await waitFor(() =>
+      expect(fetchLinguistTimeSpentReport).toHaveBeenLastCalledWith(
+        expect.objectContaining({ translatorUserId: null }),
+      ),
+    );
+  });
+
+  it('recomputes for the selected translator before applying the report filter', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const translatorFilter = screen.getByRole('button', { name: 'Filter by translator' });
+    await waitFor(() => expect(translatorFilter).toBeEnabled());
+    await user.click(translatorFilter);
+    await user.click(screen.getByRole('button', { name: /Morgan Chen/ }));
+
+    expect(fetchLinguistTimeSpentReport).toHaveBeenCalledTimes(1);
+    expect(fetchLinguistTimeSpentReport).toHaveBeenLastCalledWith(
+      expect.objectContaining({ translatorUserId: null }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Recompute' }));
+
+    await waitFor(() =>
+      expect(recomputeLinguistTimeSpentReport).toHaveBeenCalledWith({
+        projectCreatedAfter: null,
+        projectCreatedBefore: null,
+        status: 'CLOSED',
+        translatorUserId: 501,
+        localeBcp47Tag: null,
+        limit: 500,
+      }),
+    );
+    expect(
+      await screen.findByText('Matched 1 projects, computed 1 assignment windows, backfilled 0.'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows a translator loading error while keeping the report visible', async () => {
+    vi.mocked(fetchAllUsersAdmin).mockRejectedValue(new Error('Synthetic users API failure'));
+    renderPage();
+
+    expect(
+      await screen.findByText('Failed to load translators. Please reload to retry.'),
+    ).toBeInTheDocument();
+    expect(await screen.findByRole('columnheader', { name: 'p95' })).toBeInTheDocument();
+  });
+
+  it('redirects project managers without fetching the report or admin users', async () => {
     userState.role = 'ROLE_PM';
 
     renderPage();
 
     expect(await screen.findByText('Personal settings')).toBeInTheDocument();
     expect(fetchLinguistTimeSpentReport).not.toHaveBeenCalled();
+    expect(fetchAllUsersAdmin).not.toHaveBeenCalled();
   });
 });

@@ -11,6 +11,7 @@ export type SingleSelectOption<T extends string | number> = {
   value: T;
   label: string;
   helper?: string;
+  searchText?: string;
   disabled?: boolean;
 };
 
@@ -139,7 +140,9 @@ export function SingleSelectDropdown<T extends string | number>({
     if (!query) {
       return normalizedOptions;
     }
-    return normalizedOptions.filter((option) => option.label.toLowerCase().includes(query));
+    return normalizedOptions.filter((option) =>
+      (option.searchText ?? option.label).toLowerCase().includes(query),
+    );
   }, [filterQuery, normalizedOptions]);
   const customQuery = filterQuery.trim();
   const hasExactCustomMatch =

@@ -12,6 +12,7 @@ import {
   recomputeLinguistTimeSpentReport,
   type ReviewProjectStatusFilter,
 } from '../../api/linguist-time-spent';
+import { fetchAllUsersAdmin } from '../../api/users';
 import {
   type DateQuickRange,
   MultiSectionFilterChip,
@@ -19,14 +20,16 @@ import {
 import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
 import { useLocales } from '../../hooks/useLocales';
 import { useUser } from '../../hooks/useUser';
+import { USERS_QUERY_KEY } from '../../hooks/useUsers';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
+import { getUserDisplayName } from '../../utils/userDisplayName';
 import { SettingsSubpageHeader } from './SettingsSubpageHeader';
 
 type Filters = {
   activityAfter: string | null;
   activityBefore: string | null;
   status: ReviewProjectStatusFilter;
-  translatorUserId: string;
+  translatorUserId: number | null;
   localeBcp47Tag: string;
 };
 
@@ -34,7 +37,7 @@ const DEFAULT_FILTERS: Filters = {
   activityAfter: null,
   activityBefore: null,
   status: 'CLOSED',
-  translatorUserId: '',
+  translatorUserId: null,
   localeBcp47Tag: '',
 };
 
@@ -81,21 +84,12 @@ function getReportDateQuickRanges(): DateQuickRange[] {
   ];
 }
 
-function asNumberOrNull(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const parsed = Number(trimmed);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function buildReportParams(filters: Filters): LinguistTimeSpentReportParams {
   return {
     activityAfter: filters.activityAfter,
     activityBefore: filters.activityBefore,
     status: filters.status,
-    translatorUserId: asNumberOrNull(filters.translatorUserId),
+    translatorUserId: filters.translatorUserId,
     localeBcp47Tag: filters.localeBcp47Tag.trim() || null,
     summaryLimit: 100,
     detailLimit: 100,
@@ -238,10 +232,42 @@ export function AdminLinguistTimeSpentPage() {
   const isAdmin = user.role === 'ROLE_ADMIN';
   const resolveLocaleName = useLocaleDisplayNameResolver();
   const { data: locales, isLoading: localesLoading } = useLocales();
+  const usersQuery = useQuery({
+    queryKey: USERS_QUERY_KEY,
+    queryFn: fetchAllUsersAdmin,
+    staleTime: 30_000,
+    enabled: isAdmin,
+  });
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [notice, setNotice] = useState<{ kind: 'success' | 'error'; message: string } | null>(null);
   const dateQuickRanges = useMemo(() => getReportDateQuickRanges(), []);
+  const translatorOptions = useMemo(
+    () =>
+      (usersQuery.data ?? [])
+        .map((translator) => {
+          const label = getUserDisplayName(translator) || `User ${translator.id}`;
+          return {
+            value: translator.id,
+            label,
+            helper: `${translator.username} · ID ${translator.id}`,
+            searchText: [
+              label,
+              translator.givenName,
+              translator.surname,
+              translator.commonName,
+              translator.username,
+              translator.id,
+            ]
+              .filter((value) => value != null)
+              .join(' '),
+          };
+        })
+        .sort((first, second) =>
+          first.label.localeCompare(second.label, undefined, { sensitivity: 'base' }),
+        ),
+    [usersQuery.data],
+  );
   const localeOptions = useMemo(
     () =>
       (locales ?? [])
@@ -274,7 +300,7 @@ export function AdminLinguistTimeSpentPage() {
         projectCreatedAfter: filters.activityAfter,
         projectCreatedBefore: filters.activityBefore,
         status: filters.status,
-        translatorUserId: asNumberOrNull(filters.translatorUserId),
+        translatorUserId: filters.translatorUserId,
         localeBcp47Tag: filters.localeBcp47Tag.trim() || null,
         limit: 500,
       }),
@@ -413,21 +439,26 @@ export function AdminLinguistTimeSpentPage() {
                 searchPlaceholder="Filter languages"
               />
             </div>
-            <label className="settings-field">
-              <span className="settings-field__label">Translator user ID</span>
-              <input
-                className="settings-input"
-                type="number"
-                min="1"
+            <div className="settings-field">
+              <span className="settings-field__label">Translator</span>
+              <SingleSelectDropdown<number>
+                label="Translator"
+                options={translatorOptions}
                 value={filters.translatorUserId}
-                onChange={(event) =>
+                onChange={(value) =>
                   setFilters((current) => ({
                     ...current,
-                    translatorUserId: event.target.value,
+                    translatorUserId: value,
                   }))
                 }
+                noneLabel="All translators"
+                placeholder={usersQuery.isLoading ? 'Loading translators…' : 'All translators'}
+                disabled={isWorking || usersQuery.isLoading}
+                buttonAriaLabel="Filter by translator"
+                searchPlaceholder="Search by name, username, or ID"
+                noResultsLabel="No matching users"
               />
-            </label>
+            </div>
             <div className="settings-actions">
               <button
                 type="button"
@@ -452,6 +483,11 @@ export function AdminLinguistTimeSpentPage() {
               ) : null}
             </div>
           </div>
+          {usersQuery.error ? (
+            <p className="settings-hint is-error">
+              Failed to load translators. Please reload to retry.
+            </p>
+          ) : null}
           {notice ? (
             <p className={`settings-hint ${notice.kind === 'error' ? 'is-error' : ''}`}>
               {notice.message}

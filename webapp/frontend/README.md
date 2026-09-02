@@ -26,3 +26,9 @@ Maven Integration (packaging)
 
 - The `webapp` Maven module runs an additional `frontend-maven-plugin` execution in `frontend` to build assets during `compile`.
 - Result is included automatically in the Spring Boot jar under `public`.
+
+Linguist Time Spent Filters
+
+- The admin report at `/settings/system/linguist-time-spent` has a translator picker searchable by name, username, or numeric user ID. Names appear first, with username and ID underneath.
+- Disabled users remain available for historical reports. Select `All translators` to clear the filter.
+- `Apply` loads the report for the selected filters; `Recompute` uses the current filter selection.
