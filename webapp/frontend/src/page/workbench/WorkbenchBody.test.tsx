@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { type ComponentProps } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -180,14 +180,20 @@ one {{Você tem {$count} arquivo.}}
     });
   });
 
-  it('keeps the compact MF2 source preview on collapsed rows', () => {
+  it('shows the serialized MF2 document instead of one resolved form on collapsed rows', () => {
     const mf2Row: WorkbenchRow = {
       ...editingRow,
       messageFormat: 'MF2',
-      source: `.input {$count :number}
-{{You have {$count} files.}}`,
-      translation: `.input {$count :number}
-{{Você tem {$count} arquivos.}}`,
+      source: `.input {$status :string}
+.match $status
+active {{Active}}
+paused {{Paused}}
+* {{Unknown}}`,
+      translation: `.input {$status :string}
+.match $status
+active {{Actif}}
+paused {{En pause}}
+* {{Inconnu}}`,
     };
     const onStartEditing = vi.fn();
     const { container } = renderWorkbenchBody({
@@ -201,19 +207,50 @@ one {{Você tem {$count} arquivo.}}
     const translationPreview = screen.getByRole('textbox', {
       name: 'MF2 translation editor',
     });
-    expect(sourcePreview).toHaveTextContent('You have count files.');
-    expect(translationPreview).toHaveTextContent('Você tem count arquivos.');
-    const variables = screen.getAllByLabelText('MF2 variable count');
-    expect(variables).toHaveLength(2);
-    variables.forEach((variable) => {
-      expect(variable).toHaveClass('visible-text-editor__protected-token--mf2-placeholder');
-      expect(variable).toHaveAttribute('data-raw', '{$count}');
-      expect(variable).toHaveTextContent('count');
-    });
+    expect(sourcePreview).toHaveAttribute('aria-multiline', 'true');
+    expect(translationPreview).toHaveAttribute('aria-multiline', 'true');
+    expect(sourcePreview).toHaveTextContent('.input {$status :string}');
+    expect(sourcePreview).toHaveTextContent('.match $status');
+    expect(sourcePreview).toHaveTextContent('active {{Active}}');
+    expect(sourcePreview).toHaveTextContent('paused {{Paused}}');
+    expect(sourcePreview).toHaveTextContent('* {{Unknown}}');
+    expect(translationPreview).toHaveTextContent('.input {$status :string}');
+    expect(translationPreview).toHaveTextContent('.match $status');
+    expect(translationPreview).toHaveTextContent('active {{Actif}}');
+    expect(translationPreview).toHaveTextContent('paused {{En pause}}');
+    expect(translationPreview).toHaveTextContent('* {{Inconnu}}');
     expect(container.querySelector('.workbench-page__mf2-badge')).not.toBeInTheDocument();
 
     fireEvent.focus(translationPreview);
     expect(onStartEditing).toHaveBeenCalledWith(mf2Row.id, mf2Row.translation);
+  });
+
+  it('protects MF2 variables without hiding their serialized syntax', () => {
+    const mf2Row: WorkbenchRow = {
+      ...editingRow,
+      messageFormat: 'MF2',
+      source: `.input {$count :number}
+{{You have {$count} files.}}`,
+      translation: `.input {$count :number}
+{{Você tem {$count} arquivos.}}`,
+    };
+    renderWorkbenchBody({
+      editingRowId: null,
+      editingValue: '',
+      rows: [mf2Row],
+    });
+
+    const sourcePreview = screen.getByRole('textbox', { name: 'MF2 source' });
+    const variables = within(sourcePreview).getAllByLabelText('MF2 variable count');
+    expect(variables).toHaveLength(2);
+    expect(variables.map((variable) => variable.getAttribute('data-raw'))).toEqual([
+      '{$count :number}',
+      '{$count}',
+    ]);
+    variables.forEach((variable) => {
+      expect(variable).toHaveClass('visible-text-editor__protected-token--mf2-placeholder');
+      expect(variable.textContent).toBe(variable.getAttribute('data-raw'));
+    });
   });
 
   it('keeps raw MF2 serialization on collapsed rows when the assisted editor is off', () => {

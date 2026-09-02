@@ -1211,12 +1211,16 @@
 .workbench-page__mf2-preview-text {
   display: -webkit-box;
   min-width: 0;
+  width: 100%;
   overflow: hidden;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 5;
   overflow-wrap: anywhere;
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-medium);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
 }
 
 .workbench-page__mf2-preview-text.is-empty {

@@ -11,8 +11,7 @@ import {
   Mf2TranslationEditor,
   type Mf2TranslationEditorSnapshot,
 } from '../../components/mf2/Mf2TranslationEditor';
-import { sourceLiteralPreview } from '../../components/mf2/model';
-import { mf2PatternPreview } from '../../components/mf2/preview';
+import { mf2DocumentPreview } from '../../components/mf2/preview';
 import { Modal } from '../../components/Modal';
 import { PillDropdown } from '../../components/PillDropdown';
 import type { TranslationEditorHandle } from '../../components/TranslationEditorHandle';
@@ -732,7 +731,6 @@ export function WorkbenchBody({
                           disabled={!row.canEdit || isSaving}
                           emptyLabel="No translation yet"
                           lang={translationLocale}
-                          dir={translationDirection}
                           marksMode={translationMarksMode}
                           onFocus={
                             row.canEdit && !isSaving
@@ -905,7 +903,6 @@ export function WorkbenchBody({
 
 function WorkbenchMf2Preview({
   ariaLabel,
-  dir = 'auto',
   disabled = false,
   emptyLabel = 'Empty message',
   lang,
@@ -914,7 +911,6 @@ function WorkbenchMf2Preview({
   value,
 }: {
   ariaLabel: string;
-  dir?: 'ltr' | 'rtl' | 'auto';
   disabled?: boolean;
   emptyLabel?: string;
   lang?: string;
@@ -922,14 +918,15 @@ function WorkbenchMf2Preview({
   onFocus?: () => void;
   value: string;
 }) {
-  const preview = useMemo(() => mf2PatternPreview(sourceLiteralPreview(value).trim()), [value]);
-  const isEmpty = preview.value.length === 0;
+  const preview = useMemo(() => mf2DocumentPreview(value), [value]);
+  const isEmpty = value.trim().length === 0;
   const isInteractive = Boolean(onFocus) && !disabled;
 
   return (
     <div
       aria-disabled={disabled || undefined}
       aria-label={ariaLabel}
+      aria-multiline="true"
       aria-readonly="true"
       className={`workbench-page__mf2-preview${isInteractive ? ' is-interactive' : ''}`}
       onFocus={isInteractive ? onFocus : undefined}
@@ -938,7 +935,7 @@ function WorkbenchMf2Preview({
     >
       <VisibleTextRenderer
         className={`workbench-page__mf2-preview-text${isEmpty ? ' is-empty' : ''}`}
-        dir={dir}
+        dir="ltr"
         disabled={disabled}
         lang={lang}
         marksMode={isEmpty ? 'off' : marksMode}

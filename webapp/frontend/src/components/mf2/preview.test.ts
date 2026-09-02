@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { sourceLiteralPreview } from './model';
-import { mf2PatternPreview } from './preview';
+import { MAX_MF2_MESSAGE_CODE_UNITS } from './model';
+import { mf2DocumentPreview, mf2PatternPreview } from './preview';
 
 describe('mf2PatternPreview', () => {
   it('protects a typed variable as one compact placeholder', () => {
@@ -59,20 +59,66 @@ describe('mf2PatternPreview', () => {
     ).toEqual(['{#link href=$url}', '{/link}', '{#br/}', '{|literal|}', '{:function}']);
     expect(preview.value).toContain('here');
   });
+});
 
-  it('renders the wildcard form from a selected message', () => {
-    const pattern = sourceLiteralPreview(`.input {$count :number}
+describe('mf2DocumentPreview', () => {
+  it('shows the complete serialized document with protected variables', () => {
+    const source = `.input {$count :number}
+{{You have {$count} files.}}`;
+    const preview = mf2DocumentPreview(source);
+
+    expect(preview.value).toBe(source);
+    expect(preview.protectedTokens).toHaveLength(2);
+    expect(
+      preview.protectedTokens.map((token) => preview.value.slice(token.start, token.end)),
+    ).toEqual(['{$count :number}', '{$count}']);
+    expect(preview.protectedTokens).toEqual([
+      expect.objectContaining({
+        displayText: '{$count :number}',
+        kind: 'mf2-placeholder',
+      }),
+      expect.objectContaining({
+        displayText: '{$count}',
+        kind: 'mf2-placeholder',
+      }),
+    ]);
+  });
+
+  it('keeps every selected-message form in the serialized preview', () => {
+    const source = `.input {$count :number}
 .match $count
 one {{One file}}
-* {{Files: {$count}}}`);
+many {{Many files}}
+other {{Other files}}
+* {{Files: {$count}}}`;
+    const preview = mf2DocumentPreview(source);
 
-    const preview = mf2PatternPreview(pattern);
+    expect(preview.value).toBe(source);
+    expect(preview.value).toContain('.match $count');
+    expect(preview.value).toContain('one {{One file}}');
+    expect(preview.value).toContain('many {{Many files}}');
+    expect(preview.value).toContain('other {{Other files}}');
+    expect(preview.value).toContain('* {{Files: {$count}}}');
+  });
 
-    expect(preview.value).toBe('Files: {$count}');
-    expect(preview.protectedTokens).toHaveLength(1);
+  it('shows malformed input as the complete raw serialization', () => {
+    const source = `.input {$status :string}
+.match $status
+active {{Active}`;
+    const preview = mf2DocumentPreview(source);
+
+    expect(preview.value).toBe(source);
     expect(preview.protectedTokens[0]).toMatchObject({
-      displayText: 'count',
+      displayText: '{$status :string}',
       kind: 'mf2-placeholder',
     });
+  });
+
+  it('does not scan oversized raw fallbacks for preview tokens', () => {
+    const source = `{$name}${'x'.repeat(MAX_MF2_MESSAGE_CODE_UNITS)}`;
+    const preview = mf2DocumentPreview(source);
+
+    expect(preview.value).toBe(source);
+    expect(preview.protectedTokens).toEqual([]);
   });
 });
