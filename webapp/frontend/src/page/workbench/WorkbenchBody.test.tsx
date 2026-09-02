@@ -173,7 +173,7 @@ one {{Você tem {$count} arquivo.}}
     expect(screen.getByText('Shown to translators')).toBeInTheDocument();
     expect(container.querySelector('.mf2-active-source-comparison')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Hidden characters: Auto' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Advanced source' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit placeholders' })).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Text editor' })).not.toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Accept' })).toBeEnabled();
@@ -305,7 +305,7 @@ paused {{En pause}}
     const editor = screen.getByRole('textbox', { name: 'Text editor' });
     expect(editor.tagName).toBe('TEXTAREA');
     expect(editor).toHaveValue(mf2Row.translation);
-    expect(screen.queryByRole('button', { name: 'Advanced source' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit placeholders' })).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: /Target count:/u })).not.toBeInTheDocument();
   });
 
@@ -350,7 +350,7 @@ paused {{En pause}}
     const editor = screen.getByRole('textbox', { name: 'Text editor' });
     expect(editor.tagName).toBe('TEXTAREA');
     expect(editor).toHaveValue(mf2Row.translation);
-    expect(screen.queryByRole('button', { name: 'Advanced source' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit placeholders' })).not.toBeInTheDocument();
   });
 
   it('blocks an initially invalid MF2 target from being accepted', async () => {

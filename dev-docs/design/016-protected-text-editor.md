@@ -224,10 +224,12 @@ The structured editor reuses the production editor's compact hidden-character
 control and marker presentation. Its default guided mode keeps MF2 expressions
 and syntax protected while `Hidden chars: Auto / All / Off` changes only
 display decorations without replacing editor state or history. Full-document
-CodeMirror editing is exposed as **Advanced source**, not as **Edit
-placeholders**: unlike the generic editor's scoped escape hatch, it can change
-declarations, selectors, keys, and every variant at once. Keyboard reference is
-available through a compact **Shortcuts** disclosure instead of occupying an
+CodeMirror editing is exposed as **Edit placeholders** so the translator-facing
+control matches the generic editor and does not imply that the source-language
+string will change. Unlike the generic editor's scoped escape hatch, MF2 raw
+mode can change declarations, selectors, keys, and every variant at once;
+**Guided editor** returns to the protected structured view. Keyboard reference
+is available through a compact **Shortcuts** disclosure instead of occupying an
 always-visible row. Clean documents do not show a passive success diagnostic;
 form badges, inline diagnostics, and a collapsible issue summary appear only
 when there is something actionable.

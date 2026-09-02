@@ -789,7 +789,7 @@ export const Mf2TranslationEditor = forwardRef<
           onClick={() => selectMode(mode === 'rich' ? 'raw' : 'rich')}
           type="button"
         >
-          {mode === 'raw' ? 'Guided editor' : 'Advanced source'}
+          {mode === 'raw' ? 'Guided editor' : 'Edit placeholders'}
         </button>
         {(mode === 'raw' && !readOnly) || (mode === 'rich' && richEditorCanMutate) ? (
           <>

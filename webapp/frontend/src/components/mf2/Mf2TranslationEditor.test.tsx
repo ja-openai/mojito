@@ -105,7 +105,7 @@ function placeCaret(element: HTMLElement, offset: number) {
 }
 
 describe('Mf2TranslationEditor', () => {
-  it('keeps source input syntax out of the guided editor and available in advanced source', async () => {
+  it('keeps source input syntax out of the guided editor and available while editing placeholders', async () => {
     const user = userEvent.setup();
     const { container } = render(
       <Mf2TranslationEditor
@@ -142,10 +142,10 @@ describe('Mf2TranslationEditor', () => {
       'mf2-inline-editor--menu-open',
     );
 
-    const advancedSource = screen.getByRole('button', { name: 'Advanced source' });
-    expect(advancedSource).toHaveAttribute('aria-pressed', 'false');
+    const editPlaceholders = screen.getByRole('button', { name: 'Edit placeholders' });
+    expect(editPlaceholders).toHaveAttribute('aria-pressed', 'false');
 
-    await user.click(advancedSource);
+    await user.click(editPlaceholders);
 
     expect(screen.getByRole('button', { name: 'Guided editor' })).toHaveAttribute(
       'aria-pressed',
