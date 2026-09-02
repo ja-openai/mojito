@@ -79,6 +79,7 @@ function buildRow(
     existingDecisionNotes: null,
     includedInLocalizedFile: true,
     expectedCurrentTmTextUnitVariantId: null,
+    expectedReviewStateRevision: null,
     assetPath: null,
     hasStagedSuggestion: false,
     ...overrides,

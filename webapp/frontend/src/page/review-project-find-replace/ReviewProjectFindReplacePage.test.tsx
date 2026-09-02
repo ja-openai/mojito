@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import { fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -5,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as ReviewProjectsApi from '../../api/review-projects';
 import type { ApiReviewProjectDetail, ApiReviewProjectTextUnit } from '../../api/review-projects';
+import { UserContext } from '../../hooks/useUser';
 import { ReviewProjectFindReplacePage } from './ReviewProjectFindReplacePage';
 
 const useReviewProjectDetailMock = vi.hoisted(() => vi.fn());
@@ -23,6 +25,7 @@ vi.mock('../../api/review-projects', async () => {
 });
 
 vi.mock('../../hooks/useReviewProjectDetail', () => ({
+  REVIEW_PROJECT_DETAIL_QUERY_KEY: ['review-project'],
   useReviewProjectDetail: useReviewProjectDetailMock,
 }));
 
@@ -50,15 +53,29 @@ function buildProject(
 
 function renderPage(path = '/review-projects/7/find-replace') {
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route
-          path="/review-projects/:projectId/find-replace"
-          element={<ReviewProjectFindReplacePage />}
-        />
-        <Route path="/review-projects/:projectId" element={<div>Review project destination</div>} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={new QueryClient()}>
+      <UserContext.Provider
+        value={{
+          username: 'bulk-reviewer',
+          role: 'ROLE_PM',
+          canTranslateAllLocales: true,
+          userLocales: [],
+        }}
+      >
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route
+              path="/review-projects/:projectId/find-replace"
+              element={<ReviewProjectFindReplacePage />}
+            />
+            <Route
+              path="/review-projects/:projectId"
+              element={<div>Review project destination</div>}
+            />
+          </Routes>
+        </MemoryRouter>
+      </UserContext.Provider>
+    </QueryClientProvider>,
   );
 }
 
@@ -199,6 +216,7 @@ describe('ReviewProjectFindReplacePage', () => {
       notes: null,
       previousTarget: 'Réflexionbam...',
       expectedCurrentTmTextUnitVariantId: null,
+      expectedReviewStateRevision: 'row-revision-1',
     });
   });
 
@@ -225,7 +243,10 @@ describe('ReviewProjectFindReplacePage', () => {
 
     await screen.findByText('Cleared 1 staged suggestion.');
     await waitFor(() => expect(deleteReviewProjectTextUnitSuggestionMock).toHaveBeenCalledTimes(1));
-    expect(deleteReviewProjectTextUnitSuggestionMock).toHaveBeenCalledWith({ textUnitId: 101 });
+    expect(deleteReviewProjectTextUnitSuggestionMock).toHaveBeenCalledWith({
+      textUnitId: 101,
+      expectedReviewStateRevision: 'row-revision-1',
+    });
     expect(screen.queryByText('From find/replace')).not.toBeInTheDocument();
     expect(screen.getByDisplayValue('Réflexionbam...')).toBeInTheDocument();
   });
@@ -278,6 +299,7 @@ describe('ReviewProjectFindReplacePage', () => {
       includedInLocalizedFile: true,
       decisionState: 'DECIDED',
       expectedCurrentTmTextUnitVariantId: null,
+      expectedReviewStateRevision: 'row-revision-1',
       decisionNotes: null,
     });
   });
@@ -292,6 +314,7 @@ function buildTextUnit({
 }): ApiReviewProjectTextUnit {
   return {
     id: 101,
+    reviewStateRevision: 'row-revision-1',
     tmTextUnit: {
       id: 86,
       name: 'message.default-on',

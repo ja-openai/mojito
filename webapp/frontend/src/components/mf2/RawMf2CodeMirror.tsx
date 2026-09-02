@@ -7,7 +7,7 @@ import {
   startCompletion,
 } from '@codemirror/autocomplete';
 import { type Diagnostic, linter, lintGutter } from '@codemirror/lint';
-import { Compartment, EditorState, Transaction } from '@codemirror/state';
+import { Compartment, EditorState, Prec, Transaction } from '@codemirror/state';
 import { parseToModel } from '@mojito-mf2/core';
 import { basicSetup, EditorView } from 'codemirror';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
@@ -365,24 +365,28 @@ function rawFormNavigation(
     submit?: () => void;
   },
 ) {
-  return EditorView.domEventHandlers({
-    keydown(event) {
-      const navigation = formNavigationIntent(event);
-      if (!navigation) return false;
-      const handlers = handlersProvider();
-      if (navigation.reason === 'command-enter' && handlers.submit) {
+  // Submit before basicSetup's Mod-Enter binding can insert a blank line.
+  return Prec.high(
+    EditorView.domEventHandlers({
+      keydown(event, view) {
+        if (view.composing || event.isComposing || event.keyCode === 229) return false;
+        const navigation = formNavigationIntent(event);
+        if (!navigation) return false;
+        const handlers = handlersProvider();
+        if (navigation.reason === 'command-enter' && handlers.submit) {
+          event.preventDefault();
+          event.stopPropagation();
+          handlers.submit();
+          return true;
+        }
+        const handler = navigation.direction > 0 ? handlers.next : handlers.previous;
+        if (!handler) return false;
         event.preventDefault();
-        event.stopPropagation();
-        handlers.submit();
+        handler();
         return true;
-      }
-      const handler = navigation.direction > 0 ? handlers.next : handlers.previous;
-      if (!handler) return false;
-      event.preventDefault();
-      handler();
-      return true;
-    },
-  });
+      },
+    }),
+  );
 }
 
 function rawPlaceholderCompletionSource(

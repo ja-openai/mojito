@@ -18,7 +18,6 @@ import com.box.l10n.mojito.service.review.CreateReviewProjectRequestCommand;
 import com.box.l10n.mojito.service.review.GetProjectDetailView;
 import com.box.l10n.mojito.service.review.ReviewProjectCurrentVariantConflictException;
 import com.box.l10n.mojito.service.review.ReviewProjectService;
-import com.box.l10n.mojito.service.review.ReviewProjectTextUnitDetail;
 import com.box.l10n.mojito.service.review.SearchReviewProjectRequestsView;
 import com.box.l10n.mojito.service.review.SearchReviewProjectsCriteria;
 import com.box.l10n.mojito.service.review.SearchReviewProjectsView;
@@ -46,6 +45,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -394,7 +394,7 @@ public class ReviewProjectWS {
     }
 
     try {
-      ReviewProjectTextUnitDetail detail =
+      GetProjectDetailView.ReviewProjectTextUnit detail =
           reviewProjectService.saveDecision(
               textUnitId,
               request.getTarget(),
@@ -404,10 +404,11 @@ public class ReviewProjectWS {
               decisionState,
               request.getExpectedCurrentTmTextUnitVariantId(),
               Boolean.TRUE.equals(request.getOverrideChangedCurrent()),
-              request.getDecisionNotes());
+              request.getDecisionNotes(),
+              request.getExpectedReviewStateRevision());
       return ResponseEntity.ok(toTextUnitResponse(detail));
     } catch (ReviewProjectCurrentVariantConflictException conflict) {
-      ReviewProjectTextUnitDetail currentTextUnit = conflict.getCurrentTextUnit();
+      GetProjectDetailView.ReviewProjectTextUnit currentTextUnit = conflict.getCurrentTextUnit();
       return currentTextUnit == null
           ? ResponseEntity.status(HttpStatus.CONFLICT).build()
           : ResponseEntity.status(HttpStatus.CONFLICT).body(toTextUnitResponse(currentTextUnit));
@@ -435,9 +436,10 @@ public class ReviewProjectWS {
                   request.notes(),
                   request.previousTarget(),
                   request.expectedCurrentTmTextUnitVariantId(),
-                  Boolean.TRUE.equals(request.overrideChangedCurrent()))));
+                  Boolean.TRUE.equals(request.overrideChangedCurrent()),
+                  request.expectedReviewStateRevision())));
     } catch (ReviewProjectCurrentVariantConflictException conflict) {
-      ReviewProjectTextUnitDetail currentTextUnit = conflict.getCurrentTextUnit();
+      GetProjectDetailView.ReviewProjectTextUnit currentTextUnit = conflict.getCurrentTextUnit();
       return currentTextUnit == null
           ? ResponseEntity.status(HttpStatus.CONFLICT).build()
           : ResponseEntity.status(HttpStatus.CONFLICT).body(toTextUnitResponse(currentTextUnit));
@@ -451,10 +453,15 @@ public class ReviewProjectWS {
 
   @DeleteMapping("/review-project-text-units/{textUnitId}/suggestion")
   public ResponseEntity<GetReviewProjectResponse.ReviewProjectTextUnit> deleteSuggestion(
-      @PathVariable Long textUnitId) {
+      @PathVariable Long textUnitId,
+      @RequestParam(required = false) String expectedReviewStateRevision) {
     try {
       return ResponseEntity.ok(
-          toTextUnitResponse(reviewProjectService.deleteSuggestion(textUnitId)));
+          toTextUnitResponse(
+              reviewProjectService.deleteSuggestion(textUnitId, expectedReviewStateRevision)));
+    } catch (ReviewProjectCurrentVariantConflictException conflict) {
+      return ResponseEntity.status(HttpStatus.CONFLICT)
+          .body(toTextUnitResponse(conflict.getCurrentTextUnit()));
     } catch (AccessDeniedException accessDeniedException) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, accessDeniedException.getMessage());
     } catch (IllegalArgumentException illegalArgumentException) {
@@ -518,6 +525,9 @@ public class ReviewProjectWS {
                   request == null ? null : request.termType(),
                   request == null ? null : request.enforcement(),
                   request == null ? null : request.doNotTranslate())));
+    } catch (ReviewProjectCurrentVariantConflictException conflict) {
+      throw new ResponseStatusException(
+          HttpStatus.CONFLICT, "The term changed while saving. Refresh it before saving again.");
     } catch (AccessDeniedException accessDeniedException) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, accessDeniedException.getMessage());
     } catch (IllegalArgumentException illegalArgumentException) {
@@ -597,7 +607,8 @@ public class ReviewProjectWS {
       String notes,
       String previousTarget,
       Long expectedCurrentTmTextUnitVariantId,
-      Boolean overrideChangedCurrent) {}
+      Boolean overrideChangedCurrent,
+      String expectedReviewStateRevision) {}
 
   public record ReviewProjectTextUnitFeedbackRequest(
       Recommendation recommendation, Integer confidence, String notes) {}
@@ -720,7 +731,8 @@ public class ReviewProjectWS {
         ReviewProjectTextUnitSuggestion reviewProjectTextUnitSuggestion,
         TerminologyTerm terminologyTerm,
         List<TerminologyTermEvidence> glossaryTermEvidence,
-        List<ReviewProjectTextUnitFeedback> terminologyFeedbacks) {}
+        List<ReviewProjectTextUnitFeedback> terminologyFeedbacks,
+        String reviewStateRevision) {}
 
     public record TerminologyTerm(
         Long glossaryId,
@@ -1133,7 +1145,8 @@ public class ReviewProjectWS {
         toSuggestionResponse(view.reviewProjectTextUnitSuggestion()),
         toTerminologyTermResponse(view.terminologyTerm()),
         glossaryTermEvidence.stream().map(this::toTerminologyTermEvidenceResponse).toList(),
-        terminologyFeedbacks.stream().map(this::toTerminologyFeedbackResponse).toList());
+        terminologyFeedbacks.stream().map(this::toTerminologyFeedbackResponse).toList(),
+        view.reviewStateRevision());
   }
 
   private GetReviewProjectResponse.ReviewProjectTextUnitSuggestion toSuggestionResponse(
@@ -1150,84 +1163,6 @@ public class ReviewProjectWS {
         suggestion.createdDate(),
         suggestion.lastModifiedDate(),
         suggestion.lastModifiedByUsername());
-  }
-
-  private GetReviewProjectResponse.ReviewProjectTextUnit toTextUnitResponse(
-      ReviewProjectTextUnitDetail detail) {
-    GetReviewProjectResponse.Asset.Repository repository =
-        new GetReviewProjectResponse.Asset.Repository(
-            detail.repositoryId(), detail.repositoryName());
-    GetReviewProjectResponse.Asset asset =
-        new GetReviewProjectResponse.Asset(detail.assetPath(), repository);
-    GetReviewProjectResponse.TmTextUnit tmTextUnit =
-        new GetReviewProjectResponse.TmTextUnit(
-            detail.tmTextUnitId(),
-            detail.tmTextUnitName(),
-            detail.tmTextUnitContent(),
-            MessageFormatDetector.detect(detail.tmTextUnitContent(), detail.assetPath()),
-            detail.tmTextUnitComment(),
-            detail.tmTextUnitCreatedDate(),
-            asset,
-            detail.tmTextUnitWordCount() != null ? detail.tmTextUnitWordCount().longValue() : null);
-
-    GetReviewProjectResponse.TmTextUnitVariant baselineVariant =
-        new GetReviewProjectResponse.TmTextUnitVariant(
-            detail.baselineTmTextUnitVariantId(),
-            detail.baselineTmTextUnitVariantContent(),
-            detail.baselineTmTextUnitVariantStatus() != null
-                ? detail.baselineTmTextUnitVariantStatus().name()
-                : null,
-            detail.baselineTmTextUnitVariantIncludedInLocalizedFile(),
-            detail.baselineTmTextUnitVariantComment());
-    GetReviewProjectResponse.TmTextUnitVariant currentVariant =
-        new GetReviewProjectResponse.TmTextUnitVariant(
-            detail.currentTmTextUnitVariantId(),
-            detail.currentTmTextUnitVariantContent(),
-            detail.currentTmTextUnitVariantStatus() != null
-                ? detail.currentTmTextUnitVariantStatus().name()
-                : null,
-            detail.currentTmTextUnitVariantIncludedInLocalizedFile(),
-            detail.currentTmTextUnitVariantComment());
-    GetReviewProjectResponse.TmTextUnitVariant decisionVariant =
-        detail.decisionVariantId() == null
-            ? null
-            : new GetReviewProjectResponse.TmTextUnitVariant(
-                detail.decisionVariantId(),
-                detail.decisionVariantContent(),
-                detail.decisionVariantStatus() != null
-                    ? detail.decisionVariantStatus().name()
-                    : null,
-                detail.decisionVariantIncludedInLocalizedFile(),
-                detail.decisionVariantComment());
-
-    String decisionStateName =
-        detail.decisionState() != null ? detail.decisionState().name() : null;
-    boolean hasDecision =
-        decisionStateName != null
-            || detail.decisionVariantId() != null
-            || detail.reviewedTmTextUnitVariantId() != null
-            || detail.decisionNotes() != null;
-    GetReviewProjectResponse.ReviewProjectTextUnitDecision decision =
-        hasDecision
-            ? new GetReviewProjectResponse.ReviewProjectTextUnitDecision(
-                detail.reviewedTmTextUnitVariantId(),
-                detail.decisionNotes(),
-                decisionStateName,
-                decisionVariant,
-                detail.decisionLastModifiedDate(),
-                detail.decisionLastModifiedByUsername())
-            : null;
-
-    return new GetReviewProjectResponse.ReviewProjectTextUnit(
-        detail.reviewProjectTextUnitId(),
-        tmTextUnit,
-        baselineVariant,
-        currentVariant,
-        decision,
-        null,
-        null,
-        List.of(),
-        List.of());
   }
 
   private GetReviewProjectResponse.TerminologyTerm toTerminologyTermResponse(

@@ -53,7 +53,8 @@ public record GetProjectDetailView(
       ReviewProjectTextUnitSuggestion reviewProjectTextUnitSuggestion,
       TerminologyTerm terminologyTerm,
       List<TerminologyTermEvidence> glossaryTermEvidence,
-      List<ReviewProjectTextUnitFeedback> terminologyFeedbacks) {}
+      List<ReviewProjectTextUnitFeedback> terminologyFeedbacks,
+      String reviewStateRevision) {}
 
   public record TerminologyTerm(
       Long glossaryId,

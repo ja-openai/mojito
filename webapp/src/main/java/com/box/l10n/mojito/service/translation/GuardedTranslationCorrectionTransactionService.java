@@ -22,6 +22,7 @@ import com.box.l10n.mojito.service.translation.GuardedTranslationCorrectionServi
 import com.box.l10n.mojito.service.translation.GuardedTranslationCorrectionService.StoredTranslation;
 import com.box.l10n.mojito.service.translation.GuardedTranslationCorrectionService.Verification;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -99,6 +100,8 @@ public class GuardedTranslationCorrectionTransactionService {
       return identityConflict;
     }
 
+    // Match review saves: the stable parent precedes the current-translation lock.
+    entityManager.lock(tmTextUnit, LockModeType.PESSIMISTIC_WRITE);
     TMTextUnitCurrentVariant current =
         currentVariantRepository.findForUpdateByLocaleIdAndTmTextUnitId(
             locale.getId(), tmTextUnit.getId());
@@ -107,7 +110,7 @@ public class GuardedTranslationCorrectionTransactionService {
           index, correction, "CURRENT_TRANSLATION_MISSING", "Current translation is missing");
     }
 
-    // Keep lock order deterministic: current translation first, then the complete audited
+    // Keep lock order deterministic: text unit, current translation, then the complete audited
     // identity graph. Clear the initial unlocked lookup and reload the identity through a locking
     // query so MySQL REPEATABLE_READ cannot return a stale snapshot.
     entityManager.clear();

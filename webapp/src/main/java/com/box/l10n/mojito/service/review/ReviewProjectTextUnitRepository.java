@@ -68,7 +68,9 @@ public interface ReviewProjectTextUnitRepository
         decisionModifiedBy.username,
         termIndexCandidate.id,
         targetGlossary.id,
-        targetGlossary.name
+        targetGlossary.name,
+        rptud.id,
+        rptud.version
       )
       from ReviewProjectTextUnit rptu
       join rptu.reviewProject rp
@@ -127,7 +129,9 @@ public interface ReviewProjectTextUnitRepository
         decisionModifiedBy.username,
         termIndexCandidate.id,
         targetGlossary.id,
-        targetGlossary.name
+        targetGlossary.name,
+        rptud.id,
+        rptud.version
       )
       from ReviewProjectTextUnit rptu
       join rptu.reviewProject rp

@@ -320,7 +320,13 @@ export const Mf2ProseMirrorEditor = forwardRef<
               return true;
             }
             if (readOnlyRef.current) return false;
-            if (view.composing || composingRef.current || event.isComposing) return false;
+            if (
+              view.composing ||
+              composingRef.current ||
+              event.isComposing ||
+              event.keyCode === 229
+            )
+              return false;
             const navigation = formNavigationIntent(event);
             if (navigation) {
               event.preventDefault();

@@ -865,6 +865,7 @@ public class ReviewProjectServiceTest {
           com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState.DECIDED,
           null,
           false,
+          null,
           null);
       fail("Expected AccessDeniedException");
     } catch (AccessDeniedException e) {
@@ -930,7 +931,7 @@ public class ReviewProjectServiceTest {
 
     when(reviewProjectTextUnitRepository.findById(55L))
         .thenReturn(Optional.of(reviewProjectTextUnit));
-    when(tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(14L, 321L))
+    when(tmTextUnitCurrentVariantRepository.findForUpdateByLocaleIdAndTmTextUnitId(14L, 321L))
         .thenReturn(current);
     when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
         .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
@@ -945,6 +946,7 @@ public class ReviewProjectServiceTest {
           com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState.DECIDED,
           776L,
           false,
+          null,
           null);
       fail("Expected ReviewProjectCurrentVariantConflictException");
     } catch (ReviewProjectCurrentVariantConflictException e) {
@@ -1026,7 +1028,7 @@ public class ReviewProjectServiceTest {
     when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
         .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
 
-    ReviewProjectTextUnitDetail detail =
+    GetProjectDetailView.ReviewProjectTextUnit detail =
         reviewProjectService.saveDecision(
             55L,
             "Bonjour",
@@ -1036,9 +1038,10 @@ public class ReviewProjectServiceTest {
             com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState.DECIDED,
             null,
             false,
-            "Looks good");
+            "Looks good",
+            null);
 
-    assertEquals(Long.valueOf(55L), detail.reviewProjectTextUnitId());
+    assertEquals(Long.valueOf(55L), detail.id());
     verify(reviewProjectTextUnitDecisionRepository).saveAndFlush(any());
     verify(reviewProjectRepository).incrementDecidedProgress(12L, 7L);
     assertEquals(1L, saveDecisionDurationCount("initialRead", "success", true));
@@ -1104,7 +1107,8 @@ public class ReviewProjectServiceTest {
           com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState.DECIDED,
           null,
           false,
-          "Looks good");
+          "Looks good",
+          null);
       fail("Expected IllegalArgumentException");
     } catch (IllegalArgumentException e) {
       assertEquals("reviewProjectTextUnit with id: 55 not found", e.getMessage());
@@ -1135,7 +1139,7 @@ public class ReviewProjectServiceTest {
     when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
         .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
 
-    ReviewProjectTextUnitDetail detail =
+    GetProjectDetailView.ReviewProjectTextUnit detail =
         reviewProjectService.saveDecision(
             55L,
             null,
@@ -1145,9 +1149,10 @@ public class ReviewProjectServiceTest {
             com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState.PENDING,
             null,
             false,
+            null,
             null);
 
-    assertEquals(Long.valueOf(55L), detail.reviewProjectTextUnitId());
+    assertEquals(Long.valueOf(55L), detail.id());
     verify(reviewProjectTextUnitDecisionRepository, never()).saveAndFlush(any());
     verify(reviewProjectRepository, never()).incrementDecidedProgress(anyLong(), anyLong());
     verify(reviewProjectRepository, never()).decrementDecidedProgress(anyLong(), anyLong());
@@ -1180,7 +1185,7 @@ public class ReviewProjectServiceTest {
     when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
         .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
 
-    ReviewProjectTextUnitDetail detail =
+    GetProjectDetailView.ReviewProjectTextUnit detail =
         reviewProjectService.saveDecision(
             55L,
             null,
@@ -1190,9 +1195,10 @@ public class ReviewProjectServiceTest {
             com.box.l10n.mojito.entity.review.ReviewProjectTextUnitDecision.DecisionState.PENDING,
             null,
             false,
-            stagedNote);
+            stagedNote,
+            null);
 
-    assertEquals(Long.valueOf(55L), detail.reviewProjectTextUnitId());
+    assertEquals(Long.valueOf(55L), detail.id());
     ArgumentCaptor<ReviewProjectTextUnitDecision> decisionCaptor =
         ArgumentCaptor.forClass(ReviewProjectTextUnitDecision.class);
     verify(reviewProjectTextUnitDecisionRepository).saveAndFlush(decisionCaptor.capture());
@@ -1241,7 +1247,7 @@ public class ReviewProjectServiceTest {
         .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
 
     reviewProjectService.saveSuggestion(
-        55L, "Bonjour", "FIND_REPLACE", "manual cleanup", "Salut", null, false);
+        55L, "Bonjour", "FIND_REPLACE", "manual cleanup", "Salut", null, false, null);
 
     ArgumentCaptor<ReviewProjectTextUnitSuggestion> suggestionCaptor =
         ArgumentCaptor.forClass(ReviewProjectTextUnitSuggestion.class);
@@ -1288,14 +1294,14 @@ public class ReviewProjectServiceTest {
 
     when(reviewProjectTextUnitRepository.findById(55L))
         .thenReturn(Optional.of(reviewProjectTextUnit));
-    when(tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(14L, 321L))
+    when(tmTextUnitCurrentVariantRepository.findForUpdateByLocaleIdAndTmTextUnitId(14L, 321L))
         .thenReturn(current);
     when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
         .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
 
     try {
       reviewProjectService.saveSuggestion(
-          55L, "Bonjour", "FIND_REPLACE", "manual cleanup", "Salut", null, false);
+          55L, "Bonjour", "FIND_REPLACE", "manual cleanup", "Salut", null, false, null);
       fail("Expected ReviewProjectCurrentVariantConflictException");
     } catch (ReviewProjectCurrentVariantConflictException e) {
       assertNull(e.getExpectedVariantId());
@@ -1341,7 +1347,7 @@ public class ReviewProjectServiceTest {
     when(reviewProjectTextUnitRepository.findDetailByReviewProjectTextUnitId(55L))
         .thenReturn(Optional.of(reviewProjectTextUnitDetail(55L)));
 
-    reviewProjectService.deleteSuggestion(55L);
+    reviewProjectService.deleteSuggestion(55L, null);
 
     verify(reviewProjectTextUnitSuggestionRepository).delete(suggestion);
     verify(reviewProjectTextUnitSuggestionRepository).flush();
@@ -1942,6 +1948,8 @@ public class ReviewProjectServiceTest {
         "glossary",
         7L,
         "repo",
+        null,
+        null,
         null,
         null,
         null,

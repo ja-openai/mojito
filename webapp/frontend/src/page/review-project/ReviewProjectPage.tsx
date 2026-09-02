@@ -72,7 +72,7 @@ export function ReviewProjectPage() {
     return <LoadingState />;
   }
 
-  if (projectDetailQuery.isError) {
+  if (projectDetailQuery.isError && !projectDetailQuery.data) {
     const message =
       projectDetailQuery.error instanceof Error
         ? projectDetailQuery.error.message
@@ -81,17 +81,28 @@ export function ReviewProjectPage() {
   }
 
   return (
-    <ReviewProjectPageView
-      projectId={projectId}
-      project={projectDetailQuery.data ?? null}
-      mutations={mutationControls}
-      selectedTextUnitQueryId={selectedTextUnitId}
-      onSelectedTextUnitIdChange={handleSelectedTextUnitIdChange}
-      openRequestDetailsQuery={openRequestDetails}
-      requestDetailsSource={requestDetailsSource}
-      onRequestDetailsQueryHandled={handleRequestDetailsQueryHandled}
-      onRequestDetailsFlowFinished={handleRequestDetailsFlowFinished}
-    />
+    <>
+      {projectDetailQuery.isError && (
+        <div className="review-project-page__state review-project-page__state--error" role="alert">
+          Could not refresh the project. Your current work has been kept.{' '}
+          <button type="button" onClick={() => void projectDetailQuery.refetch()}>
+            Retry refresh
+          </button>
+        </div>
+      )}
+      <ReviewProjectPageView
+        key={projectId}
+        projectId={projectId}
+        project={projectDetailQuery.data ?? null}
+        mutations={mutationControls}
+        selectedTextUnitQueryId={selectedTextUnitId}
+        onSelectedTextUnitIdChange={handleSelectedTextUnitIdChange}
+        openRequestDetailsQuery={openRequestDetails}
+        requestDetailsSource={requestDetailsSource}
+        onRequestDetailsQueryHandled={handleRequestDetailsQueryHandled}
+        onRequestDetailsFlowFinished={handleRequestDetailsFlowFinished}
+      />
+    </>
   );
 }
 

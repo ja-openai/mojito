@@ -5,7 +5,7 @@ import './review-project-page.css';
 import { useQuery } from '@tanstack/react-query';
 import type { VirtualItem } from '@tanstack/react-virtual';
 import type React from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import {
@@ -140,6 +140,13 @@ import {
   REVIEW_PROJECT_SHORTCUT_HELP_KEY,
   saveReviewProjectShortcutHelpPreference,
 } from './review-project-preferences';
+import {
+  type ReviewProjectDecisionSnapshot as DecisionSnapshot,
+  type ReviewProjectDraftStatus as StatusChoice,
+  sameReviewProjectSource,
+  useReviewProjectDraft,
+} from './useReviewProjectDraft';
+import { useReviewProjectFormDraft } from './useReviewProjectFormDraft';
 
 const Chevron = ({ direction }: { direction: 'left' | 'right' | 'up' | 'down' }) => (
   <svg
@@ -184,8 +191,6 @@ const getTextUnitWordCount = (textUnit: ApiReviewProjectTextUnit) => {
 const sumTextUnitWords = (textUnits: ApiReviewProjectTextUnit[]) =>
   textUnits.reduce((sum, textUnit) => sum + getTextUnitWordCount(textUnit), 0);
 
-type StatusChoice = 'ACCEPTED' | 'NEEDS_REVIEW' | 'NEEDS_TRANSLATION' | 'REJECTED';
-
 const STATUS_CHOICES: Array<{ value: StatusChoice; label: string }> = [
   { value: 'ACCEPTED', label: 'Accepted' },
   { value: 'NEEDS_REVIEW', label: 'To review' },
@@ -204,8 +209,19 @@ type EditKind = 'translation' | 'status' | 'comment';
 type TerminologyConfidenceChoice = 'unspecified' | '1' | '2' | '3' | '4' | '5';
 type TerminologyResolutionStatusChoice = ApiTerminologyResolutionStatus;
 type ContextTab = 'glossary' | 'icu' | 'history' | 'context';
+type DetailNavigationGuard = {
+  isDirty: () => boolean;
+  isComposing: () => boolean;
+  discard: () => void;
+};
+
 type DetailEditorField = 'translation' | 'comment' | 'decisionNotes';
 type DetailEditorKeyEvent = TranslationTextEditorKeyDownEvent | React.KeyboardEvent<HTMLElement>;
+
+function isComposingKeyEvent(event: DetailEditorKeyEvent) {
+  const nativeEvent = 'nativeEvent' in event ? event.nativeEvent : event;
+  return nativeEvent.isComposing || nativeEvent.keyCode === 229;
+}
 
 const SAVING_INDICATOR_DELAY_MS = 200;
 const DEFAULT_AI_REVIEW_PROMPT = 'Review the translation and suggest improvements.';
@@ -529,37 +545,6 @@ function getEditKinds(textUnit: ApiReviewProjectTextUnit): EditKind[] {
   return kinds;
 }
 
-type DecisionSnapshot = {
-  expectedCurrentVariantId: number | null;
-  target: string;
-  comment: string | null;
-  decisionNotes: string | null;
-  statusChoice: StatusChoice;
-  decisionState: DecisionStateChoice;
-  suggestionSourceLabel: string | null;
-};
-
-type TranslationDecisionDraft = {
-  textUnitId: number;
-  target: string;
-  statusChoice: StatusChoice;
-  comment: string;
-  decisionNotes: string;
-};
-
-function buildTranslationDecisionDraft(
-  textUnitId: number,
-  snapshot: DecisionSnapshot,
-): TranslationDecisionDraft {
-  return {
-    textUnitId,
-    target: snapshot.target,
-    statusChoice: snapshot.statusChoice,
-    comment: snapshot.comment ?? '',
-    decisionNotes: snapshot.decisionNotes ?? '',
-  };
-}
-
 type TerminologyFeedbackSnapshot = {
   recommendation: ApiTerminologyFeedbackRecommendation | null;
   confidence: TerminologyConfidenceChoice;
@@ -584,6 +569,23 @@ function buildTerminologyFeedbackSnapshot(
     recommendation: currentUserFeedback?.recommendation ?? null,
     confidence,
     notes: currentUserFeedback?.notes ?? '',
+  };
+}
+
+function buildTerminologyResolutionSnapshot(
+  textUnit: ApiReviewProjectTextUnit,
+  projectType: ApiReviewProjectType | null | undefined,
+  fallbackStatus?: string | null,
+) {
+  const term = textUnit.terminologyTerm;
+  const decision = textUnit.reviewProjectTextUnitDecision;
+  return {
+    status: normalizeTerminologyResolutionStatus(term?.status ?? fallbackStatus),
+    notes: decision?.notes ?? '',
+    promoteToGlossary:
+      projectType === 'TERM_CANDIDATE' && decision?.decisionState === 'DECIDED'
+        ? term?.tmTextUnitId != null
+        : true,
   };
 }
 
@@ -831,7 +833,11 @@ function buildSnapshot(textUnit: ApiReviewProjectTextUnit): DecisionSnapshot {
   );
 
   return {
+    tmTextUnitId: textUnit.tmTextUnit?.id ?? null,
+    source: textUnit.tmTextUnit?.content ?? null,
+    messageFormat: textUnit.tmTextUnit?.messageFormat,
     expectedCurrentVariantId: current?.id ?? null,
+    reviewStateRevision: textUnit.reviewStateRevision ?? null,
     target: suggestion?.target ?? baseVariant?.content ?? '',
     comment: baseVariant?.comment ?? null,
     decisionNotes: textUnit.reviewProjectTextUnitDecision?.notes ?? null,
@@ -852,16 +858,6 @@ function getSuggestionSourceLabel(source?: string | null): string | null {
     return 'From AI review';
   }
   return 'Staged suggestion';
-}
-
-function buildSnapshotKey(textUnit: ApiReviewProjectTextUnit, snapshot: DecisionSnapshot): string {
-  const baselineId = textUnit.baselineTmTextUnitVariant?.id ?? 'null';
-  const currentId = snapshot.expectedCurrentVariantId ?? 'null';
-  const decisionVariantId =
-    textUnit.reviewProjectTextUnitDecision?.decisionTmTextUnitVariant?.id ?? 'null';
-  const decisionNotes = textUnit.reviewProjectTextUnitDecision?.notes ?? '';
-  const decisionState = snapshot.decisionState;
-  return `${textUnit.id}:${baselineId}:${currentId}:${decisionVariantId}:${decisionNotes}:${decisionState}`;
 }
 
 type Props = {
@@ -927,6 +923,7 @@ export function ReviewProjectPageView({
   const [sortOrderFilter, setSortOrderFilter] = useState<SortOrderFilter>('asc');
   const [selectedTextUnitId, setSelectedTextUnitId] = useState<number | null>(null);
   const [detailIsDirty, setDetailIsDirty] = useState(false);
+  const detailGuardRef = useRef<DetailNavigationGuard | null>(null);
   const [focusTranslationKey, setFocusTranslationKey] = useState(0);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [shortcutHelpPreference, setShortcutHelpPreference] = useState(() =>
@@ -939,6 +936,8 @@ export function ReviewProjectPageView({
   } | null>(null);
   const [pendingAdvance, setPendingAdvance] = useState<{
     fromId: number;
+    nextIds: number[];
+    operationId: number;
     focusTranslation: boolean;
   } | null>(null);
   const previousSelectedRef = useRef<number | null>(null);
@@ -1021,8 +1020,8 @@ export function ReviewProjectPageView({
   }, [screenshotImages]);
 
   const selectedTextUnit = useMemo(
-    () => filtered.find((tu) => tu.id === selectedTextUnitId),
-    [filtered, selectedTextUnitId],
+    () => textUnits.find((tu) => tu.id === selectedTextUnitId),
+    [textUnits, selectedTextUnitId],
   );
 
   useEffect(() => {
@@ -1046,13 +1045,40 @@ export function ReviewProjectPageView({
     lastAppliedQueryIdRef.current = selectedTextUnitQueryId;
     pendingQuerySelectionIdRef.current = matchedId;
     if (selectedTextUnitId !== matchedId) {
+      if (detailGuardRef.current?.isComposing()) {
+        pendingQuerySelectionIdRef.current = null;
+        onSelectedTextUnitIdChange(selectedTextUnit?.tmTextUnit?.id ?? selectedTextUnitId, {
+          replace: true,
+        });
+        return;
+      }
+      if (detailGuardRef.current?.isDirty()) {
+        setPendingSelection({ id: matchedId });
+        return;
+      }
       pendingQueryAutoScrollIdRef.current = matchedId;
+      setFocusTranslationKey(0);
     }
     setSelectedTextUnitId((current) => (current === matchedId ? current : matchedId));
-  }, [filtered, selectedTextUnitId, selectedTextUnitQueryId]);
+  }, [
+    filtered,
+    mutations.isSaving,
+    onSelectedTextUnitIdChange,
+    selectedTextUnit,
+    selectedTextUnitId,
+    selectedTextUnitQueryId,
+  ]);
 
   useEffect(() => {
+    if (
+      mutations.isSaving ||
+      pendingAdvance ||
+      detailGuardRef.current?.isDirty() ||
+      detailGuardRef.current?.isComposing()
+    )
+      return;
     if (filtered.length === 0) {
+      setFocusTranslationKey(0);
       setSelectedTextUnitId(null);
       return;
     }
@@ -1071,13 +1097,23 @@ export function ReviewProjectPageView({
       return;
     }
     if (hasSearchTerm) {
+      setFocusTranslationKey(0);
       setSelectedTextUnitId(null);
       return;
     }
     if (selectedTextUnitId == null || !hasSelectedInFiltered) {
+      setFocusTranslationKey(0);
       setSelectedTextUnitId(filtered[0]?.id ?? null);
     }
-  }, [filtered, search, selectedTextUnitId, selectedTextUnitQueryId]);
+  }, [
+    filtered,
+    search,
+    selectedTextUnitId,
+    selectedTextUnitQueryId,
+    mutations.isSaving,
+    pendingAdvance,
+    detailIsDirty,
+  ]);
 
   useEffect(() => {
     if (selectedTextUnitQueryId != null && !selectedTextUnit) {
@@ -1144,23 +1180,30 @@ export function ReviewProjectPageView({
 
   const attemptSelectTextUnit = useCallback(
     (nextId: number | null, nextIndex?: number) => {
-      if (nextId == null || nextId === selectedTextUnitId || mutations.isSaving) {
+      if (
+        nextId == null ||
+        nextId === selectedTextUnitId ||
+        mutations.isSaving ||
+        detailGuardRef.current?.isComposing()
+      ) {
         return;
       }
-      if (detailIsDirty) {
+      if (detailGuardRef.current?.isDirty()) {
         setPendingSelection({ id: nextId, index: nextIndex });
         return;
       }
+      setFocusTranslationKey(0);
       setSelectedTextUnitId(nextId);
       if (nextIndex != null) {
         scrollToIndex(nextIndex, { align: 'center' });
       }
     },
-    [detailIsDirty, mutations.isSaving, scrollToIndex, selectedTextUnitId],
+    [mutations.isSaving, scrollToIndex, selectedTextUnitId],
   );
 
   const handleKeyNav = useCallback(
     (event: KeyboardEvent) => {
+      if (isComposingKeyEvent(event) || detailGuardRef.current?.isComposing()) return;
       if (isEditableKeyboardTarget(event.target)) {
         return;
       }
@@ -1226,51 +1269,84 @@ export function ReviewProjectPageView({
   );
 
   const queueAdvance = useCallback(
-    (focusTranslation: boolean) => {
-      if (selectedTextUnitId == null) {
-        return;
-      }
-      setPendingAdvance({ fromId: selectedTextUnitId, focusTranslation });
+    (operationId: number, focusTranslation: boolean) => {
+      if (selectedTextUnitId == null) return;
+      const index = filtered.findIndex((unit) => unit.id === selectedTextUnitId);
+      setPendingAdvance({
+        fromId: selectedTextUnitId,
+        operationId,
+        nextIds: index < 0 ? [] : filtered.slice(index + 1).map((unit) => unit.id),
+        focusTranslation,
+      });
     },
-    [selectedTextUnitId],
+    [filtered, selectedTextUnitId],
+  );
+  const advanceWithoutSave = useCallback(
+    (focusTranslation: boolean) => {
+      if (
+        mutations.isSaving ||
+        detailGuardRef.current?.isDirty() ||
+        detailGuardRef.current?.isComposing()
+      )
+        return;
+      advanceToNextTextUnit(selectedTextUnitId, focusTranslation);
+    },
+    [advanceToNextTextUnit, mutations.isSaving, selectedTextUnitId],
   );
 
   useEffect(() => {
-    if (!pendingAdvance) {
-      return;
-    }
-    if (mutations.isSaving || mutations.showValidationDialog) {
-      return;
-    }
-    if (selectedTextUnitId !== pendingAdvance.fromId) {
+    if (!pendingAdvance) return;
+    const action = mutations.actionState;
+    if (
+      selectedTextUnitId !== pendingAdvance.fromId ||
+      action.phase === 'idle' ||
+      action.operationId !== pendingAdvance.operationId ||
+      action.phase === 'failed'
+    ) {
       setPendingAdvance(null);
       return;
     }
-    advanceToNextTextUnit(pendingAdvance.fromId, pendingAdvance.focusTranslation);
+    if (action.phase !== 'succeeded') return;
     setPendingAdvance(null);
-  }, [
-    advanceToNextTextUnit,
-    mutations.isSaving,
-    mutations.showValidationDialog,
-    pendingAdvance,
-    selectedTextUnitId,
-  ]);
+    if (
+      action.textUnit.id !== pendingAdvance.fromId ||
+      detailGuardRef.current?.isDirty() ||
+      detailGuardRef.current?.isComposing()
+    )
+      return;
+    const nextId = pendingAdvance.nextIds.find((id) => filtered.some((unit) => unit.id === id));
+    if (nextId == null) return;
+    setSelectedTextUnitId(nextId);
+    scrollToIndex(
+      filtered.findIndex((unit) => unit.id === nextId),
+      { align: 'center' },
+    );
+    if (pendingAdvance.focusTranslation) setFocusTranslationKey((value) => value + 1);
+  }, [filtered, mutations.actionState, pendingAdvance, scrollToIndex, selectedTextUnitId]);
 
   const confirmDiscardChanges = useCallback(() => {
-    if (!pendingSelection) {
+    if (!pendingSelection || mutations.isSaving || detailGuardRef.current?.isComposing()) {
       return;
     }
+    detailGuardRef.current?.discard();
     setDetailIsDirty(false);
+    setFocusTranslationKey(0);
     setSelectedTextUnitId(pendingSelection.id);
     if (pendingSelection.index != null) {
       scrollToIndex(pendingSelection.index, { align: 'center' });
     }
     setPendingSelection(null);
-  }, [pendingSelection, scrollToIndex]);
+  }, [mutations.isSaving, pendingSelection, scrollToIndex]);
 
   const cancelDiscardChanges = useCallback(() => {
+    if (pendingQuerySelectionIdRef.current != null) {
+      pendingQuerySelectionIdRef.current = null;
+      onSelectedTextUnitIdChange(selectedTextUnit?.tmTextUnit?.id ?? selectedTextUnitId, {
+        replace: true,
+      });
+    }
     setPendingSelection(null);
-  }, []);
+  }, [onSelectedTextUnitIdChange, selectedTextUnit, selectedTextUnitId]);
 
   const setDecisionStateFilter = useCallback(
     (next: DecisionStateFilter) => {
@@ -1564,6 +1640,7 @@ export function ReviewProjectPageView({
         <section className="review-project-page__detail-pane" ref={detailPaneRef}>
           {selectedTextUnit ? (
             <DetailPane
+              key={`${user.username}:${projectId}:${selectedTextUnit.id}`}
               projectId={projectId}
               projectType={project?.type ?? 'NORMAL'}
               terminologyPhase={project?.terminologyPhase ?? null}
@@ -1580,6 +1657,8 @@ export function ReviewProjectPageView({
               detailPaneRef={detailPaneRef}
               onDirtyChange={setDetailIsDirty}
               onQueueAdvance={queueAdvance}
+              onAdvanceWithoutSave={advanceWithoutSave}
+              navigationGuardRef={detailGuardRef}
               focusTranslationKey={focusTranslationKey}
             />
           ) : (
@@ -1799,6 +1878,8 @@ function DetailPane({
   detailPaneRef,
   onDirtyChange,
   onQueueAdvance,
+  onAdvanceWithoutSave,
+  navigationGuardRef,
   focusTranslationKey,
 }: {
   projectId: number;
@@ -1813,7 +1894,9 @@ function DetailPane({
   onOpenGallery: (images: string[]) => void;
   detailPaneRef: React.RefObject<HTMLDivElement | null>;
   onDirtyChange: (dirty: boolean) => void;
-  onQueueAdvance: (focusTranslation: boolean) => void;
+  onQueueAdvance: (operationId: number, focusTranslation: boolean) => void;
+  onAdvanceWithoutSave: (focusTranslation: boolean) => void;
+  navigationGuardRef: React.MutableRefObject<DetailNavigationGuard | null>;
   focusTranslationKey: number;
 }) {
   const user = useUser();
@@ -1835,7 +1918,6 @@ function DetailPane({
   const [activeContextTab, setActiveContextTab] = useState<ContextTab>('glossary');
   const [isAiCollapsed, setIsAiCollapsed] = useState(false);
   const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
-  const [aiMessages, setAiMessages] = useState<AiChatReviewMessage[]>([]);
   const [aiInput, setAiInput] = useState('');
   const [isAiResponding, setIsAiResponding] = useState(false);
   const heroRef = useRef<HTMLDivElement | null>(null);
@@ -1848,7 +1930,6 @@ function DetailPane({
   const savingIndicatorTimeoutRef = useRef<number | null>(null);
   const aiRequestAttemptRef = useRef(0);
   const aiRequestAbortControllerRef = useRef<AbortController | null>(null);
-  const workbenchTextUnitId = textUnit.tmTextUnit?.id ?? null;
   const repositoryId = textUnit.tmTextUnit?.asset?.repository?.id ?? null;
   const repositoryName = textUnit.tmTextUnit?.asset?.repository?.name ?? null;
   const assetPath =
@@ -1856,16 +1937,19 @@ function DetailPane({
       ? String(textUnit.tmTextUnit.asset.assetPath)
       : null;
   const textUnitName = textUnit.tmTextUnit?.name ?? `Text unit ${textUnit.id}`;
-  const source = textUnit.tmTextUnit?.content ?? null;
+  const snapshot = useMemo(() => buildSnapshot(textUnit), [textUnit]);
+  const draft = useReviewProjectDraft(user.username, projectId, textUnit.id, snapshot);
+  const sourceChanged = draft.sourceChanged;
+  const { base: draftBase, values: translationDraft } = draft.session;
+  const workbenchTextUnitId = draftBase.tmTextUnitId;
+  const source = draftBase.source;
   const sourceIsMf2 = isMf2Message({
-    messageFormat: textUnit.tmTextUnit?.messageFormat,
+    messageFormat: draftBase.messageFormat,
     source,
   });
   const sourceComment = textUnit.tmTextUnit?.comment ?? null;
   const baselineVariant = textUnit.baselineTmTextUnitVariant;
   const baselineStatusKey = getStatusKey(baselineVariant);
-  const snapshot = useMemo(() => buildSnapshot(textUnit), [textUnit]);
-  const snapshotKey = useMemo(() => buildSnapshotKey(textUnit, snapshot), [textUnit, snapshot]);
   const terminologySnapshot = useMemo(
     () => buildTerminologyFeedbackSnapshot(textUnit, user.username),
     [textUnit, user.username],
@@ -1873,14 +1957,39 @@ function DetailPane({
   const aiContextKey = useMemo(() => {
     const variantId =
       textUnit.currentTmTextUnitVariant?.id ?? textUnit.baselineTmTextUnitVariant?.id ?? 'none';
-    return `${textUnit.id}:${localeTag}:${variantId}`;
+    return `${textUnit.id}:${localeTag}:${variantId}:${textUnit.reviewStateRevision ?? 'none'}`;
   }, [
     localeTag,
     textUnit.baselineTmTextUnitVariant?.id,
     textUnit.currentTmTextUnitVariant?.id,
     textUnit.id,
+    textUnit.reviewStateRevision,
   ]);
   const aiPrecomputedVariantId = getEffectiveVariant(textUnit)?.id ?? null;
+  const [storedAiConversation, setStoredAiConversation] = useState<{
+    contextKey: string;
+    messages: AiChatReviewMessage[];
+  }>(() => ({ contextKey: aiContextKey, messages: [] }));
+  // A row selection can commit before the effect's conversation reset renders. Never expose a
+  // previous row's suggestions with the newly selected row's target-change handler.
+  const aiMessages = useMemo(
+    () => (storedAiConversation.contextKey === aiContextKey ? storedAiConversation.messages : []),
+    [aiContextKey, storedAiConversation],
+  );
+  const setAiMessages = useCallback(
+    (nextMessages: React.SetStateAction<AiChatReviewMessage[]>) => {
+      setStoredAiConversation((storedConversation) => ({
+        contextKey: aiContextKey,
+        messages:
+          typeof nextMessages === 'function'
+            ? nextMessages(
+                storedConversation.contextKey === aiContextKey ? storedConversation.messages : [],
+              )
+            : nextMessages,
+      }));
+    },
+    [aiContextKey],
+  );
 
   useEffect(() => {
     return () => {
@@ -1890,73 +1999,101 @@ function DetailPane({
     };
   }, []);
 
-  const [storedTranslationDraft, setStoredTranslationDraft] = useState(() =>
-    buildTranslationDecisionDraft(textUnit.id, snapshot),
-  );
-  const translationDraft =
-    storedTranslationDraft.textUnitId === textUnit.id
-      ? storedTranslationDraft
-      : buildTranslationDecisionDraft(textUnit.id, snapshot);
   const {
     target: draftTarget,
     statusChoice: draftStatusChoice,
     comment: draftComment,
     decisionNotes: draftDecisionNotes,
   } = translationDraft;
-  const updateTranslationDraft = useCallback(
-    (update: (draft: TranslationDecisionDraft) => TranslationDecisionDraft) => {
-      setStoredTranslationDraft((storedDraft) =>
-        update(
-          storedDraft.textUnitId === textUnit.id
-            ? storedDraft
-            : buildTranslationDecisionDraft(textUnit.id, snapshot),
-        ),
-      );
-    },
-    [snapshot, textUnit.id],
-  );
+  const {
+    read: readDraft,
+    updateValues: updateTranslationDraft,
+    startOperation,
+    confirmOperationDiscard,
+    finishOperation,
+    cancelOperation,
+    reset: resetDraft,
+  } = draft;
   const setDraftTarget = useCallback(
-    (nextTarget: React.SetStateAction<string>) => {
-      updateTranslationDraft((draft) => ({
-        ...draft,
-        target: typeof nextTarget === 'function' ? nextTarget(draft.target) : nextTarget,
+    (next: React.SetStateAction<string>) => {
+      updateTranslationDraft((values) => ({
+        ...values,
+        target: typeof next === 'function' ? next(values.target) : next,
       }));
     },
     [updateTranslationDraft],
   );
   const setDraftStatusChoice = useCallback(
-    (nextStatusChoice: React.SetStateAction<StatusChoice>) => {
-      updateTranslationDraft((draft) => ({
-        ...draft,
-        statusChoice:
-          typeof nextStatusChoice === 'function'
-            ? nextStatusChoice(draft.statusChoice)
-            : nextStatusChoice,
+    (next: React.SetStateAction<StatusChoice>) => {
+      updateTranslationDraft((values) => ({
+        ...values,
+        statusChoice: typeof next === 'function' ? next(values.statusChoice) : next,
       }));
     },
     [updateTranslationDraft],
   );
   const setDraftComment = useCallback(
-    (nextComment: React.SetStateAction<string>) => {
-      updateTranslationDraft((draft) => ({
-        ...draft,
-        comment: typeof nextComment === 'function' ? nextComment(draft.comment) : nextComment,
+    (next: React.SetStateAction<string>) => {
+      updateTranslationDraft((values) => ({
+        ...values,
+        comment: typeof next === 'function' ? next(values.comment) : next,
       }));
     },
     [updateTranslationDraft],
   );
   const setDraftDecisionNotes = useCallback(
-    (nextDecisionNotes: React.SetStateAction<string>) => {
-      updateTranslationDraft((draft) => ({
-        ...draft,
-        decisionNotes:
-          typeof nextDecisionNotes === 'function'
-            ? nextDecisionNotes(draft.decisionNotes)
-            : nextDecisionNotes,
+    (next: React.SetStateAction<string>) => {
+      updateTranslationDraft((values) => ({
+        ...values,
+        decisionNotes: typeof next === 'function' ? next(values.decisionNotes) : next,
       }));
     },
     [updateTranslationDraft],
   );
+  const compositionRef = useRef(false);
+  const compositionEndTimerRef = useRef<number | null>(null);
+  const [isComposing, setIsComposing] = useState(false);
+
+  useEffect(() => {
+    const begin = (event: CompositionEvent) => {
+      if (!(event.target instanceof Node) || !detailPaneRef.current?.contains(event.target)) return;
+      if (compositionEndTimerRef.current != null)
+        window.clearTimeout(compositionEndTimerRef.current);
+      compositionRef.current = true;
+      setIsComposing(true);
+    };
+    const end = () => {
+      // The editors finish publishing the committed composition before shortcuts resume.
+      compositionEndTimerRef.current = window.setTimeout(() => {
+        compositionRef.current = false;
+        compositionEndTimerRef.current = null;
+        setIsComposing(false);
+      }, 0);
+    };
+    window.addEventListener('compositionstart', begin);
+    window.addEventListener('compositionend', end);
+    return () => {
+      window.removeEventListener('compositionstart', begin);
+      window.removeEventListener('compositionend', end);
+      if (compositionEndTimerRef.current != null)
+        window.clearTimeout(compositionEndTimerRef.current);
+      compositionRef.current = false;
+    };
+  }, [detailPaneRef, textUnit.id]);
+
+  useLayoutEffect(() => {
+    const action = mutations.actionState;
+    if (action.phase === 'idle') {
+      cancelOperation();
+    } else if (action.phase === 'succeeded' && action.textUnit.id === textUnit.id) {
+      finishOperation(
+        action.operationId,
+        buildSnapshot(action.textUnit),
+        action.resolution === 'use-current',
+        action.action.kind === 'decision-state',
+      );
+    }
+  }, [cancelOperation, finishOperation, mutations.actionState, textUnit.id]);
   const hasIcuMessage = useMemo(
     () => !sourceIsMf2 && (hasIcuParameters(source) || hasIcuParameters(draftTarget)),
     [draftTarget, source, sourceIsMf2],
@@ -1989,11 +2126,45 @@ function DetailPane({
     },
     [mf2DocumentKey],
   );
-  const [draftTerminologyRecommendation, setDraftTerminologyRecommendation] =
-    useState<ApiTerminologyFeedbackRecommendation | null>(terminologySnapshot.recommendation);
-  const [draftTerminologyConfidence, setDraftTerminologyConfidence] =
-    useState<TerminologyConfidenceChoice>(terminologySnapshot.confidence);
-  const [draftTerminologyNotes, setDraftTerminologyNotes] = useState(terminologySnapshot.notes);
+  const feedbackDraft = useReviewProjectFormDraft(
+    user.username,
+    projectId,
+    textUnit.id,
+    'feedback',
+    terminologySnapshot,
+  );
+  const {
+    read: readFeedbackDraft,
+    updateValues: updateFeedbackDraft,
+    startOperation: startFeedbackOperation,
+    finishOperation: finishFeedbackOperation,
+    cancelOperation: cancelFeedbackOperation,
+    reset: resetFeedbackDraft,
+    isDirty: isFeedbackDirty,
+  } = feedbackDraft;
+  const {
+    recommendation: draftTerminologyRecommendation,
+    confidence: draftTerminologyConfidence,
+    notes: draftTerminologyNotes,
+  } = feedbackDraft.values;
+  const setDraftTerminologyRecommendation = useCallback(
+    (recommendation: ApiTerminologyFeedbackRecommendation | null) => {
+      updateFeedbackDraft((values) => ({ ...values, recommendation }));
+    },
+    [updateFeedbackDraft],
+  );
+  const setDraftTerminologyConfidence = useCallback(
+    (confidence: TerminologyConfidenceChoice) => {
+      updateFeedbackDraft((values) => ({ ...values, confidence }));
+    },
+    [updateFeedbackDraft],
+  );
+  const setDraftTerminologyNotes = useCallback(
+    (notes: string) => {
+      updateFeedbackDraft((values) => ({ ...values, notes }));
+    },
+    [updateFeedbackDraft],
+  );
   const isMutationActive = mutations.activeTextUnitId === textUnit.id;
   const isSavingGlobal = mutations.isSaving;
   const isSaving = isMutationActive && isSavingGlobal;
@@ -2088,22 +2259,8 @@ function DetailPane({
     terminologyTerm?.termType ?? glossaryTerm?.termType,
   );
   const terminologyResolutionSnapshot = useMemo(
-    () => ({
-      status: normalizeTerminologyResolutionStatus(terminologyTerm?.status ?? glossaryTerm?.status),
-      notes: decision?.notes ?? '',
-      promoteToGlossary:
-        projectType === 'TERM_CANDIDATE' && decision?.decisionState === 'DECIDED'
-          ? terminologyTerm?.tmTextUnitId != null
-          : true,
-    }),
-    [
-      decision?.decisionState,
-      decision?.notes,
-      glossaryTerm?.status,
-      projectType,
-      terminologyTerm?.status,
-      terminologyTerm?.tmTextUnitId,
-    ],
+    () => buildTerminologyResolutionSnapshot(textUnit, projectType, glossaryTerm?.status),
+    [textUnit, projectType, glossaryTerm?.status],
   );
   const terminologyDecisionState = decision?.decisionState ?? 'PENDING';
   const hasTermCandidate = isTermCandidateProject && terminologyTerm?.termIndexCandidateId != null;
@@ -2112,14 +2269,116 @@ function DetailPane({
     canManageGlossaryTerms(user) &&
     (hasTermCandidate ||
       (terminologyGlossaryId != null && (terminologyTerm != null || glossaryTerm != null)));
-  const [draftTerminologyResolutionStatus, setDraftTerminologyResolutionStatus] =
-    useState<TerminologyResolutionStatusChoice>(terminologyResolutionSnapshot.status);
-  const [draftTerminologyResolutionNotes, setDraftTerminologyResolutionNotes] = useState(
-    terminologyResolutionSnapshot.notes,
+  const resolutionDraft = useReviewProjectFormDraft(
+    user.username,
+    projectId,
+    textUnit.id,
+    'resolution',
+    terminologyResolutionSnapshot,
   );
-  const [draftPromoteToGlossary, setDraftPromoteToGlossary] = useState(
-    terminologyResolutionSnapshot.promoteToGlossary,
+  const {
+    read: readResolutionDraft,
+    updateValues: updateResolutionDraft,
+    startOperation: startResolutionOperation,
+    finishOperation: finishResolutionOperation,
+    cancelOperation: cancelResolutionOperation,
+    reset: resetResolutionDraft,
+    isDirty: isResolutionDirty,
+  } = resolutionDraft;
+  const {
+    status: draftTerminologyResolutionStatus,
+    notes: draftTerminologyResolutionNotes,
+    promoteToGlossary: draftPromoteToGlossary,
+  } = resolutionDraft.values;
+  const setDraftTerminologyResolutionStatus = useCallback(
+    (status: TerminologyResolutionStatusChoice) => {
+      updateResolutionDraft((values) => ({ ...values, status }));
+    },
+    [updateResolutionDraft],
   );
+  const setDraftTerminologyResolutionNotes = useCallback(
+    (notes: string) => {
+      updateResolutionDraft((values) => ({ ...values, notes }));
+    },
+    [updateResolutionDraft],
+  );
+  const setDraftPromoteToGlossary = useCallback(
+    (promoteToGlossary: boolean) => {
+      updateResolutionDraft((values) => ({ ...values, promoteToGlossary }));
+    },
+    [updateResolutionDraft],
+  );
+  const metadataSnapshot = useMemo(
+    () => buildTerminologyMetadataSnapshot(terminologyTerm),
+    [terminologyTerm],
+  );
+  const metadataDraft = useReviewProjectFormDraft(
+    user.username,
+    projectId,
+    textUnit.id,
+    'metadata',
+    metadataSnapshot,
+  );
+  const {
+    startOperation: startMetadataOperation,
+    finishOperation: finishMetadataOperation,
+    cancelOperation: cancelMetadataOperation,
+    reset: resetMetadataDraft,
+    isDirty: isMetadataDirty,
+  } = metadataDraft;
+  const discardDraft = useCallback(() => {
+    if (mutations.isSaving || compositionRef.current) return;
+    resetDraft();
+    resetFeedbackDraft();
+    resetResolutionDraft();
+    resetMetadataDraft();
+    mutations.onDiscardAction(textUnit.id);
+  }, [
+    mutations,
+    resetDraft,
+    resetFeedbackDraft,
+    resetResolutionDraft,
+    resetMetadataDraft,
+    textUnit.id,
+  ]);
+
+  useLayoutEffect(() => {
+    const action = mutations.actionState;
+    if (action.phase === 'idle') {
+      cancelFeedbackOperation();
+      cancelResolutionOperation();
+      cancelMetadataOperation();
+    } else if (action.phase === 'succeeded' && action.textUnit.id === textUnit.id) {
+      if (action.action.kind === 'terminology-feedback') {
+        finishFeedbackOperation(
+          action.operationId,
+          buildTerminologyFeedbackSnapshot(action.textUnit, user.username),
+        );
+      } else if (action.action.kind === 'terminology-resolution') {
+        finishResolutionOperation(
+          action.operationId,
+          buildTerminologyResolutionSnapshot(action.textUnit, projectType, glossaryTerm?.status),
+        );
+      } else if (action.action.kind === 'terminology-metadata') {
+        finishMetadataOperation(
+          action.operationId,
+          buildTerminologyMetadataSnapshot(action.textUnit.terminologyTerm ?? null),
+        );
+      }
+    }
+  }, [
+    mutations.actionState,
+    textUnit.id,
+    user.username,
+    projectType,
+    glossaryTerm?.status,
+    cancelFeedbackOperation,
+    finishFeedbackOperation,
+    cancelResolutionOperation,
+    finishResolutionOperation,
+    cancelMetadataOperation,
+    finishMetadataOperation,
+  ]);
   const glossaryMatchesQuery = useQuery({
     queryKey: [
       'review-project-glossary-matches',
@@ -2302,26 +2561,10 @@ function DetailPane({
   ]);
 
   useEffect(() => {
-    setStoredTranslationDraft(buildTranslationDecisionDraft(textUnit.id, snapshot));
-  }, [snapshot, snapshotKey, textUnit.id]);
-
-  useEffect(() => {
-    setDraftTerminologyRecommendation(terminologySnapshot.recommendation);
-    setDraftTerminologyConfidence(terminologySnapshot.confidence);
-    setDraftTerminologyNotes(terminologySnapshot.notes);
-  }, [terminologySnapshot, textUnit.id]);
-
-  useEffect(() => {
-    setDraftTerminologyResolutionStatus(terminologyResolutionSnapshot.status);
-    setDraftTerminologyResolutionNotes(terminologyResolutionSnapshot.notes);
-    setDraftPromoteToGlossary(terminologyResolutionSnapshot.promoteToGlossary);
-  }, [terminologyResolutionSnapshot, textUnit.id]);
-
-  useEffect(() => {
     const requestAttempt = (aiRequestAttemptRef.current += 1);
     aiRequestAbortControllerRef.current?.abort();
     aiRequestAbortControllerRef.current = null;
-    if (isTerminologyProject || !localeTag) {
+    if (isTerminologyProject || sourceChanged || !localeTag) {
       setAiMessages([]);
       setAiInput('');
       setIsAiResponding(false);
@@ -2453,46 +2696,44 @@ function DetailPane({
     glossaryMatchesQuery.isLoading,
     isTerminologyProject,
     localeTag,
+    setAiMessages,
     snapshot.target,
     source,
+    sourceChanged,
     sourceComment,
     workbenchTextUnitId,
   ]);
 
   const draftStatusApi = mapChoiceToApi(draftStatusChoice);
-  const snapshotStatusApi = mapChoiceToApi(snapshot.statusChoice);
+  const snapshotStatusApi = mapChoiceToApi(draftBase.statusChoice);
   const draftCommentNormalized = normalizeOptional(draftComment);
   const draftDecisionNotesNormalized = normalizeOptional(draftDecisionNotes);
   const draftTerminologyNotesNormalized = normalizeOptional(draftTerminologyNotes) ?? '';
-  const draftTerminologyResolutionNotesNormalized =
-    normalizeOptional(draftTerminologyResolutionNotes) ?? '';
-  const isTerminologyDirty =
-    draftTerminologyRecommendation !== terminologySnapshot.recommendation ||
-    draftTerminologyConfidence !== terminologySnapshot.confidence ||
-    draftTerminologyNotesNormalized !== terminologySnapshot.notes;
-  const isTerminologyResolutionDirty =
-    draftTerminologyResolutionStatus !== terminologyResolutionSnapshot.status ||
-    draftTerminologyResolutionNotesNormalized !== terminologyResolutionSnapshot.notes ||
-    (canPromoteTermCandidate &&
-      draftPromoteToGlossary !== terminologyResolutionSnapshot.promoteToGlossary);
-  const isTranslationDirty = draftTarget !== snapshot.target;
+  const isTerminologyDirty = feedbackDraft.dirty;
+  const isTerminologyResolutionDirty = resolutionDraft.dirty;
+  const isTranslationDirty = draftTarget !== draftBase.target;
   const isTranslationReviewDirty =
+    sourceChanged ||
     isTranslationDirty ||
     draftStatusApi.status !== snapshotStatusApi.status ||
     draftStatusApi.includedInLocalizedFile !== snapshotStatusApi.includedInLocalizedFile ||
-    draftCommentNormalized !== snapshot.comment ||
-    draftDecisionNotesNormalized !== snapshot.decisionNotes;
+    draftCommentNormalized !== draftBase.comment ||
+    draftDecisionNotesNormalized !== draftBase.decisionNotes;
   const isDirty = isTerminologyProject
-    ? isTerminologyDirty || isTerminologyResolutionDirty
+    ? isTerminologyDirty || isTerminologyResolutionDirty || metadataDraft.dirty
     : isTranslationReviewDirty;
   const isRejected = draftStatusApi.includedInLocalizedFile === false;
   const canReset = !isTerminologyProject && isDirty && !isSavingGlobal;
   const isAcceptedAndDecided =
     snapshot.statusChoice === 'ACCEPTED' && snapshot.decisionState === 'DECIDED';
-  const isTerminologyNotesDirty = draftTerminologyNotesNormalized !== terminologySnapshot.notes;
+  const isTerminologyNotesDirty = draftTerminologyNotesNormalized !== feedbackDraft.base.notes;
   const canAccept = isTerminologyProject
     ? !isSavingGlobal && draftTerminologyRecommendation != null && isTerminologyNotesDirty
-    : !isSavingGlobal && !mf2HasErrors && (!isAcceptedAndDecided || isDirty);
+    : !isSavingGlobal &&
+      !sourceChanged &&
+      !isComposing &&
+      !mf2HasErrors &&
+      (!isAcceptedAndDecided || isDirty);
   const canApplyTerminologyResolution =
     isTerminologyProject &&
     !isSpecialistTerminologyProject &&
@@ -2500,10 +2741,10 @@ function DetailPane({
     !isSavingGlobal &&
     (isTerminologyResolutionDirty || decision?.decisionState !== 'DECIDED');
   const canRunPrimaryShortcut = isPmTerminologyProject ? canApplyTerminologyResolution : canAccept;
-  const isCommentDirty = draftCommentNormalized !== snapshot.comment;
-  const isDecisionNotesDirty = draftDecisionNotesNormalized !== snapshot.decisionNotes;
+  const isCommentDirty = draftCommentNormalized !== draftBase.comment;
+  const isDecisionNotesDirty = draftDecisionNotesNormalized !== draftBase.decisionNotes;
   const isStatusDropdownDisabled =
-    isSavingGlobal || isTranslationDirty || isCommentDirty || isDecisionNotesDirty;
+    isSavingGlobal || sourceChanged || isTranslationDirty || isCommentDirty || isDecisionNotesDirty;
   const translationWarnings = useMemo(
     () => buildTranslationWarnings(source ?? '', draftTarget),
     [draftTarget, source],
@@ -2518,6 +2759,49 @@ function DetailPane({
       setIsWarningModalOpen(false);
     }
   }, [translationWarnings.length]);
+
+  useLayoutEffect(() => {
+    const guard = {
+      isDirty: () => {
+        if (isTerminologyProject)
+          return isFeedbackDirty() || isResolutionDirty() || isMetadataDirty();
+        const current = readDraft();
+        if (!current) return false;
+        return (
+          !sameReviewProjectSource(current.base, current.remote) ||
+          current.values.target !== current.base.target ||
+          current.values.statusChoice !== current.base.statusChoice ||
+          normalizeOptional(current.values.comment) !== current.base.comment ||
+          normalizeOptional(current.values.decisionNotes) !== current.base.decisionNotes
+        );
+      },
+      isComposing: () => compositionRef.current,
+      discard: discardDraft,
+    };
+    navigationGuardRef.current = guard;
+    return () => {
+      if (navigationGuardRef.current === guard) navigationGuardRef.current = null;
+    };
+  }, [
+    discardDraft,
+    isFeedbackDirty,
+    isResolutionDirty,
+    isMetadataDirty,
+    isTerminologyProject,
+    navigationGuardRef,
+    readDraft,
+  ]);
+
+  useEffect(() => {
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (!navigationGuardRef.current?.isDirty() && !compositionRef.current && !mutations.isSaving)
+        return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => window.removeEventListener('beforeunload', beforeUnload);
+  }, [mutations.isSaving, navigationGuardRef]);
 
   useEffect(() => {
     onDirtyChange(isDirty);
@@ -2536,15 +2820,18 @@ function DetailPane({
       commentOverride?: string | null;
       decisionNotesOverride?: string | null;
     } = {}) => {
-      const nextTarget = targetOverride ?? draftTarget;
-      const nextStatusChoice = statusChoiceOverride ?? draftStatusChoice;
+      const currentDraft = readDraft();
+      if (!currentDraft || compositionRef.current || mutations.isSaving) return;
+      if (!sameReviewProjectSource(currentDraft.base, currentDraft.remote)) return;
+      const nextTarget = targetOverride ?? currentDraft.values.target;
+      const nextStatusChoice = statusChoiceOverride ?? currentDraft.values.statusChoice;
       if (sourceIsMf2 && mf2HasErrors && nextStatusChoice === 'ACCEPTED') {
         return;
       }
       const nextStatusApi = mapChoiceToApi(nextStatusChoice);
-      mutations.onRequestSaveDecision({
-        textUnitId: textUnit.id,
-        tmTextUnitId: workbenchTextUnitId,
+      const operationId = mutations.onRequestSaveDecision({
+        textUnitId: currentDraft.textUnitId,
+        tmTextUnitId: currentDraft.base.tmTextUnitId,
         reportUrl:
           workbenchTextUnitId != null
             ? buildTextUnitDetailUrl(workbenchTextUnitId, localeTag)
@@ -2554,23 +2841,29 @@ function DetailPane({
           workbenchTextUnitId ?? textUnit.id,
         ),
         target: nextTarget,
-        comment: commentOverride ?? draftCommentNormalized,
+        comment:
+          commentOverride !== undefined
+            ? commentOverride
+            : normalizeOptional(currentDraft.values.comment),
         status: nextStatusApi.status,
         includedInLocalizedFile: nextStatusApi.includedInLocalizedFile,
         decisionState: 'DECIDED',
-        expectedCurrentTmTextUnitVariantId: snapshot.expectedCurrentVariantId,
-        decisionNotes: decisionNotesOverride ?? draftDecisionNotesNormalized,
+        expectedCurrentTmTextUnitVariantId: currentDraft.base.expectedCurrentVariantId,
+        expectedReviewStateRevision: currentDraft.base.reviewStateRevision,
+        decisionNotes:
+          decisionNotesOverride !== undefined
+            ? decisionNotesOverride
+            : normalizeOptional(currentDraft.values.decisionNotes),
       });
+      if (typeof operationId === 'number') startOperation(operationId);
+      return operationId;
     },
     [
-      draftCommentNormalized,
-      draftDecisionNotesNormalized,
-      draftStatusChoice,
-      draftTarget,
+      readDraft,
+      startOperation,
       mf2HasErrors,
       mutations,
       projectId,
-      snapshot.expectedCurrentVariantId,
       sourceIsMf2,
       textUnit.id,
       localeTag,
@@ -2580,13 +2873,19 @@ function DetailPane({
 
   const requestDecisionState = useCallback(
     (decisionState: DecisionStateChoice) => {
-      mutations.onRequestDecisionState({
-        textUnitId: textUnit.id,
+      const currentDraft = readDraft();
+      if (!currentDraft || compositionRef.current || mutations.isSaving) return;
+      if (!sameReviewProjectSource(currentDraft.base, currentDraft.remote)) return;
+      const operationId = mutations.onRequestDecisionState({
+        textUnitId: currentDraft.textUnitId,
         decisionState,
-        expectedCurrentTmTextUnitVariantId: snapshot.expectedCurrentVariantId,
+        expectedCurrentTmTextUnitVariantId: currentDraft.base.expectedCurrentVariantId,
+        expectedReviewStateRevision: currentDraft.base.reviewStateRevision,
       });
+      if (typeof operationId === 'number') startOperation(operationId);
+      return operationId;
     },
-    [mutations, snapshot.expectedCurrentVariantId, textUnit.id],
+    [mutations, readDraft, startOperation],
   );
 
   const requestSaveTerminologyFeedback = useCallback(
@@ -2594,25 +2893,21 @@ function DetailPane({
       recommendation?: ApiTerminologyFeedbackRecommendation;
       confidence?: TerminologyConfidenceChoice;
     }) => {
-      const recommendation = overrides?.recommendation ?? draftTerminologyRecommendation;
-      const confidence = overrides?.confidence ?? draftTerminologyConfidence;
-      if (recommendation == null) {
-        return;
-      }
-      mutations.onRequestTerminologyFeedback({
+      const current = readFeedbackDraft();
+      if (!current || compositionRef.current || mutations.isSaving) return;
+      const recommendation = overrides?.recommendation ?? current.values.recommendation;
+      const confidence = overrides?.confidence ?? current.values.confidence;
+      if (recommendation == null) return;
+      const operationId = mutations.onRequestTerminologyFeedback({
         textUnitId: textUnit.id,
         recommendation,
         confidence: confidence === 'unspecified' ? null : Number.parseInt(confidence, 10),
-        notes: draftTerminologyNotesNormalized || null,
+        notes: current.values.notes || null,
       });
+      if (typeof operationId === 'number') startFeedbackOperation(operationId);
+      return operationId;
     },
-    [
-      draftTerminologyConfidence,
-      draftTerminologyNotesNormalized,
-      draftTerminologyRecommendation,
-      mutations,
-      textUnit.id,
-    ],
+    [readFeedbackDraft, startFeedbackOperation, mutations, textUnit.id],
   );
 
   const handleTerminologyRecommendationClick = useCallback(
@@ -2625,7 +2920,12 @@ function DetailPane({
       setDraftTerminologyConfidence(confidence);
       requestSaveTerminologyFeedback({ recommendation, confidence });
     },
-    [draftTerminologyConfidence, requestSaveTerminologyFeedback],
+    [
+      draftTerminologyConfidence,
+      requestSaveTerminologyFeedback,
+      setDraftTerminologyRecommendation,
+      setDraftTerminologyConfidence,
+    ],
   );
 
   const handleTerminologyConfidenceClick = useCallback(
@@ -2636,26 +2936,31 @@ function DetailPane({
       }
       requestSaveTerminologyFeedback({ confidence });
     },
-    [draftTerminologyRecommendation, requestSaveTerminologyFeedback],
+    [draftTerminologyRecommendation, requestSaveTerminologyFeedback, setDraftTerminologyConfidence],
   );
 
   const requestSaveTerminologyResolution = useCallback(
     (overrides?: { status?: TerminologyResolutionStatusChoice }) => {
-      const status = overrides?.status ?? draftTerminologyResolutionStatus;
-      mutations.onRequestTerminologyResolution({
+      const current = readResolutionDraft();
+      if (!current || compositionRef.current || mutations.isSaving) return;
+      const status = overrides?.status ?? current.values.status;
+      const operationId = mutations.onRequestTerminologyResolution({
         textUnitId: textUnit.id,
         glossaryId: terminologyGlossaryId,
         status,
-        notes: draftTerminologyResolutionNotesNormalized || null,
+        notes: current.values.notes || null,
         promoteToGlossary:
-          canPromoteTermCandidate && status !== 'REJECTED' ? draftPromoteToGlossary : false,
+          canPromoteTermCandidate && status !== 'REJECTED'
+            ? current.values.promoteToGlossary
+            : false,
       });
+      if (typeof operationId === 'number') startResolutionOperation(operationId);
+      return operationId;
     },
     [
       canPromoteTermCandidate,
-      draftPromoteToGlossary,
-      draftTerminologyResolutionNotesNormalized,
-      draftTerminologyResolutionStatus,
+      readResolutionDraft,
+      startResolutionOperation,
       mutations,
       terminologyGlossaryId,
       textUnit.id,
@@ -2670,7 +2975,12 @@ function DetailPane({
       setDraftTerminologyResolutionStatus(status);
       requestSaveTerminologyResolution({ status });
     },
-    [canResolveTerminology, isSavingGlobal, requestSaveTerminologyResolution],
+    [
+      canResolveTerminology,
+      isSavingGlobal,
+      requestSaveTerminologyResolution,
+      setDraftTerminologyResolutionStatus,
+    ],
   );
 
   const handleTerminologyStatusShortcut = useCallback(
@@ -2713,9 +3023,7 @@ function DetailPane({
     ],
   );
 
-  const handleReset = useCallback(() => {
-    setStoredTranslationDraft(buildTranslationDecisionDraft(textUnit.id, snapshot));
-  }, [snapshot, textUnit.id]);
+  const handleReset = discardDraft;
 
   const focusDetailEditor = useCallback((field: DetailEditorField) => {
     if (field === 'translation') {
@@ -2761,6 +3069,7 @@ function DetailPane({
 
   const handleTextEditorKeyDown = useCallback(
     (event: DetailEditorKeyEvent, field: DetailEditorField) => {
+      if (compositionRef.current || isComposingKeyEvent(event)) return;
       if (event.key === 'Escape') {
         blurDetailEditor(field);
         event.stopPropagation();
@@ -2786,6 +3095,7 @@ function DetailPane({
 
   const handleTranslationEditorKeyDown = useCallback(
     (event: DetailEditorKeyEvent) => {
+      if (compositionRef.current || isComposingKeyEvent(event)) return;
       if (
         event.target instanceof HTMLElement &&
         !event.target.closest('textarea, [role="textbox"]')
@@ -2803,13 +3113,11 @@ function DetailPane({
   const handleAccept = useCallback(() => {
     if (isTerminologyProject) {
       if (isPmTerminologyProject) {
-        requestSaveTerminologyResolution();
-        return;
+        return requestSaveTerminologyResolution();
       }
-      requestSaveTerminologyFeedback();
-      return;
+      return requestSaveTerminologyFeedback();
     }
-    requestSaveDecision({ statusChoiceOverride: 'ACCEPTED' });
+    return requestSaveDecision({ statusChoiceOverride: 'ACCEPTED' });
   }, [
     isPmTerminologyProject,
     isTerminologyProject,
@@ -2856,7 +3164,7 @@ function DetailPane({
   );
 
   const handleSubmitAi = useCallback(() => {
-    if (isAiResponding || !localeTag) {
+    if (sourceChanged || isAiResponding || !localeTag) {
       return;
     }
 
@@ -2949,13 +3257,15 @@ function DetailPane({
     glossaryMatchesQuery.data,
     isAiResponding,
     localeTag,
+    setAiMessages,
     source,
+    sourceChanged,
     sourceComment,
     workbenchTextUnitId,
   ]);
 
   const handleRetryAi = useCallback(() => {
-    if (isAiResponding || !localeTag) {
+    if (sourceChanged || isAiResponding || !localeTag) {
       return;
     }
 
@@ -3038,17 +3348,21 @@ function DetailPane({
     glossaryMatchesQuery.data,
     isAiResponding,
     localeTag,
+    setAiMessages,
     snapshot.target,
     source,
+    sourceChanged,
     sourceComment,
     workbenchTextUnitId,
   ]);
 
   const handleUseAiSuggestion = useCallback(
     (suggestion: AiReviewSuggestion) => {
+      const current = readDraft();
+      if (!current || !sameReviewProjectSource(current.base, current.remote)) return;
       setDraftTarget(suggestion.content);
     },
-    [setDraftTarget],
+    [readDraft, setDraftTarget],
   );
 
   const getFocusedDetailEditor = useCallback(() => {
@@ -3089,6 +3403,7 @@ function DetailPane({
 
   useEffect(() => {
     const handleSaveShortcut = (event: KeyboardEvent) => {
+      if (compositionRef.current || isComposingKeyEvent(event)) return;
       const lowerKey = event.key.toLowerCase();
       const isPlainKey = !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
       const isOutsideEditable = !isEditableTarget(event.target) && !event.repeat;
@@ -3160,20 +3475,16 @@ function DetailPane({
         if (mutations.showValidationDialog || mutations.isSaving) {
           return;
         }
-        if (isTerminologyProject) {
-          if (canRunPrimaryShortcut) {
-            handleAccept();
-          }
-          onQueueAdvance(false);
-          focusedEditor?.blur();
-          return;
+        const operationId = canRunPrimaryShortcut
+          ? handleAccept()
+          : !isTerminologyProject && snapshot.decisionState !== 'DECIDED'
+            ? requestDecisionState('DECIDED')
+            : undefined;
+        if (typeof operationId === 'number') {
+          onQueueAdvance(operationId, !isTerminologyProject);
+        } else if (!canRunPrimaryShortcut && snapshot.decisionState === 'DECIDED') {
+          onAdvanceWithoutSave(!isTerminologyProject);
         }
-        if (canRunPrimaryShortcut) {
-          handleAccept();
-        } else if (snapshot.decisionState !== 'DECIDED') {
-          requestDecisionState('DECIDED');
-        }
-        onQueueAdvance(!isTerminologyProject);
         focusedEditor?.blur();
         return;
       }
@@ -3200,6 +3511,7 @@ function DetailPane({
     mutations.isSaving,
     mutations.showValidationDialog,
     onQueueAdvance,
+    onAdvanceWithoutSave,
     requestDecisionState,
     sourceIsMf2,
     snapshot.decisionState,
@@ -3219,21 +3531,23 @@ function DetailPane({
   );
 
   const handleUseCurrent = useCallback(() => {
-    if (!isMutationActive) {
+    if (!isMutationActive || sourceChanged) {
       return;
     }
-    mutations.onUseConflictCurrent();
-  }, [isMutationActive, mutations]);
+    const operationId = mutations.onUseConflictCurrent();
+    if (typeof operationId === 'number') confirmOperationDiscard(operationId);
+  }, [confirmOperationDiscard, isMutationActive, mutations, sourceChanged]);
 
   const handleOverwrite = useCallback(() => {
-    if (!isMutationActive) {
+    if (!isMutationActive || sourceChanged) {
       return;
     }
     mutations.onOverwriteConflict();
-  }, [isMutationActive, mutations]);
+  }, [isMutationActive, mutations, sourceChanged]);
 
   const conflictVariant = conflictTextUnit ? getEffectiveVariant(conflictTextUnit) : null;
   const conflictStatusKey = getStatusKey(conflictVariant);
+  const conflictSnapshot = conflictTextUnit ? buildSnapshot(conflictTextUnit) : null;
 
   useEffect(() => {
     if (currentScreenshotIdx !== safeScreenshotIdx) {
@@ -3489,11 +3803,29 @@ function DetailPane({
       ) : null}
       <div className="review-project-detail__layout">
         <div className="review-project-detail__main">
+          {!isTerminologyProject && sourceChanged ? (
+            <div className="review-project-detail__error" role="alert">
+              <div>
+                The source text changed while you were editing. Your draft has been kept. Copy
+                anything you need, then Reset to review the updated source before saving.
+              </div>
+              <div>
+                <strong>Updated source: </strong>
+                {snapshot.source ?? '—'}
+              </div>
+            </div>
+          ) : null}
+          {errorMessage ? (
+            <div className="review-project-detail__error" role="alert">
+              <div>Could not save. Your changes have been kept.</div>
+              <div>{errorMessage}</div>
+            </div>
+          ) : null}
           {conflictTextUnit ? (
             <div className="review-project-detail__conflict" role="alert">
               <div className="review-project-detail__conflict-title-row">
                 <div className="review-project-detail__conflict-title">
-                  An external translation was added.
+                  This text unit changed since you started editing.
                 </div>
                 {conflictStatusKey ? (
                   <Pill
@@ -3506,14 +3838,35 @@ function DetailPane({
                 ) : null}
               </div>
               <div className="review-project-detail__conflict-text">
-                {conflictVariant?.content ?? '—'}
+                {conflictSnapshot?.target || '—'}
+              </div>
+              {conflictSnapshot?.suggestionSourceLabel ? (
+                <div>{conflictSnapshot.suggestionSourceLabel}</div>
+              ) : null}
+              {conflictSnapshot &&
+              (conflictSnapshot.comment != null || draftBase.comment != null) ? (
+                <div>
+                  <strong>Current comment: </strong>
+                  {conflictSnapshot.comment || '—'}
+                </div>
+              ) : null}
+              {conflictSnapshot &&
+              (conflictSnapshot.decisionNotes != null || draftBase.decisionNotes != null) ? (
+                <div>
+                  <strong>Current decision notes: </strong>
+                  {conflictSnapshot.decisionNotes || '—'}
+                </div>
+              ) : null}
+              <div>
+                Current decision:{' '}
+                {conflictSnapshot?.decisionState === 'DECIDED' ? 'Decided' : 'Pending'}
               </div>
               <div className="review-project-detail__conflict-actions">
                 <button
                   type="button"
                   className="review-project-detail__actions-button"
                   onClick={handleUseCurrent}
-                  disabled={isSavingGlobal}
+                  disabled={isSavingGlobal || sourceChanged}
                 >
                   Use external
                 </button>
@@ -3521,7 +3874,7 @@ function DetailPane({
                   type="button"
                   className="review-project-detail__actions-button review-project-detail__actions-button--primary"
                   onClick={handleOverwrite}
-                  disabled={isSavingGlobal}
+                  disabled={isSavingGlobal || sourceChanged}
                 >
                   Use mine
                 </button>
@@ -3603,16 +3956,19 @@ function DetailPane({
               {terminologyTerm ? (
                 <TerminologyMetadataPanel
                   term={terminologyTerm}
+                  draft={metadataDraft}
                   glossaryTermHref={glossaryTermHref}
                   isTermCandidateProject={projectType === 'TERM_CANDIDATE'}
                   canEdit={canManageGlossaryTerms(user)}
                   isSaving={isSavingGlobal}
-                  onSave={(request) =>
-                    mutations.onRequestTerminologyMetadata({
+                  onSave={(request) => {
+                    if (compositionRef.current || mutations.isSaving) return;
+                    const operationId = mutations.onRequestTerminologyMetadata({
                       textUnitId: textUnit.id,
                       request,
-                    })
-                  }
+                    });
+                    if (typeof operationId === 'number') startMetadataOperation(operationId);
+                  }}
                 />
               ) : null}
 
@@ -4007,8 +4363,6 @@ function DetailPane({
               </div>
             </>
           )}
-
-          {errorMessage ? <div className="review-project-detail__error">{errorMessage}</div> : null}
         </div>
 
         <div className="review-project-detail__side">
@@ -5864,8 +6218,22 @@ function ReviewProjectHeader({
   );
 }
 
+function buildTerminologyMetadataSnapshot(term: ApiReviewProjectTerminologyTerm | null) {
+  return {
+    definition: term?.definition ?? '',
+    rationale: term?.rationale ?? '',
+    partOfSpeech: term?.partOfSpeech ?? '',
+    termType: term?.termType ?? 'GENERAL',
+    enforcement: term?.enforcement ?? 'SOFT',
+    doNotTranslate: Boolean(term?.doNotTranslate),
+  };
+}
+
+type TerminologyMetadataValues = ReturnType<typeof buildTerminologyMetadataSnapshot>;
+
 function TerminologyMetadataPanel({
   term,
+  draft,
   glossaryTermHref,
   isTermCandidateProject,
   canEdit,
@@ -5873,49 +6241,33 @@ function TerminologyMetadataPanel({
   onSave,
 }: {
   term: ApiReviewProjectTerminologyTerm;
+  draft: ReturnType<typeof useReviewProjectFormDraft<TerminologyMetadataValues>>;
   glossaryTermHref: string | null;
   isTermCandidateProject: boolean;
   canEdit: boolean;
   isSaving: boolean;
   onSave: (request: ApiReviewProjectTerminologyMetadataRequest) => void;
 }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [definition, setDefinition] = useState(term.definition ?? '');
-  const [rationale, setRationale] = useState(term.rationale ?? '');
-  const [partOfSpeech, setPartOfSpeech] = useState(term.partOfSpeech ?? '');
-  const [termType, setTermType] = useState(term.termType ?? 'GENERAL');
-  const [enforcement, setEnforcement] = useState(term.enforcement ?? 'SOFT');
-  const [doNotTranslate, setDoNotTranslate] = useState(Boolean(term.doNotTranslate));
-
-  useEffect(() => {
-    setDefinition(term.definition ?? '');
-    setRationale(term.rationale ?? '');
-    setPartOfSpeech(term.partOfSpeech ?? '');
-    setTermType(term.termType ?? 'GENERAL');
-    setEnforcement(term.enforcement ?? 'SOFT');
-    setDoNotTranslate(Boolean(term.doNotTranslate));
-    setIsEditing(false);
-  }, [
-    term.definition,
-    term.doNotTranslate,
-    term.enforcement,
-    term.metadataId,
-    term.partOfSpeech,
-    term.rationale,
-    term.termIndexCandidateId,
-    term.termType,
-  ]);
-
+  const [editingRequested, setEditingRequested] = useState(false);
+  const isEditing = editingRequested || draft.dirty;
+  const { definition, rationale, partOfSpeech, termType, enforcement, doNotTranslate } =
+    draft.values;
+  const setDefinition = (definition: string) =>
+    draft.updateValues((values) => ({ ...values, definition }));
+  const setRationale = (rationale: string) =>
+    draft.updateValues((values) => ({ ...values, rationale }));
+  const setPartOfSpeech = (partOfSpeech: string) =>
+    draft.updateValues((values) => ({ ...values, partOfSpeech }));
+  const setTermType = (termType: string) =>
+    draft.updateValues((values) => ({ ...values, termType }));
+  const setEnforcement = (enforcement: string) =>
+    draft.updateValues((values) => ({ ...values, enforcement }));
+  const setDoNotTranslate = (doNotTranslate: boolean) =>
+    draft.updateValues((values) => ({ ...values, doNotTranslate }));
   const normalizedDefinition = normalizeOptional(definition) ?? '';
   const normalizedRationale = normalizeOptional(rationale) ?? '';
   const normalizedPartOfSpeech = normalizeOptional(partOfSpeech) ?? '';
-  const isDirty =
-    normalizedDefinition !== (term.definition?.trim() ?? '') ||
-    normalizedRationale !== (term.rationale?.trim() ?? '') ||
-    normalizedPartOfSpeech !== (term.partOfSpeech?.trim() ?? '') ||
-    termType !== (term.termType ?? 'GENERAL') ||
-    enforcement !== (term.enforcement ?? 'SOFT') ||
-    doNotTranslate !== Boolean(term.doNotTranslate);
+  const isDirty = draft.dirty;
   const isCandidateTerm =
     isTermCandidateProject || term.status?.toLocaleUpperCase() === 'CANDIDATE';
 
@@ -5927,7 +6279,10 @@ function TerminologyMetadataPanel({
           <button
             type="button"
             className="review-project-detail__actions-button review-project-detail__terminology-edit-button"
-            onClick={() => setIsEditing((current) => !current)}
+            onClick={() => {
+              if (isEditing) draft.reset();
+              setEditingRequested(!isEditing);
+            }}
             disabled={isSaving}
           >
             {isEditing ? 'Cancel' : 'Edit details'}

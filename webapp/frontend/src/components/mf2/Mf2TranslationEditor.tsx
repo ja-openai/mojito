@@ -398,7 +398,7 @@ export const Mf2TranslationEditor = forwardRef<
     if (lastSnapshotSignatureRef.current === snapshotSignature) return;
     lastSnapshotSignatureRef.current = snapshotSignature;
     onChangeRef.current?.({ diagnostics, locale, mode, target });
-  }, [diagnostics, locale, mode, snapshotSignature, target]);
+  }, [diagnostics, documentKey, locale, mode, snapshotSignature, target]);
 
   useEffect(() => {
     if (targetModel) lastValidTargetModelRef.current = { model: targetModel, source };

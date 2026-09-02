@@ -28,6 +28,7 @@ export type ReviewProjectFindReplaceRow = {
   existingDecisionNotes: string | null;
   includedInLocalizedFile: boolean;
   expectedCurrentTmTextUnitVariantId: number | null;
+  expectedReviewStateRevision: string | null;
   assetPath: string | null;
   hasStagedSuggestion: boolean;
 };
@@ -93,6 +94,7 @@ export function buildReviewProjectFindReplaceRow(
     existingDecisionNotes,
     includedInLocalizedFile: variant?.includedInLocalizedFile ?? true,
     expectedCurrentTmTextUnitVariantId: currentVariant?.id ?? null,
+    expectedReviewStateRevision: textUnit.reviewStateRevision ?? null,
     assetPath:
       textUnit.tmTextUnit?.asset?.assetPath != null
         ? String(textUnit.tmTextUnit.asset.assetPath)

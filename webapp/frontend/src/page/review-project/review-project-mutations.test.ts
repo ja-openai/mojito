@@ -13,12 +13,15 @@ import {
 import { UserContext } from '../../hooks/useUser';
 import {
   type PendingAction,
+  type SaveDecisionRequest,
   shouldInvalidateGlossaryQueriesForAction,
   shouldPreflightIntegrityCheckForAction,
   useReviewProjectMutations,
 } from './review-project-mutations';
 
 const saveReviewProjectTextUnitDecisionMock = vi.hoisted(() => vi.fn());
+const setReviewProjectTextUnitDecisionStateMock = vi.hoisted(() => vi.fn());
+const updateReviewProjectStatusMock = vi.hoisted(() => vi.fn());
 const updateReviewProjectTextUnitTerminologyMetadataMock = vi.hoisted(() => vi.fn());
 const checkTextUnitIntegrityWithRetryMock = vi.hoisted(() => vi.fn());
 
@@ -26,11 +29,11 @@ vi.mock('../../api/review-projects', () => ({
   saveReviewProjectTextUnitDecision: saveReviewProjectTextUnitDecisionMock,
   saveReviewProjectTextUnitTerminologyFeedback: vi.fn(),
   saveReviewProjectTextUnitTerminologyResolution: vi.fn(),
-  setReviewProjectTextUnitDecisionState: vi.fn(),
+  setReviewProjectTextUnitDecisionState: setReviewProjectTextUnitDecisionStateMock,
   updateReviewProjectAssignment: vi.fn(),
   updateReviewProjectDueDate: vi.fn(),
   updateReviewProjectRequest: vi.fn(),
-  updateReviewProjectStatus: vi.fn(),
+  updateReviewProjectStatus: updateReviewProjectStatusMock,
   updateReviewProjectTextUnitTerminologyMetadata:
     updateReviewProjectTextUnitTerminologyMetadataMock,
 }));
@@ -56,6 +59,7 @@ const user: ApiUserProfile = {
 
 const textUnit: ApiReviewProjectTextUnit = {
   id: 101,
+  reviewStateRevision: 'draft-row-revision',
   tmTextUnit: {
     id: 3,
     name: 'checkout.pay',
@@ -100,6 +104,8 @@ const project: ApiReviewProjectDetail = {
 
 beforeEach(() => {
   saveReviewProjectTextUnitDecisionMock.mockReset();
+  setReviewProjectTextUnitDecisionStateMock.mockReset();
+  updateReviewProjectStatusMock.mockReset();
   updateReviewProjectTextUnitTerminologyMetadataMock.mockReset();
   checkTextUnitIntegrityWithRetryMock.mockReset();
 });
@@ -241,6 +247,10 @@ describe('useReviewProjectMutations', () => {
         comment: 'Accepted',
       },
     };
+    updatedTextUnit.reviewProjectTextUnitDecision = {
+      decisionState: 'DECIDED',
+      decisionTmTextUnitVariant: updatedTextUnit.currentTmTextUnitVariant,
+    };
     let resolveSave!: (value: ApiReviewProjectTextUnit) => void;
     saveReviewProjectTextUnitDecisionMock.mockReturnValue(
       new Promise<ApiReviewProjectTextUnit>((resolve) => {
@@ -340,69 +350,87 @@ describe('useReviewProjectMutations', () => {
     });
   });
 
-  it('reconciles a conflict when the same user already saved the requested decision', async () => {
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-      },
-    });
-    queryClient.setQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id], project);
-    const alreadySavedTextUnit: ApiReviewProjectTextUnit = {
-      ...textUnit,
-      currentTmTextUnitVariant: {
-        id: 32,
-        content: 'Pagar agora',
-        status: 'APPROVED',
-        includedInLocalizedFile: true,
-        comment: 'Accepted',
-      },
-      reviewProjectTextUnitDecision: {
-        decisionState: 'DECIDED',
-        notes: 'Looks good',
-        lastModifiedByUsername: user.username,
-        decisionTmTextUnitVariant: {
+  it.each([false, true])(
+    'reconciles an already-saved decision only without newer staging (staged=%s)',
+    async (hasSuggestion) => {
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+        },
+      });
+      queryClient.setQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id], project);
+      const alreadySavedTextUnit: ApiReviewProjectTextUnit = {
+        ...textUnit,
+        currentTmTextUnitVariant: {
           id: 32,
           content: 'Pagar agora',
           status: 'APPROVED',
           includedInLocalizedFile: true,
           comment: 'Accepted',
         },
-      },
-    };
-    const error = new Error('Conflict') as Error & {
-      status?: number;
-      data?: ApiReviewProjectTextUnit;
-    };
-    error.status = 409;
-    error.data = alreadySavedTextUnit;
-    saveReviewProjectTextUnitDecisionMock.mockRejectedValue(error);
-    const { result } = renderMutationsHook(queryClient);
+        reviewProjectTextUnitDecision: {
+          decisionState: 'DECIDED',
+          notes: 'Looks good',
+          lastModifiedByUsername: user.username,
+          decisionTmTextUnitVariant: {
+            id: 32,
+            content: 'Pagar agora',
+            status: 'APPROVED',
+            includedInLocalizedFile: true,
+            comment: 'Accepted',
+          },
+        },
+      };
+      if (hasSuggestion)
+        alreadySavedTextUnit.reviewProjectTextUnitSuggestion = {
+          id: 700,
+          target: 'Newer staged work',
+        };
+      const error = new Error('Conflict') as Error & {
+        status?: number;
+        data?: ApiReviewProjectTextUnit;
+      };
+      error.status = 409;
+      error.data = alreadySavedTextUnit;
+      saveReviewProjectTextUnitDecisionMock.mockRejectedValue(error);
+      const { result } = renderMutationsHook(queryClient);
 
-    act(() => {
-      result.current.onRequestSaveDecision({
-        textUnitId: textUnit.id,
-        tmTextUnitId: null,
-        target: 'Pagar agora',
-        comment: 'Accepted',
-        status: 'APPROVED',
-        includedInLocalizedFile: true,
-        decisionState: 'DECIDED',
-        decisionNotes: 'Looks good',
+      act(() => {
+        result.current.onRequestSaveDecision({
+          textUnitId: textUnit.id,
+          tmTextUnitId: null,
+          target: 'Pagar agora',
+          comment: 'Accepted',
+          status: 'APPROVED',
+          includedInLocalizedFile: true,
+          decisionState: 'DECIDED',
+          decisionNotes: 'Looks good',
+        });
       });
-    });
 
-    await waitFor(() => {
-      const cachedProject = queryClient.getQueryData<ApiReviewProjectDetail>([
-        ...REVIEW_PROJECT_DETAIL_QUERY_KEY,
-        project.id,
-      ]);
-      expect(cachedProject?.reviewProjectTextUnits?.[0]).toStrictEqual(alreadySavedTextUnit);
-      expect(result.current.activeTextUnitId).toBeNull();
-    });
+      if (hasSuggestion) {
+        await waitFor(() => expect(result.current.actionState.phase).toBe('conflict'));
+        expect(result.current.conflictTextUnit).toEqual(alreadySavedTextUnit);
+        expect(queryClient.getQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id])).toEqual({
+          ...project,
+          reviewProjectTextUnits: [alreadySavedTextUnit],
+        });
+        return;
+      }
 
-    expect(result.current.conflictTextUnit).toBeNull();
-    expect(result.current.errorMessage).toBeNull();
-  });
+      await waitFor(() => {
+        const cachedProject = queryClient.getQueryData<ApiReviewProjectDetail>([
+          ...REVIEW_PROJECT_DETAIL_QUERY_KEY,
+          project.id,
+        ]);
+        expect(cachedProject?.reviewProjectTextUnits?.[0]).toStrictEqual(alreadySavedTextUnit);
+        expect(result.current.activeTextUnitId).toBeNull();
+      });
+
+      expect(result.current.conflictTextUnit).toBeNull();
+      expect(result.current.errorMessage).toBeNull();
+    },
+  );
 
   it('keeps the conflict visible when another user saved the same translation', async () => {
     const queryClient = new QueryClient({
@@ -914,5 +942,335 @@ describe('useReviewProjectMutations', () => {
     expect(invalidatedKeys).toContainEqual(['review-project-glossary-term']);
     expect(invalidatedKeys).toContainEqual(['glossary-terms']);
     expect(invalidatedKeys).not.toContainEqual([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id]);
+  });
+});
+
+describe('Review Project save operation outcomes', () => {
+  const makeRequest = (): SaveDecisionRequest => ({
+    textUnitId: textUnit.id,
+    tmTextUnitId: 3,
+    target: 'Local translation',
+    comment: null,
+    status: 'APPROVED',
+    includedInLocalizedFile: true,
+    decisionState: 'DECIDED',
+    expectedCurrentTmTextUnitVariantId: null,
+    expectedReviewStateRevision: 'draft-row-revision',
+  });
+  const current = (
+    id: number,
+    state: 'PENDING' | 'DECIDED' = 'DECIDED',
+  ): ApiReviewProjectTextUnit => ({
+    ...textUnit,
+    reviewStateRevision: `row-revision-${id}`,
+    currentTmTextUnitVariant: {
+      ...textUnit.baselineTmTextUnitVariant!,
+      id,
+      content: 'External translation',
+    },
+    reviewProjectTextUnitDecision: {
+      decisionState: state,
+      decisionTmTextUnitVariant: { ...textUnit.baselineTmTextUnitVariant!, id },
+    },
+  });
+  const makeClient = () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id], project);
+    return queryClient;
+  };
+  const conflict = (row: ApiReviewProjectTextUnit) =>
+    Object.assign(new Error('Translation changed'), { status: 409, data: row });
+  const saved = (id: number): ApiReviewProjectTextUnit => {
+    const row = current(id);
+    row.currentTmTextUnitVariant = {
+      ...row.currentTmTextUnitVariant,
+      content: 'Local translation',
+      status: 'APPROVED',
+    };
+    row.reviewProjectTextUnitDecision!.decisionTmTextUnitVariant = row.currentTmTextUnitVariant;
+    return row;
+  };
+
+  it('freezes the submitted request and reports success for that exact operation', async () => {
+    const queryClient = makeClient();
+    let resolve!: (row: ApiReviewProjectTextUnit) => void;
+    saveReviewProjectTextUnitDecisionMock.mockReturnValue(
+      new Promise<ApiReviewProjectTextUnit>((r) => {
+        resolve = r;
+      }),
+    );
+    const { result } = renderMutationsHook(queryClient);
+    const request = makeRequest();
+    let operationId: number | void;
+    act(() => {
+      operationId = result.current.onRequestSaveDecision(request);
+      request.target = 'Changed after submit';
+      request.expectedCurrentTmTextUnitVariantId = 99;
+      request.expectedReviewStateRevision = 'mutated-after-submit';
+    });
+    await waitFor(() => expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledOnce());
+    expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: 'Local translation',
+        expectedCurrentTmTextUnitVariantId: null,
+        expectedReviewStateRevision: 'draft-row-revision',
+      }),
+    );
+    expect(result.current.actionState).toMatchObject({
+      phase: 'pending',
+      operationId: operationId!,
+      action: { request: { target: 'Local translation' } },
+    });
+    await act(async () => {
+      resolve(saved(31));
+      await Promise.resolve();
+    });
+    expect(result.current.actionState).toMatchObject({
+      phase: 'succeeded',
+      operationId: operationId!,
+      resolution: 'saved',
+      textUnit: { id: textUnit.id },
+    });
+  });
+
+  it('does not let dialog dismissal release an active save or start another write', async () => {
+    const queryClient = makeClient();
+    let resolve!: (row: ApiReviewProjectTextUnit) => void;
+    saveReviewProjectTextUnitDecisionMock.mockReturnValue(
+      new Promise<ApiReviewProjectTextUnit>((r) => {
+        resolve = r;
+      }),
+    );
+    const { result } = renderMutationsHook(queryClient);
+    act(() => {
+      result.current.onRequestSaveDecision(makeRequest());
+    });
+    await waitFor(() => expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledOnce());
+    act(() => {
+      result.current.onDismissValidationSave();
+      expect(
+        result.current.onRequestSaveDecision({ ...makeRequest(), textUnitId: 999 }),
+      ).toBeUndefined();
+    });
+    expect(result.current.actionState.phase).toBe('pending');
+    await act(async () => {
+      resolve(saved(31));
+      await Promise.resolve();
+    });
+    expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledOnce();
+    expect(result.current.actionState.phase).toBe('succeeded');
+  });
+
+  it('retains the operation through conflict recovery and conflicts again on a newer version', async () => {
+    const queryClient = makeClient();
+    saveReviewProjectTextUnitDecisionMock
+      .mockRejectedValueOnce(conflict(current(31)))
+      .mockRejectedValueOnce(conflict(current(32)));
+    const { result } = renderMutationsHook(queryClient);
+    let operationId: number | void;
+    act(() => {
+      operationId = result.current.onRequestSaveDecision(makeRequest());
+    });
+    await waitFor(() => expect(result.current.actionState.phase).toBe('conflict'));
+    const firstAttempt =
+      result.current.actionState.phase !== 'idle' ? result.current.actionState.attemptId : -1;
+    act(() => result.current.onOverwriteConflict());
+    await waitFor(() =>
+      expect(result.current.conflictTextUnit?.currentTmTextUnitVariant?.id).toBe(32),
+    );
+    expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        textUnitId: textUnit.id,
+        target: 'Local translation',
+        expectedCurrentTmTextUnitVariantId: 31,
+        expectedReviewStateRevision: 'row-revision-31',
+        overrideChangedCurrent: false,
+      }),
+    );
+    expect(result.current.actionState).toMatchObject({
+      phase: 'conflict',
+      operationId: operationId!,
+    });
+    expect(
+      result.current.actionState.phase !== 'idle' && result.current.actionState.attemptId,
+    ).toBeGreaterThan(firstAttempt);
+    expect(queryClient.getQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id])).toEqual({
+      ...project,
+      reviewProjectTextUnits: [current(32)],
+    });
+  });
+
+  it('Use current waits for a real decision save when PENDING still references a variant', async () => {
+    const queryClient = makeClient();
+    saveReviewProjectTextUnitDecisionMock.mockRejectedValue(conflict(current(31, 'PENDING')));
+    let resolve!: (row: ApiReviewProjectTextUnit) => void;
+    setReviewProjectTextUnitDecisionStateMock.mockReturnValue(
+      new Promise<ApiReviewProjectTextUnit>((r) => {
+        resolve = r;
+      }),
+    );
+    const { result } = renderMutationsHook(queryClient);
+    let operationId: number | void;
+    act(() => {
+      operationId = result.current.onRequestSaveDecision(makeRequest());
+    });
+    await waitFor(() => expect(result.current.actionState.phase).toBe('conflict'));
+    act(() => {
+      result.current.onUseConflictCurrent();
+    });
+    await waitFor(() => expect(setReviewProjectTextUnitDecisionStateMock).toHaveBeenCalledOnce());
+    expect(result.current.actionState).toMatchObject({
+      phase: 'pending',
+      operationId: operationId!,
+    });
+    expect(queryClient.getQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id])).toEqual({
+      ...project,
+      reviewProjectTextUnits: [current(31, 'PENDING')],
+    });
+    await act(async () => {
+      resolve(current(31));
+      await Promise.resolve();
+    });
+    expect(result.current.actionState).toMatchObject({
+      phase: 'succeeded',
+      operationId: operationId!,
+      resolution: 'use-current',
+    });
+  });
+
+  it('discarding a failed operation removes its old conflict request', async () => {
+    const queryClient = makeClient();
+    saveReviewProjectTextUnitDecisionMock.mockRejectedValue(conflict(current(31)));
+    const { result } = renderMutationsHook(queryClient);
+    act(() => {
+      result.current.onRequestSaveDecision(makeRequest());
+    });
+    await waitFor(() => expect(result.current.actionState.phase).toBe('conflict'));
+    const staleOverwrite = result.current.onOverwriteConflict;
+    act(() => result.current.onDiscardAction(textUnit.id));
+    expect(result.current.actionState.phase).toBe('idle');
+    act(() => staleOverwrite());
+    expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledOnce();
+  });
+
+  it('preserves a request to mark Pending when recovering with the external row', async () => {
+    const queryClient = makeClient();
+    setReviewProjectTextUnitDecisionStateMock
+      .mockRejectedValueOnce(conflict(current(31)))
+      .mockResolvedValueOnce(current(31, 'PENDING'));
+    const { result } = renderMutationsHook(queryClient);
+    act(() => {
+      result.current.onRequestDecisionState({
+        textUnitId: textUnit.id,
+        decisionState: 'PENDING',
+        expectedReviewStateRevision: 'old-revision',
+      });
+    });
+    await waitFor(() => expect(result.current.actionState.phase).toBe('conflict'));
+    act(() => {
+      result.current.onUseConflictCurrent();
+    });
+    await waitFor(() => expect(result.current.actionState.phase).toBe('succeeded'));
+    expect(setReviewProjectTextUnitDecisionStateMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        textUnitId: textUnit.id,
+        decisionState: 'PENDING',
+        expectedCurrentTmTextUnitVariantId: 31,
+        expectedReviewStateRevision: 'row-revision-31',
+      }),
+    );
+    expect(result.current.actionState).toMatchObject({
+      resolution: 'use-current',
+      textUnit: { reviewProjectTextUnitDecision: { decisionState: 'PENDING' } },
+    });
+  });
+
+  it('retains the operation through validation confirmation and cancels without success', async () => {
+    const queryClient = makeClient();
+    checkTextUnitIntegrityWithRetryMock.mockResolvedValue({
+      checkResult: false,
+      failureDetail: 'Missing placeholder',
+    });
+    saveReviewProjectTextUnitDecisionMock.mockResolvedValue(saved(31));
+    const { result } = renderMutationsHook(queryClient, { ...user, role: 'ROLE_PM' });
+    let operationId: number | void;
+    act(() => {
+      operationId = result.current.onRequestSaveDecision(makeRequest());
+    });
+    await waitFor(() => expect(result.current.actionState.phase).toBe('validation'));
+    act(() => result.current.onConfirmValidationSave());
+    await waitFor(() => expect(result.current.actionState.phase).toBe('succeeded'));
+    expect(result.current.actionState).toMatchObject({ operationId: operationId! });
+    act(() => {
+      result.current.onRequestSaveDecision(makeRequest());
+    });
+    await waitFor(() => expect(result.current.actionState.phase).toBe('validation'));
+    act(() => result.current.onDismissValidationSave());
+    expect(result.current.actionState).toEqual({ phase: 'idle' });
+    expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledOnce();
+  });
+
+  it('rejects a response for another row without acknowledging or caching it', async () => {
+    const queryClient = makeClient();
+    saveReviewProjectTextUnitDecisionMock.mockResolvedValue({ ...current(31), id: 999 });
+    const { result } = renderMutationsHook(queryClient);
+    act(() => {
+      result.current.onRequestSaveDecision(makeRequest());
+    });
+    await waitFor(() => expect(result.current.actionState.phase).toBe('failed'));
+    expect(result.current.errorMessage).toContain('did not match this row');
+    expect(queryClient.getQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id])).toEqual(
+      project,
+    );
+  });
+
+  it('does not replace an acknowledged row with an older project metadata response', async () => {
+    const queryClient = makeClient();
+    let resolveStatus!: (value: ApiReviewProjectDetail) => void;
+    updateReviewProjectStatusMock.mockReturnValue(
+      new Promise<ApiReviewProjectDetail>((resolve) => {
+        resolveStatus = resolve;
+      }),
+    );
+    saveReviewProjectTextUnitDecisionMock.mockResolvedValue(saved(31));
+    const { result } = renderMutationsHook(queryClient);
+    act(() => result.current.onRequestProjectStatus('CLOSED'));
+    act(() => {
+      result.current.onRequestSaveDecision(makeRequest());
+    });
+    await waitFor(() => expect(result.current.actionState.phase).toBe('succeeded'));
+    await act(async () => {
+      resolveStatus({ ...project, status: 'CLOSED' });
+      await Promise.resolve();
+    });
+    const cached = queryClient.getQueryData<ApiReviewProjectDetail>([
+      ...REVIEW_PROJECT_DETAIL_QUERY_KEY,
+      project.id,
+    ]);
+    expect(cached?.status).toBe('CLOSED');
+    expect(cached?.reviewProjectTextUnits?.[0]).toEqual(saved(31));
+  });
+
+  it('ignores a late response after the editing session unmounts', async () => {
+    const queryClient = makeClient();
+    let resolve!: (row: ApiReviewProjectTextUnit) => void;
+    saveReviewProjectTextUnitDecisionMock.mockReturnValue(
+      new Promise<ApiReviewProjectTextUnit>((r) => {
+        resolve = r;
+      }),
+    );
+    const { result, unmount } = renderMutationsHook(queryClient);
+    act(() => {
+      result.current.onRequestSaveDecision(makeRequest());
+    });
+    await waitFor(() => expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledOnce());
+    unmount();
+    await act(async () => {
+      resolve(current(31));
+      await Promise.resolve();
+    });
+    expect(queryClient.getQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id])).toEqual(
+      project,
+    );
   });
 });

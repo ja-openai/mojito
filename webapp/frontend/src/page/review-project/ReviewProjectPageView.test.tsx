@@ -288,6 +288,7 @@ function buildMutations(
   overrides: Partial<ReviewProjectMutationControls> = {},
 ): ReviewProjectMutationControls {
   return {
+    actionState: { phase: 'idle' },
     isSaving: false,
     isProjectStatusSaving: false,
     isProjectRequestSaving: false,
@@ -307,6 +308,7 @@ function buildMutations(
     onConfirmValidationSave: noop,
     onRetryValidationSave: noop,
     onDismissValidationSave: noop,
+    onDiscardAction: vi.fn(),
     onUseConflictCurrent: noop,
     onOverwriteConflict: noop,
     onRequestSaveDecision: noop,
@@ -607,14 +609,43 @@ describe('ReviewProjectPageView', () => {
 
   it('keeps arrow-key row navigation available after accepting and advancing', async () => {
     const nextTextUnit = buildNextTextUnit();
-
-    renderReviewProjectPageView({
-      project: {
-        ...project,
-        reviewProjectTextUnits: [textUnit, nextTextUnit],
+    const liveProject = { ...project, reviewProjectTextUnits: [textUnit, nextTextUnit] };
+    const acceptedVariant = { ...textUnit.baselineTmTextUnitVariant, id: 31, status: 'APPROVED' };
+    saveReviewProjectTextUnitDecisionMock.mockResolvedValue({
+      ...textUnit,
+      currentTmTextUnitVariant: acceptedVariant,
+      reviewProjectTextUnitDecision: {
+        decisionState: 'DECIDED',
+        decisionTmTextUnitVariant: acceptedVariant,
       },
-      mutations: buildMutations({ onRequestSaveDecision: vi.fn() }),
     });
+    const queryClient = new QueryClient();
+    queryClient.setQueryData([...REVIEW_PROJECT_DETAIL_QUERY_KEY, project.id], liveProject);
+    function LiveReviewProjectPageView() {
+      const mutations = useReviewProjectMutations(project.id);
+      return (
+        <ReviewProjectPageView
+          projectId={project.id}
+          project={liveProject}
+          mutations={mutations}
+          selectedTextUnitQueryId={null}
+          onSelectedTextUnitIdChange={noop}
+          openRequestDetailsQuery={false}
+          requestDetailsSource={null}
+          onRequestDetailsQueryHandled={noop}
+          onRequestDetailsFlowFinished={noop}
+        />
+      );
+    }
+    render(
+      <QueryClientProvider client={queryClient}>
+        <UserContext.Provider value={user}>
+          <MemoryRouter>
+            <LiveReviewProjectPageView />
+          </MemoryRouter>
+        </UserContext.Provider>
+      </QueryClientProvider>,
+    );
 
     fireEvent.keyDown(window, {
       key: 'Enter',
@@ -657,12 +688,14 @@ describe('ReviewProjectPageView', () => {
       ...project,
       reviewProjectTextUnits: [textUnit, nextTextUnit],
     };
+    const acceptedVariant = { ...textUnit.baselineTmTextUnitVariant, id: 31, status: 'APPROVED' };
     const decidedTextUnit: ApiReviewProjectTextUnit = {
       ...textUnit,
+      currentTmTextUnitVariant: acceptedVariant,
       reviewProjectTextUnitDecision: {
         decisionState: 'DECIDED',
         notes: null,
-        decisionTmTextUnitVariant: textUnit.baselineTmTextUnitVariant,
+        decisionTmTextUnitVariant: acceptedVariant,
       },
     };
     saveReviewProjectTextUnitDecisionMock.mockResolvedValue(decidedTextUnit);
@@ -724,7 +757,21 @@ describe('ReviewProjectPageView', () => {
 
   it('delays the visible saving indicator for text-unit saves', async () => {
     const { container } = renderReviewProjectPageView({
+      selectedTextUnitQueryId: textUnit.tmTextUnit!.id,
       mutations: buildMutations({
+        actionState: {
+          phase: 'pending',
+          operationId: 1,
+          attemptId: 1,
+          originalAction: {
+            kind: 'decision-state',
+            request: { textUnitId: textUnit.id, decisionState: 'DECIDED' },
+          },
+          action: {
+            kind: 'decision-state',
+            request: { textUnitId: textUnit.id, decisionState: 'DECIDED' },
+          },
+        },
         isSaving: true,
         activeTextUnitId: textUnit.id,
       }),
@@ -899,6 +946,7 @@ one {{Você tem {$count} arquivo.}}
     expect(onRequestDecisionState).toHaveBeenCalledWith({
       decisionState: 'DECIDED',
       expectedCurrentTmTextUnitVariantId: null,
+      expectedReviewStateRevision: null,
       textUnitId: rejectedMf2TextUnit.id,
     });
     expect(onRequestSaveDecision).not.toHaveBeenCalled();

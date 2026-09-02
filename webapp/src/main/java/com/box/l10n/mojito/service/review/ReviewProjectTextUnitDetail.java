@@ -37,4 +37,6 @@ public record ReviewProjectTextUnitDetail(
     String decisionLastModifiedByUsername,
     Long termIndexCandidateId,
     Long targetGlossaryId,
-    String targetGlossaryName) {}
+    String targetGlossaryName,
+    Long decisionId,
+    Long decisionVersion) {}

@@ -31,6 +31,8 @@ import com.box.l10n.mojito.service.translation.GuardedTranslationCorrectionServi
 import com.box.l10n.mojito.service.translation.GuardedTranslationCorrectionService.ItemResult;
 import com.box.l10n.mojito.service.translation.GuardedTranslationCorrectionService.Outcome;
 import com.box.l10n.mojito.test.TestIdWatcher;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -54,6 +56,7 @@ public class GuardedTranslationCorrectionTransactionServiceDbTest extends Servic
 
   @Rule public TestIdWatcher testIdWatcher = new TestIdWatcher();
 
+  @Autowired private EntityManager entityManager;
   @Autowired private RepositoryService repositoryService;
   @Autowired private RepositoryRepository repositoryRepository;
   @Autowired private AssetService assetService;
@@ -160,6 +163,9 @@ public class GuardedTranslationCorrectionTransactionServiceDbTest extends Servic
                   requiresNewTransaction()
                       .execute(
                           ignored -> {
+                            entityManager.lock(
+                                entityManager.find(TMTextUnit.class, fixture.tmTextUnitId()),
+                                LockModeType.PESSIMISTIC_WRITE);
                             TMTextUnitCurrentVariant locked =
                                 currentVariantRepository.findForUpdateByLocaleIdAndTmTextUnitId(
                                     fixture.localeId(), fixture.tmTextUnitId());

@@ -15,10 +15,15 @@ start duplicate requests before React updates its pending state. If a stale
 variant conflict returns the same user's already-saved decision with matching
 translation, status, comment, and notes, the client reconciles that response into
 the detail cache; changes saved by another user remain visible as conflicts.
-The translation decision draft is owned by the selected review-project text-unit
-ID. During a row change, render and save use the new row's snapshot immediately;
-they do not wait for the draft-reset effect. This keeps the target, status,
-comment, notes, and expected current-variant ID from being combined across rows.
+The editing session owns the row, draft values, and original server revision.
+Background refreshes preserve dirty drafts. Save/check/conflict/failure/success
+are explicit outcomes of one operation; only its matched success may advance.
+The full row revision also protects decision notes and staged suggestions that
+can change without changing the translation variant. AI suggestions and editor
+callbacks remain scoped to their row context. See
+[editing-state design](031-review-project-editing-state.md) and
+[local verification](../investigations/2026-09-02-review-project-confidence-verification.md)
+for the implementation, regression coverage, and deployment boundaries.
 Glossary query invalidation is limited to terminology actions that can change
 glossary metadata or resolution state.
 

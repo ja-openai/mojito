@@ -12,6 +12,15 @@ public class ReviewProjectTextUnitDecisionRequest {
   private Boolean overrideChangedCurrent;
   private String decisionNotes;
   private DecisionState decisionState;
+  private String expectedReviewStateRevision;
+
+  public String getExpectedReviewStateRevision() {
+    return expectedReviewStateRevision;
+  }
+
+  public void setExpectedReviewStateRevision(String expectedReviewStateRevision) {
+    this.expectedReviewStateRevision = expectedReviewStateRevision;
+  }
 
   public String getTarget() {
     return target;

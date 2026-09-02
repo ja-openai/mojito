@@ -1,11 +1,13 @@
 import '../review-project/review-project-page.css';
 import './review-project-find-replace-page.css';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type QueryClient, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import {
   type ApiReviewProjectDetail,
+  type ApiReviewProjectTextUnit,
   deleteReviewProjectTextUnitSuggestion,
   REVIEW_PROJECT_TYPE_LABELS,
   saveReviewProjectTextUnitDecision,
@@ -25,7 +27,11 @@ import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
 import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
 import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
-import { useReviewProjectDetail } from '../../hooks/useReviewProjectDetail';
+import {
+  REVIEW_PROJECT_DETAIL_QUERY_KEY,
+  useReviewProjectDetail,
+} from '../../hooks/useReviewProjectDetail';
+import { useUser } from '../../hooks/useUser';
 import { useVisibleTextEditorEnabled } from '../../hooks/useVisibleTextEditorEnabled';
 import {
   type FindReplaceMatchRange,
@@ -63,6 +69,41 @@ type ReplacementMatch = {
 
 type ApplyMode = 'STAGE_FOR_REVIEW' | 'ACCEPT_AND_DECIDE';
 
+type RetainedBulkDraft = {
+  rows: ReviewProjectFindReplaceRow[];
+  projectStateRows: ReviewProjectFindReplaceRow[];
+  options: ReviewProjectFindReplaceOptions;
+  applyMode: ApplyMode;
+};
+
+const retainedBulkUnloadGuards = new WeakMap<QueryClient, () => void>();
+
+function protectRetainedBulkDrafts(client: QueryClient) {
+  if (retainedBulkUnloadGuards.has(client)) return;
+  const cache = client.getQueryCache();
+  const hasDrafts = () => cache.findAll({ queryKey: ['review-project-bulk-draft'] }).length > 0;
+  const beforeUnload = (event: BeforeUnloadEvent) => {
+    if (!hasDrafts()) return;
+    event.preventDefault();
+    event.returnValue = '';
+  };
+  const dispose = () => {
+    window.removeEventListener('beforeunload', beforeUnload);
+    unsubscribe();
+    retainedBulkUnloadGuards.delete(client);
+  };
+  const unsubscribe = cache.subscribe(() => {
+    if (!hasDrafts()) dispose();
+  });
+  retainedBulkUnloadGuards.set(client, dispose);
+  window.addEventListener('beforeunload', beforeUnload);
+}
+
+function hasLocalEdits(rows: ReviewProjectFindReplaceRow[], saved: ReviewProjectFindReplaceRow[]) {
+  const savedById = new Map(saved.map((row) => [row.id, row]));
+  return rows.some((row) => row.workingTarget !== savedById.get(row.id)?.workingTarget);
+}
+
 const DEFAULT_OPTIONS: ReviewProjectFindReplaceOptions = {
   findText: '',
   replaceText: '',
@@ -76,43 +117,117 @@ const STATIC_VIRTUAL_FALLBACK_LIMIT = 100;
 
 export function ReviewProjectFindReplacePage() {
   const { projectId: projectIdParam } = useParams<{ projectId: string }>();
-  const navigate = useNavigate();
+  const user = useUser();
   const parsedProjectId = projectIdParam ? Number(projectIdParam) : NaN;
   const projectId =
     Number.isFinite(parsedProjectId) && parsedProjectId > 0 ? parsedProjectId : undefined;
   const projectQuery = useReviewProjectDetail(projectId);
   const project = projectQuery.data ?? null;
-  const initialRows = useMemo(
-    () => (project ? buildReviewProjectFindReplaceRows(project) : []),
-    [project],
+  if (projectId == null) return <PageState tone="error">Missing or invalid project id.</PageState>;
+  if (!project && projectQuery.isLoading) return <PageState>Loading project…</PageState>;
+  if (!project && projectQuery.isError) {
+    return (
+      <PageState tone="error">
+        {projectQuery.error instanceof Error
+          ? projectQuery.error.message
+          : 'Failed to load project.'}
+      </PageState>
+    );
+  }
+  if (!project) return <PageState tone="error">Project not found.</PageState>;
+  return (
+    <FindReplaceSession
+      key={`${user.username}:${projectId}`}
+      project={project}
+      username={user.username}
+      refreshError={projectQuery.isError}
+    />
   );
-  const [options, setOptions] = useState<ReviewProjectFindReplaceOptions>(DEFAULT_OPTIONS);
-  const [checkpoints, setCheckpoints] = useState<Checkpoint[]>(() => [buildCheckpoint([])]);
-  const [projectStateRows, setProjectStateRows] = useState<ReviewProjectFindReplaceRow[]>([]);
+}
+
+function FindReplaceSession({
+  project,
+  username,
+  refreshError,
+}: {
+  project: ApiReviewProjectDetail;
+  username: string;
+  refreshError: boolean;
+}) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const projectId = project.id;
+  const draftKey = useMemo(
+    () => ['review-project-bulk-draft', username, projectId] as const,
+    [projectId, username],
+  );
+  const initialRows = useMemo(() => buildReviewProjectFindReplaceRows(project), [project]);
+  const [retained] = useState(() => {
+    const previous = queryClient.getQueryData<RetainedBulkDraft>(draftKey);
+    return previous && hasLocalEdits(previous.rows, previous.projectStateRows)
+      ? previous
+      : undefined;
+  });
+  const [options, setOptions] = useState<ReviewProjectFindReplaceOptions>(
+    retained?.options ?? DEFAULT_OPTIONS,
+  );
+  const [checkpoints, setCheckpoints] = useState<Checkpoint[]>(() => [
+    buildCheckpoint(retained?.rows ?? initialRows),
+  ]);
+  const [projectStateRows, setProjectStateRows] = useState<ReviewProjectFindReplaceRow[]>(
+    retained?.projectStateRows ?? initialRows,
+  );
   const [checkpointIndex, setCheckpointIndex] = useState(0);
   const [selectedMatchIndex, setSelectedMatchIndex] = useState(0);
-  const [applyMode, setApplyMode] = useState<ApplyMode>('STAGE_FOR_REVIEW');
+  const [applyMode, setApplyMode] = useState<ApplyMode>(retained?.applyMode ?? 'STAGE_FOR_REVIEW');
   const [isApplyingToProject, setIsApplyingToProject] = useState(false);
   const [isResettingProjectState, setIsResettingProjectState] = useState(false);
   const [applyToProjectMessage, setApplyToProjectMessage] = useState<string | null>(null);
   const [applyToProjectError, setApplyToProjectError] = useState<string | null>(null);
   const resultsScrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!project) {
-      return;
-    }
-    setOptions(DEFAULT_OPTIONS);
-    setProjectStateRows(initialRows);
-    setCheckpoints([buildCheckpoint(initialRows)]);
-    setCheckpointIndex(0);
-    setSelectedMatchIndex(0);
-    setApplyToProjectMessage(null);
-    setApplyToProjectError(null);
-  }, [initialRows, project]);
+  const mountedRef = useRef(true);
+  const inFlightRef = useRef(false);
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const activeCheckpoint = checkpoints[checkpointIndex] ?? checkpoints[0];
   const rows = activeCheckpoint?.rows ?? EMPTY_ROWS;
+  const rowsRef = useRef(rows);
+  const savedRowsRef = useRef(projectStateRows);
+  rowsRef.current = rows;
+  savedRowsRef.current = projectStateRows;
+  const isBusy = isApplyingToProject || isResettingProjectState;
+  const isLocallyDirty = hasLocalEdits(rows, projectStateRows);
+  useLayoutEffect(() => {
+    if (isLocallyDirty || isBusy) {
+      queryClient.setQueryDefaults(['review-project-bulk-draft'], { gcTime: Infinity });
+      queryClient.setQueryData<RetainedBulkDraft>(draftKey, {
+        rows,
+        projectStateRows,
+        options,
+        applyMode,
+      });
+      protectRetainedBulkDrafts(queryClient);
+    } else {
+      queryClient.removeQueries({ queryKey: draftKey, exact: true });
+    }
+  }, [applyMode, draftKey, isBusy, isLocallyDirty, options, projectStateRows, queryClient, rows]);
+  const observedRowsRef = useRef(initialRows);
+  useEffect(() => {
+    if (initialRows === observedRowsRef.current) return;
+    observedRowsRef.current = initialRows;
+    // A refetch is not permission to replace a local edit or its original revision.
+    if (inFlightRef.current || hasLocalEdits(rowsRef.current, savedRowsRef.current)) return;
+    rowsRef.current = initialRows;
+    savedRowsRef.current = initialRows;
+    setProjectStateRows(initialRows);
+    setCheckpoints([buildCheckpoint(initialRows)]);
+    setCheckpointIndex(0);
+  }, [initialRows]);
   const validationError = validateFindReplaceOptions(options);
   const plan = useMemo(() => buildReviewProjectFindReplacePlan(rows, options), [options, rows]);
   const visibleRows = useMemo(
@@ -152,7 +267,15 @@ export function ReviewProjectFindReplacePage() {
     };
   }, [options, rows, selectedMatch]);
   const changedRows = useMemo(() => countChangedReviewProjectFindReplaceRows(rows), [rows]);
-  const changedRowList = useMemo(() => rows.filter(isReviewProjectFindReplaceRowChanged), [rows]);
+  const changedRowList = useMemo(() => {
+    const savedById = new Map(projectStateRows.map((row) => [row.id, row]));
+    return rows.filter(
+      (row) =>
+        isReviewProjectFindReplaceRowChanged(row) &&
+        (applyMode === 'ACCEPT_AND_DECIDE' ||
+          row.workingTarget !== savedById.get(row.id)?.workingTarget),
+    );
+  }, [applyMode, projectStateRows, rows]);
   const stagedRowList = useMemo(() => rows.filter((row) => row.hasStagedSuggestion), [rows]);
   const integrityIssues = useMemo(() => getReviewProjectFindReplaceIntegrityIssues(rows), [rows]);
   const integrityIssuesByRowId = useMemo(
@@ -163,13 +286,15 @@ export function ReviewProjectFindReplacePage() {
     () => new Map(plan.blockedTargets.map((issue) => [issue.rowId, issue])),
     [plan.blockedTargets],
   );
-  const canReplaceAll = Boolean(options.findText) && !validationError && plan.targets.length > 0;
+  const canReplaceAll =
+    !isBusy && Boolean(options.findText) && !validationError && plan.targets.length > 0;
   const replaceAllDisabledReason = getApplyReplacementDisabledReason({
     hasFindText: Boolean(options.findText),
     validationError,
     plan,
   });
   const canReplaceCurrent =
+    !isBusy &&
     Boolean(options.findText) &&
     !validationError &&
     selectedReplacement != null &&
@@ -192,11 +317,10 @@ export function ReviewProjectFindReplacePage() {
     integrityIssues,
     isApplying: isApplyingToProject || isResettingProjectState,
   });
-  const canUndo = checkpointIndex > 0;
-  const canRedo = checkpointIndex < checkpoints.length - 1;
+  const canUndo = !isBusy && checkpointIndex > 0;
+  const canRedo = !isBusy && checkpointIndex < checkpoints.length - 1;
   const canResetProjectState =
-    !isResettingProjectState &&
-    (checkpointIndex > 0 || changedRows > 0 || stagedRowList.length > 0);
+    !isBusy && (checkpointIndex > 0 || changedRows > 0 || stagedRowList.length > 0);
 
   useEffect(() => {
     setSelectedMatchIndex((current) => {
@@ -247,6 +371,7 @@ export function ReviewProjectFindReplacePage() {
 
   const updateWorkingTarget = useCallback(
     (rowId: number, nextTarget: string) => {
+      if (!mountedRef.current || inFlightRef.current) return;
       setCheckpoints((current) => {
         const currentBranch = current.slice(0, checkpointIndex + 1);
         return currentBranch.map((checkpoint, index) =>
@@ -267,7 +392,7 @@ export function ReviewProjectFindReplacePage() {
   );
 
   const replaceCurrentMatch = () => {
-    if (!canReplaceCurrent || !selectedReplacement) {
+    if (!mountedRef.current || inFlightRef.current || !canReplaceCurrent || !selectedReplacement) {
       return;
     }
 
@@ -285,7 +410,7 @@ export function ReviewProjectFindReplacePage() {
   };
 
   const replaceAllMatches = () => {
-    if (!canReplaceAll) {
+    if (!mountedRef.current || inFlightRef.current || !canReplaceAll) {
       return;
     }
 
@@ -298,19 +423,55 @@ export function ReviewProjectFindReplacePage() {
     setApplyToProjectError(null);
   };
 
+  const acknowledgeRow = async (
+    submitted: ReviewProjectFindReplaceRow,
+    savedTextUnit: ApiReviewProjectTextUnit,
+  ) => {
+    if (!mountedRef.current) return;
+    if (savedTextUnit.id !== submitted.id)
+      throw new Error('The saved response did not match this row. Your changes have been kept.');
+    const queryKey = [...REVIEW_PROJECT_DETAIL_QUERY_KEY, projectId];
+    await queryClient.cancelQueries({ queryKey, exact: true });
+    if (!mountedRef.current) return;
+    const savedRow = buildReviewProjectFindReplaceRow(
+      savedTextUnit,
+      project.locale?.bcp47Tag ?? 'No locale',
+    );
+    const nextRows = rowsRef.current.map((row) => (row.id === submitted.id ? savedRow : row));
+    const nextSavedRows = savedRowsRef.current.map((row) =>
+      row.id === submitted.id ? savedRow : row,
+    );
+    rowsRef.current = nextRows;
+    savedRowsRef.current = nextSavedRows;
+    // Remote acknowledgements are not undoable local edits. Start fresh history while
+    // keeping every remaining unsaved row and its original revision.
+    setCheckpoints([buildCheckpoint(nextRows)]);
+    setCheckpointIndex(0);
+    setProjectStateRows(nextSavedRows);
+    queryClient.setQueryData<ApiReviewProjectDetail>(queryKey, (current) => {
+      const latest = current ?? project;
+      return {
+        ...latest,
+        reviewProjectTextUnits: latest.reviewProjectTextUnits?.map((row) =>
+          row.id === submitted.id ? savedTextUnit : row,
+        ),
+      };
+    });
+  };
+
   const applyToReviewProject = async () => {
-    if (!canApplyToProject || !project) {
+    if (!mountedRef.current || inFlightRef.current || !canApplyToProject) {
       return;
     }
-
+    inFlightRef.current = true;
     setIsApplyingToProject(true);
     setApplyToProjectMessage(null);
     setApplyToProjectError(null);
 
     try {
-      const locale = project.locale?.bcp47Tag ?? 'No locale';
-      const savedRowsById = new Map<number, ReviewProjectFindReplaceRow>();
+      let savedCount = 0;
       for (const row of changedRowList) {
+        if (!mountedRef.current) return;
         const savedTextUnit =
           applyMode === 'STAGE_FOR_REVIEW'
             ? await saveReviewProjectTextUnitSuggestion({
@@ -320,6 +481,7 @@ export function ReviewProjectFindReplacePage() {
                 notes: null,
                 previousTarget: row.originalTarget,
                 expectedCurrentTmTextUnitVariantId: row.expectedCurrentTmTextUnitVariantId,
+                expectedReviewStateRevision: row.expectedReviewStateRevision,
               })
             : await saveReviewProjectTextUnitDecision({
                 textUnitId: row.id,
@@ -329,30 +491,43 @@ export function ReviewProjectFindReplacePage() {
                 includedInLocalizedFile: true,
                 decisionState: 'DECIDED',
                 expectedCurrentTmTextUnitVariantId: row.expectedCurrentTmTextUnitVariantId,
+                expectedReviewStateRevision: row.expectedReviewStateRevision,
                 decisionNotes: row.existingDecisionNotes,
               });
-        savedRowsById.set(row.id, buildReviewProjectFindReplaceRow(savedTextUnit, locale));
+        await acknowledgeRow(row, savedTextUnit);
+        if (!mountedRef.current) return;
+        savedCount += 1;
+        setApplyToProjectMessage(formatApplySuccessMessage(applyMode, savedCount));
       }
-
-      const nextRows = rows.map((row) => savedRowsById.get(row.id) ?? row);
-      const nextCheckpoint = buildCheckpoint(nextRows);
-      const nextCheckpointIndex = checkpointIndex + 1;
-      setCheckpoints((current) => [...current.slice(0, nextCheckpointIndex), nextCheckpoint]);
-      setCheckpointIndex(nextCheckpointIndex);
-      setProjectStateRows(nextRows);
-      setApplyToProjectMessage(formatApplySuccessMessage(applyMode, savedRowsById.size));
+      queryClient.removeQueries({ queryKey: draftKey, exact: true });
       void navigate(`/review-projects/${project.id}`);
     } catch (error) {
+      if (!mountedRef.current) return;
       setApplyToProjectError(
         error instanceof Error ? error.message : 'Failed to apply changes to the review project.',
       );
     } finally {
-      setIsApplyingToProject(false);
+      inFlightRef.current = false;
+      if (mountedRef.current) setIsApplyingToProject(false);
     }
   };
 
+  const restoreLatestProjectRows = () => {
+    const latestProject =
+      queryClient.getQueryData<ApiReviewProjectDetail>([
+        ...REVIEW_PROJECT_DETAIL_QUERY_KEY,
+        projectId,
+      ]) ?? project;
+    const latestRows = buildReviewProjectFindReplaceRows(latestProject);
+    rowsRef.current = latestRows;
+    savedRowsRef.current = latestRows;
+    setProjectStateRows(latestRows);
+    setCheckpoints([buildCheckpoint(latestRows)]);
+    setCheckpointIndex(0);
+  };
+
   const resetToProjectState = async () => {
-    if (!project) {
+    if (!mountedRef.current || inFlightRef.current) {
       return;
     }
     setSelectedMatchIndex(0);
@@ -360,53 +535,38 @@ export function ReviewProjectFindReplacePage() {
     setApplyToProjectError(null);
 
     if (stagedRowList.length === 0) {
-      setCheckpoints([buildCheckpoint(projectStateRows)]);
-      setCheckpointIndex(0);
+      restoreLatestProjectRows();
       return;
     }
 
+    inFlightRef.current = true;
     setIsResettingProjectState(true);
     try {
-      const locale = project.locale?.bcp47Tag ?? 'No locale';
-      const clearedRowsById = new Map<number, ReviewProjectFindReplaceRow>();
+      let clearedCount = 0;
       for (const row of stagedRowList) {
-        const savedTextUnit = await deleteReviewProjectTextUnitSuggestion({ textUnitId: row.id });
-        clearedRowsById.set(row.id, buildReviewProjectFindReplaceRow(savedTextUnit, locale));
+        if (!mountedRef.current) return;
+        const savedTextUnit = await deleteReviewProjectTextUnitSuggestion({
+          textUnitId: row.id,
+          expectedReviewStateRevision: row.expectedReviewStateRevision,
+        });
+        await acknowledgeRow(row, savedTextUnit);
+        if (!mountedRef.current) return;
+        clearedCount += 1;
+        setApplyToProjectMessage(formatClearSuggestionsMessage(clearedCount));
       }
-
-      const nextRows = projectStateRows.map((row) => clearedRowsById.get(row.id) ?? row);
-      setProjectStateRows(nextRows);
-      setCheckpoints([buildCheckpoint(nextRows)]);
-      setCheckpointIndex(0);
-      setApplyToProjectMessage(formatClearSuggestionsMessage(clearedRowsById.size));
+      restoreLatestProjectRows();
     } catch (error) {
+      if (!mountedRef.current) return;
       setApplyToProjectError(
         error instanceof Error
           ? error.message
           : 'Failed to clear staged suggestions from the review project.',
       );
     } finally {
-      setIsResettingProjectState(false);
+      inFlightRef.current = false;
+      if (mountedRef.current) setIsResettingProjectState(false);
     }
   };
-
-  if (projectId == null) {
-    return <PageState tone="error">Missing or invalid project id.</PageState>;
-  }
-
-  if (projectQuery.isLoading) {
-    return <PageState>Loading project…</PageState>;
-  }
-
-  if (projectQuery.isError) {
-    const message =
-      projectQuery.error instanceof Error ? projectQuery.error.message : 'Failed to load project.';
-    return <PageState tone="error">{message}</PageState>;
-  }
-
-  if (!project) {
-    return <PageState tone="error">Project not found.</PageState>;
-  }
 
   const projectName = project.reviewProjectRequest?.name?.trim() || `Review project #${project.id}`;
   const localeTag = project.locale?.bcp47Tag?.trim() ?? '';
@@ -562,7 +722,7 @@ export function ReviewProjectFindReplacePage() {
                   applyMode === 'STAGE_FOR_REVIEW' ? ' is-active' : ''
                 }`}
                 aria-pressed={applyMode === 'STAGE_FOR_REVIEW'}
-                disabled={isApplyingToProject}
+                disabled={isBusy}
                 onClick={() => setApplyMode('STAGE_FOR_REVIEW')}
               >
                 Stage for review
@@ -573,7 +733,7 @@ export function ReviewProjectFindReplacePage() {
                   applyMode === 'ACCEPT_AND_DECIDE' ? ' is-active' : ''
                 }`}
                 aria-pressed={applyMode === 'ACCEPT_AND_DECIDE'}
-                disabled={isApplyingToProject}
+                disabled={isBusy}
                 onClick={() => setApplyMode('ACCEPT_AND_DECIDE')}
               >
                 Accept + decide
@@ -625,6 +785,11 @@ export function ReviewProjectFindReplacePage() {
         onSubmit={replaceAllMatches}
       />
 
+      {refreshError ? (
+        <div className="review-find-replace-page__alert" role="alert">
+          Could not refresh the project. Your working changes have been kept.
+        </div>
+      ) : null}
       {validationError ? (
         <div className="review-find-replace-page__alert" role="alert">
           {validationError}
@@ -674,6 +839,7 @@ export function ReviewProjectFindReplacePage() {
                 blockedIssue={blockedTargetsByRowId.get(row.id) ?? null}
                 integrityIssue={integrityIssuesByRowId.get(row.id) ?? null}
                 isSelectedMatch={row.id === selectedMatchRowId}
+                readOnly={isBusy}
                 onChangeWorkingTarget={updateWorkingTarget}
               />
             ))}
@@ -705,6 +871,7 @@ export function ReviewProjectFindReplacePage() {
                     blockedIssue={blockedTargetsByRowId.get(row.id) ?? null}
                     integrityIssue={integrityIssuesByRowId.get(row.id) ?? null}
                     isSelectedMatch={row.id === selectedMatchRowId}
+                    readOnly={isBusy}
                     onChangeWorkingTarget={updateWorkingTarget}
                   />
                 ),
@@ -755,6 +922,7 @@ function ResultRow({
   blockedIssue,
   integrityIssue,
   isSelectedMatch,
+  readOnly,
   onChangeWorkingTarget,
 }: {
   row: ReviewProjectFindReplaceRow;
@@ -764,6 +932,7 @@ function ResultRow({
   blockedIssue: ReviewProjectFindReplaceIntegrityIssue | null;
   integrityIssue: ReviewProjectFindReplaceIntegrityIssue | null;
   isSelectedMatch: boolean;
+  readOnly: boolean;
   onChangeWorkingTarget: (rowId: number, nextTarget: string) => void;
 }) {
   return (
@@ -802,6 +971,7 @@ function ResultRow({
           showDiff={changed}
           integrityIssue={integrityIssue}
           blockedIssue={blockedIssue}
+          readOnly={readOnly}
           onChangeWorkingTarget={onChangeWorkingTarget}
         />
       </div>
@@ -854,12 +1024,14 @@ function WorkingTargetEditor({
   showDiff,
   integrityIssue,
   blockedIssue,
+  readOnly,
   onChangeWorkingTarget,
 }: {
   row: ReviewProjectFindReplaceRow;
   showDiff: boolean;
   integrityIssue: ReviewProjectFindReplaceIntegrityIssue | null;
   blockedIssue: ReviewProjectFindReplaceIntegrityIssue | null;
+  readOnly: boolean;
   onChangeWorkingTarget: (rowId: number, nextTarget: string) => void;
 }) {
   const isVisibleTextEditorEnabled = useVisibleTextEditorEnabled();
@@ -918,6 +1090,7 @@ function WorkingTargetEditor({
         onChange={(nextTarget) => onChangeWorkingTarget(row.id, nextTarget)}
         onKeyDown={handleKeyDown}
         placeholder="Working target translation"
+        readOnly={readOnly}
         protectedDiagnostics={tokenGuard.diagnostics}
         protectedTokens={tokenGuard.protectedTokens}
         spellCheck={true}
