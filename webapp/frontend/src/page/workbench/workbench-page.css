@@ -1186,42 +1186,6 @@
   border-color: color-mix(in srgb, var(--color-border) 70%, transparent);
 }
 
-.workbench-page__mf2-preview-text {
-  display: -webkit-box;
-  min-width: 0;
-  width: 100%;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 5;
-  overflow-wrap: anywhere;
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
-    monospace;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-regular);
-}
-
-.workbench-page__mf2-preview-text .visible-text-editor__protected-token--mf2-syntax {
-  background: transparent;
-  border-radius: 0;
-  box-shadow: none;
-  color: inherit;
-  display: inline;
-  font-size: inherit;
-  font-weight: inherit;
-  margin-inline: 0;
-  max-width: none;
-  overflow-wrap: inherit;
-  padding: 0;
-  white-space: inherit;
-}
-
-.workbench-page__mf2-preview-text.is-empty {
-  color: var(--color-text-muted);
-  font-style: italic;
-  font-weight: var(--font-weight-regular);
-}
-
 .workbench-page__mf2-editor {
   width: 100%;
 }

@@ -1,4 +1,5 @@
 .visible-text-editor,
+.mf2-prose,
 .visible-text-renderer {
   --visible-text-editor-protected-surface: color-mix(
     in srgb,

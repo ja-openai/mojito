@@ -1,0 +1,43 @@
+.mf2-document-preview {
+  min-width: 0;
+  width: 100%;
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-sm);
+  line-height: 1.65;
+}
+
+.mf2-document-preview--structured {
+  background: var(--visible-text-editor-icu-surface);
+  border-radius: var(--visible-text-editor-protected-radius);
+  box-shadow: inset 0 0 0 var(--border-width) var(--visible-text-editor-icu-outline);
+  padding: 0.3em 0.4em;
+}
+
+.mf2-document-preview__structure {
+  color: var(--color-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  white-space: normal;
+}
+
+.mf2-document-preview__pattern {
+  background: var(--color-surface);
+  border-radius: 0.25rem;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  color: var(--color-text);
+  padding: 0.12em 0.1em;
+  white-space: pre-wrap;
+}
+
+/* A fallback key is structure; markup and expressions inside patterns remain blue atoms. */
+.mf2-document-preview__structure .visible-text-editor__protected-token {
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  color: inherit;
+  display: inline;
+  font-size: inherit;
+  margin: 0;
+  padding: 0;
+}

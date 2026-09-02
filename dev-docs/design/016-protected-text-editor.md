@@ -235,6 +235,18 @@ documents do not show a passive success diagnostic; form badges, inline
 diagnostics, and a collapsible issue summary appear only when there is something
 actionable.
 
+Guided completion uses content-sized menus with 12–13px UI text, bounded width and
+height, and a short description for each choice. Typing `{` offers placeholders
+and **Literal {**; typing `$` or a placeholder name filters to placeholders.
+**Literal {** keeps the already typed brace as normal editable text and preserves
+the caret, with no visible escape or chip. Continued typing does not reopen the
+same dismissed completion. Guided serialization escapes that text as `\{` in raw
+MF2; literal `}` and `\` similarly serialize as `\}` and `\\`. Shortcuts help
+explains those escapes without adding extra menu actions. Arrow keys wrap through
+choices, Enter accepts the active choice, Escape dismisses it, and command-Enter
+retains the host's save/accept action. Focus stays in the editor and the listbox
+exposes its selected option to assistive technology.
+
 API-provided source `messageFormat` metadata controls this routing. Explicit
 metadata is authoritative in the frontend; strict source-declaration detection
 is only a compatibility fallback for older payloads that omit the field. The
@@ -326,12 +338,14 @@ or editor behavior changes for everyone else.
 Workbench MF2 routing follows that generic-editor preference and the Workbench
 placeholder-highlights display option. With both enabled, Workbench shows
 the complete serialized MF2 document on collapsed rows rather than resolving a
-selected message to one form. The serialization is line-clamped to keep the
-result list compact, while the full document remains available to assistive
-technology and when editing starts. These previews reuse the lightweight
-renderer's hidden-character marks and highlight only runtime expressions inside
-message patterns as protected placeholders; declarations, selector structure,
-and variant keys remain plain monospace text. Escaped brace lookalikes remain
+selected message to one form. Structural whitespace wraps compactly so all forms
+remain visible, without a line clamp or MF2 pill. Like MF1, a subtly tinted,
+outlined envelope contains subdued monospace declarations, `.match` selectors,
+variant keys, and pattern delimiters. Translatable pattern bodies use the normal
+text color and plain surface; only true inline variables, expressions, and markup
+use blue protected atoms. This makes the boundary visible even for status
+selectors whose bodies contain no runtime variables. These previews reuse the
+lightweight renderer's hidden-character marks. Escaped brace lookalikes remain
 literal text. Assisted previews render wildcard selector keys as the plain label
 `fallback` while preserving `*` as the raw value; exact syntax remains visible
 in Raw mode. An untranslated MF2 target stays blank, matching other Workbench

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { act, createElement, createRef, type Ref } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   mf2ProseMirrorDocFromPattern,
@@ -13,11 +14,15 @@ function editorElement({
   marksMode,
   onChange = vi.fn(),
   pattern,
+  placeholders = [],
+  onSubmit = vi.fn(),
   ref,
 }: {
   marksMode: 'all' | 'auto' | 'off';
   onChange?: (pattern: string) => void;
   pattern: string;
+  placeholders?: string[];
+  onSubmit?: () => void;
   ref?: Ref<Mf2ProseMirrorEditorHandle>;
 }) {
   return createElement(Mf2ProseMirrorEditor, {
@@ -30,7 +35,8 @@ function editorElement({
     onPreviousForm: vi.fn(),
     pattern,
     placeholderSources: {},
-    placeholders: [],
+    placeholders,
+    onSubmit,
     readOnly: false,
     ref,
   });
@@ -283,5 +289,125 @@ describe('Mf2ProseMirrorEditor hidden character marks', () => {
     } finally {
       restoreRangeGeometry();
     }
+  });
+});
+
+describe('MF2 guided completion', () => {
+  let restoreGeometry: () => void;
+  beforeEach(() => {
+    restoreGeometry = installRangeGeometryMock();
+  });
+  afterEach(() => {
+    restoreGeometry();
+  });
+
+  async function openCompletion(trigger = '{', placeholders = ['name', 'count']) {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const onSubmit = vi.fn();
+    render(
+      editorElement({ marksMode: 'off', pattern: 'Bon jour', placeholders, onChange, onSubmit }),
+    );
+    const editor = screen.getByRole('textbox', { name: 'Target Message' });
+    editor.focus();
+    placeCaret(editor, 3);
+    await user.keyboard(trigger.split('{').join('{{'));
+    return { editor, user, onChange, onSubmit };
+  }
+
+  it('offers described placeholders and literal text with coherent listbox relationships', async () => {
+    const { editor } = await openCompletion();
+    const listbox = await screen.findByRole('listbox', { name: 'Suggestions for {' });
+    const options = screen.getAllByRole('option');
+    expect(options.map((option) => option.textContent)).toEqual([
+      '{$name} Insert name placeholder',
+      '{$count} Insert count placeholder',
+      'Literal { Raw MF2 stores it as \\{',
+    ]);
+    expect(editor).toHaveAttribute('aria-autocomplete', 'list');
+    expect(editor).toHaveAttribute('aria-expanded', 'true');
+    expect(editor).toHaveAttribute('aria-controls', listbox.id);
+    expect(editor).toHaveAttribute('aria-activedescendant', options[0].id);
+    expect(options[0]).toHaveAttribute('aria-selected', 'true');
+    expect(editor).toHaveFocus();
+  });
+
+  it('wraps keyboard selection and keeps the literal brace as editable text on Enter', async () => {
+    const { editor, user, onChange } = await openCompletion();
+    const literal = await screen.findByRole('option', { name: /Literal \{/u });
+    await user.keyboard('{ArrowUp}');
+    expect(literal).toHaveAttribute('aria-selected', 'true');
+    expect(editor).toHaveAttribute('aria-activedescendant', literal.id);
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getAllByRole('option')[0]).toHaveAttribute('aria-selected', 'true');
+    await user.keyboard('{ArrowUp}{Enter}');
+    expect(editor.textContent).toBe('Bon{ jour');
+    expect(editor.querySelector('[contenteditable="false"]')).toBeNull();
+    expect(onChange).toHaveBeenLastCalledWith('Bon\\{ jour');
+    expect(editor).toHaveAttribute('aria-expanded', 'false');
+    expect(editor).toHaveAttribute('aria-controls', '');
+    expect(editor).toHaveAttribute('aria-activedescendant', '');
+    expect(window.getSelection()?.anchorOffset).toBe(4);
+    await user.keyboard('name}');
+    expect(editor.textContent).toBe('Bon{name} jour');
+    expect(onChange).toHaveBeenLastCalledWith('Bon\\{name\\} jour');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('offers a literal brace even when the pattern has no placeholders', async () => {
+    const { editor, user } = await openCompletion('{', []);
+    expect(await screen.findAllByRole('option')).toHaveLength(1);
+    await user.keyboard('{Enter}');
+    expect(editor.textContent).toBe('Bon{ jour');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it.each(['$', '{$'])('keeps %s completion placeholder-focused', async (trigger) => {
+    await openCompletion(trigger);
+    expect(await screen.findAllByRole('option')).toHaveLength(2);
+    expect(screen.queryByRole('option', { name: /Literal/u })).not.toBeInTheDocument();
+  });
+
+  it('filters case-insensitively, resets selection, and inserts an atomic placeholder', async () => {
+    const { editor, user, onChange, onSubmit } = await openCompletion();
+    await screen.findByRole('listbox');
+    await user.keyboard('{ArrowUp}N');
+    const option = await screen.findByRole('option', { name: '{$name} Insert name placeholder' });
+    expect(screen.getAllByRole('option')).toHaveLength(1);
+    expect(option).toHaveAttribute('aria-selected', 'true');
+    await user.keyboard('{Enter}');
+    expect(editor.querySelector('[data-placeholder="name"]')).toHaveTextContent('{$name}');
+    expect(onChange).toHaveBeenLastCalledWith('Bon{$name} jour');
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('announces no matches without referencing a nonexistent active option', async () => {
+    const { editor, user } = await openCompletion('$unknown');
+    expect(await screen.findByRole('status')).toHaveTextContent('No matching placeholder');
+    expect(editor).toHaveAttribute('aria-expanded', 'false');
+    expect(editor).toHaveAttribute('aria-controls', '');
+    expect(editor).toHaveAttribute('aria-activedescendant', '');
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(editor.textContent).toBe('Bon$unknown jour');
+  });
+
+  it('Escape dismisses completion without changing text or invoking the host action', async () => {
+    const { editor, user, onSubmit } = await openCompletion();
+    await screen.findByRole('listbox');
+    const afterTyping = editor.textContent;
+    await user.keyboard('{Escape}x');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(editor.textContent).toBe(afterTyping?.replace('{', '{x'));
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('retains the host submit shortcut while completion is open', async () => {
+    const { user, onSubmit } = await openCompletion();
+    await screen.findByRole('listbox');
+    await user.keyboard('{Control>}{Enter}{/Control}');
+    expect(onSubmit).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 });

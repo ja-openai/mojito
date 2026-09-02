@@ -7,11 +7,11 @@ import type { ApiRepository } from '../../api/repositories';
 import type { TextUnitSearchRequest } from '../../api/text-units';
 import { LocalePill } from '../../components/LocalePill';
 import { isMf2Message } from '../../components/mf2/messageFormat';
+import { Mf2DocumentPreview } from '../../components/mf2/Mf2DocumentPreview';
 import {
   Mf2TranslationEditor,
   type Mf2TranslationEditorSnapshot,
 } from '../../components/mf2/Mf2TranslationEditor';
-import { mf2DocumentPreview } from '../../components/mf2/preview';
 import { Modal } from '../../components/Modal';
 import { PillDropdown } from '../../components/PillDropdown';
 import type { TranslationEditorHandle } from '../../components/TranslationEditorHandle';
@@ -917,13 +917,17 @@ function WorkbenchMf2Preview({
   onFocus?: () => void;
   value: string;
 }) {
-  const preview = useMemo(() => mf2DocumentPreview(value), [value]);
   const isEmpty = value.trim().length === 0;
   const isInteractive = Boolean(onFocus) && !disabled;
 
   return (
     <div
       aria-disabled={disabled || undefined}
+      aria-description={
+        isEmpty
+          ? undefined
+          : 'Shaded syntax is protected. Translate the message bodies on a plain background; blue inline placeholders stay protected.'
+      }
       aria-label={ariaLabel}
       aria-multiline="true"
       aria-readonly="true"
@@ -932,16 +936,10 @@ function WorkbenchMf2Preview({
       role="textbox"
       tabIndex={isInteractive ? 0 : undefined}
     >
-      <VisibleTextRenderer
-        className={`workbench-page__mf2-preview-text${isEmpty ? ' is-empty' : ''}`}
-        dir="ltr"
-        disabled={disabled}
+      <Mf2DocumentPreview
         lang={lang}
         marksMode={isEmpty ? 'off' : marksMode}
-        protectedTokens={isEmpty ? [] : preview.protectedTokens}
-        showProtectedTokens={!isEmpty}
-        spellCheck={false}
-        value={isEmpty ? emptyLabel : preview.value}
+        value={isEmpty ? emptyLabel : value}
       />
     </div>
   );

@@ -45,6 +45,10 @@ export type Mf2ProseMirrorEditorHandle = {
   restoreMissingPlaceholders: (missing: Array<string>) => boolean;
 };
 
+type CompletionOption =
+  | { kind: 'placeholder'; name: string; label: string; description: string }
+  | { kind: 'literal-brace'; label: string; description: string };
+
 type CompletionState = {
   index: number;
   left: number;
@@ -122,7 +126,7 @@ const schema = new Schema({
         return [
           'span',
           {
-            class: 'mf2-chip mf2-pm-chip',
+            class: 'visible-text-editor__protected-token mf2-pm-chip',
             'data-placeholder': name,
             'data-placeholder-source': source,
             contenteditable: 'false',
@@ -155,7 +159,7 @@ const schema = new Schema({
         return [
           'span',
           {
-            class: 'mf2-chip mf2-pm-chip mf2-pm-syntax',
+            class: 'visible-text-editor__protected-token mf2-pm-chip mf2-pm-syntax',
             'data-mf2-syntax': source,
             contenteditable: 'false',
             title: source,
@@ -196,12 +200,11 @@ export const Mf2ProseMirrorEditor = forwardRef<
   const viewRef = useRef<EditorView | null>(null);
   const composingRef = useRef(false);
   const completionRef = useRef<CompletionState | null>(null);
-  const filteredCompletionNamesRef = useRef<Array<string>>([]);
+  const completionOptionsRef = useRef<CompletionOption[]>([]);
   const onChangeRef = useRef(onChange);
   const onNextFormRef = useRef(onNextForm);
   const onPreviousFormRef = useRef(onPreviousForm);
   const onSubmitRef = useRef(onSubmit);
-  const placeholdersRef = useRef(placeholders);
   const placeholderSourcesRef = useRef(placeholderSources);
   const readOnlyRef = useRef(readOnly);
   const resolvedMarksMode = resolveVisibleTextMarksMode(marksMode, undefined);
@@ -209,23 +212,40 @@ export const Mf2ProseMirrorEditor = forwardRef<
   marksModeRef.current = resolvedMarksMode;
   const [completion, setCompletion] = useState<CompletionState | null>(null);
   const completionId = useId();
-  const filteredCompletionNames = useMemo(
-    () => filterPlaceholderNames(placeholders, completion?.query ?? ''),
-    [completion?.query, placeholders],
-  );
+  const dismissedCompletionFromRef = useRef<number | null>(null);
+  const completionOptions = useMemo<CompletionOption[]>(() => {
+    if (!completion) return [];
+    const options: CompletionOption[] = filterPlaceholderNames(placeholders, completion.query).map(
+      (name) => ({
+        kind: 'placeholder',
+        name,
+        label: `{$${name}}`,
+        description: `Insert ${name} placeholder`,
+      }),
+    );
+    if (completion.text.trim() === '{') {
+      options.push({
+        kind: 'literal-brace',
+        label: 'Literal {',
+        description: 'Raw MF2 stores it as \\{',
+      });
+    }
+    return options;
+  }, [completion, placeholders]);
+  const completionListOpen = Boolean(completion && completionOptions.length);
   const activeCompletionIndex =
-    completion && filteredCompletionNames.length
-      ? Math.min(completion.index, filteredCompletionNames.length - 1)
+    completion && completionOptions.length
+      ? Math.min(completion.index, completionOptions.length - 1)
       : 0;
   const activeCompletionOptionId =
-    completion && filteredCompletionNames.length
+    completion && completionOptions.length
       ? `${completionId}-option-${activeCompletionIndex}`
       : undefined;
 
   useLayoutEffect(() => {
     completionRef.current = completion;
-    filteredCompletionNamesRef.current = filteredCompletionNames;
-  }, [completion, filteredCompletionNames]);
+    completionOptionsRef.current = completionOptions;
+  }, [completion, completionOptions]);
 
   useLayoutEffect(() => {
     onChangeRef.current = onChange;
@@ -244,10 +264,6 @@ export const Mf2ProseMirrorEditor = forwardRef<
   }, [onSubmit]);
 
   useLayoutEffect(() => {
-    placeholdersRef.current = placeholders;
-  }, [placeholders]);
-
-  useLayoutEffect(() => {
     placeholderSourcesRef.current = placeholderSources;
   }, [placeholderSources]);
 
@@ -258,7 +274,9 @@ export const Mf2ProseMirrorEditor = forwardRef<
     });
   }, [readOnly]);
 
-  const closeCompletion = useCallback(() => {
+  const closeCompletion = useCallback((dismissedFrom?: number) => {
+    if (dismissedFrom !== undefined) dismissedCompletionFromRef.current = dismissedFrom;
+    completionRef.current = null;
     setCompletion(null);
   }, []);
 
@@ -269,14 +287,19 @@ export const Mf2ProseMirrorEditor = forwardRef<
     }
     const range = completionRangeFromSelection(view.state);
     if (!range) {
+      dismissedCompletionFromRef.current = null;
       setCompletion(null);
       return false;
     }
+    if (dismissedCompletionFromRef.current === range.from) return false;
     const coords = view.coordsAtPos(range.to);
     const host = hostRef.current?.getBoundingClientRect();
     setCompletion((current) => ({
       index: current && current.query === range.query ? current.index : 0,
-      left: Math.max(6, coords.left - (host?.left ?? coords.left)),
+      left: Math.max(
+        0,
+        Math.min(coords.left - (host?.left ?? coords.left), (host?.width ?? 280) - 280),
+      ),
       query: range.query,
       range: { from: range.from, to: range.to },
       text: range.text,
@@ -347,26 +370,31 @@ export const Mf2ProseMirrorEditor = forwardRef<
             if (currentCompletion) {
               if (arrowKey && !event.shiftKey && !hasTextNavigationModifier) {
                 event.preventDefault();
-                const names = filteredCompletionNamesRef.current;
+                const options = completionOptionsRef.current;
                 setCompletion((current) =>
-                  current && names.length
+                  current && options.length
                     ? {
                         ...current,
                         index:
-                          (current.index + (event.key === 'ArrowDown' ? 1 : -1) + names.length) %
-                          names.length,
+                          (current.index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) %
+                          options.length,
                       }
                     : null,
                 );
                 return true;
               }
-              if (event.key === 'Enter' && !event.shiftKey && !hasTextNavigationModifier) {
+              if (
+                event.key === 'Enter' &&
+                !event.shiftKey &&
+                !hasTextNavigationModifier &&
+                completionOptionsRef.current.length
+              ) {
                 event.preventDefault();
-                const names = filteredCompletionNamesRef.current;
-                commitPlaceholderCompletion(
+                const options = completionOptionsRef.current;
+                commitCompletion(
                   view,
-                  names,
-                  Math.min(currentCompletion.index, Math.max(0, names.length - 1)),
+                  options,
+                  Math.min(currentCompletion.index, Math.max(0, options.length - 1)),
                   currentCompletion,
                   placeholderSourcesRef.current,
                   closeCompletion,
@@ -376,7 +404,7 @@ export const Mf2ProseMirrorEditor = forwardRef<
               if (event.key === 'Escape') {
                 event.preventDefault();
                 event.stopPropagation();
-                closeCompletion();
+                closeCompletion(currentCompletion.range.from);
                 return true;
               }
             }
@@ -422,9 +450,9 @@ export const Mf2ProseMirrorEditor = forwardRef<
       attributes: {
         'aria-activedescendant': activeCompletionOptionId ?? '',
         'aria-autocomplete': 'list',
-        'aria-controls': completion ? completionId : '',
+        'aria-controls': completionListOpen ? completionId : '',
         'aria-describedby': describedBy ?? '',
-        'aria-expanded': String(Boolean(completion)),
+        'aria-expanded': String(completionListOpen),
         'aria-label': ariaLabel,
         'aria-multiline': 'true',
         'aria-readonly': String(readOnly),
@@ -438,7 +466,15 @@ export const Mf2ProseMirrorEditor = forwardRef<
         if (!current) return;
         const nextState = current.state.apply(transaction);
         current.updateState(nextState);
-        if (!transaction.docChanged) return;
+        if (dismissedCompletionFromRef.current !== null) {
+          dismissedCompletionFromRef.current = transaction.mapping.map(
+            dismissedCompletionFromRef.current,
+          );
+        }
+        if (!transaction.docChanged) {
+          if (transaction.selectionSet) closeCompletion();
+          return;
+        }
         if (current.composing || composingRef.current) return;
         syncPattern(current);
         window.setTimeout(() => refreshCompletion(current), 0);
@@ -467,6 +503,7 @@ export const Mf2ProseMirrorEditor = forwardRef<
     if (!view) return;
     const currentPattern = mf2ProseMirrorPatternFromDoc(view.state.doc);
     if (currentPattern !== pattern) {
+      dismissedCompletionFromRef.current = null;
       view.updateState(createState(pattern));
       closeCompletion();
     }
@@ -477,9 +514,9 @@ export const Mf2ProseMirrorEditor = forwardRef<
     if (!view) return;
     view.dom.setAttribute('aria-activedescendant', activeCompletionOptionId ?? '');
     view.dom.setAttribute('aria-autocomplete', 'list');
-    view.dom.setAttribute('aria-controls', completion ? completionId : '');
+    view.dom.setAttribute('aria-controls', completionListOpen ? completionId : '');
     view.dom.setAttribute('aria-describedby', describedBy ?? '');
-    view.dom.setAttribute('aria-expanded', String(Boolean(completion)));
+    view.dom.setAttribute('aria-expanded', String(completionListOpen));
     view.dom.setAttribute('aria-label', ariaLabel);
     view.dom.setAttribute('aria-multiline', 'true');
     view.dom.setAttribute('aria-readonly', String(readOnly));
@@ -491,10 +528,23 @@ export const Mf2ProseMirrorEditor = forwardRef<
     ariaLabel,
     completion,
     completionId,
+    completionListOpen,
     describedBy,
     direction,
     readOnly,
   ]);
+
+  useLayoutEffect(() => {
+    const option = hostRef.current?.querySelector<HTMLElement>(
+      '[role="option"][aria-selected="true"]',
+    );
+    const menu = option?.parentElement;
+    if (!option || !menu) return;
+    if (option.offsetTop < menu.scrollTop) menu.scrollTop = option.offsetTop;
+    else if (option.offsetTop + option.offsetHeight > menu.scrollTop + menu.clientHeight) {
+      menu.scrollTop = option.offsetTop + option.offsetHeight - menu.clientHeight;
+    }
+  }, [activeCompletionOptionId]);
 
   useLayoutEffect(() => {
     hostRef.current?.style.setProperty('--mf2-prose-min-lines', String(minLines));
@@ -558,26 +608,26 @@ export const Mf2ProseMirrorEditor = forwardRef<
     >
       {completion ? (
         <div
-          aria-label={`Placeholder suggestions for ${completion.text}`}
+          aria-label={`Suggestions for ${completion.text}`}
           className="mf2-completion"
           id={completionId}
-          role={filteredCompletionNames.length ? 'listbox' : 'status'}
+          role={completionOptions.length ? 'listbox' : 'status'}
           style={{ left: completion.left, top: completion.top }}
         >
-          {filteredCompletionNames.length ? (
-            filteredCompletionNames.map((name, itemIndex) => (
+          {completionOptions.length ? (
+            completionOptions.map((option, itemIndex) => (
               <div
                 aria-selected={itemIndex === activeCompletionIndex}
                 className="mf2-completion-option"
                 id={`${completionId}-option-${itemIndex}`}
-                key={name}
+                key={option.label}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
                   const view = viewRef.current;
                   if (!view || !completion) return;
-                  commitPlaceholderCompletion(
+                  commitCompletion(
                     view,
-                    filteredCompletionNames,
+                    completionOptions,
                     itemIndex,
                     completion,
                     placeholderSourcesRef.current,
@@ -586,7 +636,8 @@ export const Mf2ProseMirrorEditor = forwardRef<
                 }}
                 role="option"
               >
-                {`{$${name}}`}
+                <span className="mf2-completion-label">{option.label}</span>{' '}
+                <span className="mf2-completion-detail">{option.description}</span>
               </div>
             ))
           ) : (
@@ -742,19 +793,26 @@ function stringNodeAttribute(node: ProseMirrorNode, name: string) {
   return typeof value === 'string' ? value : '';
 }
 
-function commitPlaceholderCompletion(
+function commitCompletion(
   view: EditorView,
-  names: Array<string>,
+  options: CompletionOption[],
   index: number,
   state: CompletionState,
   placeholderSources: Record<string, string>,
-  close: () => void,
+  close: (dismissedFrom?: number) => void,
 ) {
-  const name = names[Math.min(index, Math.max(0, names.length - 1))];
-  if (!name) {
+  const option = options[index];
+  if (!option) {
     close();
     return;
   }
+  if (option.kind === 'literal-brace') {
+    // The trigger is already ordinary visible text. Keep it and the caret exactly as typed.
+    close(state.range.from);
+    view.focus();
+    return;
+  }
+  const name = option.name;
   const typedToken = view.state.doc.textBetween(state.range.from, state.range.to, '\n', '\n');
   const nextChar = view.state.doc.textBetween(state.range.to, state.range.to + 1, '\n', '\n');
   const to = placeholderCompletionConsumesClosingBrace(typedToken, nextChar)

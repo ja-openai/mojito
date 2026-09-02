@@ -328,13 +328,15 @@ other {{}}
 
       expect(editor).toHaveTextContent('Bon{jour');
       expect(onTargetChange).toHaveBeenLastCalledWith('Bon\\{jour');
-      expect(
-        await screen.findByRole('listbox', { name: 'Placeholder suggestions for {' }),
-      ).toBeVisible();
+      expect(await screen.findByRole('listbox', { name: 'Suggestions for {' })).toBeVisible();
       expect(window.getSelection()?.anchorNode?.textContent).toBe('Bon{jour');
       expect(window.getSelection()?.anchorOffset).toBe(4);
 
+      await user.click(screen.getByRole('option', { name: /Literal \{/u }));
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      expect(editor.querySelector('[contenteditable="false"]')).not.toBeInTheDocument();
       await user.keyboard('x');
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
 
       expect(editor).toHaveTextContent('Bon{xjour');
       expect(onTargetChange).toHaveBeenLastCalledWith('Bon\\{xjour');

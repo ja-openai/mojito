@@ -1028,7 +1028,13 @@ function ShortcutHelp({
       open={open}
     >
       <div className="mf2-shortcuts mf2-shortcut-help__content" id={id}>
-        <ShortcutKey keys="{ or $" label="placeholder menu" />
+        <ShortcutKey keys="{" label="placeholder or literal brace" />
+        <ShortcutKey keys="$" label="placeholder menu" />
+        <span className="mf2-shortcut-note">
+          {
+            'Type literal braces normally in guided mode. Raw MF2 uses \\{, \\}, and \\\\ for literal braces and backslashes.'
+          }
+        </span>
         {undoShortcut ? <ShortcutKey keys={undoShortcut} label="undo" /> : null}
         {redoShortcut ? <ShortcutKey keys={redoShortcut} label="redo" /> : null}
         <ShortcutKey keys="Shift+Down" label="next form" />

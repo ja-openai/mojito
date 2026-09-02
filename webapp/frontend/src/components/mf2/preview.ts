@@ -41,10 +41,12 @@ export function mf2PatternPreview(pattern: string): Mf2PatternPreview {
   return { protectedTokens, value: previewValue };
 }
 
-export function mf2DocumentPreview(source: string): Mf2PatternPreview {
+export type Mf2DocumentPreview = Mf2PatternPreview & { patternRanges: SourceRange[] };
+
+export function mf2DocumentPreview(source: string): Mf2DocumentPreview {
   const value = String(source ?? '');
   if (!isWithinPreviewTokenLimits(value)) {
-    return { protectedTokens: [], value };
+    return { patternRanges: [], protectedTokens: [], value };
   }
 
   const patternRanges = patternBodyRangesInDocument(value);
@@ -67,9 +69,9 @@ export function mf2DocumentPreview(source: string): Mf2PatternPreview {
           displayText: part.source,
         };
       }),
-    ...fallbackSelectorTokensInDocument(value),
+    ...fallbackSelectorTokensInDocument(value, patternRanges),
   ].sort((left, right) => left.start - right.start || left.end - right.end);
-  return { protectedTokens, value };
+  return { patternRanges, protectedTokens, value };
 }
 
 type SourceRange = { end: number; start: number };
@@ -179,21 +181,20 @@ function codePointAt(value: string, index: number) {
   return codePoint == null ? '' : String.fromCodePoint(codePoint);
 }
 
-function fallbackSelectorTokensInDocument(value: string): ProtectedTextToken[] {
-  const matchDirective = /^[\t ]*\.match\b/mu.exec(value);
+function fallbackSelectorTokensInDocument(
+  value: string,
+  patternRanges: SourceRange[],
+): ProtectedTextToken[] {
+  if (!startsWithComplexMessageSyntax(value) || !patternRanges.length) return [];
+  const header = value.slice(0, patternRanges[0].start - 2);
+  const matchDirective = /^[\t \u061c\u200e\u200f\u2066-\u2069]*\.match\b/mu.exec(header);
   if (matchDirective?.index == null) return [];
-  const bodyStart = matchDirective.index + matchDirective[0].length;
   const tokens: ProtectedTextToken[] = [];
-  const lines = value.slice(bodyStart).matchAll(/[^\r\n]*(?:\r\n|\r|\n|$)/gu);
-
-  for (const lineMatch of lines) {
-    if (!lineMatch[0]) break;
-    const lineStart = bodyStart + (lineMatch.index ?? 0);
-    const line = lineMatch[0].replace(/(?:\r\n|\r|\n)$/u, '');
-    const lineTokens: ProtectedTextToken[] = [];
+  let structureStart = matchDirective.index + matchDirective[0].length;
+  for (const range of patternRanges) {
+    const line = value.slice(structureStart, range.start - 2);
     let inQuotedLiteral = false;
     let escaped = false;
-    let hasPattern = false;
 
     for (let index = 0; index < line.length; index += 1) {
       const character = line[index];
@@ -207,21 +208,17 @@ function fallbackSelectorTokensInDocument(value: string): ProtectedTextToken[] {
         }
         continue;
       }
-      if (character === '|') {
+      if (character === '|' && isVariantKeyBoundary(line, index)) {
         inQuotedLiteral = true;
         continue;
       }
-      if (character === '{' && line[index + 1] === '{') {
-        hasPattern = true;
-        break;
-      }
       if (
         character === '*' &&
-        (index === 0 || isSelectorWhitespace(line[index - 1])) &&
-        (index === line.length - 1 || isSelectorWhitespace(line[index + 1]))
+        (index === 0 || isMf2SyntaxWhitespace(line[index - 1])) &&
+        (index === line.length - 1 || isMf2SyntaxWhitespace(line[index + 1]))
       ) {
-        const start = lineStart + index;
-        lineTokens.push({
+        const start = structureStart + index;
+        tokens.push({
           displayText: 'fallback',
           end: start + 1,
           kind: 'mf2-syntax',
@@ -231,14 +228,10 @@ function fallbackSelectorTokensInDocument(value: string): ProtectedTextToken[] {
       }
     }
 
-    if (hasPattern) tokens.push(...lineTokens);
+    structureStart = range.end + 2;
   }
 
   return tokens;
-}
-
-function isSelectorWhitespace(character: string | undefined) {
-  return character === ' ' || character === '\t';
 }
 
 function isWithinPreviewTokenLimits(value: string) {

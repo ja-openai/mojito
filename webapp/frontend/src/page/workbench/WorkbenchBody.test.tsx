@@ -104,13 +104,19 @@ function renderWorkbenchBody(overrides: Partial<WorkbenchBodyProps> = {}) {
     ...overrides,
   };
 
-  return render(
+  const content = (currentProps: WorkbenchBodyProps) => (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <WorkbenchBody {...props} />
+        <WorkbenchBody {...currentProps} />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const result = render(content(props));
+  return {
+    ...result,
+    updateProps: (next: Partial<WorkbenchBodyProps>) =>
+      result.rerender(content({ ...props, ...next })),
+  };
 }
 
 function getDetailsButton() {
@@ -236,6 +242,45 @@ paused {{En pause}}
 
     fireEvent.focus(translationPreview);
     expect(onStartEditing).toHaveBeenCalledWith(mf2Row.id, mf2Row.translation);
+  });
+
+  it('opens a collapsed status row into guided bodies and preserves exact Raw syntax', async () => {
+    const source = `.input {$status :string}\n.match $status\nactive {{Active}}\npaused {{Paused}}\n* {{Unknown}}`;
+    const target = `.input {$status :string}\n.match $status\nactive {{Actif}}\npaused {{En pause}}\n* {{Inconnu}}`;
+    const row = { ...editingRow, source, translation: target, messageFormat: 'MF2' as const };
+    const onStartEditing = vi.fn();
+    const { updateProps } = renderWorkbenchBody({
+      rows: [row],
+      editingRowId: null,
+      onStartEditing,
+    });
+    const collapsed = screen.getByRole('textbox', { name: 'MF2 translation editor' });
+    expect(collapsed.querySelector('.mf2-document-preview--structured')).toBeInTheDocument();
+    expect(collapsed).toHaveTextContent('paused {{En pause}}');
+    expect(collapsed).toHaveAccessibleDescription(/Shaded syntax is protected/u);
+    fireEvent.focus(collapsed);
+    expect(onStartEditing).toHaveBeenCalledWith(row.id, target);
+    updateProps({ rows: [row], editingRowId: row.id, editingValue: target });
+    const guided = await screen.findByRole('textbox', { name: 'Target status: active' });
+    expect(guided).toHaveTextContent('Actif');
+    expect(guided).toHaveAttribute('contenteditable', 'true');
+    expect(guided).not.toHaveTextContent('.match');
+    expect(screen.getByRole('textbox', { name: 'MF2 source' })).toHaveTextContent(
+      'paused {{Paused}}',
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Placeholder editing is off. Edit placeholders' }),
+    );
+    await waitFor(() => {
+      const raw = document.querySelector('.cm-content');
+      expect(raw?.textContent).toBe(target.split('\n').join(''));
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Placeholder editing is on. Lock placeholders' }),
+    );
+    expect(await screen.findByRole('textbox', { name: 'Target status: active' })).toHaveTextContent(
+      'Actif',
+    );
   });
 
   it('leaves an untranslated MF2 target empty on collapsed rows', () => {

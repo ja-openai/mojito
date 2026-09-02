@@ -31,6 +31,7 @@ import {
 } from './visibleTextFormatting';
 
 type Props = {
+  as?: 'div' | 'span';
   value: string;
   ariaLabel?: string;
   className?: string;
@@ -564,6 +565,7 @@ function diagnosticClassName(diagnostic: ProtectedTextDiagnostic): string {
 }
 
 export function VisibleTextRenderer({
+  as: Element = 'div',
   value,
   ariaLabel,
   className,
@@ -616,7 +618,7 @@ export function VisibleTextRenderer({
   }${disabled ? ' visible-text-renderer--disabled' : ''}${className ? ` ${className}` : ''}`;
 
   return (
-    <div
+    <Element
       aria-disabled={disabled || undefined}
       aria-label={isInteractive ? ariaLabel : undefined}
       aria-multiline={isInteractive ? 'true' : undefined}
@@ -634,6 +636,6 @@ export function VisibleTextRenderer({
       tabIndex={isInteractive ? 0 : undefined}
     >
       {renderPartsWithIcuGroups(parts, icuMessageGroups)}
-    </div>
+    </Element>
   );
 }
