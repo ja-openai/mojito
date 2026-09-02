@@ -238,6 +238,24 @@ paused {{En pause}}
     expect(onStartEditing).toHaveBeenCalledWith(mf2Row.id, mf2Row.translation);
   });
 
+  it('leaves an untranslated MF2 target empty on collapsed rows', () => {
+    const mf2Row: WorkbenchRow = {
+      ...editingRow,
+      messageFormat: 'MF2',
+      source: 'Hello {$name}.',
+      translation: null,
+    };
+    renderWorkbenchBody({
+      editingRowId: null,
+      editingValue: '',
+      rows: [mf2Row],
+    });
+
+    expect(screen.getByRole('textbox', { name: 'MF2 translation editor' })).toHaveTextContent(
+      /^$/u,
+    );
+  });
+
   it('protects MF2 variables without hiding their serialized syntax', () => {
     const mf2Row: WorkbenchRow = {
       ...editingRow,

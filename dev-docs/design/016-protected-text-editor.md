@@ -334,8 +334,9 @@ message patterns as protected placeholders; declarations, selector structure,
 and variant keys remain plain monospace text. Escaped brace lookalikes remain
 literal text. Assisted previews render wildcard selector keys as the plain label
 `fallback` while preserving `*` as the raw value; exact syntax remains visible
-in Raw mode. Editing keeps the source preview in the source column and opens the
-structured editor in the translation column when the
+in Raw mode. An untranslated MF2 target stays blank, matching other Workbench
+message formats. Editing keeps the source preview in the source column and opens
+the structured editor in the translation column when the
 Workbench is wider than 1,100 pixels. On narrower layouts, the editor moves to a
 full-row second line. With either preference disabled, Workbench shows the raw
 MF2 serialization without protected highlighting and keeps editing in the native

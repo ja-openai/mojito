@@ -728,7 +728,7 @@ export function WorkbenchBody({
                         <WorkbenchMf2Preview
                           ariaLabel="MF2 translation editor"
                           disabled={!row.canEdit || isSaving}
-                          emptyLabel="No translation yet"
+                          emptyLabel=""
                           lang={translationLocale}
                           marksMode={translationMarksMode}
                           onFocus={
