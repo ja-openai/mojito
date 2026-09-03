@@ -335,7 +335,11 @@ describe('Review Project actual editor adversarial interactions', () => {
   it('keeps a valid dirty MF2 target saveable when a background refresh changes its current variant', async () => {
     const harness = await mountEditor('mf2-rich');
     placeCaret(harness.editor);
-    await userEvent.setup().keyboard('Updated ');
+    const user = userEvent.setup();
+    await user.paste('Updated');
+    await user.keyboard(' ');
+    expect(harness.editor).toHaveTextContent('Updated You have');
+    expect(screen.getByRole('button', { name: 'Reset' })).toBeEnabled();
     const changed = structuredClone(harness.project);
     changed.reviewProjectTextUnits[0].currentTmTextUnitVariant!.id = 401;
     changed.reviewProjectTextUnits[0].currentTmTextUnitVariant!.content = mf2Message.replace(

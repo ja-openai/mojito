@@ -206,8 +206,8 @@ describe('ReviewProjectFindReplacePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Replace all' }));
     fireEvent.click(screen.getByRole('button', { name: 'Stage in project' }));
 
-    await waitFor(() => expect(saveReviewProjectTextUnitSuggestionMock).toHaveBeenCalledTimes(1));
-    expect(screen.getByText('Review project destination')).toBeInTheDocument();
+    await screen.findByText('Review project destination');
+    expect(saveReviewProjectTextUnitSuggestionMock).toHaveBeenCalledTimes(1);
     expect(saveReviewProjectTextUnitDecisionMock).not.toHaveBeenCalled();
     expect(saveReviewProjectTextUnitSuggestionMock).toHaveBeenCalledWith({
       textUnitId: 101,
@@ -289,8 +289,8 @@ describe('ReviewProjectFindReplacePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Accept + decide' }));
     fireEvent.click(screen.getByRole('button', { name: 'Accept changes' }));
 
-    await waitFor(() => expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledTimes(1));
-    expect(screen.getByText('Review project destination')).toBeInTheDocument();
+    await screen.findByText('Review project destination');
+    expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledTimes(1);
     expect(saveReviewProjectTextUnitDecisionMock).toHaveBeenCalledWith({
       textUnitId: 101,
       target: 'Raisonnement...',

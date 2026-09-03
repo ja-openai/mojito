@@ -378,7 +378,7 @@ describe.each(carryoverFixtures)('Review Project $projectId carryover matrix', (
     it('keeps the selected row target when project detail refetches after resume', async () => {
       assistedMock.mockReturnValue(assisted);
       const harness = mountProject(fixture);
-      accept({ advance: true });
+      await act(() => Promise.resolve(accept({ advance: true })));
       await waitFor(() => expect(editorTarget()).toBe(fixture.next.target));
       fireEvent(window, new Event('blur'));
       // The refetch returns the original fixture, including the previous row's

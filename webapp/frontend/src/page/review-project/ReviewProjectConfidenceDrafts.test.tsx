@@ -451,12 +451,14 @@ describe('Review Project confidence schedules', () => {
       accept(true);
       await waitFor(() => expect(saveMock).toHaveBeenCalledTimes(1));
       expect(draftField('decisionNotes')).toBeEnabled();
-      await userEvent.setup().type(draftField('decisionNotes'), 'New notes during save');
+      const newerNotes = 'New notes during save';
+      fireEvent.change(draftField('decisionNotes'), { target: { value: newerNotes } });
       await act(() =>
         Promise.resolve(pending.resolve(harness.responseFor(saveMock.mock.calls[0][0]))),
       );
       await waitFor(() => expect(screen.getByRole('button', { name: 'Accept' })).toBeEnabled());
       expect(target()).toBe(newTarget);
+      expect(draftField('decisionNotes')).toHaveValue(newerNotes);
       expect(screen.getByTestId('review-location')).toHaveTextContent('tu=201');
       accept();
       await waitFor(() => expect(saveMock).toHaveBeenCalledTimes(2));
@@ -464,6 +466,7 @@ describe('Review Project confidence schedules', () => {
         expect.objectContaining({
           textUnitId: 101,
           target: newTarget,
+          decisionNotes: newerNotes,
           expectedReviewStateRevision: 'fixture-review-state-saved-1',
         }),
       );

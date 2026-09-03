@@ -768,10 +768,13 @@ describe('ReviewProjectPageView', () => {
       </QueryClientProvider>,
     );
 
-    fireEvent.keyDown(window, {
-      key: 'Enter',
-      ctrlKey: true,
-      shiftKey: true,
+    await act(() => {
+      fireEvent.keyDown(window, {
+        key: 'Enter',
+        ctrlKey: true,
+        shiftKey: true,
+      });
+      return Promise.resolve();
     });
 
     await waitFor(() => {
@@ -862,10 +865,13 @@ describe('ReviewProjectPageView', () => {
 
     expect(container.querySelector('.review-project-row__decided-dot')).toBeNull();
 
-    fireEvent.keyDown(window, {
-      key: 'Enter',
-      ctrlKey: true,
-      shiftKey: true,
+    await act(() => {
+      fireEvent.keyDown(window, {
+        key: 'Enter',
+        ctrlKey: true,
+        shiftKey: true,
+      });
+      return Promise.resolve();
     });
 
     await waitFor(() => {
