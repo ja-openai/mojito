@@ -63,6 +63,10 @@ public class ReviewProjectDecisionTransactionServiceDbTest extends ServiceTestBa
     Fixture fixture = createFixture(true);
     var staged = stage(fixture, "staged target", fixture.originalVariantId(), false);
     assertThat(staged.getStatusCode()).isEqualTo(HttpStatus.OK);
+    // Compare committed state; database timestamps can have less precision than the response.
+    var persistedSuggestion = row(fixture).reviewProjectTextUnitSuggestion();
+    assertThat(persistedSuggestion).isNotNull();
+    assertThat(persistedSuggestion.target()).isEqualTo("staged target");
 
     for (String notes : new String[] {null, "Keep this note"}) {
       ReviewProjectTextUnitDecisionRequest request =
@@ -75,7 +79,7 @@ public class ReviewProjectDecisionTransactionServiceDbTest extends ServiceTestBa
           .usingRecursiveComparison()
           .withComparatorForType(
               java.util.Comparator.comparing(ZonedDateTime::toInstant), ZonedDateTime.class)
-          .isEqualTo(staged.getBody().reviewProjectTextUnitSuggestion());
+          .isEqualTo(persistedSuggestion);
       assertThat(suggestionRepository.findByReviewProjectTextUnitId(fixture.secondRowId()))
           .isPresent();
       assertThat(currentTarget(fixture)).isEqualTo("original target");
@@ -86,6 +90,10 @@ public class ReviewProjectDecisionTransactionServiceDbTest extends ServiceTestBa
   public void conflictRetryMustMatchTheLatestVariantAndRetainsStagedSuggestion() throws Exception {
     Fixture fixture = createFixture(true);
     var staged = stage(fixture, "staged target", fixture.originalVariantId(), false);
+    assertThat(staged.getStatusCode()).isEqualTo(HttpStatus.OK);
+    var persistedSuggestion = row(fixture).reviewProjectTextUnitSuggestion();
+    assertThat(persistedSuggestion).isNotNull();
+    assertThat(persistedSuggestion.target()).isEqualTo("staged target");
     Long secondVariantId = writeOutsideReview(fixture, "another writer");
     var conflict =
         saveDecision(fixture.secondRowId(), decision("mine", fixture.originalVariantId(), false));
@@ -94,7 +102,7 @@ public class ReviewProjectDecisionTransactionServiceDbTest extends ServiceTestBa
         .usingRecursiveComparison()
         .withComparatorForType(
             java.util.Comparator.comparing(ZonedDateTime::toInstant), ZonedDateTime.class)
-        .isEqualTo(staged.getBody().reviewProjectTextUnitSuggestion());
+        .isEqualTo(persistedSuggestion);
     assertThat(conflict.getBody().currentTmTextUnitVariant().id()).isEqualTo(secondVariantId);
 
     Long thirdVariantId = writeOutsideReview(fixture, "newer writer");
@@ -114,6 +122,10 @@ public class ReviewProjectDecisionTransactionServiceDbTest extends ServiceTestBa
   public void suggestionRetryMustMatchTheLatestVariant() throws Exception {
     Fixture fixture = createFixture(true);
     var staged = stage(fixture, "staged target", fixture.originalVariantId(), false);
+    assertThat(staged.getStatusCode()).isEqualTo(HttpStatus.OK);
+    var persistedSuggestion = row(fixture).reviewProjectTextUnitSuggestion();
+    assertThat(persistedSuggestion).isNotNull();
+    assertThat(persistedSuggestion.target()).isEqualTo("staged target");
     Long latestVariantId = writeOutsideReview(fixture, "another writer");
 
     var conflict = stage(fixture, "replacement suggestion", fixture.originalVariantId(), true);
@@ -122,7 +134,7 @@ public class ReviewProjectDecisionTransactionServiceDbTest extends ServiceTestBa
         .usingRecursiveComparison()
         .withComparatorForType(
             java.util.Comparator.comparing(ZonedDateTime::toInstant), ZonedDateTime.class)
-        .isEqualTo(staged.getBody().reviewProjectTextUnitSuggestion());
+        .isEqualTo(persistedSuggestion);
     assertThat(conflict.getBody().currentTmTextUnitVariant().id()).isEqualTo(latestVariantId);
     assertThat(
             suggestionRepository
