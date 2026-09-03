@@ -1,0 +1,1959 @@
+{
+  "name": "unicode-mf2-showcase",
+  "description": "Advanced Unicode MF2 examples plus a labeled 36-variant composition. English source, French demo translations, Polish/Arabic plural and bidi samples. Local demo; translations need review. See source comments for provenance and sample arguments.",
+  "sourceLocale": "en",
+  "locales": ["fr", "pl", "ar"],
+  "assetPath": "unicode-showcase.mf2",
+  "messages": [
+    {
+      "id": "unicode.01.party",
+      "title": "Party invitation: gender × guest count, 12 variants",
+      "source": ".input {$hostGender :string}\n.input {$guestCount :number}\n.match $hostGender $guestCount\nfemale 0 {{{$hostName} does not give a party.}}\nfemale 1 {{{$hostName} invites {$guestName} to her party.}}\nfemale 2 {{{$hostName} invites {$guestName} and one other person to her party.}}\nfemale * {{{$hostName} invites {$guestCount} people, including {$guestName}, to her party.}}\nmale 0 {{{$hostName} does not give a party.}}\nmale 1 {{{$hostName} invites {$guestName} to his party.}}\nmale 2 {{{$hostName} invites {$guestName} and one other person to his party.}}\nmale * {{{$hostName} invites {$guestCount} people, including {$guestName}, to his party.}}\n* 0 {{{$hostName} does not give a party.}}\n* 1 {{{$hostName} invites {$guestName} to their party.}}\n* 2 {{{$hostName} invites {$guestName} and one other person to their party.}}\n* * {{{$hostName} invites {$guestCount} people, including {$guestName}, to their party.}}",
+      "translations": {
+        "fr": ".input {$hostGender :string}\n.input {$guestCount :number}\n.match $hostGender $guestCount\nfemale 0 {{{$hostName} n’organise pas de fête.}}\nfemale 1 {{{$hostName} invite {$guestName} à sa fête.}}\nfemale 2 {{{$hostName} invite {$guestName} et une autre personne à sa fête.}}\nfemale * {{{$hostName} invite {$guestCount} personnes, dont {$guestName}, à sa fête.}}\nmale 0 {{{$hostName} n’organise pas de fête.}}\nmale 1 {{{$hostName} invite {$guestName} à sa fête.}}\nmale 2 {{{$hostName} invite {$guestName} et une autre personne à sa fête.}}\nmale * {{{$hostName} invite {$guestCount} personnes, dont {$guestName}, à sa fête.}}\n* 0 {{{$hostName} n’organise pas de fête.}}\n* 1 {{{$hostName} invite {$guestName} à sa fête.}}\n* 2 {{{$hostName} invite {$guestName} et une autre personne à sa fête.}}\n* * {{{$hostName} invite {$guestCount} personnes, dont {$guestName}, à sa fête.}}"
+      },
+      "provenance": {
+        "url": "https://messageformat.unicode.org/docs/reference/matchers/#multiple-selectors",
+        "kind": "unicode-example",
+        "retrieved": "2026-09-02"
+      },
+      "notes": "Two selectors; exact 0/1/2 keys and fallback. French uses the same possessive regardless of the host’s gender. Try hostGender=female, guestCount=2, hostName=Alex, guestName=Camille. French is a demo translation.",
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 0
+          },
+          "expected": "Alex does not give a party."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 0
+          },
+          "expected": "Alex n’organise pas de fête."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 1
+          },
+          "expected": "Alex invites Camille to her party."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 1
+          },
+          "expected": "Alex invite Camille à sa fête."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 2
+          },
+          "expected": "Alex invites Camille and one other person to her party."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 2
+          },
+          "expected": "Alex invite Camille et une autre personne à sa fête."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 7
+          },
+          "expected": "Alex invites 7 people, including Camille, to her party."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 7
+          },
+          "expected": "Alex invite 7 personnes, dont Camille, à sa fête."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 0
+          },
+          "expected": "Alex does not give a party."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 0
+          },
+          "expected": "Alex n’organise pas de fête."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 1
+          },
+          "expected": "Alex invites Camille to his party."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 1
+          },
+          "expected": "Alex invite Camille à sa fête."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 2
+          },
+          "expected": "Alex invites Camille and one other person to his party."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 2
+          },
+          "expected": "Alex invite Camille et une autre personne à sa fête."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 7
+          },
+          "expected": "Alex invites 7 people, including Camille, to his party."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 7
+          },
+          "expected": "Alex invite 7 personnes, dont Camille, à sa fête."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 0
+          },
+          "expected": "Alex does not give a party."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 0
+          },
+          "expected": "Alex n’organise pas de fête."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 1
+          },
+          "expected": "Alex invites Camille to their party."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 1
+          },
+          "expected": "Alex invite Camille à sa fête."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 2
+          },
+          "expected": "Alex invites Camille and one other person to their party."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 2
+          },
+          "expected": "Alex invite Camille et une autre personne à sa fête."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 7
+          },
+          "expected": "Alex invites 7 people, including Camille, to their party."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 7
+          },
+          "expected": "Alex invite 7 personnes, dont Camille, à sa fête."
+        }
+      ]
+    },
+    {
+      "id": "unicode.02.likes-shares",
+      "title": "Likes × shares: 9 variants",
+      "source": ".input {$numLikes :integer}\n.input {$numShares :integer}\n.match $numLikes $numShares\n0 0 {{Your item has no likes and has not been shared.}}\n0 one {{Your item has no likes and has been shared {$numShares} time.}}\n0 * {{Your item has no likes and has been shared {$numShares} times.}}\none 0 {{Your item has {$numLikes} like and has not been shared.}}\none one {{Your item has {$numLikes} like and has been shared {$numShares} time.}}\none * {{Your item has {$numLikes} like and has been shared {$numShares} times.}}\n* 0 {{Your item has {$numLikes} likes and has not been shared.}}\n* one {{Your item has {$numLikes} likes and has been shared {$numShares} time.}}\n* * {{Your item has {$numLikes} likes and has been shared {$numShares} times.}}",
+      "translations": {
+        "fr": ".input {$numLikes :integer}\n.input {$numShares :integer}\n.match $numLikes $numShares\n0 0 {{Votre publication n’a aucun « J’aime » et n’a pas été partagée.}}\n0 one {{Votre publication n’a aucun « J’aime » et a été partagée {$numShares} fois.}}\n0 * {{Votre publication n’a aucun « J’aime » et a été partagée {$numShares} fois.}}\none 0 {{Votre publication a {$numLikes} « J’aime » et n’a pas été partagée.}}\none one {{Votre publication a {$numLikes} « J’aime » et a été partagée {$numShares} fois.}}\none * {{Votre publication a {$numLikes} « J’aime » et a été partagée {$numShares} fois.}}\n* 0 {{Votre publication a {$numLikes} « J’aime » et n’a pas été partagée.}}\n* one {{Votre publication a {$numLikes} « J’aime » et a été partagée {$numShares} fois.}}\n* * {{Votre publication a {$numLikes} « J’aime » et a été partagée {$numShares} fois.}}"
+      },
+      "provenance": {
+        "url": "https://www.unicode.org/reports/tr35/tr35-messageFormat.html#selector",
+        "kind": "unicode-example",
+        "retrieved": "2026-09-02"
+      },
+      "notes": "Independent plural selectors combine zero, one, and fallback. Try numLikes=1, numShares=8. French is a demo translation.",
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 0,
+            "numShares": 0
+          },
+          "expected": "Your item has no likes and has not been shared."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 0,
+            "numShares": 0
+          },
+          "expected": "Votre publication n’a aucun « J’aime » et n’a pas été partagée."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 0,
+            "numShares": 1
+          },
+          "expected": "Your item has no likes and has been shared 1 time."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 0,
+            "numShares": 1
+          },
+          "expected": "Votre publication n’a aucun « J’aime » et a été partagée 1 fois."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 0,
+            "numShares": 8
+          },
+          "expected": "Your item has no likes and has been shared 8 times."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 0,
+            "numShares": 8
+          },
+          "expected": "Votre publication n’a aucun « J’aime » et a été partagée 8 fois."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 1,
+            "numShares": 0
+          },
+          "expected": "Your item has 1 like and has not been shared."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 1,
+            "numShares": 0
+          },
+          "expected": "Votre publication a 1 « J’aime » et n’a pas été partagée."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 1,
+            "numShares": 1
+          },
+          "expected": "Your item has 1 like and has been shared 1 time."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 1,
+            "numShares": 1
+          },
+          "expected": "Votre publication a 1 « J’aime » et a été partagée 1 fois."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 1,
+            "numShares": 8
+          },
+          "expected": "Your item has 1 like and has been shared 8 times."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 1,
+            "numShares": 8
+          },
+          "expected": "Votre publication a 1 « J’aime » et a été partagée 8 fois."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 5,
+            "numShares": 0
+          },
+          "expected": "Your item has 5 likes and has not been shared."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 5,
+            "numShares": 0
+          },
+          "expected": "Votre publication a 5 « J’aime » et n’a pas été partagée."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 5,
+            "numShares": 1
+          },
+          "expected": "Your item has 5 likes and has been shared 1 time."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 5,
+            "numShares": 1
+          },
+          "expected": "Votre publication a 5 « J’aime » et a été partagée 1 fois."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 5,
+            "numShares": 8
+          },
+          "expected": "Your item has 5 likes and has been shared 8 times."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 5,
+            "numShares": 8
+          },
+          "expected": "Votre publication a 5 « J’aime » et a été partagée 8 fois."
+        }
+      ]
+    },
+    {
+      "id": "unicode.03.number-locals",
+      "title": "Four local declarations and number styles",
+      "source": ".local $n1 = {$num :number notation=scientific minimumSignificantDigits=5}\n.local $n2 = {$num :number style=percent}\n.local $n3 = {$num :number minimumIntegerDigits=4 minimumFractionDigits=4}\n.local $n4 = {$num :number maximumSignificantDigits=6}\n{{The number in scientific notation is {$n1}. As a percentage, it's {$n2}.\nFormatted with at least four integer digits and four fractional digits, it's\n{$n3}. Formatted with at most six significant digits, it's {$n4}.}}",
+      "translations": {
+        "fr": ".local $n1 = {$num :number notation=scientific minimumSignificantDigits=5}\n.local $n2 = {$num :number style=percent}\n.local $n3 = {$num :number minimumIntegerDigits=4 minimumFractionDigits=4}\n.local $n4 = {$num :number maximumSignificantDigits=6}\n{{En notation scientifique : {$n1}. En pourcentage : {$n2}.\nAvec au moins quatre chiffres entiers et quatre décimales : {$n3}.\nAvec au plus six chiffres significatifs : {$n4}.}}"
+      },
+      "provenance": {
+        "url": "https://messageformat.unicode.org/docs/reference/functions/#number-formatting",
+        "kind": "unicode-example",
+        "retrieved": "2026-09-02"
+      },
+      "notes": "One input reused through four formatted locals. Uses the website’s legacy style=percent spelling. Run with num=3.1415927. Locale formatting is validated with Mojito’s Intl registry; the editor’s portable preview does not implement every number option.",
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "num": 3.1415927
+          },
+          "expected": "The number in scientific notation is 3.1415927E0. As a percentage, it's 314%.\nFormatted with at least four integer digits and four fractional digits, it's\n0,003.1416. Formatted with at most six significant digits, it's 3.14159.",
+          "knownGap": "unsupported-number-options"
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "num": 3.1415927
+          },
+          "expected": "En notation scientifique : 3,1415927E0. En pourcentage : 314 %.\nAvec au moins quatre chiffres entiers et quatre décimales : 0 003,1416.\nAvec au plus six chiffres significatifs : 3,14159.",
+          "knownGap": "unsupported-number-options"
+        }
+      ],
+      "knownLimitations": [
+        "The current Mojito Intl adapter ignores notation, legacy style=percent, minimumIntegerDigits, and significant-digit options in this official example. Validation records the mismatch against native Intl reference formatting."
+      ]
+    },
+    {
+      "id": "unicode.04.ordinal",
+      "title": "English ordinals and French locale adaptation",
+      "source": ".input {$num :number select=ordinal}\n.match $num\none {{You are {$num}st}}\ntwo {{You are {$num}nd}}\nfew {{You are {$num}rd}}\n* {{You are {$num}th}}",
+      "translations": {
+        "fr": ".input {$num :number select=ordinal}\n.match $num\none {{Votre position : {$num}er}}\n* {{Votre position : {$num}e}}"
+      },
+      "provenance": {
+        "url": "https://messageformat.unicode.org/docs/reference/functions/#number-selection",
+        "kind": "unicode-example",
+        "retrieved": "2026-09-02"
+      },
+      "notes": "English one/two/few ordinal categories become French one/fallback. Try 1, 2, 3, 11, 12, 13, 21, 22, 23. French is a demo translation.",
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "num": 1
+          },
+          "expected": "You are 1st"
+        },
+        {
+          "locale": "en",
+          "args": {
+            "num": 2
+          },
+          "expected": "You are 2nd"
+        },
+        {
+          "locale": "en",
+          "args": {
+            "num": 3
+          },
+          "expected": "You are 3rd"
+        },
+        {
+          "locale": "en",
+          "args": {
+            "num": 11
+          },
+          "expected": "You are 11th"
+        },
+        {
+          "locale": "en",
+          "args": {
+            "num": 12
+          },
+          "expected": "You are 12th"
+        },
+        {
+          "locale": "en",
+          "args": {
+            "num": 13
+          },
+          "expected": "You are 13th"
+        },
+        {
+          "locale": "en",
+          "args": {
+            "num": 21
+          },
+          "expected": "You are 21st"
+        },
+        {
+          "locale": "en",
+          "args": {
+            "num": 22
+          },
+          "expected": "You are 22nd"
+        },
+        {
+          "locale": "en",
+          "args": {
+            "num": 23
+          },
+          "expected": "You are 23rd"
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "num": 1
+          },
+          "expected": "Votre position : 1er"
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "num": 2
+          },
+          "expected": "Votre position : 2e"
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "num": 3
+          },
+          "expected": "Votre position : 3e"
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "num": 11
+          },
+          "expected": "Votre position : 11e"
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "num": 21
+          },
+          "expected": "Votre position : 21e"
+        }
+      ]
+    },
+    {
+      "id": "unicode.05.markup",
+      "title": "Paired and standalone markup",
+      "source": "Click {#link}here{/link}. {#bold}{$count}{/bold} {#star-icon/}",
+      "translations": {
+        "fr": "Cliquez {#link}ici{/link}. {#bold}{$count}{/bold} {#star-icon/}"
+      },
+      "provenance": {
+        "url": "https://messageformat.unicode.org/docs/reference/markup/",
+        "kind": "unicode-example",
+        "retrieved": "2026-09-02"
+      },
+      "notes": "link/bold/star-icon are application-defined markup. MF2 returns structured parts; it does not turn these tags into HTML. Try count=32. French is a demo translation.",
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "count": 32
+          },
+          "expected": "Click here. 32 ",
+          "markup": ["link", "link", "bold", "bold", "star-icon"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "count": 32
+          },
+          "expected": "Cliquez ici. 32 ",
+          "markup": ["link", "link", "bold", "bold", "star-icon"]
+        }
+      ]
+    },
+    {
+      "id": "unicode.06.grammatical-case",
+      "title": "Custom grammatical-case selector and person formatter",
+      "source": ".local $hasCase = {$userName :ns:hasCase}\n.match $hasCase\nvocative {{Hello, {$userName :ns:person case=vocative}!}}\naccusative {{Please welcome {$userName :ns:person case=accusative}!}}\n* {{Hello!}}",
+      "translations": {
+        "fr": ".local $hasCase = {$userName :ns:hasCase}\n.match $hasCase\nvocative {{Bonjour, {$userName :ns:person case=vocative} !}}\naccusative {{Accueillez {$userName :ns:person case=accusative} !}}\n* {{Bonjour !}}"
+      },
+      "provenance": {
+        "url": "https://www.unicode.org/reports/tr35/tr35-messageFormat.html#function",
+        "kind": "unicode-example",
+        "retrieved": "2026-09-02"
+      },
+      "notes": "Capability boundary: ns:hasCase and ns:person are illustrative host functions from Unicode, not built-in inflection. Mojito stores/edits this source, but its normal runtime cannot resolve those functions. Validation demonstrates both the missing-function result and a tiny fixture-only registry using supplied forms (no grammar inference).",
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "userName": {
+              "forms": {
+                "vocative": "Mario"
+              }
+            }
+          },
+          "expected": "Hello, Mario!",
+          "custom": true
+        },
+        {
+          "locale": "en",
+          "args": {
+            "userName": {
+              "forms": {
+                "accusative": "Marii"
+              }
+            }
+          },
+          "expected": "Please welcome Marii!",
+          "custom": true
+        },
+        {
+          "locale": "en",
+          "args": {
+            "userName": {
+              "forms": {}
+            }
+          },
+          "expected": "Hello!",
+          "custom": true
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "userName": {
+              "forms": {
+                "vocative": "Camille"
+              }
+            }
+          },
+          "expected": "Bonjour, Camille !",
+          "custom": true
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "userName": {
+              "forms": {
+                "accusative": "Camille"
+              }
+            }
+          },
+          "expected": "Accueillez Camille !",
+          "custom": true
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "userName": {
+              "forms": {}
+            }
+          },
+          "expected": "Bonjour !",
+          "custom": true
+        }
+      ]
+    },
+    {
+      "id": "unicode.07.selector-precedence",
+      "title": "Overlapping wildcard matches and precedence",
+      "source": ".input {$foo :string}\n.input {$bar :string}\n.match $foo $bar\n* bar {{Any and bar}}\nfoo * {{Foo and any}}\nfoo bar {{Foo and bar}}\n* * {{Otherwise}}",
+      "translations": {
+        "fr": ".input {$foo :string}\n.input {$bar :string}\n.match $foo $bar\n* bar {{Quelconque et bar}}\nfoo * {{Foo et quelconque}}\nfoo bar {{Foo et bar}}\n* * {{Autre cas}}"
+      },
+      "provenance": {
+        "url": "https://www.unicode.org/reports/tr35/tr35-messageFormat.html#pattern-selection-examples",
+        "kind": "unicode-example",
+        "retrieved": "2026-09-02"
+      },
+      "notes": "The most specific matching combination wins even though it appears after wildcard rows. Try foo=foo, bar=bar; then change either value. French is a demo translation.",
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "foo": "foo",
+            "bar": "bar"
+          },
+          "expected": "Foo and bar"
+        },
+        {
+          "locale": "en",
+          "args": {
+            "foo": "foo",
+            "bar": "x"
+          },
+          "expected": "Foo and any"
+        },
+        {
+          "locale": "en",
+          "args": {
+            "foo": "x",
+            "bar": "bar"
+          },
+          "expected": "Any and bar"
+        },
+        {
+          "locale": "en",
+          "args": {
+            "foo": "x",
+            "bar": "x"
+          },
+          "expected": "Otherwise"
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "foo": "foo",
+            "bar": "bar"
+          },
+          "expected": "Foo et bar"
+        }
+      ]
+    },
+    {
+      "id": "unicode.08.locale-plurals",
+      "title": "Polish plural categories and Arabic’s six forms",
+      "source": ".input {$count :number}\n.match $count\none {{You have {$count} week.}}\n* {{You have {$count} weeks.}}",
+      "translations": {
+        "fr": ".input {$count :number}\n.match $count\none {{Vous avez {$count} semaine.}}\n* {{Vous avez {$count} semaines.}}",
+        "pl": ".input {$count :number}\n.match $count\none {{Masz {$count} tydzień.}}\nfew {{Masz {$count} tygodnie.}}\nmany {{Masz {$count} tygodni.}}\nother {{Masz {$count} tygodnia.}}\n* {{Masz {$count} tygodnia.}}",
+        "ar": ".input {$count :number}\n.match $count\nzero {{ليس لديك أي أسابيع.}}\none {{لديك أسبوع واحد.}}\ntwo {{لديك أسبوعان.}}\nfew {{لديك {$count} أسابيع.}}\nmany {{لديك {$count} أسبوعًا.}}\n* {{لديك {$count} أسبوع.}}"
+      },
+      "provenance": {
+        "url": "https://messageformat.unicode.org/docs/reference/matchers/#number-selection-in-languages-with-more-than-two-plural-categories",
+        "kind": "unicode-example",
+        "retrieved": "2026-09-02"
+      },
+      "notes": "English source and Polish target come from Unicode. French and Arabic are demo translations. Polish: try 1,2,5,22,1.5. Arabic: try 0,1,2,3,11,100. Locale-specific categories can differ from the English source.",
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "count": 1
+          },
+          "expected": "You have 1 week."
+        },
+        {
+          "locale": "en",
+          "args": {
+            "count": 5
+          },
+          "expected": "You have 5 weeks."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "count": 1
+          },
+          "expected": "Vous avez 1 semaine."
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "count": 5
+          },
+          "expected": "Vous avez 5 semaines."
+        },
+        {
+          "locale": "pl",
+          "args": {
+            "count": 1
+          },
+          "expected": "Masz 1 tydzień."
+        },
+        {
+          "locale": "pl",
+          "args": {
+            "count": 2
+          },
+          "expected": "Masz 2 tygodnie."
+        },
+        {
+          "locale": "pl",
+          "args": {
+            "count": 5
+          },
+          "expected": "Masz 5 tygodni."
+        },
+        {
+          "locale": "pl",
+          "args": {
+            "count": 22
+          },
+          "expected": "Masz 22 tygodnie."
+        },
+        {
+          "locale": "pl",
+          "args": {
+            "count": 1.5
+          },
+          "expected": "Masz 1,5 tygodnia."
+        },
+        {
+          "locale": "ar",
+          "args": {
+            "count": 0
+          }
+        },
+        {
+          "locale": "ar",
+          "args": {
+            "count": 1
+          }
+        },
+        {
+          "locale": "ar",
+          "args": {
+            "count": 2
+          }
+        },
+        {
+          "locale": "ar",
+          "args": {
+            "count": 3
+          }
+        },
+        {
+          "locale": "ar",
+          "args": {
+            "count": 11
+          }
+        },
+        {
+          "locale": "ar",
+          "args": {
+            "count": 100
+          }
+        }
+      ]
+    },
+    {
+      "id": "unicode.09.date-styles",
+      "title": "Four date/time styles, fixed UTC zone",
+      "source": "Short: {$date :datetime dateStyle=short timeStyle=short timeZone=UTC}.\nMedium: {$date :datetime dateStyle=medium timeStyle=medium timeZone=UTC}.\nLong: {$date :datetime dateStyle=long timeStyle=long timeZone=UTC}.\nFull: {$date :datetime dateStyle=full timeStyle=full timeZone=UTC}.",
+      "translations": {
+        "fr": "Court : {$date :datetime dateStyle=short timeStyle=short timeZone=UTC}.\nMoyen : {$date :datetime dateStyle=medium timeStyle=medium timeZone=UTC}.\nLong : {$date :datetime dateStyle=long timeStyle=long timeZone=UTC}.\nComplet : {$date :datetime dateStyle=full timeStyle=full timeZone=UTC}."
+      },
+      "provenance": {
+        "url": "https://messageformat.unicode.org/docs/reference/functions/#the-date-time-and-datetime-functions",
+        "kind": "adapted-from-unicode",
+        "retrieved": "2026-09-02"
+      },
+      "notes": "Based on Unicode’s date/time styles example; adds timeZone=UTC for reproducibility. Try date=2024-10-25T14:05:06Z. Runtime output is validated with the Intl registry. Mojito’s portable editor preview has no date/time formatter.",
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "date": "2024-10-25T14:05:06Z"
+          }
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "date": "2024-10-25T14:05:06Z"
+          }
+        }
+      ]
+    },
+    {
+      "id": "showcase.10.event-matrix",
+      "title": "36 variants: gender × status × count, date, currency, link",
+      "source": ".input {$hostGender :string}\n.input {$status :string}\n.input {$guestCount :integer select=exact}\n.local $when = {$date :datetime dateStyle=long timeStyle=short timeZone=UTC}\n.local $fee = {$price :currency currency=EUR}\n.match $hostGender $status $guestCount\nfemale ready 0 {{{$hostName}: She is ready. No guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nfemale ready 1 {{{$hostName}: She is ready. One guest has signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nfemale ready 2 {{{$hostName}: She is ready. Two guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nfemale ready * {{{$hostName}: She is ready. {$guestCount} guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nfemale paused 0 {{{$hostName}: She is waiting. No guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nfemale paused 1 {{{$hostName}: She is waiting. One guest has signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nfemale paused 2 {{{$hostName}: She is waiting. Two guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nfemale paused * {{{$hostName}: She is waiting. {$guestCount} guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nfemale * 0 {{{$hostName}: She is unavailable. No guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nfemale * 1 {{{$hostName}: She is unavailable. One guest has signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nfemale * 2 {{{$hostName}: She is unavailable. Two guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nfemale * * {{{$hostName}: She is unavailable. {$guestCount} guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nmale ready 0 {{{$hostName}: He is ready. No guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nmale ready 1 {{{$hostName}: He is ready. One guest has signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nmale ready 2 {{{$hostName}: He is ready. Two guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nmale ready * {{{$hostName}: He is ready. {$guestCount} guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nmale paused 0 {{{$hostName}: He is waiting. No guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nmale paused 1 {{{$hostName}: He is waiting. One guest has signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nmale paused 2 {{{$hostName}: He is waiting. Two guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nmale paused * {{{$hostName}: He is waiting. {$guestCount} guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nmale * 0 {{{$hostName}: He is unavailable. No guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nmale * 1 {{{$hostName}: He is unavailable. One guest has signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nmale * 2 {{{$hostName}: He is unavailable. Two guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\nmale * * {{{$hostName}: He is unavailable. {$guestCount} guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\n* ready 0 {{{$hostName}: They are ready. No guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\n* ready 1 {{{$hostName}: They are ready. One guest has signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\n* ready 2 {{{$hostName}: They are ready. Two guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\n* ready * {{{$hostName}: They are ready. {$guestCount} guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\n* paused 0 {{{$hostName}: They are waiting. No guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\n* paused 1 {{{$hostName}: They are waiting. One guest has signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\n* paused 2 {{{$hostName}: They are waiting. Two guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\n* paused * {{{$hostName}: They are waiting. {$guestCount} guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\n* * 0 {{{$hostName}: They are unavailable. No guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\n* * 1 {{{$hostName}: They are unavailable. One guest has signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\n* * 2 {{{$hostName}: They are unavailable. Two guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}\n* * * {{{$hostName}: They are unavailable. {$guestCount} guests have signed up. Starts {$when}; admission {$fee}. {#link destination=$url}View event{/link}.}}",
+      "translations": {
+        "fr": ".input {$hostGender :string}\n.input {$status :string}\n.input {$guestCount :integer select=exact}\n.local $when = {$date :datetime dateStyle=long timeStyle=short timeZone=UTC}\n.local $fee = {$price :currency currency=EUR}\n.match $hostGender $status $guestCount\nfemale ready 0 {{{$hostName} : Elle est prête. Aucune inscription. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nfemale ready 1 {{{$hostName} : Elle est prête. Une personne est inscrite. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nfemale ready 2 {{{$hostName} : Elle est prête. Deux personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nfemale ready * {{{$hostName} : Elle est prête. {$guestCount} personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nfemale paused 0 {{{$hostName} : Elle est en attente. Aucune inscription. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nfemale paused 1 {{{$hostName} : Elle est en attente. Une personne est inscrite. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nfemale paused 2 {{{$hostName} : Elle est en attente. Deux personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nfemale paused * {{{$hostName} : Elle est en attente. {$guestCount} personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nfemale * 0 {{{$hostName} : Elle est indisponible. Aucune inscription. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nfemale * 1 {{{$hostName} : Elle est indisponible. Une personne est inscrite. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nfemale * 2 {{{$hostName} : Elle est indisponible. Deux personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nfemale * * {{{$hostName} : Elle est indisponible. {$guestCount} personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nmale ready 0 {{{$hostName} : Il est prêt. Aucune inscription. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nmale ready 1 {{{$hostName} : Il est prêt. Une personne est inscrite. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nmale ready 2 {{{$hostName} : Il est prêt. Deux personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nmale ready * {{{$hostName} : Il est prêt. {$guestCount} personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nmale paused 0 {{{$hostName} : Il est en attente. Aucune inscription. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nmale paused 1 {{{$hostName} : Il est en attente. Une personne est inscrite. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nmale paused 2 {{{$hostName} : Il est en attente. Deux personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nmale paused * {{{$hostName} : Il est en attente. {$guestCount} personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nmale * 0 {{{$hostName} : Il est indisponible. Aucune inscription. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nmale * 1 {{{$hostName} : Il est indisponible. Une personne est inscrite. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nmale * 2 {{{$hostName} : Il est indisponible. Deux personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\nmale * * {{{$hostName} : Il est indisponible. {$guestCount} personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\n* ready 0 {{{$hostName} : Cette personne est prête. Aucune inscription. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\n* ready 1 {{{$hostName} : Cette personne est prête. Une personne est inscrite. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\n* ready 2 {{{$hostName} : Cette personne est prête. Deux personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\n* ready * {{{$hostName} : Cette personne est prête. {$guestCount} personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\n* paused 0 {{{$hostName} : Cette personne est en attente. Aucune inscription. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\n* paused 1 {{{$hostName} : Cette personne est en attente. Une personne est inscrite. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\n* paused 2 {{{$hostName} : Cette personne est en attente. Deux personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\n* paused * {{{$hostName} : Cette personne est en attente. {$guestCount} personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\n* * 0 {{{$hostName} : Cette personne est indisponible. Aucune inscription. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\n* * 1 {{{$hostName} : Cette personne est indisponible. Une personne est inscrite. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\n* * 2 {{{$hostName} : Cette personne est indisponible. Deux personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}\n* * * {{{$hostName} : Cette personne est indisponible. {$guestCount} personnes sont inscrites. Début : {$when} ; entrée : {$fee}. {#link destination=$url}Voir l’événement{/link}.}}"
+      },
+      "provenance": {
+        "url": "https://www.unicode.org/reports/tr35/tr35-messageFormat.html#matcher",
+        "kind": "original-composition",
+        "retrieved": "2026-09-02"
+      },
+      "notes": "Authored for this Mojito showcase, not a published Unicode example. Three selectors produce 36 combinations. Also uses two locals, localized date/currency and a link with a variable option. All 36 English and French branches are exercised by validate.mjs. Try hostGender=female, status=ready, guestCount=2, hostName=Alex, date=2026-09-18T18:00:00Z, price=25, url=https://example.org/events/demo. Date/currency need the Intl registry.",
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "ready",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is ready. No guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "ready",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est prête. Aucune inscription.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "ready",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is ready. One guest has signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "ready",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est prête. Une personne est inscrite.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "ready",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is ready. Two guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "ready",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est prête. Deux personnes sont inscrites.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "ready",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is ready. 7 guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "ready",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est prête. 7 personnes sont inscrites.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "paused",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is waiting. No guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "paused",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est en attente. Aucune inscription.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "paused",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is waiting. One guest has signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "paused",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est en attente. Une personne est inscrite.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "paused",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is waiting. Two guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "paused",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est en attente. Deux personnes sont inscrites.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "paused",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is waiting. 7 guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "paused",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est en attente. 7 personnes sont inscrites.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "offline",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is unavailable. No guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "offline",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est indisponible. Aucune inscription.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "offline",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is unavailable. One guest has signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "offline",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est indisponible. Une personne est inscrite.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "offline",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is unavailable. Two guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "offline",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est indisponible. Deux personnes sont inscrites.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "offline",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is unavailable. 7 guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "offline",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est indisponible. 7 personnes sont inscrites.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "ready",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is ready. No guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "ready",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est prêt. Aucune inscription.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "ready",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is ready. One guest has signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "ready",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est prêt. Une personne est inscrite.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "ready",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is ready. Two guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "ready",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est prêt. Deux personnes sont inscrites.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "ready",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is ready. 7 guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "ready",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est prêt. 7 personnes sont inscrites.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "paused",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is waiting. No guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "paused",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est en attente. Aucune inscription.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "paused",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is waiting. One guest has signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "paused",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est en attente. Une personne est inscrite.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "paused",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is waiting. Two guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "paused",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est en attente. Deux personnes sont inscrites.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "paused",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is waiting. 7 guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "paused",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est en attente. 7 personnes sont inscrites.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "offline",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is unavailable. No guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "offline",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est indisponible. Aucune inscription.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "offline",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is unavailable. One guest has signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "offline",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est indisponible. Une personne est inscrite.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "offline",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is unavailable. Two guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "offline",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est indisponible. Deux personnes sont inscrites.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "offline",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is unavailable. 7 guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "offline",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est indisponible. 7 personnes sont inscrites.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "ready",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are ready. No guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "ready",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est prête. Aucune inscription.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "ready",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are ready. One guest has signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "ready",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est prête. Une personne est inscrite.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "ready",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are ready. Two guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "ready",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est prête. Deux personnes sont inscrites.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "ready",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are ready. 7 guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "ready",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est prête. 7 personnes sont inscrites.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "paused",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are waiting. No guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "paused",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est en attente. Aucune inscription.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "paused",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are waiting. One guest has signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "paused",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est en attente. Une personne est inscrite.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "paused",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are waiting. Two guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "paused",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est en attente. Deux personnes sont inscrites.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "paused",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are waiting. 7 guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "paused",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est en attente. 7 personnes sont inscrites.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "offline",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are unavailable. No guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "offline",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est indisponible. Aucune inscription.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "offline",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are unavailable. One guest has signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "offline",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est indisponible. Une personne est inscrite.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "offline",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are unavailable. Two guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "offline",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est indisponible. Deux personnes sont inscrites.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "offline",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are unavailable. 7 guests have signed up.",
+          "markup": ["link", "link"]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "offline",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est indisponible. 7 personnes sont inscrites.",
+          "markup": ["link", "link"]
+        }
+      ],
+      "knownLimitations": [
+        "This valid 36-variant matrix currently produces 88 selector-priority overlap warnings in the editor. Date and currency rendering require the Intl registry; the portable editor preview lacks these functions."
+      ]
+    },
+    {
+      "id": "showcase.11.bidi",
+      "title": "Mixed-direction name and file path",
+      "source": "{$userName :string u:dir=rtl} uploaded {$path :string u:dir=ltr}.",
+      "translations": {
+        "fr": "{$userName :string u:dir=rtl} a envoyé {$path :string u:dir=ltr}.",
+        "ar": "رفعَت {$userName :string u:dir=rtl} الملف {$path :string u:dir=ltr}."
+      },
+      "provenance": {
+        "url": "https://www.unicode.org/reports/tr35/tr35-messageFormat.html#handling-bidirectional-text",
+        "kind": "original-composition",
+        "retrieved": "2026-09-02"
+      },
+      "notes": "Authored from Unicode’s bidi isolation rules. Arabic name plus an LTR path; u:dir supplies direction metadata. Runtime parts retain isolation information. Try userName=ليلى and path=reports/2026-Q3.csv. French and Arabic are demo translations.",
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "userName": "ليلى",
+            "path": "reports/2026-Q3.csv"
+          },
+          "bidi": true
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "userName": "ليلى",
+            "path": "reports/2026-Q3.csv"
+          },
+          "bidi": true
+        },
+        {
+          "locale": "ar",
+          "args": {
+            "userName": "ليلى",
+            "path": "reports/2026-Q3.csv"
+          },
+          "bidi": true
+        }
+      ]
+    }
+  ]
+}

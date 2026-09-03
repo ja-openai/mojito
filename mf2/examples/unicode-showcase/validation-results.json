@@ -1,0 +1,2874 @@
+{
+  "messages": [
+    {
+      "id": "unicode.01.party",
+      "variants": 12,
+      "targets": [
+        "fr"
+      ],
+      "editorWarnings": {
+        "fr": {
+          "missing-locale-plural-variant": 2
+        }
+      },
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 0
+          },
+          "expected": "Alex does not give a party.",
+          "output": "Alex does not give a party.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 0
+          },
+          "expected": "Alex n’organise pas de fête.",
+          "output": "Alex n’organise pas de fête.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 1
+          },
+          "expected": "Alex invites Camille to her party.",
+          "output": "Alex invites Camille to her party.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 1
+          },
+          "expected": "Alex invite Camille à sa fête.",
+          "output": "Alex invite Camille à sa fête.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 2
+          },
+          "expected": "Alex invites Camille and one other person to her party.",
+          "output": "Alex invites Camille and one other person to her party.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 2
+          },
+          "expected": "Alex invite Camille et une autre personne à sa fête.",
+          "output": "Alex invite Camille et une autre personne à sa fête.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 7
+          },
+          "expected": "Alex invites 7 people, including Camille, to her party.",
+          "output": "Alex invites 7 people, including Camille, to her party.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 7
+          },
+          "expected": "Alex invite 7 personnes, dont Camille, à sa fête.",
+          "output": "Alex invite 7 personnes, dont Camille, à sa fête.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 0
+          },
+          "expected": "Alex does not give a party.",
+          "output": "Alex does not give a party.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 0
+          },
+          "expected": "Alex n’organise pas de fête.",
+          "output": "Alex n’organise pas de fête.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 1
+          },
+          "expected": "Alex invites Camille to his party.",
+          "output": "Alex invites Camille to his party.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 1
+          },
+          "expected": "Alex invite Camille à sa fête.",
+          "output": "Alex invite Camille à sa fête.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 2
+          },
+          "expected": "Alex invites Camille and one other person to his party.",
+          "output": "Alex invites Camille and one other person to his party.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 2
+          },
+          "expected": "Alex invite Camille et une autre personne à sa fête.",
+          "output": "Alex invite Camille et une autre personne à sa fête.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 7
+          },
+          "expected": "Alex invites 7 people, including Camille, to his party.",
+          "output": "Alex invites 7 people, including Camille, to his party.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 7
+          },
+          "expected": "Alex invite 7 personnes, dont Camille, à sa fête.",
+          "output": "Alex invite 7 personnes, dont Camille, à sa fête.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 0
+          },
+          "expected": "Alex does not give a party.",
+          "output": "Alex does not give a party.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 0
+          },
+          "expected": "Alex n’organise pas de fête.",
+          "output": "Alex n’organise pas de fête.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 1
+          },
+          "expected": "Alex invites Camille to their party.",
+          "output": "Alex invites Camille to their party.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 1
+          },
+          "expected": "Alex invite Camille à sa fête.",
+          "output": "Alex invite Camille à sa fête.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 2
+          },
+          "expected": "Alex invites Camille and one other person to their party.",
+          "output": "Alex invites Camille and one other person to their party.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 2
+          },
+          "expected": "Alex invite Camille et une autre personne à sa fête.",
+          "output": "Alex invite Camille et une autre personne à sa fête.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 7
+          },
+          "expected": "Alex invites 7 people, including Camille, to their party.",
+          "output": "Alex invites 7 people, including Camille, to their party.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "hostName": "Alex",
+            "guestName": "Camille",
+            "guestCount": 7
+          },
+          "expected": "Alex invite 7 personnes, dont Camille, à sa fête.",
+          "output": "Alex invite 7 personnes, dont Camille, à sa fête.",
+          "knownMismatch": false,
+          "portableErrors": []
+        }
+      ]
+    },
+    {
+      "id": "unicode.02.likes-shares",
+      "variants": 9,
+      "targets": [
+        "fr"
+      ],
+      "editorWarnings": {
+        "fr": {
+          "missing-locale-plural-variant": 2
+        }
+      },
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 0,
+            "numShares": 0
+          },
+          "expected": "Your item has no likes and has not been shared.",
+          "output": "Your item has no likes and has not been shared.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 0,
+            "numShares": 0
+          },
+          "expected": "Votre publication n’a aucun « J’aime » et n’a pas été partagée.",
+          "output": "Votre publication n’a aucun « J’aime » et n’a pas été partagée.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 0,
+            "numShares": 1
+          },
+          "expected": "Your item has no likes and has been shared 1 time.",
+          "output": "Your item has no likes and has been shared 1 time.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 0,
+            "numShares": 1
+          },
+          "expected": "Votre publication n’a aucun « J’aime » et a été partagée 1 fois.",
+          "output": "Votre publication n’a aucun « J’aime » et a été partagée 1 fois.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 0,
+            "numShares": 8
+          },
+          "expected": "Your item has no likes and has been shared 8 times.",
+          "output": "Your item has no likes and has been shared 8 times.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 0,
+            "numShares": 8
+          },
+          "expected": "Votre publication n’a aucun « J’aime » et a été partagée 8 fois.",
+          "output": "Votre publication n’a aucun « J’aime » et a été partagée 8 fois.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 1,
+            "numShares": 0
+          },
+          "expected": "Your item has 1 like and has not been shared.",
+          "output": "Your item has 1 like and has not been shared.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 1,
+            "numShares": 0
+          },
+          "expected": "Votre publication a 1 « J’aime » et n’a pas été partagée.",
+          "output": "Votre publication a 1 « J’aime » et n’a pas été partagée.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 1,
+            "numShares": 1
+          },
+          "expected": "Your item has 1 like and has been shared 1 time.",
+          "output": "Your item has 1 like and has been shared 1 time.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 1,
+            "numShares": 1
+          },
+          "expected": "Votre publication a 1 « J’aime » et a été partagée 1 fois.",
+          "output": "Votre publication a 1 « J’aime » et a été partagée 1 fois.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 1,
+            "numShares": 8
+          },
+          "expected": "Your item has 1 like and has been shared 8 times.",
+          "output": "Your item has 1 like and has been shared 8 times.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 1,
+            "numShares": 8
+          },
+          "expected": "Votre publication a 1 « J’aime » et a été partagée 8 fois.",
+          "output": "Votre publication a 1 « J’aime » et a été partagée 8 fois.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 5,
+            "numShares": 0
+          },
+          "expected": "Your item has 5 likes and has not been shared.",
+          "output": "Your item has 5 likes and has not been shared.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 5,
+            "numShares": 0
+          },
+          "expected": "Votre publication a 5 « J’aime » et n’a pas été partagée.",
+          "output": "Votre publication a 5 « J’aime » et n’a pas été partagée.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 5,
+            "numShares": 1
+          },
+          "expected": "Your item has 5 likes and has been shared 1 time.",
+          "output": "Your item has 5 likes and has been shared 1 time.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 5,
+            "numShares": 1
+          },
+          "expected": "Votre publication a 5 « J’aime » et a été partagée 1 fois.",
+          "output": "Votre publication a 5 « J’aime » et a été partagée 1 fois.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "numLikes": 5,
+            "numShares": 8
+          },
+          "expected": "Your item has 5 likes and has been shared 8 times.",
+          "output": "Your item has 5 likes and has been shared 8 times.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "numLikes": 5,
+            "numShares": 8
+          },
+          "expected": "Votre publication a 5 « J’aime » et a été partagée 8 fois.",
+          "output": "Votre publication a 5 « J’aime » et a été partagée 8 fois.",
+          "knownMismatch": false,
+          "portableErrors": []
+        }
+      ]
+    },
+    {
+      "id": "unicode.03.number-locals",
+      "variants": 1,
+      "targets": [
+        "fr"
+      ],
+      "editorWarnings": {
+        "fr": {}
+      },
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "num": 3.1415927
+          },
+          "expected": "The number in scientific notation is 3.1415927E0. As a percentage, it's 314%.\nFormatted with at least four integer digits and four fractional digits, it's\n0,003.1416. Formatted with at most six significant digits, it's 3.14159.",
+          "knownGap": "unsupported-number-options",
+          "output": "The number in scientific notation is 3.142. As a percentage, it's 3.142.\nFormatted with at least four integer digits and four fractional digits, it's\n3.1416. Formatted with at most six significant digits, it's 3.142.",
+          "knownMismatch": true,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "num": 3.1415927
+          },
+          "expected": "En notation scientifique : 3,1415927E0. En pourcentage : 314 %.\nAvec au moins quatre chiffres entiers et quatre décimales : 0 003,1416.\nAvec au plus six chiffres significatifs : 3,14159.",
+          "knownGap": "unsupported-number-options",
+          "output": "En notation scientifique : 3,142. En pourcentage : 3,142.\nAvec au moins quatre chiffres entiers et quatre décimales : 3,1416.\nAvec au plus six chiffres significatifs : 3,142.",
+          "knownMismatch": true,
+          "portableErrors": []
+        }
+      ]
+    },
+    {
+      "id": "unicode.04.ordinal",
+      "variants": 4,
+      "targets": [
+        "fr"
+      ],
+      "editorWarnings": {
+        "fr": {
+          "missing-source-variant": 2
+        }
+      },
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "num": 1
+          },
+          "expected": "You are 1st",
+          "output": "You are 1st",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "num": 2
+          },
+          "expected": "You are 2nd",
+          "output": "You are 2nd",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "num": 3
+          },
+          "expected": "You are 3rd",
+          "output": "You are 3rd",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "num": 11
+          },
+          "expected": "You are 11th",
+          "output": "You are 11th",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "num": 12
+          },
+          "expected": "You are 12th",
+          "output": "You are 12th",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "num": 13
+          },
+          "expected": "You are 13th",
+          "output": "You are 13th",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "num": 21
+          },
+          "expected": "You are 21st",
+          "output": "You are 21st",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "num": 22
+          },
+          "expected": "You are 22nd",
+          "output": "You are 22nd",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "num": 23
+          },
+          "expected": "You are 23rd",
+          "output": "You are 23rd",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "num": 1
+          },
+          "expected": "Votre position : 1er",
+          "output": "Votre position : 1er",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "num": 2
+          },
+          "expected": "Votre position : 2e",
+          "output": "Votre position : 2e",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "num": 3
+          },
+          "expected": "Votre position : 3e",
+          "output": "Votre position : 3e",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "num": 11
+          },
+          "expected": "Votre position : 11e",
+          "output": "Votre position : 11e",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "num": 21
+          },
+          "expected": "Votre position : 21e",
+          "output": "Votre position : 21e",
+          "knownMismatch": false,
+          "portableErrors": []
+        }
+      ]
+    },
+    {
+      "id": "unicode.05.markup",
+      "variants": 1,
+      "targets": [
+        "fr"
+      ],
+      "editorWarnings": {
+        "fr": {}
+      },
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "count": 32
+          },
+          "expected": "Click here. 32 ",
+          "markup": [
+            "link",
+            "link",
+            "bold",
+            "bold",
+            "star-icon"
+          ],
+          "output": "Click here. 32 ",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "count": 32
+          },
+          "expected": "Cliquez ici. 32 ",
+          "markup": [
+            "link",
+            "link",
+            "bold",
+            "bold",
+            "star-icon"
+          ],
+          "output": "Cliquez ici. 32 ",
+          "knownMismatch": false,
+          "portableErrors": []
+        }
+      ]
+    },
+    {
+      "id": "unicode.06.grammatical-case",
+      "variants": 3,
+      "targets": [
+        "fr"
+      ],
+      "editorWarnings": {
+        "fr": {}
+      },
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "userName": {
+              "forms": {
+                "vocative": "Mario"
+              }
+            }
+          },
+          "expected": "Hello, Mario!",
+          "custom": true,
+          "output": "Hello, Mario!",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "userName": {
+              "forms": {
+                "accusative": "Marii"
+              }
+            }
+          },
+          "expected": "Please welcome Marii!",
+          "custom": true,
+          "output": "Please welcome Marii!",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "userName": {
+              "forms": {}
+            }
+          },
+          "expected": "Hello!",
+          "custom": true,
+          "output": "Hello!",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "userName": {
+              "forms": {
+                "vocative": "Camille"
+              }
+            }
+          },
+          "expected": "Bonjour, Camille !",
+          "custom": true,
+          "output": "Bonjour, Camille !",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "userName": {
+              "forms": {
+                "accusative": "Camille"
+              }
+            }
+          },
+          "expected": "Accueillez Camille !",
+          "custom": true,
+          "output": "Accueillez Camille !",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "userName": {
+              "forms": {}
+            }
+          },
+          "expected": "Bonjour !",
+          "custom": true,
+          "output": "Bonjour !",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "unicode.07.selector-precedence",
+      "variants": 4,
+      "targets": [
+        "fr"
+      ],
+      "editorWarnings": {
+        "fr": {}
+      },
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "foo": "foo",
+            "bar": "bar"
+          },
+          "expected": "Foo and bar",
+          "output": "Foo and bar",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "foo": "foo",
+            "bar": "x"
+          },
+          "expected": "Foo and any",
+          "output": "Foo and any",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "foo": "x",
+            "bar": "bar"
+          },
+          "expected": "Any and bar",
+          "output": "Any and bar",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "foo": "x",
+            "bar": "x"
+          },
+          "expected": "Otherwise",
+          "output": "Otherwise",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "foo": "foo",
+            "bar": "bar"
+          },
+          "expected": "Foo et bar",
+          "output": "Foo et bar",
+          "knownMismatch": false,
+          "portableErrors": []
+        }
+      ]
+    },
+    {
+      "id": "unicode.08.locale-plurals",
+      "variants": 2,
+      "targets": [
+        "fr",
+        "pl",
+        "ar"
+      ],
+      "editorWarnings": {
+        "fr": {
+          "missing-locale-plural-variant": 1
+        },
+        "pl": {
+          "target-only-variant": 1
+        },
+        "ar": {}
+      },
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "count": 1
+          },
+          "expected": "You have 1 week.",
+          "output": "You have 1 week.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "en",
+          "args": {
+            "count": 5
+          },
+          "expected": "You have 5 weeks.",
+          "output": "You have 5 weeks.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "count": 1
+          },
+          "expected": "Vous avez 1 semaine.",
+          "output": "Vous avez 1 semaine.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "count": 5
+          },
+          "expected": "Vous avez 5 semaines.",
+          "output": "Vous avez 5 semaines.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "pl",
+          "args": {
+            "count": 1
+          },
+          "expected": "Masz 1 tydzień.",
+          "output": "Masz 1 tydzień.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "pl",
+          "args": {
+            "count": 2
+          },
+          "expected": "Masz 2 tygodnie.",
+          "output": "Masz 2 tygodnie.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "pl",
+          "args": {
+            "count": 5
+          },
+          "expected": "Masz 5 tygodni.",
+          "output": "Masz 5 tygodni.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "pl",
+          "args": {
+            "count": 22
+          },
+          "expected": "Masz 22 tygodnie.",
+          "output": "Masz 22 tygodnie.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "pl",
+          "args": {
+            "count": 1.5
+          },
+          "expected": "Masz 1,5 tygodnia.",
+          "output": "Masz 1,5 tygodnia.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "ar",
+          "args": {
+            "count": 0
+          },
+          "output": "ليس لديك أي أسابيع.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "ar",
+          "args": {
+            "count": 1
+          },
+          "output": "لديك أسبوع واحد.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "ar",
+          "args": {
+            "count": 2
+          },
+          "output": "لديك أسبوعان.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "ar",
+          "args": {
+            "count": 3
+          },
+          "output": "لديك 3 أسابيع.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "ar",
+          "args": {
+            "count": 11
+          },
+          "output": "لديك 11 أسبوعًا.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "ar",
+          "args": {
+            "count": 100
+          },
+          "output": "لديك 100 أسبوع.",
+          "knownMismatch": false,
+          "portableErrors": []
+        }
+      ]
+    },
+    {
+      "id": "unicode.09.date-styles",
+      "variants": 1,
+      "targets": [
+        "fr"
+      ],
+      "editorWarnings": {
+        "fr": {}
+      },
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "date": "2024-10-25T14:05:06Z"
+          },
+          "output": "Short: 10/25/24, 2:05 PM.\nMedium: Oct 25, 2024, 2:05:06 PM.\nLong: October 25, 2024 at 2:05:06 PM UTC.\nFull: Friday, October 25, 2024 at 2:05:06 PM Coordinated Universal Time.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function",
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "date": "2024-10-25T14:05:06Z"
+          },
+          "output": "Court : 25/10/2024 14:05.\nMoyen : 25 oct. 2024, 14:05:06.\nLong : 25 octobre 2024 à 14:05:06 UTC.\nComplet : vendredi 25 octobre 2024 à 14:05:06 temps universel coordonné.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function",
+            "unknown-function",
+            "unknown-function"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "showcase.10.event-matrix",
+      "variants": 36,
+      "targets": [
+        "fr"
+      ],
+      "editorWarnings": {
+        "fr": {}
+      },
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "ready",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is ready. No guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: She is ready. No guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "ready",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est prête. Aucune inscription.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Elle est prête. Aucune inscription. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "ready",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is ready. One guest has signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: She is ready. One guest has signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "ready",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est prête. Une personne est inscrite.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Elle est prête. Une personne est inscrite. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "ready",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is ready. Two guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: She is ready. Two guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "ready",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est prête. Deux personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Elle est prête. Deux personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "ready",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is ready. 7 guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: She is ready. 7 guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "ready",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est prête. 7 personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Elle est prête. 7 personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "paused",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is waiting. No guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: She is waiting. No guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "paused",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est en attente. Aucune inscription.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Elle est en attente. Aucune inscription. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "paused",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is waiting. One guest has signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: She is waiting. One guest has signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "paused",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est en attente. Une personne est inscrite.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Elle est en attente. Une personne est inscrite. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "paused",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is waiting. Two guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: She is waiting. Two guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "paused",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est en attente. Deux personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Elle est en attente. Deux personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "paused",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is waiting. 7 guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: She is waiting. 7 guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "paused",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est en attente. 7 personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Elle est en attente. 7 personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "offline",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is unavailable. No guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: She is unavailable. No guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "offline",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est indisponible. Aucune inscription.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Elle est indisponible. Aucune inscription. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "offline",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is unavailable. One guest has signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: She is unavailable. One guest has signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "offline",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est indisponible. Une personne est inscrite.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Elle est indisponible. Une personne est inscrite. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "offline",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is unavailable. Two guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: She is unavailable. Two guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "offline",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est indisponible. Deux personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Elle est indisponible. Deux personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "female",
+            "status": "offline",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: She is unavailable. 7 guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: She is unavailable. 7 guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "female",
+            "status": "offline",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Elle est indisponible. 7 personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Elle est indisponible. 7 personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "ready",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is ready. No guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: He is ready. No guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "ready",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est prêt. Aucune inscription.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Il est prêt. Aucune inscription. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "ready",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is ready. One guest has signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: He is ready. One guest has signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "ready",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est prêt. Une personne est inscrite.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Il est prêt. Une personne est inscrite. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "ready",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is ready. Two guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: He is ready. Two guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "ready",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est prêt. Deux personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Il est prêt. Deux personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "ready",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is ready. 7 guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: He is ready. 7 guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "ready",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est prêt. 7 personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Il est prêt. 7 personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "paused",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is waiting. No guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: He is waiting. No guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "paused",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est en attente. Aucune inscription.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Il est en attente. Aucune inscription. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "paused",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is waiting. One guest has signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: He is waiting. One guest has signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "paused",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est en attente. Une personne est inscrite.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Il est en attente. Une personne est inscrite. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "paused",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is waiting. Two guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: He is waiting. Two guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "paused",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est en attente. Deux personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Il est en attente. Deux personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "paused",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is waiting. 7 guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: He is waiting. 7 guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "paused",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est en attente. 7 personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Il est en attente. 7 personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "offline",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is unavailable. No guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: He is unavailable. No guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "offline",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est indisponible. Aucune inscription.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Il est indisponible. Aucune inscription. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "offline",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is unavailable. One guest has signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: He is unavailable. One guest has signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "offline",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est indisponible. Une personne est inscrite.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Il est indisponible. Une personne est inscrite. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "offline",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is unavailable. Two guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: He is unavailable. Two guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "offline",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est indisponible. Deux personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Il est indisponible. Deux personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "male",
+            "status": "offline",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: He is unavailable. 7 guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: He is unavailable. 7 guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "male",
+            "status": "offline",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Il est indisponible. 7 personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Il est indisponible. 7 personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "ready",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are ready. No guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: They are ready. No guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "ready",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est prête. Aucune inscription.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Cette personne est prête. Aucune inscription. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "ready",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are ready. One guest has signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: They are ready. One guest has signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "ready",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est prête. Une personne est inscrite.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Cette personne est prête. Une personne est inscrite. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "ready",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are ready. Two guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: They are ready. Two guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "ready",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est prête. Deux personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Cette personne est prête. Deux personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "ready",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are ready. 7 guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: They are ready. 7 guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "ready",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est prête. 7 personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Cette personne est prête. 7 personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "paused",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are waiting. No guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: They are waiting. No guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "paused",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est en attente. Aucune inscription.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Cette personne est en attente. Aucune inscription. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "paused",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are waiting. One guest has signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: They are waiting. One guest has signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "paused",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est en attente. Une personne est inscrite.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Cette personne est en attente. Une personne est inscrite. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "paused",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are waiting. Two guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: They are waiting. Two guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "paused",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est en attente. Deux personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Cette personne est en attente. Deux personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "paused",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are waiting. 7 guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: They are waiting. 7 guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "paused",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est en attente. 7 personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Cette personne est en attente. 7 personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "offline",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are unavailable. No guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: They are unavailable. No guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "offline",
+            "guestCount": 0,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est indisponible. Aucune inscription.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Cette personne est indisponible. Aucune inscription. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "offline",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are unavailable. One guest has signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: They are unavailable. One guest has signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "offline",
+            "guestCount": 1,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est indisponible. Une personne est inscrite.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Cette personne est indisponible. Une personne est inscrite. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "offline",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are unavailable. Two guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: They are unavailable. Two guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "offline",
+            "guestCount": 2,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est indisponible. Deux personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Cette personne est indisponible. Deux personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "en",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "offline",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex: They are unavailable. 7 guests have signed up.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex: They are unavailable. 7 guests have signed up. Starts September 18, 2026 at 6:00 PM; admission €25.00. View event.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "hostGender": "nonbinary",
+            "status": "offline",
+            "guestCount": 7,
+            "hostName": "Alex",
+            "date": "2026-09-18T18:00:00Z",
+            "price": 25,
+            "url": "https://example.org/events/demo"
+          },
+          "startsWith": "Alex : Cette personne est indisponible. 7 personnes sont inscrites.",
+          "markup": [
+            "link",
+            "link"
+          ],
+          "output": "Alex : Cette personne est indisponible. 7 personnes sont inscrites. Début : 18 septembre 2026 à 18:00 ; entrée : 25,00 €. Voir l’événement.",
+          "knownMismatch": false,
+          "portableErrors": [
+            "unknown-function",
+            "unknown-function"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "showcase.11.bidi",
+      "variants": 1,
+      "targets": [
+        "fr",
+        "ar"
+      ],
+      "editorWarnings": {
+        "fr": {},
+        "ar": {}
+      },
+      "cases": [
+        {
+          "locale": "en",
+          "args": {
+            "userName": "ليلى",
+            "path": "reports/2026-Q3.csv"
+          },
+          "bidi": true,
+          "output": "⁧ليلى⁩ uploaded ⁦reports/2026-Q3.csv⁩.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "fr",
+          "args": {
+            "userName": "ليلى",
+            "path": "reports/2026-Q3.csv"
+          },
+          "bidi": true,
+          "output": "⁧ليلى⁩ a envoyé ⁦reports/2026-Q3.csv⁩.",
+          "knownMismatch": false,
+          "portableErrors": []
+        },
+        {
+          "locale": "ar",
+          "args": {
+            "userName": "ليلى",
+            "path": "reports/2026-Q3.csv"
+          },
+          "bidi": true,
+          "output": "رفعَت ⁧ليلى⁩ الملف ⁦reports/2026-Q3.csv⁩.",
+          "knownMismatch": false,
+          "portableErrors": []
+        }
+      ]
+    }
+  ],
+  "totalCases": 163,
+  "knownMismatches": 2
+}

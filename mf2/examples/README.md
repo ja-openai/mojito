@@ -1,5 +1,9 @@
 # MF2 Catalog Demo
 
+For a translator-facing dataset of advanced Unicode examples, locale-specific
+forms, and a 36-variant composition, see [Unicode showcase](unicode-showcase/README.md).
+It includes a local Mojito importer and recorded runtime/editor limitations.
+
 This directory contains a tiny parser-free catalog demo. The catalog stores the
 official MF2 model directly; each runtime exposes a local `translate` helper that
 does only:
