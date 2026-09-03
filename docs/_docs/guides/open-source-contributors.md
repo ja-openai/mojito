@@ -253,6 +253,13 @@ Run one backend test class:
 ./mvnw -pl webapp -Pno-local-config -Dtest=YourTestClass test
 ```
 
+Backend integration tests should extend `WSTestBase` or `ServiceTestBase`. Their
+shared setup binds Mojito's singleton AspectJ transaction and bean-configurer
+aspects to the active test context before each test, including when bean
+overrides create separate cached Spring contexts. Keep the normal shared JVM
+when checking combinations of these tests so context-switching regressions
+remain visible.
+
 For frontend changes:
 
 ```sh
