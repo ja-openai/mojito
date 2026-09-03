@@ -14,12 +14,19 @@ import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.AssetIntegrityChecker;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
+import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
+import com.box.l10n.mojito.entity.TMTextUnitVariant;
+import com.box.l10n.mojito.entity.security.user.Authority;
+import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.json.ObjectMapper;
+import com.box.l10n.mojito.security.AuditorAwareImpl;
+import com.box.l10n.mojito.security.Role;
 import com.box.l10n.mojito.service.assetintegritychecker.AssetIntegrityCheckerRepository;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckerFactory;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckerType;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.TranslationIntegrityCheckerException;
+import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.security.user.UserService;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTextUnitIntegrityCheckService;
@@ -38,6 +45,7 @@ import java.util.Optional;
 import java.util.Set;
 import org.junit.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -154,28 +162,92 @@ public class TextUnitWSSearchValidationTest {
   }
 
   @Test
-  public void addTextUnitValidatesBeforeSaving() {
-    TMTextUnitIntegrityCheckService integrityCheckService =
-        mock(TMTextUnitIntegrityCheckService.class);
-    TMService tmService = mock(TMService.class);
-    doThrow(new IntegrityCheckException("Missing placeholder"))
-        .when(integrityCheckService)
-        .checkTMTextUnitIntegrity(321L, "Bonjour");
-    textUnitWS.tmTextUnitIntegrityCheckService = integrityCheckService;
-    textUnitWS.tmService = tmService;
-    textUnitWS.userService = mock(UserService.class);
+  public void addTextUnitValidatesBeforeSavingForUsersAndTranslators() {
+    for (Role role : Arrays.asList(Role.ROLE_USER, Role.ROLE_TRANSLATOR)) {
+      TMTextUnitIntegrityCheckService integrityCheckService =
+          mock(TMTextUnitIntegrityCheckService.class);
+      TMService tmService = mock(TMService.class);
+      doThrow(new IntegrityCheckException("Missing placeholder"))
+          .when(integrityCheckService)
+          .checkTMTextUnitIntegrity(321L, "Bonjour");
+      textUnitWS.tmTextUnitIntegrityCheckService = integrityCheckService;
+      textUnitWS.tmService = tmService;
+      textUnitWS.userService = userServiceWithRole(role, true);
+      TextUnitDTO textUnit = new TextUnitDTO();
+      textUnit.setTmTextUnitId(321L);
+      textUnit.setLocaleId(12L);
+      textUnit.setTarget("Bonjour");
+
+      ResponseStatusException exception =
+          assertThrows(ResponseStatusException.class, () -> textUnitWS.addTextUnit(textUnit));
+
+      assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, exception.getStatusCode());
+      assertEquals("Missing placeholder", exception.getReason());
+      verify(integrityCheckService).checkTMTextUnitIntegrity(321L, "Bonjour");
+      verifyNoInteractions(tmService);
+    }
+  }
+
+  @Test
+  public void addTextUnitAllowsAdminAndPmIntegrityOverridesWithRequestedStatus() {
+    for (Role role : Arrays.asList(Role.ROLE_ADMIN, Role.ROLE_PM)) {
+      for (TMTextUnitVariant.Status status :
+          Arrays.asList(
+              TMTextUnitVariant.Status.APPROVED, TMTextUnitVariant.Status.TRANSLATION_NEEDED)) {
+        boolean includedInLocalizedFile = status == TMTextUnitVariant.Status.APPROVED;
+        TMTextUnitIntegrityCheckService integrityCheckService =
+            mock(TMTextUnitIntegrityCheckService.class);
+        doThrow(new IntegrityCheckException("Missing placeholder"))
+            .when(integrityCheckService)
+            .checkTMTextUnitIntegrity(321L, "Caf\u00e9");
+        TMService tmService = mock(TMService.class);
+        TMTextUnitVariant variant = new TMTextUnitVariant();
+        variant.setId(456L);
+        TMTextUnitCurrentVariant currentVariant = new TMTextUnitCurrentVariant();
+        currentVariant.setId(789L);
+        currentVariant.setTmTextUnitVariant(variant);
+        when(tmService.addTMTextUnitCurrentVariant(
+                321L, 12L, "Caf\u00e9", "Reviewed manually", status, includedInLocalizedFile))
+            .thenReturn(currentVariant);
+        textUnitWS.tmTextUnitIntegrityCheckService = integrityCheckService;
+        textUnitWS.tmService = tmService;
+        textUnitWS.userService = userServiceWithRole(role, true);
+        TextUnitDTO textUnit = new TextUnitDTO();
+        textUnit.setTmTextUnitId(321L);
+        textUnit.setLocaleId(12L);
+        textUnit.setTarget("Cafe\u0301");
+        textUnit.setTargetComment("Reviewed manually");
+        textUnit.setStatus(status);
+        textUnit.setIncludedInLocalizedFile(includedInLocalizedFile);
+
+        TextUnitDTO saved = textUnitWS.addTextUnit(textUnit);
+
+        assertEquals("Caf\u00e9", saved.getTarget());
+        assertEquals(status, saved.getStatus());
+        assertEquals(includedInLocalizedFile, saved.isIncludedInLocalizedFile());
+        assertEquals(Long.valueOf(456L), saved.getTmTextUnitVariantId());
+        assertEquals(Long.valueOf(789L), saved.getTmTextUnitCurrentVariantId());
+        verify(tmService)
+            .addTMTextUnitCurrentVariant(
+                321L, 12L, "Caf\u00e9", "Reviewed manually", status, includedInLocalizedFile);
+        verifyNoInteractions(integrityCheckService);
+      }
+    }
+  }
+
+  @Test
+  public void addTextUnitIntegrityOverrideStillRequiresLocaleAccess() {
+    textUnitWS.userService = userServiceWithRole(Role.ROLE_ADMIN, false);
+    textUnitWS.tmTextUnitIntegrityCheckService = mock(TMTextUnitIntegrityCheckService.class);
+    textUnitWS.tmService = mock(TMService.class);
     TextUnitDTO textUnit = new TextUnitDTO();
     textUnit.setTmTextUnitId(321L);
     textUnit.setLocaleId(12L);
     textUnit.setTarget("Bonjour");
 
-    ResponseStatusException exception =
-        assertThrows(ResponseStatusException.class, () -> textUnitWS.addTextUnit(textUnit));
+    assertThrows(AccessDeniedException.class, () -> textUnitWS.addTextUnit(textUnit));
 
-    assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, exception.getStatusCode());
-    assertEquals("Missing placeholder", exception.getReason());
-    verify(integrityCheckService).checkTMTextUnitIntegrity(321L, "Bonjour");
-    verifyNoInteractions(tmService);
+    verifyNoInteractions(textUnitWS.tmTextUnitIntegrityCheckService, textUnitWS.tmService);
   }
 
   @Test
@@ -230,5 +302,22 @@ public class TextUnitWSSearchValidationTest {
         .tag("result", result)
         .timer()
         .count();
+  }
+
+  private UserService userServiceWithRole(Role role, boolean canTranslateAllLocales) {
+    User user = new User();
+    user.setUsername("test-user");
+    user.setCanTranslateAllLocales(canTranslateAllLocales);
+    Authority authority = new Authority();
+    authority.setAuthority(role.name());
+    user.setAuthorities(Set.of(authority));
+    AuditorAwareImpl auditor = mock(AuditorAwareImpl.class);
+    when(auditor.getCurrentAuditor()).thenReturn(Optional.of(user));
+    UserRepository userRepository = mock(UserRepository.class);
+    when(userRepository.findByUsername(user.getUsername())).thenReturn(user);
+    UserService userService = new UserService();
+    ReflectionTestUtils.setField(userService, "auditorAwareImpl", auditor);
+    ReflectionTestUtils.setField(userService, "userRepository", userRepository);
+    return userService;
   }
 }

@@ -86,8 +86,9 @@ and URL rules.
 
 Both checkers report every deterministic target finding from the selected rule bundle. They never
 rewrite a translation: a finding that has a deterministic repair in the neutral conformance corpus
-is still rejected at Mojito's mutation boundary. Persisted source defects are reported by the
-preflight command but do not reject a target save, because that operation cannot repair the source.
+is still a validation failure, subject to the PM/admin override rules below. Persisted source
+defects are reported by the preflight command but do not reject a target save, because that
+operation cannot repair the source.
 
 Each source and target is limited to 65,536 UTF-16 code units before parser-backed validation.
 An oversized target fails the integrity check. An oversized source is a source defect and is
@@ -193,10 +194,10 @@ The translation gets rejected if any traingling whitespace in the source string 
 
 ### Generated Android resource validation
 
-Repository-configured text-unit checkers validate each translation before the
-direct save endpoint writes it. Placeholder, Markdown-link, and plural-branch
+Repository-configured text-unit checkers validate translator saves before the
+direct save endpoint writes them. Placeholder, Markdown-link, and plural-branch
 contracts therefore fail at the translation boundary instead of waiting for a
-localized asset pull.
+localized asset pull. PM and admin overrides remain available as described below.
 
 Mojito can separately validate the final Android XML after the Android filter has
 finished its output post-processing. Enable that check with
@@ -215,11 +216,16 @@ from syntax.
 ### Handling Rejected Translations
 
 
-Interactive saves run configured integrity checkers before writing and return an error without
-replacing the current translation. Offline, XLIFF, and localized-asset imports preserve their
-existing bulk semantics: Mojito stores an invalid candidate as `TRANSLATION_NEEDED`, excludes it
-from localized output, and adds an integrity-check error comment. The number of excluded
-translations appears on the Repository page.
+Translator saves run configured integrity checkers before writing and return an error without
+replacing the current translation. PMs and admins can override checker reports: Workbench offers
+`Save anyway` after a failed translation check, and changing a row's status directly applies the
+requested status even when its existing translation fails a checker. The direct save endpoint
+preserves those PM/admin overrides while still enforcing locale permissions and recording the
+normal translation history.
+
+Offline, XLIFF, and localized-asset imports preserve their existing bulk semantics: Mojito stores
+an invalid candidate as `TRANSLATION_NEEDED`, excludes it from localized output, and adds an
+integrity-check error comment. The number of excluded translations appears on the Repository page.
 
 ![Repository with Rejected Translation](./images/repository-rejected-translation.png)
 
