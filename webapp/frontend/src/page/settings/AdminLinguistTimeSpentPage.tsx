@@ -1,7 +1,7 @@
 import './settings-page.css';
 import '../../components/filters/filter-chip.css';
 
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 
@@ -40,6 +40,9 @@ const DEFAULT_FILTERS: Filters = {
   translatorUserId: null,
   localeBcp47Tag: '',
 };
+
+const REPORT_PAGE_SIZE = 25;
+const FIRST_PAGES = { scorecardPage: 0, linguistPage: 0, detailPage: 0 };
 
 function startOfToday() {
   const date = new Date();
@@ -84,15 +87,19 @@ function getReportDateQuickRanges(): DateQuickRange[] {
   ];
 }
 
-function buildReportParams(filters: Filters): LinguistTimeSpentReportParams {
+function buildReportParams(
+  filters: Filters,
+  pages: typeof FIRST_PAGES,
+): LinguistTimeSpentReportParams {
   return {
     activityAfter: filters.activityAfter,
     activityBefore: filters.activityBefore,
     status: filters.status,
     translatorUserId: filters.translatorUserId,
     localeBcp47Tag: filters.localeBcp47Tag.trim() || null,
-    summaryLimit: 100,
-    detailLimit: 100,
+    summaryLimit: REPORT_PAGE_SIZE,
+    detailLimit: REPORT_PAGE_SIZE,
+    ...pages,
   };
 }
 
@@ -189,6 +196,46 @@ function formatDeadlineStatus(window: LinguistTimeSpentWindow) {
   return 'On time';
 }
 
+function ReportPagination({
+  label,
+  page,
+  hasNext,
+  disabled,
+  loading,
+  onChange,
+}: {
+  label: string;
+  page: number;
+  hasNext: boolean;
+  disabled: boolean;
+  loading: boolean;
+  onChange: (page: number) => void;
+}) {
+  return (
+    <nav className="settings-actions settings-actions--wrap" aria-label={`${label} pagination`}>
+      <button
+        type="button"
+        className="settings-button"
+        disabled={disabled || page === 0}
+        onClick={() => onChange(page - 1)}
+      >
+        Previous
+      </button>
+      <span className="settings-hint" aria-live="polite">
+        {loading ? 'Loading…' : `Page ${page + 1}`}
+      </span>
+      <button
+        type="button"
+        className="settings-button"
+        disabled={disabled || !hasNext}
+        onClick={() => onChange(page + 1)}
+      >
+        Next
+      </button>
+    </nav>
+  );
+}
+
 function ReportHelp() {
   return (
     <details className="settings-help-popover">
@@ -203,6 +250,11 @@ function ReportHelp() {
           Decision timestamps are review signals, not session tracking or proof of time worked. A
           later edit can replace a final-decision timestamp, and assignment-window fallback can
           include another reviewer&apos;s decisions when actor attribution is unavailable.
+        </p>
+        <p>
+          Each table shows {REPORT_PAGE_SIZE} rows per page and can be paged independently. Summary
+          totals include all matching assignment windows. Applying filters returns every table to
+          its first page.
         </p>
         <dl>
           <dt>Reported</dt>
@@ -240,6 +292,7 @@ export function AdminLinguistTimeSpentPage() {
   });
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [pages, setPages] = useState(FIRST_PAGES);
   const [notice, setNotice] = useState<{ kind: 'success' | 'error'; message: string } | null>(null);
   const dateQuickRanges = useMemo(() => getReportDateQuickRanges(), []);
   const translatorOptions = useMemo(
@@ -287,11 +340,12 @@ export function AdminLinguistTimeSpentPage() {
     [locales, resolveLocaleName],
   );
 
-  const reportParams = buildReportParams(appliedFilters);
+  const reportParams = buildReportParams(appliedFilters, pages);
   const reportQuery = useQuery({
     queryKey: ['linguist-time-spent-report', reportParams],
     queryFn: () => fetchLinguistTimeSpentReport(reportParams),
     enabled: isAdmin,
+    placeholderData: keepPreviousData,
   });
 
   const recomputeMutation = useMutation({
@@ -455,7 +509,7 @@ export function AdminLinguistTimeSpentPage() {
                 placeholder={usersQuery.isLoading ? 'Loading translators…' : 'All translators'}
                 disabled={isWorking || usersQuery.isLoading}
                 buttonAriaLabel="Filter by translator"
-                searchPlaceholder="Search by name, username, or ID"
+                searchPlaceholder="Search by name, email, username, or ID"
                 noResultsLabel="No matching users"
               />
             </div>
@@ -465,6 +519,7 @@ export function AdminLinguistTimeSpentPage() {
                 className="settings-button settings-button--primary"
                 onClick={() => {
                   setAppliedFilters(filters);
+                  setPages(FIRST_PAGES);
                   setNotice(null);
                 }}
                 disabled={isWorking}
@@ -486,6 +541,11 @@ export function AdminLinguistTimeSpentPage() {
           {usersQuery.error ? (
             <p className="settings-hint is-error">
               Failed to load translators. Please reload to retry.
+            </p>
+          ) : null}
+          {reportQuery.isPlaceholderData ? (
+            <p className="settings-hint" role="status">
+              Updating report… Previous results are shown while loading.
             </p>
           ) : null}
           {notice ? (
@@ -546,6 +606,14 @@ export function AdminLinguistTimeSpentPage() {
         <section className="settings-card">
           <div className="settings-card__header">
             <h2>Translator scorecard</h2>
+            <ReportPagination
+              label="Translator scorecard"
+              page={pages.scorecardPage}
+              hasNext={report?.translatorScorecardsHasNext ?? false}
+              disabled={isWorking}
+              loading={reportQuery.isFetching}
+              onChange={(scorecardPage) => setPages((current) => ({ ...current, scorecardPage }))}
+            />
           </div>
           {report && report.translatorScorecards.length > 0 ? (
             <div className="settings-table-wrapper">
@@ -611,6 +679,14 @@ export function AdminLinguistTimeSpentPage() {
         <section className="settings-card">
           <div className="settings-card__header">
             <h2>By linguist and language</h2>
+            <ReportPagination
+              label="By linguist and language"
+              page={pages.linguistPage}
+              hasNext={report?.linguistsHasNext ?? false}
+              disabled={isWorking}
+              loading={reportQuery.isFetching}
+              onChange={(linguistPage) => setPages((current) => ({ ...current, linguistPage }))}
+            />
           </div>
           {report && report.linguists.length > 0 ? (
             <div className="settings-table-wrapper">
@@ -662,6 +738,14 @@ export function AdminLinguistTimeSpentPage() {
         <section className="settings-card">
           <div className="settings-card__header">
             <h2>Project assignment windows</h2>
+            <ReportPagination
+              label="Project assignment windows"
+              page={pages.detailPage}
+              hasNext={report?.windowsHasNext ?? false}
+              disabled={isWorking}
+              loading={reportQuery.isFetching}
+              onChange={(detailPage) => setPages((current) => ({ ...current, detailPage }))}
+            />
           </div>
           {report && report.windows.length > 0 ? (
             <div className="settings-table-wrapper">

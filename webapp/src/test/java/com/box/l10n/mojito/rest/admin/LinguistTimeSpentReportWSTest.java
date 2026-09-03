@@ -2,13 +2,90 @@ package com.box.l10n.mojito.rest.admin;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.box.l10n.mojito.json.ObjectMapper;
+import com.box.l10n.mojito.service.blobstorage.StructuredBlobStorage;
 import com.box.l10n.mojito.service.review.ReviewProjectTimeSpentStatRepository;
+import com.box.l10n.mojito.service.review.ReviewProjectTimeSpentStatService;
+import java.time.Duration;
+import java.util.List;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.core.task.support.TaskExecutorAdapter;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 public class LinguistTimeSpentReportWSTest {
+
+  @Test
+  public void reportMapsIndependentPagesAndReturnsNextPageFlags() throws Exception {
+    ReviewProjectTimeSpentStatService service = mock(ReviewProjectTimeSpentStatService.class);
+    when(service.getReport(any()))
+        .thenReturn(
+            new ReviewProjectTimeSpentStatService.TimeSpentReport(
+                null, List.of(), List.of(), List.of(), true, false, true));
+
+    reportMockMvc(service)
+        .perform(
+            get("/api/admin/linguist-time-spent")
+                .param("scorecardPage", "2")
+                .param("linguistPage", "3")
+                .param("detailPage", "4")
+                .param("summaryLimit", "25")
+                .param("detailLimit", "50")
+                .param("translatorUserId", "7")
+                .param("localeBcp47Tag", "fr-FR"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.results.translatorScorecardsHasNext").value(true))
+        .andExpect(jsonPath("$.results.linguistsHasNext").value(false))
+        .andExpect(jsonPath("$.results.windowsHasNext").value(true));
+
+    ArgumentCaptor<ReviewProjectTimeSpentStatService.TimeSpentReportCriteria> criteria =
+        ArgumentCaptor.forClass(ReviewProjectTimeSpentStatService.TimeSpentReportCriteria.class);
+    verify(service).getReport(criteria.capture());
+    assertEquals(2, criteria.getValue().scorecardPage());
+    assertEquals(3, criteria.getValue().linguistPage());
+    assertEquals(4, criteria.getValue().detailPage());
+    assertEquals(25, criteria.getValue().summaryLimit());
+    assertEquals(50, criteria.getValue().detailLimit());
+    assertEquals(Long.valueOf(7), criteria.getValue().translatorUserId());
+    assertEquals("fr-FR", criteria.getValue().localeBcp47Tag());
+  }
+
+  @Test
+  public void reportWithoutPaginationParametersKeepsFirstPageDefaults() throws Exception {
+    ReviewProjectTimeSpentStatService service = mock(ReviewProjectTimeSpentStatService.class);
+    when(service.getReport(any()))
+        .thenReturn(
+            new ReviewProjectTimeSpentStatService.TimeSpentReport(
+                null, List.of(), List.of(), List.of(), false, false, false));
+
+    reportMockMvc(service)
+        .perform(get("/api/admin/linguist-time-spent"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.results.translatorScorecardsHasNext").value(false));
+
+    verify(service).getReport(ReviewProjectTimeSpentStatService.TimeSpentReportCriteria.defaults());
+  }
+
+  private MockMvc reportMockMvc(ReviewProjectTimeSpentStatService service) {
+    return MockMvcBuilders.standaloneSetup(
+            new LinguistTimeSpentReportWS(
+                service,
+                mock(StructuredBlobStorage.class),
+                mock(ObjectMapper.class),
+                new LinguistTimeSpentHybridProperties(
+                    Duration.ofMinutes(1), Duration.ofMinutes(2), null),
+                new TaskExecutorAdapter(Runnable::run)))
+        .build();
+  }
 
   @Test
   public void summaryAggregatesRapidDecisionIntervalsWithoutAveragingPercentiles() {

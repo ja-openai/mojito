@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   fetchLinguistTimeSpentReport,
   type LinguistTimeSpentReport,
+  type LinguistTimeSpentReportParams,
   recomputeLinguistTimeSpentReport,
 } from '../../api/linguist-time-spent';
 import { type ApiUser, fetchAllUsersAdmin } from '../../api/users';
@@ -72,6 +73,9 @@ const summary = {
 
 const report = {
   summary,
+  translatorScorecardsHasNext: false,
+  linguistsHasNext: false,
+  windowsHasNext: false,
   translatorScorecards: [
     {
       assignedTranslatorUserId: 501,
@@ -154,6 +158,44 @@ const report = {
   ],
 } satisfies LinguistTimeSpentReport;
 
+function pagedReport({
+  scorecardPage = 0,
+  linguistPage = 0,
+  detailPage = 0,
+}: LinguistTimeSpentReportParams): LinguistTimeSpentReport {
+  return {
+    ...report,
+    translatorScorecards: [
+      {
+        ...report.translatorScorecards[0],
+        assignedTranslatorUserId: 601 + scorecardPage,
+        assignedTranslatorUsername: `scorecard-page-${scorecardPage + 1}@example.test`,
+      },
+    ],
+    linguists: [
+      {
+        ...report.linguists[0],
+        assignedTranslatorUserId: 701 + linguistPage,
+        assignedTranslatorUsername: `linguist-page-${linguistPage + 1}@example.test`,
+      },
+    ],
+    windows: [
+      {
+        ...report.windows[0],
+        id: 801 + detailPage,
+        reviewProjectRequestName: `Window page ${detailPage + 1}`,
+      },
+    ],
+    translatorScorecardsHasNext: scorecardPage === 0,
+    linguistsHasNext: linguistPage === 0,
+    windowsHasNext: detailPage === 0,
+  };
+}
+
+function pagination(label: string) {
+  return within(screen.getByRole('navigation', { name: `${label} pagination` }));
+}
+
 function renderPage() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -196,7 +238,7 @@ describe('AdminLinguistTimeSpentPage', () => {
     expect(screen.queryByRole('columnheader', { name: 'Discrepancy' })).not.toBeInTheDocument();
   });
 
-  it('searches users by name, username, or ID and applies or clears the selected translator', async () => {
+  it('searches users by name, email, username, or ID and applies or clears the selected translator', async () => {
     const user = userEvent.setup();
     renderPage();
 
@@ -207,7 +249,7 @@ describe('AdminLinguistTimeSpentPage', () => {
 
     const menu = within(screen.getByRole('menu'));
     expect(menu.getByRole('button', { name: /Morgan Chen/ })).toBeInTheDocument();
-    const search = screen.getByPlaceholderText('Search by name, username, or ID');
+    const search = screen.getByPlaceholderText('Search by name, email, username, or ID');
     for (const query of ['aLeX rIvErA', 'Alexandra', 'former.reviewer@example.test', '502']) {
       await user.clear(search);
       await user.type(search, query);
@@ -244,6 +286,203 @@ describe('AdminLinguistTimeSpentPage', () => {
       ),
     );
   });
+
+  it('pages each table independently, preserves rows while loading, and stops on the final page', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchLinguistTimeSpentReport).mockImplementation((params) =>
+      Promise.resolve(pagedReport(params)),
+    );
+    renderPage();
+
+    expect(await screen.findByText('scorecard-page-1@example.test')).toBeInTheDocument();
+    const scorecard = pagination('Translator scorecard');
+    const linguist = pagination('By linguist and language');
+    const windows = pagination('Project assignment windows');
+    await waitFor(() => expect(scorecard.getByRole('button', { name: 'Next' })).toBeEnabled());
+    expect(scorecard.getByRole('button', { name: 'Previous' })).toBeDisabled();
+    expect(fetchLinguistTimeSpentReport).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        scorecardPage: 0,
+        linguistPage: 0,
+        detailPage: 0,
+        summaryLimit: 25,
+        detailLimit: 25,
+      }),
+    );
+
+    let resolveNextPage!: (value: LinguistTimeSpentReport) => void;
+    const nextPage = new Promise<LinguistTimeSpentReport>((resolve) => {
+      resolveNextPage = resolve;
+    });
+    vi.mocked(fetchLinguistTimeSpentReport).mockReturnValueOnce(nextPage);
+    await user.click(scorecard.getByRole('button', { name: 'Next' }));
+    await waitFor(() =>
+      expect(fetchLinguistTimeSpentReport).toHaveBeenLastCalledWith(
+        expect.objectContaining({ scorecardPage: 1, linguistPage: 0, detailPage: 0 }),
+      ),
+    );
+    expect(screen.getByText('scorecard-page-1@example.test')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Updating report… Previous results are shown while loading.',
+    );
+    expect(scorecard.queryByText('Page 2')).not.toBeInTheDocument();
+    for (const table of [scorecard, linguist, windows]) {
+      expect(table.getByText('Loading…')).toBeInTheDocument();
+      expect(table.getByRole('button', { name: 'Previous' })).toBeDisabled();
+      expect(table.getByRole('button', { name: 'Next' })).toBeDisabled();
+    }
+
+    await act(async () => {
+      resolveNextPage(pagedReport({ scorecardPage: 1 }));
+      await nextPage;
+    });
+    expect(await screen.findByText('scorecard-page-2@example.test')).toBeInTheDocument();
+    expect(screen.queryByText('scorecard-page-1@example.test')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByText('linguist-page-1@example.test')).toBeInTheDocument();
+    expect(screen.getByText('Window page 1')).toBeInTheDocument();
+    expect(scorecard.getByText('Page 2')).toBeInTheDocument();
+    expect(linguist.getByText('Page 1')).toBeInTheDocument();
+    expect(windows.getByText('Page 1')).toBeInTheDocument();
+    expect(scorecard.getByRole('button', { name: 'Next' })).toBeDisabled();
+
+    await user.click(linguist.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByText('linguist-page-2@example.test')).toBeInTheDocument();
+    expect(fetchLinguistTimeSpentReport).toHaveBeenLastCalledWith(
+      expect.objectContaining({ scorecardPage: 1, linguistPage: 1, detailPage: 0 }),
+    );
+    await waitFor(() => expect(windows.getByRole('button', { name: 'Next' })).toBeEnabled());
+    await user.click(windows.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByText('Window page 2')).toBeInTheDocument();
+    expect(fetchLinguistTimeSpentReport).toHaveBeenLastCalledWith(
+      expect.objectContaining({ scorecardPage: 1, linguistPage: 1, detailPage: 1 }),
+    );
+    expect(screen.getByText('scorecard-page-2@example.test')).toBeInTheDocument();
+    for (const table of [scorecard, linguist, windows]) {
+      expect(table.getByText('Page 2')).toBeInTheDocument();
+      expect(table.getByRole('button', { name: 'Next' })).toBeDisabled();
+    }
+
+    await waitFor(() => expect(scorecard.getByRole('button', { name: 'Previous' })).toBeEnabled());
+    await user.click(scorecard.getByRole('button', { name: 'Previous' }));
+    expect(await screen.findByText('scorecard-page-1@example.test')).toBeInTheDocument();
+    expect(fetchLinguistTimeSpentReport).toHaveBeenLastCalledWith(
+      expect.objectContaining({ scorecardPage: 0, linguistPage: 1, detailPage: 1 }),
+    );
+    expect(screen.getByText('linguist-page-2@example.test')).toBeInTheDocument();
+    expect(screen.getByText('Window page 2')).toBeInTheDocument();
+    expect(recomputeLinguistTimeSpentReport).not.toHaveBeenCalled();
+  });
+
+  it('keeps draft filters out of paging requests and resets all tables when filters are applied', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchLinguistTimeSpentReport).mockImplementation((params) =>
+      Promise.resolve(pagedReport(params)),
+    );
+    renderPage();
+
+    const translatorFilter = screen.getByRole('button', { name: 'Filter by translator' });
+    await waitFor(() => expect(translatorFilter).toBeEnabled());
+    await user.click(translatorFilter);
+    await user.click(screen.getByRole('button', { name: /Alex Rivera/ }));
+    expect(fetchLinguistTimeSpentReport).toHaveBeenCalledTimes(1);
+
+    for (const label of [
+      'Translator scorecard',
+      'By linguist and language',
+      'Project assignment windows',
+    ]) {
+      const next = pagination(label).getByRole('button', { name: 'Next' });
+      await waitFor(() => expect(next).toBeEnabled());
+      await user.click(next);
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled());
+      expect(fetchLinguistTimeSpentReport).toHaveBeenLastCalledWith(
+        expect.objectContaining({ translatorUserId: null }),
+      );
+    }
+    expect(fetchLinguistTimeSpentReport).toHaveBeenLastCalledWith(
+      expect.objectContaining({ scorecardPage: 1, linguistPage: 1, detailPage: 1 }),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await waitFor(() =>
+      expect(fetchLinguistTimeSpentReport).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          translatorUserId: 502,
+          scorecardPage: 0,
+          linguistPage: 0,
+          detailPage: 0,
+        }),
+      ),
+    );
+    expect(await screen.findByText('scorecard-page-1@example.test')).toBeInTheDocument();
+    for (const label of [
+      'Translator scorecard',
+      'By linguist and language',
+      'Project assignment windows',
+    ]) {
+      expect(pagination(label).getByText('Page 1')).toBeInTheDocument();
+    }
+
+    await waitFor(() => expect(translatorFilter).toBeEnabled());
+    await user.click(translatorFilter);
+    await user.click(screen.getByRole('button', { name: /Morgan Chen/ }));
+    await user.click(pagination('Translator scorecard').getByRole('button', { name: 'Next' }));
+    await waitFor(() =>
+      expect(fetchLinguistTimeSpentReport).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          translatorUserId: 502,
+          scorecardPage: 1,
+          linguistPage: 0,
+          detailPage: 0,
+        }),
+      ),
+    );
+    expect(recomputeLinguistTimeSpentReport).not.toHaveBeenCalled();
+  });
+
+  it.each([0, 25])(
+    'disables both directions on a terminal first page with %i rows',
+    async (rowCount) => {
+      vi.mocked(fetchLinguistTimeSpentReport).mockResolvedValue({
+        ...report,
+        translatorScorecards: Array.from({ length: rowCount }, (_, index) => ({
+          ...report.translatorScorecards[0],
+          assignedTranslatorUserId: 1000 + index,
+        })),
+        linguists: Array.from({ length: rowCount }, (_, index) => ({
+          ...report.linguists[0],
+          assignedTranslatorUserId: 1000 + index,
+        })),
+        windows: Array.from({ length: rowCount }, (_, index) => ({
+          ...report.windows[0],
+          id: 1000 + index,
+        })),
+      });
+      renderPage();
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled());
+
+      for (const label of [
+        'Translator scorecard',
+        'By linguist and language',
+        'Project assignment windows',
+      ]) {
+        const table = pagination(label);
+        expect(table.getByText('Page 1')).toBeInTheDocument();
+        expect(table.getByRole('button', { name: 'Previous' })).toBeDisabled();
+        expect(table.getByRole('button', { name: 'Next' })).toBeDisabled();
+      }
+      if (rowCount === 0) {
+        expect(screen.getByText('No scorecard rows found.')).toBeInTheDocument();
+        expect(screen.getByText('No computed rows found.')).toBeInTheDocument();
+      } else {
+        const scorecardSection = screen
+          .getByRole('heading', { name: 'Translator scorecard' })
+          .closest('section')!;
+        expect(within(scorecardSection).getAllByRole('row')).toHaveLength(26);
+      }
+    },
+  );
 
   it('recomputes for the selected translator before applying the report filter', async () => {
     const user = userEvent.setup();

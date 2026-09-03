@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,8 +41,6 @@ public class ReviewProjectTimeSpentStatService {
   public TimeSpentReport getReport(TimeSpentReportCriteria criteria) {
     TimeSpentReportCriteria safeCriteria =
         criteria == null ? TimeSpentReportCriteria.defaults() : criteria;
-    PageRequest detailLimit = PageRequest.of(0, safeCriteria.detailLimit());
-    PageRequest summaryLimit = PageRequest.of(0, safeCriteria.summaryLimit());
     ReviewProjectTimeSpentStatRepository.SummaryProjection summary =
         statRepository.findReportSummary(
             safeCriteria.activityAfter(),
@@ -51,7 +50,7 @@ public class ReviewProjectTimeSpentStatService {
             safeCriteria.localeBcp47Tag(),
             ReviewProjectTimeSpentReviewFlag.OK,
             ReviewProjectTimeSpentReviewFlag.MISSING_REPORT);
-    List<ReviewProjectTimeSpentStatRepository.LinguistSummaryProjection> linguists =
+    Slice<ReviewProjectTimeSpentStatRepository.LinguistSummaryProjection> linguists =
         statRepository.findLinguistSummaries(
             safeCriteria.activityAfter(),
             safeCriteria.activityBefore(),
@@ -60,8 +59,8 @@ public class ReviewProjectTimeSpentStatService {
             safeCriteria.localeBcp47Tag(),
             ReviewProjectTimeSpentReviewFlag.OK,
             ReviewProjectTimeSpentReviewFlag.MISSING_REPORT,
-            summaryLimit);
-    List<ReviewProjectTimeSpentStatRepository.TranslatorScorecardProjection> scorecards =
+            PageRequest.of(safeCriteria.linguistPage(), safeCriteria.summaryLimit()));
+    Slice<ReviewProjectTimeSpentStatRepository.TranslatorScorecardProjection> scorecards =
         statRepository.findTranslatorScorecards(
             safeCriteria.activityAfter(),
             safeCriteria.activityBefore(),
@@ -70,16 +69,23 @@ public class ReviewProjectTimeSpentStatService {
             safeCriteria.localeBcp47Tag(),
             ReviewProjectTimeSpentReviewFlag.OK,
             ReviewProjectTimeSpentReviewFlag.MISSING_REPORT,
-            summaryLimit);
-    List<ReviewProjectTimeSpentStat> windows =
+            PageRequest.of(safeCriteria.scorecardPage(), safeCriteria.summaryLimit()));
+    Slice<ReviewProjectTimeSpentStat> windows =
         statRepository.findReportRows(
             safeCriteria.activityAfter(),
             safeCriteria.activityBefore(),
             safeCriteria.statusName(),
             safeCriteria.translatorUserId(),
             safeCriteria.localeBcp47Tag(),
-            detailLimit);
-    return new TimeSpentReport(summary, linguists, scorecards, windows);
+            PageRequest.of(safeCriteria.detailPage(), safeCriteria.detailLimit()));
+    return new TimeSpentReport(
+        summary,
+        linguists.getContent(),
+        scorecards.getContent(),
+        windows.getContent(),
+        scorecards.hasNext(),
+        linguists.hasNext(),
+        windows.hasNext());
   }
 
   @Transactional
@@ -377,7 +383,10 @@ public class ReviewProjectTimeSpentStatService {
       ReviewProjectTimeSpentStatRepository.SummaryProjection summary,
       List<ReviewProjectTimeSpentStatRepository.LinguistSummaryProjection> linguistSummaries,
       List<ReviewProjectTimeSpentStatRepository.TranslatorScorecardProjection> translatorScorecards,
-      List<ReviewProjectTimeSpentStat> windows) {}
+      List<ReviewProjectTimeSpentStat> windows,
+      boolean translatorScorecardsHasNext,
+      boolean linguistsHasNext,
+      boolean windowsHasNext) {}
 
   public record TimeSpentRecomputeResult(
       int matchedProjectCount, int computedWindowCount, int backfilledWindowCount) {}
@@ -389,11 +398,17 @@ public class ReviewProjectTimeSpentStatService {
       Long translatorUserId,
       String localeBcp47Tag,
       int summaryLimit,
-      int detailLimit) {
+      int detailLimit,
+      int scorecardPage,
+      int linguistPage,
+      int detailPage) {
 
     public TimeSpentReportCriteria {
       summaryLimit = normalizeLimit(summaryLimit, 100, 500);
       detailLimit = normalizeLimit(detailLimit, 100, 500);
+      scorecardPage = normalizePage(scorecardPage, summaryLimit);
+      linguistPage = normalizePage(linguistPage, summaryLimit);
+      detailPage = normalizePage(detailPage, detailLimit);
       localeBcp47Tag = blankToNull(localeBcp47Tag);
     }
 
@@ -403,7 +418,7 @@ public class ReviewProjectTimeSpentStatService {
 
     public static TimeSpentReportCriteria defaults() {
       return new TimeSpentReportCriteria(
-          null, null, ReviewProjectStatus.CLOSED, null, null, 100, 100);
+          null, null, ReviewProjectStatus.CLOSED, null, null, 100, 100, 0, 0, 0);
     }
   }
 
@@ -430,6 +445,11 @@ public class ReviewProjectTimeSpentStatService {
       return defaultLimit;
     }
     return Math.min(limit, maxLimit);
+  }
+
+  private static int normalizePage(int page, int limit) {
+    // JPA query offsets must fit in an int.
+    return Math.max(0, Math.min(page, Integer.MAX_VALUE / limit));
   }
 
   private static String blankToNull(String value) {

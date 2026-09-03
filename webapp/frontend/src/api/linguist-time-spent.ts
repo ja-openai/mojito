@@ -10,6 +10,9 @@ export type LinguistTimeSpentReportParams = {
   localeBcp47Tag?: string | null;
   summaryLimit?: number;
   detailLimit?: number;
+  scorecardPage?: number;
+  linguistPage?: number;
+  detailPage?: number;
 };
 
 export type LinguistTimeSpentRecomputeRequest = {
@@ -121,6 +124,9 @@ export type LinguistTimeSpentReport = {
   translatorScorecards: LinguistTimeSpentTranslatorScorecard[];
   linguists: LinguistTimeSpentLinguistSummary[];
   windows: LinguistTimeSpentWindow[];
+  translatorScorecardsHasNext: boolean;
+  linguistsHasNext: boolean;
+  windowsHasNext: boolean;
 };
 
 export type LinguistTimeSpentRecomputeResponse = {
@@ -183,6 +189,9 @@ export async function fetchLinguistTimeSpentReport(
   appendParam(params, 'localeBcp47Tag', filters.localeBcp47Tag);
   appendParam(params, 'summaryLimit', filters.summaryLimit);
   appendParam(params, 'detailLimit', filters.detailLimit);
+  appendParam(params, 'scorecardPage', filters.scorecardPage);
+  appendParam(params, 'linguistPage', filters.linguistPage);
+  appendParam(params, 'detailPage', filters.detailPage);
 
   const response = await fetch(`/api/admin/linguist-time-spent?${params.toString()}`, {
     method: 'GET',

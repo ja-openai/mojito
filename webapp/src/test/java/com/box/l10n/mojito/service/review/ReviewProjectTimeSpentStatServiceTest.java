@@ -1,7 +1,10 @@
 package com.box.l10n.mojito.service.review;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -22,6 +25,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.SliceImpl;
 
 public class ReviewProjectTimeSpentStatServiceTest {
 
@@ -46,6 +51,135 @@ public class ReviewProjectTimeSpentStatServiceTest {
             statRepository);
     when(statRepository.save(any(ReviewProjectTimeSpentStat.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
+  }
+
+  @Test
+  public void getReportPagesTablesIndependentlyAndKeepsFullFilteredSummary() {
+    ZonedDateTime after = ZonedDateTime.parse("2026-06-01T00:00:00Z");
+    ZonedDateTime before = after.plusMonths(1);
+    ReviewProjectTimeSpentStatRepository.SummaryProjection summary =
+        Mockito.mock(ReviewProjectTimeSpentStatRepository.SummaryProjection.class);
+    ReviewProjectTimeSpentStatRepository.LinguistSummaryProjection linguist =
+        Mockito.mock(ReviewProjectTimeSpentStatRepository.LinguistSummaryProjection.class);
+    ReviewProjectTimeSpentStatRepository.TranslatorScorecardProjection scorecard =
+        Mockito.mock(ReviewProjectTimeSpentStatRepository.TranslatorScorecardProjection.class);
+    ReviewProjectTimeSpentStat window = new ReviewProjectTimeSpentStat();
+    PageRequest linguistPage = PageRequest.of(3, 2);
+    PageRequest scorecardPage = PageRequest.of(2, 2);
+    PageRequest detailPage = PageRequest.of(4, 3);
+    when(summary.getWindowCount()).thenReturn(1000L);
+    when(statRepository.findReportSummary(
+            after,
+            before,
+            "CLOSED",
+            5L,
+            "fr-FR",
+            ReviewProjectTimeSpentReviewFlag.OK,
+            ReviewProjectTimeSpentReviewFlag.MISSING_REPORT))
+        .thenReturn(summary);
+    when(statRepository.findLinguistSummaries(
+            after,
+            before,
+            "CLOSED",
+            5L,
+            "fr-FR",
+            ReviewProjectTimeSpentReviewFlag.OK,
+            ReviewProjectTimeSpentReviewFlag.MISSING_REPORT,
+            linguistPage))
+        .thenReturn(new SliceImpl<>(List.of(linguist), linguistPage, false));
+    when(statRepository.findTranslatorScorecards(
+            after,
+            before,
+            "CLOSED",
+            5L,
+            "fr-FR",
+            ReviewProjectTimeSpentReviewFlag.OK,
+            ReviewProjectTimeSpentReviewFlag.MISSING_REPORT,
+            scorecardPage))
+        .thenReturn(new SliceImpl<>(List.of(scorecard), scorecardPage, true));
+    when(statRepository.findReportRows(after, before, "CLOSED", 5L, "fr-FR", detailPage))
+        .thenReturn(new SliceImpl<>(List.of(window), detailPage, true));
+
+    ReviewProjectTimeSpentStatService.TimeSpentReport report =
+        service.getReport(
+            new ReviewProjectTimeSpentStatService.TimeSpentReportCriteria(
+                after, before, ReviewProjectStatus.CLOSED, 5L, "fr-FR", 2, 3, 2, 3, 4));
+
+    assertSame(summary, report.summary());
+    assertEquals(Long.valueOf(1000L), report.summary().getWindowCount());
+    assertEquals(List.of(linguist), report.linguistSummaries());
+    assertEquals(List.of(scorecard), report.translatorScorecards());
+    assertEquals(List.of(window), report.windows());
+    assertTrue(report.translatorScorecardsHasNext());
+    assertFalse(report.linguistsHasNext());
+    assertTrue(report.windowsHasNext());
+  }
+
+  @Test
+  public void getReportDefaultsToFirstPageAndEndsEmptyTables() {
+    PageRequest firstPage = PageRequest.of(0, 100);
+    when(statRepository.findLinguistSummaries(
+            null,
+            null,
+            "CLOSED",
+            null,
+            null,
+            ReviewProjectTimeSpentReviewFlag.OK,
+            ReviewProjectTimeSpentReviewFlag.MISSING_REPORT,
+            firstPage))
+        .thenReturn(new SliceImpl<>(List.of(), firstPage, false));
+    when(statRepository.findTranslatorScorecards(
+            null,
+            null,
+            "CLOSED",
+            null,
+            null,
+            ReviewProjectTimeSpentReviewFlag.OK,
+            ReviewProjectTimeSpentReviewFlag.MISSING_REPORT,
+            firstPage))
+        .thenReturn(new SliceImpl<>(List.of(), firstPage, false));
+    when(statRepository.findReportRows(null, null, "CLOSED", null, null, firstPage))
+        .thenReturn(new SliceImpl<>(List.of(), firstPage, false));
+
+    ReviewProjectTimeSpentStatService.TimeSpentReport report = service.getReport(null);
+
+    assertTrue(report.linguistSummaries().isEmpty());
+    assertTrue(report.translatorScorecards().isEmpty());
+    assertTrue(report.windows().isEmpty());
+    assertFalse(report.translatorScorecardsHasNext());
+    assertFalse(report.linguistsHasNext());
+    assertFalse(report.windowsHasNext());
+  }
+
+  @Test
+  public void reportCriteriaNormalizesPagesAfterLimits() {
+    ReviewProjectTimeSpentStatService.TimeSpentReportCriteria negativePages =
+        new ReviewProjectTimeSpentStatService.TimeSpentReportCriteria(
+            null, null, null, null, " ", 0, -1, -1, -2, Integer.MIN_VALUE);
+    assertEquals(100, negativePages.summaryLimit());
+    assertEquals(100, negativePages.detailLimit());
+    assertEquals(0, negativePages.scorecardPage());
+    assertEquals(0, negativePages.linguistPage());
+    assertEquals(0, negativePages.detailPage());
+    assertNull(negativePages.localeBcp47Tag());
+
+    ReviewProjectTimeSpentStatService.TimeSpentReportCriteria largePages =
+        new ReviewProjectTimeSpentStatService.TimeSpentReportCriteria(
+            null,
+            null,
+            null,
+            null,
+            null,
+            1000,
+            25,
+            Integer.MAX_VALUE,
+            Integer.MAX_VALUE,
+            Integer.MAX_VALUE);
+    assertEquals(500, largePages.summaryLimit());
+    assertEquals(25, largePages.detailLimit());
+    assertEquals(Integer.MAX_VALUE / 500, largePages.scorecardPage());
+    assertEquals(Integer.MAX_VALUE / 500, largePages.linguistPage());
+    assertEquals(Integer.MAX_VALUE / 25, largePages.detailPage());
   }
 
   @Test

@@ -64,7 +64,10 @@ public class LinguistTimeSpentReportWS {
       @RequestParam(required = false) Long translatorUserId,
       @RequestParam(required = false) String localeBcp47Tag,
       @RequestParam(required = false, defaultValue = "100") int summaryLimit,
-      @RequestParam(required = false, defaultValue = "100") int detailLimit) {
+      @RequestParam(required = false, defaultValue = "100") int detailLimit,
+      @RequestParam(required = false, defaultValue = "0") int scorecardPage,
+      @RequestParam(required = false, defaultValue = "0") int linguistPage,
+      @RequestParam(required = false, defaultValue = "0") int detailPage) {
     ReviewProjectTimeSpentStatService.TimeSpentReportCriteria criteria =
         new ReviewProjectTimeSpentStatService.TimeSpentReportCriteria(
             activityAfter,
@@ -73,7 +76,10 @@ public class LinguistTimeSpentReportWS {
             translatorUserId,
             localeBcp47Tag,
             summaryLimit,
-            detailLimit);
+            detailLimit,
+            scorecardPage,
+            linguistPage,
+            detailPage);
     UUID requestId = UUID.randomUUID();
     AtomicBoolean forceAsyncPersistence = new AtomicBoolean(false);
     long startedAtNanos = System.nanoTime();
@@ -249,14 +255,20 @@ public class LinguistTimeSpentReportWS {
       SummaryResponse summary,
       List<TranslatorScorecardResponse> translatorScorecards,
       List<LinguistSummaryResponse> linguists,
-      List<WindowResponse> windows) {
+      List<WindowResponse> windows,
+      boolean translatorScorecardsHasNext,
+      boolean linguistsHasNext,
+      boolean windowsHasNext) {
 
     public static ReportResponse from(ReviewProjectTimeSpentStatService.TimeSpentReport report) {
       return new ReportResponse(
           SummaryResponse.from(report.summary()),
           report.translatorScorecards().stream().map(TranslatorScorecardResponse::from).toList(),
           report.linguistSummaries().stream().map(LinguistSummaryResponse::from).toList(),
-          report.windows().stream().map(WindowResponse::from).toList());
+          report.windows().stream().map(WindowResponse::from).toList(),
+          report.translatorScorecardsHasNext(),
+          report.linguistsHasNext(),
+          report.windowsHasNext());
     }
   }
 

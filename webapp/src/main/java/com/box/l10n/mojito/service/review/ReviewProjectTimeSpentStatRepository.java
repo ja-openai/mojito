@@ -6,6 +6,7 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -40,7 +41,7 @@ public interface ReviewProjectTimeSpentStatRepository
         and (:localeBcp47Tag is null or stat.localeBcp47Tag = :localeBcp47Tag)
       order by stat.lastDecisionAt desc, stat.id desc
       """)
-  List<ReviewProjectTimeSpentStat> findReportRows(
+  Slice<ReviewProjectTimeSpentStat> findReportRows(
       @Param("activityAfter") ZonedDateTime activityAfter,
       @Param("activityBefore") ZonedDateTime activityBefore,
       @Param("status") String status,
@@ -106,9 +107,10 @@ public interface ReviewProjectTimeSpentStatRepository
         and (:translatorUserId is null or stat.assignedTranslatorUser.id = :translatorUserId)
         and (:localeBcp47Tag is null or stat.localeBcp47Tag = :localeBcp47Tag)
       group by stat.assignedTranslatorUser.id, stat.assignedTranslatorUsername, stat.localeBcp47Tag
-      order by sum(stat.selfReportedSeconds) desc, sum(stat.estimatedActiveSeconds) desc
+      order by sum(stat.selfReportedSeconds) desc, sum(stat.estimatedActiveSeconds) desc,
+        stat.assignedTranslatorUser.id asc, stat.assignedTranslatorUsername asc, stat.localeBcp47Tag asc
       """)
-  List<LinguistSummaryProjection> findLinguistSummaries(
+  Slice<LinguistSummaryProjection> findLinguistSummaries(
       @Param("activityAfter") ZonedDateTime activityAfter,
       @Param("activityBefore") ZonedDateTime activityBefore,
       @Param("status") String status,
@@ -152,9 +154,10 @@ public interface ReviewProjectTimeSpentStatRepository
           and stat.lastDecisionAt > stat.projectDueDate
           then 1 else 0 end) desc,
         avg(stat.assignedToAcceptedSeconds) desc,
-        sum(case when stat.reviewFlag <> :okFlag and stat.reviewFlag <> :missingReportFlag then 1 else 0 end) desc
+        sum(case when stat.reviewFlag <> :okFlag and stat.reviewFlag <> :missingReportFlag then 1 else 0 end) desc,
+        stat.assignedTranslatorUser.id asc, stat.assignedTranslatorUsername asc
       """)
-  List<TranslatorScorecardProjection> findTranslatorScorecards(
+  Slice<TranslatorScorecardProjection> findTranslatorScorecards(
       @Param("activityAfter") ZonedDateTime activityAfter,
       @Param("activityBefore") ZonedDateTime activityBefore,
       @Param("status") String status,
