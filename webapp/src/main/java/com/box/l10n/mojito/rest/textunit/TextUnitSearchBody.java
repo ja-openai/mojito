@@ -34,6 +34,7 @@ class TextUnitSearchBody {
   Long branchId;
   Integer limit = 10;
   Integer offset = 0;
+  boolean orderedByTextUnitId = false;
 
   public ArrayList<Long> getRepositoryIds() {
     return repositoryIds;
@@ -233,5 +234,13 @@ class TextUnitSearchBody {
 
   public void setOffset(Integer offset) {
     this.offset = offset;
+  }
+
+  public boolean isOrderedByTextUnitId() {
+    return orderedByTextUnitId;
+  }
+
+  public void setOrderedByTextUnitId(boolean orderedByTextUnitId) {
+    this.orderedByTextUnitId = orderedByTextUnitId;
   }
 }

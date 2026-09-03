@@ -9,14 +9,20 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as GlossariesApi from '../../api/glossaries';
 import type * as ReviewProjectsApi from '../../api/review-projects';
 import type { ApiReviewProjectDetail, ApiReviewProjectTextUnit } from '../../api/review-projects';
+import type * as TextUnitsApi from '../../api/text-units';
 import type { ApiUserProfile } from '../../api/users';
 import type * as Mf2TranslationEditorModule from '../../components/mf2/Mf2TranslationEditor';
 import type {
   Mf2TranslationEditorHandle,
   Mf2TranslationEditorProps,
 } from '../../components/mf2/Mf2TranslationEditor';
+import { REPOSITORIES_QUERY_KEY } from '../../hooks/useRepositories';
 import { REVIEW_PROJECT_DETAIL_QUERY_KEY } from '../../hooks/useReviewProjectDetail';
 import { UserContext } from '../../hooks/useUser';
+import {
+  getReviewProjectSearchEnabledKey,
+  saveReviewProjectSearchEnabled,
+} from '../../utils/reviewProjectSearchPreference';
 import {
   type ReviewProjectMutationControls,
   useReviewProjectMutations,
@@ -29,6 +35,12 @@ const requestAiReviewMock = vi.hoisted(() => vi.fn());
 const saveReviewProjectTextUnitDecisionMock = vi.hoisted(() => vi.fn());
 const visibleTextEditorEnabledMock = vi.hoisted(() => vi.fn(() => true));
 const mf2TranslationEditorHostMock = vi.hoisted(() => ({ enabled: false, errorCount: 0 }));
+const searchTextUnitsMock = vi.hoisted(() => vi.fn());
+
+vi.mock('../../api/text-units', async (importActual) => ({
+  ...(await importActual<typeof TextUnitsApi>()),
+  searchTextUnits: searchTextUnitsMock,
+}));
 
 vi.mock('../../api/ai-review', () => ({
   fetchPrecomputedAiReview: fetchPrecomputedAiReviewMock,
@@ -174,6 +186,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+  window.localStorage.clear();
   fetchPrecomputedAiReviewMock.mockReset();
   fetchPrecomputedAiReviewMock.mockResolvedValue(null);
   requestAiReviewMock.mockReset();
@@ -190,6 +203,8 @@ beforeEach(() => {
   visibleTextEditorEnabledMock.mockReturnValue(true);
   mf2TranslationEditorHostMock.enabled = false;
   mf2TranslationEditorHostMock.errorCount = 0;
+  searchTextUnitsMock.mockReset();
+  searchTextUnitsMock.mockResolvedValue([]);
 });
 
 const user: ApiUserProfile = {
@@ -324,7 +339,10 @@ function buildMutations(
   };
 }
 
-function renderReviewProjectPageView(overrides: Partial<ReviewProjectPageViewProps> = {}) {
+function renderReviewProjectPageView(
+  overrides: Partial<ReviewProjectPageViewProps> = {},
+  currentUser: ApiUserProfile = user,
+) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -346,7 +364,7 @@ function renderReviewProjectPageView(overrides: Partial<ReviewProjectPageViewPro
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <UserContext.Provider value={user}>
+      <UserContext.Provider value={currentUser}>
         <MemoryRouter>
           <ReviewProjectPageView {...props} />
         </MemoryRouter>
@@ -358,10 +376,11 @@ function renderReviewProjectPageView(overrides: Partial<ReviewProjectPageViewPro
 function renderReviewProjectPageViewNode(
   props: ReviewProjectPageViewProps,
   queryClient: QueryClient,
+  currentUser: ApiUserProfile = user,
 ) {
   return (
     <QueryClientProvider client={queryClient}>
-      <UserContext.Provider value={user}>
+      <UserContext.Provider value={currentUser}>
         <MemoryRouter>
           <ReviewProjectPageView {...props} />
         </MemoryRouter>
@@ -502,6 +521,108 @@ describe('ReviewProjectPageView', () => {
         textUnitId: textUnit.id,
       }),
     );
+  });
+
+  it.each(['ROLE_USER', 'ROLE_TRANSLATOR', 'ROLE_PM', 'ROLE_ADMIN'] as const)(
+    'hides Search by default for %s',
+    (role) => {
+      renderReviewProjectPageView({}, { ...user, role });
+
+      expect(screen.queryByRole('tab', { name: 'Search' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: 'Translation search' })).not.toBeInTheDocument();
+      expect(searchTextUnitsMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it('lets opted-in translators use Search without changing or saving the translation draft', async () => {
+    saveReviewProjectSearchEnabled(true, user.username);
+    visibleTextEditorEnabledMock.mockReturnValue(false);
+    const onRequestSaveDecision = vi.fn();
+    const onRequestDecisionState = vi.fn();
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(REPOSITORIES_QUERY_KEY, [
+      { id: 1, name: 'example-mobile' },
+      { id: 2, name: 'example-web' },
+    ]);
+    render(
+      renderReviewProjectPageViewNode(
+        {
+          projectId: project.id,
+          project,
+          mutations: buildMutations({ onRequestSaveDecision, onRequestDecisionState }),
+          selectedTextUnitQueryId: null,
+          onSelectedTextUnitIdChange: noop,
+          openRequestDetailsQuery: false,
+          requestDetailsSource: null,
+          onRequestDetailsQueryHandled: noop,
+          onRequestDetailsFlowFinished: noop,
+        },
+        queryClient,
+        user,
+      ),
+    );
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    fireEvent.change(editor, { target: { value: 'Pague {price} agora' } });
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Search' }));
+    const searchInput = await screen.findByRole('searchbox', { name: 'Search translation' });
+    fireEvent.change(searchInput, { target: { value: 'pagamento' } });
+    fireEvent.submit(searchInput.closest('form')!);
+
+    await waitFor(() =>
+      expect(searchTextUnitsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          textSearch: {
+            operator: 'AND',
+            predicates: [{ field: 'target', searchType: 'contains', value: 'pagamento' }],
+          },
+          localeTags: ['pt-PT'],
+          repositoryIds: [1, 2],
+        }),
+      ),
+    );
+    searchInput.focus();
+    fireEvent.keyDown(searchInput, { key: 'Enter', ctrlKey: true });
+    fireEvent.keyDown(searchInput, { key: 'Enter', metaKey: true });
+
+    fireEvent.click(screen.getByRole('tab', { name: /^Glossary/ }));
+    expect(screen.queryByRole('searchbox', { name: 'Search translation' })).not.toBeInTheDocument();
+    expect(editor).toHaveValue('Pague {price} agora');
+    fireEvent.click(screen.getByRole('tab', { name: 'Search' }));
+
+    expect(screen.getByRole('searchbox', { name: 'Search translation' })).toBe(searchInput);
+    expect(searchInput).toHaveValue('pagamento');
+    expect(screen.getByRole('textbox', { name: 'Translation' })).toBe(editor);
+    expect(editor).toHaveValue('Pague {price} agora');
+    expect(searchTextUnitsMock).toHaveBeenCalledTimes(1);
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
+    expect(onRequestDecisionState).not.toHaveBeenCalled();
+
+    act(() => saveReviewProjectSearchEnabled(false, user.username));
+    expect(screen.queryByRole('tab', { name: 'Search' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Translation search' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^Glossary/ })).toHaveAttribute('aria-selected', 'true');
+    expect(editor).toHaveValue('Pague {price} agora');
+
+    act(() => saveReviewProjectSearchEnabled(true, 'another-user'));
+    expect(screen.queryByRole('tab', { name: 'Search' })).not.toBeInTheDocument();
+    act(() => saveReviewProjectSearchEnabled(true, user.username));
+    fireEvent.click(screen.getByRole('tab', { name: 'Search' }));
+    expect(screen.getByRole('searchbox', { name: 'Search translation' })).toHaveValue('');
+
+    // A saved preference in another browser tab updates an already-open review.
+    const storageKey = getReviewProjectSearchEnabledKey(user.username);
+    act(() => {
+      window.localStorage.removeItem(storageKey);
+      window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: null }));
+    });
+    expect(screen.queryByRole('tab', { name: 'Search' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^Glossary/ })).toHaveAttribute('aria-selected', 'true');
+    expect(editor).toHaveValue('Pague {price} agora');
+    expect(searchTextUnitsMock).toHaveBeenCalledTimes(1);
+    expect(onRequestSaveDecision).not.toHaveBeenCalled();
   });
 
   it('mounts a fresh translation editor when the selected text unit changes', async () => {

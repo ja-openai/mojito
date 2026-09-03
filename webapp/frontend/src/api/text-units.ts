@@ -42,6 +42,8 @@ export type ApiTextUnit = {
   target?: string | null;
   targetLocale: string;
   targetComment?: string | null;
+  // Creator of the current variant; an import may name the importer.
+  translationCreatedByUsername?: string | null;
   // "MF2" routes the row to the structured MessageFormat 2 editor.
   messageFormat?: string | null;
   pluralForm?: string | null;
@@ -77,6 +79,7 @@ export type TextUnitSearchRequest = {
   searchText?: string;
   offset?: number;
   limit?: number;
+  orderedByTextUnitId?: boolean;
   statusFilter?: string;
   glossaryStatusFilter?: GlossaryStatusFilter;
   usedFilter?: 'USED' | 'UNUSED';
@@ -250,6 +253,7 @@ type TextUnitSearchBody = {
   pluralFormOther?: string;
   pluralFormFiltered: boolean;
   pluralFormExcluded: boolean;
+  orderedByTextUnitId?: boolean;
   searchType?: string;
   usedFilter?: 'USED' | 'UNUSED';
   statusFilter?: string;
@@ -509,6 +513,10 @@ function buildSearchBody(request: TextUnitSearchRequest): TextUnitSearchBody {
     limit,
     offset,
   };
+
+  if (request.orderedByTextUnitId) {
+    body.orderedByTextUnitId = true;
+  }
 
   if (tmTextUnitIds.length > 0) {
     body.tmTextUnitIds = tmTextUnitIds;

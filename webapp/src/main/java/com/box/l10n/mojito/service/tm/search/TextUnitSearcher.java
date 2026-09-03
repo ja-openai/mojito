@@ -72,6 +72,7 @@ public class TextUnitSearcher {
   private static final String STATUS = "status";
   private static final String INCLUDED_IN_LOCALIZED_FILE = "includedInLocalizedFile";
   private static final String CREATED_DATE = "createdDate";
+  private static final String TRANSLATION_CREATED_BY_USERNAME = "translationCreatedByUsername";
   private static final String ASSET_DELETED = "assetDeleted";
   private static final String PLURAL_FORM = "pluralForm";
   private static final String PLURAL_FORM_OTHER = "pluralFormOther";
@@ -247,6 +248,11 @@ public class TextUnitSearcher {
         context.variant.get("includedInLocalizedFile"),
         INCLUDED_IN_LOCALIZED_FILE);
     add(selections, groupBy, context.variant.get("createdDate"), CREATED_DATE);
+    add(
+        selections,
+        groupBy,
+        context.variant.join("createdByUser", JoinType.LEFT).get("username"),
+        TRANSLATION_CREATED_BY_USERNAME);
     add(selections, groupBy, context.asset.get("deleted"), ASSET_DELETED);
     add(selections, groupBy, context.pluralForm.get("name"), PLURAL_FORM);
     add(selections, groupBy, context.textUnit.get("pluralFormOther"), PLURAL_FORM_OTHER);
@@ -620,6 +626,8 @@ public class TextUnitSearcher {
     List<Order> orders = new ArrayList<>();
     if (searchParameters.isOrderedByTextUnitID()) {
       orders.add(cb.asc(context.textUnit.get("id")));
+      orders.add(cb.asc(context.locale.get("id")));
+      orders.add(cb.asc(context.assetTextUnit.get("id")));
     }
     if (searchParameters instanceof TextUnitSearcherParametersForTesting testingParameters
         && testingParameters.isOrdered()) {
@@ -753,6 +761,7 @@ public class TextUnitSearcher {
     dto.setStatus(toStatus(tuple.get(STATUS)));
     dto.setIncludedInLocalizedFile(Boolean.TRUE.equals(tuple.get(INCLUDED_IN_LOCALIZED_FILE)));
     dto.setCreatedDate(tuple.get(CREATED_DATE, ZonedDateTime.class));
+    dto.setTranslationCreatedByUsername(tuple.get(TRANSLATION_CREATED_BY_USERNAME, String.class));
     dto.setAssetDeleted(Boolean.TRUE.equals(tuple.get(ASSET_DELETED)));
     dto.setPluralForm(tuple.get(PLURAL_FORM, String.class));
     dto.setPluralFormOther(tuple.get(PLURAL_FORM_OTHER, String.class));

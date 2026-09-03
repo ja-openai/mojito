@@ -70,6 +70,10 @@ one or more repositories, one or more target locales, and current-variant status
 tags and case variants are normalized for filtering. Empty repository and locale selections include
 all available values.
 
+Review Project's opt-in [Search tab](034-review-project-search.md) uses the
+existing Workbench text search API. Its initial separate fuzzy demo endpoint has
+been removed so both interfaces share the same search options and behavior.
+
 The `/api/monitoring/search-index/**` endpoints inherit Mojito's existing admin-only monitoring
 security rule. Managed staging/production provisioning must include the four required analysis
 plugins. Authenticated remote access, incremental synchronization, deletion propagation, and

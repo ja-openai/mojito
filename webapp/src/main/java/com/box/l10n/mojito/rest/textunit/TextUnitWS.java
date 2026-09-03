@@ -435,6 +435,7 @@ public class TextUnitWS {
     textUnitSearcherParameters.setBranchId(textUnitSearchBody.getBranchId());
     textUnitSearcherParameters.setLimit(textUnitSearchBody.getLimit());
     textUnitSearcherParameters.setOffset(textUnitSearchBody.getOffset());
+    textUnitSearcherParameters.setOrderByTextUnitID(textUnitSearchBody.isOrderedByTextUnitId());
 
     return textUnitSearcherParameters;
   }

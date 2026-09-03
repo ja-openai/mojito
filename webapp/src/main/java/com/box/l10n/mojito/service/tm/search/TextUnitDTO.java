@@ -38,6 +38,8 @@ public class TextUnitDTO {
   private ZonedDateTime tmTextUnitCreatedDate;
   private boolean doNotTranslate;
   private Long branchId;
+  // The actor who created the current variant; an import actor may differ from its author.
+  private String translationCreatedByUsername;
 
   @JsonAlias({"translatedBy", "author", "authorIdentity", "upstreamAuthorIdentity"})
   private String translatorIdentity;
@@ -275,6 +277,14 @@ public class TextUnitDTO {
 
   public void setBranchId(Long branchId) {
     this.branchId = branchId;
+  }
+
+  public String getTranslationCreatedByUsername() {
+    return translationCreatedByUsername;
+  }
+
+  public void setTranslationCreatedByUsername(String translationCreatedByUsername) {
+    this.translationCreatedByUsername = translationCreatedByUsername;
   }
 
   public String getTranslatorIdentity() {

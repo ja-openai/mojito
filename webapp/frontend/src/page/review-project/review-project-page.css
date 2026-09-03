@@ -1554,6 +1554,7 @@
 
 .review-project-detail__context-tabs {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-4);
   border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-border) 52%, transparent);
@@ -1601,7 +1602,7 @@
 }
 
 .review-project-detail__context-tab-count-slot {
-  display: inline-flex;
+  display: none;
   align-items: center;
   justify-content: flex-start;
   gap: var(--space-1);
@@ -1610,6 +1611,7 @@
 }
 
 .review-project-detail__context-tab-count-slot.has-count {
+  display: inline-flex;
   visibility: visible;
 }
 

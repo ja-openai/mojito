@@ -2,9 +2,30 @@ package com.box.l10n.mojito.service.tm.search;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.box.l10n.mojito.json.ObjectMapper;
 import org.junit.Test;
 
 public class TextUnitDTOTest {
+
+  @Test
+  public void keepsImportedAuthorIdentitySeparateFromTheTranslationCreator() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    TextUnitDTO textUnit =
+        mapper.readValue(
+            """
+        {"author":"upstream-translator", "translationCreatedByUsername":"importing-user"}
+        """,
+            TextUnitDTO.class);
+
+    assertThat(textUnit.getTranslatorIdentity()).isEqualTo("upstream-translator");
+    assertThat(textUnit.getTranslationCreatedByUsername()).isEqualTo("importing-user");
+    assertThat(
+            mapper
+                .readTree(mapper.writeValueAsString(textUnit))
+                .path("translatorIdentity")
+                .asText())
+        .isEqualTo("upstream-translator");
+  }
 
   @Test
   public void infersMf2MessageFormatFromStrictDeclarations() {

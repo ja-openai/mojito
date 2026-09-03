@@ -94,6 +94,7 @@ import { useVirtualRows } from '../../components/virtual/useVirtualRows';
 import { VirtualList } from '../../components/virtual/VirtualList';
 import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
 import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
+import { useReviewProjectSearchEnabled } from '../../hooks/useReviewProjectSearchEnabled';
 import { useUser } from '../../hooks/useUser';
 import { useVisibleTextEditorEnabled } from '../../hooks/useVisibleTextEditorEnabled';
 import { buildAiTranslateAttemptTimelineData } from '../../utils/aiTranslateHistory';
@@ -141,6 +142,7 @@ import {
   REVIEW_PROJECT_SHORTCUT_HELP_KEY,
   saveReviewProjectShortcutHelpPreference,
 } from './review-project-preferences';
+import { ReviewProjectSearchPanel } from './ReviewProjectSearchPanel';
 import {
   type ReviewProjectDecisionSnapshot as DecisionSnapshot,
   type ReviewProjectDraftStatus as StatusChoice,
@@ -209,7 +211,7 @@ type SortOrderFilter = 'asc' | 'desc';
 type EditKind = 'translation' | 'status' | 'comment';
 type TerminologyConfidenceChoice = 'unspecified' | '1' | '2' | '3' | '4' | '5';
 type TerminologyResolutionStatusChoice = ApiTerminologyResolutionStatus;
-type ContextTab = 'glossary' | 'icu' | 'history' | 'context';
+type ContextTab = 'glossary' | 'search' | 'icu' | 'history' | 'context';
 type DetailNavigationGuard = {
   isDirty: () => boolean;
   isComposing: () => boolean;
@@ -1917,6 +1919,15 @@ function DetailPane({
   const [translationMarksMode, setTranslationMarksMode] = useState<VisibleTextMarksMode>('auto');
   const [icuPreviewMode, setIcuPreviewMode] = useState<'source' | 'target'>('target');
   const [activeContextTab, setActiveContextTab] = useState<ContextTab>('glossary');
+  const [hasOpenedSearch, setHasOpenedSearch] = useState(false);
+  const canSearchTranslations = useReviewProjectSearchEnabled();
+
+  useEffect(() => {
+    if (!canSearchTranslations) {
+      setHasOpenedSearch(false);
+      setActiveContextTab((current) => (current === 'search' ? 'glossary' : current));
+    }
+  }, [canSearchTranslations]);
   const [isAiCollapsed, setIsAiCollapsed] = useState(false);
   const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
   const [aiInput, setAiInput] = useState('');
@@ -4464,6 +4475,7 @@ function DetailPane({
                   label: 'Glossary',
                   count: glossaryMatchesQuery.data?.length,
                 },
+                ...(canSearchTranslations ? [{ value: 'search' as const, label: 'Search' }] : []),
                 ...(sourceIsMf2
                   ? []
                   : [
@@ -4489,6 +4501,7 @@ function DetailPane({
                       aria-selected={activeContextTab === tab.value}
                       onClick={() => {
                         setActiveContextTab(tab.value);
+                        if (tab.value === 'search') setHasOpenedSearch(true);
                       }}
                     >
                       <span className="review-project-detail__context-tab-label">{tab.label}</span>
@@ -4515,6 +4528,15 @@ function DetailPane({
             </div>
 
             <div className="review-project-detail__context-body">
+              {canSearchTranslations && hasOpenedSearch ? (
+                <div hidden={activeContextTab !== 'search'}>
+                  <ReviewProjectSearchPanel
+                    key={localeTag}
+                    localeTag={localeTag}
+                    active={activeContextTab === 'search'}
+                  />
+                </div>
+              ) : null}
               {activeContextTab === 'glossary' ? (
                 <GlossaryMatchesPanel
                   matches={glossaryMatchesQuery.data ?? []}

@@ -12,6 +12,10 @@ import { hasSameSet } from '../../utils/arraySelection';
 import { useLocaleDisplayNameResolver } from '../../utils/localeDisplayNames';
 import { buildLocaleOptionsFromRepositories } from '../../utils/localeSelection';
 import {
+  loadReviewProjectSearchEnabled,
+  saveReviewProjectSearchEnabled,
+} from '../../utils/reviewProjectSearchPreference';
+import {
   loadVisibleTextEditorEnabled,
   saveVisibleTextEditorEnabled,
 } from '../../utils/visibleTextEditorPreference';
@@ -66,6 +70,12 @@ export function SettingsPage() {
   );
   const [visibleTextEditorDraft, setVisibleTextEditorDraft] = useState(() =>
     loadVisibleTextEditorEnabled(username),
+  );
+  const [savedReviewProjectSearchEnabled, setSavedReviewProjectSearchEnabled] = useState(() =>
+    loadReviewProjectSearchEnabled(username),
+  );
+  const [reviewProjectSearchDraft, setReviewProjectSearchDraft] = useState(() =>
+    loadReviewProjectSearchEnabled(username),
   );
   const [worksetDraft, setWorksetDraft] = useState<string>(() =>
     savedWorkset == null ? '' : String(savedWorkset),
@@ -145,6 +155,9 @@ export function SettingsPage() {
     const nextVisibleTextEditorEnabled = loadVisibleTextEditorEnabled(username);
     setSavedVisibleTextEditorEnabled(nextVisibleTextEditorEnabled);
     setVisibleTextEditorDraft(nextVisibleTextEditorEnabled);
+    const nextSearchEnabled = loadReviewProjectSearchEnabled(username);
+    setSavedReviewProjectSearchEnabled(nextSearchEnabled);
+    setReviewProjectSearchDraft(nextSearchEnabled);
     const nextDefaultReviewTeamIds = loadDefaultReviewProjectTeamIds(username);
     setSavedDefaultReviewTeamIds(nextDefaultReviewTeamIds);
     setDefaultReviewTeamDraft(nextDefaultReviewTeamIds);
@@ -210,6 +223,7 @@ export function SettingsPage() {
   const canResetDefaultReviewTeams =
     savedDefaultReviewTeamIds.length > 0 || defaultReviewTeamDraft.length > 0;
   const isVisibleTextEditorDirty = visibleTextEditorDraft !== savedVisibleTextEditorEnabled;
+  const isReviewProjectSearchDirty = reviewProjectSearchDraft !== savedReviewProjectSearchEnabled;
 
   const handleSaveWorksetPreference = () => {
     if (!parsedWorkset.valid || !isWorksetDirty) {
@@ -258,6 +272,14 @@ export function SettingsPage() {
     }
     saveVisibleTextEditorEnabled(visibleTextEditorDraft, username);
     setSavedVisibleTextEditorEnabled(visibleTextEditorDraft);
+  };
+
+  const handleSaveReviewProjectSearchPreference = () => {
+    if (!isReviewProjectSearchDirty) return;
+    saveReviewProjectSearchEnabled(reviewProjectSearchDraft, username);
+    const saved = loadReviewProjectSearchEnabled(username);
+    setSavedReviewProjectSearchEnabled(saved);
+    setReviewProjectSearchDraft(saved);
   };
 
   return (
@@ -479,6 +501,57 @@ export function SettingsPage() {
               disabled={!isPreferredLocalesDirty}
             >
               Save
+            </button>
+          </div>
+        </div>
+      </section>
+      <section
+        id="review-project-search"
+        className="settings-card"
+        aria-labelledby="settings-review-project-search"
+      >
+        <div className="settings-card__header">
+          <h2 id="settings-review-project-search">Review Project search</h2>
+        </div>
+        <div className="settings-field">
+          <label className="settings-radio-option">
+            <input
+              type="checkbox"
+              checked={reviewProjectSearchDraft}
+              onChange={(event) => setReviewProjectSearchDraft(event.target.checked)}
+            />
+            <span className="settings-radio-option__body">
+              <span className="settings-radio-option__label">
+                Show the Search tab in Review Project (preview)
+              </span>
+              <span className="settings-hint">
+                Search current translations across repositories. Off by default; enable it to try
+                the preview.
+              </span>
+            </span>
+          </label>
+          <p className="settings-hint">
+            Select Save to apply this setting for your Mojito account in this browser. Uncheck and
+            Save to turn it off again.
+          </p>
+        </div>
+        <div className="settings-card__footer">
+          <div className="settings-actions">
+            <button
+              type="button"
+              className="settings-button settings-button--primary"
+              onClick={handleSaveReviewProjectSearchPreference}
+              disabled={!isReviewProjectSearchDirty}
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              className="settings-button settings-button--ghost"
+              onClick={() => setReviewProjectSearchDraft(false)}
+              disabled={!reviewProjectSearchDraft}
+            >
+              Reset
             </button>
           </div>
         </div>

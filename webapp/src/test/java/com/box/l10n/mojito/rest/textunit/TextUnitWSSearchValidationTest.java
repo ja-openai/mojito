@@ -1,6 +1,7 @@
 package com.box.l10n.mojito.rest.textunit;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doThrow;
@@ -13,6 +14,7 @@ import com.box.l10n.mojito.entity.Asset;
 import com.box.l10n.mojito.entity.AssetIntegrityChecker;
 import com.box.l10n.mojito.entity.Repository;
 import com.box.l10n.mojito.entity.TMTextUnit;
+import com.box.l10n.mojito.json.ObjectMapper;
 import com.box.l10n.mojito.service.assetintegritychecker.AssetIntegrityCheckerRepository;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckException;
 import com.box.l10n.mojito.service.assetintegritychecker.integritychecker.IntegrityCheckerFactory;
@@ -42,6 +44,19 @@ import org.springframework.web.server.ResponseStatusException;
 public class TextUnitWSSearchValidationTest {
 
   TextUnitWS textUnitWS = new TextUnitWS();
+
+  @Test
+  public void mapsStableOrderingOnlyWhenRequested() throws Exception {
+    assertFalse(
+        textUnitWS
+            .textUnitSearchBodyToTextUnitSearcherParameters(new TextUnitSearchBody())
+            .isOrderedByTextUnitID());
+    TextUnitSearchBody body =
+        new ObjectMapper().readValue("{\"orderedByTextUnitId\":true}", TextUnitSearchBody.class);
+
+    assertTrue(
+        textUnitWS.textUnitSearchBodyToTextUnitSearcherParameters(body).isOrderedByTextUnitID());
+  }
 
   @Test
   public void mapsTranslationCreatedDates() throws Exception {

@@ -1,0 +1,81 @@
+.review-project-search {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  font-size: var(--font-size-sm);
+}
+
+.review-project-search__hint,
+.review-project-search__summary,
+.review-project-search__name {
+  color: var(--color-text-muted);
+}
+
+.review-project-search__controls,
+.review-project-search__result-meta,
+.review-project-search__pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.review-project-search__submit {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.review-project-search__results {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: min(50vh, 32rem);
+  overflow-y: auto;
+}
+
+.review-project-search__result {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-bottom: var(--border-width) solid var(--color-border);
+  overflow-wrap: anywhere;
+}
+
+.review-project-search__result-meta {
+  font-weight: var(--font-weight-medium);
+}
+
+.review-project-search__result-meta a {
+  margin-left: auto;
+}
+
+.review-project-search__name {
+  font-size: var(--font-size-xs);
+}
+
+.review-project-search__text {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: var(--space-2);
+  line-height: 1.5;
+}
+
+.review-project-search__text > span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.review-project-search__text > div {
+  white-space: pre-wrap;
+}
+
+.review-project-search__pagination {
+  justify-content: flex-end;
+  margin-top: var(--space-3);
+}
+
+.review-project-search__author {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}

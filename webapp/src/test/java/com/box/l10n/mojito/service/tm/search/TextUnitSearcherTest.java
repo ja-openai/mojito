@@ -15,6 +15,7 @@ import com.box.l10n.mojito.entity.TMTextUnitCurrentVariant;
 import com.box.l10n.mojito.entity.TMTextUnitVariant;
 import com.box.l10n.mojito.entity.glossary.Glossary;
 import com.box.l10n.mojito.entity.glossary.GlossaryTermMetadata;
+import com.box.l10n.mojito.entity.security.user.User;
 import com.box.l10n.mojito.service.asset.AssetService;
 import com.box.l10n.mojito.service.assetExtraction.ServiceTestBase;
 import com.box.l10n.mojito.service.assetTextUnit.AssetTextUnitRepository;
@@ -22,8 +23,10 @@ import com.box.l10n.mojito.service.glossary.GlossaryRepository;
 import com.box.l10n.mojito.service.glossary.GlossaryTermMetadataRepository;
 import com.box.l10n.mojito.service.locale.LocaleService;
 import com.box.l10n.mojito.service.repository.RepositoryService;
+import com.box.l10n.mojito.service.security.user.UserRepository;
 import com.box.l10n.mojito.service.tm.TMService;
 import com.box.l10n.mojito.service.tm.TMTestData;
+import com.box.l10n.mojito.service.tm.TMTextUnitCurrentVariantRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitRepository;
 import com.box.l10n.mojito.service.tm.TMTextUnitVariantRepository;
 import com.box.l10n.mojito.test.TestIdWatcher;
@@ -75,7 +78,105 @@ public class TextUnitSearcherTest extends ServiceTestBase {
 
   @Autowired GlossaryTermMetadataRepository glossaryTermMetadataRepository;
 
+  @Autowired UserRepository userRepository;
+
+  @Autowired TMTextUnitCurrentVariantRepository tmTextUnitCurrentVariantRepository;
+
   @Rule public TestIdWatcher testIdWatcher = new TestIdWatcher();
+
+  @Transactional
+  @Test
+  public void projectsCurrentTranslationCreatorWithoutUsingSourceOrOtherVariantAuthors() {
+    TMTestData data = new TMTestData(testIdWatcher);
+    User sourceCreator = translationSearchUser("source-creator");
+    User currentTranslationCreator = translationSearchUser("translation-creator");
+    User currentMarkerCreator = translationSearchUser("current-marker-creator");
+    User newerVariantCreator = translationSearchUser("newer-variant-creator");
+    data.addTMTextUnit1.setCreatedByUser(sourceCreator);
+    tmTextUnitRepository.saveAndFlush(data.addTMTextUnit1);
+    data.addCurrentTMTextUnitVariant1FrFR.setCreatedByUser(currentTranslationCreator);
+    tmTextUnitVariantRepository.saveAndFlush(data.addCurrentTMTextUnitVariant1FrFR);
+    TMTextUnitCurrentVariant marker =
+        tmTextUnitCurrentVariantRepository.findByLocale_IdAndTmTextUnit_Id(
+            data.frFR.getId(), data.addTMTextUnit1.getId());
+    marker.setCreatedByUser(currentMarkerCreator);
+    marker.setLastModifiedDate(ZonedDateTime.now().plusDays(1));
+    tmTextUnitCurrentVariantRepository.saveAndFlush(marker);
+    tmService.addTMTextUnitVariant(
+        data.addTMTextUnit1.getId(),
+        data.frFR.getId(),
+        "Newer but not current",
+        null,
+        TMTextUnitVariant.Status.APPROVED,
+        true,
+        ZonedDateTime.now().plusDays(1),
+        newerVariantCreator);
+
+    TextUnitSearcherParameters parameters = new TextUnitSearcherParameters();
+    parameters.setTmTextUnitIds(data.addTMTextUnit1.getId());
+    parameters.setLocaleTags(List.of("fr-FR"));
+    TextUnitDTO result = textUnitSearcher.search(parameters).getFirst();
+
+    assertThat(result.getTmTextUnitVariantId())
+        .isEqualTo(data.addCurrentTMTextUnitVariant1FrFR.getId());
+    assertThat(result.getTranslationCreatedByUsername())
+        .isEqualTo(currentTranslationCreator.getUsername());
+    assertThat(result.getTranslatorIdentity()).isNull();
+  }
+
+  @Transactional
+  @Test
+  public void keepsMissingTranslationCreatorsUnknownIncludingUntranslatedLocales() {
+    TMTestData data = new TMTestData(testIdWatcher);
+    data.addCurrentTMTextUnitVariant1FrFR.setCreatedByUser(null);
+    tmTextUnitVariantRepository.saveAndFlush(data.addCurrentTMTextUnitVariant1FrFR);
+    TextUnitSearcherParameters parameters = new TextUnitSearcherParameters();
+    parameters.setTmTextUnitIds(data.addTMTextUnit1.getId());
+    parameters.setLocaleTags(List.of("fr-FR", "fr-CA"));
+
+    List<TextUnitDTO> results = textUnitSearcher.search(parameters);
+
+    assertThat(results).hasSize(2);
+    assertThat(results)
+        .extracting(TextUnitDTO::getTranslationCreatedByUsername)
+        .containsOnlyNulls();
+    assertThat(results).extracting(TextUnitDTO::getTranslatorIdentity).containsOnlyNulls();
+  }
+
+  private User translationSearchUser(String suffix) {
+    User user = new User();
+    user.setUsername(testIdWatcher.getEntityName(suffix));
+    user.setEnabled(true);
+    return userRepository.saveAndFlush(user);
+  }
+
+  @Transactional
+  @Test
+  public void paginatesMultipleLocalesWithStableTextUnitAndLocaleOrdering() {
+    TMTestData data = new TMTestData(testIdWatcher);
+    TextUnitSearcherParameters parameters = new TextUnitSearcherParameters();
+    parameters.setTmTextUnitIds(data.addTMTextUnit1.getId(), data.addTMTextUnit2.getId());
+    parameters.setLocaleTags(List.of("ko-KR", "fr-FR"));
+    parameters.setOrderByTextUnitID(true);
+    parameters.setLimit(1);
+    List<TextUnitDTO> pages = new ArrayList<>();
+    for (int offset = 0; offset < 4; offset++) {
+      parameters.setOffset(offset);
+      List<TextUnitDTO> page = textUnitSearcher.search(parameters);
+      assertThat(page).hasSize(1);
+      pages.addAll(page);
+    }
+    List<Long> locales = List.of(data.koKR.getId(), data.frFR.getId()).stream().sorted().toList();
+    assertThat(pages)
+        .extracting(TextUnitDTO::getTmTextUnitId, TextUnitDTO::getLocaleId)
+        .containsExactly(
+            tuple(data.addTMTextUnit1.getId(), locales.get(0)),
+            tuple(data.addTMTextUnit1.getId(), locales.get(1)),
+            tuple(data.addTMTextUnit2.getId(), locales.get(0)),
+            tuple(data.addTMTextUnit2.getId(), locales.get(1)));
+    parameters.setOffset(4);
+    assertThat(textUnitSearcher.search(parameters)).isEmpty();
+  }
 
   @Transactional
   @Test

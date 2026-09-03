@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { SearchAttribute, SearchType } from '../../api/text-units';
 import {
@@ -10,10 +10,8 @@ import {
   RepositoryMultiSelect,
   type RepositoryMultiSelectOption,
 } from '../../components/RepositoryMultiSelect';
-import { SearchControl } from '../../components/SearchControl';
-import { SingleSelectDropdown } from '../../components/SingleSelectDropdown';
+import { TextUnitSearchControl } from '../../components/TextUnitSearchControl';
 import { getStandardDateQuickRanges } from '../../utils/dateQuickRanges';
-import { CONTAINS_SEARCH_HELPER, ILIKE_SEARCH_HELPER } from '../../utils/likeSearch';
 import type { LocaleSelectionOption } from '../../utils/localeSelection';
 import { filterMyLocales } from '../../utils/localeSelection';
 import { resultSizePresets, WORKSET_SIZE_DEFAULT, WORKSET_SIZE_MIN } from './workbench-constants';
@@ -25,40 +23,8 @@ import type {
   WorkbenchTextSearchOperator,
 } from './workbench-types';
 
-type SearchAttributeOption = { value: SearchAttribute; label: string; helper?: string };
-type SearchTypeOption = { value: SearchType; label: string; helper?: string };
 type StatusFilterOption = { value: StatusFilterValue; label: string };
 type GlossaryStatusFilterOption = { value: GlossaryStatusFilterValue; label: string };
-
-const searchAttributeOptions: SearchAttributeOption[] = [
-  { value: 'target', label: 'Translation' },
-  { value: 'source', label: 'Source' },
-  { value: 'comment', label: 'Comment' },
-  { value: 'stringId', label: 'String ID' },
-  { value: 'asset', label: 'Asset path' },
-  { value: 'location', label: 'Location' },
-  { value: 'pluralFormOther', label: 'Plural (other)' },
-  { value: 'tmTextUnitIds', label: 'TextUnit IDs' },
-];
-
-const searchTypeOptions: SearchTypeOption[] = [
-  { value: 'exact', label: 'Exact match', helper: 'Find only the full text you type' },
-  {
-    value: 'contains',
-    label: 'Contains',
-    helper: CONTAINS_SEARCH_HELPER,
-  },
-  {
-    value: 'ilike',
-    label: 'iLike',
-    helper: ILIKE_SEARCH_HELPER,
-  },
-  {
-    value: 'regex',
-    label: 'Regex',
-    helper: 'Advanced: use a regular expression, e.g. \\x{FFFF}, ^/$, .*, (?i)insensitive',
-  },
-];
 
 const statusFilterOptions: StatusFilterOption[] = [
   // Match legacy workbench semantics and wording.
@@ -79,226 +45,6 @@ const glossaryStatusFilterOptions: GlossaryStatusFilterOption[] = [
   { value: 'REJECTED', label: 'Rejected' },
   { value: 'DEPRECATED', label: 'Deprecated' },
 ];
-
-type CompoundTextSearchBuilderProps = {
-  disabled: boolean;
-  operator: WorkbenchTextSearchOperator;
-  conditions: WorkbenchTextSearchCondition[];
-  onChangeOperator: (value: WorkbenchTextSearchOperator) => void;
-  onChangeCondition: (
-    id: string,
-    patch: Partial<Pick<WorkbenchTextSearchCondition, 'field' | 'searchType' | 'value'>>,
-  ) => void;
-  onAddCondition: () => void;
-  onRemoveCondition: (id: string) => void;
-  onSubmitSearch: () => void;
-};
-
-type TextSearchConditionControlProps = {
-  disabled: boolean;
-  condition: WorkbenchTextSearchCondition;
-  leading: ReactNode;
-  after?: ReactNode;
-  trailing?: ReactNode;
-  className?: string;
-  onChangeValue: (value: string) => void;
-  onSubmitSearch: () => void;
-};
-
-function getSearchPlaceholder(searchAttribute: SearchAttribute) {
-  switch (searchAttribute) {
-    case 'target':
-      return 'Search translation';
-    case 'source':
-      return 'Search source text';
-    case 'comment':
-      return 'Search comment';
-    case 'stringId':
-      return 'Search string ID';
-    case 'asset':
-      return 'Search asset path';
-    case 'location':
-      return 'Search location (usage)';
-    case 'pluralFormOther':
-      return 'Search plural form (other)';
-    case 'tmTextUnitIds':
-      return 'Search TM TextUnit IDs (comma or space separated)';
-    default:
-      return 'Search';
-  }
-}
-
-function TextSearchConditionControl({
-  disabled,
-  condition,
-  leading,
-  after,
-  trailing,
-  className,
-  onChangeValue,
-  onSubmitSearch,
-}: TextSearchConditionControlProps) {
-  const placeholder = getSearchPlaceholder(condition.field);
-
-  return (
-    <div className="workbench-searchrow">
-      <SearchControl
-        value={condition.value}
-        onChange={onChangeValue}
-        onSubmit={onSubmitSearch}
-        disabled={disabled}
-        placeholder={placeholder}
-        inputAriaLabel={placeholder}
-        className={className}
-        leading={leading}
-        trailing={trailing}
-      />
-      {after ? <div className="workbench-searchrow__after">{after}</div> : null}
-    </div>
-  );
-}
-
-function getSearchConditionSummary(
-  condition: Pick<WorkbenchTextSearchCondition, 'field' | 'searchType'>,
-) {
-  return [
-    searchAttributeOptions.find((option) => option.value === condition.field)?.label,
-    searchTypeOptions.find((option) => option.value === condition.searchType)?.label,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-}
-
-function SearchConditionOptionsChip({
-  disabled,
-  condition,
-  onChangeField,
-  onChangeSearchType,
-}: {
-  disabled: boolean;
-  condition: Pick<WorkbenchTextSearchCondition, 'field' | 'searchType'>;
-  onChangeField: (value: SearchAttribute) => void;
-  onChangeSearchType: (value: SearchType) => void;
-}) {
-  return (
-    <MultiSectionFilterChip
-      align="left"
-      ariaLabel="Select search options"
-      className="workbench-searchmode workbench-searchmode--inline"
-      classNames={{
-        button: 'workbench-searchmode__button',
-        panel: 'workbench-searchmode__panel',
-        section: 'workbench-searchmode__section',
-        label: 'workbench-searchmode__label',
-        list: 'workbench-searchmode__list',
-        option: 'workbench-searchmode__option',
-        helper: 'workbench-searchmode__helper',
-      }}
-      disabled={disabled}
-      summary={getSearchConditionSummary(condition)}
-      sections={[
-        {
-          kind: 'radio',
-          label: 'Search attribute',
-          options: searchAttributeOptions,
-          value: condition.field,
-          onChange: (value) => onChangeField(value as SearchAttribute),
-        },
-        {
-          kind: 'radio',
-          label: 'Match type',
-          options: searchTypeOptions,
-          value: condition.searchType,
-          onChange: (value) => onChangeSearchType(value as SearchType),
-        },
-      ]}
-    />
-  );
-}
-
-function CompoundTextSearchBuilder({
-  disabled,
-  operator,
-  conditions,
-  onChangeOperator,
-  onChangeCondition,
-  onAddCondition,
-  onRemoveCondition,
-  onSubmitSearch,
-}: CompoundTextSearchBuilderProps) {
-  return (
-    <div className="workbench-searchbuilder">
-      <div className="workbench-searchbuilder__meta">
-        <label className="workbench-searchbuilder__toggle">
-          <span>Match</span>
-          <SingleSelectDropdown<WorkbenchTextSearchOperator>
-            label="Match operator"
-            className="workbench-searchbuilder__select workbench-searchbuilder__select--operator"
-            value={operator}
-            options={[
-              { value: 'AND', label: 'all' },
-              { value: 'OR', label: 'any' },
-            ]}
-            onChange={(value) => {
-              if (value) {
-                onChangeOperator(value);
-              }
-            }}
-            disabled={disabled}
-            searchable={false}
-            buttonAriaLabel="Match operator"
-          />
-        </label>
-        <button
-          type="button"
-          className="workbench-searchbuilder__action"
-          onClick={onAddCondition}
-          disabled={disabled}
-        >
-          Add
-        </button>
-      </div>
-
-      <div className="workbench-searchbuilder__rows">
-        {conditions.map((condition) => (
-          <div key={condition.id} className="workbench-searchbuilder__row">
-            <TextSearchConditionControl
-              disabled={disabled}
-              condition={condition}
-              className="workbench-searchbuilder__control"
-              onChangeValue={(value) => onChangeCondition(condition.id, { value })}
-              onSubmitSearch={onSubmitSearch}
-              leading={
-                <SearchConditionOptionsChip
-                  disabled={disabled}
-                  condition={condition}
-                  onChangeField={(value) => onChangeCondition(condition.id, { field: value })}
-                  onChangeSearchType={(value) =>
-                    onChangeCondition(condition.id, { searchType: value })
-                  }
-                />
-              }
-              after={
-                <button
-                  type="button"
-                  className="workbench-searchrow__remove"
-                  onClick={() => onRemoveCondition(condition.id)}
-                  disabled={disabled}
-                  aria-label="Remove search condition"
-                  title="Remove condition"
-                >
-                  <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-                    <path d="M6 2h4l.5 1H13v1H3V3h2.5L6 2Zm-1 3h1v7H5V5Zm3 0h1v7H8V5Zm3 0h1v7h-1V5ZM4 13V5h8v8H4Z" />
-                  </svg>
-                </button>
-              }
-            />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 type WorkbenchHeaderProps = {
   disabled: boolean;
@@ -434,7 +180,6 @@ export function WorkbenchHeader({
     value: searchInputValue,
   };
   const hasCompoundSearch = textSearchConditions.length > 1;
-  const canAddCompoundCondition = primaryTextSearchCondition.value.trim().length > 0;
 
   return (
     <div className="workbench-page__header workbench-header">
@@ -463,50 +208,30 @@ export function WorkbenchHeader({
       </div>
 
       <div className="workbench-header__search">
-        <div className="workbench-searchpane">
-          {hasCompoundSearch ? (
-            <CompoundTextSearchBuilder
-              disabled={searchControlsDisabled}
-              operator={textSearchOperator}
-              conditions={textSearchConditions}
-              onChangeOperator={onChangeTextSearchOperator}
-              onChangeCondition={onChangeTextSearchCondition}
-              onAddCondition={onAddTextSearchCondition}
-              onRemoveCondition={onRemoveTextSearchCondition}
-              onSubmitSearch={onSubmitSearch}
-            />
-          ) : (
-            <TextSearchConditionControl
-              disabled={searchControlsDisabled}
-              condition={primaryTextSearchCondition}
-              className="workbench-searchcontrol"
-              onChangeValue={onChangeSearchInput}
-              onSubmitSearch={onSubmitSearch}
-              leading={
-                <SearchConditionOptionsChip
-                  disabled={searchControlsDisabled}
-                  condition={primaryTextSearchCondition}
-                  onChangeField={onChangeSearchAttribute}
-                  onChangeSearchType={onChangeSearchType}
-                />
-              }
-              trailing={
-                canAddCompoundCondition ? (
-                  <button
-                    type="button"
-                    className="workbench-searchcontrol__add"
-                    onClick={onAddTextSearchCondition}
-                    disabled={searchControlsDisabled}
-                    aria-label="Add search condition"
-                    title="Add search condition"
-                  >
-                    Add
-                  </button>
-                ) : null
-              }
-            />
-          )}
-        </div>
+        <TextUnitSearchControl
+          disabled={searchControlsDisabled}
+          operator={textSearchOperator}
+          conditions={hasCompoundSearch ? textSearchConditions : [primaryTextSearchCondition]}
+          onChangeOperator={onChangeTextSearchOperator}
+          onChangeCondition={(id, patch) => {
+            if (hasCompoundSearch) {
+              onChangeTextSearchCondition(id, patch);
+              return;
+            }
+            if (patch.field !== undefined) {
+              onChangeSearchAttribute(patch.field);
+            }
+            if (patch.searchType !== undefined) {
+              onChangeSearchType(patch.searchType);
+            }
+            if (patch.value !== undefined) {
+              onChangeSearchInput(patch.value);
+            }
+          }}
+          onAddCondition={onAddTextSearchCondition}
+          onRemoveCondition={onRemoveTextSearchCondition}
+          onSubmitSearch={onSubmitSearch}
+        />
       </div>
 
       <div className="workbench-header__right">

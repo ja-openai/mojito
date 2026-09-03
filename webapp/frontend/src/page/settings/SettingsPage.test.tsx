@@ -4,22 +4,27 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  loadReviewProjectSearchEnabled,
+  saveReviewProjectSearchEnabled,
+} from '../../utils/reviewProjectSearchPreference';
+import {
   loadVisibleTextEditorEnabled,
   VISIBLE_TEXT_EDITOR_ENABLED_KEY,
 } from '../../utils/visibleTextEditorPreference';
 import { SettingsPage } from './SettingsPage';
 
 const TEST_USERNAME = 'translator';
+let currentUsername = TEST_USERNAME;
 
 function renderSettingsPage() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <SettingsPage />
-    </QueryClientProvider>,
-  );
+  return render(<SettingsPage />, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    ),
+  });
 }
 
 vi.mock('../../hooks/useRepositories', () => ({
@@ -28,7 +33,7 @@ vi.mock('../../hooks/useRepositories', () => ({
 
 vi.mock('../../hooks/useUser', () => ({
   useUser: () => ({
-    username: TEST_USERNAME,
+    username: currentUsername,
     role: 'ROLE_TRANSLATOR',
     canTranslateAllLocales: false,
     userLocales: [],
@@ -38,6 +43,7 @@ vi.mock('../../hooks/useUser', () => ({
 describe('SettingsPage', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    currentUsername = TEST_USERNAME;
   });
 
   it('stages the assisted translation editor opt-in until Save', async () => {
@@ -105,5 +111,84 @@ describe('SettingsPage', () => {
         name: /Use the assisted rich text editor in Workbench, Review Project, and text unit details/,
       }),
     ).toBeChecked();
+  });
+
+  it('stages Search opt-in and opt-out until Save and preserves the saved setting on reload', async () => {
+    const user = userEvent.setup();
+    const view = renderSettingsPage();
+    const section = within(screen.getByRole('region', { name: 'Review Project search' }));
+    const toggle = section.getByRole('checkbox', { name: /Show the Search tab in Review Project/ });
+    const save = section.getByRole('button', { name: 'Save' });
+
+    expect(toggle).not.toBeChecked();
+    expect(save).toBeDisabled();
+    expect(section.getByRole('button', { name: 'Reset' })).toBeDisabled();
+    expect(
+      section.getByText(
+        'Search current translations across repositories. Off by default; enable it to try the preview.',
+      ),
+    ).toBeInTheDocument();
+    await user.click(toggle);
+    expect(toggle).toBeChecked();
+    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(false);
+    await user.click(save);
+    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
+    expect(loadReviewProjectSearchEnabled('other-user')).toBe(false);
+    expect(save).toBeDisabled();
+
+    view.unmount();
+    renderSettingsPage();
+    const reloaded = within(screen.getByRole('region', { name: 'Review Project search' }));
+    const reloadedToggle = reloaded.getByRole('checkbox', {
+      name: /Show the Search tab in Review Project/,
+    });
+    expect(reloadedToggle).toBeChecked();
+    await user.click(reloadedToggle);
+    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
+    await user.click(reloaded.getByRole('button', { name: 'Save' }));
+    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(false);
+    expect(reloaded.getByRole('button', { name: 'Save' })).toBeDisabled();
+  });
+
+  it('keeps Search Reset as a draft until Save and discards unsaved changes on navigation', async () => {
+    const user = userEvent.setup();
+    saveReviewProjectSearchEnabled(true, TEST_USERNAME);
+    const view = renderSettingsPage();
+    const section = within(screen.getByRole('region', { name: 'Review Project search' }));
+
+    await user.click(section.getByRole('button', { name: 'Reset' }));
+    expect(section.getByRole('checkbox', { name: /Show the Search tab/ })).not.toBeChecked();
+    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
+    expect(section.getByRole('button', { name: 'Save' })).toBeEnabled();
+
+    view.unmount();
+    renderSettingsPage();
+    expect(screen.getByRole('checkbox', { name: /Show the Search tab/ })).toBeChecked();
+  });
+
+  it('switches Search saved state and drafts with the signed-in account', async () => {
+    const user = userEvent.setup();
+    saveReviewProjectSearchEnabled(true, TEST_USERNAME);
+    const view = renderSettingsPage();
+    const searchSection = () =>
+      within(screen.getByRole('region', { name: 'Review Project search' }));
+    expect(searchSection().getByRole('checkbox', { name: /Show the Search tab/ })).toBeChecked();
+    await user.click(searchSection().getByRole('checkbox', { name: /Show the Search tab/ }));
+
+    currentUsername = 'other-user';
+    view.rerender(<SettingsPage />);
+    expect(
+      searchSection().getByRole('checkbox', { name: /Show the Search tab/ }),
+    ).not.toBeChecked();
+    expect(searchSection().getByRole('button', { name: 'Save' })).toBeDisabled();
+    await user.click(searchSection().getByRole('checkbox', { name: /Show the Search tab/ }));
+    await user.click(searchSection().getByRole('button', { name: 'Save' }));
+    expect(loadReviewProjectSearchEnabled('other-user')).toBe(true);
+    expect(loadReviewProjectSearchEnabled(TEST_USERNAME)).toBe(true);
+
+    currentUsername = TEST_USERNAME;
+    view.rerender(<SettingsPage />);
+    expect(searchSection().getByRole('checkbox', { name: /Show the Search tab/ })).toBeChecked();
+    expect(searchSection().getByRole('button', { name: 'Save' })).toBeDisabled();
   });
 });
