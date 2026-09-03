@@ -414,6 +414,23 @@ describe('Review Project actual editor adversarial interactions', () => {
     },
   );
 
+  it.each(['mf2-rich', 'mf2-raw'] as const)(
+    'keeps the %s draft unchanged when AI alters its declarations',
+    async (mode) => {
+      fetchAiMock.mockResolvedValue(
+        aiResponse('Changed structure', mf2Message.replace(':number', ':string')),
+      );
+      const harness = await mountEditor(mode);
+      const use = await screen.findByRole('button', { name: 'Use' });
+      expect(use).toBeDisabled();
+      expect(use).toHaveAccessibleDescription(/preserve the source declarations/);
+      fireEvent.click(use);
+      submit(harness.editor, { shiftKey: true });
+      await waitFor(() => expect(saveMock).toHaveBeenCalledTimes(1));
+      expect(saveMock.mock.calls[0][0].target).toBe(mf2Message);
+    },
+  );
+
   it.each(['textarea', 'assisted', 'mf2-rich'] as const)(
     'retains a later AI choice made during %s save and does not auto-advance',
     async (mode) => {

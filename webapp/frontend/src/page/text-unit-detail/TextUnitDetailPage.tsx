@@ -29,6 +29,11 @@ import {
   searchTextUnits,
   type TextUnitSearchRequest,
 } from '../../api/text-units';
+import { isMf2Message } from '../../components/mf2/messageFormat';
+import {
+  mf2TranslationErrorCount,
+  mf2TranslationErrors,
+} from '../../components/mf2/translationValidation';
 import type { VisibleTextMarksMode } from '../../components/VisibleTextEditor';
 import { useProtectedTextTokenGuard } from '../../hooks/useProtectedTextTokenGuard';
 import { useUser } from '../../hooks/useUser';
@@ -355,7 +360,24 @@ export function TextUnitDetailPage() {
   });
 
   const canEdit = localeForEditing ? canEditLocaleForUser(currentUser, localeForEditing) : false;
-  const useProtectedDetailEditor = isVisibleTextEditorEnabled && !isSourceOnly;
+  const isMf2Translation =
+    !isSourceOnly &&
+    isMf2Message({
+      messageFormat: activeTextUnit?.messageFormat,
+      source: activeTextUnit?.source,
+    });
+  const useProtectedDetailEditor = isVisibleTextEditorEnabled && !isSourceOnly && !isMf2Translation;
+  const mf2ErrorCount = useMemo(
+    () =>
+      isMf2Translation
+        ? mf2TranslationErrorCount({
+            locale: localeForEditing ?? 'en',
+            source: activeTextUnit?.source ?? '',
+            target: draftTarget,
+          })
+        : 0,
+    [activeTextUnit?.source, draftTarget, isMf2Translation, localeForEditing],
+  );
   const draftTargetTokenGuard = useProtectedTextTokenGuard(
     draftTarget,
     useProtectedDetailEditor ? 'icu-html' : 'none',
@@ -733,6 +755,18 @@ export function TextUnitDetailPage() {
     async (request: SaveTextUnitRequest) => {
       setSaveErrorMessage(null);
 
+      if (
+        isMf2Translation &&
+        mf2TranslationErrorCount({
+          locale: localeForEditing ?? 'en',
+          source: activeTextUnit?.source ?? '',
+          target: request.target,
+        }) > 0
+      ) {
+        setSaveErrorMessage('Fix the MF2 errors before saving.');
+        return;
+      }
+
       try {
         const integrityResult = await checkTextUnitIntegrityWithRetry({
           tmTextUnitId: request.tmTextUnitId,
@@ -769,7 +803,7 @@ export function TextUnitDetailPage() {
 
       await saveMutation.mutateAsync(request);
     },
-    [currentUser.role, localeForEditing, saveMutation],
+    [activeTextUnit?.source, currentUser.role, isMf2Translation, localeForEditing, saveMutation],
   );
 
   const saveDraft = useCallback(
@@ -1069,10 +1103,30 @@ export function TextUnitDetailPage() {
     localeForEditing,
   ]);
 
-  const handleUseAiSuggestion = useCallback((suggestion: AiReviewSuggestion) => {
-    setDraftTarget(suggestion.content);
-    setSaveErrorMessage(null);
-  }, []);
+  const getAiSuggestionError = useCallback(
+    (suggestion: AiReviewSuggestion) =>
+      isMf2Translation
+        ? (mf2TranslationErrors({
+            locale: localeForEditing ?? 'en',
+            source: activeTextUnit?.source ?? '',
+            target: suggestion.content,
+          })[0]?.message ?? null)
+        : null,
+    [activeTextUnit?.source, isMf2Translation, localeForEditing],
+  );
+
+  const handleUseAiSuggestion = useCallback(
+    (suggestion: AiReviewSuggestion) => {
+      const error = getAiSuggestionError(suggestion);
+      if (error) {
+        setSaveErrorMessage(error);
+        return;
+      }
+      setDraftTarget(suggestion.content);
+      setSaveErrorMessage(null);
+    },
+    [getAiSuggestionError],
+  );
 
   const editorWarningMessage = isSourceOnly
     ? 'Open this page with a target locale to edit a translation or view translation history.'
@@ -1104,11 +1158,12 @@ export function TextUnitDetailPage() {
         isDirty: isEditorDirty,
         isSaving: saveMutation.isPending,
         isDeleting: deleteMutation.isPending,
+        mf2ErrorCount,
         errorMessage: saveErrorMessage,
         warningMessage: editorWarningMessage,
       }}
       visibleTextEditor={{
-        enabled: useProtectedDetailEditor,
+        enabled: isVisibleTextEditorEnabled && !isSourceOnly,
         marksMode: translationMarksMode,
         onChangeMarksMode: setTranslationMarksMode,
         protectedDiagnostics: draftTargetProtectedDiagnostics,
@@ -1120,6 +1175,7 @@ export function TextUnitDetailPage() {
         stringId: formatValue(activeTextUnit?.name),
         locale: isSourceOnly ? `Source ${formatValue(displayLocale)}` : formatValue(displayLocale),
         source: formatValue(activeTextUnit?.source),
+        messageFormat: activeTextUnit?.messageFormat,
         comment: formatValue(activeTextUnit?.comment),
         repositoryName: formatValue(activeTextUnit?.repositoryName),
       }}
@@ -1144,6 +1200,7 @@ export function TextUnitDetailPage() {
       onSubmitAi={handleSubmitAi}
       onRetryAi={handleRetryAi}
       onUseAiSuggestion={handleUseAiSuggestion}
+      getAiSuggestionError={getAiSuggestionError}
       isAiResponding={isAiResponding}
       glossaryMatches={glossaryMatchesQuery.data ?? []}
       isGlossaryLoading={glossaryMatchesQuery.isLoading}

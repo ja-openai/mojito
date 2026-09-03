@@ -467,8 +467,9 @@ one {{Vous avez \nDeuxième ligne {$count} fichier.}}
         showLocaleSelector={false}
         showPreview={false}
         showSource={false}
-        source={COUNT_SOURCE}
-        target="{{Vous avez des fichiers.}}"
+        source={COUNT_SELECT_SOURCE}
+        target={'.input {$count :number}\n.match $count\n* {{Vous avez des fichiers.}}'}
+        locale="fr"
       />,
     );
 

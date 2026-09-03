@@ -8,6 +8,11 @@
   overflow: visible;
 }
 
+.mf2-inline-editor:focus-within {
+  border-color: var(--color-focus-border);
+  box-shadow: 0 0 0 0.15rem var(--color-focus-outline);
+}
+
 .mf2-inline-editor button:not([data-translation-editor-control]),
 .mf2-inline-editor input,
 .mf2-inline-editor select {
@@ -129,10 +134,6 @@
   padding: 8px;
 }
 
-.mf2-edit-row {
-  padding: 8px;
-}
-
 .mf2-source-prose {
   border-bottom: 1px solid var(--color-border);
 }
@@ -146,8 +147,6 @@
 
 .mf2-forms {
   display: grid;
-  border: 1px solid color-mix(in srgb, var(--color-accent) 24%, var(--color-border));
-  border-radius: 8px;
   gap: 0;
   overflow: visible;
 }
@@ -188,13 +187,26 @@
   align-items: stretch;
   background: var(--color-surface);
   border: 0;
-  border-top: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
   border-radius: 0;
   cursor: pointer;
   display: grid;
   gap: 0;
   grid-template-columns: minmax(130px, 180px) minmax(0, 1fr);
   min-width: 0;
+}
+
+.mf2-form-row + .mf2-form-row {
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+/* The outer editor owns the frame; round its first surface without clipping menus. */
+.mf2-edit-row:first-child .mf2-form-row:first-child {
+  border-top-left-radius: 7px;
+  border-top-right-radius: 7px;
+}
+
+.mf2-form-row--plain {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .mf2-form-row.is-active {
@@ -231,6 +243,8 @@
   align-content: center;
   background: color-mix(in srgb, var(--color-accent) 7%, var(--color-surface));
   border-right: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-top-left-radius: inherit;
+  border-bottom-left-radius: inherit;
   color: var(--color-text-muted);
   display: grid;
   font-size: 13px;
@@ -550,8 +564,9 @@
   z-index: 110;
 }
 
-.mf2-shortcut-special[open] .mf2-text-tool-grid {
-  inline-size: min(360px, calc(100cqw - 32px));
+.mf2-shortcut-special[open] .mf2-text-tool-menu {
+  inline-size: max-content;
+  max-inline-size: min(280px, calc(100cqw - 32px));
   left: 0;
   min-width: 0;
   position: absolute;
@@ -559,37 +574,52 @@
   z-index: 110;
 }
 
-.mf2-text-tool-grid {
+.mf2-text-tool-menu {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   box-shadow: 0 12px 28px color-mix(in srgb, var(--color-text) 14%, transparent);
   display: grid;
-  gap: 6px;
-  grid-template-columns: repeat(2, minmax(150px, 1fr));
-  margin-top: 6px;
-  padding: 8px;
+  gap: 0;
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 4px;
+  padding: 4px;
 }
 
-.mf2-text-tool-grid button {
+.mf2-text-tool-menu button {
   align-items: center;
-  display: flex;
-  font-family: inherit;
-  gap: 8px;
-  justify-content: space-between;
-  min-height: 32px;
-  padding: 6px 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: var(--color-text);
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  line-height: 1.35;
+  min-height: 26px;
+  padding: 4px 8px;
   text-align: start;
 }
 
-.mf2-text-tool-grid span {
-  font-weight: 700;
+.mf2-text-tool-menu button:hover,
+.mf2-text-tool-menu button:focus-visible {
+  background: var(--color-surface-muted);
 }
 
-.mf2-text-tool-grid small {
+.mf2-text-tool-menu button:focus-visible {
+  outline: 2px solid var(--color-focus-border);
+  outline-offset: -2px;
+}
+
+.mf2-text-tool-menu small {
   color: var(--color-text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 .mf2-prose:focus {
@@ -815,6 +845,8 @@
   .mf2-form-key {
     border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
     border-right: 0;
+    border-top-right-radius: inherit;
+    border-bottom-left-radius: 0;
   }
 
   .mf2-form-contract {
@@ -826,9 +858,5 @@
   .mf2-form-contract code {
     overflow-wrap: anywhere;
     white-space: normal;
-  }
-
-  .mf2-text-tool-grid {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
 }

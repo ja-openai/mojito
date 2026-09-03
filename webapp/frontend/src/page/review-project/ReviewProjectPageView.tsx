@@ -70,6 +70,7 @@ import {
   Mf2TranslationEditor,
   type Mf2TranslationEditorSnapshot,
 } from '../../components/mf2/Mf2TranslationEditor';
+import { mf2TranslationErrors } from '../../components/mf2/translationValidation';
 import { Modal } from '../../components/Modal';
 import { Pill } from '../../components/Pill';
 import { PillDropdown } from '../../components/PillDropdown';
@@ -3356,13 +3357,26 @@ function DetailPane({
     workbenchTextUnitId,
   ]);
 
+  const getAiSuggestionError = useCallback(
+    (suggestion: AiReviewSuggestion) =>
+      sourceIsMf2
+        ? (mf2TranslationErrors({
+            locale: localeTag,
+            source: source ?? '',
+            target: suggestion.content,
+          })[0]?.message ?? null)
+        : null,
+    [localeTag, source, sourceIsMf2],
+  );
+
   const handleUseAiSuggestion = useCallback(
     (suggestion: AiReviewSuggestion) => {
       const current = readDraft();
       if (!current || !sameReviewProjectSource(current.base, current.remote)) return;
+      if (getAiSuggestionError(suggestion)) return;
       setDraftTarget(suggestion.content);
     },
-    [readDraft, setDraftTarget],
+    [getAiSuggestionError, readDraft, setDraftTarget],
   );
 
   const getFocusedDetailEditor = useCallback(() => {
@@ -4328,6 +4342,7 @@ function DetailPane({
                     onChangeInput={setAiInput}
                     onSubmit={handleSubmitAi}
                     onUseSuggestion={handleUseAiSuggestion}
+                    getSuggestionError={getAiSuggestionError}
                     onRetryError={handleRetryAi}
                     isResponding={isAiResponding}
                   />

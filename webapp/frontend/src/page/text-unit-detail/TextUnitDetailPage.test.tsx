@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -16,6 +16,9 @@ const fetchGlossariesMock = vi.hoisted(() => vi.fn());
 const fetchGlossaryTermsMock = vi.hoisted(() => vi.fn());
 const matchGlossaryTermsMock = vi.hoisted(() => vi.fn());
 const requestAiReviewMock = vi.hoisted(() => vi.fn());
+const saveTextUnitMock = vi.hoisted(() => vi.fn());
+const checkTextUnitIntegrityMock = vi.hoisted(() => vi.fn());
+const editorPreference = vi.hoisted(() => ({ enabled: true }));
 
 vi.mock('../../hooks/useUser', () => ({
   useUser: () => ({
@@ -27,7 +30,7 @@ vi.mock('../../hooks/useUser', () => ({
 }));
 
 vi.mock('../../hooks/useVisibleTextEditorEnabled', () => ({
-  useVisibleTextEditorEnabled: () => true,
+  useVisibleTextEditorEnabled: () => editorPreference.enabled,
 }));
 
 vi.mock('../../api/text-units', async (importActual) => {
@@ -38,6 +41,8 @@ vi.mock('../../api/text-units', async (importActual) => {
     fetchGitBlameWithUsages: fetchGitBlameWithUsagesMock,
     fetchTextUnitHistory: fetchTextUnitHistoryMock,
     searchTextUnits: searchTextUnitsMock,
+    saveTextUnit: saveTextUnitMock,
+    checkTextUnitIntegrity: checkTextUnitIntegrityMock,
   };
 });
 
@@ -85,8 +90,41 @@ function renderTextUnitDetailPage(path = '/text-units/3?locale=pt-PT') {
   );
 }
 
+const mf2Source = `.input {$status :string}
+.input {$count :integer select=exact}
+.match $status $count
+active 0 {{The queue is empty.}}
+active * {{Queued jobs: {$count}.}}
+* * {{Jobs: {$count}.}}`;
+const mf2Target = mf2Source.replace('The queue is empty.', 'La file est vide.');
+
+function mockMf2TextUnit(messageFormat: string | null | undefined) {
+  searchTextUnitsMock.mockResolvedValue([
+    {
+      tmTextUnitId: 3,
+      tmTextUnitVariantId: 30,
+      tmTextUnitCurrentVariantId: 30,
+      localeId: 17,
+      name: 'mf2.status.count',
+      source: mf2Source,
+      target: mf2Target,
+      messageFormat,
+      targetLocale: 'fr',
+      used: true,
+      status: 'APPROVED',
+      includedInLocalizedFile: true,
+    },
+  ]);
+}
+
 describe('TextUnitDetailPage', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
+    editorPreference.enabled = true;
+    checkTextUnitIntegrityMock.mockResolvedValue({ checkResult: true });
+    saveTextUnitMock.mockImplementation((request: TextUnitsApi.SaveTextUnitRequest) =>
+      Promise.resolve(request),
+    );
     searchTextUnitsMock.mockResolvedValue([
       {
         tmTextUnitId: 3,
@@ -144,5 +182,101 @@ describe('TextUnitDetailPage', () => {
         searchType: 'exact',
       }),
     );
+  });
+
+  it.each(['MF2', undefined])(
+    'routes MF2 metadata %s to the guided editor and structured source preview',
+    async (messageFormat) => {
+      mockMf2TextUnit(messageFormat);
+
+      const { container } = renderTextUnitDetailPage('/text-units/3?locale=fr');
+
+      expect(
+        await screen.findByRole('textbox', { name: 'Target status: active / count: 0' }),
+      ).toHaveTextContent('La file est vide.');
+      expect(screen.queryByRole('textbox', { name: 'Translation' })).not.toBeInTheDocument();
+      expect(screen.getByText('Insert special')).toBeVisible();
+      expect(container.querySelector('.mf2-document-preview')).toHaveTextContent('.match');
+      expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    },
+  );
+
+  it('honors explicit non-MF2 metadata even when the source resembles MF2', async () => {
+    mockMf2TextUnit(null);
+
+    const { container } = renderTextUnitDetailPage('/text-units/3?locale=fr');
+
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Translation' })).toHaveTextContent(
+        'La file est vide.',
+      ),
+    );
+    expect(container.querySelector('.mf2-inline-editor')).not.toBeInTheDocument();
+  });
+
+  it('blocks invalid MF2 saves with assistance off and preserves the full valid document on save', async () => {
+    editorPreference.enabled = false;
+    mockMf2TextUnit('MF2');
+    renderTextUnitDetailPage('/text-units/3?locale=fr');
+
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    await waitFor(() => expect(editor).toHaveValue(mf2Target));
+    expect(editor.tagName).toBe('TEXTAREA');
+
+    fireEvent.change(editor, { target: { value: `${mf2Target}\n}}` } });
+    expect(screen.getByRole('alert')).toHaveTextContent(/MF2 errors? before saving/);
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(checkTextUnitIntegrityMock).not.toHaveBeenCalled();
+    expect(saveTextUnitMock).not.toHaveBeenCalled();
+
+    fireEvent.change(editor, { target: { value: mf2Target.replace('active 0', 'active 1') } });
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(saveTextUnitMock).not.toHaveBeenCalled();
+
+    const nextTarget = mf2Target.replace('La file est vide.', 'Aucune tâche en attente.');
+    fireEvent.change(editor, { target: { value: nextTarget } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(saveTextUnitMock).toHaveBeenCalledWith({
+        tmTextUnitId: 3,
+        localeId: 17,
+        target: nextTarget,
+        status: 'APPROVED',
+        includedInLocalizedFile: true,
+      }),
+    );
+    expect(checkTextUnitIntegrityMock).toHaveBeenCalledWith({
+      tmTextUnitId: 3,
+      content: nextTarget,
+    });
+  });
+
+  it('blocks structurally changed AI suggestions and accepts equivalent MF2 spelling', async () => {
+    editorPreference.enabled = false;
+    mockMf2TextUnit('MF2');
+    const safe = mf2Target
+      .replace('select=exact', 'select=|exact|')
+      .replace('La file est vide.', 'Aucune tâche en attente.');
+    requestAiReviewMock.mockResolvedValue({
+      message: { role: 'assistant', content: 'Suggestions' },
+      suggestions: [
+        { content: mf2Target.replace('active 0', 'active 1'), explanation: 'Changed a fixed key' },
+        { content: safe, explanation: 'Equivalent syntax with improved prose' },
+      ],
+    });
+    renderTextUnitDetailPage('/text-units/3?locale=fr');
+    const editor = await screen.findByRole('textbox', { name: 'Translation' });
+    const buttons = await screen.findAllByRole('button', { name: 'Use' });
+    expect(buttons[0]).toBeDisabled();
+    expect(buttons[0]).toHaveAccessibleDescription(/preserve fixed selector values/);
+    fireEvent.click(buttons[0]);
+    expect(editor).toHaveValue(mf2Target);
+    expect(buttons[1]).toBeEnabled();
+    fireEvent.click(buttons[1]);
+    expect(editor).toHaveValue(safe);
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    expect(saveTextUnitMock).not.toHaveBeenCalled();
   });
 });

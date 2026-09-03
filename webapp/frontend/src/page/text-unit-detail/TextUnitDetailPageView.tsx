@@ -13,6 +13,9 @@ import { GlossaryMatchesPanel } from '../../components/GlossaryMatchesPanel';
 import { GlossaryTermEvidenceThumbnails } from '../../components/GlossaryTermEvidenceThumbnails';
 import { IcuPreviewSection } from '../../components/IcuPreviewSection';
 import { IntegrityCheckAlertModal } from '../../components/IntegrityCheckAlertModal';
+import { isMf2Message } from '../../components/mf2/messageFormat';
+import { Mf2DocumentPreview } from '../../components/mf2/Mf2DocumentPreview';
+import { Mf2TranslationEditor } from '../../components/mf2/Mf2TranslationEditor';
 import { Pill } from '../../components/Pill';
 import { PillDropdown } from '../../components/PillDropdown';
 import {
@@ -75,6 +78,7 @@ type TextUnitDetailPageViewProps = {
     isDirty: boolean;
     isSaving: boolean;
     isDeleting: boolean;
+    mf2ErrorCount: number;
     errorMessage: string | null;
     warningMessage: string | null;
   };
@@ -91,6 +95,7 @@ type TextUnitDetailPageViewProps = {
     stringId: string;
     locale: string;
     source: string;
+    messageFormat?: string | null;
     comment: string;
     repositoryName: string;
   };
@@ -112,6 +117,7 @@ type TextUnitDetailPageViewProps = {
   onSubmitAi: () => void;
   onRetryAi: () => void;
   onUseAiSuggestion: (suggestion: AiReviewSuggestion) => void;
+  getAiSuggestionError?: (suggestion: AiReviewSuggestion) => string | null;
   isAiResponding: boolean;
   glossaryMatches: ApiMatchedGlossaryTerm[];
   isGlossaryLoading: boolean;
@@ -183,6 +189,7 @@ export function TextUnitDetailPageView({
   onSubmitAi,
   onRetryAi,
   onUseAiSuggestion,
+  getAiSuggestionError,
   isAiResponding,
   glossaryMatches,
   isGlossaryLoading,
@@ -223,6 +230,13 @@ export function TextUnitDetailPageView({
   onConfirmDeleteEditor,
   onDismissDeleteDialog,
 }: TextUnitDetailPageViewProps) {
+  const isMf2 = !editorInfo.isSourceOnly && isMf2Message(keyInfo);
+  const canSaveEditor =
+    editorInfo.canEdit &&
+    editorInfo.isDirty &&
+    !editorInfo.isSaving &&
+    !editorInfo.isDeleting &&
+    editorInfo.mf2ErrorCount === 0;
   const glossaryTerm = glossaryTermMetadata?.term ?? null;
   const glossaryTermHref = glossaryTermMetadata
     ? `/glossaries/${glossaryTermMetadata.glossaryId}${
@@ -300,35 +314,63 @@ export function TextUnitDetailPageView({
             </h1>
 
             <div className="text-unit-detail-page__editor-field">
-              <TranslationTextEditor
-                assisted={visibleTextEditor.enabled}
-                ariaLabel={editorInfo.isSourceOnly ? 'Source text' : 'Translation'}
-                className="text-unit-detail-page__editor-textarea"
-                value={editorInfo.target}
-                onChange={onChangeTarget}
-                controlBar={
-                  visibleTextEditor.enabled
-                    ? {
-                        marksMode: visibleTextEditor.marksMode,
-                        onChangeMarksMode: visibleTextEditor.onChangeMarksMode,
-                        protectedTokenCount: visibleTextEditor.protectedTokens.length,
-                      }
-                    : undefined
-                }
-                dir={visibleTextEditor.dir}
-                disabled={!editorInfo.canEdit || editorInfo.isSaving}
-                lang={previewLocale}
-                minRows={1}
-                placeholder="Add translated copy"
-                protectedDiagnostics={visibleTextEditor.protectedDiagnostics}
-                protectedTokens={visibleTextEditor.protectedTokens}
-                marksMode={visibleTextEditor.marksMode}
-                spellCheck={true}
-                style={{ resize: 'none' }}
-                validateNextValue={
-                  visibleTextEditor.enabled ? visibleTextEditor.validateNextValue : undefined
-                }
-              />
+              {isMf2 && visibleTextEditor.enabled ? (
+                <Mf2TranslationEditor
+                  documentKey={`${tmTextUnitId}:${previewLocale}`}
+                  locale={previewLocale}
+                  marksMode={visibleTextEditor.marksMode}
+                  onChangeMarksMode={visibleTextEditor.onChangeMarksMode}
+                  onSubmit={canSaveEditor ? onSaveEditor : undefined}
+                  onTargetChange={onChangeTarget}
+                  readOnly={!editorInfo.canEdit || editorInfo.isSaving || editorInfo.isDeleting}
+                  showArgumentInputs={false}
+                  showLocaleSelector={false}
+                  showPreview={false}
+                  showSource={false}
+                  source={keyInfo.source}
+                  target={editorInfo.target}
+                />
+              ) : (
+                <TranslationTextEditor
+                  assisted={visibleTextEditor.enabled && !isMf2}
+                  ariaLabel={editorInfo.isSourceOnly ? 'Source text' : 'Translation'}
+                  className="text-unit-detail-page__editor-textarea"
+                  value={editorInfo.target}
+                  onChange={onChangeTarget}
+                  controlBar={
+                    visibleTextEditor.enabled && !isMf2
+                      ? {
+                          marksMode: visibleTextEditor.marksMode,
+                          onChangeMarksMode: visibleTextEditor.onChangeMarksMode,
+                          protectedTokenCount: visibleTextEditor.protectedTokens.length,
+                        }
+                      : undefined
+                  }
+                  dir={visibleTextEditor.dir}
+                  disabled={!editorInfo.canEdit || editorInfo.isSaving}
+                  lang={previewLocale}
+                  minRows={1}
+                  protectedDiagnostics={visibleTextEditor.protectedDiagnostics}
+                  protectedTokens={visibleTextEditor.protectedTokens}
+                  marksMode={visibleTextEditor.marksMode}
+                  spellCheck={true}
+                  style={{ resize: 'none' }}
+                  validateNextValue={
+                    visibleTextEditor.enabled && !isMf2
+                      ? visibleTextEditor.validateNextValue
+                      : undefined
+                  }
+                />
+              )}
+              {editorInfo.mf2ErrorCount > 0 ? (
+                <div
+                  className="text-unit-detail-page__state text-unit-detail-page__state--error"
+                  role="alert"
+                >
+                  Fix {editorInfo.mf2ErrorCount} MF2 error
+                  {editorInfo.mf2ErrorCount === 1 ? '' : 's'} before saving.
+                </div>
+              ) : null}
             </div>
 
             {!editorInfo.isSourceOnly ? (
@@ -371,12 +413,7 @@ export function TextUnitDetailPageView({
                     type="button"
                     className="text-unit-detail-page__button text-unit-detail-page__button--primary"
                     onClick={onSaveEditor}
-                    disabled={
-                      !editorInfo.canEdit ||
-                      !editorInfo.isDirty ||
-                      editorInfo.isSaving ||
-                      editorInfo.isDeleting
-                    }
+                    disabled={!canSaveEditor}
                   >
                     {editorInfo.isSaving ? 'Saving…' : 'Save'}
                   </button>
@@ -384,7 +421,7 @@ export function TextUnitDetailPageView({
               </div>
             ) : null}
 
-            {!editorInfo.isSourceOnly ? (
+            {!editorInfo.isSourceOnly && !isMf2 ? (
               <IcuPreviewSection
                 sourceMessage={keyInfo.source}
                 targetMessage={editorInfo.target}
@@ -413,6 +450,7 @@ export function TextUnitDetailPageView({
                     onSubmit={onSubmitAi}
                     onRetryError={onRetryAi}
                     onUseSuggestion={onUseAiSuggestion}
+                    getSuggestionError={getAiSuggestionError}
                     isResponding={isAiResponding}
                   />
                 ) : null}
@@ -447,9 +485,16 @@ export function TextUnitDetailPageView({
                     ) : null}
                   </dt>
                   <dd>
-                    <pre className="text-unit-detail-page__key-info-text text-unit-detail-page__key-info-text--primary">
-                      {keyInfo.source}
-                    </pre>
+                    {isMf2 && visibleTextEditor.enabled ? (
+                      <Mf2DocumentPreview
+                        marksMode={visibleTextEditor.marksMode}
+                        value={keyInfo.source}
+                      />
+                    ) : (
+                      <pre className="text-unit-detail-page__key-info-text text-unit-detail-page__key-info-text--primary">
+                        {keyInfo.source}
+                      </pre>
+                    )}
                   </dd>
                 </div>
                 <div className="text-unit-detail-page__key-info-row">

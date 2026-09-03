@@ -1,5 +1,13 @@
-import { formatMessageToParts, type MF2Part, parseToModel } from '@mojito-mf2/core';
+import {
+  formatMessageToParts,
+  type MF2Message,
+  type MF2Part,
+  parseToModel,
+} from '@mojito-mf2/core';
 import { partsToString } from '@mojito-mf2/core/formatter';
+
+import { isOptionalCounterExpression, optionalCounterNames } from './optionalCounter';
+import { mf2SkeletonDiagnostics } from './skeleton';
 
 // MF2 parsing is synchronous in the active editor, so reject hostile catalog input before the
 // parser materializes its runtime and editor representations.
@@ -246,6 +254,15 @@ export function diagnosticsFor(
     ...targetDiagnostics,
   ];
   if (!sourceModel || !targetModel) return diagnostics;
+  if (sourceModel.rustModel && targetModel.rustModel) {
+    diagnostics.push(
+      ...mf2SkeletonDiagnostics(
+        sourceModel.rustModel as MF2Message,
+        targetModel.rustModel as MF2Message,
+        locale,
+      ),
+    );
+  }
   const sourceInsertionNames = placeholderInsertionNameSet(sourceModel);
   const targetInsertionNames = targetPlaceholderInsertionNameSet(targetModel);
   const targetCoverageNames = targetSourceCoverageNameSet(targetModel);
@@ -333,7 +350,7 @@ export function diagnosticsFor(
   if (!selectorDiagnostics.length) {
     diagnostics.push(
       ...variantContractDiagnostics(sourceModel, targetModel, locale),
-      ...variantPlaceholderDiagnostics(sourceModel, targetModel),
+      ...variantPlaceholderDiagnostics(sourceModel, targetModel, locale),
       ...markupContractDiagnostics(sourceModel, targetModel),
     );
   }
@@ -712,8 +729,25 @@ export function missingPlaceholderNamesForActiveSource(
   targetModel: EditorModel | null,
   sourcePattern: string,
   targetPattern: string,
+  targetVariant?: EditorVariant,
+  locale = 'en',
 ) {
-  const missing = missingPlaceholderNamesForPattern(sourcePattern, targetPattern);
+  const optionalCounters =
+    targetModel?.rustModel && targetVariant
+      ? optionalCounterNames(
+          targetModel.rustModel as MF2Message,
+          targetVariant.keys.map((key, index) =>
+            key === '*' && !targetVariant.literalStarKeyIndexes?.includes(index)
+              ? { type: '*' as const }
+              : { type: 'literal' as const, value: key },
+          ),
+          locale,
+        )
+      : new Set<string>();
+  const missing = missingPlaceholderNamesForPattern(
+    patternWithoutOptionalCounters(sourcePattern, optionalCounters),
+    patternWithoutOptionalCounters(targetPattern, optionalCounters),
+  );
   if (!sourceModel) return missing;
   const targetOptionNames = optionVariableNamesInPatternSource(targetPattern);
   const targetVisibleNames = placeholderCountsInPattern(targetPattern);
@@ -757,6 +791,19 @@ export function missingPlaceholderNamesForActiveSource(
     missing.push(name);
   }
   return missing;
+}
+
+function patternWithoutOptionalCounters(pattern: string, optionalCounters: Set<string>) {
+  if (!optionalCounters.size) return pattern;
+  return placeholderExpressionsInPattern(pattern).reduceRight((value, expression) => {
+    if (!optionalCounters.has(expression.name)) return value;
+    const parsed = parseToModel(expression.source).model;
+    return parsed?.type === 'message' &&
+      parsed.pattern.length === 1 &&
+      isOptionalCounterExpression(parsed.pattern[0], optionalCounters)
+      ? value.slice(0, expression.from) + value.slice(expression.to)
+      : value;
+  }, pattern);
 }
 
 export function patternWithRestoredPlaceholders(
@@ -991,18 +1038,24 @@ function selectorContractDiagnostics(sourceModel: EditorModel, targetModel: Edit
   return diagnostics;
 }
 
-function variantPlaceholderDiagnostics(sourceModel: EditorModel, targetModel: EditorModel) {
+function variantPlaceholderDiagnostics(
+  sourceModel: EditorModel,
+  targetModel: EditorModel,
+  locale: string,
+) {
   return pairedPatternsForDiagnostics(sourceModel, targetModel).flatMap(
-    ({ label, sourcePattern, targetPattern }) => {
+    ({ label, sourcePattern, targetPattern, targetVariant }) => {
       return missingPlaceholderNamesForActiveSource(
         sourceModel,
         targetModel,
         sourcePattern,
         targetPattern,
+        targetVariant,
+        locale,
       ).map((name) => ({
         code: 'variant-missing-placeholder',
         formLabel: label,
-        message: `Target form ${label} omits source placeholder {$${name}}; keep it omitted only when intentional.`,
+        message: `This form is missing {$${name}} from the source. Restore it to preserve the information shown to the user.`,
         severity: 'warning' as const,
       }));
     },
@@ -1128,7 +1181,9 @@ function addMarkupShapePart(shapes: Map<string, MarkupShape>, part: Exclude<Runt
 }
 
 function markupShapesEqual(left: MarkupShape, right: MarkupShape) {
-  return MARKUP_KINDS.every((kind) => left[kind] === right[kind]);
+  // Variant counts can change for a locale. The skeleton check compares exact
+  // marker counts and order inside each corresponding pattern.
+  return MARKUP_KINDS.every((kind) => Boolean(left[kind]) === Boolean(right[kind]));
 }
 
 function markupShapeLabel(shape: MarkupShape) {
@@ -1205,37 +1260,9 @@ function variantContractDiagnostics(
 
 function targetVariantOrderDiagnostics(targetModel: EditorModel, locale: string) {
   if (targetModel.type !== 'select') return [];
-  return [
-    ...overlappingNumericVariantDiagnostics(targetModel, locale),
-    ...selectorPriorityVariantDiagnostics(targetModel, locale),
-  ];
-}
-
-function overlappingNumericVariantDiagnostics(model: SelectEditorModel, locale: string) {
-  const selectors = selectorContractFromModel(model);
-  const diagnostics: Array<EditorDiagnostic> = [];
-  const seen = new Set<string>();
-  for (const overlap of numericVariantOverlaps(model, selectors, locale)) {
-    const signature = [
-      overlap.selector.name,
-      overlap.exact,
-      overlap.category,
-      variantSignature(overlap.left.keys),
-      variantSignature(overlap.right.keys),
-    ].join('\u0000');
-    if (seen.has(signature)) continue;
-    seen.add(signature);
-    diagnostics.push({
-      code: 'overlapping-numeric-variant',
-      formLabels: [
-        formLabel(overlap.left.keys, model.selectors),
-        formLabel(overlap.right.keys, model.selectors),
-      ],
-      message: `Target has both exact $${overlap.selector.name}: ${overlap.exact} and CLDR ${overlap.kind} category ${overlap.category} forms with the same surrounding keys; if both match, the earlier row wins.`,
-      severity: 'warning',
-    });
-  }
-  return diagnostics;
+  // Built-in numeric selection ranks exact values above plural categories.
+  // Their normal overlap is resolved regardless of declaration order.
+  return selectorPriorityVariantDiagnostics(targetModel, locale);
 }
 
 function selectorPriorityVariantDiagnostics(model: SelectEditorModel, locale: string) {
@@ -1263,43 +1290,6 @@ function selectorPriorityVariantDiagnostics(model: SelectEditorModel, locale: st
   return diagnostics;
 }
 
-function numericVariantOverlaps(
-  model: SelectEditorModel,
-  selectors: Array<SelectorContract>,
-  locale: string,
-) {
-  const overlaps: Array<{
-    category: string;
-    exact: string;
-    kind: 'cardinal' | 'ordinal';
-    left: EditorVariant;
-    right: EditorVariant;
-    selector: SelectorContract;
-  }> = [];
-  for (let leftIndex = 0; leftIndex < model.variants.length; leftIndex += 1) {
-    for (let rightIndex = leftIndex + 1; rightIndex < model.variants.length; rightIndex += 1) {
-      const left = model.variants[leftIndex];
-      const right = model.variants[rightIndex];
-      for (let selectorIndex = 0; selectorIndex < selectors.length; selectorIndex += 1) {
-        const overlap = numericCategoryOverlap(
-          left.keys[selectorIndex],
-          right.keys[selectorIndex],
-          selectors[selectorIndex],
-          locale,
-        );
-        if (!overlap || !sameSurroundingVariantKeys(left.keys, right.keys, selectorIndex)) continue;
-        overlaps.push({
-          ...overlap,
-          left,
-          right,
-          selector: selectors[selectorIndex],
-        });
-      }
-    }
-  }
-  return overlaps;
-}
-
 function selectorPriorityVariantOverlaps(
   model: SelectEditorModel,
   selectors: Array<SelectorContract>,
@@ -1319,6 +1309,7 @@ function selectorPriorityVariantOverlaps(
       const leftRank = variantSpecificityRank(left.keys);
       const rightRank = variantSpecificityRank(right.keys);
       if (!hasMixedSpecificity(leftRank, rightRank)) continue;
+      if (variantIntersectionIsCovered(model.variants, left, right)) continue;
       const comparison = compareVariantSpecificityRank(leftRank, rightRank);
       if (comparison === 0) continue;
       const priorityIndex = firstDifferingIndex(leftRank, rightRank);
@@ -1333,6 +1324,36 @@ function selectorPriorityVariantOverlaps(
     }
   }
   return overlaps;
+}
+
+function variantIntersectionIsCovered(
+  variants: EditorVariant[],
+  left: EditorVariant,
+  right: EditorVariant,
+) {
+  // A complete selector matrix resolves crossed wildcard rows with a more
+  // specific combined row. Differing non-wildcard keys need separate analysis.
+  if (left.literalStarKeyIndexes?.length || right.literalStarKeyIndexes?.length) return false;
+  if (
+    left.keys.some(
+      (key, index) => key !== '*' && right.keys[index] !== '*' && key !== right.keys[index],
+    )
+  )
+    return false;
+  const intersection = left.keys.map((key, index) => (key === '*' ? right.keys[index] : key));
+  return variants.some(
+    (variant) =>
+      !variant.literalStarKeyIndexes?.length &&
+      variant.keys.every((key, index) => key === '*' || key === intersection[index]) &&
+      compareVariantSpecificityRank(
+        variantSpecificityRank(variant.keys),
+        variantSpecificityRank(left.keys),
+      ) > 0 &&
+      compareVariantSpecificityRank(
+        variantSpecificityRank(variant.keys),
+        variantSpecificityRank(right.keys),
+      ) > 0,
+  );
 }
 
 function variantKeysCanOverlap(
@@ -1596,21 +1617,21 @@ function missingLocalePluralMessage(
 
 function pairedPatternsForDiagnostics(sourceModel: EditorModel, targetModel: EditorModel) {
   if (targetModel.type === 'select') {
-    return targetModel.variants
-      .map((variant) => {
-        const sourceVariant =
-          sourceModel.type === 'select' ? bestVariantForKeys(sourceModel, variant.keys) : null;
-        if (!sourceVariant) return null;
-        return {
+    return targetModel.variants.flatMap((variant) => {
+      const sourceVariant =
+        sourceModel.type === 'select'
+          ? bestVariantForKeys(sourceModel, variant.keys)
+          : { value: sourceModel.pattern };
+      if (!sourceVariant) return [];
+      return [
+        {
           label: formLabel(variant.keys, targetModel.selectors),
           sourcePattern: sourceVariant.value,
           targetPattern: variant.value,
-        };
-      })
-      .filter(
-        (item): item is { label: string; sourcePattern: string; targetPattern: string } =>
-          item != null,
-      );
+          targetVariant: variant,
+        },
+      ];
+    });
   }
   return [
     {
@@ -1620,6 +1641,7 @@ function pairedPatternsForDiagnostics(sourceModel: EditorModel, targetModel: Edi
           ? sourceLiteralPreview(sourceModel.source)
           : sourceModel.pattern,
       targetPattern: targetModel.pattern,
+      targetVariant: undefined,
     },
   ];
 }
@@ -2618,6 +2640,7 @@ function optionsToSource(options?: Record<string, RuntimeArg>) {
 
 function sourceArgsToText(args?: Record<string, RuntimeArgValue>, prefix = '') {
   return Object.entries(args ?? {})
+    .sort(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) =>
       value === true ? `${prefix}${name}` : `${prefix}${name}=${argToSource(value)}`,
     )

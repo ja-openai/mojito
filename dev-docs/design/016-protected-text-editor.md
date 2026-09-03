@@ -220,6 +220,12 @@ wildcard fallback even when the source message is plain rather than a `.match`;
 undeclared, non-selector-capable, and annotation-mismatched target selectors are
 rejected.
 
+Text unit details use the same guided editor and compact source preview when
+assisted editing is enabled. Explicit `messageFormat` metadata selects MF2;
+strict source detection is only a fallback when the API omits it. Detail-page
+saves validate MF2 syntax and the source contract even with assisted editing off,
+before running the existing backend integrity check. Source-only pages stay read-only.
+
 The structured editor reuses the production editor's compact hidden-character
 control and marker presentation. Its default guided mode keeps MF2 expressions
 and syntax protected while `Hidden chars: Auto / All / Off` changes only
@@ -227,13 +233,22 @@ display decorations without replacing editor state or history. Full-document
 CodeMirror editing is exposed through the same **Edit placeholders / Lock
 placeholders** pair as the generic editor, so the translator-facing control does
 not imply that the source-language string will change. Unlike the generic
-editor's scoped escape hatch, MF2 raw mode can change declarations, selectors,
-keys, and every variant at once; locking placeholders returns to the protected
-structured view. Keyboard reference is available through a compact
+editor's scoped escape hatch, MF2 raw mode exposes declarations, selectors,
+keys, and every variant at once. Source-contract diagnostics block saving a
+changed skeleton; locking placeholders returns to the protected structured view.
+Keyboard reference is available through a compact
 **Shortcuts** disclosure instead of occupying an always-visible row. Clean
 documents do not show a passive success diagnostic; form badges, inline
 diagnostics, and a collapsible issue summary appear only when there is something
 actionable.
+
+**Insert special** uses a compact single-column menu with normal-weight action
+labels and aligned character hints. Keyboard-specific shortcuts stay in tooltips.
+
+The guided editor uses one outer border and focus ring around the text and controls.
+Variant rows meet that frame directly, with separators between forms. Messages
+without selectors have a full-width text surface without a redundant **Message**
+header. Selector labels remain visible where they distinguish actual variants.
 
 Guided completion uses content-sized menus with 12–13px UI text, bounded width and
 height, and a short description for each choice. Typing `{` offers placeholders
@@ -257,6 +272,47 @@ current backend derives the metadata from a final `.mf2` source asset extension
 or, for mixed and legacy assets, strict source shape. Repository- or
 asset-configured MF2 declaration and server-side parse/contract validation on
 all mutation paths remain follow-up work.
+
+#### Source skeleton protection
+
+Shared translation validation compares the parsed source and target models,
+ignoring translated prose and equivalent source spelling. For example,
+`select=exact` and `select=|exact|` have the same literal value; neither quoting
+nor option-map order changes the contract.
+
+- Declarations, input/local names, functions, options, attributes, and selector
+  order must remain consistent with the source.
+- Fixed selector values, exact-number branches, and fallback coverage are
+  preserved. CLDR plural categories may differ by locale, and a source-declared
+  numeric input may be promoted into plural forms.
+- Each target form preserves the placeholders and markup of its matching source
+  form. Placeholder order may change with the translated sentence; markup
+  nesting and attributes remain protected. New plural categories use the source
+  fallback as their template. Bare numeric counters may be spelled out when an
+  exact key or the locale's cardinal rule fixes the quantity. The editor derives
+  singleton categories from the vendored CLDR conditions: Arabic `zero`, `one`,
+  and `two` qualify, but Russian `one`, French `one`, and ordinal category names
+  do not. A target form may add its existing bare numeric selector counter when
+  the source spells out the quantity, so variable-count categories can render it.
+  Formatting overrides, custom selectors, and other placeholders remain
+  protected. Save validation, omission warnings, and **Restore** use this same rule.
+
+Inline diagnostics use readable messages; technical codes remain in the expanded
+diagnostic details. Crossed wildcard rows do not generate overlap warnings when
+a more specific combined row already resolves their intersection. Built-in numeric
+selectors prioritize exact keys over plural categories, so normal exact/category
+overlap does not warn either. Missing
+locale-form reminders remain available to guide plural adaptation.
+
+Workbench, Review Project, and text-unit detail saves use these diagnostics even
+when assisted editing is off. AI Chat Review disables **Use** for suggestions
+with errors, explains the first error, and checks again before applying a
+suggestion. Structural validation does not judge prose quality or remove stray
+text such as an accidental word inside a variant.
+
+These checks protect interactive editing. They do not replace authoritative
+server validation for direct API writes, imports, or background AI translation;
+that work remains tracked by `MF2-03`.
 
 ### Backend Integrity Checker Bridge
 

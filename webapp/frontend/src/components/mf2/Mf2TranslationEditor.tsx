@@ -579,6 +579,8 @@ export const Mf2TranslationEditor = forwardRef<
     targetModel,
     activeSourcePattern,
     activePattern,
+    variants[activeVariantIndex],
+    locale,
   );
   const inlineDiagnostics = diagnosticsNearActiveEditor(diagnostics, activeFormLabel, mode);
 
@@ -626,7 +628,7 @@ export const Mf2TranslationEditor = forwardRef<
         <div className="mf2-source-prose">
           <div>
             <span>Source</span>
-            <strong>{activeSourceFormLabel}</strong>
+            {sourceModel?.type === 'select' ? <strong>{activeSourceFormLabel}</strong> : null}
           </div>
           <p dir="auto">{activeSourcePattern}</p>
         </div>
@@ -642,7 +644,12 @@ export const Mf2TranslationEditor = forwardRef<
               return (
                 <div
                   aria-current={index === activeVariantIndex ? 'true' : undefined}
-                  className={`mf2-form-row ${index === activeVariantIndex ? 'is-active' : ''} ${formSeverity ? `has-${formSeverity}` : ''}`}
+                  className={classNames(
+                    'mf2-form-row',
+                    editableModel?.type !== 'select' ? 'mf2-form-row--plain' : undefined,
+                    index === activeVariantIndex ? 'is-active' : undefined,
+                    formSeverity ? `has-${formSeverity}` : undefined,
+                  )}
                   data-form={index}
                   key={`${variant.keys.join('\u001F')}:${index}`}
                   onClick={() => index !== activeVariantIndex && selectVariant(index)}
@@ -662,10 +669,12 @@ export const Mf2TranslationEditor = forwardRef<
                   role={index === activeVariantIndex ? undefined : 'button'}
                   tabIndex={index === activeVariantIndex ? undefined : 0}
                 >
-                  <span className="mf2-form-key">
-                    <span>{label}</span>
-                    <FormIssueBadge diagnostics={formDiagnostics} />
-                  </span>
+                  {editableModel?.type === 'select' ? (
+                    <span className="mf2-form-key">
+                      <span>{label}</span>
+                      <FormIssueBadge diagnostics={formDiagnostics} />
+                    </span>
+                  ) : null}
                   {index === activeVariantIndex ? (
                     <div className="mf2-form-editor-cell">
                       {activeSourceComparison ? (
@@ -990,7 +999,7 @@ function InlineDiagnostics({
           className={`mf2-inline-issue mf2-inline-issue-${diagnostic.severity}`}
           key={diagnosticRenderKey(diagnostic, index)}
         >
-          <strong>{diagnostic.code}</strong> {diagnostic.message}
+          {diagnostic.message}
         </span>
       ))}
       {hiddenCount ? (
@@ -1266,20 +1275,21 @@ function SpecialTextTools({
       onRestoreFocus={onRestoreFocus}
       open={open}
     >
-      <div className="mf2-text-tool-grid">
+      <div className="mf2-text-tool-menu">
         {TEXT_TOOLS.map((tool) => (
           <button
+            data-translation-editor-control
             key={tool.code}
             onClick={() => {
               onApplyTextTool(tool);
               onOpenChange(false);
             }}
             onMouseDown={(event) => event.preventDefault()}
-            title={tool.title}
+            title={tool.shortcut ? `${tool.title} ${tool.shortcut}` : tool.title}
             type="button"
           >
             <span>{tool.label}</span>
-            <small>{tool.shortcut ? `${tool.code} · ${tool.shortcut}` : tool.code}</small>
+            <small>{tool.code}</small>
           </button>
         ))}
       </div>

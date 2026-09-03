@@ -169,6 +169,11 @@
   color: var(--color-text-muted);
 }
 
+.ai-chat-review__suggestion-error {
+  color: var(--color-danger);
+  font-size: var(--font-size-xs);
+}
+
 .ai-chat-review__suggestion-actions {
   position: absolute;
   top: var(--space-1);

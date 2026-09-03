@@ -24,6 +24,7 @@ function buildProps(
       isDirty: false,
       isSaving: false,
       isDeleting: false,
+      mf2ErrorCount: 0,
       errorMessage: null,
       warningMessage: null,
     },

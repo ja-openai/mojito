@@ -1,6 +1,6 @@
 import './ai-chat-review.css';
 
-import { type FormEvent, useEffect, useMemo, useRef } from 'react';
+import { type FormEvent, useEffect, useId, useMemo, useRef } from 'react';
 
 import type { AiReviewReview, AiReviewSuggestion } from '../api/ai-review';
 
@@ -20,6 +20,7 @@ type AiChatReviewProps = {
   onChangeInput: (value: string) => void;
   onSubmit: () => void;
   onUseSuggestion: (suggestion: AiReviewSuggestion) => void;
+  getSuggestionError?: (suggestion: AiReviewSuggestion) => string | null;
   onRetryError?: () => void;
   isResponding: boolean;
   className?: string;
@@ -31,10 +32,23 @@ export function AiChatReview({
   onChangeInput,
   onSubmit,
   onUseSuggestion,
+  getSuggestionError,
   onRetryError,
   isResponding,
   className,
 }: AiChatReviewProps) {
+  const validationId = useId();
+  const suggestionErrors = useMemo(
+    () =>
+      new Map(
+        messages.flatMap((message) =>
+          (message.suggestions ?? []).map(
+            (suggestion) => [suggestion, getSuggestionError?.(suggestion) ?? null] as const,
+          ),
+        ),
+      ),
+    [getSuggestionError, messages],
+  );
   const firstReviewMessage = useMemo(() => {
     for (const message of messages) {
       if (message.sender === 'assistant' && message.review) {
@@ -130,11 +144,25 @@ export function AiChatReview({
                             {suggestion.explanation}
                           </span>
                         ) : null}
+                        {suggestionErrors.get(suggestion) ? (
+                          <span
+                            className="ai-chat-review__suggestion-error"
+                            id={`${validationId}-${index}-${suggestionIndex}`}
+                          >
+                            Cannot use this suggestion: {suggestionErrors.get(suggestion)}
+                          </span>
+                        ) : null}
                       </div>
                       <div className="ai-chat-review__suggestion-actions">
                         <button
                           type="button"
                           className="ai-chat-review__button"
+                          disabled={Boolean(suggestionErrors.get(suggestion))}
+                          aria-describedby={
+                            suggestionErrors.get(suggestion)
+                              ? `${validationId}-${index}-${suggestionIndex}`
+                              : undefined
+                          }
                           onClick={() => onUseSuggestion(suggestion)}
                         >
                           Use

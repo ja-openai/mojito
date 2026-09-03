@@ -9,6 +9,18 @@ export function mf2TranslationErrorCount({
   source: string;
   target: string;
 }) {
+  return mf2TranslationErrors({ locale, source, target }).length;
+}
+
+export function mf2TranslationErrors({
+  locale,
+  source,
+  target,
+}: {
+  locale: string;
+  source: string;
+  target: string;
+}) {
   const sourceParsed = parseMf2(source, {}, locale, { includeRuntimeDiagnostics: false });
   const targetParsed = parseMf2(target, {}, locale, { includeRuntimeDiagnostics: false });
   return diagnosticsFor(
@@ -17,5 +29,5 @@ export function mf2TranslationErrorCount({
     targetParsed.diagnostics,
     locale,
     sourceParsed.diagnostics,
-  ).filter((diagnostic) => diagnostic.severity === 'error').length;
+  ).filter((diagnostic) => diagnostic.severity === 'error');
 }
